@@ -4,6 +4,7 @@ import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
@@ -45,7 +46,8 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 		@Index(name = "idx_errand_municipality_id_namespace_created", columnList = "municipality_id,namespace,created"),
 		@Index(name = "idx_errand_municipality_id_namespace_touched", columnList = "municipality_id,namespace,touched")
 	})
-public class ErrandEntity {
+@EntityListeners(AuditableListener.class)
+public class ErrandEntity implements Auditable {
 
 	@Id
 	@UuidGenerator
@@ -129,17 +131,9 @@ public class ErrandEntity {
 	}
 
 	@PrePersist
-	void onCreate() {
-		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
-		created = timestamp;
-		touched = timestamp;
-	}
-
 	@PreUpdate
-	void onUpdate() {
-		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
-		modified = timestamp;
-		touched = timestamp;
+	void onCreateOrUpdate() {
+		touched = now(systemDefault()).truncatedTo(MILLIS);
 	}
 
 	public String getId() {
@@ -367,6 +361,7 @@ public class ErrandEntity {
 		return created;
 	}
 
+	@Override
 	public void setCreated(final OffsetDateTime created) {
 		this.created = created;
 	}
@@ -380,6 +375,7 @@ public class ErrandEntity {
 		return modified;
 	}
 
+	@Override
 	public void setModified(final OffsetDateTime modified) {
 		this.modified = modified;
 	}

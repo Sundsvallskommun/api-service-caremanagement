@@ -143,24 +143,12 @@ class ErrandEntityTest {
 	}
 
 	@Test
-	void onCreateSetsCreatedAndTouched() {
+	void onCreateOrUpdateSetsTouched() {
 		final var entity = new ErrandEntity().withStatus("status");
 
-		entity.onCreate();
+		entity.onCreateOrUpdate();
 
-		assertThat(entity.getCreated()).isCloseTo(now(), within(1, SECONDS));
 		assertThat(entity.getTouched()).isCloseTo(now(), within(1, SECONDS));
-		assertThat(entity).hasAllNullFieldsOrPropertiesExcept("created", "touched", "status");
-	}
-
-	@Test
-	void onUpdateSetsModifiedAndTouched() {
-		final var entity = new ErrandEntity().withStatus("status");
-
-		entity.onUpdate();
-
-		assertThat(entity.getModified()).isCloseTo(now(), within(1, SECONDS));
-		assertThat(entity.getTouched()).isCloseTo(now(), within(1, SECONDS));
-		assertThat(entity).hasAllNullFieldsOrPropertiesExcept("modified", "touched", "status");
+		assertThat(entity).hasAllNullFieldsOrPropertiesExcept("touched", "status");
 	}
 }

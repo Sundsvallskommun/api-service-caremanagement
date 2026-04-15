@@ -1,7 +1,10 @@
 package se.sundsvall.caremanagement.integration.db.model;
 
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
@@ -9,11 +12,18 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEqualsExclud
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCodeExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToStringExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static com.google.code.beanmatchers.BeanMatchers.registerValueGenerator;
+import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class StakeholderEntityTest {
+
+	@BeforeAll
+	static void setup() {
+		registerValueGenerator(() -> now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+	}
 
 	@Test
 	void testBean() {
@@ -42,6 +52,8 @@ class StakeholderEntityTest {
 		final var country = "SE";
 		final var contactChannels = List.of(TagEmbeddable.create().withKey("EMAIL").withValue("a@b.se"));
 		final var parameters = List.of(StakeholderParameterEntity.create().withKey("k").withDisplayName("d").withValues(List.of("v")));
+		final var created = OffsetDateTime.now().minusDays(1);
+		final var modified = OffsetDateTime.now();
 
 		final var entity = StakeholderEntity.create()
 			.withId(id)
@@ -58,7 +70,9 @@ class StakeholderEntityTest {
 			.withCity(city)
 			.withCountry(country)
 			.withContactChannels(contactChannels)
-			.withParameters(parameters);
+			.withParameters(parameters)
+			.withCreated(created)
+			.withModified(modified);
 
 		assertThat(entity).hasNoNullFieldsOrProperties();
 		assertThat(entity.getId()).isEqualTo(id);
@@ -76,6 +90,8 @@ class StakeholderEntityTest {
 		assertThat(entity.getCountry()).isEqualTo(country);
 		assertThat(entity.getContactChannels()).isEqualTo(contactChannels);
 		assertThat(entity.getParameters()).isEqualTo(parameters);
+		assertThat(entity.getCreated()).isEqualTo(created);
+		assertThat(entity.getModified()).isEqualTo(modified);
 	}
 
 	@Test

@@ -4,6 +4,7 @@ import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
@@ -12,18 +13,22 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
 import static jakarta.persistence.CascadeType.ALL;
+import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 @Entity
 @Table(name = "stakeholder",
 	indexes = {
 		@Index(name = "idx_stakeholder_external_id_role_errand_id", columnList = "external_id, `role`, errand_id")
 	})
-public class StakeholderEntity {
+@EntityListeners(AuditableListener.class)
+public class StakeholderEntity implements Auditable {
 
 	@Id
 	@UuidGenerator
@@ -81,6 +86,14 @@ public class StakeholderEntity {
 
 	@OneToMany(mappedBy = "stakeholderEntity", cascade = ALL, orphanRemoval = true)
 	private List<StakeholderParameterEntity> parameters;
+
+	@Column(name = "created")
+	@TimeZoneStorage(NORMALIZE)
+	private OffsetDateTime created;
+
+	@Column(name = "modified")
+	@TimeZoneStorage(NORMALIZE)
+	private OffsetDateTime modified;
 
 	public static StakeholderEntity create() {
 		return new StakeholderEntity();
@@ -281,6 +294,34 @@ public class StakeholderEntity {
 		return this;
 	}
 
+	public OffsetDateTime getCreated() {
+		return created;
+	}
+
+	@Override
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
+	public StakeholderEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
+		return this;
+	}
+
+	public OffsetDateTime getModified() {
+		return modified;
+	}
+
+	@Override
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
+	}
+
+	public StakeholderEntity withModified(final OffsetDateTime modified) {
+		this.modified = modified;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (this == o) {
@@ -292,13 +333,14 @@ public class StakeholderEntity {
 		final StakeholderEntity that = (StakeholderEntity) o;
 		return Objects.equals(id, that.id) && Objects.equals(externalId, that.externalId) && Objects.equals(externalIdType, that.externalIdType) && Objects.equals(role, that.role)
 			&& Objects.equals(firstName, that.firstName) && Objects.equals(lastName, that.lastName) && Objects.equals(organizationName, that.organizationName) && Objects.equals(address, that.address) && Objects.equals(careOf, that.careOf)
-			&& Objects.equals(zipCode, that.zipCode) && Objects.equals(city, that.city) && Objects.equals(country, that.country) && Objects.equals(contactChannels, that.contactChannels) && Objects.equals(parameters, that.parameters);
+			&& Objects.equals(zipCode, that.zipCode) && Objects.equals(city, that.city) && Objects.equals(country, that.country) && Objects.equals(contactChannels, that.contactChannels) && Objects.equals(parameters, that.parameters)
+			&& Objects.equals(created, that.created) && Objects.equals(modified, that.modified);
 	}
 
 	// errandEntity intentionally excluded to avoid infinite recursion (bidirectional relationship).
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, externalId, externalIdType, role, firstName, lastName, organizationName, address, careOf, zipCode, city, country, contactChannels, parameters);
+		return Objects.hash(id, externalId, externalIdType, role, firstName, lastName, organizationName, address, careOf, zipCode, city, country, contactChannels, parameters, created, modified);
 	}
 
 	@Override
@@ -319,6 +361,8 @@ public class StakeholderEntity {
 			", country='" + country + '\'' +
 			", contactChannels=" + contactChannels +
 			", parameters=" + parameters +
+			", created=" + created +
+			", modified=" + modified +
 			'}';
 	}
 }

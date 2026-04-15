@@ -2,25 +2,21 @@ package se.sundsvall.caremanagement.integration.db.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
 import static jakarta.persistence.CascadeType.ALL;
-import static java.time.OffsetDateTime.now;
-import static java.time.temporal.ChronoUnit.MILLIS;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 @Entity
@@ -35,7 +31,8 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 			"attachment_data_id"
 		})
 	})
-public class AttachmentEntity {
+@EntityListeners(AuditableListener.class)
+public class AttachmentEntity implements Auditable {
 
 	@Id
 	@UuidGenerator
@@ -75,16 +72,6 @@ public class AttachmentEntity {
 
 	public static AttachmentEntity create() {
 		return new AttachmentEntity();
-	}
-
-	@PrePersist
-	void onCreate() {
-		created = now(ZoneId.systemDefault()).truncatedTo(MILLIS);
-	}
-
-	@PreUpdate
-	void onUpdate() {
-		modified = now(ZoneId.systemDefault()).truncatedTo(MILLIS);
 	}
 
 	public String getId() {
@@ -182,6 +169,7 @@ public class AttachmentEntity {
 		return created;
 	}
 
+	@Override
 	public void setCreated(final OffsetDateTime created) {
 		this.created = created;
 	}
@@ -195,6 +183,7 @@ public class AttachmentEntity {
 		return modified;
 	}
 
+	@Override
 	public void setModified(final OffsetDateTime modified) {
 		this.modified = modified;
 	}

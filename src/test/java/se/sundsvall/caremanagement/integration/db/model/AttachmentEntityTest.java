@@ -16,7 +16,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static java.time.OffsetDateTime.now;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
@@ -69,24 +68,6 @@ class AttachmentEntityTest {
 		assertThat(entity.getMimeType()).isEqualTo(mimeType);
 		assertThat(entity.getErrandEntity()).isEqualTo(errandEntity);
 		assertThat(entity.getFileSize()).isEqualTo(fileSize);
-	}
-
-	@Test
-	void testOnCreate() {
-		final var entity = new AttachmentEntity();
-		entity.onCreate();
-
-		assertThat(entity.getCreated()).isCloseTo(now(), within(1, SECONDS));
-		assertThat(entity).hasAllNullFieldsOrPropertiesExcept("created");
-	}
-
-	@Test
-	void testOnUpdate() {
-		final var entity = new AttachmentEntity();
-		entity.onUpdate();
-
-		assertThat(entity.getModified()).isCloseTo(now(), within(1, SECONDS));
-		assertThat(entity).hasAllNullFieldsOrPropertiesExcept("modified");
 	}
 
 	@Test

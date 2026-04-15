@@ -2,11 +2,10 @@ package se.sundsvall.caremanagement.integration.db.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
@@ -14,9 +13,6 @@ import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 
 import static jakarta.persistence.GenerationType.IDENTITY;
-import static java.time.OffsetDateTime.now;
-import static java.time.ZoneId.systemDefault;
-import static java.time.temporal.ChronoUnit.MILLIS;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 @Entity
@@ -28,7 +24,8 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 		"namespace", "municipality_id"
 	})
 })
-public class NamespaceConfigEntity {
+@EntityListeners(AuditableListener.class)
+public class NamespaceConfigEntity implements Auditable {
 
 	@Id
 	@GeneratedValue(strategy = IDENTITY)
@@ -128,6 +125,7 @@ public class NamespaceConfigEntity {
 		return created;
 	}
 
+	@Override
 	public void setCreated(final OffsetDateTime created) {
 		this.created = created;
 	}
@@ -141,6 +139,7 @@ public class NamespaceConfigEntity {
 		return modified;
 	}
 
+	@Override
 	public void setModified(final OffsetDateTime modified) {
 		this.modified = modified;
 	}
@@ -148,16 +147,6 @@ public class NamespaceConfigEntity {
 	public NamespaceConfigEntity withModified(final OffsetDateTime modified) {
 		this.modified = modified;
 		return this;
-	}
-
-	@PrePersist
-	void onCreate() {
-		created = now(systemDefault()).truncatedTo(MILLIS);
-	}
-
-	@PreUpdate
-	void onUpdate() {
-		modified = now(systemDefault()).truncatedTo(MILLIS);
 	}
 
 	@Override

@@ -86,6 +86,8 @@
         zip_code varchar(255),
         city varchar(255),
         country varchar(255),
+        created datetime(6),
+        modified datetime(6),
         primary key (id)
     ) engine=InnoDB;
 
