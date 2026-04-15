@@ -97,7 +97,7 @@ public class ErrandEntity {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "contact_reason_id", foreignKey = @ForeignKey(name = "fk_errand_contact_reason_id"))
-	private ContactReasonEntity contactReason;
+	private LookupEntity contactReason;
 
 	@Column(name = "contact_reason_description", length = 4096)
 	private String contactReasonDescription;
@@ -298,15 +298,15 @@ public class ErrandEntity {
 		return this;
 	}
 
-	public ContactReasonEntity getContactReason() {
+	public LookupEntity getContactReason() {
 		return contactReason;
 	}
 
-	public void setContactReason(final ContactReasonEntity contactReason) {
+	public void setContactReason(final LookupEntity contactReason) {
 		this.contactReason = contactReason;
 	}
 
-	public ErrandEntity withContactReason(final ContactReasonEntity contactReason) {
+	public ErrandEntity withContactReason(final LookupEntity contactReason) {
 		this.contactReason = contactReason;
 		return this;
 	}

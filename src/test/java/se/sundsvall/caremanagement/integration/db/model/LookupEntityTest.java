@@ -12,13 +12,11 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static com.google.code.beanmatchers.BeanMatchers.registerValueGenerator;
 import static java.time.OffsetDateTime.now;
-import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
-class ContactReasonEntityTest {
+class LookupEntityTest {
 
 	@BeforeAll
 	static void setup() {
@@ -27,7 +25,7 @@ class ContactReasonEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(ContactReasonEntity.class, allOf(
+		assertThat(LookupEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -41,18 +39,20 @@ class ContactReasonEntityTest {
 		final var id = 1L;
 		final var modified = OffsetDateTime.now();
 		final var municipalityId = "municipalityId";
-		final var name = "NEW_APPLICATION";
-		final var displayName = "Ny ansökan";
+		final var name = "name";
+		final var displayName = "displayName";
 		final var namespace = "namespace";
+		final var kind = LookupKind.CATEGORY;
 
-		final var entity = ContactReasonEntity.create()
+		final var entity = LookupEntity.create()
 			.withCreated(created)
 			.withId(id)
 			.withModified(modified)
 			.withMunicipalityId(municipalityId)
 			.withName(name)
 			.withDisplayName(displayName)
-			.withNamespace(namespace);
+			.withNamespace(namespace)
+			.withKind(kind);
 
 		assertThat(entity).hasNoNullFieldsOrProperties();
 		assertThat(entity.getCreated()).isEqualTo(created);
@@ -62,29 +62,12 @@ class ContactReasonEntityTest {
 		assertThat(entity.getName()).isEqualTo(name);
 		assertThat(entity.getDisplayName()).isEqualTo(displayName);
 		assertThat(entity.getNamespace()).isEqualTo(namespace);
-	}
-
-	@Test
-	void testOnCreate() {
-		final var entity = ContactReasonEntity.create();
-		entity.onCreate();
-
-		assertThat(entity.getCreated()).isCloseTo(now(), within(1, SECONDS));
-		assertThat(entity).hasAllNullFieldsOrPropertiesExcept("created");
-	}
-
-	@Test
-	void testOnUpdate() {
-		final var entity = ContactReasonEntity.create();
-		entity.onUpdate();
-
-		assertThat(entity.getModified()).isCloseTo(now(), within(1, SECONDS));
-		assertThat(entity).hasAllNullFieldsOrPropertiesExcept("modified");
+		assertThat(entity.getKind()).isEqualTo(kind);
 	}
 
 	@Test
 	void testNoDirtOnCreatedBean() {
-		assertThat(ContactReasonEntity.create()).hasAllNullFieldsOrProperties();
-		assertThat(new ContactReasonEntity()).hasAllNullFieldsOrProperties();
+		assertThat(LookupEntity.create()).hasAllNullFieldsOrProperties();
+		assertThat(new LookupEntity()).hasAllNullFieldsOrProperties();
 	}
 }

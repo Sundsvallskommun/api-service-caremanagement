@@ -19,13 +19,14 @@
         primary key (id)
     ) engine=InnoDB;
 
-    create table category (
+    create table lookup (
         created datetime(6),
         id bigint not null auto_increment,
         modified datetime(6),
+        kind varchar(32) not null,
+        name varchar(255) not null,
         display_name varchar(255),
         municipality_id varchar(8) not null,
-        name varchar(255) not null,
         namespace varchar(32) not null,
         primary key (id)
     ) engine=InnoDB;
@@ -47,17 +48,6 @@
         title varchar(255),
         type varchar(128),
         description longtext,
-        primary key (id)
-    ) engine=InnoDB;
-
-    create table contact_reason (
-        created datetime(6),
-        id bigint not null auto_increment,
-        modified datetime(6),
-        display_name varchar(255),
-        municipality_id varchar(8) not null,
-        namespace varchar(32) not null,
-        name varchar(255),
         primary key (id)
     ) engine=InnoDB;
 
@@ -129,39 +119,6 @@
         primary key (id)
     ) engine=InnoDB;
 
-    create table role (
-        created datetime(6),
-        id bigint not null auto_increment,
-        modified datetime(6),
-        display_name varchar(255),
-        municipality_id varchar(8) not null,
-        name varchar(255) not null,
-        namespace varchar(32) not null,
-        primary key (id)
-    ) engine=InnoDB;
-
-    create table status (
-        created datetime(6),
-        id bigint not null auto_increment,
-        modified datetime(6),
-        display_name varchar(255),
-        municipality_id varchar(8) not null,
-        name varchar(255) not null,
-        namespace varchar(32) not null,
-        primary key (id)
-    ) engine=InnoDB;
-
-    create table `type` (
-        created datetime(6),
-        id bigint not null auto_increment,
-        modified datetime(6),
-        display_name varchar(255),
-        municipality_id varchar(8) not null,
-        name varchar(255) not null,
-        namespace varchar(32) not null,
-        primary key (id)
-    ) engine=InnoDB;
-
     create table shedlock (
         name varchar(64) not null,
         lock_until timestamp(3) not null default current_timestamp(3) on update current_timestamp(3),
@@ -175,8 +132,8 @@
     create index idx_attachment_namespace on attachment (namespace);
     alter table if exists attachment add constraint uq_attachment_data_id unique (attachment_data_id);
 
-    create index idx_category_namespace_municipality_id on category (namespace, municipality_id);
-    alter table if exists category add constraint uq_category_namespace_municipality_id_name unique (namespace, municipality_id, name);
+    create index idx_lookup_kind_namespace_municipality_id on lookup (kind, namespace, municipality_id);
+    alter table if exists lookup add constraint uq_lookup_kind_namespace_municipality_id_name unique (kind, namespace, municipality_id, name);
 
     create index idx_errand_id on errand (id);
     create index idx_errand_namespace on errand (namespace);
@@ -190,9 +147,6 @@
     create index idx_errand_municipality_id_namespace_status_modified on errand (municipality_id, namespace, status, modified);
     create index idx_errand_municipality_id_namespace_created on errand (municipality_id, namespace, created);
     create index idx_errand_municipality_id_namespace_touched on errand (municipality_id, namespace, touched);
-
-    create index idx_contact_reason_namespace_municipality_id on contact_reason (namespace, municipality_id);
-    alter table if exists contact_reason add constraint uq_contact_reason_namespace_municipality_id_name unique (namespace, municipality_id, name);
 
     create index idx_external_tag_errand_id on external_tag (errand_id);
     create index idx_external_tag_key on external_tag (`key`);
@@ -208,15 +162,6 @@
     create index idx_namespace_config_municipality_id on namespace_config (municipality_id);
     alter table if exists namespace_config add constraint uq_namespace_config_namespace_municipality_id unique (namespace, municipality_id);
 
-    create index idx_role_namespace_municipality_id on role (namespace, municipality_id);
-    alter table if exists role add constraint uq_role_namespace_municipality_id_name unique (namespace, municipality_id, name);
-
-    create index idx_status_namespace_municipality_id on status (namespace, municipality_id);
-    alter table if exists status add constraint uq_status_namespace_municipality_id_name unique (namespace, municipality_id, name);
-
-    create index idx_type_namespace_municipality_id on `type` (namespace, municipality_id);
-    alter table if exists `type` add constraint uq_type_namespace_municipality_id_name unique (namespace, municipality_id, name);
-
     alter table if exists attachment
         add constraint fk_attachment_data_attachment
         foreign key (attachment_data_id)
@@ -230,7 +175,7 @@
     alter table if exists errand
         add constraint fk_errand_contact_reason_id
         foreign key (contact_reason_id)
-        references contact_reason (id);
+        references lookup (id);
 
     alter table if exists external_tag
         add constraint fk_errand_external_tag_errand_id

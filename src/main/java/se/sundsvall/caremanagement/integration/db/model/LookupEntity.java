@@ -2,41 +2,50 @@ package se.sundsvall.caremanagement.integration.db.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 
 import static jakarta.persistence.GenerationType.IDENTITY;
-import static java.time.OffsetDateTime.now;
-import static java.time.temporal.ChronoUnit.MILLIS;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
+/**
+ * Generic namespace-scoped, municipality-scoped named reference value. The {@code kind} discriminator separates what
+ * would otherwise have been five near-identical tables (category/status/type/role/contact_reason) into a single table
+ * with one entity.
+ * Typed service facades live above this class.
+ */
 @Entity
-@Table(name = "contact_reason",
+@Table(name = "lookup",
 	indexes = {
-		@Index(name = "idx_contact_reason_namespace_municipality_id", columnList = "namespace, municipality_id")
+		@Index(name = "idx_lookup_kind_namespace_municipality_id", columnList = "kind, namespace, municipality_id")
 	},
 	uniqueConstraints = {
-		@UniqueConstraint(name = "uq_contact_reason_namespace_municipality_id_name", columnNames = {
-			"namespace", "municipality_id", "name"
+		@UniqueConstraint(name = "uq_lookup_kind_namespace_municipality_id_name", columnNames = {
+			"kind", "namespace", "municipality_id", "name"
 		})
 	})
-public class ContactReasonEntity {
+@EntityListeners(AuditableListener.class)
+public class LookupEntity implements Auditable {
 
 	@Id
 	@GeneratedValue(strategy = IDENTITY)
 	@Column(name = "id")
 	private Long id;
 
-	@Column(name = "name")
+	@Enumerated(EnumType.STRING)
+	@Column(name = "kind", nullable = false, length = 32)
+	private LookupKind kind;
+
+	@Column(name = "name", nullable = false)
 	private String name;
 
 	@Column(name = "display_name")
@@ -56,18 +65,8 @@ public class ContactReasonEntity {
 	@TimeZoneStorage(NORMALIZE)
 	private OffsetDateTime modified;
 
-	public static ContactReasonEntity create() {
-		return new ContactReasonEntity();
-	}
-
-	@PrePersist
-	void onCreate() {
-		created = now(ZoneId.systemDefault()).truncatedTo(MILLIS);
-	}
-
-	@PreUpdate
-	void onUpdate() {
-		modified = now(ZoneId.systemDefault()).truncatedTo(MILLIS);
+	public static LookupEntity create() {
+		return new LookupEntity();
 	}
 
 	public Long getId() {
@@ -78,8 +77,21 @@ public class ContactReasonEntity {
 		this.id = id;
 	}
 
-	public ContactReasonEntity withId(final Long id) {
+	public LookupEntity withId(final Long id) {
 		this.id = id;
+		return this;
+	}
+
+	public LookupKind getKind() {
+		return kind;
+	}
+
+	public void setKind(final LookupKind kind) {
+		this.kind = kind;
+	}
+
+	public LookupEntity withKind(final LookupKind kind) {
+		this.kind = kind;
 		return this;
 	}
 
@@ -91,7 +103,7 @@ public class ContactReasonEntity {
 		this.name = name;
 	}
 
-	public ContactReasonEntity withName(final String name) {
+	public LookupEntity withName(final String name) {
 		this.name = name;
 		return this;
 	}
@@ -104,7 +116,7 @@ public class ContactReasonEntity {
 		this.displayName = displayName;
 	}
 
-	public ContactReasonEntity withDisplayName(final String displayName) {
+	public LookupEntity withDisplayName(final String displayName) {
 		this.displayName = displayName;
 		return this;
 	}
@@ -117,7 +129,7 @@ public class ContactReasonEntity {
 		this.municipalityId = municipalityId;
 	}
 
-	public ContactReasonEntity withMunicipalityId(final String municipalityId) {
+	public LookupEntity withMunicipalityId(final String municipalityId) {
 		this.municipalityId = municipalityId;
 		return this;
 	}
@@ -130,7 +142,7 @@ public class ContactReasonEntity {
 		this.namespace = namespace;
 	}
 
-	public ContactReasonEntity withNamespace(final String namespace) {
+	public LookupEntity withNamespace(final String namespace) {
 		this.namespace = namespace;
 		return this;
 	}
@@ -139,11 +151,12 @@ public class ContactReasonEntity {
 		return created;
 	}
 
+	@Override
 	public void setCreated(final OffsetDateTime created) {
 		this.created = created;
 	}
 
-	public ContactReasonEntity withCreated(final OffsetDateTime created) {
+	public LookupEntity withCreated(final OffsetDateTime created) {
 		this.created = created;
 		return this;
 	}
@@ -152,11 +165,12 @@ public class ContactReasonEntity {
 		return modified;
 	}
 
+	@Override
 	public void setModified(final OffsetDateTime modified) {
 		this.modified = modified;
 	}
 
-	public ContactReasonEntity withModified(final OffsetDateTime modified) {
+	public LookupEntity withModified(final OffsetDateTime modified) {
 		this.modified = modified;
 		return this;
 	}
@@ -169,20 +183,21 @@ public class ContactReasonEntity {
 		if (o == null || getClass() != o.getClass()) {
 			return false;
 		}
-		final ContactReasonEntity that = (ContactReasonEntity) o;
-		return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(displayName, that.displayName) && Objects.equals(municipalityId, that.municipalityId) && Objects.equals(namespace, that.namespace)
-			&& Objects.equals(created, that.created) && Objects.equals(modified, that.modified);
+		final LookupEntity that = (LookupEntity) o;
+		return Objects.equals(id, that.id) && kind == that.kind && Objects.equals(name, that.name) && Objects.equals(displayName, that.displayName)
+			&& Objects.equals(municipalityId, that.municipalityId) && Objects.equals(namespace, that.namespace) && Objects.equals(created, that.created) && Objects.equals(modified, that.modified);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, name, displayName, municipalityId, namespace, created, modified);
+		return Objects.hash(id, kind, name, displayName, municipalityId, namespace, created, modified);
 	}
 
 	@Override
 	public String toString() {
-		return "ContactReasonEntity{" +
+		return "LookupEntity{" +
 			"id=" + id +
+			", kind=" + kind +
 			", name='" + name + '\'' +
 			", displayName='" + displayName + '\'' +
 			", municipalityId='" + municipalityId + '\'' +

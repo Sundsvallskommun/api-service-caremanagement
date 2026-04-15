@@ -301,9 +301,6 @@ public class StakeholderEntity {
 		return Objects.hash(id, externalId, externalIdType, role, firstName, lastName, organizationName, address, careOf, zipCode, city, country, contactChannels, parameters);
 	}
 
-	// TODO(GDPR): encrypt externalId at-rest before exposing entity to production data.
-	// TODO(GDPR): mask externalId/firstName/lastName at logging-layer (e.g. logback converter), NOT in toString
-	// since BeanMatchers requires raw values for testing.
 	@Override
 	public String toString() {
 		return "StakeholderEntity{" +

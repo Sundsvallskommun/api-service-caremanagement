@@ -57,7 +57,7 @@ class ErrandEntityTest {
 		final var attachments = List.of(AttachmentEntity.create().withId(UUID.randomUUID().toString()).withFileName("fileName").withAttachmentData(AttachmentDataEntity.create().withFile(new MariaDbBlob("file".getBytes()))).withMimeType("mimeType"));
 		final var stakeholders = List.of(StakeholderEntity.create().withRole("PATIENT").withFirstName("First").withLastName("Last"));
 		final var parameters = List.of(ParameterEntity.create().withKey("k").withDisplayName("d").withParameterGroup("g").withValues(List.of("v")));
-		final var contactReason = ContactReasonEntity.create().withName("NEW_APPLICATION").withDisplayName("Ny ansökan");
+		final var contactReason = LookupEntity.create().withKind(LookupKind.CONTACT_REASON).withName("NEW_APPLICATION").withDisplayName("Ny ansökan");
 		final var contactReasonDescription = "Brukaren önskar ansöka om hemtjänst";
 
 		final var entity = ErrandEntity.create()
