@@ -8,6 +8,21 @@ openapi:
   name: ${spring.application.name}
   title: ${spring.application.name}
   version: '@project.version@'
+springdoc:
+  swagger-ui:
+    operationsSorter: alpha
+    tagsSorter: alpha
 spring:
   application:
     name: care-management
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+  flyway:
+    enabled: false
+  jpa:
+    properties:
+      jakarta:
+        persistence:
+          schema-generation:
+            database:
+              action: none
