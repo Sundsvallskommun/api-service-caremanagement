@@ -11,31 +11,35 @@ public final class NamespaceConfigMapper {
 
 	public static NamespaceConfig toNamespaceConfig(final NamespaceConfigEntity entity) {
 		return ofNullable(entity)
-			.map(e -> NamespaceConfig.create()
-				.withId(e.getId())
-				.withDisplayName(e.getDisplayName())
-				.withShortCode(e.getShortCode())
-				.withCreated(e.getCreated())
-				.withModified(e.getModified()))
+			.map(configEntity -> NamespaceConfig.create()
+				.withId(configEntity.getId())
+				.withDisplayName(configEntity.getDisplayName())
+				.withShortCode(configEntity.getShortCode())
+				.withCreated(configEntity.getCreated())
+				.withModified(configEntity.getModified()))
 			.orElse(null);
 	}
 
 	public static NamespaceConfigEntity toNamespaceConfigEntity(final NamespaceConfig config, final String namespace, final String municipalityId) {
 		return ofNullable(config)
-			.map(c -> NamespaceConfigEntity.create()
+			.map(source -> NamespaceConfigEntity.create()
 				.withNamespace(namespace)
 				.withMunicipalityId(municipalityId)
-				.withDisplayName(c.getDisplayName())
-				.withShortCode(c.getShortCode()))
+				.withDisplayName(source.getDisplayName())
+				.withShortCode(source.getShortCode()))
 			.orElse(null);
 	}
 
+	/**
+	 * Applies non-null fields from {@code source} onto {@code entity}. Null fields on the source mean
+	 * "leave existing value untouched" (PATCH semantics).
+	 */
 	public static NamespaceConfigEntity updateNamespaceConfigEntity(final NamespaceConfigEntity entity, final NamespaceConfig source) {
 		if (entity == null || source == null) {
 			return entity;
 		}
-		entity.setDisplayName(source.getDisplayName());
-		entity.setShortCode(source.getShortCode());
+		ofNullable(source.getDisplayName()).ifPresent(entity::setDisplayName);
+		ofNullable(source.getShortCode()).ifPresent(entity::setShortCode);
 		return entity;
 	}
 }

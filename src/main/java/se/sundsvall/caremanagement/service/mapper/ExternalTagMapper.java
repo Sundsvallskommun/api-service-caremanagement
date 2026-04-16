@@ -13,17 +13,17 @@ public final class ExternalTagMapper {
 
 	public static ExternalTag toExternalTag(final TagEmbeddable entity) {
 		return ofNullable(entity)
-			.map(e -> ExternalTag.create()
-				.withKey(e.getKey())
-				.withValue(e.getValue()))
+			.map(tagEmbeddable -> ExternalTag.create()
+				.withKey(tagEmbeddable.getKey())
+				.withValue(tagEmbeddable.getValue()))
 			.orElse(null);
 	}
 
 	public static TagEmbeddable toTagEmbeddable(final ExternalTag tag) {
 		return ofNullable(tag)
-			.map(t -> TagEmbeddable.create()
-				.withKey(t.getKey())
-				.withValue(t.getValue()))
+			.map(externalTag -> TagEmbeddable.create()
+				.withKey(externalTag.getKey())
+				.withValue(externalTag.getValue()))
 			.orElse(null);
 	}
 

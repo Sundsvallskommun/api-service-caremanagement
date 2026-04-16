@@ -20,13 +20,13 @@ public final class AttachmentMapper {
 
 	public static Attachment toAttachment(final AttachmentEntity entity) {
 		return ofNullable(entity)
-			.map(e -> Attachment.create()
-				.withId(e.getId())
-				.withFileName(e.getFileName())
-				.withMimeType(e.getMimeType())
-				.withFileSize(e.getFileSize())
-				.withCreated(e.getCreated())
-				.withModified(e.getModified()))
+			.map(attachmentEntity -> Attachment.create()
+				.withId(attachmentEntity.getId())
+				.withFileName(attachmentEntity.getFileName())
+				.withMimeType(attachmentEntity.getMimeType())
+				.withFileSize(attachmentEntity.getFileSize())
+				.withCreated(attachmentEntity.getCreated())
+				.withModified(attachmentEntity.getModified()))
 			.orElse(null);
 	}
 
@@ -44,8 +44,8 @@ public final class AttachmentMapper {
 				.withFileSize(Math.toIntExact(file.getSize()))
 				.withAttachmentData(AttachmentDataEntity.create()
 					.withFile(Hibernate.getLobHelper().createBlob(file.getInputStream(), file.getSize())));
-		} catch (final IOException e) {
-			throw Problem.valueOf(BAD_REQUEST, "Could not read input stream: %s".formatted(e.getMessage()));
+		} catch (final IOException ioException) {
+			throw Problem.valueOf(BAD_REQUEST, "Could not read input stream: %s".formatted(ioException.getMessage()));
 		}
 	}
 

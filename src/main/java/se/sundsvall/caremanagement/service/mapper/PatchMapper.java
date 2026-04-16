@@ -35,11 +35,7 @@ public final class PatchMapper {
 		ofNullable(patch.getAssignedUserId()).ifPresent(entity::setAssignedUserId);
 		ofNullable(patch.getContactReasonDescription()).ifPresent(entity::setContactReasonDescription);
 		ofNullable(patch.getExternalTags()).ifPresent(tags -> entity.setExternalTags(new ArrayList<>(toTagEmbeddableList(tags))));
-		// contactReason: only assign if caller resolved a lookup. To clear the reference the caller passes a separate
-		// signal (null contactReason in PatchErrand means "don't touch", matching casedata semantics).
-		if (patch.getContactReason() != null) {
-			entity.setContactReason(resolvedContactReason);
-		}
+		ofNullable(patch.getContactReason()).ifPresent(_ -> entity.setContactReason(resolvedContactReason));
 		return entity;
 	}
 }

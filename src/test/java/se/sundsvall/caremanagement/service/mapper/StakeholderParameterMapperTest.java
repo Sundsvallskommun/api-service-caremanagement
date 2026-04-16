@@ -86,13 +86,14 @@ class StakeholderParameterMapperTest {
 	}
 
 	@Test
-	void updateStakeholderParameterEntity_nullValues() {
+	void updateStakeholderParameterEntity_nullSourceValuesPreservesExisting() {
 		final var entity = StakeholderParameterEntity.create().withValues(new ArrayList<>(List.of("a")));
 		final var source = StakeholderParameter.create().withKey("k");
 
 		final var result = StakeholderParameterMapper.updateStakeholderParameterEntity(entity, source);
 
-		assertThat(result.getValues()).isNull();
+		assertThat(result.getKey()).isEqualTo("k");
+		assertThat(result.getValues()).containsExactly("a");
 	}
 
 	@Test

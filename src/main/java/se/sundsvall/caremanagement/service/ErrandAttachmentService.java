@@ -46,18 +46,15 @@ public class ErrandAttachmentService {
 		return saved.getId();
 	}
 
-	@Transactional(readOnly = true)
 	public List<Attachment> readAttachments(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = findErrand(municipalityId, namespace, errandId);
 		return toAttachmentList(errand.getAttachments());
 	}
 
-	@Transactional(readOnly = true)
 	public Attachment readAttachment(final String municipalityId, final String namespace, final String errandId, final String attachmentId) {
 		return toAttachment(findAttachment(municipalityId, namespace, errandId, attachmentId));
 	}
 
-	@Transactional(readOnly = true)
 	public void streamAttachmentFile(final String municipalityId, final String namespace, final String errandId, final String attachmentId, final HttpServletResponse response) {
 		final var attachment = findAttachment(municipalityId, namespace, errandId, attachmentId);
 		try {
@@ -65,15 +62,15 @@ public class ErrandAttachmentService {
 			response.addHeader(CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getFileName() + "\"");
 			ofNullable(attachment.getFileSize()).ifPresent(response::setContentLength);
 			StreamUtils.copy(attachment.getAttachmentData().getFile().getBinaryStream(), response.getOutputStream());
-		} catch (final IOException | SQLException e) {
-			throw Problem.valueOf(INTERNAL_SERVER_ERROR, STREAM_ERROR_MESSAGE.formatted(e.getClass().getSimpleName(), attachment.getId(), e.getMessage()));
+		} catch (final IOException | SQLException exception) {
+			throw Problem.valueOf(INTERNAL_SERVER_ERROR, STREAM_ERROR_MESSAGE.formatted(exception.getClass().getSimpleName(), attachment.getId(), exception.getMessage()));
 		}
 	}
 
 	public void deleteAttachment(final String municipalityId, final String namespace, final String errandId, final String attachmentId) {
 		final var errand = findErrand(municipalityId, namespace, errandId);
 		final var attachment = errand.getAttachments().stream()
-			.filter(a -> a.getId().equals(attachmentId))
+			.filter(entity -> entity.getId().equals(attachmentId))
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ATTACHMENT_NOT_FOUND_MESSAGE.formatted(attachmentId, errandId, namespace, municipalityId)));
 		errand.getAttachments().remove(attachment);

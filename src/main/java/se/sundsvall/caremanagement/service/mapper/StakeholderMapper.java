@@ -19,21 +19,21 @@ public final class StakeholderMapper {
 
 	public static Stakeholder toStakeholder(final StakeholderEntity entity) {
 		return ofNullable(entity)
-			.map(e -> Stakeholder.create()
-				.withId(e.getId())
-				.withExternalId(e.getExternalId())
-				.withExternalIdType(e.getExternalIdType())
-				.withRole(e.getRole())
-				.withFirstName(e.getFirstName())
-				.withLastName(e.getLastName())
-				.withOrganizationName(e.getOrganizationName())
-				.withAddress(e.getAddress())
-				.withCareOf(e.getCareOf())
-				.withZipCode(e.getZipCode())
-				.withCity(e.getCity())
-				.withCountry(e.getCountry())
-				.withContactChannels(toContactChannelList(e.getContactChannels()))
-				.withParameters(toStakeholderParameterList(e.getParameters())))
+			.map(stakeholderEntity -> Stakeholder.create()
+				.withId(stakeholderEntity.getId())
+				.withExternalId(stakeholderEntity.getExternalId())
+				.withExternalIdType(stakeholderEntity.getExternalIdType())
+				.withRole(stakeholderEntity.getRole())
+				.withFirstName(stakeholderEntity.getFirstName())
+				.withLastName(stakeholderEntity.getLastName())
+				.withOrganizationName(stakeholderEntity.getOrganizationName())
+				.withAddress(stakeholderEntity.getAddress())
+				.withCareOf(stakeholderEntity.getCareOf())
+				.withZipCode(stakeholderEntity.getZipCode())
+				.withCity(stakeholderEntity.getCity())
+				.withCountry(stakeholderEntity.getCountry())
+				.withContactChannels(toContactChannelList(stakeholderEntity.getContactChannels()))
+				.withParameters(toStakeholderParameterList(stakeholderEntity.getParameters())))
 			.orElse(null);
 	}
 
@@ -41,7 +41,7 @@ public final class StakeholderMapper {
 		if (stakeholder == null) {
 			return null;
 		}
-		final var entity = StakeholderEntity.create()
+		final var stakeholderEntity = StakeholderEntity.create()
 			.withErrandEntity(errandEntity)
 			.withExternalId(stakeholder.getExternalId())
 			.withExternalIdType(stakeholder.getExternalIdType())
@@ -55,26 +55,29 @@ public final class StakeholderMapper {
 			.withCity(stakeholder.getCity())
 			.withCountry(stakeholder.getCountry())
 			.withContactChannels(new ArrayList<>(toTagEmbeddableList(stakeholder.getContactChannels())));
-		entity.setParameters(new ArrayList<>(toStakeholderParameterEntityList(stakeholder.getParameters(), entity)));
-		return entity;
+		return stakeholderEntity.withParameters(new ArrayList<>(toStakeholderParameterEntityList(stakeholder.getParameters(), stakeholderEntity)));
 	}
 
+	/**
+	 * Applies non-null fields from {@code source} onto {@code entity}. Null fields on the source mean
+	 * "leave existing value untouched" (PATCH semantics).
+	 */
 	public static StakeholderEntity updateStakeholderEntity(final StakeholderEntity entity, final Stakeholder source) {
 		if (entity == null || source == null) {
 			return entity;
 		}
-		entity.setExternalId(source.getExternalId());
-		entity.setExternalIdType(source.getExternalIdType());
-		entity.setRole(source.getRole());
-		entity.setFirstName(source.getFirstName());
-		entity.setLastName(source.getLastName());
-		entity.setOrganizationName(source.getOrganizationName());
-		entity.setAddress(source.getAddress());
-		entity.setCareOf(source.getCareOf());
-		entity.setZipCode(source.getZipCode());
-		entity.setCity(source.getCity());
-		entity.setCountry(source.getCountry());
-		entity.setContactChannels(new ArrayList<>(toTagEmbeddableList(source.getContactChannels())));
+		ofNullable(source.getExternalId()).ifPresent(entity::setExternalId);
+		ofNullable(source.getExternalIdType()).ifPresent(entity::setExternalIdType);
+		ofNullable(source.getRole()).ifPresent(entity::setRole);
+		ofNullable(source.getFirstName()).ifPresent(entity::setFirstName);
+		ofNullable(source.getLastName()).ifPresent(entity::setLastName);
+		ofNullable(source.getOrganizationName()).ifPresent(entity::setOrganizationName);
+		ofNullable(source.getAddress()).ifPresent(entity::setAddress);
+		ofNullable(source.getCareOf()).ifPresent(entity::setCareOf);
+		ofNullable(source.getZipCode()).ifPresent(entity::setZipCode);
+		ofNullable(source.getCity()).ifPresent(entity::setCity);
+		ofNullable(source.getCountry()).ifPresent(entity::setCountry);
+		ofNullable(source.getContactChannels()).ifPresent(channels -> entity.setContactChannels(new ArrayList<>(toTagEmbeddableList(channels))));
 		return entity;
 	}
 
@@ -86,7 +89,7 @@ public final class StakeholderMapper {
 
 	public static List<StakeholderEntity> toStakeholderEntityList(final List<Stakeholder> stakeholders, final ErrandEntity errandEntity) {
 		return ofNullable(stakeholders).orElse(emptyList()).stream()
-			.map(s -> toStakeholderEntity(s, errandEntity))
+			.map(stakeholder -> toStakeholderEntity(stakeholder, errandEntity))
 			.toList();
 	}
 }

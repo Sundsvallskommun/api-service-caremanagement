@@ -27,6 +27,7 @@ import static jakarta.persistence.CascadeType.ALL;
 import static java.time.OffsetDateTime.now;
 import static java.time.ZoneId.systemDefault;
 import static java.time.temporal.ChronoUnit.MILLIS;
+import static java.util.Optional.ofNullable;
 import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
@@ -386,13 +387,9 @@ public class ErrandEntity implements Auditable {
 	}
 
 	public OffsetDateTime getTouched() {
-		if (touched != null) {
-			return touched;
-		}
-		if ((modified != null) && (created != null) && modified.isAfter(created)) {
-			return modified;
-		}
-		return created;
+		return ofNullable(touched)
+			.or(() -> ofNullable(modified).filter(modifiedAt -> created != null && modifiedAt.isAfter(created)))
+			.orElse(created);
 	}
 
 	public void setTouched(final OffsetDateTime touched) {

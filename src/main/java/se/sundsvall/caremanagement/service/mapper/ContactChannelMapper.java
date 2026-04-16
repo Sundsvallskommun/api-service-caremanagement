@@ -13,17 +13,17 @@ public final class ContactChannelMapper {
 
 	public static ContactChannel toContactChannel(final TagEmbeddable entity) {
 		return ofNullable(entity)
-			.map(e -> ContactChannel.create()
-				.withKey(e.getKey())
-				.withValue(e.getValue()))
+			.map(tagEmbeddable -> ContactChannel.create()
+				.withKey(tagEmbeddable.getKey())
+				.withValue(tagEmbeddable.getValue()))
 			.orElse(null);
 	}
 
 	public static TagEmbeddable toTagEmbeddable(final ContactChannel channel) {
 		return ofNullable(channel)
-			.map(c -> TagEmbeddable.create()
-				.withKey(c.getKey())
-				.withValue(c.getValue()))
+			.map(contactChannel -> TagEmbeddable.create()
+				.withKey(contactChannel.getKey())
+				.withValue(contactChannel.getValue()))
 			.orElse(null);
 	}
 

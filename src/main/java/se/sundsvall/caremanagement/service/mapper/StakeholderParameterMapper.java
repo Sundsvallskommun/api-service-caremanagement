@@ -15,31 +15,35 @@ public final class StakeholderParameterMapper {
 
 	public static StakeholderParameter toStakeholderParameter(final StakeholderParameterEntity entity) {
 		return ofNullable(entity)
-			.map(e -> StakeholderParameter.create()
-				.withId(e.getId())
-				.withKey(e.getKey())
-				.withDisplayName(e.getDisplayName())
-				.withValues(ofNullable(e.getValues()).map(ArrayList::new).orElse(null)))
+			.map(parameterEntity -> StakeholderParameter.create()
+				.withId(parameterEntity.getId())
+				.withKey(parameterEntity.getKey())
+				.withDisplayName(parameterEntity.getDisplayName())
+				.withValues(ofNullable(parameterEntity.getValues()).map(ArrayList::new).orElse(null)))
 			.orElse(null);
 	}
 
 	public static StakeholderParameterEntity toStakeholderParameterEntity(final StakeholderParameter parameter, final StakeholderEntity stakeholderEntity) {
 		return ofNullable(parameter)
-			.map(p -> StakeholderParameterEntity.create()
+			.map(source -> StakeholderParameterEntity.create()
 				.withStakeholderEntity(stakeholderEntity)
-				.withKey(p.getKey())
-				.withDisplayName(p.getDisplayName())
-				.withValues(ofNullable(p.getValues()).map(ArrayList::new).orElse(null)))
+				.withKey(source.getKey())
+				.withDisplayName(source.getDisplayName())
+				.withValues(ofNullable(source.getValues()).map(ArrayList::new).orElse(null)))
 			.orElse(null);
 	}
 
+	/**
+	 * Applies non-null fields from {@code source} onto {@code entity}. Null fields on the source mean
+	 * "leave existing value untouched" (PATCH semantics).
+	 */
 	public static StakeholderParameterEntity updateStakeholderParameterEntity(final StakeholderParameterEntity entity, final StakeholderParameter source) {
 		if (entity == null || source == null) {
 			return entity;
 		}
-		entity.setKey(source.getKey());
-		entity.setDisplayName(source.getDisplayName());
-		entity.setValues(ofNullable(source.getValues()).map(ArrayList::new).orElse(null));
+		ofNullable(source.getKey()).ifPresent(entity::setKey);
+		ofNullable(source.getDisplayName()).ifPresent(entity::setDisplayName);
+		ofNullable(source.getValues()).ifPresent(values -> entity.setValues(new ArrayList<>(values)));
 		return entity;
 	}
 
@@ -51,7 +55,7 @@ public final class StakeholderParameterMapper {
 
 	public static List<StakeholderParameterEntity> toStakeholderParameterEntityList(final List<StakeholderParameter> parameters, final StakeholderEntity stakeholderEntity) {
 		return ofNullable(parameters).orElse(emptyList()).stream()
-			.map(p -> toStakeholderParameterEntity(p, stakeholderEntity))
+			.map(parameter -> toStakeholderParameterEntity(parameter, stakeholderEntity))
 			.toList();
 	}
 }

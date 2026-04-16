@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Objects;
 import org.hibernate.annotations.UuidGenerator;
 
+import static java.util.Optional.ofNullable;
+
 @Entity
 @Table(name = "parameter")
 public class ParameterEntity {
@@ -153,7 +155,7 @@ public class ParameterEntity {
 	public String toString() {
 		return "ParameterEntity{" +
 			"id='" + id + '\'' +
-			", errandEntity=" + (errandEntity != null ? errandEntity.getId() : "null") +
+			", errandEntity=" + ofNullable(errandEntity).map(ErrandEntity::getId).orElse("null") +
 			", displayName='" + displayName + '\'' +
 			", parameterGroup='" + parameterGroup + '\'' +
 			", key='" + key + '\'' +

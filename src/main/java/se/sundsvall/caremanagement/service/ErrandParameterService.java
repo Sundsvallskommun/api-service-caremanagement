@@ -57,7 +57,7 @@ public class ErrandParameterService {
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String parameterId) {
 		final var errand = findErrand(municipalityId, namespace, errandId);
 		final var parameter = errand.getParameters().stream()
-			.filter(p -> p.getId().equals(parameterId))
+			.filter(entity -> entity.getId().equals(parameterId))
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, PARAMETER_NOT_FOUND_MESSAGE.formatted(parameterId, errandId, namespace, municipalityId)));
 		errand.getParameters().remove(parameter);
@@ -72,7 +72,7 @@ public class ErrandParameterService {
 	private ParameterEntity findParameter(final String municipalityId, final String namespace, final String errandId, final String parameterId) {
 		final var errand = findErrand(municipalityId, namespace, errandId);
 		return errand.getParameters().stream()
-			.filter(p -> p.getId().equals(parameterId))
+			.filter(entity -> entity.getId().equals(parameterId))
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, PARAMETER_NOT_FOUND_MESSAGE.formatted(parameterId, errandId, namespace, municipalityId)));
 	}

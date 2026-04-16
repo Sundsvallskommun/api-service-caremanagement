@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 
 import static jakarta.persistence.GenerationType.IDENTITY;
+import static java.util.Optional.ofNullable;
 
 @Entity
 @Table(name = "stakeholder_parameter")
@@ -136,7 +137,7 @@ public class StakeholderParameterEntity {
 	public String toString() {
 		return "StakeholderParameterEntity{" +
 			"id=" + id +
-			", stakeholderEntity=" + (stakeholderEntity != null ? stakeholderEntity.getId() : "null") +
+			", stakeholderEntity=" + ofNullable(stakeholderEntity).map(StakeholderEntity::getId).orElse("null") +
 			", displayName='" + displayName + '\'' +
 			", key='" + key + '\'' +
 			", values=" + values +

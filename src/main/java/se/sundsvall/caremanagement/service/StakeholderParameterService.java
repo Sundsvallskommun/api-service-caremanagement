@@ -65,7 +65,7 @@ public class StakeholderParameterService {
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String stakeholderId, final Long parameterId) {
 		final var stakeholder = findStakeholder(municipalityId, namespace, errandId, stakeholderId);
 		final var parameter = stakeholder.getParameters().stream()
-			.filter(p -> p.getId() == parameterId)
+			.filter(entity -> entity.getId() == parameterId)
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, PARAMETER_NOT_FOUND_MESSAGE.formatted(parameterId, stakeholderId, namespace, municipalityId)));
 		stakeholder.getParameters().remove(parameter);
@@ -80,7 +80,7 @@ public class StakeholderParameterService {
 	private StakeholderEntity findStakeholder(final String municipalityId, final String namespace, final String errandId, final String stakeholderId) {
 		final var errand = findErrand(municipalityId, namespace, errandId);
 		return errand.getStakeholders().stream()
-			.filter(s -> s.getId().equals(stakeholderId))
+			.filter(entity -> entity.getId().equals(stakeholderId))
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, STAKEHOLDER_NOT_FOUND_MESSAGE.formatted(stakeholderId, errandId, namespace, municipalityId)));
 	}
@@ -88,7 +88,7 @@ public class StakeholderParameterService {
 	private StakeholderParameterEntity findParameter(final String municipalityId, final String namespace, final String errandId, final String stakeholderId, final Long parameterId) {
 		final var stakeholder = findStakeholder(municipalityId, namespace, errandId, stakeholderId);
 		return stakeholder.getParameters().stream()
-			.filter(p -> p.getId() == parameterId)
+			.filter(entity -> entity.getId() == parameterId)
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, PARAMETER_NOT_FOUND_MESSAGE.formatted(parameterId, stakeholderId, namespace, municipalityId)));
 	}

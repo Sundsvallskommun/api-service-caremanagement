@@ -24,26 +24,26 @@ public final class ErrandMapper {
 
 	public static Errand toErrand(final ErrandEntity entity) {
 		return ofNullable(entity)
-			.map(e -> Errand.create()
-				.withId(e.getId())
-				.withMunicipalityId(e.getMunicipalityId())
-				.withNamespace(e.getNamespace())
-				.withTitle(e.getTitle())
-				.withCategory(e.getCategory())
-				.withType(e.getType())
-				.withStatus(e.getStatus())
-				.withDescription(e.getDescription())
-				.withPriority(e.getPriority())
-				.withReporterUserId(e.getReporterUserId())
-				.withAssignedUserId(e.getAssignedUserId())
-				.withContactReason(ofNullable(e.getContactReason()).map(LookupEntity::getName).orElse(null))
-				.withContactReasonDescription(e.getContactReasonDescription())
-				.withExternalTags(toExternalTagList(e.getExternalTags()))
-				.withStakeholders(toStakeholderList(e.getStakeholders()))
-				.withParameters(toParameterList(e.getParameters()))
-				.withCreated(e.getCreated())
-				.withModified(e.getModified())
-				.withTouched(e.getTouched()))
+			.map(errandEntity -> Errand.create()
+				.withId(errandEntity.getId())
+				.withMunicipalityId(errandEntity.getMunicipalityId())
+				.withNamespace(errandEntity.getNamespace())
+				.withTitle(errandEntity.getTitle())
+				.withCategory(errandEntity.getCategory())
+				.withType(errandEntity.getType())
+				.withStatus(errandEntity.getStatus())
+				.withDescription(errandEntity.getDescription())
+				.withPriority(errandEntity.getPriority())
+				.withReporterUserId(errandEntity.getReporterUserId())
+				.withAssignedUserId(errandEntity.getAssignedUserId())
+				.withContactReason(ofNullable(errandEntity.getContactReason()).map(LookupEntity::getName).orElse(null))
+				.withContactReasonDescription(errandEntity.getContactReasonDescription())
+				.withExternalTags(toExternalTagList(errandEntity.getExternalTags()))
+				.withStakeholders(toStakeholderList(errandEntity.getStakeholders()))
+				.withParameters(toParameterList(errandEntity.getParameters()))
+				.withCreated(errandEntity.getCreated())
+				.withModified(errandEntity.getModified())
+				.withTouched(errandEntity.getTouched()))
 			.orElse(null);
 	}
 
@@ -51,7 +51,7 @@ public final class ErrandMapper {
 		if (errand == null) {
 			return null;
 		}
-		final var entity = ErrandEntity.create()
+		final var errandEntity = ErrandEntity.create()
 			.withMunicipalityId(municipalityId)
 			.withNamespace(namespace)
 			.withTitle(errand.getTitle())
@@ -65,10 +65,10 @@ public final class ErrandMapper {
 			.withContactReason(contactReason)
 			.withContactReasonDescription(errand.getContactReasonDescription())
 			.withExternalTags(new ArrayList<>(toTagEmbeddableList(errand.getExternalTags())));
-		entity.setStakeholders(new ArrayList<>(toStakeholderEntityList(errand.getStakeholders(), entity)));
-		entity.setParameters(new ArrayList<>(toParameterEntityList(errand.getParameters(), entity)));
-		entity.setAttachments(new ArrayList<>());
-		return entity;
+		return errandEntity
+			.withStakeholders(new ArrayList<>(toStakeholderEntityList(errand.getStakeholders(), errandEntity)))
+			.withParameters(new ArrayList<>(toParameterEntityList(errand.getParameters(), errandEntity)))
+			.withAttachments(new ArrayList<>());
 	}
 
 	public static List<Errand> toErrandList(final List<ErrandEntity> entities) {
@@ -78,13 +78,12 @@ public final class ErrandMapper {
 	}
 
 	public static FindErrandsResponse toFindErrandsResponse(final Page<ErrandEntity> page) {
-		if (page == null) {
-			return FindErrandsResponse.create()
+		return ofNullable(page)
+			.map(errandPage -> FindErrandsResponse.create()
+				.withErrands(errandPage.getContent().stream().map(ErrandMapper::toErrand).toList())
+				.withMetaData(new PagingAndSortingMetaData().withPageData(errandPage)))
+			.orElseGet(() -> FindErrandsResponse.create()
 				.withErrands(emptyList())
-				.withMetaData(new PagingAndSortingMetaData());
-		}
-		return FindErrandsResponse.create()
-			.withErrands(page.getContent().stream().map(ErrandMapper::toErrand).toList())
-			.withMetaData(new PagingAndSortingMetaData().withPageData(page));
+				.withMetaData(new PagingAndSortingMetaData()));
 	}
 }

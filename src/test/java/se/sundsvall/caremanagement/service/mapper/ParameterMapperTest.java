@@ -96,13 +96,14 @@ class ParameterMapperTest {
 	}
 
 	@Test
-	void updateParameterEntity_nullValues() {
+	void updateParameterEntity_nullSourceValuesPreservesExisting() {
 		final var entity = ParameterEntity.create().withKey("old").withValues(new ArrayList<>(List.of("a")));
 		final var source = Parameter.create().withKey("new");
 
 		final var result = ParameterMapper.updateParameterEntity(entity, source);
 
-		assertThat(result.getValues()).isNull();
+		assertThat(result.getKey()).isEqualTo("new");
+		assertThat(result.getValues()).containsExactly("a");
 	}
 
 	@Test

@@ -14,34 +14,34 @@ public final class LookupMapper {
 
 	public static Lookup toLookup(final LookupEntity entity) {
 		return ofNullable(entity)
-			.map(e -> Lookup.create()
-				.withName(e.getName())
-				.withDisplayName(e.getDisplayName())
-				.withCreated(e.getCreated())
-				.withModified(e.getModified()))
+			.map(lookupEntity -> Lookup.create()
+				.withName(lookupEntity.getName())
+				.withDisplayName(lookupEntity.getDisplayName())
+				.withCreated(lookupEntity.getCreated())
+				.withModified(lookupEntity.getModified()))
 			.orElse(null);
 	}
 
 	public static LookupEntity toLookupEntity(final Lookup lookup, final LookupKind kind, final String namespace, final String municipalityId) {
 		return ofNullable(lookup)
-			.map(l -> LookupEntity.create()
+			.map(source -> LookupEntity.create()
 				.withKind(kind)
-				.withName(l.getName())
-				.withDisplayName(l.getDisplayName())
+				.withName(source.getName())
+				.withDisplayName(source.getDisplayName())
 				.withNamespace(namespace)
 				.withMunicipalityId(municipalityId))
 			.orElse(null);
 	}
 
 	/**
-	 * Applies updatable fields from {@code source} onto the existing entity. {@code name} is identity and is not
-	 * touched; only {@code displayName} is mutable.
+	 * Applies non-null fields from {@code source} onto the existing entity (PATCH semantics — null fields are
+	 * skipped). {@code name} is identity and is not touched; only {@code displayName} is mutable.
 	 */
 	public static LookupEntity updateLookupEntity(final LookupEntity entity, final Lookup source) {
 		if (entity == null || source == null) {
 			return entity;
 		}
-		entity.setDisplayName(source.getDisplayName());
+		ofNullable(source.getDisplayName()).ifPresent(entity::setDisplayName);
 		return entity;
 	}
 

@@ -57,7 +57,7 @@ public class ErrandStakeholderService {
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String stakeholderId) {
 		final var errand = findErrand(municipalityId, namespace, errandId);
 		final var stakeholder = errand.getStakeholders().stream()
-			.filter(s -> s.getId().equals(stakeholderId))
+			.filter(entity -> entity.getId().equals(stakeholderId))
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, STAKEHOLDER_NOT_FOUND_MESSAGE.formatted(stakeholderId, errandId, namespace, municipalityId)));
 		errand.getStakeholders().remove(stakeholder);
@@ -72,7 +72,7 @@ public class ErrandStakeholderService {
 	private StakeholderEntity findStakeholder(final String municipalityId, final String namespace, final String errandId, final String stakeholderId) {
 		final var errand = findErrand(municipalityId, namespace, errandId);
 		return errand.getStakeholders().stream()
-			.filter(s -> s.getId().equals(stakeholderId))
+			.filter(entity -> entity.getId().equals(stakeholderId))
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, STAKEHOLDER_NOT_FOUND_MESSAGE.formatted(stakeholderId, errandId, namespace, municipalityId)));
 	}

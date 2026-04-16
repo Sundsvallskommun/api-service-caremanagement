@@ -15,34 +15,38 @@ public final class ParameterMapper {
 
 	public static Parameter toParameter(final ParameterEntity entity) {
 		return ofNullable(entity)
-			.map(e -> Parameter.create()
-				.withId(e.getId())
-				.withKey(e.getKey())
-				.withDisplayName(e.getDisplayName())
-				.withParameterGroup(e.getParameterGroup())
-				.withValues(ofNullable(e.getValues()).map(ArrayList::new).orElse(null)))
+			.map(parameterEntity -> Parameter.create()
+				.withId(parameterEntity.getId())
+				.withKey(parameterEntity.getKey())
+				.withDisplayName(parameterEntity.getDisplayName())
+				.withParameterGroup(parameterEntity.getParameterGroup())
+				.withValues(ofNullable(parameterEntity.getValues()).map(ArrayList::new).orElse(null)))
 			.orElse(null);
 	}
 
 	public static ParameterEntity toParameterEntity(final Parameter parameter, final ErrandEntity errandEntity) {
 		return ofNullable(parameter)
-			.map(p -> ParameterEntity.create()
+			.map(source -> ParameterEntity.create()
 				.withErrandEntity(errandEntity)
-				.withKey(p.getKey())
-				.withDisplayName(p.getDisplayName())
-				.withParameterGroup(p.getParameterGroup())
-				.withValues(ofNullable(p.getValues()).map(ArrayList::new).orElse(null)))
+				.withKey(source.getKey())
+				.withDisplayName(source.getDisplayName())
+				.withParameterGroup(source.getParameterGroup())
+				.withValues(ofNullable(source.getValues()).map(ArrayList::new).orElse(null)))
 			.orElse(null);
 	}
 
+	/**
+	 * Applies non-null fields from {@code source} onto {@code entity}. Null fields on the source mean
+	 * "leave existing value untouched" (PATCH semantics).
+	 */
 	public static ParameterEntity updateParameterEntity(final ParameterEntity entity, final Parameter source) {
 		if (entity == null || source == null) {
 			return entity;
 		}
-		entity.setKey(source.getKey());
-		entity.setDisplayName(source.getDisplayName());
-		entity.setParameterGroup(source.getParameterGroup());
-		entity.setValues(ofNullable(source.getValues()).map(ArrayList::new).orElse(null));
+		ofNullable(source.getKey()).ifPresent(entity::setKey);
+		ofNullable(source.getDisplayName()).ifPresent(entity::setDisplayName);
+		ofNullable(source.getParameterGroup()).ifPresent(entity::setParameterGroup);
+		ofNullable(source.getValues()).ifPresent(values -> entity.setValues(new ArrayList<>(values)));
 		return entity;
 	}
 
@@ -54,7 +58,7 @@ public final class ParameterMapper {
 
 	public static List<ParameterEntity> toParameterEntityList(final List<Parameter> parameters, final ErrandEntity errandEntity) {
 		return ofNullable(parameters).orElse(emptyList()).stream()
-			.map(p -> toParameterEntity(p, errandEntity))
+			.map(parameter -> toParameterEntity(parameter, errandEntity))
 			.toList();
 	}
 }
