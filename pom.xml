@@ -12,8 +12,15 @@
 	<artifactId>api-service-caremanagement</artifactId>
 	<version>1.0</version>
 	<name>api-service-care-management</name>
-	<properties />
+	<properties>
+		<spring-filter.version>3.2.5</spring-filter.version>
+	</properties>
 	<dependencies>
+		<dependency>
+			<groupId>com.turkraft.springfilter</groupId>
+			<artifactId>jpa</artifactId>
+			<version>${spring-filter.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
@@ -27,6 +34,10 @@
 		<dependency>
 			<groupId>se.sundsvall.dept44</groupId>
 			<artifactId>dept44-common-validators</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>se.sundsvall.dept44</groupId>
+			<artifactId>dept44-models</artifactId>
 		</dependency>
 		<!-- Test -->
 		<dependency>

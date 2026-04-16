@@ -3,4 +3,17 @@
 #========================================
 logging:
   level:
-    root: DEBUG
+    root: INFO
+spring:
+  cache:
+    type: none
+  datasource:
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    url: jdbc:tc:mariadb:10.6:///junittest
+  jpa:
+    properties:
+      jakarta:
+        persistence:
+          schema-generation:
+            database:
+              action: update
