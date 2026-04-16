@@ -52,7 +52,6 @@ class ErrandTest {
 		final var externalTags = List.of(ExternalTag.create());
 		final var stakeholders = List.of(Stakeholder.create());
 		final var parameters = List.of(Parameter.create());
-		final var attachments = List.of(Attachment.create());
 		final var created = now();
 		final var modified = now();
 		final var touched = now();
@@ -74,7 +73,6 @@ class ErrandTest {
 			.withExternalTags(externalTags)
 			.withStakeholders(stakeholders)
 			.withParameters(parameters)
-			.withAttachments(attachments)
 			.withCreated(created)
 			.withModified(modified)
 			.withTouched(touched);
@@ -96,7 +94,6 @@ class ErrandTest {
 		assertThat(result.getExternalTags()).isEqualTo(externalTags);
 		assertThat(result.getStakeholders()).isEqualTo(stakeholders);
 		assertThat(result.getParameters()).isEqualTo(parameters);
-		assertThat(result.getAttachments()).isEqualTo(attachments);
 		assertThat(result.getCreated()).isEqualTo(created);
 		assertThat(result.getModified()).isEqualTo(modified);
 		assertThat(result.getTouched()).isEqualTo(touched);

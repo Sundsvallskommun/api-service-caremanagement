@@ -69,9 +69,6 @@ public class Errand {
 	@Valid
 	private List<Parameter> parameters;
 
-	@Schema(description = "Attachments associated with the errand", accessMode = READ_ONLY)
-	private List<Attachment> attachments;
-
 	@Schema(description = "Created timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
@@ -296,19 +293,6 @@ public class Errand {
 		return this;
 	}
 
-	public List<Attachment> getAttachments() {
-		return attachments;
-	}
-
-	public void setAttachments(final List<Attachment> attachments) {
-		this.attachments = attachments;
-	}
-
-	public Errand withAttachments(final List<Attachment> attachments) {
-		this.attachments = attachments;
-		return this;
-	}
-
 	public OffsetDateTime getCreated() {
 		return created;
 	}
@@ -352,19 +336,17 @@ public class Errand {
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
-		final Errand that = (Errand) o;
-		return Objects.equals(id, that.id) && Objects.equals(municipalityId, that.municipalityId) && Objects.equals(namespace, that.namespace) && Objects.equals(title, that.title)
-			&& Objects.equals(category, that.category) && Objects.equals(type, that.type) && Objects.equals(status, that.status) && Objects.equals(description, that.description)
-			&& Objects.equals(priority, that.priority) && Objects.equals(reporterUserId, that.reporterUserId) && Objects.equals(assignedUserId, that.assignedUserId)
-			&& Objects.equals(contactReason, that.contactReason) && Objects.equals(contactReasonDescription, that.contactReasonDescription) && Objects.equals(externalTags, that.externalTags)
-			&& Objects.equals(stakeholders, that.stakeholders) && Objects.equals(parameters, that.parameters) && Objects.equals(attachments, that.attachments)
-			&& Objects.equals(created, that.created) && Objects.equals(modified, that.modified) && Objects.equals(touched, that.touched);
+		final Errand errand = (Errand) o;
+		return Objects.equals(id, errand.id) && Objects.equals(municipalityId, errand.municipalityId) && Objects.equals(namespace, errand.namespace) && Objects.equals(title, errand.title) && Objects.equals(
+			category, errand.category) && Objects.equals(type, errand.type) && Objects.equals(status, errand.status) && Objects.equals(description, errand.description) && Objects.equals(priority, errand.priority)
+			&& Objects.equals(reporterUserId, errand.reporterUserId) && Objects.equals(assignedUserId, errand.assignedUserId) && Objects.equals(contactReason, errand.contactReason) && Objects.equals(
+				contactReasonDescription, errand.contactReasonDescription) && Objects.equals(externalTags, errand.externalTags) && Objects.equals(stakeholders, errand.stakeholders) && Objects.equals(parameters, errand.parameters)
+			&& Objects.equals(created, errand.created) && Objects.equals(modified, errand.modified) && Objects.equals(touched, errand.touched);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, municipalityId, namespace, title, category, type, status, description, priority, reporterUserId, assignedUserId, contactReason, contactReasonDescription,
-			externalTags, stakeholders, parameters, attachments, created, modified, touched);
+		return Objects.hash(id, municipalityId, namespace, title, category, type, status, description, priority, reporterUserId, assignedUserId, contactReason, contactReasonDescription, externalTags, stakeholders, parameters, created, modified, touched);
 	}
 
 	@Override
@@ -386,7 +368,6 @@ public class Errand {
 			", externalTags=" + externalTags +
 			", stakeholders=" + stakeholders +
 			", parameters=" + parameters +
-			", attachments=" + attachments +
 			", created=" + created +
 			", modified=" + modified +
 			", touched=" + touched +

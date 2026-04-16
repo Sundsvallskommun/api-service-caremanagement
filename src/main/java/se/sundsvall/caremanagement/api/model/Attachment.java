@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Null;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -15,7 +14,6 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 public class Attachment {
 
 	@Schema(description = "Unique identifier", examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec", accessMode = READ_ONLY)
-	@Null(groups = OnCreate.class)
 	private String id;
 
 	@Schema(description = "File name", examples = "my-file.pdf")

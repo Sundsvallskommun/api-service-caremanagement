@@ -5,15 +5,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.api.model.Errand;
+import se.sundsvall.caremanagement.api.model.FindErrandsResponse;
 import se.sundsvall.caremanagement.api.model.PatchErrand;
-import se.sundsvall.caremanagement.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.service.ErrandService;
 
 import static java.util.UUID.randomUUID;
@@ -73,7 +72,7 @@ class ErrandResourceTest {
 
 	@Test
 	void findErrands() {
-		when(serviceMock.findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(), any())).thenReturn(new PageImpl<>(java.util.List.of(Errand.create())));
+		when(serviceMock.findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(), any())).thenReturn(FindErrandsResponse.create().withErrands(java.util.List.of(Errand.create())));
 
 		webTestClient.get()
 			.uri(builder -> builder.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
@@ -102,10 +101,5 @@ class ErrandResourceTest {
 			.expectStatus().isNoContent();
 
 		verify(serviceMock).deleteErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-	}
-
-	@SuppressWarnings("unused")
-	private static Specification<ErrandEntity> dummy() {
-		return null;
 	}
 }

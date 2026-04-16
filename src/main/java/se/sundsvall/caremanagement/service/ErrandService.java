@@ -1,10 +1,10 @@
 package se.sundsvall.caremanagement.service;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.api.model.Errand;
+import se.sundsvall.caremanagement.api.model.FindErrandsResponse;
 import se.sundsvall.caremanagement.api.model.PatchErrand;
 import se.sundsvall.caremanagement.integration.db.model.ErrandEntity;
 import se.sundsvall.dept44.util.jacoco.ExcludeFromJacocoGeneratedCoverageReport;
@@ -23,7 +23,7 @@ public class ErrandService {
 		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
 	}
 
-	public Page<Errand> findErrands(final String municipalityId, final String namespace, final Specification<ErrandEntity> filter, final Pageable pageable) {
+	public FindErrandsResponse findErrands(final String municipalityId, final String namespace, final Specification<ErrandEntity> filter, final Pageable pageable) {
 		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
 	}
 
