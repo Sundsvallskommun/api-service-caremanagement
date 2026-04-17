@@ -153,7 +153,7 @@ public class ParameterEntity {
 	public String toString() {
 		return "ParameterEntity{" +
 			"id='" + id + '\'' +
-			", errandEntity=" + (errandEntity != null ? errandEntity.getId() : "null") +
+			", errandEntity=" + errandEntity +
 			", displayName='" + displayName + '\'' +
 			", parameterGroup='" + parameterGroup + '\'' +
 			", key='" + key + '\'' +

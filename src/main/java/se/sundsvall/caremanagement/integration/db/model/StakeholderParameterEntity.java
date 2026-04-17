@@ -136,7 +136,7 @@ public class StakeholderParameterEntity {
 	public String toString() {
 		return "StakeholderParameterEntity{" +
 			"id=" + id +
-			", stakeholderEntity=" + (stakeholderEntity != null ? stakeholderEntity.getId() : "null") +
+			", stakeholderEntity=" + stakeholderEntity +
 			", displayName='" + displayName + '\'' +
 			", key='" + key + '\'' +
 			", values=" + values +

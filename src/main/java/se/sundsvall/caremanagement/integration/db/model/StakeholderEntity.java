@@ -347,7 +347,7 @@ public class StakeholderEntity implements Auditable {
 	public String toString() {
 		return "StakeholderEntity{" +
 			"id='" + id + '\'' +
-			", errandEntity=" + (errandEntity != null ? errandEntity.getId() : "null") +
+			", errandEntity=" + errandEntity +
 			", externalId='" + externalId + '\'' +
 			", externalIdType='" + externalIdType + '\'' +
 			", role='" + role + '\'' +
