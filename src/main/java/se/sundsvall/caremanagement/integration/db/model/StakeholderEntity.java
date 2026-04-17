@@ -20,7 +20,6 @@ import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
 import static jakarta.persistence.CascadeType.ALL;
-import static java.util.Optional.ofNullable;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 @Entity
@@ -348,7 +347,7 @@ public class StakeholderEntity implements Auditable {
 	public String toString() {
 		return "StakeholderEntity{" +
 			"id='" + id + '\'' +
-			", errandEntity=" + ofNullable(errandEntity).map(ErrandEntity::getId).orElse("null") +
+			", errandEntity=" + errandEntity +
 			", externalId='" + externalId + '\'' +
 			", externalIdType='" + externalIdType + '\'' +
 			", role='" + role + '\'' +
