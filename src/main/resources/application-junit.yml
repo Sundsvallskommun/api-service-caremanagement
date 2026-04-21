@@ -4,6 +4,9 @@
 logging:
   level:
     root: INFO
+integration:
+  operaton:
+    url: http://operaton.url
 spring:
   cache:
     type: none
@@ -17,3 +20,13 @@ spring:
           schema-generation:
             database:
               action: update
+  security:
+    oauth2:
+      client:
+        provider:
+          operaton:
+            token-uri: http://token.url
+        registration:
+          operaton:
+            client-id: the-client-id
+            client-secret: the-client-secret
