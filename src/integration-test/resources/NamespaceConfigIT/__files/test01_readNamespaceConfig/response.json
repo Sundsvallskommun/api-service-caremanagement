@@ -1,0 +1,7 @@
+{
+	"id": 1,
+	"displayName": "My namespace",
+	"shortCode": "MY",
+	"created": "${json-unit.any-string}",
+	"modified": "${json-unit.any-string}"
+}

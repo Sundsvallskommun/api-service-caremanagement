@@ -1,0 +1,5 @@
+{
+	"title": "Not Found",
+	"status": 404,
+	"detail": "No parameter with id '9999' found on stakeholder 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' in namespace 'MY_NAMESPACE' for municipality id '2281'"
+}

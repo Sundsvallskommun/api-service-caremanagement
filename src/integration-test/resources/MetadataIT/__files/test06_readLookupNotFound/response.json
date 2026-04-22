@@ -1,0 +1,5 @@
+{
+	"title": "Not Found",
+	"status": 404,
+	"detail": "No category with name 'UNKNOWN' found in namespace 'MY_NAMESPACE' for municipality id '2281'"
+}

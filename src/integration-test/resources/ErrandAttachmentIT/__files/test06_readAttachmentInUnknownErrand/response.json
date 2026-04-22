@@ -1,0 +1,5 @@
+{
+	"title": "Not Found",
+	"status": 404,
+	"detail": "No attachment with id 'dddddddd-dddd-dddd-dddd-dddddddddddd' found on errand '33333333-3333-3333-3333-333333333333' in namespace 'MY_NAMESPACE' for municipality id '2281'"
+}
