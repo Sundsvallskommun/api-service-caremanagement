@@ -26,7 +26,7 @@ public interface OperatonClient {
 	 */
 	@GetMapping(path = "/{municipalityId}/process-instances", produces = APPLICATION_JSON_VALUE)
 	ProcessInstancesResponse getProcessInstances(
-		@PathVariable("municipalityId") final String municipalityId);
+		@PathVariable final String municipalityId);
 
 	/**
 	 * Start a new process instance by process definition key.
@@ -37,7 +37,7 @@ public interface OperatonClient {
 	 */
 	@PostMapping(path = "/{municipalityId}/process-instances", produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
 	ProcessInstanceResponse startProcessInstance(
-		@PathVariable("municipalityId") final String municipalityId,
+		@PathVariable final String municipalityId,
 		@RequestBody final StartProcessInstanceRequest request);
 
 	/**
@@ -49,6 +49,6 @@ public interface OperatonClient {
 	 */
 	@GetMapping(path = "/{municipalityId}/process-instances/{id}", produces = APPLICATION_JSON_VALUE)
 	ProcessInstanceResponse getProcessInstance(
-		@PathVariable("municipalityId") final String municipalityId,
-		@PathVariable("id") final String id);
+		@PathVariable final String municipalityId,
+		@PathVariable final String id);
 }
