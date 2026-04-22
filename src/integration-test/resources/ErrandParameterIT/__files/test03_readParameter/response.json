@@ -1,0 +1,10 @@
+{
+	"id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+	"displayName": "Priority level",
+	"parameterGroup": "contact",
+	"key": "priorityLevel",
+	"values": [
+		"high",
+		"urgent"
+	]
+}

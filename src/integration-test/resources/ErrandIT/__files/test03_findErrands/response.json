@@ -1,0 +1,134 @@
+{
+	"errands": [
+		{
+			"id": "44444444-4444-4444-4444-444444444444",
+			"municipalityId": "2281",
+			"namespace": "MY_NAMESPACE",
+			"title": "Errand four",
+			"category": "CATEGORY-1",
+			"type": "TYPE-1",
+			"status": "NEW",
+			"description": "Fourth errand description",
+			"priority": "LOW",
+			"reporterUserId": "reporter4",
+			"externalTags": [],
+			"stakeholders": [],
+			"parameters": [],
+			"created": "${json-unit.any-string}",
+			"modified": "${json-unit.any-string}",
+			"touched": "${json-unit.any-string}"
+		},
+		{
+			"id": "22222222-2222-2222-2222-222222222222",
+			"municipalityId": "2281",
+			"namespace": "MY_NAMESPACE",
+			"title": "Errand two",
+			"category": "CATEGORY-1",
+			"type": "TYPE-1",
+			"status": "NEW",
+			"description": "Second errand description",
+			"priority": "MEDIUM",
+			"reporterUserId": "reporter2",
+			"assignedUserId": "assignee2",
+			"contactReason": "PHONE",
+			"externalTags": [],
+			"stakeholders": [
+				{
+					"id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab",
+					"externalId": "198101011234",
+					"externalIdType": "PRIVATE",
+					"role": "APPLICANT",
+					"firstName": "Jane",
+					"lastName": "Doe",
+					"address": "Storgatan 2",
+					"zipCode": "85248",
+					"city": "Sundsvall",
+					"country": "Sweden",
+					"contactChannels": [],
+					"parameters": []
+				}
+			],
+			"parameters": [],
+			"created": "${json-unit.any-string}",
+			"modified": "${json-unit.any-string}",
+			"touched": "${json-unit.any-string}"
+		},
+		{
+			"id": "11111111-1111-1111-1111-111111111111",
+			"municipalityId": "2281",
+			"namespace": "MY_NAMESPACE",
+			"title": "Errand one",
+			"category": "CATEGORY-1",
+			"type": "TYPE-1",
+			"status": "NEW",
+			"description": "First errand description",
+			"priority": "HIGH",
+			"reporterUserId": "reporter1",
+			"assignedUserId": "assignee1",
+			"contactReason": "PHONE",
+			"contactReasonDescription": "Caller said hello",
+			"externalTags": [
+				{
+					"key": "caseId",
+					"value": "12345"
+				}
+			],
+			"stakeholders": [
+				{
+					"id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+					"externalId": "198001011234",
+					"externalIdType": "PRIVATE",
+					"role": "APPLICANT",
+					"firstName": "Joe",
+					"lastName": "Doe",
+					"address": "Storgatan 1",
+					"zipCode": "85248",
+					"city": "Sundsvall",
+					"country": "Sweden",
+					"contactChannels": [
+						{
+							"key": "Email",
+							"value": "joe.doe@example.com"
+						}
+					],
+					"parameters": [
+						{
+							"id": 100,
+							"displayName": "Phone number",
+							"key": "phoneNumber",
+							"values": [
+								"+46701234567"
+							]
+						}
+					]
+				}
+			],
+			"parameters": [
+				{
+					"id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+					"displayName": "Priority level",
+					"parameterGroup": "contact",
+					"key": "priorityLevel",
+					"values": [
+						"high",
+						"urgent"
+					]
+				}
+			],
+			"created": "${json-unit.any-string}",
+			"modified": "${json-unit.any-string}",
+			"touched": "${json-unit.any-string}"
+		}
+	],
+	"_meta": {
+		"page": 1,
+		"limit": 10,
+		"count": 3,
+		"totalRecords": 3,
+		"totalPages": 1,
+		"sortBy": [
+			"touched"
+		],
+		"sortDirection": "DESC"
+	}
+}

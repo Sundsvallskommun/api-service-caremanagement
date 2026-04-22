@@ -1,0 +1,5 @@
+{
+	"title": "Not Found",
+	"status": 404,
+	"detail": "No parameter with id 'cccccccc-cccc-cccc-cccc-cccccccccccc' found on errand '11111111-1111-1111-1111-111111111111' in namespace 'MY_NAMESPACE' for municipality id '2281'"
+}

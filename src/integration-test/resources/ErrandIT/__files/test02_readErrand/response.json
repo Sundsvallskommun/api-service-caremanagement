@@ -1,0 +1,66 @@
+{
+	"id": "11111111-1111-1111-1111-111111111111",
+	"municipalityId": "2281",
+	"namespace": "MY_NAMESPACE",
+	"title": "Errand one",
+	"category": "CATEGORY-1",
+	"type": "TYPE-1",
+	"status": "NEW",
+	"description": "First errand description",
+	"priority": "HIGH",
+	"reporterUserId": "reporter1",
+	"assignedUserId": "assignee1",
+	"contactReason": "PHONE",
+	"contactReasonDescription": "Caller said hello",
+	"externalTags": [
+		{
+			"key": "caseId",
+			"value": "12345"
+		}
+	],
+	"stakeholders": [
+		{
+			"id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+			"externalId": "198001011234",
+			"externalIdType": "PRIVATE",
+			"role": "APPLICANT",
+			"firstName": "Joe",
+			"lastName": "Doe",
+			"address": "Storgatan 1",
+			"zipCode": "85248",
+			"city": "Sundsvall",
+			"country": "Sweden",
+			"contactChannels": [
+				{
+					"key": "Email",
+					"value": "joe.doe@example.com"
+				}
+			],
+			"parameters": [
+				{
+					"id": 100,
+					"displayName": "Phone number",
+					"key": "phoneNumber",
+					"values": [
+						"+46701234567"
+					]
+				}
+			]
+		}
+	],
+	"parameters": [
+		{
+			"id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+			"displayName": "Priority level",
+			"parameterGroup": "contact",
+			"key": "priorityLevel",
+			"values": [
+				"high",
+				"urgent"
+			]
+		}
+	],
+	"created": "${json-unit.any-string}",
+	"modified": "${json-unit.any-string}",
+	"touched": "${json-unit.any-string}"
+}

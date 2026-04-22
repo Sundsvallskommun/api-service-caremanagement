@@ -1,0 +1,5 @@
+{
+	"title": "Not Found",
+	"status": 404,
+	"detail": "No namespace config found for namespace 'DOES_NOT_EXIST' and municipality id '2281'"
+}

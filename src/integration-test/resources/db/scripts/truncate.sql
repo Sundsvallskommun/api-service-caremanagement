@@ -1,0 +1,15 @@
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE attachment;
+TRUNCATE TABLE attachment_data;
+TRUNCATE TABLE contact_channel;
+TRUNCATE TABLE external_tag;
+TRUNCATE TABLE parameter_values;
+TRUNCATE TABLE parameter;
+TRUNCATE TABLE stakeholder_parameter_values;
+TRUNCATE TABLE stakeholder_parameter;
+TRUNCATE TABLE stakeholder;
+TRUNCATE TABLE errand;
+TRUNCATE TABLE lookup;
+TRUNCATE TABLE namespace_config;
+TRUNCATE TABLE shedlock;
+SET FOREIGN_KEY_CHECKS = 1;

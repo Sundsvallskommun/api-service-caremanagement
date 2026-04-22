@@ -1,0 +1,10 @@
+[
+	{
+		"id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+		"fileName": "hello.txt",
+		"mimeType": "text/plain",
+		"fileSize": 5,
+		"created": "${json-unit.any-string}",
+		"modified": "${json-unit.any-string}"
+	}
+]
