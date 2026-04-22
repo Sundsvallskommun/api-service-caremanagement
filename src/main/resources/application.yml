@@ -26,3 +26,17 @@ spring:
           schema-generation:
             database:
               action: none
+  security:
+    oauth2:
+      client:
+        registration:
+          operaton:
+            authorization-grant-type: client_credentials
+            provider: operaton
+#========================================
+# Integration settings
+#========================================
+integration:
+  operaton:
+    connect-timeout: 5
+    read-timeout: 30

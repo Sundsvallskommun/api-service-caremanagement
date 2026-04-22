@@ -1,0 +1,1023 @@
+openapi: 3.1.0
+info:
+  title: operaton
+  contact: {}
+  license:
+    name: MIT License
+    url: https://opensource.org/licenses/MIT
+  version: "1.0"
+servers:
+- url: https://operaton-af-operaton.apps.ocp201.sundsvall.se
+  description: Generated server url
+tags:
+- name: Deployments
+  description: Deploy and manage BPMN process definitions and DMN decision tables
+- name: Topics
+  description: Catalog of available external task worker topics. Each topic represents
+    a reusable building block that can be used in BPMN process models
+- name: Processes
+  description: Manage deployed process definitions and running process instances
+- name: Decisions
+  description: Manage deployed DMN decision definitions
+paths:
+  /{municipalityId}/process-instances:
+    get:
+      tags:
+      - Processes
+      summary: List active process instances
+      operationId: getProcessInstances
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessInstancesResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+      - Processes
+      summary: "Start a new process instance by process definition key, optionally\
+        \ with variables"
+      operationId: startProcessInstance
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartProcessInstanceRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessInstanceResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/deployments:
+    get:
+      tags:
+      - Deployments
+      summary: List all deployments
+      operationId: getDeployments
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeploymentsResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+      - Deployments
+      summary: Deploy a BPMN process definition or DMN decision table
+      operationId: deploy
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: name
+        in: query
+        description: Deployment name
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: BPMN (.bpmn) or DMN (.dmn) file to deploy
+              required:
+              - file
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeploymentResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/topics:
+    get:
+      tags:
+      - Topics
+      summary: List all available external task topics with their input/output variable
+        contracts
+      operationId: getTopics
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopicDescription"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/topics/{topic}:
+    get:
+      tags:
+      - Topics
+      summary: Get details for a specific external task topic including expected input/output
+        variables
+      operationId: getTopic
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: topic
+        in: path
+        description: Topic name
+        required: true
+        schema:
+          type: string
+        example: send-email
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicDescription"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/topics/templates:
+    get:
+      tags:
+      - Topics
+      summary: List all available external task topics as bpmn-js element templates
+        for use in a BPMN editor
+      operationId: getElementTemplates
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ElementTemplate"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/process-instances/{id}:
+    get:
+      tags:
+      - Processes
+      summary: Get status and details for a specific process instance
+      operationId: getProcessInstance
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: id
+        in: path
+        description: Process instance id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessInstanceResponse"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/process-definitions:
+    get:
+      tags:
+      - Processes
+      summary: List the latest version of all deployed process definitions
+      operationId: getProcessDefinitions
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessDefinitionsResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/process-definitions/{id}:
+    get:
+      tags:
+      - Processes
+      summary: Get a specific process definition by ID
+      operationId: getProcessDefinition
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: id
+        in: path
+        description: Process definition id
+        required: true
+        schema:
+          type: string
+        example: send-email-process:1:4
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessDefinitionResponse"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/process-definitions/{id}/xml:
+    get:
+      tags:
+      - Processes
+      summary: Get the BPMN XML for a specific process definition
+      operationId: getProcessDefinitionXml
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: id
+        in: path
+        description: Process definition id
+        required: true
+        schema:
+          type: string
+        example: send-email-process:1:4
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/xml:
+              schema:
+                type: string
+                format: byte
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/decision-definitions:
+    get:
+      tags:
+      - Decisions
+      summary: List the latest version of all deployed decision definitions
+      operationId: getDecisionDefinitions
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionDefinitionsResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/decision-definitions/{id}:
+    get:
+      tags:
+      - Decisions
+      summary: Get a specific decision definition by ID
+      operationId: getDecisionDefinition
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: id
+        in: path
+        description: Decision definition id
+        required: true
+        schema:
+          type: string
+        example: approve-loan:1:5
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionDefinitionResponse"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/decision-definitions/{id}/xml:
+    get:
+      tags:
+      - Decisions
+      summary: Get the DMN XML for a specific decision definition
+      operationId: getDecisionDefinitionXml
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: id
+        in: path
+        description: Decision definition id
+        required: true
+        schema:
+          type: string
+        example: approve-loan:1:5
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/xml:
+              schema:
+                type: string
+                format: byte
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api-docs:
+    get:
+      tags:
+      - API
+      summary: OpenAPI
+      operationId: getApiDocs
+      responses:
+        "200":
+          description: OK
+          content:
+            application/yaml:
+              schema:
+                type: string
+      x-auth-type: None
+      x-throttling-tier: Unlimited
+      x-wso2-mutual-ssl: Optional
+  /{municipalityId}/deployments/{id}:
+    delete:
+      tags:
+      - Deployments
+      summary: Delete a deployment and its process definitions. Use cascade=true to
+        also terminate running process instances
+      operationId: deleteDeployment
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: id
+        in: path
+        description: Deployment id
+        required: true
+        schema:
+          type: string
+      - name: cascade
+        in: query
+        description: Also delete running process instances
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "204":
+          description: Deployment deleted
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+components:
+  schemas:
+    StartProcessInstanceRequest:
+      type: object
+      description: Request to start a process instance
+      properties:
+        processDefinitionKey:
+          type: string
+          description: Process definition key
+          examples:
+          - invoice
+          minLength: 1
+        businessKey:
+          type: string
+          description: Business key for the process instance
+          examples:
+          - order-12345
+        variables:
+          type: object
+          additionalProperties: {}
+          description: Process variables to set when starting the instance
+      required:
+      - processDefinitionKey
+    Problem:
+      type: object
+      properties:
+        instance:
+          type: string
+          format: uri
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        detail:
+          type: string
+        status:
+          type: integer
+          format: int32
+    ConstraintViolationProblem:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        status:
+          type: integer
+          format: int32
+        violations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Violation"
+        title:
+          type: string
+        instance:
+          type: string
+          format: uri
+        detail:
+          type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
+    ThrowableProblem:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        causeAsProblem: {}
+    Violation:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    ProcessInstanceResponse:
+      type: object
+      description: Process instance response model
+      properties:
+        id:
+          type: string
+          description: Process instance ID
+          examples:
+          - a-process-instance-id
+        processDefinitionId:
+          type: string
+          description: Process definition ID
+          examples:
+          - invoice:1:4
+        businessKey:
+          type: string
+          description: Business key
+          examples:
+          - order-12345
+        suspended:
+          type: boolean
+          description: Whether the process instance is suspended
+        ended:
+          type: boolean
+          description: Whether the process instance has ended
+    DeploymentResponse:
+      type: object
+      description: Deployment response model
+      properties:
+        id:
+          type: string
+          description: Deployment ID
+          examples:
+          - "12345"
+        name:
+          type: string
+          description: Deployment name
+          examples:
+          - invoice-process
+        source:
+          type: string
+          description: Deployment source
+        deploymentTime:
+          type: string
+          format: date-time
+          description: Deployment time
+    TopicDescription:
+      type: object
+      description: Description of an external task topic
+      properties:
+        topic:
+          type: string
+          description: Topic name
+          examples:
+          - send-email
+        description:
+          type: string
+          description: Human-readable description of what this topic does
+          examples:
+          - Sends an email via Messaging API
+        inputVariables:
+          type: array
+          description: List of input variable names expected by the worker
+          items:
+            type: string
+        outputVariables:
+          type: array
+          description: List of output variable names set by the worker
+          items:
+            type: string
+    ElementTemplate:
+      type: object
+      description: A bpmn-js element template that exposes a reusable worker topic
+        as a drag-and-drop building block in the BPMN editor
+      properties:
+        id:
+          type: string
+          description: Globally unique identifier for the template
+          examples:
+          - se.sundsvall.operaton.SendEmail
+        name:
+          type: string
+          description: Human-readable template name shown in the template chooser
+          examples:
+          - Send Email
+        description:
+          type: string
+          description: Human-readable description shown in the template chooser
+          examples:
+          - Sends an email via the Messaging API
+        appliesTo:
+          type: array
+          description: BPMN element types this template can be applied to
+          examples:
+          - "[\"bpmn:ServiceTask\"]"
+          items:
+            type: string
+        properties:
+          type: array
+          description: Editable properties exposed by this template
+          items:
+            $ref: "#/components/schemas/ElementTemplateProperty"
+        $schema:
+          type: string
+          description: JSON schema the template conforms to
+          examples:
+          - https://unpkg.com/@camunda/element-templates-json-schema/resources/schema.json
+    ElementTemplateBinding:
+      type: object
+      description: Binding between an element template property and a BPMN model attribute
+      properties:
+        type:
+          type: string
+          description: Binding type as understood by bpmn-js-element-templates
+          examples:
+          - camunda:inputParameter
+        name:
+          type: string
+          description: Target attribute or parameter name
+          examples:
+          - emailAddress
+    ElementTemplateConstraints:
+      type: object
+      description: Validation constraints for an element template property
+      properties:
+        notEmpty:
+          type: boolean
+          description: Whether the value must not be empty
+          examples:
+          - "true"
+    ElementTemplateProperty:
+      type: object
+      description: A single editable property inside an element template
+      properties:
+        label:
+          type: string
+          description: Label shown in the properties panel
+          examples:
+          - Email Address
+        type:
+          type: string
+          description: Property value type
+          examples:
+          - String
+        value:
+          type: string
+          description: Default or fixed value
+        editable:
+          type: boolean
+          description: Whether the user may change the value (defaults to true when
+            omitted)
+        binding:
+          $ref: "#/components/schemas/ElementTemplateBinding"
+          description: How the property is bound to the BPMN model
+        constraints:
+          $ref: "#/components/schemas/ElementTemplateConstraints"
+          description: Validation constraints for the property
+    ProcessInstancesResponse:
+      type: object
+      description: Process instances response model
+      properties:
+        processInstances:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProcessInstanceResponse"
+    ProcessDefinitionResponse:
+      type: object
+      description: Process definition response model
+      properties:
+        id:
+          type: string
+          description: Process definition ID
+          examples:
+          - invoice:1:4
+        key:
+          type: string
+          description: Process definition key
+          examples:
+          - invoice
+        name:
+          type: string
+          description: Process definition name
+          examples:
+          - Invoice Process
+        version:
+          type: integer
+          format: int32
+          description: Process definition version
+          examples:
+          - "1"
+        deploymentId:
+          type: string
+          description: ID of the deployment this process definition belongs to
+          examples:
+          - deploy-1
+    ProcessDefinitionsResponse:
+      type: object
+      description: Process definitions response model
+      properties:
+        processDefinitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProcessDefinitionResponse"
+    DeploymentsResponse:
+      type: object
+      description: Deployments response model
+      properties:
+        deployments:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeploymentResponse"
+    DecisionDefinitionResponse:
+      type: object
+      description: Decision definition response model
+      properties:
+        id:
+          type: string
+          description: Decision definition ID
+          examples:
+          - approve-loan:1:5
+        key:
+          type: string
+          description: Decision definition key
+          examples:
+          - approve-loan
+        name:
+          type: string
+          description: Decision definition name
+          examples:
+          - Approve Loan
+        version:
+          type: integer
+          format: int32
+          description: Decision definition version
+          examples:
+          - "1"
+        deploymentId:
+          type: string
+          description: ID of the deployment this decision definition belongs to
+          examples:
+          - deploy-1
+    DecisionDefinitionsResponse:
+      type: object
+      description: Decision definitions response model
+      properties:
+        decisionDefinitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/DecisionDefinitionResponse"
+  securitySchemes: {}
