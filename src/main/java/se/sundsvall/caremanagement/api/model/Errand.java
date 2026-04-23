@@ -69,6 +69,13 @@ public class Errand {
 	@Valid
 	private List<Parameter> parameters;
 
+	@Schema(description = "Name of the Operaton process definition to start when the errand is created", examples = "Handläggning av ärende")
+	private String processDefinitionName;
+
+	@Schema(description = "Id of the Operaton process instance started for this errand", examples = "a-process-instance-id", accessMode = READ_ONLY)
+	@Null(groups = OnCreate.class)
+	private String processInstanceId;
+
 	@Schema(description = "Created timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
@@ -293,6 +300,32 @@ public class Errand {
 		return this;
 	}
 
+	public String getProcessDefinitionName() {
+		return processDefinitionName;
+	}
+
+	public void setProcessDefinitionName(final String processDefinitionName) {
+		this.processDefinitionName = processDefinitionName;
+	}
+
+	public Errand withProcessDefinitionName(final String processDefinitionName) {
+		this.processDefinitionName = processDefinitionName;
+		return this;
+	}
+
+	public String getProcessInstanceId() {
+		return processInstanceId;
+	}
+
+	public void setProcessInstanceId(final String processInstanceId) {
+		this.processInstanceId = processInstanceId;
+	}
+
+	public Errand withProcessInstanceId(final String processInstanceId) {
+		this.processInstanceId = processInstanceId;
+		return this;
+	}
+
 	public OffsetDateTime getCreated() {
 		return created;
 	}
@@ -341,12 +374,14 @@ public class Errand {
 			category, errand.category) && Objects.equals(type, errand.type) && Objects.equals(status, errand.status) && Objects.equals(description, errand.description) && Objects.equals(priority, errand.priority)
 			&& Objects.equals(reporterUserId, errand.reporterUserId) && Objects.equals(assignedUserId, errand.assignedUserId) && Objects.equals(contactReason, errand.contactReason) && Objects.equals(
 				contactReasonDescription, errand.contactReasonDescription) && Objects.equals(externalTags, errand.externalTags) && Objects.equals(stakeholders, errand.stakeholders) && Objects.equals(parameters, errand.parameters)
+			&& Objects.equals(processDefinitionName, errand.processDefinitionName) && Objects.equals(processInstanceId, errand.processInstanceId)
 			&& Objects.equals(created, errand.created) && Objects.equals(modified, errand.modified) && Objects.equals(touched, errand.touched);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, municipalityId, namespace, title, category, type, status, description, priority, reporterUserId, assignedUserId, contactReason, contactReasonDescription, externalTags, stakeholders, parameters, created, modified, touched);
+		return Objects.hash(id, municipalityId, namespace, title, category, type, status, description, priority, reporterUserId, assignedUserId, contactReason, contactReasonDescription, externalTags, stakeholders, parameters, processDefinitionName,
+			processInstanceId, created, modified, touched);
 	}
 
 	@Override
@@ -368,6 +403,8 @@ public class Errand {
 			", externalTags=" + externalTags +
 			", stakeholders=" + stakeholders +
 			", parameters=" + parameters +
+			", processDefinitionName='" + processDefinitionName + '\'' +
+			", processInstanceId='" + processInstanceId + '\'' +
 			", created=" + created +
 			", modified=" + modified +
 			", touched=" + touched +

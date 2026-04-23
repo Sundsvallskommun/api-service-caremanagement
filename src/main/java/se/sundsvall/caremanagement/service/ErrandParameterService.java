@@ -25,15 +25,18 @@ public class ErrandParameterService {
 
 	private final ErrandRepository errandRepository;
 	private final ParameterRepository parameterRepository;
+	private final ProcessService processService;
 
-	ErrandParameterService(final ErrandRepository errandRepository, final ParameterRepository parameterRepository) {
+	ErrandParameterService(final ErrandRepository errandRepository, final ParameterRepository parameterRepository, final ProcessService processService) {
 		this.errandRepository = errandRepository;
 		this.parameterRepository = parameterRepository;
+		this.processService = processService;
 	}
 
 	public String create(final String municipalityId, final String namespace, final String errandId, final Parameter parameter) {
 		final var errand = findErrand(municipalityId, namespace, errandId);
 		final var saved = parameterRepository.save(toParameterEntity(parameter, errand));
+		processService.updateVariable(municipalityId, errand.getProcessInstanceId(), parameter);
 		return saved.getId();
 	}
 
@@ -50,8 +53,15 @@ public class ErrandParameterService {
 
 	public void update(final String municipalityId, final String namespace, final String errandId, final String parameterId, final Parameter parameter) {
 		final var entity = findParameter(municipalityId, namespace, errandId, parameterId);
+		final var previousKey = entity.getKey();
 		updateParameterEntity(entity, parameter);
 		parameterRepository.save(entity);
+
+		final var instanceId = entity.getErrandEntity().getProcessInstanceId();
+		if (parameter.getKey() != null && !parameter.getKey().equals(previousKey)) {
+			processService.deleteVariable(municipalityId, instanceId, previousKey);
+		}
+		processService.updateVariable(municipalityId, instanceId, toParameter(entity));
 	}
 
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String parameterId) {
@@ -60,8 +70,10 @@ public class ErrandParameterService {
 			.filter(entity -> entity.getId().equals(parameterId))
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, PARAMETER_NOT_FOUND_MESSAGE.formatted(parameterId, errandId, namespace, municipalityId)));
+		final var removedKey = parameter.getKey();
 		errand.getParameters().remove(parameter);
 		errandRepository.save(errand);
+		processService.deleteVariable(municipalityId, errand.getProcessInstanceId(), removedKey);
 	}
 
 	private ErrandEntity findErrand(final String municipalityId, final String namespace, final String errandId) {

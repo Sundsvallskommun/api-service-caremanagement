@@ -41,6 +41,8 @@ public final class ErrandMapper {
 				.withExternalTags(toExternalTagList(errandEntity.getExternalTags()))
 				.withStakeholders(toStakeholderList(errandEntity.getStakeholders()))
 				.withParameters(toParameterList(errandEntity.getParameters()))
+				.withProcessDefinitionName(errandEntity.getProcessDefinitionName())
+				.withProcessInstanceId(errandEntity.getProcessInstanceId())
 				.withCreated(errandEntity.getCreated())
 				.withModified(errandEntity.getModified())
 				.withTouched(errandEntity.getTouched()))
@@ -64,6 +66,7 @@ public final class ErrandMapper {
 			.withAssignedUserId(errand.getAssignedUserId())
 			.withContactReason(contactReason)
 			.withContactReasonDescription(errand.getContactReasonDescription())
+			.withProcessDefinitionName(errand.getProcessDefinitionName())
 			.withExternalTags(new ArrayList<>(toTagEmbeddableList(errand.getExternalTags())));
 		return errandEntity
 			.withStakeholders(new ArrayList<>(toStakeholderEntityList(errand.getStakeholders(), errandEntity)))

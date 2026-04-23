@@ -1,0 +1,9 @@
+{
+	"key": "newKey",
+	"displayName": "New parameter",
+	"parameterGroup": "misc",
+	"values": [
+		"v1",
+		"v2"
+	]
+}

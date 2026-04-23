@@ -42,6 +42,8 @@ class ErrandMapperTest {
 			.withExternalTags(new ArrayList<>(List.of(TagEmbeddable.create().withKey("k").withValue("v"))))
 			.withStakeholders(new ArrayList<>(List.of(StakeholderEntity.create().withId("sid").withRole("APPLICANT"))))
 			.withParameters(new ArrayList<>(List.of(ParameterEntity.create().withId("pid").withKey("k"))))
+			.withProcessDefinitionName("Handläggning")
+			.withProcessInstanceId("pi-1")
 			.withCreated(created)
 			.withModified(modified);
 
@@ -64,6 +66,8 @@ class ErrandMapperTest {
 		assertThat(result.getExternalTags()).hasSize(1);
 		assertThat(result.getStakeholders()).hasSize(1);
 		assertThat(result.getParameters()).hasSize(1);
+		assertThat(result.getProcessDefinitionName()).isEqualTo("Handläggning");
+		assertThat(result.getProcessInstanceId()).isEqualTo("pi-1");
 		assertThat(result.getCreated()).isEqualTo(created);
 		assertThat(result.getModified()).isEqualTo(modified);
 	}
@@ -99,7 +103,8 @@ class ErrandMapperTest {
 			.withContactReasonDescription("crd")
 			.withExternalTags(List.of(ExternalTag.create().withKey("k").withValue("v")))
 			.withStakeholders(List.of(Stakeholder.create().withRole("APPLICANT")))
-			.withParameters(List.of(Parameter.create().withKey("k")));
+			.withParameters(List.of(Parameter.create().withKey("k")))
+			.withProcessDefinitionName("Handläggning");
 
 		final var result = ErrandMapper.toErrandEntity(errand, "ns", "2281", contactReason);
 
@@ -113,6 +118,8 @@ class ErrandMapperTest {
 		assertThat(result.getStakeholders().getFirst().getErrandEntity()).isSameAs(result);
 		assertThat(result.getParameters()).hasSize(1);
 		assertThat(result.getParameters().getFirst().getErrandEntity()).isSameAs(result);
+		assertThat(result.getProcessDefinitionName()).isEqualTo("Handläggning");
+		assertThat(result.getProcessInstanceId()).isNull();
 		assertThat(result.getAttachments()).isNotNull().isEmpty();
 	}
 

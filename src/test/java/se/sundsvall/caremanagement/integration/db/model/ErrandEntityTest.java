@@ -59,6 +59,8 @@ class ErrandEntityTest {
 		final var parameters = List.of(ParameterEntity.create().withKey("k").withDisplayName("d").withParameterGroup("g").withValues(List.of("v")));
 		final var contactReason = LookupEntity.create().withKind(LookupKind.CONTACT_REASON).withName("NEW_APPLICATION").withDisplayName("Ny ansökan");
 		final var contactReasonDescription = "Brukaren önskar ansöka om hemtjänst";
+		final var processDefinitionName = "Handläggning";
+		final var processInstanceId = "pi-1";
 
 		final var entity = ErrandEntity.create()
 			.withId(id)
@@ -78,6 +80,8 @@ class ErrandEntityTest {
 			.withAttachments(attachments)
 			.withStakeholders(stakeholders)
 			.withParameters(parameters)
+			.withProcessDefinitionName(processDefinitionName)
+			.withProcessInstanceId(processInstanceId)
 			.withCreated(now)
 			.withModified(now)
 			.withTouched(now);
@@ -100,6 +104,8 @@ class ErrandEntityTest {
 		assertThat(entity.getAttachments()).isEqualTo(attachments);
 		assertThat(entity.getStakeholders()).isEqualTo(stakeholders);
 		assertThat(entity.getParameters()).isEqualTo(parameters);
+		assertThat(entity.getProcessDefinitionName()).isEqualTo(processDefinitionName);
+		assertThat(entity.getProcessInstanceId()).isEqualTo(processInstanceId);
 		assertThat(entity).extracting(
 			ErrandEntity::getCreated,
 			ErrandEntity::getModified,

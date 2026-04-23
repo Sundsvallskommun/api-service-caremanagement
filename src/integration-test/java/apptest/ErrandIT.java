@@ -114,4 +114,23 @@ class ErrandIT extends AbstractAppTest {
 			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequestAndVerifyResponse();
 	}
+
+	@Test
+	void test08_createErrandStartsOperatonProcess() {
+		setupCall()
+			.withServicePath(PATH)
+			.withHttpMethod(POST)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(CREATED)
+			.withExpectedResponseHeader(LOCATION, List.of("^/2281/MY_NAMESPACE/errands/[a-f0-9-]+$"))
+			.withExpectedResponseBodyIsNull()
+			.sendRequestAndVerifyResponse();
+
+		final var errand = repository.findAll().stream()
+			.filter(e -> "Started Errand".equals(e.getTitle()))
+			.findFirst()
+			.orElseThrow();
+		assertThat(errand.getProcessDefinitionName()).isEqualTo("Handläggning");
+		assertThat(errand.getProcessInstanceId()).isEqualTo("pi-test-08");
+	}
 }

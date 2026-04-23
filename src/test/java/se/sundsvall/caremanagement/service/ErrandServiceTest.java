@@ -23,6 +23,7 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -44,6 +45,9 @@ class ErrandServiceTest {
 	@Mock
 	private LookupRepository lookupRepositoryMock;
 
+	@Mock
+	private ProcessService processServiceMock;
+
 	@Captor
 	private ArgumentCaptor<ErrandEntity> entityCaptor;
 
@@ -55,6 +59,7 @@ class ErrandServiceTest {
 		final var errand = Errand.create().withTitle("title");
 		when(errandRepositoryMock.save(any(ErrandEntity.class)))
 			.thenAnswer(inv -> ((ErrandEntity) inv.getArgument(0)).withId(ERRAND_ID));
+		when(processServiceMock.startProcess(any(), any(), any(), any())).thenReturn(Optional.empty());
 
 		final var result = service.createErrand(MUNICIPALITY_ID, NAMESPACE, errand);
 
@@ -64,7 +69,38 @@ class ErrandServiceTest {
 		assertThat(entityCaptor.getValue().getNamespace()).isEqualTo(NAMESPACE);
 		assertThat(entityCaptor.getValue().getMunicipalityId()).isEqualTo(MUNICIPALITY_ID);
 		assertThat(entityCaptor.getValue().getContactReason()).isNull();
-		verifyNoMoreInteractions(lookupRepositoryMock);
+		verify(processServiceMock).startProcess(MUNICIPALITY_ID, null, ERRAND_ID, null);
+		verifyNoMoreInteractions(lookupRepositoryMock, processServiceMock);
+	}
+
+	@Test
+	void createErrand_withProcessDefinitionName_startsProcessAndStoresInstanceId() {
+		final var errand = Errand.create().withTitle("title").withProcessDefinitionName("Handläggning");
+		when(errandRepositoryMock.save(any(ErrandEntity.class)))
+			.thenAnswer(inv -> ((ErrandEntity) inv.getArgument(0)).withId(ERRAND_ID));
+		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq("Handläggning"), eq(ERRAND_ID), any()))
+			.thenReturn(Optional.of("pi-1"));
+
+		final var result = service.createErrand(MUNICIPALITY_ID, NAMESPACE, errand);
+
+		assertThat(result).isEqualTo(ERRAND_ID);
+		verify(errandRepositoryMock, org.mockito.Mockito.times(2)).save(entityCaptor.capture());
+		final var allValues = entityCaptor.getAllValues();
+		assertThat(allValues).hasSize(2);
+		assertThat(allValues.getLast().getProcessInstanceId()).isEqualTo("pi-1");
+	}
+
+	@Test
+	void createErrand_processServiceRejectsUnknownName_propagatesProblem() {
+		final var errand = Errand.create().withTitle("title").withProcessDefinitionName("Unknown");
+		when(errandRepositoryMock.save(any(ErrandEntity.class)))
+			.thenAnswer(inv -> ((ErrandEntity) inv.getArgument(0)).withId(ERRAND_ID));
+		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq("Unknown"), eq(ERRAND_ID), any()))
+			.thenThrow(se.sundsvall.dept44.problem.Problem.valueOf(BAD_REQUEST, "No Operaton process definition found with name 'Unknown'"));
+
+		assertThatThrownBy(() -> service.createErrand(MUNICIPALITY_ID, NAMESPACE, errand))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 	}
 
 	@Test
