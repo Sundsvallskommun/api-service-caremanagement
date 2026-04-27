@@ -115,6 +115,12 @@ public class ErrandEntity implements Auditable {
 	@OneToMany(mappedBy = "errandEntity", cascade = ALL, orphanRemoval = true)
 	private List<ParameterEntity> parameters;
 
+	@Column(name = "process_definition_name")
+	private String processDefinitionName;
+
+	@Column(name = "process_instance_id")
+	private String processInstanceId;
+
 	@Column(name = "created")
 	@TimeZoneStorage(NORMALIZE)
 	private OffsetDateTime created;
@@ -358,6 +364,32 @@ public class ErrandEntity implements Auditable {
 		return this;
 	}
 
+	public String getProcessDefinitionName() {
+		return processDefinitionName;
+	}
+
+	public void setProcessDefinitionName(final String processDefinitionName) {
+		this.processDefinitionName = processDefinitionName;
+	}
+
+	public ErrandEntity withProcessDefinitionName(final String processDefinitionName) {
+		this.processDefinitionName = processDefinitionName;
+		return this;
+	}
+
+	public String getProcessInstanceId() {
+		return processInstanceId;
+	}
+
+	public void setProcessInstanceId(final String processInstanceId) {
+		this.processInstanceId = processInstanceId;
+	}
+
+	public ErrandEntity withProcessInstanceId(final String processInstanceId) {
+		this.processInstanceId = processInstanceId;
+		return this;
+	}
+
 	public OffsetDateTime getCreated() {
 		return created;
 	}
@@ -413,15 +445,16 @@ public class ErrandEntity implements Auditable {
 		return Objects.equals(id, that.id) && Objects.equals(externalTags, that.externalTags) && Objects.equals(municipalityId, that.municipalityId) && Objects.equals(namespace, that.namespace) && Objects.equals(title, that.title)
 			&& Objects.equals(category, that.category) && Objects.equals(type, that.type) && Objects.equals(status, that.status) && Objects.equals(description, that.description) && Objects.equals(priority, that.priority)
 			&& Objects.equals(reporterUserId, that.reporterUserId) && Objects.equals(assignedUserId, that.assignedUserId) && Objects.equals(contactReason, that.contactReason) && Objects.equals(contactReasonDescription, that.contactReasonDescription)
-			&& Objects.equals(attachments, that.attachments) && Objects.equals(stakeholders, that.stakeholders) && Objects.equals(parameters, that.parameters) && Objects.equals(created, that.created) && Objects.equals(modified, that.modified)
+			&& Objects.equals(attachments, that.attachments) && Objects.equals(stakeholders, that.stakeholders) && Objects.equals(parameters, that.parameters)
+			&& Objects.equals(processDefinitionName, that.processDefinitionName) && Objects.equals(processInstanceId, that.processInstanceId)
+			&& Objects.equals(created, that.created) && Objects.equals(modified, that.modified)
 			&& Objects.equals(touched, that.touched);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, externalTags, municipalityId, namespace, title, category, type, status, description, priority, reporterUserId, assignedUserId, contactReason, contactReasonDescription, attachments, stakeholders, parameters, created,
-			modified,
-			touched);
+		return Objects.hash(id, externalTags, municipalityId, namespace, title, category, type, status, description, priority, reporterUserId, assignedUserId, contactReason, contactReasonDescription, attachments, stakeholders, parameters,
+			processDefinitionName, processInstanceId, created, modified, touched);
 	}
 
 	@Override
@@ -444,6 +477,8 @@ public class ErrandEntity implements Auditable {
 			", attachments=" + attachments +
 			", stakeholders=" + stakeholders +
 			", parameters=" + parameters +
+			", processDefinitionName='" + processDefinitionName + '\'' +
+			", processInstanceId='" + processInstanceId + '\'' +
 			", created=" + created +
 			", modified=" + modified +
 			", touched=" + touched +

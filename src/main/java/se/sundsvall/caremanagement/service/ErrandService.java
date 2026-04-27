@@ -32,15 +32,24 @@ public class ErrandService {
 
 	private final ErrandRepository errandRepository;
 	private final LookupRepository lookupRepository;
+	private final ProcessService processService;
 
-	ErrandService(final ErrandRepository errandRepository, final LookupRepository lookupRepository) {
+	ErrandService(final ErrandRepository errandRepository, final LookupRepository lookupRepository, final ProcessService processService) {
 		this.errandRepository = errandRepository;
 		this.lookupRepository = lookupRepository;
+		this.processService = processService;
 	}
 
 	public String createErrand(final String municipalityId, final String namespace, final Errand errand) {
 		final var contactReason = resolveContactReason(municipalityId, namespace, errand.getContactReason());
 		final var saved = errandRepository.save(toErrandEntity(errand, namespace, municipalityId, contactReason));
+
+		processService.startProcess(municipalityId, errand.getProcessDefinitionName(), saved.getId(), errand.getParameters())
+			.ifPresent(instanceId -> {
+				saved.setProcessInstanceId(instanceId);
+				errandRepository.save(saved);
+			});
+
 		return saved.getId();
 	}
 

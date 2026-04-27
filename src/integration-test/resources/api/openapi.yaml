@@ -2154,6 +2154,18 @@ components:
           description: Parameters for the errand
           items:
             $ref: "#/components/schemas/Parameter"
+        processDefinitionName:
+          type: string
+          description: Name of the Operaton process definition to start when the errand
+            is created
+          examples:
+          - Handläggning av ärende
+        processInstanceId:
+          type: string
+          description: Id of the Operaton process instance started for this errand
+          examples:
+          - a-process-instance-id
+          readOnly: true
         created:
           type: string
           format: date-time

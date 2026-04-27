@@ -1,0 +1,33 @@
+{
+	"request": {
+		"method": "GET",
+		"urlPath": "/api-operaton/2281/process-definitions",
+		"queryParameters": {
+			"name": {
+				"equalTo": "Handläggning"
+			}
+		},
+		"headers": {
+			"Authorization": {
+				"equalTo": "Bearer 0000000000000000AAAAAAAAAAAAAAAA"
+			}
+		}
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"processDefinitions": [
+				{
+					"id": "handling:1:1",
+					"key": "handling",
+					"name": "Handläggning",
+					"version": 1,
+					"deploymentId": "deploy-1"
+				}
+			]
+		},
+		"status": 200
+	}
+}

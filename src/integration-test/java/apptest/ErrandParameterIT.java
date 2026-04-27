@@ -32,6 +32,7 @@ class ErrandParameterIT extends AbstractAppTest {
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "MY_NAMESPACE";
 	private static final String ERRAND_ID = "11111111-1111-1111-1111-111111111111";
+	private static final String RUNNING_PROCESS_ERRAND_ID = "55555555-5555-5555-5555-555555555555";
 	private static final String UNKNOWN_ERRAND_ID = "33333333-3333-3333-3333-333333333333";
 	private static final String PARAMETER_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 	private static final String UNKNOWN_PARAMETER_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc";
@@ -115,6 +116,18 @@ class ErrandParameterIT extends AbstractAppTest {
 			.withHttpMethod(GET)
 			.withExpectedResponseStatus(NOT_FOUND)
 			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequestAndVerifyResponse();
+	}
+
+	@Test
+	void test08_createParameterSyncsOperatonVariable() {
+		setupCall()
+			.withServicePath(BASE_PATH.formatted(RUNNING_PROCESS_ERRAND_ID))
+			.withHttpMethod(POST)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(CREATED)
+			.withExpectedResponseHeader(LOCATION, List.of("^/2281/MY_NAMESPACE/errands/55555555-5555-5555-5555-555555555555/parameters/[a-f0-9-]+$"))
+			.withExpectedResponseBodyIsNull()
 			.sendRequestAndVerifyResponse();
 	}
 }

@@ -1,5 +1,7 @@
 package se.sundsvall.caremanagement.integration.operaton;
 
+import generated.se.sundsvall.operaton.ModifyVariablesRequest;
+import generated.se.sundsvall.operaton.ProcessDefinitionsResponse;
 import generated.se.sundsvall.operaton.ProcessInstanceResponse;
 import generated.se.sundsvall.operaton.ProcessInstancesResponse;
 import generated.se.sundsvall.operaton.StartProcessInstanceRequest;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import se.sundsvall.caremanagement.integration.operaton.configuration.OperatonConfiguration;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -51,4 +54,29 @@ public interface OperatonClient {
 	ProcessInstanceResponse getProcessInstance(
 		@PathVariable final String municipalityId,
 		@PathVariable final String id);
+
+	/**
+	 * List process definitions filtered by name (latest versions that match).
+	 *
+	 * @param  municipalityId the id of the municipality
+	 * @param  name           process definition name to match
+	 * @return                response containing matching process definitions
+	 */
+	@GetMapping(path = "/{municipalityId}/process-definitions", params = "name", produces = APPLICATION_JSON_VALUE)
+	ProcessDefinitionsResponse getProcessDefinitionsByName(
+		@PathVariable final String municipalityId,
+		@RequestParam("name") final String name);
+
+	/**
+	 * Add, update, or remove variables on a running process instance.
+	 *
+	 * @param municipalityId the id of the municipality
+	 * @param id             the process instance id
+	 * @param request        modifications and deletions to apply
+	 */
+	@PostMapping(path = "/{municipalityId}/process-instances/{id}/variables", consumes = APPLICATION_JSON_VALUE)
+	void modifyProcessInstanceVariables(
+		@PathVariable final String municipalityId,
+		@PathVariable final String id,
+		@RequestBody final ModifyVariablesRequest request);
 }

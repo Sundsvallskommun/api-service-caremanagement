@@ -308,6 +308,55 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/process-instances/{id}/variables:
+    post:
+      tags:
+      - Processes
+      summary: Modify variables (add, update, delete) on a running process instance
+      operationId: modifyProcessInstanceVariables
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: id
+        in: path
+        description: Process instance id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyVariablesRequest"
+        required: true
+      responses:
+        "204":
+          description: Variables modified
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/process-instances/{id}:
     get:
       tags:
@@ -359,7 +408,8 @@ paths:
     get:
       tags:
       - Processes
-      summary: List the latest version of all deployed process definitions
+      summary: List the latest version of all deployed process definitions, optionally
+        filtered by name
       operationId: getProcessDefinitions
       parameters:
       - name: municipalityId
@@ -369,6 +419,12 @@ paths:
         schema:
           type: string
         example: 2281
+      - name: name
+        in: query
+        description: Filter by process definition name (latest version that matches)
+        required: false
+        schema:
+          type: string
       responses:
         "200":
           description: Successful Operation
@@ -709,6 +765,20 @@ components:
           description: Process variables to set when starting the instance
       required:
       - processDefinitionKey
+    ModifyVariablesRequest:
+      type: object
+      description: Request to add, update, and/or remove variables on a running process
+        instance
+      properties:
+        modifications:
+          type: object
+          additionalProperties: {}
+          description: Variables to add or update (keyed by variable name)
+        deletions:
+          type: array
+          description: Names of variables to remove
+          items:
+            type: string
     Problem:
       type: object
       properties:

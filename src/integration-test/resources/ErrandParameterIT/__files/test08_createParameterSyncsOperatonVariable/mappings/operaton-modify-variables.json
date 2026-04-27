@@ -1,0 +1,27 @@
+{
+	"request": {
+		"method": "POST",
+		"urlPath": "/api-operaton/2281/process-instances/pi-running-55/variables",
+		"headers": {
+			"Authorization": {
+				"equalTo": "Bearer 0000000000000000AAAAAAAAAAAAAAAA"
+			}
+		},
+		"bodyPatterns": [
+			{
+				"equalToJson": {
+					"modifications": {
+						"newKey": [
+							"v1",
+							"v2"
+						]
+					},
+					"deletions": []
+				}
+			}
+		]
+	},
+	"response": {
+		"status": 204
+	}
+}

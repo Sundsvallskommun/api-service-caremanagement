@@ -1,6 +1,26 @@
 {
 	"errands": [
 		{
+			"id": "55555555-5555-5555-5555-555555555555",
+			"municipalityId": "2281",
+			"namespace": "MY_NAMESPACE",
+			"title": "Errand five",
+			"category": "CATEGORY-1",
+			"type": "TYPE-1",
+			"status": "NEW",
+			"description": "Running process errand",
+			"priority": "MEDIUM",
+			"reporterUserId": "reporter5",
+			"processDefinitionName": "Handläggning",
+			"processInstanceId": "pi-running-55",
+			"externalTags": [],
+			"stakeholders": [],
+			"parameters": [],
+			"created": "${json-unit.any-string}",
+			"modified": "${json-unit.any-string}",
+			"touched": "${json-unit.any-string}"
+		},
+		{
 			"id": "44444444-4444-4444-4444-444444444444",
 			"municipalityId": "2281",
 			"namespace": "MY_NAMESPACE",
@@ -123,8 +143,8 @@
 	"_meta": {
 		"page": 1,
 		"limit": 10,
-		"count": 3,
-		"totalRecords": 3,
+		"count": 4,
+		"totalRecords": 4,
 		"totalPages": 1,
 		"sortBy": [
 			"touched"

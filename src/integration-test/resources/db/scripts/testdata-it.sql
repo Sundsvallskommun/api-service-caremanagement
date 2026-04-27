@@ -19,10 +19,11 @@ INSERT INTO namespace_config (id, municipality_id, namespace, display_name, shor
     (2, '2281', 'OTHER_NAMESPACE', 'Other namespace', 'OTHR', '2025-01-01 12:00:00.000000', '2025-01-01 12:00:00.000000');
 
 -- Errands
-INSERT INTO errand (id, municipality_id, namespace, title, category, type, status, description, priority, reporter_user_id, assigned_user_id, contact_reason_id, contact_reason_description, created, modified, touched) VALUES
-    ('11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'Errand one',   'CATEGORY-1', 'TYPE-1', 'NEW', 'First errand description',  'HIGH',   'reporter1', 'assignee1', 1, 'Caller said hello', '2025-01-02 09:00:00.000000', '2025-01-02 09:00:00.000000', '2025-01-02 09:00:00.000000'),
-    ('22222222-2222-2222-2222-222222222222', '2281', 'MY_NAMESPACE', 'Errand two',   'CATEGORY-1', 'TYPE-1', 'NEW', 'Second errand description', 'MEDIUM', 'reporter2', 'assignee2', 1, NULL,                '2025-01-03 10:00:00.000000', '2025-01-03 10:00:00.000000', '2025-01-03 10:00:00.000000'),
-    ('44444444-4444-4444-4444-444444444444', '2281', 'MY_NAMESPACE', 'Errand four',  'CATEGORY-1', 'TYPE-1', 'NEW', 'Fourth errand description', 'LOW',    'reporter4', NULL,        NULL, NULL,             '2025-01-04 11:00:00.000000', '2025-01-04 11:00:00.000000', '2025-01-04 11:00:00.000000');
+INSERT INTO errand (id, municipality_id, namespace, title, category, type, status, description, priority, reporter_user_id, assigned_user_id, contact_reason_id, contact_reason_description, process_definition_name, process_instance_id, created, modified, touched) VALUES
+    ('11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'Errand one',   'CATEGORY-1', 'TYPE-1', 'NEW', 'First errand description',  'HIGH',   'reporter1', 'assignee1', 1, 'Caller said hello', NULL,            NULL,              '2025-01-02 09:00:00.000000', '2025-01-02 09:00:00.000000', '2025-01-02 09:00:00.000000'),
+    ('22222222-2222-2222-2222-222222222222', '2281', 'MY_NAMESPACE', 'Errand two',   'CATEGORY-1', 'TYPE-1', 'NEW', 'Second errand description', 'MEDIUM', 'reporter2', 'assignee2', 1, NULL,                NULL,            NULL,              '2025-01-03 10:00:00.000000', '2025-01-03 10:00:00.000000', '2025-01-03 10:00:00.000000'),
+    ('44444444-4444-4444-4444-444444444444', '2281', 'MY_NAMESPACE', 'Errand four',  'CATEGORY-1', 'TYPE-1', 'NEW', 'Fourth errand description', 'LOW',    'reporter4', NULL,        NULL, NULL,             NULL,            NULL,              '2025-01-04 11:00:00.000000', '2025-01-04 11:00:00.000000', '2025-01-04 11:00:00.000000'),
+    ('55555555-5555-5555-5555-555555555555', '2281', 'MY_NAMESPACE', 'Errand five',  'CATEGORY-1', 'TYPE-1', 'NEW', 'Running process errand',    'MEDIUM', 'reporter5', NULL,        NULL, NULL,             'Handläggning',  'pi-running-55',   '2025-01-05 12:00:00.000000', '2025-01-05 12:00:00.000000', '2025-01-05 12:00:00.000000');
 
 -- External tags on errand one
 INSERT INTO external_tag (errand_id, `key`, `value`) VALUES

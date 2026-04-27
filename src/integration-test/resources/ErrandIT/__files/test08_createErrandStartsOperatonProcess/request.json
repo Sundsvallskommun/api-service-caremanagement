@@ -1,0 +1,12 @@
+{
+	"title": "Started Errand",
+	"processDefinitionName": "Handläggning",
+	"parameters": [
+		{
+			"key": "priorityLevel",
+			"values": [
+				"high"
+			]
+		}
+	]
+}
