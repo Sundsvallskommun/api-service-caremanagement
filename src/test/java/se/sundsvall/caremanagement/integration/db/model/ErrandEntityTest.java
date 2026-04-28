@@ -57,6 +57,7 @@ class ErrandEntityTest {
 		final var attachments = List.of(AttachmentEntity.create().withId(UUID.randomUUID().toString()).withFileName("fileName").withAttachmentData(AttachmentDataEntity.create().withFile(new MariaDbBlob("file".getBytes()))).withMimeType("mimeType"));
 		final var stakeholders = List.of(StakeholderEntity.create().withRole("PATIENT").withFirstName("First").withLastName("Last"));
 		final var parameters = List.of(ParameterEntity.create().withKey("k").withDisplayName("d").withParameterGroup("g").withValues(List.of("v")));
+		final var decisions = List.of(DecisionEntity.create().withDecisionType("PAYMENT").withValue("APPROVED").withDescription("desc").withCreatedBy("jane01doe").withCreated(now));
 		final var contactReason = LookupEntity.create().withKind(LookupKind.CONTACT_REASON).withName("NEW_APPLICATION").withDisplayName("Ny ansökan");
 		final var contactReasonDescription = "Brukaren önskar ansöka om hemtjänst";
 		final var processDefinitionName = "Handläggning";
@@ -80,6 +81,7 @@ class ErrandEntityTest {
 			.withAttachments(attachments)
 			.withStakeholders(stakeholders)
 			.withParameters(parameters)
+			.withDecisions(decisions)
 			.withProcessDefinitionName(processDefinitionName)
 			.withProcessInstanceId(processInstanceId)
 			.withCreated(now)
@@ -104,6 +106,7 @@ class ErrandEntityTest {
 		assertThat(entity.getAttachments()).isEqualTo(attachments);
 		assertThat(entity.getStakeholders()).isEqualTo(stakeholders);
 		assertThat(entity.getParameters()).isEqualTo(parameters);
+		assertThat(entity.getDecisions()).isEqualTo(decisions);
 		assertThat(entity.getProcessDefinitionName()).isEqualTo(processDefinitionName);
 		assertThat(entity.getProcessInstanceId()).isEqualTo(processInstanceId);
 		assertThat(entity).extracting(

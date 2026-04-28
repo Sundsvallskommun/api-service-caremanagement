@@ -52,6 +52,7 @@ class ErrandTest {
 		final var externalTags = List.of(ExternalTag.create());
 		final var stakeholders = List.of(Stakeholder.create());
 		final var parameters = List.of(Parameter.create());
+		final var decisions = List.of(Decision.create());
 		final var processDefinitionName = "Handläggning";
 		final var processInstanceId = "pi-1";
 		final var created = now();
@@ -75,6 +76,7 @@ class ErrandTest {
 			.withExternalTags(externalTags)
 			.withStakeholders(stakeholders)
 			.withParameters(parameters)
+			.withDecisions(decisions)
 			.withProcessDefinitionName(processDefinitionName)
 			.withProcessInstanceId(processInstanceId)
 			.withCreated(created)
@@ -98,6 +100,7 @@ class ErrandTest {
 		assertThat(result.getExternalTags()).isEqualTo(externalTags);
 		assertThat(result.getStakeholders()).isEqualTo(stakeholders);
 		assertThat(result.getParameters()).isEqualTo(parameters);
+		assertThat(result.getDecisions()).isEqualTo(decisions);
 		assertThat(result.getProcessDefinitionName()).isEqualTo(processDefinitionName);
 		assertThat(result.getProcessInstanceId()).isEqualTo(processInstanceId);
 		assertThat(result.getCreated()).isEqualTo(created);

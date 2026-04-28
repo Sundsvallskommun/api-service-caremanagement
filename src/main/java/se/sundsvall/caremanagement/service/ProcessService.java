@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.service;
 
+import generated.se.sundsvall.operaton.CorrelationMessageRequest;
 import generated.se.sundsvall.operaton.ModifyVariablesRequest;
 import generated.se.sundsvall.operaton.ProcessDefinitionResponse;
 import generated.se.sundsvall.operaton.ProcessDefinitionsResponse;
@@ -66,6 +67,18 @@ public class ProcessService {
 		}
 		operatonClient.modifyProcessInstanceVariables(municipalityId, processInstanceId, new ModifyVariablesRequest()
 			.deletions(List.of(parameterKey)));
+	}
+
+	/**
+	 * Correlates a BPMN message to the process instance identified by {@code businessKey}. Used to resume a process
+	 * waiting on a receive task or message catch event, e.g. when a handläggare clicks Approve/Reject in the UI. The
+	 * {@code variables} map (if non-empty) is set on the process instance as part of the correlation.
+	 */
+	public void correlateMessage(final String municipalityId, final String messageName, final String businessKey, final Map<String, Object> variables) {
+		operatonClient.correlateMessage(municipalityId, new CorrelationMessageRequest()
+			.messageName(messageName)
+			.businessKey(businessKey)
+			.processVariables(ofNullable(variables).orElseGet(Map::of)));
 	}
 
 	private String resolveDefinitionKey(final String municipalityId, final String name) {
