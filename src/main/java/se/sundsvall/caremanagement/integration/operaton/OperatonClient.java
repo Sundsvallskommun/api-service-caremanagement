@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.integration.operaton;
 
+import generated.se.sundsvall.operaton.CorrelationMessageRequest;
 import generated.se.sundsvall.operaton.ModifyVariablesRequest;
 import generated.se.sundsvall.operaton.ProcessDefinitionsResponse;
 import generated.se.sundsvall.operaton.ProcessInstanceResponse;
@@ -79,4 +80,15 @@ public interface OperatonClient {
 		@PathVariable final String municipalityId,
 		@PathVariable final String id,
 		@RequestBody final ModifyVariablesRequest request);
+
+	/**
+	 * Correlate a BPMN message to a process instance waiting on a receive task or message catch event.
+	 *
+	 * @param municipalityId the id of the municipality
+	 * @param request        message name, business key, and optional process variables
+	 */
+	@PostMapping(path = "/{municipalityId}/message", consumes = APPLICATION_JSON_VALUE)
+	void correlateMessage(
+		@PathVariable final String municipalityId,
+		@RequestBody final CorrelationMessageRequest request);
 }

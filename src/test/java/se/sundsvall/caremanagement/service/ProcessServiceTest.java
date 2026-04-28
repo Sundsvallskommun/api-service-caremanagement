@@ -1,11 +1,13 @@
 package se.sundsvall.caremanagement.service;
 
+import generated.se.sundsvall.operaton.CorrelationMessageRequest;
 import generated.se.sundsvall.operaton.ModifyVariablesRequest;
 import generated.se.sundsvall.operaton.ProcessDefinitionResponse;
 import generated.se.sundsvall.operaton.ProcessDefinitionsResponse;
 import generated.se.sundsvall.operaton.ProcessInstanceResponse;
 import generated.se.sundsvall.operaton.StartProcessInstanceRequest;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -42,6 +44,9 @@ class ProcessServiceTest {
 
 	@Captor
 	private ArgumentCaptor<ModifyVariablesRequest> modifyCaptor;
+
+	@Captor
+	private ArgumentCaptor<CorrelationMessageRequest> correlateCaptor;
 
 	@InjectMocks
 	private ProcessService service;
@@ -177,5 +182,24 @@ class ProcessServiceTest {
 
 		verify(operatonClientMock).modifyProcessInstanceVariables(eq(MUNICIPALITY_ID), eq(PROCESS_INSTANCE_ID), modifyCaptor.capture());
 		assertThat(modifyCaptor.getValue().getDeletions()).containsExactly("k");
+	}
+
+	@Test
+	void correlateMessage_withVariables() {
+		service.correlateMessage(MUNICIPALITY_ID, "PaymentDecisionReceived", BUSINESS_KEY, Map.of("paymentDecision", "APPROVED"));
+
+		verify(operatonClientMock).correlateMessage(eq(MUNICIPALITY_ID), correlateCaptor.capture());
+		final var request = correlateCaptor.getValue();
+		assertThat(request.getMessageName()).isEqualTo("PaymentDecisionReceived");
+		assertThat(request.getBusinessKey()).isEqualTo(BUSINESS_KEY);
+		assertThat(request.getProcessVariables()).containsEntry("paymentDecision", "APPROVED");
+	}
+
+	@Test
+	void correlateMessage_nullVariables_sendsEmptyMap() {
+		service.correlateMessage(MUNICIPALITY_ID, "MessageName", BUSINESS_KEY, null);
+
+		verify(operatonClientMock).correlateMessage(eq(MUNICIPALITY_ID), correlateCaptor.capture());
+		assertThat(correlateCaptor.getValue().getProcessVariables()).isEmpty();
 	}
 }

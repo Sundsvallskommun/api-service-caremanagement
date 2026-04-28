@@ -19,7 +19,53 @@ tags:
   description: Manage deployed process definitions and running process instances
 - name: Decisions
   description: Manage deployed DMN decision definitions
+- name: Messages
+  description: Correlate BPMN messages to running process instances
 paths:
+  /{municipalityId}/message:
+    post:
+      tags:
+      - Messages
+      summary: Correlate a BPMN message to a process instance waiting on a receive
+        task or message catch event
+      operationId: correlateMessage
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrelationMessageRequest"
+        required: true
+      responses:
+        "204":
+          description: Message correlated
+        "404":
+          description: No process instance waiting for the message
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/process-instances:
     get:
       tags:
@@ -744,6 +790,29 @@ paths:
                 $ref: "#/components/schemas/Problem"
 components:
   schemas:
+    CorrelationMessageRequest:
+      type: object
+      description: Request to correlate a BPMN message to a waiting receive task
+      properties:
+        messageName:
+          type: string
+          description: Name of the BPMN message to correlate
+          examples:
+          - PaymentDecisionReceived
+          minLength: 1
+        businessKey:
+          type: string
+          description: Business key identifying the target process instance
+          examples:
+          - errand-12345
+          minLength: 1
+        processVariables:
+          type: object
+          additionalProperties: {}
+          description: Process variables to set when correlating the message
+      required:
+      - messageName
+      - businessKey
     StartProcessInstanceRequest:
       type: object
       description: Request to start a process instance

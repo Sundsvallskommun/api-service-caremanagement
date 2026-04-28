@@ -60,6 +60,7 @@
 			]
 		}
 	],
+	"decisions": [],
 	"created": "${json-unit.any-string}",
 	"modified": "${json-unit.any-string}",
 	"touched": "${json-unit.any-string}"

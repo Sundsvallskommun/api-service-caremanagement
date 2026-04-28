@@ -11,6 +11,8 @@ import se.sundsvall.dept44.models.api.paging.PagingAndSortingMetaData;
 
 import static java.util.Collections.emptyList;
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.service.mapper.DecisionMapper.toDecisionEntityList;
+import static se.sundsvall.caremanagement.service.mapper.DecisionMapper.toDecisionList;
 import static se.sundsvall.caremanagement.service.mapper.ExternalTagMapper.toExternalTagList;
 import static se.sundsvall.caremanagement.service.mapper.ExternalTagMapper.toTagEmbeddableList;
 import static se.sundsvall.caremanagement.service.mapper.ParameterMapper.toParameterEntityList;
@@ -41,6 +43,7 @@ public final class ErrandMapper {
 				.withExternalTags(toExternalTagList(errandEntity.getExternalTags()))
 				.withStakeholders(toStakeholderList(errandEntity.getStakeholders()))
 				.withParameters(toParameterList(errandEntity.getParameters()))
+				.withDecisions(toDecisionList(errandEntity.getDecisions()))
 				.withProcessDefinitionName(errandEntity.getProcessDefinitionName())
 				.withProcessInstanceId(errandEntity.getProcessInstanceId())
 				.withCreated(errandEntity.getCreated())
@@ -71,6 +74,7 @@ public final class ErrandMapper {
 		return errandEntity
 			.withStakeholders(new ArrayList<>(toStakeholderEntityList(errand.getStakeholders(), errandEntity)))
 			.withParameters(new ArrayList<>(toParameterEntityList(errand.getParameters(), errandEntity)))
+			.withDecisions(new ArrayList<>(toDecisionEntityList(errand.getDecisions(), errandEntity)))
 			.withAttachments(new ArrayList<>());
 	}
 

@@ -69,6 +69,11 @@ public class Errand {
 	@Valid
 	private List<Parameter> parameters;
 
+	@Schema(
+		description = "Decisions recorded against the errand. Both system-generated (e.g. a DMN-evaluated recommendation from a BPMN process) and human (e.g. a handläggare APPROVE/REJECT) decisions accumulate here over the errand's lifetime, distinguished by `decisionType`.")
+	@Valid
+	private List<Decision> decisions;
+
 	@Schema(description = "Name of the Operaton process definition to start when the errand is created", examples = "Handläggning av ärende")
 	private String processDefinitionName;
 
@@ -300,6 +305,19 @@ public class Errand {
 		return this;
 	}
 
+	public List<Decision> getDecisions() {
+		return decisions;
+	}
+
+	public void setDecisions(final List<Decision> decisions) {
+		this.decisions = decisions;
+	}
+
+	public Errand withDecisions(final List<Decision> decisions) {
+		this.decisions = decisions;
+		return this;
+	}
+
 	public String getProcessDefinitionName() {
 		return processDefinitionName;
 	}
@@ -373,14 +391,16 @@ public class Errand {
 		return Objects.equals(id, errand.id) && Objects.equals(municipalityId, errand.municipalityId) && Objects.equals(namespace, errand.namespace) && Objects.equals(title, errand.title) && Objects.equals(
 			category, errand.category) && Objects.equals(type, errand.type) && Objects.equals(status, errand.status) && Objects.equals(description, errand.description) && Objects.equals(priority, errand.priority)
 			&& Objects.equals(reporterUserId, errand.reporterUserId) && Objects.equals(assignedUserId, errand.assignedUserId) && Objects.equals(contactReason, errand.contactReason) && Objects.equals(
-				contactReasonDescription, errand.contactReasonDescription) && Objects.equals(externalTags, errand.externalTags) && Objects.equals(stakeholders, errand.stakeholders) && Objects.equals(parameters, errand.parameters)
+				contactReasonDescription, errand.contactReasonDescription) && Objects.equals(externalTags, errand.externalTags) && Objects.equals(stakeholders, errand.stakeholders) && Objects.equals(parameters, errand.parameters) && Objects.equals(
+					decisions, errand.decisions)
 			&& Objects.equals(processDefinitionName, errand.processDefinitionName) && Objects.equals(processInstanceId, errand.processInstanceId)
 			&& Objects.equals(created, errand.created) && Objects.equals(modified, errand.modified) && Objects.equals(touched, errand.touched);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, municipalityId, namespace, title, category, type, status, description, priority, reporterUserId, assignedUserId, contactReason, contactReasonDescription, externalTags, stakeholders, parameters, processDefinitionName,
+		return Objects.hash(id, municipalityId, namespace, title, category, type, status, description, priority, reporterUserId, assignedUserId, contactReason, contactReasonDescription, externalTags, stakeholders, parameters, decisions,
+			processDefinitionName,
 			processInstanceId, created, modified, touched);
 	}
 
@@ -403,6 +423,7 @@ public class Errand {
 			", externalTags=" + externalTags +
 			", stakeholders=" + stakeholders +
 			", parameters=" + parameters +
+			", decisions=" + decisions +
 			", processDefinitionName='" + processDefinitionName + '\'' +
 			", processInstanceId='" + processInstanceId + '\'' +
 			", created=" + created +
