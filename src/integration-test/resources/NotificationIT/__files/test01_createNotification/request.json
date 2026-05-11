@@ -1,0 +1,7 @@
+{
+	"ownerId": "assignee1",
+	"createdBy": "reporter1",
+	"type": "CREATE",
+	"subType": "SYSTEM",
+	"description": "Test notification"
+}

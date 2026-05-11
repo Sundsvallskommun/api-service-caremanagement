@@ -7,6 +7,12 @@ logging:
 integration:
   operaton:
     url: http://operaton.url
+scheduler:
+  notification-cleanup:
+    cron: '-'
+    name: notification-cleanup
+    shedlock-lock-at-most-for: PT5M
+    maximum-execution-time: PT5M
 spring:
   cache:
     type: none

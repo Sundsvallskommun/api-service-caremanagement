@@ -10,16 +10,19 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import se.sundsvall.caremanagement.api.model.Decision;
 import se.sundsvall.caremanagement.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.integration.db.model.DecisionEntity;
 import se.sundsvall.caremanagement.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.service.event.NotificationRequestedEvent;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -39,11 +42,17 @@ class ErrandDecisionServiceTest {
 	@Mock
 	private DecisionRepository decisionRepositoryMock;
 
+	@Mock
+	private ApplicationEventPublisher eventPublisherMock;
+
 	@Captor
 	private ArgumentCaptor<DecisionEntity> decisionCaptor;
 
 	@Captor
 	private ArgumentCaptor<ErrandEntity> errandCaptor;
+
+	@Captor
+	private ArgumentCaptor<NotificationRequestedEvent> eventCaptor;
 
 	@InjectMocks
 	private ErrandDecisionService service;
@@ -150,5 +159,59 @@ class ErrandDecisionServiceTest {
 		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+	}
+
+	@Test
+	void create_publishesEventsForReporterAndAssignee() {
+		final var errand = ErrandEntity.create().withId(ERRAND_ID).withReporterUserId("john02doe").withAssignedUserId("jane01doe");
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(errand));
+		when(decisionRepositoryMock.save(any(DecisionEntity.class)))
+			.thenAnswer(inv -> ((DecisionEntity) inv.getArgument(0)).withId(DECISION_ID));
+
+		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			Decision.create().withDecisionType("PAYMENT").withValue("APPROVED").withCreatedBy("operaton"));
+
+		verify(eventPublisherMock, times(2)).publishEvent(eventCaptor.capture());
+		assertThat(eventCaptor.getAllValues())
+			.extracting(event -> event.notification().getOwnerId())
+			.containsExactly("john02doe", "jane01doe");
+		assertThat(eventCaptor.getAllValues()).allSatisfy(event -> {
+			assertThat(event.municipalityId()).isEqualTo(MUNICIPALITY_ID);
+			assertThat(event.namespace()).isEqualTo(NAMESPACE);
+			assertThat(event.errandId()).isEqualTo(ERRAND_ID);
+			assertThat(event.notification().getType()).isEqualTo("CREATE");
+			assertThat(event.notification().getSubType()).isEqualTo("DECISION");
+			assertThat(event.notification().getCreatedBy()).isEqualTo("operaton");
+			assertThat(event.notification().getDescription()).isEqualTo("Decision recorded: PAYMENT = APPROVED");
+		});
+	}
+
+	@Test
+	void create_dedupsWhenReporterEqualsAssignee() {
+		final var errand = ErrandEntity.create().withId(ERRAND_ID).withReporterUserId("jane01doe").withAssignedUserId("jane01doe");
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(errand));
+		when(decisionRepositoryMock.save(any(DecisionEntity.class)))
+			.thenAnswer(inv -> ((DecisionEntity) inv.getArgument(0)).withId(DECISION_ID));
+
+		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			Decision.create().withDecisionType("PAYMENT").withValue("APPROVED"));
+
+		verify(eventPublisherMock, times(1)).publishEvent(any(NotificationRequestedEvent.class));
+	}
+
+	@Test
+	void create_skipsWhenNoRecipients() {
+		final var errand = ErrandEntity.create().withId(ERRAND_ID);
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(errand));
+		when(decisionRepositoryMock.save(any(DecisionEntity.class)))
+			.thenAnswer(inv -> ((DecisionEntity) inv.getArgument(0)).withId(DECISION_ID));
+
+		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			Decision.create().withDecisionType("PAYMENT").withValue("APPROVED"));
+
+		verifyNoInteractions(eventPublisherMock);
 	}
 }

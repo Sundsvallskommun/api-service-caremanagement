@@ -1,16 +1,24 @@
 package se.sundsvall.caremanagement.service;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.api.model.Decision;
+import se.sundsvall.caremanagement.api.model.Notification;
 import se.sundsvall.caremanagement.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.integration.db.model.DecisionEntity;
 import se.sundsvall.caremanagement.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.integration.db.model.NotificationSubType;
+import se.sundsvall.caremanagement.integration.db.model.NotificationType;
+import se.sundsvall.caremanagement.service.event.NotificationRequestedEvent;
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.service.mapper.DecisionMapper.toDecision;
 import static se.sundsvall.caremanagement.service.mapper.DecisionMapper.toDecisionEntity;
 import static se.sundsvall.caremanagement.service.mapper.DecisionMapper.toDecisionList;
@@ -24,15 +32,18 @@ public class ErrandDecisionService {
 
 	private final ErrandRepository errandRepository;
 	private final DecisionRepository decisionRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
-	ErrandDecisionService(final ErrandRepository errandRepository, final DecisionRepository decisionRepository) {
+	ErrandDecisionService(final ErrandRepository errandRepository, final DecisionRepository decisionRepository, final ApplicationEventPublisher eventPublisher) {
 		this.errandRepository = errandRepository;
 		this.decisionRepository = decisionRepository;
+		this.eventPublisher = eventPublisher;
 	}
 
 	public String create(final String municipalityId, final String namespace, final String errandId, final Decision decision) {
 		final var errand = findErrand(municipalityId, namespace, errandId);
 		final var saved = decisionRepository.save(toDecisionEntity(decision, errand));
+		publishDecisionNotifications(municipalityId, namespace, errand, decision);
 		return saved.getId();
 	}
 
@@ -68,5 +79,28 @@ public class ErrandDecisionService {
 			.filter(entity -> entity.getId().equals(decisionId))
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, DECISION_NOT_FOUND_MESSAGE.formatted(decisionId, errandId, namespace, municipalityId)));
+	}
+
+	private void publishDecisionNotifications(final String municipalityId, final String namespace, final ErrandEntity errand, final Decision decision) {
+		final Set<String> recipients = new LinkedHashSet<>();
+		if (hasText(errand.getReporterUserId())) {
+			recipients.add(errand.getReporterUserId());
+		}
+		if (hasText(errand.getAssignedUserId())) {
+			recipients.add(errand.getAssignedUserId());
+		}
+		if (recipients.isEmpty()) {
+			return;
+		}
+		final var description = "Decision recorded: %s = %s".formatted(decision.getDecisionType(), decision.getValue());
+		recipients.forEach(ownerId -> {
+			final var notification = Notification.create()
+				.withOwnerId(ownerId)
+				.withCreatedBy(decision.getCreatedBy())
+				.withType(NotificationType.CREATE.name())
+				.withSubType(NotificationSubType.DECISION.name())
+				.withDescription(description);
+			eventPublisher.publishEvent(new NotificationRequestedEvent(municipalityId, namespace, errand.getId(), notification));
+		});
 	}
 }

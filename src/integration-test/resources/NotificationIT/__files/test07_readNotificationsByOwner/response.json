@@ -1,0 +1,26 @@
+[
+	{
+		"id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+		"errandId": "11111111-1111-1111-1111-111111111111",
+		"ownerId": "assignee1",
+		"createdBy": "reporter1",
+		"type": "CREATE",
+		"subType": "ERRAND",
+		"description": "New errand assigned to you",
+		"acknowledged": false,
+		"expires": "${json-unit.any-string}",
+		"created": "${json-unit.any-string}"
+	},
+	{
+		"id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeef",
+		"errandId": "11111111-1111-1111-1111-111111111111",
+		"ownerId": "assignee1",
+		"createdBy": "operaton",
+		"type": "CREATE",
+		"subType": "DECISION",
+		"description": "Decision recorded: PAYMENT = APPROVED",
+		"acknowledged": false,
+		"expires": "${json-unit.any-string}",
+		"created": "${json-unit.any-string}"
+	}
+]

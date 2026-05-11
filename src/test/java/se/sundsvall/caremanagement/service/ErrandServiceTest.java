@@ -9,6 +9,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
@@ -18,6 +19,8 @@ import se.sundsvall.caremanagement.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.integration.db.LookupRepository;
 import se.sundsvall.caremanagement.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.integration.db.model.LookupEntity;
+import se.sundsvall.caremanagement.service.event.NotificationRequestedEvent;
+import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,7 +28,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -48,8 +53,14 @@ class ErrandServiceTest {
 	@Mock
 	private ProcessService processServiceMock;
 
+	@Mock
+	private ApplicationEventPublisher eventPublisherMock;
+
 	@Captor
 	private ArgumentCaptor<ErrandEntity> entityCaptor;
+
+	@Captor
+	private ArgumentCaptor<NotificationRequestedEvent> eventCaptor;
 
 	@InjectMocks
 	private ErrandService service;
@@ -84,7 +95,7 @@ class ErrandServiceTest {
 		final var result = service.createErrand(MUNICIPALITY_ID, NAMESPACE, errand);
 
 		assertThat(result).isEqualTo(ERRAND_ID);
-		verify(errandRepositoryMock, org.mockito.Mockito.times(2)).save(entityCaptor.capture());
+		verify(errandRepositoryMock, times(2)).save(entityCaptor.capture());
 		final var allValues = entityCaptor.getAllValues();
 		assertThat(allValues).hasSize(2);
 		assertThat(allValues.getLast().getProcessInstanceId()).isEqualTo("pi-1");
@@ -96,7 +107,7 @@ class ErrandServiceTest {
 		when(errandRepositoryMock.save(any(ErrandEntity.class)))
 			.thenAnswer(inv -> ((ErrandEntity) inv.getArgument(0)).withId(ERRAND_ID));
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq("Unknown"), eq(ERRAND_ID), any()))
-			.thenThrow(se.sundsvall.dept44.problem.Problem.valueOf(BAD_REQUEST, "No Operaton process definition found with name 'Unknown'"));
+			.thenThrow(Problem.valueOf(BAD_REQUEST, "No Operaton process definition found with name 'Unknown'"));
 
 		assertThatThrownBy(() -> service.createErrand(MUNICIPALITY_ID, NAMESPACE, errand))
 			.isInstanceOf(ThrowableProblem.class)
@@ -171,7 +182,7 @@ class ErrandServiceTest {
 	@Test
 	void findErrands_withFilter() {
 		final var page = new PageImpl<ErrandEntity>(List.of());
-		final Specification<ErrandEntity> filter = (root, q, cb) -> cb.conjunction();
+		final Specification<ErrandEntity> filter = (root, _, cb) -> cb.conjunction();
 		when(errandRepositoryMock.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(page);
 
 		final var result = service.findErrands(MUNICIPALITY_ID, NAMESPACE, filter, PageRequest.of(0, 20));
@@ -241,5 +252,76 @@ class ErrandServiceTest {
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
 		verify(errandRepositoryMock, never()).delete(any(ErrandEntity.class));
+	}
+
+	@Test
+	void createErrand_publishesAssignmentNotificationEvent() {
+		final var errand = Errand.create().withTitle("t").withAssignedUserId("jane01doe").withReporterUserId("john02doe");
+		when(errandRepositoryMock.save(any(ErrandEntity.class)))
+			.thenAnswer(inv -> ((ErrandEntity) inv.getArgument(0)).withId(ERRAND_ID));
+		when(processServiceMock.startProcess(any(), any(), any(), any())).thenReturn(Optional.empty());
+
+		service.createErrand(MUNICIPALITY_ID, NAMESPACE, errand);
+
+		verify(eventPublisherMock).publishEvent(eventCaptor.capture());
+		final var event = eventCaptor.getValue();
+		assertThat(event.municipalityId()).isEqualTo(MUNICIPALITY_ID);
+		assertThat(event.namespace()).isEqualTo(NAMESPACE);
+		assertThat(event.errandId()).isEqualTo(ERRAND_ID);
+		assertThat(event.notification().getOwnerId()).isEqualTo("jane01doe");
+		assertThat(event.notification().getCreatedBy()).isEqualTo("john02doe");
+		assertThat(event.notification().getType()).isEqualTo("CREATE");
+		assertThat(event.notification().getSubType()).isEqualTo("ERRAND");
+		assertThat(event.notification().getDescription()).contains("assigned to you");
+	}
+
+	@Test
+	void createErrand_assigneeEqualsReporter_doesNotPublishEvent() {
+		final var errand = Errand.create().withTitle("t").withAssignedUserId("jane01doe").withReporterUserId("jane01doe");
+		when(errandRepositoryMock.save(any(ErrandEntity.class)))
+			.thenAnswer(inv -> ((ErrandEntity) inv.getArgument(0)).withId(ERRAND_ID));
+		when(processServiceMock.startProcess(any(), any(), any(), any())).thenReturn(Optional.empty());
+
+		service.createErrand(MUNICIPALITY_ID, NAMESPACE, errand);
+
+		verifyNoInteractions(eventPublisherMock);
+	}
+
+	@Test
+	void createErrand_noAssignee_doesNotPublishEvent() {
+		final var errand = Errand.create().withTitle("t").withReporterUserId("john02doe");
+		when(errandRepositoryMock.save(any(ErrandEntity.class)))
+			.thenAnswer(inv -> ((ErrandEntity) inv.getArgument(0)).withId(ERRAND_ID));
+		when(processServiceMock.startProcess(any(), any(), any(), any())).thenReturn(Optional.empty());
+
+		service.createErrand(MUNICIPALITY_ID, NAMESPACE, errand);
+
+		verifyNoInteractions(eventPublisherMock);
+	}
+
+	@Test
+	void updateErrand_assigneeChanged_publishesEvent() {
+		final var entity = ErrandEntity.create().withId(ERRAND_ID).withAssignedUserId("jane01doe").withReporterUserId("john02doe");
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(entity));
+
+		service.updateErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PatchErrand.create().withAssignedUserId("alice03doe"));
+
+		verify(eventPublisherMock).publishEvent(eventCaptor.capture());
+		final var event = eventCaptor.getValue();
+		assertThat(event.notification().getOwnerId()).isEqualTo("alice03doe");
+		assertThat(event.notification().getType()).isEqualTo("UPDATE");
+		assertThat(event.notification().getDescription()).contains("reassigned");
+	}
+
+	@Test
+	void updateErrand_assigneeUnchanged_doesNotPublishEvent() {
+		final var entity = ErrandEntity.create().withId(ERRAND_ID).withAssignedUserId("jane01doe");
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(entity));
+
+		service.updateErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PatchErrand.create().withAssignedUserId("jane01doe"));
+
+		verifyNoInteractions(eventPublisherMock);
 	}
 }
