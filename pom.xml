@@ -14,14 +14,48 @@
 	<name>api-service-care-management</name>
 	<properties>
 		<spring-filter.version>3.2.5</spring-filter.version>
+		<!-- Modulith 2.x targets Spring Boot 4 (which dept44 8.x runs).
+				Verify the latest GA at https://spring.io/projects/spring-modulith
+				before bumping. -->
+		<spring-modulith.version>2.0.0</spring-modulith.version>
 		<generated-sources-path>${project.build.directory}/generated-sources</generated-sources-path>
 		<generated-sources-java-path>src/main/java</generated-sources-java-path>
 	</properties>
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.modulith</groupId>
+				<artifactId>spring-modulith-bom</artifactId>
+				<version>${spring-modulith.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>com.turkraft.springfilter</groupId>
 			<artifactId>jpa</artifactId>
 			<version>${spring-filter.version}</version>
+		</dependency>
+		<!-- Spring Modulith — module boundaries enforced at build time -->
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-starter-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-starter-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-docs</artifactId>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -36,6 +70,10 @@
 		<dependency>
 			<groupId>se.sundsvall.dept44</groupId>
 			<artifactId>dept44-starter-feign</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>se.sundsvall.dept44</groupId>
+			<artifactId>dept44-starter-scheduler</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>se.sundsvall.dept44</groupId>
