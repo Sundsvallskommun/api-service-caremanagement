@@ -7,22 +7,22 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:53502
+- url: http://localhost:59560
   description: Generated server url
 tags:
 - name: Errand decisions
   description: "Decision audit trail on an errand. Stores both system-generated decisions\
     \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
     \ (e.g. handläggare APPROVE/REJECT), distinguished by `decisionType`."
+- name: Notes
+  description: Notes attached to an errand
 - name: Notifications
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen; expired ones are purged by a daily background job.
-- name: Errand parameters
-  description: Errand parameter operations
 - name: Errand stakeholders
   description: Errand stakeholder operations
-- name: Stakeholder parameters
-  description: Stakeholder parameter operations
+- name: Status History
+  description: Status transition log for an errand
 - name: Metadata
   description: Metadata (lookup) operations
 - name: Namespace config
@@ -608,116 +608,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/stakeholders/{stakeholderId}/parameters:
-    get:
-      tags:
-      - Stakeholder parameters
-      summary: List stakeholder parameters
-      operationId: readParameters
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: stakeholderId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/StakeholderParameter"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    post:
-      tags:
-      - Stakeholder parameters
-      summary: Create stakeholder parameter
-      operationId: createParameter
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: stakeholderId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/StakeholderParameter"
-        required: true
-      responses:
-        "201":
-          description: Successful operation
-          headers:
-            Location:
-              style: simple
-              schema:
-                type: string
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/{errandId}/process-messages:
     post:
       tags:
@@ -762,106 +652,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/parameters:
-    get:
-      tags:
-      - Errand parameters
-      summary: List parameters
-      operationId: readParameters_1
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Parameter"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    post:
-      tags:
-      - Errand parameters
-      summary: Create parameter
-      operationId: createParameter_1
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Parameter"
-        required: true
-      responses:
-        "201":
-          description: Successful operation
-          headers:
-            Location:
-              style: simple
-              schema:
-                type: string
         "400":
           description: Bad request
           content:
@@ -997,6 +787,69 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/notes:
+    get:
+      tags:
+      - Notes
+      summary: List notes for errand
+      operationId: list
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Note"
+    post:
+      tags:
+      - Notes
+      summary: Add note to errand
+      operationId: add
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNote"
+        required: true
+      responses:
+        "200":
+          description: OK
   /{municipalityId}/{namespace}/errands/{errandId}/decisions:
     get:
       tags:
@@ -1727,358 +1580,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/stakeholders/{stakeholderId}/parameters/{parameterId}:
-    get:
-      tags:
-      - Stakeholder parameters
-      summary: Read stakeholder parameter
-      operationId: readParameter
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: stakeholderId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: parameterId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StakeholderParameter"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    delete:
-      tags:
-      - Stakeholder parameters
-      summary: Delete stakeholder parameter
-      operationId: deleteParameter
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: stakeholderId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: parameterId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        "204":
-          description: Successful operation
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    patch:
-      tags:
-      - Stakeholder parameters
-      summary: Update stakeholder parameter
-      operationId: updateParameter
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: stakeholderId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: parameterId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/StakeholderParameter"
-        required: true
-      responses:
-        "204":
-          description: Successful operation
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/parameters/{parameterId}:
-    get:
-      tags:
-      - Errand parameters
-      summary: Read parameter
-      operationId: readParameter_1
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: parameterId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Parameter"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    delete:
-      tags:
-      - Errand parameters
-      summary: Delete parameter
-      operationId: deleteParameter_1
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: parameterId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: Successful operation
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    patch:
-      tags:
-      - Errand parameters
-      summary: Update parameter
-      operationId: updateParameter_1
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: parameterId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Parameter"
-        required: true
-      responses:
-        "204":
-          description: Successful operation
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/{errandId}/notifications/{notificationId}:
     get:
       tags:
@@ -2308,6 +1809,103 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/status-history:
+    get:
+      tags:
+      - Status History
+      summary: List status transitions for errand
+      operationId: list_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StatusHistoryEntry"
+  /{municipalityId}/{namespace}/errands/{errandId}/notes/{noteId}:
+    get:
+      tags:
+      - Notes
+      summary: Read note
+      operationId: read
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+    delete:
+      tags:
+      - Notes
+      summary: Delete note
+      operationId: delete
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
   /{municipalityId}/{namespace}/errands/{errandId}/decisions/{decisionId}:
     get:
       tags:
@@ -2615,9 +2213,9 @@ components:
     Problem:
       type: object
       properties:
-        title:
-          type: string
         detail:
+          type: string
+        title:
           type: string
         instance:
           type: string
@@ -2730,68 +2328,9 @@ components:
           format: date-time
           description: Modified timestamp
           readOnly: true
-    ContactChannel:
-      type: object
-      description: ContactChannel model
-      properties:
-        key:
-          type: string
-          description: The key of the contact channel
-          examples:
-          - Email
-        value:
-          type: string
-          description: The value of the contact channel
-          examples:
-          - joe.doe@example.com
-    Decision:
-      type: object
-      description: "Decision recorded against an errand. Both system-generated decisions\
-        \ (e.g. a DMN-evaluated recommendation produced by a BPMN process) and human\
-        \ decisions (e.g. a handläggare approving a payment) are stored here, distinguished\
-        \ by `decisionType`. The list on the errand grows over time and is the audit\
-        \ trail of every decision made on the case."
-      properties:
-        id:
-          type: string
-          description: Unique identifier
-          examples:
-          - cb20c51f-fcf3-42c0-b613-de563634a8ec
-          readOnly: true
-        decisionType:
-          type: string
-          description: "Decision category. Free-form string; conventionally `RECOMMENDATION`\
-            \ for DMN-produced suggestions and `PAYMENT` for handläggare APPROVE/REJECT\
-            \ decisions, but namespaces are encouraged to define their own."
-          examples:
-          - PAYMENT
-        value:
-          type: string
-          description: Decision value. For binary outcomes use `APPROVED`/`REJECTED`;
-            for richer outputs (e.g. a calculated amount) use the value itself or
-            a short label.
-          examples:
-          - APPROVED
-        description:
-          type: string
-          description: Optional human-readable description or motivation for the decision
-          examples:
-          - "Beslutsförslag enligt regelverk: 7900 kr, ingen varning"
-        createdBy:
-          type: string
-          description: "Identifier of the actor that produced the decision. Use the\
-            \ handläggare userId for human decisions or a system identifier (e.g.\
-            \ `operaton`, `dmn-engine`) for automated ones."
-          examples:
-          - jane01doe
-        created:
-          type: string
-          format: date-time
-          description: Timestamp the decision was recorded (server-assigned)
-          readOnly: true
     Errand:
       type: object
-      description: Errand model
+      description: Errand envelope
       properties:
         id:
           type: string
@@ -2811,21 +2350,22 @@ components:
           examples:
           - MY_NAMESPACE
           readOnly: true
+        errandNumber:
+          type: string
+          description: Human-readable errand number
+          examples:
+          - CAREM-2026-00042
+          readOnly: true
+        typeSlug:
+          type: string
+          description: Registered errand type slug — validated against ErrandTypeRegistry
+          examples:
+          - case-type-slug
         title:
           type: string
           description: Title for the errand
           examples:
           - Title of the errand
-        category:
-          type: string
-          description: Category for the errand
-          examples:
-          - CATEGORY-1
-        type:
-          type: string
-          description: Type for the errand
-          examples:
-          - TYPE-1
         status:
           type: string
           description: Status of the errand
@@ -2851,39 +2391,6 @@ components:
           description: User id of the assignee
           examples:
           - jane02doe
-        contactReason:
-          type: string
-          description: Contact reason (name of a CONTACT_REASON lookup)
-          examples:
-          - PHONE
-        contactReasonDescription:
-          type: string
-          description: Contact reason description
-          examples:
-          - The reporter called in
-        externalTags:
-          type: array
-          description: External tags associated with the errand
-          items:
-            $ref: "#/components/schemas/ExternalTag"
-        stakeholders:
-          type: array
-          description: Stakeholders associated with the errand
-          items:
-            $ref: "#/components/schemas/Stakeholder"
-        parameters:
-          type: array
-          description: Parameters for the errand
-          items:
-            $ref: "#/components/schemas/Parameter"
-        decisions:
-          type: array
-          description: "Decisions recorded against the errand. Both system-generated\
-            \ (e.g. a DMN-evaluated recommendation from a BPMN process) and human\
-            \ (e.g. a handläggare APPROVE/REJECT) decisions accumulate here over the\
-            \ errand's lifetime, distinguished by `decisionType`."
-          items:
-            $ref: "#/components/schemas/Decision"
         processDefinitionName:
           type: string
           description: Name of the Operaton process definition to start when the errand
@@ -2911,53 +2418,23 @@ components:
           format: date-time
           description: Touched timestamp
           readOnly: true
-    ExternalTag:
+    ContactChannel:
       type: object
-      description: ExternalTag model
+      description: ContactChannel model
       properties:
         key:
           type: string
-          description: The key of the external tag
+          description: The key of the contact channel
           examples:
-          - caseId
+          - Email
         value:
           type: string
-          description: The value of the external tag
+          description: The value of the contact channel
           examples:
-          - "12345"
-    Parameter:
-      type: object
-      description: Parameter model
-      properties:
-        id:
-          type: string
-          description: Unique identifier
-          examples:
-          - cb20c51f-fcf3-42c0-b613-de563634a8ec
-          readOnly: true
-        displayName:
-          type: string
-          description: Display name of the parameter
-          examples:
-          - Priority level
-        parameterGroup:
-          type: string
-          description: Grouping for the parameter
-          examples:
-          - contact
-        key:
-          type: string
-          description: Key of the parameter
-          examples:
-          - priorityLevel
-        values:
-          type: array
-          description: Values of the parameter
-          items:
-            type: string
+          - joe.doe@example.com
     Stakeholder:
       type: object
-      description: Stakeholder model
+      description: Stakeholder
       properties:
         id:
           type: string
@@ -2977,9 +2454,10 @@ components:
           - PRIVATE
         role:
           type: string
-          description: Role of the stakeholder
+          description: Role of the stakeholder — validated against StakeholderRoleRegistry
+            for the errand's typeSlug
           examples:
-          - APPLICANT
+          - FOSTER_PARENT
         firstName:
           type: string
           description: First name
@@ -3025,37 +2503,6 @@ components:
           description: Contact channels for the stakeholder
           items:
             $ref: "#/components/schemas/ContactChannel"
-        parameters:
-          type: array
-          description: Parameters for the stakeholder
-          items:
-            $ref: "#/components/schemas/StakeholderParameter"
-    StakeholderParameter:
-      type: object
-      description: StakeholderParameter model
-      properties:
-        id:
-          type: integer
-          format: int64
-          description: Unique identifier
-          examples:
-          - "42"
-          readOnly: true
-        displayName:
-          type: string
-          description: Display name of the parameter
-          examples:
-          - Phone number
-        key:
-          type: string
-          description: Key of the parameter
-          examples:
-          - phoneNumber
-        values:
-          type: array
-          description: Values of the parameter
-          items:
-            type: string
     ProcessMessageRequest:
       type: object
       description: "Request body for correlating a BPMN message to the process instance\
@@ -3159,25 +2606,73 @@ components:
           format: date-time
           description: Last-modified timestamp (server-assigned)
           readOnly: true
+    CreateNote:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 8192
+          minLength: 0
+        author:
+          type: string
+          maxLength: 64
+          minLength: 0
+      required:
+      - body
+    Decision:
+      type: object
+      description: "Decision recorded against an errand. Both system-generated decisions\
+        \ (e.g. a DMN-evaluated recommendation produced by a BPMN process) and human\
+        \ decisions (e.g. a handläggare approving a payment) are stored here, distinguished\
+        \ by `decisionType`. The list on the errand grows over time and is the audit\
+        \ trail of every decision made on the case."
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+          readOnly: true
+        decisionType:
+          type: string
+          description: "Decision category. Free-form string; conventionally `RECOMMENDATION`\
+            \ for DMN-produced suggestions and `PAYMENT` for handläggare APPROVE/REJECT\
+            \ decisions, but namespaces are encouraged to define their own."
+          examples:
+          - PAYMENT
+        value:
+          type: string
+          description: Decision value. For binary outcomes use `APPROVED`/`REJECTED`;
+            for richer outputs (e.g. a calculated amount) use the value itself or
+            a short label.
+          examples:
+          - APPROVED
+        description:
+          type: string
+          description: Optional human-readable description or motivation for the decision
+          examples:
+          - "Beslutsförslag enligt regelverk: 7900 kr, ingen varning"
+        createdBy:
+          type: string
+          description: "Identifier of the actor that produced the decision. Use the\
+            \ handläggare userId for human decisions or a system identifier (e.g.\
+            \ `operaton`, `dmn-engine`) for automated ones."
+          examples:
+          - jane01doe
+        created:
+          type: string
+          format: date-time
+          description: Timestamp the decision was recorded (server-assigned)
+          readOnly: true
     PatchErrand:
       type: object
-      description: PatchErrand model - only patchable fields
+      description: PatchErrand model — patchable envelope fields only
       properties:
         title:
           type: string
           description: Title for the errand
           examples:
           - Title of the errand
-        category:
-          type: string
-          description: Category for the errand
-          examples:
-          - CATEGORY-1
-        type:
-          type: string
-          description: Type for the errand
-          examples:
-          - TYPE-1
         status:
           type: string
           description: Status of the errand
@@ -3201,19 +2696,6 @@ components:
           description: User id of the assignee
           examples:
           - jane02doe
-        contactReason:
-          type: string
-          description: Contact reason (name of a CONTACT_REASON lookup)
-          examples:
-          - PHONE
-        contactReasonDescription:
-          type: string
-          description: Contact reason description
-        externalTags:
-          type: array
-          description: External tags associated with the errand
-          items:
-            $ref: "#/components/schemas/ExternalTag"
     Direction:
       type: string
       enum:
@@ -3283,6 +2765,44 @@ components:
           description: The sort order direction
           examples:
           - ASC
+    StatusHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        errandId:
+          type: string
+        fromStatus:
+          type: string
+        toStatus:
+          type: string
+        changedBy:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+    Note:
+      type: object
+      description: Note attached to an errand
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+        errandId:
+          type: string
+          description: Errand id this note belongs to
+        body:
+          type: string
+          description: Note body
+          example: "Spoke to family today, awaiting docs."
+        author:
+          type: string
+          description: Author user id
+          example: jane01doe
+        created:
+          type: string
+          format: date-time
+          description: Created timestamp
     Attachment:
       type: object
       description: Attachment model
