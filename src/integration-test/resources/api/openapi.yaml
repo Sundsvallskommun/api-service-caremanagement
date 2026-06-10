@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:59560
+- url: http://localhost:63083
   description: Generated server url
 tags:
 - name: Errand decisions
@@ -2213,9 +2213,9 @@ components:
     Problem:
       type: object
       properties:
-        detail:
-          type: string
         title:
+          type: string
+        detail:
           type: string
         instance:
           type: string
@@ -2281,7 +2281,7 @@ components:
           format: int64
           description: Unique identifier
           examples:
-          - "1"
+          - 1
           readOnly: true
         displayName:
           type: string
@@ -2722,35 +2722,35 @@ components:
           format: int32
           description: Current page
           examples:
-          - "5"
+          - 5
           readOnly: true
         limit:
           type: integer
           format: int32
           description: Displayed objects per page
           examples:
-          - "20"
+          - 20
           readOnly: true
         count:
           type: integer
           format: int32
           description: Displayed objects on current page
           examples:
-          - "13"
+          - 13
           readOnly: true
         totalRecords:
           type: integer
           format: int64
           description: Total amount of hits based on provided search parameters
           examples:
-          - "98"
+          - 98
           readOnly: true
         totalPages:
           type: integer
           format: int32
           description: Total amount of pages based on provided search parameters
           examples:
-          - "23"
+          - 23
           readOnly: true
         sortBy:
           type: array
@@ -2828,7 +2828,7 @@ components:
           format: int32
           description: File size in bytes
           examples:
-          - "1024"
+          - 1024
           readOnly: true
         created:
           type: string
