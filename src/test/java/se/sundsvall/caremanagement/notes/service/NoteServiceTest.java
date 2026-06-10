@@ -26,6 +26,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
 class NoteServiceTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Mock
 	private NoteRepository repositoryMock;
@@ -61,7 +62,7 @@ class NoteServiceTest {
 
 	@Test
 	void listForErrandReturnsMappedNotes() {
-		final var ts = OffsetDateTime.now();
+		final var ts = FIXED_TIMESTAMP;
 		when(repositoryMock.findByErrandIdOrderByCreatedDesc("errand-1")).thenReturn(List.of(
 			NoteEntity.create().withId("n1").withErrandId("errand-1").withBody("b1").withAuthor("a1").withCreated(ts)));
 

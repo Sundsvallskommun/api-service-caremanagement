@@ -6,10 +6,11 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ErrandCreatedTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void accessors() {
-		final var timestamp = OffsetDateTime.now();
+		final var timestamp = FIXED_TIMESTAMP;
 		final var event = new ErrandCreated("e1", "type-slug", "2281", "MY_NAMESPACE",
 			"reporter", "assignee", timestamp);
 

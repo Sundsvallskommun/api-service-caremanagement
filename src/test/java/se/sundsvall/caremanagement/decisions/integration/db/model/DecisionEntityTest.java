@@ -16,6 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class DecisionEntityTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@BeforeAll
 	static void setup() {
@@ -40,7 +41,7 @@ class DecisionEntityTest {
 
 	@Test
 	void testBuilderMethods() {
-		final var created = now();
+		final var created = FIXED_TIMESTAMP;
 		final var entity = DecisionEntity.create()
 			.withId("id")
 			.withErrandId("errand")
@@ -75,7 +76,7 @@ class DecisionEntityTest {
 
 	@Test
 	void prePersistDoesNotOverwriteExistingCreated() {
-		final var existing = now().minusDays(1);
+		final var existing = FIXED_TIMESTAMP.minusDays(1);
 		final var entity = DecisionEntity.create().withCreated(existing);
 		entity.prePersist();
 		org.assertj.core.api.Assertions.assertThat(entity.getCreated()).isEqualTo(existing);

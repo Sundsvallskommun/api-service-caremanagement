@@ -6,10 +6,11 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class StatusHistoryEntryTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void accessors() {
-		final var changedAt = OffsetDateTime.now();
+		final var changedAt = FIXED_TIMESTAMP;
 		final var entry = new StatusHistoryEntry("id-1", "errand-1", "OPEN", "CLOSED", "user-1", changedAt);
 
 		assertThat(entry.id()).isEqualTo("id-1");
@@ -22,7 +23,7 @@ class StatusHistoryEntryTest {
 
 	@Test
 	void initialTransitionHasNullFromStatus() {
-		final var entry = new StatusHistoryEntry("id", "e", null, "OPEN", null, OffsetDateTime.now());
+		final var entry = new StatusHistoryEntry("id", "e", null, "OPEN", null, FIXED_TIMESTAMP);
 		assertThat(entry.fromStatus()).isNull();
 		assertThat(entry.changedBy()).isNull();
 	}

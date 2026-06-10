@@ -16,6 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class DecisionTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@BeforeAll
 	static void setup() {
@@ -39,7 +40,7 @@ class DecisionTest {
 		final var value = "APPROVED";
 		final var description = "desc";
 		final var createdBy = "jane01doe";
-		final var created = OffsetDateTime.now();
+		final var created = FIXED_TIMESTAMP;
 
 		final var result = Decision.create()
 			.withId(id)

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class NoteEntityTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void builderMethods() {
@@ -13,7 +14,7 @@ class NoteEntityTest {
 		final var errandId = "e1";
 		final var body = "body";
 		final var author = "author";
-		final var created = OffsetDateTime.now();
+		final var created = FIXED_TIMESTAMP;
 
 		final var entity = NoteEntity.create()
 			.withId(id)

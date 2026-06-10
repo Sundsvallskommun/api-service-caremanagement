@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class NoteTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void builderMethods() {
@@ -13,7 +14,7 @@ class NoteTest {
 		final var errandId = "e1";
 		final var body = "body";
 		final var author = "author";
-		final var created = OffsetDateTime.now();
+		final var created = FIXED_TIMESTAMP;
 
 		final var note = Note.create()
 			.withId(id)
@@ -36,7 +37,7 @@ class NoteTest {
 		note.setErrandId("eid");
 		note.setBody("b");
 		note.setAuthor("a");
-		final var ts = OffsetDateTime.now();
+		final var ts = FIXED_TIMESTAMP;
 		note.setCreated(ts);
 
 		assertThat(note.getId()).isEqualTo("id");
@@ -53,7 +54,7 @@ class NoteTest {
 
 	@Test
 	void equalsAndHashCode() {
-		final var ts = OffsetDateTime.now();
+		final var ts = FIXED_TIMESTAMP;
 		final var a = Note.create().withId("1").withErrandId("e").withBody("b").withAuthor("u").withCreated(ts);
 		final var b = Note.create().withId("1").withErrandId("e").withBody("b").withAuthor("u").withCreated(ts);
 		final var c = Note.create().withId("2");

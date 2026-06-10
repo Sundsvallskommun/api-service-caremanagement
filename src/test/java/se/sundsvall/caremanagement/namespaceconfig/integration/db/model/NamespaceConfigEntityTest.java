@@ -17,6 +17,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class NamespaceConfigEntityTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@BeforeAll
 	static void setup() {
@@ -35,10 +36,10 @@ class NamespaceConfigEntityTest {
 
 	@Test
 	void hasValidBuilderMethods() {
-		final var created = OffsetDateTime.now().minusDays(1);
+		final var created = FIXED_TIMESTAMP.minusDays(1);
 		final var displayName = "displayName";
 		final var id = 1L;
-		final var modified = OffsetDateTime.now();
+		final var modified = FIXED_TIMESTAMP;
 		final var municipalityId = "municipalityId";
 		final var namespace = "namespace";
 		final var shortCode = "SHORT";

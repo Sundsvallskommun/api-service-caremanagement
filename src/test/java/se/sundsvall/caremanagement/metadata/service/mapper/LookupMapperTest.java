@@ -10,11 +10,12 @@ import se.sundsvall.caremanagement.metadata.integration.db.model.LookupKind;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class LookupMapperTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void toLookup_maps() {
-		final var created = OffsetDateTime.now().minusDays(1);
-		final var modified = OffsetDateTime.now();
+		final var created = FIXED_TIMESTAMP.minusDays(1);
+		final var modified = FIXED_TIMESTAMP;
 		final var entity = LookupEntity.create()
 			.withKind(LookupKind.STATUS)
 			.withName("NEW")

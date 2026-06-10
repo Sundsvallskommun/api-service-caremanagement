@@ -8,11 +8,12 @@ import se.sundsvall.caremanagement.namespaceconfig.integration.db.model.Namespac
 import static org.assertj.core.api.Assertions.assertThat;
 
 class NamespaceConfigMapperTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void toNamespaceConfig_maps() {
-		final var created = OffsetDateTime.now().minusDays(1);
-		final var modified = OffsetDateTime.now();
+		final var created = FIXED_TIMESTAMP.minusDays(1);
+		final var modified = FIXED_TIMESTAMP;
 		final var entity = NamespaceConfigEntity.create()
 			.withId(42L)
 			.withNamespace("ns")

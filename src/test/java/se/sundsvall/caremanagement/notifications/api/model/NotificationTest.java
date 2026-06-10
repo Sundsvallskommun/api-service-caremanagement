@@ -16,6 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class NotificationTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@BeforeAll
 	static void setup() {
@@ -43,9 +44,9 @@ class NotificationTest {
 		final var description = "desc";
 		final var content = "content";
 		final var acknowledged = Boolean.TRUE;
-		final var expires = OffsetDateTime.now().plusDays(30);
-		final var created = OffsetDateTime.now();
-		final var modified = OffsetDateTime.now();
+		final var expires = FIXED_TIMESTAMP.plusDays(30);
+		final var created = FIXED_TIMESTAMP;
+		final var modified = FIXED_TIMESTAMP;
 
 		final var result = Notification.create()
 			.withId(id)

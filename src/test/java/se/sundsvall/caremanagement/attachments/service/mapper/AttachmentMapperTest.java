@@ -17,11 +17,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 class AttachmentMapperTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void toAttachmentMapsAllFields() {
-		final var created = OffsetDateTime.now().minusDays(1);
-		final var modified = OffsetDateTime.now();
+		final var created = FIXED_TIMESTAMP.minusDays(1);
+		final var modified = FIXED_TIMESTAMP;
 		final var entity = AttachmentEntity.create()
 			.withId("id")
 			.withFileName("f.txt")

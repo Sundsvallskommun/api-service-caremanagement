@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class AttachmentErrandDeletedListenerTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Mock
 	private AttachmentRepository repositoryMock;
@@ -23,7 +24,7 @@ class AttachmentErrandDeletedListenerTest {
 
 	@Test
 	void deletesAllAttachmentsForErrand() {
-		listener.on(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", OffsetDateTime.now()));
+		listener.on(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", FIXED_TIMESTAMP));
 
 		verify(repositoryMock).deleteByErrandId("e1");
 		verifyNoMoreInteractions(repositoryMock);

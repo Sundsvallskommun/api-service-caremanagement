@@ -16,6 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class AttachmentEntityTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@BeforeAll
 	static void setup() {
@@ -41,8 +42,8 @@ class AttachmentEntityTest {
 	@Test
 	void testBuilderMethods() {
 		final var attachmentData = AttachmentDataEntity.create();
-		final var created = now();
-		final var modified = now();
+		final var created = FIXED_TIMESTAMP;
+		final var modified = FIXED_TIMESTAMP;
 
 		final var entity = AttachmentEntity.create()
 			.withId("id")

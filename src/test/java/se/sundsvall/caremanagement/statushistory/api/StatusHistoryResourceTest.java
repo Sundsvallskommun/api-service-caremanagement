@@ -24,6 +24,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 @AutoConfigureWebTestClient
 @ActiveProfiles("junit")
 class StatusHistoryResourceTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
@@ -38,7 +39,7 @@ class StatusHistoryResourceTest {
 
 	@Test
 	void list() {
-		final var entry = new StatusHistoryEntry("h1", ERRAND_ID, "OPEN", "CLOSED", "user", OffsetDateTime.now());
+		final var entry = new StatusHistoryEntry("h1", ERRAND_ID, "OPEN", "CLOSED", "user", FIXED_TIMESTAMP);
 		when(serviceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(entry));
 
 		final var response = webTestClient.get()

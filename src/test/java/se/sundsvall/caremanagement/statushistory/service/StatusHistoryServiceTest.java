@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class StatusHistoryServiceTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Mock
 	private StatusHistoryRepository repositoryMock;
@@ -26,8 +27,8 @@ class StatusHistoryServiceTest {
 
 	@Test
 	void listForErrandReturnsMappedEntries() {
-		final var ts1 = OffsetDateTime.now().minusHours(1);
-		final var ts2 = OffsetDateTime.now();
+		final var ts1 = FIXED_TIMESTAMP.minusHours(1);
+		final var ts2 = FIXED_TIMESTAMP;
 
 		when(repositoryMock.findByErrandIdOrderByChangedAtDesc("e1")).thenReturn(List.of(
 			StatusHistoryEntity.create().withId("h2").withErrandId("e1").withFromStatus("OPEN").withToStatus("CLOSED").withChangedBy("u").withChangedAt(ts2),

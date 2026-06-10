@@ -6,10 +6,11 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class StatusHistoryEntityTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void builderMethods() {
-		final var changedAt = OffsetDateTime.now();
+		final var changedAt = FIXED_TIMESTAMP;
 		final var entity = StatusHistoryEntity.create()
 			.withId("id")
 			.withErrandId("errand-1")

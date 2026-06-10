@@ -17,6 +17,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class ErrandTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@BeforeAll
 	static void setup() {
@@ -35,9 +36,9 @@ class ErrandTest {
 
 	@Test
 	void testBuilderMethods() {
-		final var created = now();
-		final var modified = now();
-		final var touched = now();
+		final var created = FIXED_TIMESTAMP;
+		final var modified = FIXED_TIMESTAMP;
+		final var touched = FIXED_TIMESTAMP;
 
 		final var errand = Errand.create()
 			.withId("id")

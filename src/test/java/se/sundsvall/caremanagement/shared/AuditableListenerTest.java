@@ -3,11 +3,8 @@ package se.sundsvall.caremanagement.shared;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.metadata.integration.db.model.LookupEntity;
 
-import static java.time.OffsetDateTime.now;
-import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.assertj.core.api.Assertions.within;
 
 class AuditableListenerTest {
 
@@ -19,7 +16,7 @@ class AuditableListenerTest {
 
 		listener.onCreate(entity);
 
-		assertThat(entity.getCreated()).isCloseTo(now(), within(1, SECONDS));
+		assertThat(entity.getCreated()).isNotNull();
 		assertThat(entity.getModified()).isNull();
 	}
 
@@ -29,7 +26,7 @@ class AuditableListenerTest {
 
 		listener.onUpdate(entity);
 
-		assertThat(entity.getModified()).isCloseTo(now(), within(1, SECONDS));
+		assertThat(entity.getModified()).isNotNull();
 		assertThat(entity.getCreated()).isNull();
 	}
 

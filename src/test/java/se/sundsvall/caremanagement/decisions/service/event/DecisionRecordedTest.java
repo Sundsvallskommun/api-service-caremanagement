@@ -6,10 +6,11 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DecisionRecordedTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void accessors() {
-		final var timestamp = OffsetDateTime.now();
+		final var timestamp = FIXED_TIMESTAMP;
 		final var event = new DecisionRecorded("decision-1", "errand-1", "type-slug",
 			"APPROVED", "decider", timestamp);
 
