@@ -7,22 +7,30 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:51629
+- url: http://localhost:53159
   description: Generated server url
 tags:
-- name: Errand decisions
-  description: "Decision audit trail on an errand. Stores both system-generated decisions\
-    \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
-    \ (e.g. handläggare APPROVE/REJECT), distinguished by `decisionType`."
 - name: Notes
   description: Notes attached to an errand
-- name: Notifications
-  description: User-facing notifications raised against an errand. Recipients (`ownerId`)
-    acknowledge them when seen; expired ones are purged by a daily background job.
 - name: Errand stakeholders
   description: Errand stakeholder operations
 - name: Statistics
   description: Read-only errand statistics for the caseworker interface
+- name: Permits
+  description: "Permits issued on an errand: validity period, conditions and status.\
+    \ Revoking sets the status to REVOKED."
+- name: Referrals
+  description: "Referrals/consultations on an errand: receiving authority, due date,\
+    \ free-text response and status (SENT → RESPONDED)."
+- name: Conversation
+  description: Messages between caseworker and applicant on an errand
+- name: Errand decisions
+  description: "Decision audit trail on an errand. Stores both system-generated decisions\
+    \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
+    \ (e.g. handläggare APPROVE/REJECT), distinguished by `decisionType`."
+- name: Notifications
+  description: User-facing notifications raised against an errand. Recipients (`ownerId`)
+    acknowledge them when seen; expired ones are purged by a daily background job.
 - name: Status History
   description: Status transition log for an errand
 - name: Metadata
@@ -31,8 +39,6 @@ tags:
   description: Namespace configuration operations
 - name: Errands
   description: Errand operations
-- name: Conversation
-  description: Messages between caseworker and applicant on an errand
 - name: Process messages
   description: Send BPMN message correlation events to the process instance currently
     running for an errand
@@ -612,6 +618,111 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/referrals:
+    get:
+      tags:
+      - Referrals
+      summary: List referrals
+      operationId: readReferrals
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Referral"
+    post:
+      tags:
+      - Referrals
+      summary: Send referral
+      operationId: createReferral
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Referral"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
+  /{municipalityId}/{namespace}/errands/{errandId}/referrals/{referralId}/response:
+    post:
+      tags:
+      - Referrals
+      summary: Register response on referral
+      operationId: registerResponse
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: referralId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferralResponseRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
   /{municipalityId}/{namespace}/errands/{errandId}/process-messages:
     post:
       tags:
@@ -670,6 +781,131 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/permits:
+    get:
+      tags:
+      - Permits
+      summary: List permits
+      operationId: readPermits
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Permit"
+    post:
+      tags:
+      - Permits
+      summary: Issue permit
+      operationId: issuePermit
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Permit"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
+  /{municipalityId}/{namespace}/errands/{errandId}/permits/{permitId}/revoke:
+    post:
+      tags:
+      - Permits
+      summary: Revoke permit
+      operationId: revokePermit
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: permitId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /{municipalityId}/{namespace}/errands/{errandId}/permits/revoke:
+    post:
+      tags:
+      - Permits
+      summary: Revoke all permits on the errand
+      operationId: revokeAllPermits
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
   /{municipalityId}/{namespace}/errands/{errandId}/notifications:
     get:
       tags:
@@ -1956,6 +2192,148 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/StatusHistoryEntry"
+  /{municipalityId}/{namespace}/errands/{errandId}/referrals/{referralId}:
+    get:
+      tags:
+      - Referrals
+      summary: Read referral
+      operationId: readReferral
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: referralId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Referral"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+      - Referrals
+      summary: Delete referral
+      operationId: deleteReferral
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: referralId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /{municipalityId}/{namespace}/errands/{errandId}/permits/{permitId}:
+    get:
+      tags:
+      - Permits
+      summary: Read permit
+      operationId: readPermit
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: permitId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Permit"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+      - Permits
+      summary: Delete permit
+      operationId: deletePermit
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: permitId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
   /{municipalityId}/{namespace}/errands/{errandId}/notes/{noteId}:
     get:
       tags:
@@ -2391,10 +2769,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -2653,6 +3031,81 @@ components:
           description: Contact channels for the stakeholder
           items:
             $ref: "#/components/schemas/ContactChannel"
+    Referral:
+      type: object
+      description: "A referral/consultation on an errand, with the receiving authority,\
+        \ due date and status."
+      properties:
+        id:
+          type: string
+          description: Unique id
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+          readOnly: true
+        authority:
+          type: string
+          description: The receiving authority (namespace-defined)
+          examples:
+          - ENVIRONMENTAL_OFFICE
+          maxLength: 64
+          minLength: 0
+        recipient:
+          type: string
+          description: Recipient (name/unit)
+          examples:
+          - "Environmental Office, Sundsvall"
+          maxLength: 255
+          minLength: 0
+        sentAt:
+          type: string
+          format: date
+          description: Date the referral was sent. Defaults to today when omitted.
+          examples:
+          - 2026-06-03
+        dueAt:
+          type: string
+          format: date
+          description: Response due date
+          examples:
+          - 2026-07-01
+        responseText:
+          type: string
+          description: Response to the referral
+          examples:
+          - The authority has no objection.
+          maxLength: 4096
+          minLength: 0
+        status:
+          type: string
+          description: Status
+          enum:
+          - SENT
+          - RESPONDED
+          examples:
+          - SENT
+        created:
+          type: string
+          format: date-time
+          description: Created
+          readOnly: true
+        modified:
+          type: string
+          format: date-time
+          description: Modified
+          readOnly: true
+    ReferralResponseRequest:
+      type: object
+      description: Response to a referral.
+      properties:
+        responseText:
+          type: string
+          description: Response to the referral
+          examples:
+          - The authority has no objection.
+          maxLength: 4096
+          minLength: 0
+      required:
+      - responseText
     ProcessMessageRequest:
       type: object
       description: "Request body for correlating a BPMN message to the process instance\
@@ -2674,6 +3127,60 @@ components:
           description: Process variables to set when correlating the message
       required:
       - messageName
+    Permit:
+      type: object
+      description: "An issued permit with a validity period, conditions and status."
+      properties:
+        id:
+          type: string
+          description: Unique id
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+          readOnly: true
+        permitType:
+          type: string
+          description: The type of permit (namespace-defined)
+          examples:
+          - PARKING_PERMIT
+          maxLength: 64
+          minLength: 0
+        validFrom:
+          type: string
+          format: date
+          description: Valid from (decision date). Defaults to today when omitted.
+          examples:
+          - 2026-06-03
+        validUntil:
+          type: string
+          format: date
+          description: Valid until and including. Open-ended when omitted.
+          examples:
+          - 2031-09-01
+        conditions:
+          type: string
+          description: Conditions for the permit
+          examples:
+          - Unloading may only take place during daytime.
+          maxLength: 4096
+          minLength: 0
+        status:
+          type: string
+          description: Status
+          enum:
+          - ACTIVE
+          - REVOKED
+          examples:
+          - ACTIVE
+        created:
+          type: string
+          format: date-time
+          description: Created
+          readOnly: true
+        modified:
+          type: string
+          format: date-time
+          description: Modified
+          readOnly: true
     Notification:
       type: object
       description: "User-facing notification raised against an errand. Mutable: callers\
