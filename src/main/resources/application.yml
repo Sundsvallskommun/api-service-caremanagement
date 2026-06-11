@@ -51,3 +51,16 @@ scheduler:
     name: notification-cleanup
     shedlock-lock-at-most-for: PT5M
     maximum-execution-time: PT5M
+  database-cleanup:
+    cron: '-'
+    name: database-cleanup
+    shedlock-lock-at-most-for: PT5M
+    maximum-execution-time: PT10M
+#========================================
+# Maintenance settings
+#========================================
+maintenance:
+  database-cleanup:
+    # Destructive nightly demo reset. Disabled by default; the scheduler bean is only created when this
+    # is true (set together with scheduler.database-cleanup.cron in throwaway demo environments only).
+    enabled: false
