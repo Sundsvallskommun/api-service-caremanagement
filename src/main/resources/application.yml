@@ -33,11 +33,23 @@ spring:
           operaton:
             authorization-grant-type: client_credentials
             provider: operaton
+          messaging:
+            client-id: ${INTEGRATION_MESSAGING_CLIENT_ID:override}
+            client-secret: ${INTEGRATION_MESSAGING_CLIENT_SECRET:override}
+            authorization-grant-type: client_credentials
+            provider: messaging
+        provider:
+          messaging:
+            token-uri: ${INTEGRATION_MESSAGING_TOKEN_URI:http://localhost/token}
 #========================================
 # Integration settings
 #========================================
 integration:
   operaton:
+    connect-timeout: 5
+    read-timeout: 30
+  messaging:
+    url: ${INTEGRATION_MESSAGING_URL:http://localhost}
     connect-timeout: 5
     read-timeout: 30
 #========================================
