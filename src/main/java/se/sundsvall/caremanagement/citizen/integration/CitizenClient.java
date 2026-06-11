@@ -13,12 +13,12 @@ import static se.sundsvall.caremanagement.citizen.integration.configuration.Citi
 
 /**
  * Client for citizen/folkbokföring lookups (personId resolution + citizen incl. addresses, civil status, protected
- * identity). A first-class, type-agnostic integration for case preparation.
+ * identity) against the Sundsvallskommun <b>api-service-citizen v3</b> API. A first-class, type-agnostic integration
+ * for
+ * case preparation.
  * <p>
- * <b>Contract note:</b> the request paths below follow the self-hosted <b>api-service-citizen v2</b> contract used by
- * the POC — there is no {@code municipalityId} path segment (it is a query parameter on the guid lookup), and the
- * citizen-by-id lookup takes only the personId. The Sundsvallskommun <b>v3</b> API differs; adjust the mappings (and
- * {@code integration.citizen.url}) when pointing at v3 or a v3-shaped WireMock. The generated models are v3-shaped.
+ * The v3 contract takes {@code municipalityId} as a path segment. {@code integration.citizen.url} must point at the v3
+ * base path (ending in {@code /api/v3/citizen}); the mappings below are relative to it.
  */
 @FeignClient(name = CLIENT_ID, url = "${integration.citizen.url}", configuration = CitizenConfiguration.class)
 @CircuitBreaker(name = CLIENT_ID)
@@ -27,26 +27,30 @@ public interface CitizenClient {
 	/**
 	 * Resolve a citizen's personId (GUID) from their personnummer.
 	 * <p>
-	 * api-service-citizen v2: {@code GET /{personNumber}/guid?municipalityId=...}
+	 * api-service-citizen v3: {@code GET /{municipalityId}/{personNumber}/guid}
 	 *
-	 * @param  municipalityId the id of the municipality (query parameter)
+	 * @param  municipalityId the id of the municipality (path variable)
 	 * @param  personNumber   the applicant's personnummer (path variable)
 	 * @return                the citizen's personId (GUID), or {@code null} on 204 No Content
 	 */
-	@GetMapping(path = "/{personNumber}/guid", produces = APPLICATION_JSON_VALUE)
+	@GetMapping(path = "/{municipalityId}/{personNumber}/guid", produces = APPLICATION_JSON_VALUE)
 	String getGuid(
-		@RequestParam("municipalityId") final String municipalityId,
+		@PathVariable final String municipalityId,
 		@PathVariable final String personNumber);
 
 	/**
 	 * Fetch a citizen (incl. addresses) by personId.
 	 * <p>
-	 * api-service-citizen v2: {@code GET /{personId}}
+	 * api-service-citizen v3: {@code GET /{municipalityId}/{personId}?ShowClassified=...}
 	 *
-	 * @param  personId the citizen's personId (GUID)
-	 * @return          the citizen, or {@code null} on 204 No Content
+	 * @param  municipalityId the id of the municipality (path variable)
+	 * @param  personId       the citizen's personId (GUID)
+	 * @param  showClassified whether to include classified/protected data (requires authorization)
+	 * @return                the citizen, or {@code null} on 204 No Content
 	 */
-	@GetMapping(path = "/{personId}", produces = APPLICATION_JSON_VALUE)
+	@GetMapping(path = "/{municipalityId}/{personId}", produces = APPLICATION_JSON_VALUE)
 	CitizenExtended getCitizen(
-		@PathVariable final String personId);
+		@PathVariable final String municipalityId,
+		@PathVariable final String personId,
+		@RequestParam("ShowClassified") final boolean showClassified);
 }
