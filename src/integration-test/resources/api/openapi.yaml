@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:51159
+- url: http://localhost:51629
   description: Generated server url
 tags:
 - name: Errand decisions
@@ -21,6 +21,8 @@ tags:
     acknowledge them when seen; expired ones are purged by a daily background job.
 - name: Errand stakeholders
   description: Errand stakeholder operations
+- name: Statistics
+  description: Read-only errand statistics for the caseworker interface
 - name: Status History
   description: Status transition log for an errand
 - name: Metadata
@@ -1814,6 +1816,54 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/statistics:
+    get:
+      tags:
+      - Statistics
+      summary: Errand statistics
+      description: "Aggregates the number of errands per status and per assigned user,\
+        \ optionally filtered by errand type and creation date."
+      operationId: getStatistics
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: typeSlug
+        in: query
+        description: Filter on errand type (module). Omit for statistics across all
+          types.
+        required: false
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Count only errands created at or after this point in time (ISO-8601).
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        description: Count only errands created at or before this point in time (ISO-8601).
+        required: false
+        schema:
+          type: string
+          format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatisticsResponse"
   /{municipalityId}/{namespace}/notifications:
     get:
       tags:
@@ -2827,6 +2877,62 @@ components:
           description: User id of the assignee
           examples:
           - jane02doe
+    AssigneeCount:
+      type: object
+      description: Number of errands assigned to a given user
+      properties:
+        assignedUserId:
+          type: string
+          description: The assigned user id
+          examples:
+          - joe01doe
+        count:
+          type: integer
+          format: int64
+          description: Number of errands assigned to the user
+          examples:
+          - 5
+    StatisticsResponse:
+      type: object
+      description: Aggregated errand statistics for the caseworker interface
+      properties:
+        total:
+          type: integer
+          format: int64
+          description: Total number of errands in the selection
+          examples:
+          - 42
+        byStatus:
+          type: array
+          description: Number of errands per status
+          items:
+            $ref: "#/components/schemas/StatusCount"
+        byAssignee:
+          type: array
+          description: Number of errands per assigned user
+          items:
+            $ref: "#/components/schemas/AssigneeCount"
+        unassigned:
+          type: integer
+          format: int64
+          description: Number of errands without an assigned user
+          examples:
+          - 7
+    StatusCount:
+      type: object
+      description: Number of errands in a given status
+      properties:
+        status:
+          type: string
+          description: Status
+          examples:
+          - DECIDED
+        count:
+          type: integer
+          format: int64
+          description: Number of errands in the status
+          examples:
+          - 12
     Direction:
       type: string
       enum:
