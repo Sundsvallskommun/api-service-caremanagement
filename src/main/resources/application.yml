@@ -38,9 +38,16 @@ spring:
             client-secret: ${INTEGRATION_MESSAGING_CLIENT_SECRET:override}
             authorization-grant-type: client_credentials
             provider: messaging
+          templating:
+            client-id: ${INTEGRATION_TEMPLATING_CLIENT_ID:override}
+            client-secret: ${INTEGRATION_TEMPLATING_CLIENT_SECRET:override}
+            authorization-grant-type: client_credentials
+            provider: templating
         provider:
           messaging:
             token-uri: ${INTEGRATION_MESSAGING_TOKEN_URI:http://localhost/token}
+          templating:
+            token-uri: ${INTEGRATION_TEMPLATING_TOKEN_URI:http://localhost/token}
 #========================================
 # Integration settings
 #========================================
@@ -50,6 +57,10 @@ integration:
     read-timeout: 30
   messaging:
     url: ${INTEGRATION_MESSAGING_URL:http://localhost}
+    connect-timeout: 5
+    read-timeout: 30
+  templating:
+    url: ${INTEGRATION_TEMPLATING_URL:http://localhost}
     connect-timeout: 5
     read-timeout: 30
 #========================================
