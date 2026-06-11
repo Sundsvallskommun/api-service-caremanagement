@@ -74,6 +74,16 @@ integration:
     url: ${INTEGRATION_CITIZEN_URL:http://localhost}
     connect-timeout: 5
     read-timeout: 30
+  # Eneo (LLM) document/decision support. OAuth2 is built programmatically (not a Spring registration).
+  eneo:
+    url: ${INTEGRATION_ENEO_URL:http://localhost}
+    api-key: ${INTEGRATION_ENEO_API_KEY:override}
+    connect-timeout-in-seconds: 5
+    read-timeout-in-seconds: 30
+    oauth2:
+      token-url: ${INTEGRATION_ENEO_OAUTH2_TOKEN_URL:http://localhost/token}
+      client-id: ${INTEGRATION_ENEO_OAUTH2_CLIENT_ID:override}
+      client-secret: ${INTEGRATION_ENEO_OAUTH2_CLIENT_SECRET:override}
 #========================================
 # Notification settings
 #========================================
