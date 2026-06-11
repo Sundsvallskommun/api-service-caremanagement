@@ -1,0 +1,105 @@
+openapi: 3.0.1
+info:
+  title: Citizen API
+  version: v3
+# Trimmed to what rtj-management's egensotning folkbokföringskontroll needs: the
+# CitizenExtended + CitizenAddress models. Only models are generated (generateApis=false);
+# the actual request paths live on the CitizenClient Feign interface. The full source spec
+# is owned by api-service-citizen.
+paths: {}
+components:
+  schemas:
+    CitizenAddress:
+      type: object
+      properties:
+        status:
+          type: string
+          nullable: true
+        nrDate:
+          type: string
+          format: date-time
+          nullable: true
+        realEstateDescription:
+          type: string
+          nullable: true
+        co:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        addressArea:
+          type: string
+          nullable: true
+        addressNumber:
+          type: string
+          nullable: true
+        addressLetter:
+          type: string
+          nullable: true
+        appartmentNumber:
+          type: string
+          nullable: true
+        postalCode:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        county:
+          type: string
+          nullable: true
+        municipality:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+        emigrated:
+          type: boolean
+          nullable: true
+        addressType:
+          type: string
+          nullable: true
+        xCoordLocal:
+          type: number
+          format: double
+          nullable: true
+        yCoordLocal:
+          type: number
+          format: double
+          nullable: true
+      additionalProperties: false
+    CitizenExtended:
+      type: object
+      properties:
+        personId:
+          type: string
+          format: uuid
+        givenname:
+          type: string
+          nullable: true
+        lastname:
+          type: string
+          nullable: true
+        gender:
+          type: string
+          nullable: true
+        civilStatus:
+          type: string
+          nullable: true
+        nrDate:
+          type: string
+          nullable: true
+        classified:
+          type: string
+          nullable: true
+        protectedNR:
+          type: string
+          nullable: true
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/CitizenAddress'
+          nullable: true
+      additionalProperties: false
