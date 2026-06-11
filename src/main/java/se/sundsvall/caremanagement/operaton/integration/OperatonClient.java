@@ -1,0 +1,94 @@
+package se.sundsvall.caremanagement.operaton.integration;
+
+import generated.se.sundsvall.operaton.CorrelationMessageRequest;
+import generated.se.sundsvall.operaton.ModifyVariablesRequest;
+import generated.se.sundsvall.operaton.ProcessDefinitionsResponse;
+import generated.se.sundsvall.operaton.ProcessInstanceResponse;
+import generated.se.sundsvall.operaton.ProcessInstancesResponse;
+import generated.se.sundsvall.operaton.StartProcessInstanceRequest;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import se.sundsvall.caremanagement.operaton.integration.configuration.OperatonConfiguration;
+
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static se.sundsvall.caremanagement.operaton.integration.configuration.OperatonConfiguration.CLIENT_ID;
+
+@FeignClient(name = CLIENT_ID, url = "${integration.operaton.url}", configuration = OperatonConfiguration.class)
+@CircuitBreaker(name = CLIENT_ID)
+public interface OperatonClient {
+
+	/**
+	 * List active process instances.
+	 *
+	 * @param  municipalityId the id of the municipality
+	 * @return                response containing the active process instances
+	 */
+	@GetMapping(path = "/{municipalityId}/process-instances", produces = APPLICATION_JSON_VALUE)
+	ProcessInstancesResponse getProcessInstances(
+		@PathVariable final String municipalityId);
+
+	/**
+	 * Start a new process instance by process definition key.
+	 *
+	 * @param  municipalityId the id of the municipality
+	 * @param  request        containing process definition key and optional variables
+	 * @return                response describing the started process instance
+	 */
+	@PostMapping(path = "/{municipalityId}/process-instances", produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
+	ProcessInstanceResponse startProcessInstance(
+		@PathVariable final String municipalityId,
+		@RequestBody final StartProcessInstanceRequest request);
+
+	/**
+	 * Get status and details for a specific process instance.
+	 *
+	 * @param  municipalityId the id of the municipality
+	 * @param  id             the process instance id
+	 * @return                response describing the process instance
+	 */
+	@GetMapping(path = "/{municipalityId}/process-instances/{id}", produces = APPLICATION_JSON_VALUE)
+	ProcessInstanceResponse getProcessInstance(
+		@PathVariable final String municipalityId,
+		@PathVariable final String id);
+
+	/**
+	 * List process definitions filtered by name (latest versions that match).
+	 *
+	 * @param  municipalityId the id of the municipality
+	 * @param  name           process definition name to match
+	 * @return                response containing matching process definitions
+	 */
+	@GetMapping(path = "/{municipalityId}/process-definitions", params = "name", produces = APPLICATION_JSON_VALUE)
+	ProcessDefinitionsResponse getProcessDefinitionsByName(
+		@PathVariable final String municipalityId,
+		@RequestParam("name") final String name);
+
+	/**
+	 * Add, update, or remove variables on a running process instance.
+	 *
+	 * @param municipalityId the id of the municipality
+	 * @param id             the process instance id
+	 * @param request        modifications and deletions to apply
+	 */
+	@PostMapping(path = "/{municipalityId}/process-instances/{id}/variables", consumes = APPLICATION_JSON_VALUE)
+	void modifyProcessInstanceVariables(
+		@PathVariable final String municipalityId,
+		@PathVariable final String id,
+		@RequestBody final ModifyVariablesRequest request);
+
+	/**
+	 * Correlate a BPMN message to a process instance waiting on a receive task or message catch event.
+	 *
+	 * @param municipalityId the id of the municipality
+	 * @param request        message name, business key, and optional process variables
+	 */
+	@PostMapping(path = "/{municipalityId}/message", consumes = APPLICATION_JSON_VALUE)
+	void correlateMessage(
+		@PathVariable final String municipalityId,
+		@RequestBody final CorrelationMessageRequest request);
+}
