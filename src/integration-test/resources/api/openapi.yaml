@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:63083
+- url: http://localhost:51159
   description: Generated server url
 tags:
 - name: Errand decisions
@@ -29,6 +29,8 @@ tags:
   description: Namespace configuration operations
 - name: Errands
   description: Errand operations
+- name: Conversation
+  description: Messages between caseworker and applicant on an errand
 - name: Process messages
   description: Send BPMN message correlation events to the process instance currently
     running for an errand
@@ -846,6 +848,69 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CreateNote"
+        required: true
+      responses:
+        "200":
+          description: OK
+  /{municipalityId}/{namespace}/errands/{errandId}/messages:
+    get:
+      tags:
+      - Conversation
+      summary: List the errand's messages (chronological)
+      operationId: list_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      tags:
+      - Conversation
+      summary: Post a message on the errand
+      operationId: post
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMessage"
         required: true
       responses:
         "200":
@@ -1814,7 +1879,7 @@ paths:
       tags:
       - Status History
       summary: List status transitions for errand
-      operationId: list_1
+      operationId: list_2
       parameters:
       - name: municipalityId
         in: path
@@ -1906,6 +1971,41 @@ paths:
       responses:
         "200":
           description: OK
+  /{municipalityId}/{namespace}/errands/{errandId}/messages/{messageId}:
+    get:
+      tags:
+      - Conversation
+      summary: Read a message
+      operationId: read_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
   /{municipalityId}/{namespace}/errands/{errandId}/decisions/{decisionId}:
     get:
       tags:
@@ -2241,10 +2341,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -2619,6 +2719,37 @@ components:
           minLength: 0
       required:
       - body
+    CreateMessage:
+      type: object
+      description: A new message in the errand's conversation
+      properties:
+        direction:
+          type: string
+          description: "Direction: OUTBOUND = caseworker → applicant, INBOUND = applicant\
+            \ → caseworker"
+          enum:
+          - INBOUND
+          - OUTBOUND
+          examples:
+          - OUTBOUND
+          minLength: 1
+        body:
+          type: string
+          description: Message text
+          examples:
+          - Please complete your application with a valid certificate.
+          maxLength: 8192
+          minLength: 0
+        author:
+          type: string
+          description: Author id (the caseworker's user id or the applicant's identifier)
+          examples:
+          - joe01doe
+          maxLength: 64
+          minLength: 0
+      required:
+      - body
+      - direction
     Decision:
       type: object
       description: "Decision recorded against an errand. Both system-generated decisions\
@@ -2799,6 +2930,38 @@ components:
           type: string
           description: Author user id
           example: jane01doe
+        created:
+          type: string
+          format: date-time
+          description: Created timestamp
+    Message:
+      type: object
+      description: A message in the errand's conversation
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+        errandId:
+          type: string
+          description: The errand the message belongs to
+        direction:
+          type: string
+          description: Direction
+          enum:
+          - INBOUND
+          - OUTBOUND
+          examples:
+          - OUTBOUND
+        body:
+          type: string
+          description: Message text
+          examples:
+          - Please complete your application with a valid certificate.
+        author:
+          type: string
+          description: Author id
+          examples:
+          - joe01doe
         created:
           type: string
           format: date-time
