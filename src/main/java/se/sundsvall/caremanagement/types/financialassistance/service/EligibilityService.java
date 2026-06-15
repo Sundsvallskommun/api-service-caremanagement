@@ -9,7 +9,6 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseService;
@@ -18,7 +17,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Applicati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.util.Comparator.comparing;
@@ -36,32 +35,28 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
 
 /**
- * Application-eligibility (gemensam ingång) routing for ekonomiskt bistånd. Given an applicant and an optional
- * co-applicant, suggests which application to offer — nyansökan / återansökan / tilläggsansökan — following
- * {@code forslag-1-gemensam-ingang-regler}:
+ * Application-eligibility (gemensam ingång) routing for ekonomiskt bistånd, encoding the agreed decision flow:
  *
  * <ol>
- * <li>If an application was already submitted within the window (our own DB), offer only tilläggsansökan / contact a
- * caseworker.</li>
- * <li>Otherwise read Lifecare (best-effort): no open case for both applicants → nyansökan; an open case with a decision
- * for the current month → återansökan next month or tilläggsansökan this month; an open case without one → återansökan
- * this or next month, or tilläggsansökan.</li>
- * <li>If the requested constellation (alone vs with the given partner) differs from the previous application/decision,
- * flag that a caseworker must handle it.</li>
+ * <li><b>Finns i CM? + LC</b> — does the applicant already exist (an EB errand in caremanagement, or a Lifecare
+ * footprint)? When applying together, <em>both</em> must exist. If not → nyansökan.</li>
+ * <li><b>Samma civilstånd?</b> — does the requested constellation (alone vs with a partner, inferred from the
+ * co-applicant) match the previous application's? If it changed → nyansökan.</li>
+ * <li><b>Per-month</b> — for the current and next month, is there already an application/decision (within the window)?
+ * If yes → tilläggsansökan for that month; if no → återansökan. The current month being decided in Lifecare makes the
+ * next-month option the recommended one.</li>
  * </ol>
  *
- * The decision is advisory — the handläggare stays in the loop — so the result always carries the facts it was built
- * from and a degraded ({@code lifecareChecked=false}) answer when Lifecare is unreachable.
+ * The decision is advisory — the handläggare stays in the loop — so the result carries the facts each gate was decided
+ * from and degrades ({@code lifecareChecked=false}) when Lifecare is unreachable.
  */
 @Service
 @Transactional(readOnly = true)
 public class EligibilityService {
 
-	static final String REASON_NO_OPEN_CASE = "NO_OPEN_CASE";
-	static final String REASON_DECISION_FOR_CURRENT_MONTH = "DECISION_FOR_CURRENT_MONTH";
-	static final String REASON_NO_DECISION_FOR_CURRENT_MONTH = "NO_DECISION_FOR_CURRENT_MONTH";
-	static final String REASON_RECENT_APPLICATION = "RECENT_APPLICATION";
-	static final String REASON_CONSTELLATION_MISMATCH = "CONSTELLATION_MISMATCH";
+	static final String REASON_NO_EXISTING_CASE = "NO_EXISTING_CASE";
+	static final String REASON_CIVILSTAND_CHANGED = "CIVILSTAND_CHANGED";
+	static final String REASON_EXISTING_CASE = "EXISTING_CASE";
 
 	private static final String[] MONTHS_SV = {
 		"januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"
@@ -86,146 +81,145 @@ public class EligibilityService {
 		final var currentMonth = YearMonth.from(today);
 		final var nextMonth = currentMonth.plusMonths(1);
 		final var window = ofNullable(request.getWithinDays()).orElse(defaultWindowDays);
+		final var cutoff = OffsetDateTime.now().minusDays(window);
 		final var hasCoApplicant = hasText(request.getCoApplicant());
 
 		final var response = EligibilityResponse.create()
 			.withWindowDays(window)
 			.withHasCoApplicant(hasCoApplicant);
 
-		// 1) Duplicate guard against our own (Druken) errands.
-		final var recentErrands = findRecentErrands(municipalityId, namespace, request, OffsetDateTime.now().minusDays(window));
-		if (!recentErrands.isEmpty()) {
-			final var matches = constellationMatchesDb(recentErrands.get(0).getId(), request);
-			response.setHasRecentApplication(true);
-			response.setConstellationMatchesPrevious(matches);
-			response.setSuggestions(List.of(suggestion(SLUG_SUPPLEMENTARY, currentMonth, true)));
-			response.setMessage("En ansökan har redan lämnats in inom " + window
-				+ " dagar. Föreslår tilläggsansökan, eller kontakta socialsekreterare.");
-			return finishWithConstellation(response, REASON_RECENT_APPLICATION, matches,
-				" Sökande skiljer sig från den tidigare ansökan.");
-		}
-
-		// 2) Lifecare (best-effort).
+		// Lifecare (best-effort).
 		var lifecareChecked = true;
-		LifecareEbCaseSummary applicantSummary;
-		LifecareEbCaseSummary coApplicantSummary = null;
+		LifecareEbCaseSummary applicantLc;
+		LifecareEbCaseSummary coApplicantLc = null;
 		try {
-			applicantSummary = lifecareEbCaseService.summarize(request.getApplicant(), today);
+			applicantLc = lifecareEbCaseService.summarize(request.getApplicant(), today);
 			if (hasCoApplicant) {
-				coApplicantSummary = lifecareEbCaseService.summarize(request.getCoApplicant(), today);
+				coApplicantLc = lifecareEbCaseService.summarize(request.getCoApplicant(), today);
 			}
 		} catch (final ThrowableProblem e) {
 			lifecareChecked = false;
-			applicantSummary = LifecareEbCaseSummary.none();
-			coApplicantSummary = hasCoApplicant ? LifecareEbCaseSummary.none() : null;
+			applicantLc = LifecareEbCaseSummary.none();
+			coApplicantLc = hasCoApplicant ? LifecareEbCaseSummary.none() : null;
 		}
 
 		response.setLifecareChecked(lifecareChecked);
-		response.setHasPreviousCalculation(applicantSummary.hasCalculation());
-		response.setHasDecisionForCurrentMonth(applicantSummary.hasDecisionForReferenceMonth());
-		ofNullable(applicantSummary.latestDecisionPeriod()).ifPresent(period -> {
+		response.setHasPreviousCalculation(applicantLc.hasCalculation());
+		ofNullable(applicantLc.latestDecisionPeriod()).ifPresent(period -> {
 			response.setLatestDecisionPeriodMonth(period.getMonthValue());
 			response.setLatestDecisionPeriodYear(period.getYear());
 		});
 
-		// "Öppet ärende för båda sökande" — when applying together, both must have an open case.
-		final var openCaseForBoth = applicantSummary.hasOpenCase()
-			&& (!hasCoApplicant || (coApplicantSummary != null && coApplicantSummary.hasOpenCase()));
-		response.setHasOpenCase(openCaseForBoth);
+		// Caremanagement (Druken) EB errands for the applicant (+ co-applicant), scoped to this namespace/municipality.
+		final var cmRecords = loadCmRecords(municipalityId, namespace, request);
+		final var existsInCm = cmRecords.stream().anyMatch(record -> personIn(record.fa(), request.getApplicant()));
+		response.setExistsInCm(existsInCm);
+		response.setExistsInLc(applicantLc.hasFootprint());
 
-		// 3) Route.
-		if (!openCaseForBoth) {
-			response.setSuggestions(List.of(suggestion(SLUG_NEW, null, true)));
-			response.setMessage("Inget öppet ärende hittades" + (lifecareChecked ? "" : " (Lifecare kunde inte nås)")
-				+ ". Föreslår nyansökan.");
-			response.setReasonCode(REASON_NO_OPEN_CASE);
-			return response;
+		// 1) Finns i CM? + LC — applicant must exist; when applying together the co-applicant must too.
+		final var applicantExists = existsInCm || applicantLc.hasFootprint();
+		final var coApplicantExists = !hasCoApplicant
+			|| cmRecords.stream().anyMatch(record -> personIn(record.fa(), request.getCoApplicant()))
+			|| (coApplicantLc != null && coApplicantLc.hasFootprint());
+		if (!(applicantExists && coApplicantExists)) {
+			return newApplication(response, REASON_NO_EXISTING_CASE,
+				"Inget befintligt ärende hittades" + (lifecareChecked ? "" : " (Lifecare kunde inte nås)") + ". Föreslår nyansökan.");
 		}
 
-		final var matches = constellationMatchesLifecare(applicantSummary, request);
-		response.setConstellationMatchesPrevious(matches);
-
-		if (applicantSummary.hasDecisionForReferenceMonth()) {
-			response.setSuggestions(List.of(
-				suggestion(SLUG_RENEWAL, nextMonth, true),
-				suggestion(SLUG_SUPPLEMENTARY, currentMonth, false)));
-			response.setMessage("Beslut finns för innevarande månad. Föreslår återansökan för nästa månad "
-				+ "eller tilläggsansökan för innevarande månad.");
-			return finishWithConstellation(response, REASON_DECISION_FOR_CURRENT_MONTH, matches,
-				" Sökande skiljer sig från tidigare beslut – kontakta socialsekreterare.");
+		// 2) Samma civilstånd? — constellation (alone vs partner) vs the most recent existing case.
+		final var previousHadCoApplicant = previousHadCoApplicant(cmRecords, applicantLc);
+		final var civilstandMatches = hasCoApplicant == previousHadCoApplicant;
+		response.setCivilstandMatches(civilstandMatches);
+		if (!civilstandMatches) {
+			return newApplication(response, REASON_CIVILSTAND_CHANGED,
+				"Civilståndet skiljer sig från föregående ansökan. Föreslår nyansökan.");
 		}
 
-		response.setSuggestions(List.of(
-			suggestion(SLUG_RENEWAL, currentMonth, true),
-			suggestion(SLUG_RENEWAL, nextMonth, false),
-			suggestion(SLUG_SUPPLEMENTARY, currentMonth, false)));
-		response.setMessage("Öppet ärende utan beslut för innevarande månad. Föreslår återansökan för innevarande "
-			+ "eller nästa månad, alternativt tilläggsansökan.");
-		return finishWithConstellation(response, REASON_NO_DECISION_FOR_CURRENT_MONTH, matches,
-			" Sökande skiljer sig från tidigare beslut – kontakta socialsekreterare.");
-	}
+		// 3) Per-month — application/decision already present for this/next month?
+		final var existsThisMonth = applicationExists(cmRecords, applicantLc, currentMonth, cutoff);
+		final var existsNextMonth = applicationExists(cmRecords, applicantLc, nextMonth, cutoff);
+		final var currentMonthDecided = applicantLc.decisionMonths().contains(currentMonth);
 
-	/**
-	 * Applies the reason code and, on a constellation mismatch, escalates to a caseworker — overriding the reason code so
-	 * the frontend can surface the mismatch as the salient issue while still showing the computed suggestions.
-	 */
-	private static EligibilityResponse finishWithConstellation(final EligibilityResponse response, final String reasonCode,
-		final Boolean matches, final String mismatchNote) {
-		if (Boolean.FALSE.equals(matches)) {
-			response.setRequiresCaseworker(true);
-			response.setReasonCode(REASON_CONSTELLATION_MISMATCH);
-			response.setMessage(response.getMessage() + mismatchNote);
-		} else {
-			response.setReasonCode(reasonCode);
-		}
+		response.setApplicationExistsThisMonth(existsThisMonth);
+		response.setApplicationExistsNextMonth(existsNextMonth);
+		response.setCurrentMonthDecided(currentMonthDecided);
+
+		final var thisMonth = monthSuggestion(currentMonth, existsThisMonth, !currentMonthDecided);
+		final var nextMonthSuggestion = monthSuggestion(nextMonth, existsNextMonth, currentMonthDecided);
+
+		// Recommended = denna månad while it's still open; nästa månad once the current month is decided.
+		response.setSuggestions(currentMonthDecided ? List.of(nextMonthSuggestion, thisMonth) : List.of(thisMonth, nextMonthSuggestion));
+		response.setReasonCode(REASON_EXISTING_CASE);
+		response.setMessage(currentMonthDecided
+			? "Beslut finns för innevarande månad. Föreslår återansökan för nästa månad eller tilläggsansökan."
+			: "Befintligt ärende utan beslut för innevarande månad. Föreslår återansökan för innevarande månad.");
 		return response;
 	}
 
-	/** Recent financial-assistance errands (created within the window) in this namespace where either applicant appears. */
-	private List<ErrandEntity> findRecentErrands(final String municipalityId, final String namespace,
-		final EligibilityRequest request, final OffsetDateTime createdAfter) {
-		final var ids = new LinkedHashSet<>(financialAssistanceRepository.findRecentErrandIdsByPerson(request.getApplicant(), createdAfter));
+	private static EligibilityResponse newApplication(final EligibilityResponse response, final String reasonCode, final String message) {
+		response.setSuggestions(List.of(suggestion(SLUG_NEW, null, true)));
+		response.setReasonCode(reasonCode);
+		response.setMessage(message);
+		return response;
+	}
+
+	/** A month's suggestion: tilläggsansökan when an application already exists for it, otherwise återansökan. */
+	private static ApplicationSuggestion monthSuggestion(final YearMonth month, final boolean exists, final boolean recommended) {
+		return suggestion(exists ? SLUG_SUPPLEMENTARY : SLUG_RENEWAL, month, recommended);
+	}
+
+	/**
+	 * Is there an application for {@code month} — a CM errand for that period within the window, or a Lifecare decision?
+	 */
+	private static boolean applicationExists(final List<CmRecord> cmRecords, final LifecareEbCaseSummary applicantLc,
+		final YearMonth month, final OffsetDateTime cutoff) {
+		final var inCm = cmRecords.stream().anyMatch(record -> periodEquals(record.fa(), month) && createdWithin(record.errand(), cutoff));
+		return inCm || applicantLc.decisionMonths().contains(month);
+	}
+
+	/**
+	 * The constellation of the most recent existing case — a CM application with a co-applicant, else the latest Lifecare
+	 * decision.
+	 */
+	private static boolean previousHadCoApplicant(final List<CmRecord> cmRecords, final LifecareEbCaseSummary applicantLc) {
+		return cmRecords.stream().findFirst()
+			.map(record -> hasCoApplicantPerson(record.fa()))
+			.orElseGet(applicantLc::hasCoApplicant);
+	}
+
+	/** EB errands (newest first) for either applicant, scoped to the namespace/municipality and the EB type slugs. */
+	private List<CmRecord> loadCmRecords(final String municipalityId, final String namespace, final EligibilityRequest request) {
+		final var ids = new LinkedHashSet<>(financialAssistanceRepository.findErrandIdsByPerson(request.getApplicant()));
 		if (hasText(request.getCoApplicant())) {
-			ids.addAll(financialAssistanceRepository.findRecentErrandIdsByPerson(request.getCoApplicant(), createdAfter));
+			ids.addAll(financialAssistanceRepository.findErrandIdsByPerson(request.getCoApplicant()));
 		}
 		return ids.stream()
 			.map(id -> errandRepository.findByIdAndNamespaceAndMunicipalityId(id, namespace, municipalityId))
 			.flatMap(Optional::stream)
 			.filter(errand -> SLUGS.contains(errand.getTypeSlug()))
-			.sorted(comparing(ErrandEntity::getCreated, nullsFirst(naturalOrder())).reversed())
+			.map(errand -> new CmRecord(errand, financialAssistanceRepository.findByErrandId(errand.getId()).orElse(null)))
+			.filter(record -> record.fa() != null)
+			.sorted(comparing((CmRecord record) -> record.errand().getCreated(), nullsFirst(naturalOrder())).reversed())
 			.toList();
 	}
 
-	/** Does the requested constellation match the persons on a previous (DB) application? */
-	private Boolean constellationMatchesDb(final String errandId, final EligibilityRequest request) {
-		final var previousCoApplicants = financialAssistanceRepository.findByErrandId(errandId)
-			.map(entity -> ofNullable(entity.getPersons()).orElseGet(List::of).stream()
-				.filter(person -> ROLE_CO_APPLICANT.equals(person.getRole()))
-				.map(FaPerson::getPersonalNumber)
-				.filter(StringUtils::hasText)
-				.toList())
-			.orElseGet(List::of);
-		return matchesConstellation(previousCoApplicants, request.getCoApplicant());
+	private static boolean personIn(final FinancialAssistanceEntity fa, final String personalNumber) {
+		return ofNullable(fa.getPersons()).orElseGet(List::of).stream()
+			.anyMatch(person -> personalNumber.equals(person.getPersonalNumber()));
 	}
 
-	/**
-	 * Does the requested constellation match the co-applicants on the latest Lifecare decision (or {@code null} if none)?
-	 */
-	private static Boolean constellationMatchesLifecare(final LifecareEbCaseSummary summary, final EligibilityRequest request) {
-		if (summary.latestDecisionPeriod() == null) {
-			return null; // nothing to compare against
-		}
-		return matchesConstellation(List.copyOf(summary.coApplicantPersonIds()), request.getCoApplicant());
+	private static boolean hasCoApplicantPerson(final FinancialAssistanceEntity fa) {
+		return ofNullable(fa.getPersons()).orElseGet(List::of).stream()
+			.anyMatch(person -> ROLE_CO_APPLICANT.equals(person.getRole()) && hasText(person.getPersonalNumber()));
 	}
 
-	/**
-	 * Applying together → the previous co-applicants must include the requested partner; applying alone → there were none.
-	 */
-	private static Boolean matchesConstellation(final List<String> previousCoApplicants, final String requestedCoApplicant) {
-		if (hasText(requestedCoApplicant)) {
-			return previousCoApplicants.contains(requestedCoApplicant);
-		}
-		return previousCoApplicants.isEmpty();
+	private static boolean periodEquals(final FinancialAssistanceEntity fa, final YearMonth month) {
+		return ofNullable(fa.getPeriodMonth()).map(m -> m == month.getMonthValue()).orElse(false)
+			&& ofNullable(fa.getPeriodYear()).map(y -> y == month.getYear()).orElse(false);
+	}
+
+	private static boolean createdWithin(final ErrandEntity errand, final OffsetDateTime cutoff) {
+		return errand.getCreated() != null && !errand.getCreated().isBefore(cutoff);
 	}
 
 	private static ApplicationSuggestion suggestion(final String slug, final YearMonth period, final boolean recommended) {
@@ -253,5 +247,9 @@ public class EligibilityService {
 			default -> "Tilläggsansökan";
 		};
 		return period == null ? base : base + " för " + MONTHS_SV[period.getMonthValue() - 1] + " " + period.getYear();
+	}
+
+	/** An EB errand envelope paired with its typed financial-assistance row. */
+	private record CmRecord(ErrandEntity errand, FinancialAssistanceEntity fa) {
 	}
 }

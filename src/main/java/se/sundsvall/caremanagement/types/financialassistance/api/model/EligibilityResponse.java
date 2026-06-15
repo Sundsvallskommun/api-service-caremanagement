@@ -5,40 +5,46 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Result of the application-eligibility check. Carries the ordered {@link ApplicationSuggestion}s the citizen can be
- * offered (one flagged {@code recommended}) together with the facts the decision was built from, so the frontend can
- * render the "kontakta socialsekreterare" path and explain the constellation handling.
+ * Result of the application-eligibility check (gemensam ingång). Carries the ordered {@link ApplicationSuggestion}s the
+ * citizen can be offered (one flagged {@code recommended}) together with the facts each gate was decided from, so the
+ * frontend can explain the routing.
  */
 @Schema(description = "Eligibility result: which application(s) the citizen should be offered, plus the supporting facts.")
 public class EligibilityResponse {
 
-	@Schema(description = "Suggested applications, ordered with the recommended one first. Empty only when nothing can be offered automatically.")
+	@Schema(description = "Suggested applications, ordered with the recommended one first.")
 	private List<ApplicationSuggestion> suggestions;
 
-	@Schema(description = "True when a caseworker must handle the case (e.g. the constellation differs from a previous application).", examples = "false")
-	private boolean requiresCaseworker;
-
-	@Schema(description = "Machine-readable code for the situation that drove the suggestion",
-		examples = "NO_DECISION_FOR_CURRENT_MONTH",
+	@Schema(description = "Machine-readable code for the gate that drove the suggestion",
+		examples = "EXISTING_CASE",
 		allowableValues = {
-			"NO_OPEN_CASE", "DECISION_FOR_CURRENT_MONTH", "NO_DECISION_FOR_CURRENT_MONTH", "RECENT_APPLICATION", "CONSTELLATION_MISMATCH"
+			"NO_EXISTING_CASE", "CIVILSTAND_CHANGED", "EXISTING_CASE"
 		})
 	private String reasonCode;
 
 	@Schema(description = "Human-readable Swedish explanation of the suggestion", examples = "Öppet ärende utan beslut för innevarande månad. Föreslår återansökan.")
 	private String message;
 
-	@Schema(description = "True when an application by either applicant was already submitted within the window in this system", examples = "false")
-	private boolean hasRecentApplication;
+	@Schema(description = "True when the applicant already has an EB errand in caremanagement", examples = "true")
+	private boolean existsInCm;
 
-	@Schema(description = "The duplicate-application window in days that was applied", examples = "90")
+	@Schema(description = "True when the applicant has an EB footprint in Lifecare (aktualisering/beslut/normberäkning)", examples = "true")
+	private boolean existsInLc;
+
+	@Schema(description = "Whether the requested civilstånd (alone vs with a partner) matches the previous application. Null when not evaluated (no existing case).", examples = "true")
+	private Boolean civilstandMatches;
+
+	@Schema(description = "The duplicate-application window in days that was applied to the per-month check", examples = "90")
 	private int windowDays;
 
-	@Schema(description = "True when Lifecare shows an open EB case (for both applicants when applying together)", examples = "true")
-	private boolean hasOpenCase;
+	@Schema(description = "True when an application/decision already exists for the current month", examples = "false")
+	private boolean applicationExistsThisMonth;
 
-	@Schema(description = "True when Lifecare shows a decision covering the current month", examples = "false")
-	private boolean hasDecisionForCurrentMonth;
+	@Schema(description = "True when an application/decision already exists for next month", examples = "false")
+	private boolean applicationExistsNextMonth;
+
+	@Schema(description = "True when Lifecare shows a decision for the current month (the current month is decided/closed)", examples = "false")
+	private boolean currentMonthDecided;
 
 	@Schema(description = "Month (1-12) of the most recent Lifecare decision, when one exists", examples = "5")
 	private Integer latestDecisionPeriodMonth;
@@ -49,10 +55,7 @@ public class EligibilityResponse {
 	@Schema(description = "True when Lifecare shows a previous normberäkning", examples = "true")
 	private boolean hasPreviousCalculation;
 
-	@Schema(description = "Whether the requested constellation (alone vs with the given partner) matches the previous application/decision. Null when there is nothing to compare against.", examples = "true")
-	private Boolean constellationMatchesPrevious;
-
-	@Schema(description = "True when the Lifecare lookup succeeded. False means the answer is degraded (DB-only).", examples = "true")
+	@Schema(description = "True when the Lifecare lookup succeeded. False means the answer is degraded (CM-only).", examples = "true")
 	private boolean lifecareChecked;
 
 	@Schema(description = "True when the request included a co-applicant (medsökande)", examples = "false")
@@ -72,19 +75,6 @@ public class EligibilityResponse {
 
 	public EligibilityResponse withSuggestions(final List<ApplicationSuggestion> suggestions) {
 		this.suggestions = suggestions;
-		return this;
-	}
-
-	public boolean isRequiresCaseworker() {
-		return requiresCaseworker;
-	}
-
-	public void setRequiresCaseworker(final boolean requiresCaseworker) {
-		this.requiresCaseworker = requiresCaseworker;
-	}
-
-	public EligibilityResponse withRequiresCaseworker(final boolean requiresCaseworker) {
-		this.requiresCaseworker = requiresCaseworker;
 		return this;
 	}
 
@@ -114,16 +104,42 @@ public class EligibilityResponse {
 		return this;
 	}
 
-	public boolean isHasRecentApplication() {
-		return hasRecentApplication;
+	public boolean isExistsInCm() {
+		return existsInCm;
 	}
 
-	public void setHasRecentApplication(final boolean hasRecentApplication) {
-		this.hasRecentApplication = hasRecentApplication;
+	public void setExistsInCm(final boolean existsInCm) {
+		this.existsInCm = existsInCm;
 	}
 
-	public EligibilityResponse withHasRecentApplication(final boolean hasRecentApplication) {
-		this.hasRecentApplication = hasRecentApplication;
+	public EligibilityResponse withExistsInCm(final boolean existsInCm) {
+		this.existsInCm = existsInCm;
+		return this;
+	}
+
+	public boolean isExistsInLc() {
+		return existsInLc;
+	}
+
+	public void setExistsInLc(final boolean existsInLc) {
+		this.existsInLc = existsInLc;
+	}
+
+	public EligibilityResponse withExistsInLc(final boolean existsInLc) {
+		this.existsInLc = existsInLc;
+		return this;
+	}
+
+	public Boolean getCivilstandMatches() {
+		return civilstandMatches;
+	}
+
+	public void setCivilstandMatches(final Boolean civilstandMatches) {
+		this.civilstandMatches = civilstandMatches;
+	}
+
+	public EligibilityResponse withCivilstandMatches(final Boolean civilstandMatches) {
+		this.civilstandMatches = civilstandMatches;
 		return this;
 	}
 
@@ -140,29 +156,42 @@ public class EligibilityResponse {
 		return this;
 	}
 
-	public boolean isHasOpenCase() {
-		return hasOpenCase;
+	public boolean isApplicationExistsThisMonth() {
+		return applicationExistsThisMonth;
 	}
 
-	public void setHasOpenCase(final boolean hasOpenCase) {
-		this.hasOpenCase = hasOpenCase;
+	public void setApplicationExistsThisMonth(final boolean applicationExistsThisMonth) {
+		this.applicationExistsThisMonth = applicationExistsThisMonth;
 	}
 
-	public EligibilityResponse withHasOpenCase(final boolean hasOpenCase) {
-		this.hasOpenCase = hasOpenCase;
+	public EligibilityResponse withApplicationExistsThisMonth(final boolean applicationExistsThisMonth) {
+		this.applicationExistsThisMonth = applicationExistsThisMonth;
 		return this;
 	}
 
-	public boolean isHasDecisionForCurrentMonth() {
-		return hasDecisionForCurrentMonth;
+	public boolean isApplicationExistsNextMonth() {
+		return applicationExistsNextMonth;
 	}
 
-	public void setHasDecisionForCurrentMonth(final boolean hasDecisionForCurrentMonth) {
-		this.hasDecisionForCurrentMonth = hasDecisionForCurrentMonth;
+	public void setApplicationExistsNextMonth(final boolean applicationExistsNextMonth) {
+		this.applicationExistsNextMonth = applicationExistsNextMonth;
 	}
 
-	public EligibilityResponse withHasDecisionForCurrentMonth(final boolean hasDecisionForCurrentMonth) {
-		this.hasDecisionForCurrentMonth = hasDecisionForCurrentMonth;
+	public EligibilityResponse withApplicationExistsNextMonth(final boolean applicationExistsNextMonth) {
+		this.applicationExistsNextMonth = applicationExistsNextMonth;
+		return this;
+	}
+
+	public boolean isCurrentMonthDecided() {
+		return currentMonthDecided;
+	}
+
+	public void setCurrentMonthDecided(final boolean currentMonthDecided) {
+		this.currentMonthDecided = currentMonthDecided;
+	}
+
+	public EligibilityResponse withCurrentMonthDecided(final boolean currentMonthDecided) {
+		this.currentMonthDecided = currentMonthDecided;
 		return this;
 	}
 
@@ -205,19 +234,6 @@ public class EligibilityResponse {
 		return this;
 	}
 
-	public Boolean getConstellationMatchesPrevious() {
-		return constellationMatchesPrevious;
-	}
-
-	public void setConstellationMatchesPrevious(final Boolean constellationMatchesPrevious) {
-		this.constellationMatchesPrevious = constellationMatchesPrevious;
-	}
-
-	public EligibilityResponse withConstellationMatchesPrevious(final Boolean constellationMatchesPrevious) {
-		this.constellationMatchesPrevious = constellationMatchesPrevious;
-		return this;
-	}
-
 	public boolean isLifecareChecked() {
 		return lifecareChecked;
 	}
@@ -249,32 +265,32 @@ public class EligibilityResponse {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final EligibilityResponse that = (EligibilityResponse) o;
-		return requiresCaseworker == that.requiresCaseworker && hasRecentApplication == that.hasRecentApplication
-			&& windowDays == that.windowDays && hasOpenCase == that.hasOpenCase
-			&& hasDecisionForCurrentMonth == that.hasDecisionForCurrentMonth
+		return existsInCm == that.existsInCm && existsInLc == that.existsInLc && windowDays == that.windowDays
+			&& applicationExistsThisMonth == that.applicationExistsThisMonth
+			&& applicationExistsNextMonth == that.applicationExistsNextMonth && currentMonthDecided == that.currentMonthDecided
 			&& hasPreviousCalculation == that.hasPreviousCalculation && lifecareChecked == that.lifecareChecked
 			&& hasCoApplicant == that.hasCoApplicant && Objects.equals(suggestions, that.suggestions)
 			&& Objects.equals(reasonCode, that.reasonCode) && Objects.equals(message, that.message)
+			&& Objects.equals(civilstandMatches, that.civilstandMatches)
 			&& Objects.equals(latestDecisionPeriodMonth, that.latestDecisionPeriodMonth)
-			&& Objects.equals(latestDecisionPeriodYear, that.latestDecisionPeriodYear)
-			&& Objects.equals(constellationMatchesPrevious, that.constellationMatchesPrevious);
+			&& Objects.equals(latestDecisionPeriodYear, that.latestDecisionPeriodYear);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(suggestions, requiresCaseworker, reasonCode, message, hasRecentApplication, windowDays,
-			hasOpenCase, hasDecisionForCurrentMonth, latestDecisionPeriodMonth, latestDecisionPeriodYear,
-			hasPreviousCalculation, constellationMatchesPrevious, lifecareChecked, hasCoApplicant);
+		return Objects.hash(suggestions, reasonCode, message, existsInCm, existsInLc, civilstandMatches, windowDays,
+			applicationExistsThisMonth, applicationExistsNextMonth, currentMonthDecided, latestDecisionPeriodMonth,
+			latestDecisionPeriodYear, hasPreviousCalculation, lifecareChecked, hasCoApplicant);
 	}
 
 	@Override
 	public String toString() {
-		return "EligibilityResponse{suggestions=" + suggestions + ", requiresCaseworker=" + requiresCaseworker
-			+ ", reasonCode='" + reasonCode + "', message='" + message + "', hasRecentApplication=" + hasRecentApplication
-			+ ", windowDays=" + windowDays + ", hasOpenCase=" + hasOpenCase + ", hasDecisionForCurrentMonth="
-			+ hasDecisionForCurrentMonth + ", latestDecisionPeriodMonth=" + latestDecisionPeriodMonth
-			+ ", latestDecisionPeriodYear=" + latestDecisionPeriodYear + ", hasPreviousCalculation=" + hasPreviousCalculation
-			+ ", constellationMatchesPrevious=" + constellationMatchesPrevious + ", lifecareChecked=" + lifecareChecked
-			+ ", hasCoApplicant=" + hasCoApplicant + '}';
+		return "EligibilityResponse{suggestions=" + suggestions + ", reasonCode='" + reasonCode + "', message='" + message
+			+ "', existsInCm=" + existsInCm + ", existsInLc=" + existsInLc + ", civilstandMatches=" + civilstandMatches
+			+ ", windowDays=" + windowDays + ", applicationExistsThisMonth=" + applicationExistsThisMonth
+			+ ", applicationExistsNextMonth=" + applicationExistsNextMonth + ", currentMonthDecided=" + currentMonthDecided
+			+ ", latestDecisionPeriodMonth=" + latestDecisionPeriodMonth + ", latestDecisionPeriodYear="
+			+ latestDecisionPeriodYear + ", hasPreviousCalculation=" + hasPreviousCalculation + ", lifecareChecked="
+			+ lifecareChecked + ", hasCoApplicant=" + hasCoApplicant + '}';
 	}
 }

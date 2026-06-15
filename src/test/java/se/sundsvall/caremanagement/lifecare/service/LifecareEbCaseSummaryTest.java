@@ -11,23 +11,23 @@ class LifecareEbCaseSummaryTest {
 	@Test
 	void accessors() {
 		final var period = YearMonth.of(2026, 5);
-		final var summary = new LifecareEbCaseSummary(true, true, period, true, Set.of("198202022397"));
+		final var summary = new LifecareEbCaseSummary(true, Set.of(period), period, true, true);
 
-		assertThat(summary.hasOpenCase()).isTrue();
-		assertThat(summary.hasDecisionForReferenceMonth()).isTrue();
+		assertThat(summary.hasFootprint()).isTrue();
+		assertThat(summary.decisionMonths()).containsExactly(period);
 		assertThat(summary.latestDecisionPeriod()).isEqualTo(period);
 		assertThat(summary.hasCalculation()).isTrue();
-		assertThat(summary.coApplicantPersonIds()).containsExactly("198202022397");
+		assertThat(summary.hasCoApplicant()).isTrue();
 	}
 
 	@Test
 	void noneIsEmpty() {
 		final var none = LifecareEbCaseSummary.none();
 
-		assertThat(none.hasOpenCase()).isFalse();
-		assertThat(none.hasDecisionForReferenceMonth()).isFalse();
+		assertThat(none.hasFootprint()).isFalse();
+		assertThat(none.decisionMonths()).isEmpty();
 		assertThat(none.latestDecisionPeriod()).isNull();
 		assertThat(none.hasCalculation()).isFalse();
-		assertThat(none.coApplicantPersonIds()).isEmpty();
+		assertThat(none.hasCoApplicant()).isFalse();
 	}
 }

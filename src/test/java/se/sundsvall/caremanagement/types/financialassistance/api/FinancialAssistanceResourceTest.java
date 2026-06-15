@@ -83,7 +83,7 @@ class FinancialAssistanceResourceTest {
 	@Test
 	void checkEligibility() {
 		when(eligibilityServiceMock.evaluate(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(EligibilityRequest.class)))
-			.thenReturn(EligibilityResponse.create().withReasonCode("NO_OPEN_CASE"));
+			.thenReturn(EligibilityResponse.create().withReasonCode("EXISTING_CASE"));
 
 		final var response = webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/eligibility").build(base()))
@@ -95,7 +95,7 @@ class FinancialAssistanceResourceTest {
 			.getResponseBody();
 
 		assertThat(response).isNotNull();
-		assertThat(response.getReasonCode()).isEqualTo("NO_OPEN_CASE");
+		assertThat(response.getReasonCode()).isEqualTo("EXISTING_CASE");
 		verify(eligibilityServiceMock).evaluate(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(EligibilityRequest.class));
 	}
 

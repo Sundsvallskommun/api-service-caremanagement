@@ -5,26 +5,26 @@ import java.util.Set;
 
 /**
  * Domain summary of a person's ekonomiskt-bistånd footprint in Lifecare FC, distilled from aktualiseringar, beslut and
- * normberäkningar. Encapsulates FC's generated DTOs and date formats so callers reason in domain terms.
+ * normberäkningar over the lookback window. Encapsulates FC's generated DTOs and date formats so callers reason in
+ * domain terms.
  *
- * @param hasOpenCase                  the person is known to FC's EB process — an aktualisering or a beslut exists
- *                                     within
- *                                     the lookback window
- * @param hasDecisionForReferenceMonth a beslut covers the reference month (its from/to period spans it)
- * @param latestDecisionPeriod         the period (year-month) of the most recent beslut, or {@code null} when none
- * @param hasCalculation               a normberäkning exists within the lookback window
- * @param coApplicantPersonIds         co-applicant person ids found on the most recent beslut — empty when the latest
- *                                     decision was for a single applicant
+ * @param hasFootprint         the person is known to FC's EB process — at least one aktualisering, beslut or
+ *                             normberäkning exists in the window (drives the "finns i LC?" existence gate)
+ * @param decisionMonths       the set of year-months covered by a beslut within the window (used to check whether a
+ *                             decision exists for a given month, and whether the current month is already decided)
+ * @param latestDecisionPeriod the period (year-month) of the most recent beslut, or {@code null} when none
+ * @param hasCalculation       a normberäkning exists within the window
+ * @param hasCoApplicant       the most recent beslut included a co-applicant (used to infer the previous civilstånd)
  */
 public record LifecareEbCaseSummary(
-	boolean hasOpenCase,
-	boolean hasDecisionForReferenceMonth,
+	boolean hasFootprint,
+	Set<YearMonth> decisionMonths,
 	YearMonth latestDecisionPeriod,
 	boolean hasCalculation,
-	Set<String> coApplicantPersonIds) {
+	boolean hasCoApplicant) {
 
 	/** Empty summary — used when the person has no EB footprint, or as the best-effort fallback. */
 	public static LifecareEbCaseSummary none() {
-		return new LifecareEbCaseSummary(false, false, null, false, Set.of());
+		return new LifecareEbCaseSummary(false, Set.of(), null, false, false);
 	}
 }

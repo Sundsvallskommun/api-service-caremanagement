@@ -8,10 +8,11 @@ import generated.se.sundsvall.lifecarefc.PersonBasedDecisionPersonDTO;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.LinkedHashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -20,7 +21,6 @@ import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Comparator.comparing;
 import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.toCollection;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
@@ -37,6 +37,9 @@ import static org.springframework.util.StringUtils.hasText;
 @Service
 public class LifecareEbCaseService {
 
+	/** Guard against a malformed decision period (e.g. from 2000 to 2030) producing an unbounded month set. */
+	private static final int MAX_MONTHS_PER_DECISION = 36;
+
 	private final LifecareFcIntegration lifecareFcIntegration;
 	private final int lookbackMonths;
 
@@ -47,14 +50,13 @@ public class LifecareEbCaseService {
 	}
 
 	/**
-	 * Summarises the person's EB footprint in FC as of {@code referenceDate}.
+	 * Summarises the person's EB footprint in FC over the lookback window ending at {@code referenceDate}.
 	 *
 	 * @param  personId      the person's personnummer
-	 * @param  referenceDate the date the routing is evaluated against (the reference month is {@code YearMonth.from} it)
+	 * @param  referenceDate the date the routing is evaluated against (bounds the lookback window)
 	 * @return               the distilled summary; never {@code null}
 	 */
 	public LifecareEbCaseSummary summarize(final String personId, final LocalDate referenceDate) {
-		final var referenceMonth = YearMonth.from(referenceDate);
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
@@ -70,16 +72,19 @@ public class LifecareEbCaseService {
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of);
 
-		final var hasOpenCase = !actualisations.isEmpty() || !decisions.isEmpty();
-		final var hasDecisionForReferenceMonth = decisions.stream().anyMatch(decision -> covers(decision, referenceMonth));
+		final var hasFootprint = !actualisations.isEmpty() || !decisions.isEmpty() || !calculations.isEmpty();
+
+		final var decisionMonths = new TreeSet<YearMonth>();
+		decisions.forEach(decision -> decisionMonths.addAll(monthsCovered(decision)));
+
 		final var latestDecision = latestDecision(decisions);
 
 		return new LifecareEbCaseSummary(
-			hasOpenCase,
-			hasDecisionForReferenceMonth,
+			hasFootprint,
+			Set.copyOf(decisionMonths),
 			latestDecision.map(LifecareEbCaseService::periodOf).orElse(null),
 			!calculations.isEmpty(),
-			latestDecision.map(LifecareEbCaseService::coApplicantsOf).orElseGet(Set::of));
+			latestDecision.map(LifecareEbCaseService::hasCoApplicant).orElse(false));
 	}
 
 	/** The decision with the most recent period (to/from), used to read the current household constellation. */
@@ -89,25 +94,30 @@ public class LifecareEbCaseService {
 			.max(comparing(LifecareEbCaseService::periodOf));
 	}
 
-	/** Co-applicant person ids on a decision — flagged participants plus the scalar {@code coApplicant} field. */
-	private static Set<String> coApplicantsOf(final PersonBasedDecisionDTO decision) {
-		final var coApplicants = ofNullable(decision.getDecisionPersonDTOs()).orElseGet(List::of).stream()
+	/** Whether a decision included a co-applicant — a flagged participant or the scalar {@code coApplicant} field. */
+	private static boolean hasCoApplicant(final PersonBasedDecisionDTO decision) {
+		final var flagged = ofNullable(decision.getDecisionPersonDTOs()).orElseGet(List::of).stream()
 			.filter(person -> Boolean.TRUE.equals(person.getIsCoApplicant()))
 			.map(PersonBasedDecisionPersonDTO::getPersonId)
-			.filter(StringUtils::hasText)
-			.collect(toCollection(LinkedHashSet::new));
-		ofNullable(decision.getCoApplicant()).filter(StringUtils::hasText).ifPresent(coApplicants::add);
-		return coApplicants;
+			.anyMatch(StringUtils::hasText);
+		return flagged || hasText(decision.getCoApplicant());
 	}
 
-	/** Does a decision's from/to period span the given month? */
-	private static boolean covers(final PersonBasedDecisionDTO decision, final YearMonth month) {
+	/** The year-months a decision's from/to period covers (bounded; a single side covers just that month). */
+	private static List<YearMonth> monthsCovered(final PersonBasedDecisionDTO decision) {
 		final var from = toYearMonth(decision.getFromDate());
 		final var to = toYearMonth(decision.getToDate());
 		if (from.isPresent() && to.isPresent()) {
-			return !month.isBefore(from.get()) && !month.isAfter(to.get());
+			final var months = new ArrayList<YearMonth>();
+			var cursor = from.get();
+			final var last = to.get();
+			while (!cursor.isAfter(last) && months.size() < MAX_MONTHS_PER_DECISION) {
+				months.add(cursor);
+				cursor = cursor.plusMonths(1);
+			}
+			return months;
 		}
-		return from.map(month::equals).or(() -> to.map(month::equals)).orElse(false);
+		return from.or(() -> to).map(List::of).orElseGet(List::of);
 	}
 
 	/** The representative period of a decision — its {@code toDate} month, falling back to {@code fromDate}. */

@@ -34,16 +34,24 @@ class LifecareEbCaseServiceTest {
 		return new LifecareEbCaseService(integrationMock, 13);
 	}
 
-	@Test
-	void openCaseWithDecisionForReferenceMonthAndCoApplicant() {
-		final var decision = new PersonBasedDecisionDTO()
-			.fromDate("2026-06-01")
-			.toDate("2026-06-30")
-			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId("198202022397").isCoApplicant(true))
-			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId(APPLICANT).isCoApplicant(false));
-
+	private void noActualisations() {
 		when(integrationMock.getActualisations(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO().addResultItem(new PersonBasedAktualiseringDTO().status("OPEN")));
+			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO());
+	}
+
+	private void noCalculations() {
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO());
+	}
+
+	@Test
+	void footprintFromDecisionsWithMonthRangeAndCoApplicant() {
+		final var decision = new PersonBasedDecisionDTO()
+			.fromDate("2026-05-01")
+			.toDate("2026-06-30")
+			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId("198202022397").isCoApplicant(true));
+
+		noActualisations();
 		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().addResultItem(decision));
 		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
@@ -51,50 +59,57 @@ class LifecareEbCaseServiceTest {
 
 		final var summary = service().summarize(APPLICANT, REFERENCE);
 
-		assertThat(summary.hasOpenCase()).isTrue();
-		assertThat(summary.hasDecisionForReferenceMonth()).isTrue();
+		assertThat(summary.hasFootprint()).isTrue();
+		assertThat(summary.decisionMonths()).containsExactlyInAnyOrder(YearMonth.of(2026, 5), YearMonth.of(2026, 6));
 		assertThat(summary.latestDecisionPeriod()).isEqualTo(YearMonth.of(2026, 6));
 		assertThat(summary.hasCalculation()).isTrue();
-		assertThat(summary.coApplicantPersonIds()).containsExactly("198202022397");
+		assertThat(summary.hasCoApplicant()).isTrue();
 	}
 
 	@Test
-	void picksMostRecentDecisionForConstellationAndPeriod() {
-		final var older = new PersonBasedDecisionDTO().fromDate("2026-03-01").toDate("2026-03-31")
-			.coApplicant("197001010000");
-		final var newer = new PersonBasedDecisionDTO().fromDate("2026-05-01").toDate("2026-05-31");
-
+	void footprintFromActualisationOnly() {
 		when(integrationMock.getActualisations(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO());
+			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO().addResultItem(new PersonBasedAktualiseringDTO().status("OPEN")));
 		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().result(List.of(older, newer)));
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO());
+			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
+		noCalculations();
 
 		final var summary = service().summarize(APPLICANT, REFERENCE);
 
-		assertThat(summary.hasOpenCase()).isTrue(); // a decision exists even though no aktualisering
-		assertThat(summary.hasDecisionForReferenceMonth()).isFalse(); // neither covers June
-		assertThat(summary.latestDecisionPeriod()).isEqualTo(YearMonth.of(2026, 5));
-		assertThat(summary.coApplicantPersonIds()).isEmpty(); // newest decision has no co-applicant
+		assertThat(summary.hasFootprint()).isTrue();
+		assertThat(summary.decisionMonths()).isEmpty();
+		assertThat(summary.latestDecisionPeriod()).isNull();
+		assertThat(summary.hasCoApplicant()).isFalse();
+	}
+
+	@Test
+	void footprintFromCalculationOnly() {
+		noActualisations();
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(new PersonBasedCalculationDTO()));
+
+		final var summary = service().summarize(APPLICANT, REFERENCE);
+
+		assertThat(summary.hasFootprint()).isTrue();
+		assertThat(summary.hasCalculation()).isTrue();
 	}
 
 	@Test
 	void noFootprintYieldsEmptySummary() {
-		when(integrationMock.getActualisations(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO());
+		noActualisations();
 		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO());
+		noCalculations();
 
 		final var summary = service().summarize(APPLICANT, REFERENCE);
 
-		assertThat(summary.hasOpenCase()).isFalse();
-		assertThat(summary.hasDecisionForReferenceMonth()).isFalse();
+		assertThat(summary.hasFootprint()).isFalse();
+		assertThat(summary.decisionMonths()).isEmpty();
 		assertThat(summary.latestDecisionPeriod()).isNull();
 		assertThat(summary.hasCalculation()).isFalse();
-		assertThat(summary.coApplicantPersonIds()).isEmpty();
+		assertThat(summary.hasCoApplicant()).isFalse();
 	}
 
 	@Test
@@ -105,57 +120,38 @@ class LifecareEbCaseServiceTest {
 
 		final var summary = service().summarize(APPLICANT, REFERENCE);
 
-		assertThat(summary.hasOpenCase()).isFalse();
-		assertThat(summary.hasCalculation()).isFalse();
+		assertThat(summary.hasFootprint()).isFalse();
+		assertThat(summary.decisionMonths()).isEmpty();
 	}
 
 	@Test
-	void decisionCoveringWithOnlyFromDate() {
-		when(integrationMock.getActualisations(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO());
+	void decisionMonthsFromSingleDateAndCoApplicantScalar() {
+		noActualisations();
 		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO()
-				.addResultItem(new PersonBasedDecisionDTO().fromDate("2026-06-01")));
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO());
+				.addResultItem(new PersonBasedDecisionDTO().toDate("2026-06-30").coApplicant("198202022397")));
+		noCalculations();
 
 		final var summary = service().summarize(APPLICANT, REFERENCE);
 
-		assertThat(summary.hasDecisionForReferenceMonth()).isTrue();
-		assertThat(summary.latestDecisionPeriod()).isEqualTo(YearMonth.of(2026, 6));
+		assertThat(summary.decisionMonths()).containsExactly(YearMonth.of(2026, 6));
+		assertThat(summary.hasCoApplicant()).isTrue();
 	}
 
 	@Test
-	void decisionCoveringWithOnlyToDate() {
-		when(integrationMock.getActualisations(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO());
+	void latestDecisionDrivesPeriodAndConstellation() {
+		final var older = new PersonBasedDecisionDTO().toDate("2026-03-31").coApplicant("197001010000");
+		final var newer = new PersonBasedDecisionDTO().toDate("2026-05-31"); // no co-applicant
+		noActualisations();
 		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO()
-				.addResultItem(new PersonBasedDecisionDTO().toDate("2026-06-30")));
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO());
+			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().result(List.of(older, newer)));
+		noCalculations();
 
 		final var summary = service().summarize(APPLICANT, REFERENCE);
 
-		assertThat(summary.hasDecisionForReferenceMonth()).isTrue();
-		assertThat(summary.latestDecisionPeriod()).isEqualTo(YearMonth.of(2026, 6));
-	}
-
-	@Test
-	void decisionWithoutDatesHasOpenCaseButNoPeriod() {
-		when(integrationMock.getActualisations(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO());
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().addResultItem(new PersonBasedDecisionDTO()));
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO());
-
-		final var summary = service().summarize(APPLICANT, REFERENCE);
-
-		assertThat(summary.hasOpenCase()).isTrue();
-		assertThat(summary.hasDecisionForReferenceMonth()).isFalse();
-		assertThat(summary.latestDecisionPeriod()).isNull();
-		assertThat(summary.coApplicantPersonIds()).isEmpty();
+		assertThat(summary.latestDecisionPeriod()).isEqualTo(YearMonth.of(2026, 5));
+		assertThat(summary.hasCoApplicant()).isFalse(); // newest decision has none
+		assertThat(summary.decisionMonths()).containsExactlyInAnyOrder(YearMonth.of(2026, 3), YearMonth.of(2026, 5));
 	}
 
 	@Test

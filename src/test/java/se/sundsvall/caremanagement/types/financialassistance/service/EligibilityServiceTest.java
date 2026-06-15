@@ -23,20 +23,17 @@ import se.sundsvall.dept44.problem.Problem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_APPLICANT;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_CO_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
-import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_CONSTELLATION_MISMATCH;
-import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_DECISION_FOR_CURRENT_MONTH;
-import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_NO_DECISION_FOR_CURRENT_MONTH;
-import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_NO_OPEN_CASE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_RECENT_APPLICATION;
+import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_CIVILSTAND_CHANGED;
+import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_EXISTING_CASE;
+import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_NO_EXISTING_CASE;
 
 @ExtendWith(MockitoExtension.class)
 class EligibilityServiceTest {
@@ -46,6 +43,9 @@ class EligibilityServiceTest {
 	private static final String APPLICANT = "198001012389";
 	private static final String CO_APPLICANT = "198202022397";
 	private static final String ERRAND_ID = "errand-1";
+
+	private static final YearMonth CURRENT = YearMonth.now();
+	private static final YearMonth NEXT = CURRENT.plusMonths(1);
 
 	@Mock
 	private ErrandRepository errandRepositoryMock;
@@ -64,192 +64,211 @@ class EligibilityServiceTest {
 		return EligibilityRequest.create().withApplicant(APPLICANT);
 	}
 
+	private static EligibilityRequest together() {
+		return EligibilityRequest.create().withApplicant(APPLICANT).withCoApplicant(CO_APPLICANT);
+	}
+
 	private static ApplicationSuggestion recommended(final List<ApplicationSuggestion> suggestions) {
 		return suggestions.stream().filter(ApplicationSuggestion::isRecommended).findFirst().orElseThrow();
 	}
 
-	private void noRecentApplications() {
-		when(financialAssistanceRepositoryMock.findRecentErrandIdsByPerson(eq(APPLICANT), any(OffsetDateTime.class))).thenReturn(List.of());
+	/** Wire a CM EB errand owned by the given persons, with an optional period, created now. */
+	private void cmErrand(final FaPerson... persons) {
+		cmErrandWithPeriod(null, null, persons);
 	}
 
-	// ---- Duplicate guard (our DB) ------------------------------------------------------------------------------------
-
-	@Test
-	void recentApplicationAloneSuggestsSupplementary() {
-		when(financialAssistanceRepositoryMock.findRecentErrandIdsByPerson(eq(APPLICANT), any(OffsetDateTime.class))).thenReturn(List.of(ERRAND_ID));
+	private void cmErrandWithPeriod(final YearMonth period, final OffsetDateTime created, final FaPerson... persons) {
+		when(financialAssistanceRepositoryMock.findErrandIdsByPerson(APPLICANT)).thenReturn(List.of(ERRAND_ID));
+		lenient().when(financialAssistanceRepositoryMock.findErrandIdsByPerson(CO_APPLICANT)).thenReturn(List.of(ERRAND_ID));
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID).withTypeSlug(SLUG_NEW).withCreated(OffsetDateTime.now())));
-		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID))
-			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)
-				.withPersons(List.of(FaPerson.create().withRole(ROLE_APPLICANT).withPersonalNumber(APPLICANT)))));
-
-		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
-
-		assertThat(response.getReasonCode()).isEqualTo(REASON_RECENT_APPLICATION);
-		assertThat(response.isHasRecentApplication()).isTrue();
-		assertThat(response.isRequiresCaseworker()).isFalse();
-		assertThat(response.getConstellationMatchesPrevious()).isTrue();
-		assertThat(response.getWindowDays()).isEqualTo(90);
-		assertThat(response.getSuggestions()).singleElement()
-			.satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_SUPPLEMENTARY))
-			.satisfies(s -> assertThat(s.isRecommended()).isTrue());
-		verifyNoInteractions(lifecareEbCaseServiceMock);
+			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL)
+				.withCreated(created != null ? created : OffsetDateTime.now())));
+		final var fa = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withPersons(List.of(persons));
+		Optional.ofNullable(period).ifPresent(p -> fa.withPeriodMonth(p.getMonthValue()).withPeriodYear(p.getYear()));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(fa));
 	}
 
-	@Test
-	void recentApplicationWithDifferentConstellationRequiresCaseworker() {
-		final var request = EligibilityRequest.create().withApplicant(APPLICANT).withCoApplicant(CO_APPLICANT);
-		when(financialAssistanceRepositoryMock.findRecentErrandIdsByPerson(eq(APPLICANT), any(OffsetDateTime.class))).thenReturn(List.of(ERRAND_ID));
-		when(financialAssistanceRepositoryMock.findRecentErrandIdsByPerson(eq(CO_APPLICANT), any(OffsetDateTime.class))).thenReturn(List.of());
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL).withCreated(OffsetDateTime.now())));
-		// Previous application was for a single applicant — now applying together => mismatch.
-		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID))
-			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)
-				.withPersons(List.of(FaPerson.create().withRole(ROLE_APPLICANT).withPersonalNumber(APPLICANT)))));
-
-		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, request);
-
-		assertThat(response.getReasonCode()).isEqualTo(REASON_CONSTELLATION_MISMATCH);
-		assertThat(response.isRequiresCaseworker()).isTrue();
-		assertThat(response.getConstellationMatchesPrevious()).isFalse();
-		assertThat(response.isHasCoApplicant()).isTrue();
+	private static FaPerson person(final String role, final String pnr) {
+		return FaPerson.create().withRole(role).withPersonalNumber(pnr);
 	}
 
+	private void noCmErrands() {
+		when(financialAssistanceRepositoryMock.findErrandIdsByPerson(APPLICANT)).thenReturn(List.of());
+		lenient().when(financialAssistanceRepositoryMock.findErrandIdsByPerson(CO_APPLICANT)).thenReturn(List.of());
+	}
+
+	// ---- 1) Existence gate -------------------------------------------------------------------------------------------
+
 	@Test
-	void recentErrandOfOtherTypeIsIgnored() {
-		// The person appears in a non-EB errand only — it must not count as a recent EB application.
-		when(financialAssistanceRepositoryMock.findRecentErrandIdsByPerson(eq(APPLICANT), any(OffsetDateTime.class))).thenReturn(List.of(ERRAND_ID));
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID).withTypeSlug("some-other-type").withCreated(OffsetDateTime.now())));
+	void noExistenceAnywhereSuggestsNew() {
+		noCmErrands();
 		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any())).thenReturn(LifecareEbCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
-		assertThat(response.isHasRecentApplication()).isFalse();
-		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_OPEN_CASE);
-	}
-
-	// ---- Lifecare-driven routing -------------------------------------------------------------------------------------
-
-	@Test
-	void noOpenCaseSuggestsNewApplication() {
-		final var request = alone().withWithinDays(30);
-		when(financialAssistanceRepositoryMock.findRecentErrandIdsByPerson(eq(APPLICANT), any(OffsetDateTime.class))).thenReturn(List.of());
-		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any())).thenReturn(LifecareEbCaseSummary.none());
-
-		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, request);
-
-		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_OPEN_CASE);
-		assertThat(response.isLifecareChecked()).isTrue();
-		assertThat(response.isHasOpenCase()).isFalse();
-		assertThat(response.getWindowDays()).isEqualTo(30);
+		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_EXISTING_CASE);
+		assertThat(response.isExistsInCm()).isFalse();
+		assertThat(response.isExistsInLc()).isFalse();
 		assertThat(response.getSuggestions()).singleElement()
 			.satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_NEW))
-			.satisfies(s -> assertThat(s.getPeriodMonth()).isNull());
+			.satisfies(s -> assertThat(s.getPeriodMonth()).isNull())
+			.satisfies(s -> assertThat(s.isRecommended()).isTrue());
 	}
 
 	@Test
-	void openCaseWithDecisionForCurrentMonthSuggestsRenewalNextOrSupplementary() {
-		final var current = YearMonth.now();
-		noRecentApplications();
+	void existsInLifecareOnlyPassesExistence() {
+		noCmErrands();
 		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any()))
-			.thenReturn(new LifecareEbCaseSummary(true, true, current, true, Set.of()));
+			.thenReturn(new LifecareEbCaseSummary(true, Set.of(), null, false, false));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
-		assertThat(response.getReasonCode()).isEqualTo(REASON_DECISION_FOR_CURRENT_MONTH);
-		assertThat(response.isHasOpenCase()).isTrue();
-		assertThat(response.isHasDecisionForCurrentMonth()).isTrue();
-		assertThat(response.isHasPreviousCalculation()).isTrue();
-		assertThat(response.getLatestDecisionPeriodMonth()).isEqualTo(current.getMonthValue());
-		assertThat(response.getLatestDecisionPeriodYear()).isEqualTo(current.getYear());
-		assertThat(response.getSuggestions()).hasSize(2);
-		final var primary = recommended(response.getSuggestions());
-		assertThat(primary.getTypeSlug()).isEqualTo(SLUG_RENEWAL);
-		assertThat(primary.getPeriodMonth()).isEqualTo(current.plusMonths(1).getMonthValue());
-		assertThat(primary.getPeriodYear()).isEqualTo(current.plusMonths(1).getYear());
-		assertThat(response.getSuggestions().get(1).getTypeSlug()).isEqualTo(SLUG_SUPPLEMENTARY);
+		assertThat(response.isExistsInLc()).isTrue();
+		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
 	}
 
 	@Test
-	void openCaseWithoutDecisionForCurrentMonthSuggestsRenewalThisOrNextOrSupplementary() {
-		final var current = YearMonth.now();
-		noRecentApplications();
+	void coApplicantMissingEverywhereSuggestsNew() {
+		// Applicant exists in CM, co-applicant exists nowhere → not "för båda" → NY.
+		cmErrand(person(ROLE_APPLICANT, APPLICANT), person(ROLE_CO_APPLICANT, CO_APPLICANT));
+		// Re-stub co lookup to empty so the co-applicant is absent from CM, and absent from LC.
+		when(financialAssistanceRepositoryMock.findErrandIdsByPerson(CO_APPLICANT)).thenReturn(List.of());
 		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any()))
-			.thenReturn(new LifecareEbCaseSummary(true, false, current.minusMonths(2), false, Set.of()));
-
-		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
-
-		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_DECISION_FOR_CURRENT_MONTH);
-		assertThat(response.isRequiresCaseworker()).isFalse();
-		assertThat(response.getSuggestions()).hasSize(3);
-		final var primary = recommended(response.getSuggestions());
-		assertThat(primary.getTypeSlug()).isEqualTo(SLUG_RENEWAL);
-		assertThat(primary.getPeriodMonth()).isEqualTo(current.getMonthValue());
-	}
-
-	@Test
-	void openCaseWithoutAnyDecisionLeavesConstellationUnknown() {
-		// Open case via an aktualisering only — no decision to compare the constellation against.
-		noRecentApplications();
-		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any()))
-			.thenReturn(new LifecareEbCaseSummary(true, false, null, false, Set.of()));
-
-		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
-
-		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_DECISION_FOR_CURRENT_MONTH);
-		assertThat(response.isRequiresCaseworker()).isFalse();
-		assertThat(response.getConstellationMatchesPrevious()).isNull();
-		assertThat(response.getLatestDecisionPeriodMonth()).isNull();
-	}
-
-	@Test
-	void openCaseWithConstellationMismatchRequiresCaseworker() {
-		final var request = EligibilityRequest.create().withApplicant(APPLICANT).withCoApplicant(CO_APPLICANT);
-		final var current = YearMonth.now();
-		when(financialAssistanceRepositoryMock.findRecentErrandIdsByPerson(eq(APPLICANT), any(OffsetDateTime.class))).thenReturn(List.of());
-		when(financialAssistanceRepositoryMock.findRecentErrandIdsByPerson(eq(CO_APPLICANT), any(OffsetDateTime.class))).thenReturn(List.of());
-		// Latest decision lists a different co-applicant than the one now applying.
-		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any()))
-			.thenReturn(new LifecareEbCaseSummary(true, false, current, false, Set.of("197001010000")));
-		when(lifecareEbCaseServiceMock.summarize(eq(CO_APPLICANT), any()))
-			.thenReturn(new LifecareEbCaseSummary(true, false, null, false, Set.of()));
-
-		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, request);
-
-		assertThat(response.getReasonCode()).isEqualTo(REASON_CONSTELLATION_MISMATCH);
-		assertThat(response.isRequiresCaseworker()).isTrue();
-		assertThat(response.getConstellationMatchesPrevious()).isFalse();
-	}
-
-	@Test
-	void coApplicantWithoutOpenCaseForBothSuggestsNewApplication() {
-		final var request = EligibilityRequest.create().withApplicant(APPLICANT).withCoApplicant(CO_APPLICANT);
-		when(financialAssistanceRepositoryMock.findRecentErrandIdsByPerson(eq(APPLICANT), any(OffsetDateTime.class))).thenReturn(List.of());
-		when(financialAssistanceRepositoryMock.findRecentErrandIdsByPerson(eq(CO_APPLICANT), any(OffsetDateTime.class))).thenReturn(List.of());
-		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any()))
-			.thenReturn(new LifecareEbCaseSummary(true, true, YearMonth.now(), true, Set.of()));
+			.thenReturn(new LifecareEbCaseSummary(true, Set.of(), null, false, true));
 		when(lifecareEbCaseServiceMock.summarize(eq(CO_APPLICANT), any())).thenReturn(LifecareEbCaseSummary.none());
 
-		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, request);
+		// errand only lists the applicant so co-applicant isn't found in CM either
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID))
+			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)
+				.withPersons(List.of(person(ROLE_APPLICANT, APPLICANT)))));
 
-		assertThat(response.isHasOpenCase()).isFalse();
-		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_OPEN_CASE);
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_EXISTING_CASE);
+	}
+
+	// ---- 2) Civilstånd gate ------------------------------------------------------------------------------------------
+
+	@Test
+	void civilstandChangedSuggestsNew() {
+		// Previous CM application was solo; now applying together → civilstånd changed → NY.
+		cmErrand(person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any())).thenReturn(LifecareEbCaseSummary.none());
+		when(lifecareEbCaseServiceMock.summarize(eq(CO_APPLICANT), any()))
+			.thenReturn(new LifecareEbCaseSummary(true, Set.of(), null, false, false)); // co exists in LC
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_CIVILSTAND_CHANGED);
+		assertThat(response.getCivilstandMatches()).isFalse();
+		assertThat(response.isHasCoApplicant()).isTrue();
 		assertThat(response.getSuggestions()).singleElement().satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_NEW));
 	}
 
 	@Test
-	void lifecareUnavailableDegradesToNewApplication() {
-		noRecentApplications();
+	void sameCivilstandTogetherPasses() {
+		// Previous CM application also had a co-applicant → same civilstånd → continue to month logic.
+		cmErrand(person(ROLE_APPLICANT, APPLICANT), person(ROLE_CO_APPLICANT, CO_APPLICANT));
+		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any())).thenReturn(LifecareEbCaseSummary.none());
+		when(lifecareEbCaseServiceMock.summarize(eq(CO_APPLICANT), any())).thenReturn(LifecareEbCaseSummary.none());
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
+
+		assertThat(response.getCivilstandMatches()).isTrue();
+		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
+	}
+
+	// ---- 3) Per-month logic ------------------------------------------------------------------------------------------
+
+	@Test
+	void existingCaseNoDecisionThisMonthRecommendsRenewalThisMonth() {
+		cmErrand(person(ROLE_APPLICANT, APPLICANT)); // no period → no application for this/next month
+		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any()))
+			.thenReturn(new LifecareEbCaseSummary(true, Set.of(), null, false, false));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
+		assertThat(response.isCurrentMonthDecided()).isFalse();
+		assertThat(response.getSuggestions()).hasSize(2);
+		final var primary = recommended(response.getSuggestions());
+		assertThat(primary.getTypeSlug()).isEqualTo(SLUG_RENEWAL);
+		assertThat(primary.getPeriodMonth()).isEqualTo(CURRENT.getMonthValue());
+		assertThat(response.getSuggestions().get(1).getPeriodMonth()).isEqualTo(NEXT.getMonthValue());
+	}
+
+	@Test
+	void decisionForCurrentMonthRecommendsNextMonthAndSupplementThis() {
+		cmErrand(person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any()))
+			.thenReturn(new LifecareEbCaseSummary(true, Set.of(CURRENT), CURRENT, true, false));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
+		assertThat(response.isCurrentMonthDecided()).isTrue();
+		assertThat(response.isApplicationExistsThisMonth()).isTrue();
+		assertThat(response.isHasPreviousCalculation()).isTrue();
+		final var primary = recommended(response.getSuggestions());
+		assertThat(primary.getTypeSlug()).isEqualTo(SLUG_RENEWAL);
+		assertThat(primary.getPeriodMonth()).isEqualTo(NEXT.getMonthValue());
+		// the non-recommended option is a tilläggsansökan for the current month
+		assertThat(response.getSuggestions()).anySatisfy(s -> {
+			assertThat(s.getTypeSlug()).isEqualTo(SLUG_SUPPLEMENTARY);
+			assertThat(s.getPeriodMonth()).isEqualTo(CURRENT.getMonthValue());
+		});
+	}
+
+	@Test
+	void cmApplicationForThisMonthYieldsSupplement() {
+		// A CM application already exists for the current month within the window → tilläggsansökan this month.
+		cmErrandWithPeriod(CURRENT, OffsetDateTime.now(), person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any()))
+			.thenReturn(new LifecareEbCaseSummary(true, Set.of(), null, false, false));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.isApplicationExistsThisMonth()).isTrue();
+		final var primary = recommended(response.getSuggestions());
+		assertThat(primary.getTypeSlug()).isEqualTo(SLUG_SUPPLEMENTARY);
+		assertThat(primary.getPeriodMonth()).isEqualTo(CURRENT.getMonthValue());
+	}
+
+	@Test
+	void cmApplicationOutsideWindowDoesNotCount() {
+		// Same-month CM application but created long ago → outside 90-day window → still återansökan.
+		cmErrandWithPeriod(CURRENT, OffsetDateTime.now().minusDays(200), person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any()))
+			.thenReturn(new LifecareEbCaseSummary(true, Set.of(), null, false, false));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.isApplicationExistsThisMonth()).isFalse();
+		assertThat(recommended(response.getSuggestions()).getTypeSlug()).isEqualTo(SLUG_RENEWAL);
+	}
+
+	// ---- Degradation -------------------------------------------------------------------------------------------------
+
+	@Test
+	void lifecareUnavailableButExistsInCmStillRoutes() {
+		cmErrand(person(ROLE_APPLICANT, APPLICANT));
 		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "FC down"));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
 		assertThat(response.isLifecareChecked()).isFalse();
-		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_OPEN_CASE);
-		assertThat(response.getMessage()).contains("Lifecare kunde inte nås");
-		assertThat(response.getSuggestions()).singleElement().satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_NEW));
-		verify(errandRepositoryMock, never()).findByIdAndNamespaceAndMunicipalityId(any(), any(), any());
+		assertThat(response.isExistsInCm()).isTrue();
+		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
+		assertThat(recommended(response.getSuggestions()).getTypeSlug()).isEqualTo(SLUG_RENEWAL);
+	}
+
+	@Test
+	void windowOverrideIsReflected() {
+		noCmErrands();
+		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any())).thenReturn(LifecareEbCaseSummary.none());
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone().withWithinDays(30));
+
+		assertThat(response.getWindowDays()).isEqualTo(30);
 	}
 }

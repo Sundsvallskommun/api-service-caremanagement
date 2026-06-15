@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:53294
+- url: http://localhost:56936
   description: Generated server url
 tags:
 - name: Notes
@@ -4230,53 +4230,62 @@ components:
       properties:
         suggestions:
           type: array
-          description: "Suggested applications, ordered with the recommended one first.\
-            \ Empty only when nothing can be offered automatically."
+          description: "Suggested applications, ordered with the recommended one first."
           items:
             $ref: "#/components/schemas/ApplicationSuggestion"
-        requiresCaseworker:
-          type: boolean
-          description: True when a caseworker must handle the case (e.g. the constellation
-            differs from a previous application).
-          examples:
-          - "false"
         reasonCode:
           type: string
-          description: Machine-readable code for the situation that drove the suggestion
+          description: Machine-readable code for the gate that drove the suggestion
           enum:
-          - NO_OPEN_CASE
-          - DECISION_FOR_CURRENT_MONTH
-          - NO_DECISION_FOR_CURRENT_MONTH
-          - RECENT_APPLICATION
-          - CONSTELLATION_MISMATCH
+          - NO_EXISTING_CASE
+          - CIVILSTAND_CHANGED
+          - EXISTING_CASE
           examples:
-          - NO_DECISION_FOR_CURRENT_MONTH
+          - EXISTING_CASE
         message:
           type: string
           description: Human-readable Swedish explanation of the suggestion
           examples:
           - Öppet ärende utan beslut för innevarande månad. Föreslår återansökan.
-        hasRecentApplication:
+        existsInCm:
           type: boolean
-          description: True when an application by either applicant was already submitted
-            within the window in this system
+          description: True when the applicant already has an EB errand in caremanagement
           examples:
-          - "false"
+          - "true"
+        existsInLc:
+          type: boolean
+          description: True when the applicant has an EB footprint in Lifecare (aktualisering/beslut/normberäkning)
+          examples:
+          - "true"
+        civilstandMatches:
+          type: boolean
+          description: Whether the requested civilstånd (alone vs with a partner)
+            matches the previous application. Null when not evaluated (no existing
+            case).
+          examples:
+          - "true"
         windowDays:
           type: integer
           format: int32
-          description: The duplicate-application window in days that was applied
+          description: The duplicate-application window in days that was applied to
+            the per-month check
           examples:
           - 90
-        hasOpenCase:
+        applicationExistsThisMonth:
           type: boolean
-          description: True when Lifecare shows an open EB case (for both applicants
-            when applying together)
+          description: True when an application/decision already exists for the current
+            month
           examples:
-          - "true"
-        hasDecisionForCurrentMonth:
+          - "false"
+        applicationExistsNextMonth:
           type: boolean
-          description: True when Lifecare shows a decision covering the current month
+          description: True when an application/decision already exists for next month
+          examples:
+          - "false"
+        currentMonthDecided:
+          type: boolean
+          description: True when Lifecare shows a decision for the current month (the
+            current month is decided/closed)
           examples:
           - "false"
         latestDecisionPeriodMonth:
@@ -4297,17 +4306,10 @@ components:
           description: True when Lifecare shows a previous normberäkning
           examples:
           - "true"
-        constellationMatchesPrevious:
-          type: boolean
-          description: Whether the requested constellation (alone vs with the given
-            partner) matches the previous application/decision. Null when there is
-            nothing to compare against.
-          examples:
-          - "true"
         lifecareChecked:
           type: boolean
           description: True when the Lifecare lookup succeeded. False means the answer
-            is degraded (DB-only).
+            is degraded (CM-only).
           examples:
           - "true"
         hasCoApplicant:
