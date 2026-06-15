@@ -105,6 +105,8 @@ integration:
     key: ${INTEGRATION_LIFECARE_FC_KEY:override}
     connect-timeout: 5
     read-timeout: 30
+    # Lookback (months, ending at the reference date) for the EB eligibility reads — aktualiseringar, beslut, normberäkningar.
+    eb-lookback-months: 13
 #========================================
 # Notification settings
 #========================================
@@ -129,3 +131,10 @@ maintenance:
     # Destructive nightly demo reset. Disabled by default; the scheduler bean is only created when this
     # is true (set together with scheduler.database-cleanup.cron in throwaway demo environments only).
     enabled: false
+#========================================
+# Financial assistance (EB) settings
+#========================================
+financial-assistance:
+  eligibility:
+    # "Inom X dagar" duplicate-application guard for the gemensam-ingång eligibility check. A request may override it.
+    duplicate-window-days: 90

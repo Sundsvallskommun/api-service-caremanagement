@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:53159
+- url: http://localhost:53294
   description: Generated server url
 tags:
 - name: Notes
@@ -24,6 +24,10 @@ tags:
     \ free-text response and status (SENT → RESPONDED)."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
+- name: Financial Assistance
+  description: Ekonomiskt bistånd (EB) errands. Create against one of the three application-type
+    slugs (financial-assistance-new / -renewal / -supplementary); read and replace
+    the typed data via the shared financial-assistance path.
 - name: Errand decisions
   description: "Decision audit trail on an errand. Stores both system-generated decisions\
     \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
@@ -91,6 +95,44 @@ paths:
                 - $ref: "#/components/schemas/ConstraintViolationProblem"
         "500":
           description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/data:
+    put:
+      tags:
+      - Financial Assistance
+      summary: Replace financial assistance data
+      operationId: updateData
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancialAssistanceData"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          description: Not Found
           content:
             application/problem+json:
               schema:
@@ -517,6 +559,45 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{typeSlug}:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Create financial assistance errand
+      description: "typeSlug is one of financial-assistance-new, financial-assistance-renewal,\
+        \ financial-assistance-supplementary."
+      operationId: createErrand_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: typeSlug
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFinancialAssistanceRequest"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
   /{municipalityId}/{namespace}/errands/{errandId}/stakeholders:
     get:
       tags:
@@ -1367,6 +1448,40 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/eligibility:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Check application eligibility (gemensam ingång)
+      description: "Given an applicant (and an optional co-applicant) suggests which\
+        \ application — nyansökan / återansökan / tilläggsansökan — to offer, checking\
+        \ this system and Lifecare (best-effort)."
+      operationId: checkEligibility
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EligibilityRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibilityResponse"
   /{municipalityId}/{namespace}/metadata/{name}:
     get:
       tags:
@@ -2720,6 +2835,42 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}:
+    get:
+      tags:
+      - Financial Assistance
+      summary: Read financial assistance errand
+      operationId: readErrand_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialAssistanceView"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /api-docs:
     get:
       tags:
@@ -2800,6 +2951,621 @@ components:
           type: string
         message:
           type: string
+    Asset:
+      type: object
+      description: An asset owned by the applicant or co-applicant.
+      properties:
+        assetCategory:
+          type: string
+          description: The category of asset
+          enum:
+          - BANK_SAVINGS
+          - REAL_ESTATE
+          - COMPANY
+          - VEHICLE
+          examples:
+          - VEHICLE
+        description:
+          type: string
+          description: Free text description of the asset
+          examples:
+          - Sparkonto hos Swedbank
+        value:
+          type: number
+          description: Estimated value of the asset
+          examples:
+          - 120000.0
+        propertyType:
+          type: string
+          description: Type of real estate property
+          enum:
+          - BOSTADSRATT
+          - VILLA
+          - FASTIGHET
+          - FRITIDSHUS
+          examples:
+          - VILLA
+        purchaseYear:
+          type: integer
+          format: int32
+          description: Year the asset was purchased
+          examples:
+          - 2018
+        purchasePrice:
+          type: number
+          description: Price paid when the asset was purchased
+          examples:
+          - 2200000.0
+        companyName:
+          type: string
+          description: Name of the company asset
+          examples:
+          - Andersson Bygg AB
+        companyAssetSum:
+          type: number
+          description: Total sum of the company's assets
+          examples:
+          - 350000.0
+        vehicleType:
+          type: string
+          description: Type of vehicle
+          enum:
+          - BIL
+          - BAT
+          - MC
+          - HUSVAGN
+          - MOPED
+          - SNOSKOTER
+          examples:
+          - BIL
+        registrationNumber:
+          type: string
+          description: Vehicle registration number
+          examples:
+          - ABC123
+        purchaseDate:
+          type: string
+          format: date
+          description: The date the asset was purchased
+          examples:
+          - 2018-04-12
+    Child:
+      type: object
+      description: A child included in the financial assistance application.
+      properties:
+        personalNumber:
+          type: string
+          description: Personal number of the child
+          examples:
+          - "200501012389"
+        firstName:
+          type: string
+          description: First name
+          examples:
+          - Astrid
+        lastName:
+          type: string
+          description: Last name
+          examples:
+          - Lindgren
+        schoolName:
+          type: string
+          description: Name of the child's school
+          examples:
+          - Bredsands skola
+        residenceExtent:
+          type: string
+          description: Extent of residence in the home
+          enum:
+          - FULL_TIME
+          - HALF_TIME
+          - OTHER
+          examples:
+          - FULL_TIME
+        daysInHome:
+          type: integer
+          format: int32
+          description: Number of days per month the child lives in the home
+          examples:
+          - 15
+    Cost:
+      type: object
+      description: A cost the applicant is applying for assistance with.
+      properties:
+        costType:
+          type: string
+          description: The type of cost
+          enum:
+          - RENT
+          - ELECTRICITY
+          - HOME_INSURANCE
+          - INTERNET
+          - UNEMPLOYMENT_FUND
+          - UNION_FEE
+          - TRAVEL_APPROVED
+          - TRAVEL_MEDICAL_TRANSPORT
+          - MEDICAL_CARE
+          - MEDICINE
+          - OTHER
+          examples:
+          - RENT
+        appliedAmount:
+          type: number
+          description: The amount applied for
+          examples:
+          - 5400.0
+        otherSubType:
+          type: string
+          description: Sub type when the cost type is OTHER
+          enum:
+          - OTHER
+          - MUNICIPAL_FEES
+          - ACUTE_DENTAL
+          examples:
+          - MUNICIPAL_FEES
+        specification:
+          type: string
+          description: Free text specification of the cost
+          examples:
+          - Tandvård hos folktandvården
+        recipientOrPeriod:
+          type: string
+          description: Recipient of the cost or the period it covers
+          examples:
+          - "Mitt Bostads AB, juni 2026"
+    FinancialAssistanceData:
+      type: object
+      description: The typed financial assistance application payload.
+      properties:
+        applicationType:
+          type: string
+          description: The type of application
+          enum:
+          - NEW
+          - RENEWAL
+          - SUPPLEMENTARY
+          examples:
+          - NEW
+        maritalStatus:
+          type: string
+          description: Marital status of the applicant
+          enum:
+          - SINGLE
+          - COHABITING
+          examples:
+          - SINGLE
+        periodMonth:
+          type: integer
+          format: int32
+          description: The month the application period concerns
+          examples:
+          - 6
+        periodYear:
+          type: integer
+          format: int32
+          description: The year the application period concerns
+          examples:
+          - 2026
+        periodChoice:
+          type: string
+          description: Choice of application period
+          enum:
+          - CURRENT_MONTH
+          - NEXT_MONTH
+          - OTHER_BENEFIT
+          examples:
+          - CURRENT_MONTH
+        normType:
+          type: string
+          description: The norm type used for the calculation
+          enum:
+          - RIKSNORM
+          - OTHER_NORM
+          examples:
+          - RIKSNORM
+        otherBenefitDescription:
+          type: string
+          description: Description of the other benefit
+          examples:
+          - Etableringsersättning
+        livelihoodDescription:
+          type: string
+          description: Description of the applicant's livelihood
+          examples:
+          - Söker arbete via arbetsförmedlingen
+        hasChildrenUnder21:
+          type: boolean
+          description: Whether the household has children under 21
+          examples:
+          - "true"
+        childrenResidenceChanged:
+          type: boolean
+          description: Whether the children's residence situation has changed
+          examples:
+          - "false"
+        childrenResidenceChangeDescription:
+          type: string
+          description: Description of the change in children's residence
+          examples:
+          - Barnen bor numera växelvis
+        housingForm:
+          type: string
+          description: The household's housing form
+          enum:
+          - NO_HOUSING_OR_INSTITUTION
+          - RENTAL
+          - SUBLET
+          - LODGER
+          - CONDOMINIUM
+          - OWNED_HOUSE
+          - RENTED_HOUSE
+          - LIVING_WITH_PARENTS
+          examples:
+          - RENTAL
+        housingAdultsCount:
+          type: integer
+          format: int32
+          description: Number of adults in the housing
+          examples:
+          - 2
+        housingChildrenCount:
+          type: integer
+          format: int32
+          description: Number of children in the housing
+          examples:
+          - 1
+        housingRoomsPlusKitchen:
+          type: integer
+          format: int32
+          description: Number of rooms plus kitchen
+          examples:
+          - 3
+        housingDescription:
+          type: string
+          description: Free text description of the housing
+          examples:
+          - Trerumslägenhet med hyresrätt
+        housingChanged:
+          type: boolean
+          description: Whether the housing situation has changed
+          examples:
+          - "false"
+        housingChangeDescription:
+          type: string
+          description: Description of the housing change
+          examples:
+          - Flyttade till mindre lägenhet i maj
+        hasIncomes:
+          type: boolean
+          description: Whether the household has incomes
+          examples:
+          - "true"
+        hasPendingBenefits:
+          type: boolean
+          description: Whether the household has pending benefits
+          examples:
+          - "false"
+        hasAssets:
+          type: boolean
+          description: Whether the household has assets
+          examples:
+          - "false"
+        staysInMunicipality:
+          type: boolean
+          description: Whether the applicant stays in the municipality
+          examples:
+          - "true"
+        stayDescription:
+          type: string
+          description: Description of the applicant's stay
+          examples:
+          - Bor på folkbokföringsadressen
+        attestation:
+          type: boolean
+          description: Whether the applicant has attested the application
+          examples:
+          - "true"
+        attestedAt:
+          type: string
+          format: date-time
+          description: When the application was attested
+          examples:
+          - 2026-06-01T09:30:00Z
+        children:
+          type: array
+          description: Children included in the application
+          items:
+            $ref: "#/components/schemas/Child"
+        costs:
+          type: array
+          description: Costs applied for
+          items:
+            $ref: "#/components/schemas/Cost"
+        incomes:
+          type: array
+          description: Incomes reported
+          items:
+            $ref: "#/components/schemas/Income"
+        pendingBenefits:
+          type: array
+          description: Pending benefits
+          items:
+            $ref: "#/components/schemas/PendingBenefit"
+        assets:
+          type: array
+          description: Assets owned
+          items:
+            $ref: "#/components/schemas/Asset"
+        persons:
+          type: array
+          description: Persons on the application
+          items:
+            $ref: "#/components/schemas/Person"
+        plannings:
+          type: array
+          description: Plannings towards self-sufficiency
+          items:
+            $ref: "#/components/schemas/Planning"
+        plannedActivities:
+          type: array
+          description: Planned activities
+          items:
+            $ref: "#/components/schemas/PlannedActivity"
+        jobApplications:
+          type: array
+          description: Job applications
+          items:
+            $ref: "#/components/schemas/JobApplication"
+    Income:
+      type: object
+      description: An income reported by the applicant or co-applicant.
+      properties:
+        incomeType:
+          type: string
+          description: The type of income
+          enum:
+          - OTHER_INCOME
+          - FINANCIAL_AID_OTHER_MUNICIPALITY
+          - SALARY
+          - SWISH_DEPOSITS
+          - OCCUPATIONAL_PENSION_INSURANCE
+          - CHILD_SUPPORT
+          - RENT_SHARE_FROM_CHILD
+          examples:
+          - SALARY
+        amount:
+          type: number
+          description: The income amount
+          examples:
+          - 18500.0
+        incomeDate:
+          type: string
+          format: date
+          description: The date the income was received
+          examples:
+          - 2026-05-25
+        recipient:
+          type: string
+          description: Who received the income
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          examples:
+          - APPLICANT
+    JobApplication:
+      type: object
+      description: A job application reported by the applicant or co-applicant.
+      properties:
+        person:
+          type: string
+          description: Which person submitted the job application
+          examples:
+          - APPLICANT
+        applicationDate:
+          type: string
+          format: date
+          description: The date the job application was submitted
+          examples:
+          - 2026-05-20
+        jobTitle:
+          type: string
+          description: The job title applied for
+          examples:
+          - Lagerarbetare
+        employerAndPlace:
+          type: string
+          description: Employer and place of work
+          examples:
+          - "PostNord, Sundsvall"
+    PendingBenefit:
+      type: object
+      description: A benefit the applicant has applied for but not yet received a
+        decision on.
+      properties:
+        benefitName:
+          type: string
+          description: Name of the pending benefit
+          examples:
+          - Bostadsbidrag
+        applicantName:
+          type: string
+          description: Name of the person who applied for the benefit
+          examples:
+          - Anna Andersson
+    Person:
+      type: object
+      description: A person (applicant or co-applicant) on the financial assistance
+        application.
+      properties:
+        role:
+          type: string
+          description: Role of the person
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          examples:
+          - APPLICANT
+        personalNumber:
+          type: string
+          description: Personal number
+          examples:
+          - "198001012389"
+        needsInterpreter:
+          type: boolean
+          description: Whether the person needs an interpreter
+          examples:
+          - "true"
+        interpreterLanguage:
+          type: string
+          description: Language the interpreter should use
+          examples:
+          - Arabiska
+        hadWorkLast12Months:
+          type: boolean
+          description: Whether the person had work during the last 12 months
+          examples:
+          - "false"
+        hadWorkDescription:
+          type: string
+          description: Description of the work the person had
+          examples:
+          - Vikarie inom hemtjänsten
+        paymentMethod:
+          type: string
+          description: Payment method
+          enum:
+          - BANK_ACCOUNT
+          - OTHER
+          examples:
+          - BANK_ACCOUNT
+        clearingNumber:
+          type: string
+          description: Clearing number of the bank account
+          examples:
+          - 8327-9
+        accountNumber:
+          type: string
+          description: Bank account number
+          examples:
+          - "123456789"
+        otherPaymentDescription:
+          type: string
+          description: Description of the payment method when OTHER
+          examples:
+          - Utbetalningskort
+        paymentSameAsPrevious:
+          type: boolean
+          description: Whether the payment details are the same as previously used
+          examples:
+          - "true"
+    PlannedActivity:
+      type: object
+      description: A planned activity for the applicant or co-applicant.
+      properties:
+        person:
+          type: string
+          description: Which person the activity concerns
+          examples:
+          - APPLICANT
+        activity:
+          type: string
+          description: Description of the activity
+          examples:
+          - Arbetsträning på Återbruket
+        periodFrom:
+          type: string
+          format: date
+          description: Period from date
+          examples:
+          - 2026-06-01
+        periodTo:
+          type: string
+          format: date
+          description: Period to date
+          examples:
+          - 2026-08-31
+    Planning:
+      type: object
+      description: The applicant's or co-applicant's planning towards self-sufficiency.
+      properties:
+        person:
+          type: string
+          description: Which person the planning concerns
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          examples:
+          - APPLICANT
+        planningType:
+          type: string
+          description: The type of planning
+          enum:
+          - WORK
+          - JOBSEEKING
+          - SICK_LEAVE
+          - SFI
+          - OTHER
+          examples:
+          - WORK
+        workExtent:
+          type: string
+          description: Extent of work
+          enum:
+          - FULL
+          - PART
+          examples:
+          - FULL
+        workDescription:
+          type: string
+          description: Description of the work
+          examples:
+          - Tillsvidareanställning som undersköterska
+        sickLeaveLevel:
+          type: string
+          description: Level of sick leave (percent)
+          enum:
+          - "100"
+          - "75"
+          - "50"
+          - "25"
+          examples:
+          - "100"
+        sickFrom:
+          type: string
+          format: date
+          description: Sick leave from date
+          examples:
+          - 2026-05-01
+        sickTo:
+          type: string
+          format: date
+          description: Sick leave to date
+          examples:
+          - 2026-06-30
+        sfiStudyPath:
+          type: string
+          description: SFI study path
+          enum:
+          - "1"
+          - "2"
+          - "3"
+          examples:
+          - "1"
+        sfiCourse:
+          type: string
+          description: SFI course
+          enum:
+          - A
+          - B
+          - C
+          - D
+          examples:
+          - B
+        otherDescription:
+          type: string
+          description: Description of other planning
+          examples:
+          - Praktik via arbetsförmedlingen
     NamespaceConfig:
       type: object
       description: NamespaceConfig model
@@ -2946,6 +3712,38 @@ components:
           format: date-time
           description: Touched timestamp
           readOnly: true
+    CreateFinancialAssistanceRequest:
+      type: object
+      description: Request to create a financial assistance errand.
+      properties:
+        title:
+          type: string
+          description: Title of the errand
+          examples:
+          - Ansökan om ekonomiskt bistånd
+        description:
+          type: string
+          description: Description of the errand
+          examples:
+          - Återansökan om hyra för juni 2026
+        priority:
+          type: string
+          description: Priority of the errand
+          examples:
+          - HIGH
+        reporterUserId:
+          type: string
+          description: Id of the reporting user
+          examples:
+          - joe01doe
+        assignedUserId:
+          type: string
+          description: Id of the assigned user
+          examples:
+          - jane02doe
+        data:
+          $ref: "#/components/schemas/FinancialAssistanceData"
+          description: The typed financial assistance application payload
     ContactChannel:
       type: object
       description: ContactChannel model
@@ -3352,6 +4150,171 @@ components:
           format: date-time
           description: Timestamp the decision was recorded (server-assigned)
           readOnly: true
+    EligibilityRequest:
+      type: object
+      description: Request to evaluate which financial assistance application a citizen
+        should be offered.
+      properties:
+        applicant:
+          type: string
+          description: The applicant's personal number (12 digits)
+          examples:
+          - "198001012389"
+        coApplicant:
+          type: string
+          description: "The co-applicant's (medsökande) personal number (12 digits),\
+            \ when applying together with a partner"
+          examples:
+          - "198202022397"
+        withinDays:
+          type: integer
+          format: int32
+          description: Override for the duplicate-application window in days. Defaults
+            to the server-configured value when omitted.
+          examples:
+          - 90
+      required:
+      - applicant
+    ApplicationSuggestion:
+      type: object
+      description: "A suggested application the citizen can submit, with its target\
+        \ period."
+      properties:
+        typeSlug:
+          type: string
+          description: The errand type slug to create the application against
+          enum:
+          - financial-assistance-new
+          - financial-assistance-renewal
+          - financial-assistance-supplementary
+          examples:
+          - financial-assistance-renewal
+        applicationType:
+          type: string
+          description: The application type the slug maps to
+          enum:
+          - NEW
+          - RENEWAL
+          - SUPPLEMENTARY
+          examples:
+          - RENEWAL
+        periodMonth:
+          type: integer
+          format: int32
+          description: "Month (1-12) the suggested application concerns. Null for\
+            \ a new application (nyansökan), which has no prior period."
+          examples:
+          - 7
+        periodYear:
+          type: integer
+          format: int32
+          description: Year the suggested application concerns. Null for a new application
+            (nyansökan).
+          examples:
+          - 2026
+        recommended:
+          type: boolean
+          description: True for the primary suggestion the citizen should be guided
+            towards
+          examples:
+          - "true"
+        label:
+          type: string
+          description: Human-readable Swedish label for the suggestion
+          examples:
+          - Återansökan för juli 2026
+    EligibilityResponse:
+      type: object
+      description: "Eligibility result: which application(s) the citizen should be\
+        \ offered, plus the supporting facts."
+      properties:
+        suggestions:
+          type: array
+          description: "Suggested applications, ordered with the recommended one first.\
+            \ Empty only when nothing can be offered automatically."
+          items:
+            $ref: "#/components/schemas/ApplicationSuggestion"
+        requiresCaseworker:
+          type: boolean
+          description: True when a caseworker must handle the case (e.g. the constellation
+            differs from a previous application).
+          examples:
+          - "false"
+        reasonCode:
+          type: string
+          description: Machine-readable code for the situation that drove the suggestion
+          enum:
+          - NO_OPEN_CASE
+          - DECISION_FOR_CURRENT_MONTH
+          - NO_DECISION_FOR_CURRENT_MONTH
+          - RECENT_APPLICATION
+          - CONSTELLATION_MISMATCH
+          examples:
+          - NO_DECISION_FOR_CURRENT_MONTH
+        message:
+          type: string
+          description: Human-readable Swedish explanation of the suggestion
+          examples:
+          - Öppet ärende utan beslut för innevarande månad. Föreslår återansökan.
+        hasRecentApplication:
+          type: boolean
+          description: True when an application by either applicant was already submitted
+            within the window in this system
+          examples:
+          - "false"
+        windowDays:
+          type: integer
+          format: int32
+          description: The duplicate-application window in days that was applied
+          examples:
+          - 90
+        hasOpenCase:
+          type: boolean
+          description: True when Lifecare shows an open EB case (for both applicants
+            when applying together)
+          examples:
+          - "true"
+        hasDecisionForCurrentMonth:
+          type: boolean
+          description: True when Lifecare shows a decision covering the current month
+          examples:
+          - "false"
+        latestDecisionPeriodMonth:
+          type: integer
+          format: int32
+          description: "Month (1-12) of the most recent Lifecare decision, when one\
+            \ exists"
+          examples:
+          - 5
+        latestDecisionPeriodYear:
+          type: integer
+          format: int32
+          description: "Year of the most recent Lifecare decision, when one exists"
+          examples:
+          - 2026
+        hasPreviousCalculation:
+          type: boolean
+          description: True when Lifecare shows a previous normberäkning
+          examples:
+          - "true"
+        constellationMatchesPrevious:
+          type: boolean
+          description: Whether the requested constellation (alone vs with the given
+            partner) matches the previous application/decision. Null when there is
+            nothing to compare against.
+          examples:
+          - "true"
+        lifecareChecked:
+          type: boolean
+          description: True when the Lifecare lookup succeeded. False means the answer
+            is degraded (DB-only).
+          examples:
+          - "true"
+        hasCoApplicant:
+          type: boolean
+          description: True when the request included a co-applicant (medsökande)
+          examples:
+          - "false"
     PatchErrand:
       type: object
       description: PatchErrand model — patchable envelope fields only
@@ -3616,4 +4579,87 @@ components:
           format: date-time
           description: Modified timestamp
           readOnly: true
+    FinancialAssistanceView:
+      type: object
+      description: A financial assistance errand with its typed application payload.
+      properties:
+        id:
+          type: string
+          description: Unique id
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+          readOnly: true
+        errandNumber:
+          type: string
+          description: Errand number
+          examples:
+          - EB-2026-00042
+          readOnly: true
+        municipalityId:
+          type: string
+          description: Municipality id
+          examples:
+          - "2281"
+          readOnly: true
+        namespace:
+          type: string
+          description: Namespace
+          examples:
+          - FINANCIAL_ASSISTANCE
+          readOnly: true
+        typeSlug:
+          type: string
+          description: Type slug
+          examples:
+          - financial-assistance
+          readOnly: true
+        title:
+          type: string
+          description: Title of the errand
+          examples:
+          - Ansökan om ekonomiskt bistånd
+        status:
+          type: string
+          description: Status of the errand
+          examples:
+          - ONGOING
+        priority:
+          type: string
+          description: Priority of the errand
+          examples:
+          - HIGH
+        reporterUserId:
+          type: string
+          description: Id of the reporting user
+          examples:
+          - joe01doe
+        assignedUserId:
+          type: string
+          description: Id of the assigned user
+          examples:
+          - jane02doe
+        processInstanceId:
+          type: string
+          description: Id of the started process instance
+          examples:
+          - 8d2e1c3a-4f56-7890-abcd-ef1234567890
+          readOnly: true
+        created:
+          type: string
+          format: date-time
+          description: Created
+          readOnly: true
+        modified:
+          type: string
+          format: date-time
+          description: Modified
+          readOnly: true
+        touched:
+          type: string
+          format: date-time
+          description: Touched
+          readOnly: true
+        data:
+          $ref: "#/components/schemas/FinancialAssistanceData"
+          description: The typed financial assistance application payload
   securitySchemes: {}
