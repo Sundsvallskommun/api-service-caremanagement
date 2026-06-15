@@ -7,6 +7,10 @@ logging:
 integration:
   operaton:
     url: http://operaton.url
+  lifecare-fc:
+    url: http://lifecarefc.url
+    domain: junit-domain
+    key: junit-key
 scheduler:
   notification-cleanup:
     cron: '-'

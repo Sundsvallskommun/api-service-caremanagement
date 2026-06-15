@@ -84,6 +84,15 @@ integration:
       token-url: ${INTEGRATION_ENEO_OAUTH2_TOKEN_URL:http://localhost/token}
       client-id: ${INTEGRATION_ENEO_OAUTH2_CLIENT_ID:override}
       client-secret: ${INTEGRATION_ENEO_OAUTH2_CLIENT_SECRET:override}
+  # Lifecare FamilyCare (FC) — EB write-back (aktualisering + normberäkning) + proposal lookups. Auth is domain + key
+  # (query params / X-API-Key header); url is the FC base path (host + /WESE.FC.Api.FC). The key is sensitive — inject
+  # via secret and keep it out of request logging.
+  lifecare-fc:
+    url: ${INTEGRATION_LIFECARE_FC_URL:http://localhost}
+    domain: ${INTEGRATION_LIFECARE_FC_DOMAIN:override}
+    key: ${INTEGRATION_LIFECARE_FC_KEY:override}
+    connect-timeout: 5
+    read-timeout: 30
 #========================================
 # Notification settings
 #========================================
