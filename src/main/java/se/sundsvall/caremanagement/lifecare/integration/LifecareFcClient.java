@@ -1,10 +1,21 @@
 package se.sundsvall.caremanagement.lifecare.integration;
 
+import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
+import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
+import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedExecutionDTO;
+import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedInvestigationDTO;
+import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedPaymentDTO;
+import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedResourceAllocationDTO;
+import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedServiceDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringProposalDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedContactDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefc.PostAktualiseringsBodyRequest;
 import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import java.util.List;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,15 +27,138 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static se.sundsvall.caremanagement.lifecare.integration.configuration.LifecareFcConfiguration.CLIENT_ID;
 
 /**
- * Feign contract for the EB write-back subset of the Tieto/Lifecare FamilyCare (FC) API: create an aktualisering (case
- * intake) and a calculation (normberäkning), plus the two proposal lookups that supply the code lists those POST bodies
- * reference. The mandatory {@code domain} + {@code key} auth (and the {@code X-API-Key} header) are added globally by
- * {@link LifecareFcConfiguration}, so they are not part of these method signatures. Full API documented in
- * vof-ekonomiskt-bistand/architecture/lifecare-fc-api.md.
+ * Feign contract for the EB subset of the Tieto/Lifecare FamilyCare (FC) API: the person-based case-data reads
+ * (person, contacts, and the date-ranged lists that make up the EB lifecycle — aktualiseringar, normberäkningar,
+ * beslut, utbetalningar, utredningar, insatser, verkställigheter, resursfördelning), the write-back (create
+ * aktualisering + normberäkning), and the two proposal lookups that supply the code lists those POST bodies reference.
+ * The mandatory {@code domain} + {@code key} auth (and the {@code X-API-Key} header) are added globally by
+ * {@link LifecareFcConfiguration}, so they are not part of these method signatures. The list reads share
+ * {@code startDate}/{@code endDate} (required) and optional {@code pageSize}/{@code pageNr}/{@code ascending}
+ * pagination. Full API documented in vof-ekonomiskt-bistand/architecture/lifecare-fc-api.md.
  */
 @FeignClient(name = CLIENT_ID, url = "${integration.lifecare-fc.url}", configuration = LifecareFcConfiguration.class)
 @CircuitBreaker(name = CLIENT_ID)
 public interface LifecareFcClient {
+
+	// ---- Person-based reads ------------------------------------------------------------------------------------------
+
+	/**
+	 * Read the FC master data for a person.
+	 *
+	 * @param  personId the full personnummer
+	 * @return          the person's FC master data
+	 */
+	@GetMapping(path = "/apifc/v1/Persons", produces = APPLICATION_JSON_VALUE)
+	PersonBasedPersonDTO getPerson(
+		@RequestParam("personId") final String personId);
+
+	/**
+	 * List the contacts registered on a person.
+	 *
+	 * @param  personId the full personnummer
+	 * @return          the person's contacts
+	 */
+	@GetMapping(path = "/apifc/v1/Contacts", produces = APPLICATION_JSON_VALUE)
+	List<PersonBasedContactDTO> getContacts(
+		@RequestParam("personId") final String personId);
+
+	/**
+	 * List the aktualiseringar (case intakes) registered on a person in the given period.
+	 */
+	@GetMapping(path = "/apifc/v1/Actualisations", produces = APPLICATION_JSON_VALUE)
+	ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(
+		@RequestParam("personId") final String personId,
+		@RequestParam("startDate") final String startDate,
+		@RequestParam("endDate") final String endDate,
+		@RequestParam(value = "pageSize", required = false) final Integer pageSize,
+		@RequestParam(value = "pageNr", required = false) final Integer pageNr,
+		@RequestParam(value = "ascending", required = false) final Boolean ascending);
+
+	/**
+	 * List the normberäkningar registered on a person in the given period.
+	 */
+	@GetMapping(path = "/apifc/v1/Calculations", produces = APPLICATION_JSON_VALUE)
+	ApiPaginationCompositePersonBasedCalculationDTO getCalculations(
+		@RequestParam("personId") final String personId,
+		@RequestParam("startDate") final String startDate,
+		@RequestParam("endDate") final String endDate,
+		@RequestParam(value = "pageSize", required = false) final Integer pageSize,
+		@RequestParam(value = "pageNr", required = false) final Integer pageNr,
+		@RequestParam(value = "ascending", required = false) final Boolean ascending);
+
+	/**
+	 * List the beslut registered on a person in the given period.
+	 */
+	@GetMapping(path = "/apifc/v1/Decisions", produces = APPLICATION_JSON_VALUE)
+	ApiPaginationCompositePersonBasedDecisionDTO getDecisions(
+		@RequestParam("personId") final String personId,
+		@RequestParam("startDate") final String startDate,
+		@RequestParam("endDate") final String endDate,
+		@RequestParam(value = "pageSize", required = false) final Integer pageSize,
+		@RequestParam(value = "pageNr", required = false) final Integer pageNr,
+		@RequestParam(value = "ascending", required = false) final Boolean ascending);
+
+	/**
+	 * List the utbetalningar registered on a person in the given period.
+	 */
+	@GetMapping(path = "/apifc/v1/Payments", produces = APPLICATION_JSON_VALUE)
+	ApiPaginationCompositePersonBasedPaymentDTO getPayments(
+		@RequestParam("personId") final String personId,
+		@RequestParam("startDate") final String startDate,
+		@RequestParam("endDate") final String endDate,
+		@RequestParam(value = "pageSize", required = false) final Integer pageSize,
+		@RequestParam(value = "pageNr", required = false) final Integer pageNr,
+		@RequestParam(value = "ascending", required = false) final Boolean ascending);
+
+	/**
+	 * List the utredningar registered on a person in the given period.
+	 */
+	@GetMapping(path = "/apifc/v1/Investigations", produces = APPLICATION_JSON_VALUE)
+	ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(
+		@RequestParam("personId") final String personId,
+		@RequestParam("startDate") final String startDate,
+		@RequestParam("endDate") final String endDate,
+		@RequestParam(value = "pageSize", required = false) final Integer pageSize,
+		@RequestParam(value = "pageNr", required = false) final Integer pageNr,
+		@RequestParam(value = "ascending", required = false) final Boolean ascending);
+
+	/**
+	 * List the insatser registered on a person in the given period.
+	 */
+	@GetMapping(path = "/apifc/v1/Services", produces = APPLICATION_JSON_VALUE)
+	ApiPaginationCompositePersonBasedServiceDTO getServices(
+		@RequestParam("personId") final String personId,
+		@RequestParam("startDate") final String startDate,
+		@RequestParam("endDate") final String endDate,
+		@RequestParam(value = "pageSize", required = false) final Integer pageSize,
+		@RequestParam(value = "pageNr", required = false) final Integer pageNr,
+		@RequestParam(value = "ascending", required = false) final Boolean ascending);
+
+	/**
+	 * List the verkställigheter registered on a person in the given period.
+	 */
+	@GetMapping(path = "/apifc/v1/Executions", produces = APPLICATION_JSON_VALUE)
+	ApiPaginationCompositePersonBasedExecutionDTO getExecutions(
+		@RequestParam("personId") final String personId,
+		@RequestParam("startDate") final String startDate,
+		@RequestParam("endDate") final String endDate,
+		@RequestParam(value = "pageSize", required = false) final Integer pageSize,
+		@RequestParam(value = "pageNr", required = false) final Integer pageNr,
+		@RequestParam(value = "ascending", required = false) final Boolean ascending);
+
+	/**
+	 * List the resursfördelning registered on a person in the given period.
+	 */
+	@GetMapping(path = "/apifc/v1/ResourceAllocations", produces = APPLICATION_JSON_VALUE)
+	ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(
+		@RequestParam("personId") final String personId,
+		@RequestParam("startDate") final String startDate,
+		@RequestParam("endDate") final String endDate,
+		@RequestParam(value = "pageSize", required = false) final Integer pageSize,
+		@RequestParam(value = "pageNr", required = false) final Integer pageNr,
+		@RequestParam(value = "ascending", required = false) final Boolean ascending);
+
+	// ---- Write-back (aktualisering + normberäkning) and the proposals that drive it ----------------------------------
 
 	/**
 	 * Fetch the proposal (valid code lists: types, reasons, fromWho, organisations, working status, investigation/service
