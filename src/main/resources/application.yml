@@ -48,6 +48,11 @@ spring:
             client-secret: ${INTEGRATION_CITIZEN_CLIENT_SECRET:override}
             authorization-grant-type: client_credentials
             provider: citizen
+          financial-aid:
+            client-id: ${INTEGRATION_FINANCIAL_AID_CLIENT_ID:override}
+            client-secret: ${INTEGRATION_FINANCIAL_AID_CLIENT_SECRET:override}
+            authorization-grant-type: client_credentials
+            provider: financial-aid
         provider:
           messaging:
             token-uri: ${INTEGRATION_MESSAGING_TOKEN_URI:http://localhost/token}
@@ -55,11 +60,18 @@ spring:
             token-uri: ${INTEGRATION_TEMPLATING_TOKEN_URI:http://localhost/token}
           citizen:
             token-uri: ${INTEGRATION_CITIZEN_TOKEN_URI:http://localhost/token}
+          financial-aid:
+            token-uri: ${INTEGRATION_FINANCIAL_AID_TOKEN_URI:http://localhost/token}
 #========================================
 # Integration settings
 #========================================
 integration:
   operaton:
+    connect-timeout: 5
+    read-timeout: 30
+  # financial-aid (SSBTEK proxy). OAuth2 client-credentials via the financial-aid Spring security registration above.
+  financial-aid:
+    url: ${INTEGRATION_FINANCIAL_AID_URL:http://localhost}
     connect-timeout: 5
     read-timeout: 30
   messaging:

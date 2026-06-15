@@ -33,12 +33,14 @@ import static se.sundsvall.caremanagement.lifecare.service.model.UnhandledReason
 /**
  * Maps normalised SSBTEK incomes to FC normberäkning income rows. For each income it looks up the FC normberäkning
  * income-type name in {@link SsbtekIncomeRegistry}, resolves that name to the numeric type id offered by the FC
- * calculation proposal, then merges incomes that resolve to the same type id into one
- * {@link PersonBasedCalculationIncomePostDTO} (applicant and co-applicant amounts summed into their own columns).
- * Incomes that are not on the whitelist, or whose FC type the proposal does not offer, are returned as
- * {@link UnhandledIncome} warnings rather than silently dropped — except deliberate exclusions
+ * calculation proposal, then
+ * merges incomes that resolve to the same type id into one {@link PersonBasedCalculationIncomePostDTO} (applicant and
+ * co-applicant amounts summed into their own columns). Incomes that are not on the whitelist, or whose FC type the
+ * proposal does not offer,
+ * are returned as {@link UnhandledIncome} warnings rather than silently dropped — except deliberate exclusions
  * (regelverk "Ej ta med"), which are skipped without a warning. Period selection (which incomes to transfer) is the
- * caller's responsibility; this mapper sums whatever it is given. See ssbtek-regelverk.txt.
+ * caller's responsibility; this
+ * mapper sums whatever it is given. See ssbtek-regelverk.txt.
  */
 public final class SsbtekToFcIncomeMapper {
 
@@ -47,7 +49,7 @@ public final class SsbtekToFcIncomeMapper {
 	/**
 	 * Map a set of SSBTEK incomes to FC normberäkning rows for the given calculation proposal.
 	 *
-	 * @param  incomes  the normalised SSBTEK incomes to transfer (may be {@code null})
+	 * @param  incomes  the normalised SSBTEK incomes to transfer (maybe {@code null})
 	 * @param  proposal the FC calculation proposal whose {@code calculationIncomeTypes} supply the numeric type ids
 	 * @return          the FC income rows plus the incomes that could not be transferred
 	 */
