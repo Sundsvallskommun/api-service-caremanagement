@@ -11,20 +11,25 @@ import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 import static java.util.Optional.ofNullable;
 
 /**
- * Turns the financial-aid SSBTEK basis — the untyped, per-agency JSON map produced by a generic XML→JSON conversion of
- * the SSBTEK SOAP response — into normalised {@link SsbtekIncome}s for {@code SsbtekToFcIncomeMapper}. Keys mirror the
- * SSBTEK XML element names, and repeated elements arrive as either a single object or a list, so navigation is
- * defensive throughout. One SSBTEK basis is one person's data, so the caller supplies the {@link ApplicantRole}.
+ * Turns the financial-aid SSBTEK basis — the untyped, per-agency JSON map — into normalised {@link SsbtekIncome}s for
+ * {@code SsbtekToFcIncomeMapper}. Most agencies are a generic XML→JSON conversion of the SSBTEK SOAP (keys mirror the
+ * XML
+ * element names, PascalCase); <b>fk</b> is delivered as LEFI JSON, so its keys are the LEFI property names (lowercase).
+ * Repeated elements arrive as a single object or a list, so navigation is defensive throughout. One SSBTEK basis is one
+ * person's data, so the caller supplies the {@link ApplicantRole}.
  *
  * <p>
- * Grounded agencies: <b>so</b> (arbetslöshetsersättning). The income-bearing <b>fk</b> förmånslista
- * (Dagersättning/Bostadsbidrag/Barnbidrag/PM/PLV/Underhållsstöd) and <b>csn</b> amounts are not present in any current
- * sample payload, so they are explicit extension points (marked in {@link #extract(Map, ApplicantRole)}) — they need a
- * real SSBTEK payload before they can be implemented without guessing field names. Non-income agencies (af/tns/miv, skv
- * capital) are intentionally not read.
+ * Grounded agencies: <b>fk</b> (Försäkringskassan förmånsutbetalningar, from {@code utbetalningar} — bostadsbidrag,
+ * barnbidrag, underhållsstöd, dagersättning, …) and <b>so</b> (arbetslöshetsersättning). The FK förmån comes from the
+ * payment's {@code formansfamilj.beskrivning} and is matched against the whitelist, so FK förmåner not on it surface as
+ * warnings (the regelverk's rålista). <b>csn</b> amounts are not yet grounded — the sample fixtures show only the
+ * Studiestödstyp-förteckning flags, not the per-aid payment structure. Non-income agencies (af/tns/miv, skv capital)
+ * are
+ * intentionally not read.
  */
 public final class SsbtekIncomeExtractor {
 
+	private static final String AGENCY_FK = "fk";
 	private static final String AGENCY_SO = "so";
 
 	private SsbtekIncomeExtractor() {}
@@ -42,11 +47,31 @@ public final class SsbtekIncomeExtractor {
 		}
 
 		final var incomes = new ArrayList<SsbtekIncome>();
+		incomes.addAll(extractFkUtbetalningar(asMap(agencyBasis.get(AGENCY_FK)), role));
 		incomes.addAll(extractArbetsloshetsersattning(asMap(agencyBasis.get(AGENCY_SO)), role));
-		// Extension points (need a real SSBTEK payload before they can be grounded — see class note):
-		// - fk: the förmånslista (Dagersättning/Bostadsbidrag/Barnbidrag/PM/PLV/Underhållsstöd), where most EB income lives
-		// - csn: studiemedel/studiehjälp amounts
+		// csn studiemedel/studiehjälp amounts: extension point — the per-aid payment structure isn't grounded in any
+		// current sample payload (see class note).
 		return List.copyOf(incomes);
+	}
+
+	/**
+	 * fk → utbetalningar(*): each effectuated FK/PM payment carries {@code nettobelopp.summa}, {@code datum}, the förmån
+	 * via {@code formansfamilj.beskrivning} and the beloppstyp via {@code typ.beskrivning} (Månad/Daglig/Retro). LEFI
+	 * JSON; see Försäkringskassan's lefi-formansinformation schema bundled in api-service-financial-aid.
+	 */
+	private static List<SsbtekIncome> extractFkUtbetalningar(final Map<String, Object> fk, final ApplicantRole role) {
+		final var incomes = new ArrayList<SsbtekIncome>();
+		for (final var utbetalning : asList(fk.get("utbetalningar"))) {
+			final var payment = asMap(utbetalning);
+			final var amount = decimal(asMap(payment.get("nettobelopp")).get("summa"));
+			if (amount != null) {
+				final var formansfamilj = asMap(payment.get("formansfamilj"));
+				final var forman = ofNullable(str(formansfamilj.get("beskrivning"))).orElseGet(() -> str(formansfamilj.get("id")));
+				final var beloppstyp = str(asMap(payment.get("typ")).get("beskrivning"));
+				incomes.add(new SsbtekIncome(forman, null, beloppstyp, amount, date(payment.get("datum")), role));
+			}
+		}
+		return incomes;
 	}
 
 	/**
@@ -86,6 +111,10 @@ public final class SsbtekIncomeExtractor {
 			return List.copyOf(list);
 		}
 		return List.of(value);
+	}
+
+	private static String str(final Object value) {
+		return ofNullable(value).map(Object::toString).map(String::trim).filter(text -> !text.isEmpty()).orElse(null);
 	}
 
 	private static BigDecimal decimal(final Object value) {

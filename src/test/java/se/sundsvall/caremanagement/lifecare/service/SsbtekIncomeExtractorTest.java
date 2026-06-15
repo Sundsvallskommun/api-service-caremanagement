@@ -25,6 +25,79 @@ class SsbtekIncomeExtractorTest {
 		return Map.of("NettoEfterSkatt", netto, "Utbetalningsdatum", datum);
 	}
 
+	/** Mirrors the real LEFI FK shape: fk.utbetalningar[] with nettobelopp/datum/formansfamilj/typ. */
+	private static Map<String, Object> fkBasis(final Object utbetalningar) {
+		return Map.of("fk", Map.of("utbetalningar", utbetalningar));
+	}
+
+	private static Map<String, Object> fkPayment(final String formanBeskrivning, final String beloppstypBeskrivning, final Object summa, final String datum) {
+		return Map.of(
+			"formansfamilj", Map.of("id", "BOB", "beskrivning", formanBeskrivning),
+			"typ", Map.of("id", 1, "beskrivning", beloppstypBeskrivning),
+			"nettobelopp", Map.of("summa", summa, "valuta", "SEK"),
+			"datum", datum);
+	}
+
+	@Test
+	void extractsFkPaymentFromUtbetalningar() {
+		final var incomes = SsbtekIncomeExtractor.extract(fkBasis(fkPayment("Bostadsbidrag", "Månad", 4500.0, "2026-04-25")), APPLICANT);
+
+		assertThat(incomes).singleElement().satisfies(income -> {
+			assertThat(income.forman()).isEqualTo("Bostadsbidrag");
+			assertThat(income.beloppstyp()).isEqualTo("Månad");
+			assertThat(income.netAmount()).isEqualByComparingTo("4500.0");
+			assertThat(income.period()).isEqualTo(LocalDate.parse("2026-04-25"));
+			assertThat(income.role()).isEqualTo(APPLICANT);
+		});
+	}
+
+	@Test
+	void handlesMultipleFkPaymentsAsAList() {
+		final var incomes = SsbtekIncomeExtractor.extract(
+			fkBasis(List.of(
+				fkPayment("Bostadsbidrag", "Månad", 4500.0, "2026-04-25"),
+				fkPayment("Underhållsstöd", "Månad", 1673.0, "2026-04-25"))),
+			APPLICANT);
+
+		assertThat(incomes).extracting(SsbtekIncome::forman).containsExactly("Bostadsbidrag", "Underhållsstöd");
+	}
+
+	@Test
+	void skipsFkPaymentWithoutANetAmount() {
+		final var incomes = SsbtekIncomeExtractor.extract(
+			fkBasis(Map.of("formansfamilj", Map.of("beskrivning", "Bostadsbidrag"), "datum", "2026-04-25")), APPLICANT);
+
+		assertThat(incomes).isEmpty();
+	}
+
+	@Test
+	void fallsBackToFormanIdWhenBeskrivningMissing() {
+		final var incomes = SsbtekIncomeExtractor.extract(
+			fkBasis(Map.of("formansfamilj", Map.of("id", "BOB"), "nettobelopp", Map.of("summa", 4500.0), "datum", "2026-04-25")), APPLICANT);
+
+		assertThat(incomes).singleElement().satisfies(income -> assertThat(income.forman()).isEqualTo("BOB"));
+	}
+
+	@Test
+	void treatsBlankFormanBeskrivningAsMissingAndFallsBackToId() {
+		final var incomes = SsbtekIncomeExtractor.extract(
+			fkBasis(Map.of("formansfamilj", Map.of("id", "BOB", "beskrivning", "  "), "nettobelopp", Map.of("summa", 4500.0), "datum", "2026-04-25")), APPLICANT);
+
+		assertThat(incomes).singleElement().satisfies(income -> assertThat(income.forman()).isEqualTo("BOB"));
+	}
+
+	@Test
+	void combinesFkAndSoIncomes() {
+		final Map<String, Object> basis = Map.of(
+			"fk", Map.of("utbetalningar", fkPayment("Bostadsbidrag", "Månad", 4500.0, "2026-04-25")),
+			"so", Map.of("ArbetsloshetsersattningLista", Map.of("Arbetsloshetsersattning", Map.of(
+				"Utbetalningar", payment("1200", "2026-04-10")))));
+
+		final var incomes = SsbtekIncomeExtractor.extract(basis, APPLICANT);
+
+		assertThat(incomes).extracting(SsbtekIncome::forman).containsExactlyInAnyOrder("Bostadsbidrag", "Arbetslöshetsersättning");
+	}
+
 	@Test
 	void extractsSingleArbetsloshetsersattningPayment() {
 		final var incomes = SsbtekIncomeExtractor.extract(soBasis(payment("1250.50", "2013-11-23")), APPLICANT);
