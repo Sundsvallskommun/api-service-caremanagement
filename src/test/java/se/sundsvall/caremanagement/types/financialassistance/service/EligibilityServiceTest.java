@@ -263,12 +263,12 @@ class EligibilityServiceTest {
 	}
 
 	@Test
-	void windowOverrideIsReflected() {
+	void configuredWindowIsReflected() {
 		noCmErrands();
 		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT), any())).thenReturn(LifecareEbCaseSummary.none());
 
-		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone().withWithinDays(30));
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
-		assertThat(response.getWindowDays()).isEqualTo(30);
+		assertThat(response.getWindowDays()).isEqualTo(90); // from the service config, not the request
 	}
 }

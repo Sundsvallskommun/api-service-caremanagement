@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:56936
+- url: http://localhost:57957
   description: Generated server url
 tags:
 - name: Notes
@@ -4166,13 +4166,6 @@ components:
             \ when applying together with a partner"
           examples:
           - "198202022397"
-        withinDays:
-          type: integer
-          format: int32
-          description: Override for the duplicate-application window in days. Defaults
-            to the server-configured value when omitted.
-          examples:
-          - 90
       required:
       - applicant
     ApplicationSuggestion:

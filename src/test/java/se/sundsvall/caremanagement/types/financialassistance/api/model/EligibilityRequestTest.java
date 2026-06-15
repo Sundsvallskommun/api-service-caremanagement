@@ -27,12 +27,10 @@ class EligibilityRequestTest {
 	void builderMethods() {
 		final var request = EligibilityRequest.create()
 			.withApplicant("198001012389")
-			.withCoApplicant("198202022397")
-			.withWithinDays(30);
+			.withCoApplicant("198202022397");
 
 		assertThat(request.getApplicant()).isEqualTo("198001012389");
 		assertThat(request.getCoApplicant()).isEqualTo("198202022397");
-		assertThat(request.getWithinDays()).isEqualTo(30);
 	}
 
 	@Test

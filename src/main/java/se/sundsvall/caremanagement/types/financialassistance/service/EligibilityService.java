@@ -65,27 +65,26 @@ public class EligibilityService {
 	private final ErrandRepository errandRepository;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final LifecareEbCaseService lifecareEbCaseService;
-	private final int defaultWindowDays;
+	private final int windowDays;
 
 	EligibilityService(final ErrandRepository errandRepository, final FinancialAssistanceRepository financialAssistanceRepository,
 		final LifecareEbCaseService lifecareEbCaseService,
-		@Value("${financial-assistance.eligibility.duplicate-window-days:90}") final int defaultWindowDays) {
+		@Value("${financial-assistance.eligibility.duplicate-window-days:90}") final int windowDays) {
 		this.errandRepository = errandRepository;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.lifecareEbCaseService = lifecareEbCaseService;
-		this.defaultWindowDays = defaultWindowDays;
+		this.windowDays = windowDays;
 	}
 
 	public EligibilityResponse evaluate(final String municipalityId, final String namespace, final EligibilityRequest request) {
 		final var today = LocalDate.now();
 		final var currentMonth = YearMonth.from(today);
 		final var nextMonth = currentMonth.plusMonths(1);
-		final var window = ofNullable(request.getWithinDays()).orElse(defaultWindowDays);
-		final var cutoff = OffsetDateTime.now().minusDays(window);
+		final var cutoff = OffsetDateTime.now().minusDays(windowDays);
 		final var hasCoApplicant = hasText(request.getCoApplicant());
 
 		final var response = EligibilityResponse.create()
-			.withWindowDays(window)
+			.withWindowDays(windowDays)
 			.withHasCoApplicant(hasCoApplicant);
 
 		// Lifecare (best-effort).

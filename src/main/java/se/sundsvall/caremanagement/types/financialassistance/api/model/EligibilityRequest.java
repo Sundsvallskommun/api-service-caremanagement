@@ -1,7 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Positive;
 import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.ValidPersonalNumber;
 
@@ -22,10 +21,6 @@ public class EligibilityRequest {
 	@Schema(description = "The co-applicant's (medsökande) personal number (12 digits), when applying together with a partner", examples = "198202022397")
 	@ValidPersonalNumber(nullable = true)
 	private String coApplicant;
-
-	@Schema(description = "Override for the duplicate-application window in days. Defaults to the server-configured value when omitted.", examples = "90")
-	@Positive
-	private Integer withinDays;
 
 	public static EligibilityRequest create() {
 		return new EligibilityRequest();
@@ -57,35 +52,21 @@ public class EligibilityRequest {
 		return this;
 	}
 
-	public Integer getWithinDays() {
-		return withinDays;
-	}
-
-	public void setWithinDays(final Integer withinDays) {
-		this.withinDays = withinDays;
-	}
-
-	public EligibilityRequest withWithinDays(final Integer withinDays) {
-		this.withinDays = withinDays;
-		return this;
-	}
-
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final EligibilityRequest that = (EligibilityRequest) o;
-		return Objects.equals(applicant, that.applicant) && Objects.equals(coApplicant, that.coApplicant)
-			&& Objects.equals(withinDays, that.withinDays);
+		return Objects.equals(applicant, that.applicant) && Objects.equals(coApplicant, that.coApplicant);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(applicant, coApplicant, withinDays);
+		return Objects.hash(applicant, coApplicant);
 	}
 
 	@Override
 	public String toString() {
-		return "EligibilityRequest{applicant='" + applicant + "', coApplicant='" + coApplicant + "', withinDays=" + withinDays + '}';
+		return "EligibilityRequest{applicant='" + applicant + "', coApplicant='" + coApplicant + "'}";
 	}
 }
