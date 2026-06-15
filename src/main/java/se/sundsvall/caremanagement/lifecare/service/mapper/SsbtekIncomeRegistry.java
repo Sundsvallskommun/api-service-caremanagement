@@ -63,7 +63,7 @@ public final class SsbtekIncomeRegistry {
 	}
 
 	/** Trim + lower-case for case-/whitespace-insensitive matching of SSBTEK and FC names. */
-	static String normalize(final String value) {
+	public static String normalize(final String value) {
 		return ofNullable(value).map(String::trim).map(trimmed -> trimmed.toLowerCase(Locale.ROOT)).orElse("");
 	}
 }
