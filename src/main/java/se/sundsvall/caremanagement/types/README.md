@@ -4,7 +4,9 @@ This directory is reserved for per-errand-type modules. Each type module follows
 dept44-aligned layout (see `docs/architecture/proposal-modulith.md` and `migration-plan.md`)
 and registers itself with the core registries via Spring `@Configuration` beans.
 
-Nothing lives here yet — the actual type list is still being defined.
+The first type module lives here: `financialassistance` (EB / ekonomiskt bistånd) — create/read/update,
+the gemensam-ingång eligibility routing, and a per-slug form schema (see the reference contribution
+below). More types will follow as they are defined.
 
 ## Adding a new type
 
