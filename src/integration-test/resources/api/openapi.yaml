@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:51069
+- url: http://localhost:53928
   description: Generated server url
 tags:
 - name: Notes
@@ -567,8 +567,11 @@ paths:
       tags:
       - Financial Assistance
       summary: Create financial assistance errand
-      description: "typeSlug is one of financial-assistance-new, financial-assistance-renewal,\
-        \ financial-assistance-supplementary."
+      description: "Multipart request. The 'request' part carries the application\
+        \ (JSON); the optional 'attachments' part carries the citizen's supporting\
+        \ files (any type). typeSlug is one of financial-assistance-new, financial-assistance-renewal,\
+        \ financial-assistance-supplementary. Each attachment is stored on the errand,\
+        \ and a single combined PDF merging them all is generated and stored alongside."
       operationId: createErrand_1
       parameters:
       - name: municipalityId
@@ -589,9 +592,19 @@ paths:
           type: string
       requestBody:
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: "#/components/schemas/CreateFinancialAssistanceRequest"
+              type: object
+              properties:
+                request:
+                  $ref: "#/components/schemas/CreateFinancialAssistanceRequest"
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+              required:
+              - request
         required: true
       responses:
         "201":
@@ -3095,10 +3108,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri

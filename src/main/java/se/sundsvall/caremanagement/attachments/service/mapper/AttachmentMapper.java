@@ -50,6 +50,23 @@ public final class AttachmentMapper {
 		}
 	}
 
+	public static AttachmentEntity toAttachmentEntity(final String errandId, final String namespace,
+		final String municipalityId, final String fileName, final String mimeType, final byte[] content) {
+
+		if (errandId == null || content == null) {
+			return null;
+		}
+		return AttachmentEntity.create()
+			.withErrandId(errandId)
+			.withNamespace(namespace)
+			.withMunicipalityId(municipalityId)
+			.withFileName(fileName)
+			.withMimeType(mimeType)
+			.withFileSize(content.length)
+			.withAttachmentData(AttachmentDataEntity.create()
+				.withFile(Hibernate.getLobHelper().createBlob(content)));
+	}
+
 	public static List<Attachment> toAttachmentList(final List<AttachmentEntity> entities) {
 		return ofNullable(entities).orElse(emptyList()).stream()
 			.map(AttachmentMapper::toAttachment)

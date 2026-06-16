@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -20,6 +21,8 @@ import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPref
 import static java.util.UUID.randomUUID;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -46,9 +49,13 @@ class FinancialAssistanceResourceFailureTest {
 
 	@Test
 	void createErrand_blankTitle() {
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle(" ").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
+
 		webTestClient.post()
 			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
-			.bodyValue(CreateFinancialAssistanceRequest.create().withTitle(" ").withData(FinancialAssistanceData.create()))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
 			.exchange()
 			.expectStatus().isBadRequest();
 
@@ -57,9 +64,13 @@ class FinancialAssistanceResourceFailureTest {
 
 	@Test
 	void createErrand_missingData() {
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("ok"), APPLICATION_JSON);
+
 		webTestClient.post()
 			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
-			.bodyValue(CreateFinancialAssistanceRequest.create().withTitle("ok"))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
 			.exchange()
 			.expectStatus().isBadRequest();
 
@@ -68,9 +79,13 @@ class FinancialAssistanceResourceFailureTest {
 
 	@Test
 	void createErrand_invalidApplicationType() {
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("ok").withData(FinancialAssistanceData.create().withApplicationType("BOGUS")), APPLICATION_JSON);
+
 		webTestClient.post()
 			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
-			.bodyValue(CreateFinancialAssistanceRequest.create().withTitle("ok").withData(FinancialAssistanceData.create().withApplicationType("BOGUS")))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
 			.exchange()
 			.expectStatus().isBadRequest();
 

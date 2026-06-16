@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -28,6 +29,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -59,15 +62,38 @@ class FinancialAssistanceResourceTest {
 
 	@Test
 	void createErrand() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class))).thenReturn(ERRAND_ID);
+		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any())).thenReturn(ERRAND_ID);
+
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Min ansökan").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
 
 		webTestClient.post()
 			.uri(uri -> uri.path(CREATE_PATH).build(base()))
-			.bodyValue(CreateFinancialAssistanceRequest.create().withTitle("Min ansökan").withData(FinancialAssistanceData.create()))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class));
+		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any());
+	}
+
+	@Test
+	void createErrandWithAttachments() {
+		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any())).thenReturn(ERRAND_ID);
+
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Med bilagor").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
+		builder.part("attachments", "hyreskontrakt".getBytes()).filename("hyreskontrakt.pdf");
+		builder.part("attachments", "hyresavi".getBytes()).filename("hyresavi.png");
+
+		webTestClient.post()
+			.uri(uri -> uri.path(CREATE_PATH).build(base()))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isCreated();
+
+		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any());
 	}
 
 	@Test

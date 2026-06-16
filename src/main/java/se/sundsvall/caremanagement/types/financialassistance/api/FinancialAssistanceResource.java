@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +19,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
@@ -40,6 +43,7 @@ import static org.springframework.http.HttpHeaders.LOCATION;
 import static org.springframework.http.MediaType.ALL_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 import static org.springframework.http.ResponseEntity.created;
 import static org.springframework.http.ResponseEntity.noContent;
 import static org.springframework.http.ResponseEntity.ok;
@@ -68,18 +72,21 @@ class FinancialAssistanceResource {
 		this.renewalPrefillService = renewalPrefillService;
 	}
 
-	@PostMapping(path = "/{typeSlug:" + SLUG_REGEXP + "}", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
-	@Operation(summary = "Create financial assistance errand", description = "typeSlug is one of financial-assistance-new, financial-assistance-renewal, financial-assistance-supplementary.", responses = {
-		@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
-	})
+	@PostMapping(path = "/{typeSlug:" + SLUG_REGEXP + "}", consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
+	@Operation(summary = "Create financial assistance errand",
+		description = "Multipart request. The 'request' part carries the application (JSON); the optional 'attachments' part carries the citizen's supporting files (any type). typeSlug is one of financial-assistance-new, financial-assistance-renewal, financial-assistance-supplementary. Each attachment is stored on the errand, and a single combined PDF merging them all is generated and stored alongside.",
+		responses = {
+			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
+		})
 	@Validated(OnCreate.class)
 	ResponseEntity<Void> createErrand(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@PathVariable final String typeSlug,
-		@Valid @NotNull @RequestBody final CreateFinancialAssistanceRequest request) {
+		@Valid @NotNull @RequestPart("request") final CreateFinancialAssistanceRequest request,
+		@RequestPart(value = "attachments", required = false) final List<MultipartFile> attachments) {
 
-		final var id = service.create(municipalityId, namespace, typeSlug, request);
+		final var id = service.create(municipalityId, namespace, typeSlug, request, attachments);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}")
 			.buildAndExpand(municipalityId, namespace, id).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)

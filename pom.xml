@@ -18,6 +18,12 @@
 				Verify the latest GA at https://spring.io/projects/spring-modulith
 				before bumping. -->
 		<spring-modulith.version>2.0.0</spring-modulith.version>
+		<!-- Combining errand attachments into a single PDF: PDFBox merges/rasterises,
+				POI + XDocReport render DOCX. Versions aligned with the rest of the fleet
+				(api-service-digital-registered-letter / api-service-templating). -->
+		<pdfbox.version>3.0.7</pdfbox.version>
+		<poi.version>5.5.1</poi.version>
+		<poi-pdf-converter.version>2.2.0</poi-pdf-converter.version>
 		<generated-sources-path>${project.build.directory}/generated-sources</generated-sources-path>
 		<generated-sources-java-path>src/main/java</generated-sources-java-path>
 	</properties>
@@ -82,6 +88,25 @@
 		<dependency>
 			<groupId>se.sundsvall.dept44</groupId>
 			<artifactId>dept44-models</artifactId>
+		</dependency>
+		<!-- Combine uploaded errand attachments into one PDF -->
+		<dependency>
+			<!-- Merge PDFs + rasterise images into PDF pages -->
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>${pdfbox.version}</version>
+		</dependency>
+		<dependency>
+			<!-- Parse .docx -->
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>${poi.version}</version>
+		</dependency>
+		<dependency>
+			<!-- Render .docx to PDF -->
+			<groupId>fr.opensagres.xdocreport</groupId>
+			<artifactId>fr.opensagres.poi.xwpf.converter.pdf</artifactId>
+			<version>${poi-pdf-converter.version}</version>
 		</dependency>
 		<!-- Test -->
 		<dependency>

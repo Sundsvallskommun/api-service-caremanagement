@@ -119,4 +119,30 @@ class AttachmentMapperTest {
 		final var entity = AttachmentDataEntity.create();
 		assertThat(entity).isNotNull();
 	}
+
+	@Test
+	void toAttachmentEntityFromBytesBuildsEntity() {
+		final var entity = AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "sammanstallning.pdf", "application/pdf", "%PDF".getBytes());
+
+		assertThat(entity).isNotNull();
+		assertThat(entity.getErrandId()).isEqualTo("eid");
+		assertThat(entity.getNamespace()).isEqualTo("ns");
+		assertThat(entity.getMunicipalityId()).isEqualTo("mid");
+		assertThat(entity.getFileName()).isEqualTo("sammanstallning.pdf");
+		assertThat(entity.getMimeType()).isEqualTo("application/pdf");
+		assertThat(entity.getFileSize()).isEqualTo(4);
+		assertThat(entity.getAttachmentData()).isNotNull();
+	}
+
+	@Test
+	void toAttachmentEntityFromBytesNullErrandIdReturnsNull() {
+		assertThat(AttachmentMapper.toAttachmentEntity(null, "ns", "mid", "f.pdf", "application/pdf", new byte[] {
+			1
+		})).isNull();
+	}
+
+	@Test
+	void toAttachmentEntityFromBytesNullContentReturnsNull() {
+		assertThat(AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "f.pdf", "application/pdf", null)).isNull();
+	}
 }

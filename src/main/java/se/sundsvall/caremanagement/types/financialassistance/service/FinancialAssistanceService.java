@@ -1,10 +1,13 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.YearMonth;
+import java.util.List;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+import se.sundsvall.caremanagement.attachments.service.AttachmentService;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
@@ -54,17 +57,25 @@ public class FinancialAssistanceService {
 	private final NormberakningService normberakningService;
 	private final CitizenService citizenService;
 	private final DecisionService decisionService;
+	private final AttachmentService attachmentService;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final NormberakningService normberakningService,
-		final CitizenService citizenService, final DecisionService decisionService) {
+		final CitizenService citizenService, final DecisionService decisionService, final AttachmentService attachmentService) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.normberakningService = normberakningService;
 		this.citizenService = citizenService;
 		this.decisionService = decisionService;
+		this.attachmentService = attachmentService;
 	}
 
-	public String create(final String municipalityId, final String namespace, final String typeSlug, final CreateFinancialAssistanceRequest request) {
+	/**
+	 * Create the EB errand, persist its strongly-typed data, and — when the citizen supplied supporting files — store each
+	 * attachment plus a single combined PDF merging them all. Attachments are type-agnostic: the list is handed to the
+	 * attachments module as-is.
+	 */
+	public String create(final String municipalityId, final String namespace, final String typeSlug, final CreateFinancialAssistanceRequest request,
+		final List<MultipartFile> attachments) {
 		final var envelope = Errand.create()
 			.withTypeSlug(typeSlug)
 			.withTitle(ofNullable(request.getTitle()).orElse(DEFAULT_TITLE))
@@ -80,6 +91,11 @@ public class FinancialAssistanceService {
 			.orElseGet(() -> FinancialAssistanceEntity.create().withErrandId(errandId));
 		entity.setApplicationType(applicationTypeForSlug(typeSlug)); // slug is authoritative — overrides any client-sent value
 		repository.save(entity);
+
+		ofNullable(attachments)
+			.filter(files -> !files.isEmpty())
+			.ifPresent(files -> attachmentService.storeAndCombine(municipalityId, namespace, errandId, files));
+
 		return errandId;
 	}
 

@@ -10,6 +10,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
+import se.sundsvall.caremanagement.attachments.service.AttachmentService;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
@@ -62,6 +65,9 @@ class FinancialAssistanceServiceTest {
 	@Mock
 	private DecisionService decisionServiceMock;
 
+	@Mock
+	private AttachmentService attachmentServiceMock;
+
 	@InjectMocks
 	private FinancialAssistanceService service;
 
@@ -77,7 +83,7 @@ class FinancialAssistanceServiceTest {
 			.withTitle("Min ansökan")
 			.withData(FinancialAssistanceData.create().withApplicationType("SUPPLEMENTARY"));
 
-		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request);
+		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, null);
 
 		assertThat(result).isEqualTo(ERRAND_ID);
 
@@ -91,6 +97,8 @@ class FinancialAssistanceServiceTest {
 		verify(repositoryMock).save(entityCaptor.capture());
 		assertThat(entityCaptor.getValue().getErrandId()).isEqualTo(ERRAND_ID);
 		assertThat(entityCaptor.getValue().getApplicationType()).isEqualTo("NEW"); // derived from SLUG_NEW, not the client value
+
+		verify(attachmentServiceMock, never()).storeAndCombine(any(), any(), any(), any()); // no attachments supplied
 	}
 
 	@Test
@@ -99,7 +107,8 @@ class FinancialAssistanceServiceTest {
 
 		final var request = CreateFinancialAssistanceRequest.create().withTitle("Återansökan").withData(FinancialAssistanceData.create());
 
-		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_RENEWAL, request);
+		// Empty attachment list must be treated the same as none — no combine.
+		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_RENEWAL, request, List.of());
 
 		final ArgumentCaptor<Errand> errandCaptor = ArgumentCaptor.forClass(Errand.class);
 		verify(errandServiceMock).createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
@@ -108,6 +117,8 @@ class FinancialAssistanceServiceTest {
 		final ArgumentCaptor<FinancialAssistanceEntity> entityCaptor = ArgumentCaptor.forClass(FinancialAssistanceEntity.class);
 		verify(repositoryMock).save(entityCaptor.capture());
 		assertThat(entityCaptor.getValue().getApplicationType()).isEqualTo("RENEWAL");
+
+		verify(attachmentServiceMock, never()).storeAndCombine(any(), any(), any(), any());
 	}
 
 	@Test
@@ -117,11 +128,29 @@ class FinancialAssistanceServiceTest {
 		final var request = CreateFinancialAssistanceRequest.create()
 			.withData(FinancialAssistanceData.create().withApplicationType("NEW"));
 
-		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request);
+		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, null);
 
 		final ArgumentCaptor<Errand> errandCaptor = ArgumentCaptor.forClass(Errand.class);
 		verify(errandServiceMock).createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
 		assertThat(errandCaptor.getValue().getTitle()).isEqualTo("Ekonomiskt bistånd");
+	}
+
+	@Test
+	void createWithAttachmentsStoresThemAndCombines() {
+		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
+
+		final var request = CreateFinancialAssistanceRequest.create().withTitle("Med bilagor").withData(FinancialAssistanceData.create());
+		final List<MultipartFile> attachments = List.of(
+			new MockMultipartFile("attachments", "hyreskontrakt.pdf", "application/pdf", "%PDF-1.4".getBytes()),
+			new MockMultipartFile("attachments", "hyresavi.png", "image/png", new byte[] {
+				1, 2, 3
+			}));
+
+		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, attachments);
+
+		assertThat(result).isEqualTo(ERRAND_ID);
+		verify(repositoryMock).save(any(FinancialAssistanceEntity.class));
+		verify(attachmentServiceMock).storeAndCombine(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, attachments);
 	}
 
 	@Test
