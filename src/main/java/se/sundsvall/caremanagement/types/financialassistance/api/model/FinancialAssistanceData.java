@@ -71,11 +71,8 @@ public class FinancialAssistanceData {
 	}, nullable = true)
 	private String housingForm;
 
-	@Schema(description = "Number of adults in the housing", examples = "2")
-	private Integer housingAdultsCount;
-
-	@Schema(description = "Number of children in the housing", examples = "1")
-	private Integer housingChildrenCount;
+	@Schema(description = "Total number of persons (adults and children) living in the housing", examples = "3")
+	private Integer housingPersonCount;
 
 	@Schema(description = "Number of rooms plus kitchen", examples = "3")
 	private Integer housingRoomsPlusKitchen;
@@ -306,29 +303,16 @@ public class FinancialAssistanceData {
 		return this;
 	}
 
-	public Integer getHousingAdultsCount() {
-		return housingAdultsCount;
+	public Integer getHousingPersonCount() {
+		return housingPersonCount;
 	}
 
-	public void setHousingAdultsCount(final Integer housingAdultsCount) {
-		this.housingAdultsCount = housingAdultsCount;
+	public void setHousingPersonCount(final Integer housingPersonCount) {
+		this.housingPersonCount = housingPersonCount;
 	}
 
-	public FinancialAssistanceData withHousingAdultsCount(final Integer housingAdultsCount) {
-		this.housingAdultsCount = housingAdultsCount;
-		return this;
-	}
-
-	public Integer getHousingChildrenCount() {
-		return housingChildrenCount;
-	}
-
-	public void setHousingChildrenCount(final Integer housingChildrenCount) {
-		this.housingChildrenCount = housingChildrenCount;
-	}
-
-	public FinancialAssistanceData withHousingChildrenCount(final Integer housingChildrenCount) {
-		this.housingChildrenCount = housingChildrenCount;
+	public FinancialAssistanceData withHousingPersonCount(final Integer housingPersonCount) {
+		this.housingPersonCount = housingPersonCount;
 		return this;
 	}
 
@@ -605,8 +589,7 @@ public class FinancialAssistanceData {
 			&& Objects.equals(hasChildrenUnder21, that.hasChildrenUnder21)
 			&& Objects.equals(childrenResidenceChanged, that.childrenResidenceChanged)
 			&& Objects.equals(childrenResidenceChangeDescription, that.childrenResidenceChangeDescription)
-			&& Objects.equals(housingForm, that.housingForm) && Objects.equals(housingAdultsCount, that.housingAdultsCount)
-			&& Objects.equals(housingChildrenCount, that.housingChildrenCount)
+			&& Objects.equals(housingForm, that.housingForm) && Objects.equals(housingPersonCount, that.housingPersonCount)
 			&& Objects.equals(housingRoomsPlusKitchen, that.housingRoomsPlusKitchen)
 			&& Objects.equals(housingDescription, that.housingDescription) && Objects.equals(housingChanged, that.housingChanged)
 			&& Objects.equals(housingChangeDescription, that.housingChangeDescription) && Objects.equals(hasIncomes, that.hasIncomes)
@@ -623,7 +606,7 @@ public class FinancialAssistanceData {
 	public int hashCode() {
 		return Objects.hash(applicationType, maritalStatus, periodMonth, periodYear, periodChoice, normType,
 			otherBenefitDescription, livelihoodDescription, hasChildrenUnder21, childrenResidenceChanged,
-			childrenResidenceChangeDescription, housingForm, housingAdultsCount, housingChildrenCount, housingRoomsPlusKitchen,
+			childrenResidenceChangeDescription, housingForm, housingPersonCount, housingRoomsPlusKitchen,
 			housingDescription, housingChanged, housingChangeDescription, hasIncomes, hasPendingBenefits, hasAssets,
 			staysInMunicipality, stayDescription, attestation, attestedAt, children, costs, incomes, pendingBenefits, assets,
 			persons, plannings, plannedActivities, jobApplications);
@@ -636,8 +619,8 @@ public class FinancialAssistanceData {
 			+ "', normType='" + normType + "', otherBenefitDescription='" + otherBenefitDescription
 			+ "', livelihoodDescription='" + livelihoodDescription + "', hasChildrenUnder21=" + hasChildrenUnder21
 			+ ", childrenResidenceChanged=" + childrenResidenceChanged + ", childrenResidenceChangeDescription='"
-			+ childrenResidenceChangeDescription + "', housingForm='" + housingForm + "', housingAdultsCount="
-			+ housingAdultsCount + ", housingChildrenCount=" + housingChildrenCount + ", housingRoomsPlusKitchen="
+			+ childrenResidenceChangeDescription + "', housingForm='" + housingForm + "', housingPersonCount="
+			+ housingPersonCount + ", housingRoomsPlusKitchen="
 			+ housingRoomsPlusKitchen + ", housingDescription='" + housingDescription + "', housingChanged=" + housingChanged
 			+ ", housingChangeDescription='" + housingChangeDescription + "', hasIncomes=" + hasIncomes + ", hasPendingBenefits="
 			+ hasPendingBenefits + ", hasAssets=" + hasAssets + ", staysInMunicipality=" + staysInMunicipality

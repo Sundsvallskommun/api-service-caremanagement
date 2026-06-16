@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:57957
+- url: http://localhost:54198
   description: Generated server url
 tags:
 - name: Notes
@@ -2871,6 +2871,39 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/prefill:
+    get:
+      tags:
+      - Financial Assistance
+      summary: Renewal pre-fill from Lifecare
+      description: Returns the applicant's household from the most recent Lifecare
+        normberäkning (persons + children) to pre-fill an EB återansökan. Best-effort
+        — degrades to an empty result (lifecareChecked=false) when Lifecare is unreachable.
+      operationId: prefill
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: personalNumber
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RenewalPrefill"
   /api-docs:
     get:
       tags:
@@ -3202,18 +3235,13 @@ components:
           - LIVING_WITH_PARENTS
           examples:
           - RENTAL
-        housingAdultsCount:
+        housingPersonCount:
           type: integer
           format: int32
-          description: Number of adults in the housing
+          description: Total number of persons (adults and children) living in the
+            housing
           examples:
-          - 2
-        housingChildrenCount:
-          type: integer
-          format: int32
-          description: Number of children in the housing
-          examples:
-          - 1
+          - 3
         housingRoomsPlusKitchen:
           type: integer
           format: int32
@@ -3530,18 +3558,6 @@ components:
           - "25"
           examples:
           - "100"
-        sickFrom:
-          type: string
-          format: date
-          description: Sick leave from date
-          examples:
-          - 2026-05-01
-        sickTo:
-          type: string
-          format: date
-          description: Sick leave to date
-          examples:
-          - 2026-06-30
         sfiStudyPath:
           type: string
           description: SFI study path
@@ -4657,4 +4673,50 @@ components:
         data:
           $ref: "#/components/schemas/FinancialAssistanceData"
           description: The typed financial assistance application payload
+    PrefillPerson:
+      type: object
+      description: A person pre-filled from Lifecare for a financial assistance renewal.
+        Carries only what Lifecare provides — personnummer and name; the citizen completes
+        the rest on the form.
+      properties:
+        role:
+          type: string
+          description: Role on the application; null for a household child
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          examples:
+          - APPLICANT
+        personalNumber:
+          type: string
+          description: Personal number
+          examples:
+          - "198001012389"
+        name:
+          type: string
+          description: Name as registered in Lifecare
+          examples:
+          - Anna Andersson
+    RenewalPrefill:
+      type: object
+      description: "Pre-fill data for a financial assistance renewal (återansökan),\
+        \ read from Lifecare."
+      properties:
+        persons:
+          type: array
+          description: "The applicant and, when applying together, the co-applicant\
+            \ (medsökande)"
+          items:
+            $ref: "#/components/schemas/PrefillPerson"
+        children:
+          type: array
+          description: Children in the household from the most recent normberäkning
+          items:
+            $ref: "#/components/schemas/PrefillPerson"
+        lifecareChecked:
+          type: boolean
+          description: True when the Lifecare lookup succeeded. False means the answer
+            is degraded (empty lists).
+          examples:
+          - "true"
   securitySchemes: {}

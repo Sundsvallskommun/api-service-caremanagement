@@ -44,8 +44,7 @@ class FinancialAssistanceDataTest {
 			.withChildrenResidenceChanged(false)
 			.withChildrenResidenceChangeDescription("Barnen bor växelvis")
 			.withHousingForm("RENTAL")
-			.withHousingAdultsCount(2)
-			.withHousingChildrenCount(1)
+			.withHousingPersonCount(3)
 			.withHousingRoomsPlusKitchen(3)
 			.withHousingDescription("Trerumslägenhet")
 			.withHousingChanged(false)
@@ -79,8 +78,7 @@ class FinancialAssistanceDataTest {
 		assertThat(data.getChildrenResidenceChanged()).isFalse();
 		assertThat(data.getChildrenResidenceChangeDescription()).isEqualTo("Barnen bor växelvis");
 		assertThat(data.getHousingForm()).isEqualTo("RENTAL");
-		assertThat(data.getHousingAdultsCount()).isEqualTo(2);
-		assertThat(data.getHousingChildrenCount()).isEqualTo(1);
+		assertThat(data.getHousingPersonCount()).isEqualTo(3);
 		assertThat(data.getHousingRoomsPlusKitchen()).isEqualTo(3);
 		assertThat(data.getHousingDescription()).isEqualTo("Trerumslägenhet");
 		assertThat(data.getHousingChanged()).isFalse();
@@ -119,8 +117,7 @@ class FinancialAssistanceDataTest {
 		data.setChildrenResidenceChanged(true);
 		data.setChildrenResidenceChangeDescription("change");
 		data.setHousingForm("SUBLET");
-		data.setHousingAdultsCount(1);
-		data.setHousingChildrenCount(0);
+		data.setHousingPersonCount(3);
 		data.setHousingRoomsPlusKitchen(2);
 		data.setHousingDescription("housing");
 		data.setHousingChanged(true);

@@ -57,8 +57,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getChildrenResidenceChanged()).isFalse();
 		assertThat(entity.getChildrenResidenceChangeDescription()).isEqualTo("Bor växelvis");
 		assertThat(entity.getHousingForm()).isEqualTo("RENTAL");
-		assertThat(entity.getHousingAdultsCount()).isEqualTo(2);
-		assertThat(entity.getHousingChildrenCount()).isEqualTo(1);
+		assertThat(entity.getHousingPersonCount()).isEqualTo(3);
 		assertThat(entity.getHousingRoomsPlusKitchen()).isEqualTo(3);
 		assertThat(entity.getHousingDescription()).isEqualTo("Trerumslägenhet");
 		assertThat(entity.getHousingChanged()).isFalse();
@@ -128,8 +127,6 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getPlannings().getFirst().getWorkExtent()).isEqualTo("100");
 		assertThat(entity.getPlannings().getFirst().getWorkDescription()).isEqualTo("Arbete");
 		assertThat(entity.getPlannings().getFirst().getSickLeaveLevel()).isEqualTo("50");
-		assertThat(entity.getPlannings().getFirst().getSickFrom()).isEqualTo(DATE);
-		assertThat(entity.getPlannings().getFirst().getSickTo()).isEqualTo(DATE.plusMonths(1));
 		assertThat(entity.getPlannings().getFirst().getSfiStudyPath()).isEqualTo("PATH_1");
 		assertThat(entity.getPlannings().getFirst().getSfiCourse()).isEqualTo("KURS_A");
 		assertThat(entity.getPlannings().getFirst().getOtherDescription()).isEqualTo("Övrigt");
@@ -166,8 +163,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(data.getChildrenResidenceChanged()).isTrue();
 		assertThat(data.getChildrenResidenceChangeDescription()).isEqualTo("Ändrad");
 		assertThat(data.getHousingForm()).isEqualTo("CONDOMINIUM");
-		assertThat(data.getHousingAdultsCount()).isEqualTo(1);
-		assertThat(data.getHousingChildrenCount()).isEqualTo(0);
+		assertThat(data.getHousingPersonCount()).isEqualTo(3);
 		assertThat(data.getHousingRoomsPlusKitchen()).isEqualTo(2);
 		assertThat(data.getHousingDescription()).isEqualTo("Tvåa");
 		assertThat(data.getHousingChanged()).isTrue();
@@ -266,8 +262,7 @@ class FinancialAssistanceMapperTest {
 			.withChildrenResidenceChanged(false)
 			.withChildrenResidenceChangeDescription("Bor växelvis")
 			.withHousingForm("RENTAL")
-			.withHousingAdultsCount(2)
-			.withHousingChildrenCount(1)
+			.withHousingPersonCount(3)
 			.withHousingRoomsPlusKitchen(3)
 			.withHousingDescription("Trerumslägenhet")
 			.withHousingChanged(false)
@@ -330,8 +325,6 @@ class FinancialAssistanceMapperTest {
 				.withWorkExtent("100")
 				.withWorkDescription("Arbete")
 				.withSickLeaveLevel("50")
-				.withSickFrom(DATE)
-				.withSickTo(DATE.plusMonths(1))
 				.withSfiStudyPath("PATH_1")
 				.withSfiCourse("KURS_A")
 				.withOtherDescription("Övrigt")))
@@ -362,8 +355,7 @@ class FinancialAssistanceMapperTest {
 			.withChildrenResidenceChanged(true)
 			.withChildrenResidenceChangeDescription("Ändrad")
 			.withHousingForm("CONDOMINIUM")
-			.withHousingAdultsCount(1)
-			.withHousingChildrenCount(0)
+			.withHousingPersonCount(3)
 			.withHousingRoomsPlusKitchen(2)
 			.withHousingDescription("Tvåa")
 			.withHousingChanged(true)
@@ -426,8 +418,6 @@ class FinancialAssistanceMapperTest {
 				.withWorkExtent("100")
 				.withWorkDescription("Arbete")
 				.withSickLeaveLevel("50")
-				.withSickFrom(DATE)
-				.withSickTo(DATE.plusMonths(1))
 				.withSfiStudyPath("PATH_1")
 				.withSfiCourse("KURS_A")
 				.withOtherDescription("Övrigt")))

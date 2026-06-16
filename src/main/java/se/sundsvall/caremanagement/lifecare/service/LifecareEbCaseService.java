@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.lifecare.service;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedDecisionPersonDTO;
 import java.time.DateTimeException;
@@ -87,6 +88,41 @@ public class LifecareEbCaseService {
 			latestDecision.map(LifecareEbCaseService::hasCoApplicant).orElse(false));
 	}
 
+	/**
+	 * The household roster from the person's most recent normberäkning over the lookback window, paired with the
+	 * co-applicant flagged on the most recent beslut — the basis for an EB återansökan pre-fill. Propagates the
+	 * integration's {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
+	 *
+	 * @param  personId      the applicant's personnummer
+	 * @param  referenceDate the date the lookup is evaluated against (bounds the lookback window)
+	 * @return               the roster (applicant, co-applicant and the normberäkning members); members empty when none
+	 */
+	public LifecareEbRoster latestRoster(final String personId, final LocalDate referenceDate) {
+		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
+		final var end = referenceDate.format(ISO_LOCAL_DATE);
+
+		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end, null, null, false))
+			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
+			.orElseGet(List::of);
+
+		final var decisions = ofNullable(lifecareFcIntegration.getDecisions(personId, start, end, null, null, false))
+			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
+			.orElseGet(List::of);
+
+		final var members = latestCalculation(calculations)
+			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
+			.orElseGet(List::of).stream()
+			.filter(person -> hasText(person.getPersonId()))
+			.map(person -> new LifecareEbRoster.Member(person.getPersonId(), person.getName()))
+			.toList();
+
+		final var coApplicant = latestDecision(decisions)
+			.flatMap(LifecareEbCaseService::coApplicantPersonId)
+			.orElse(null);
+
+		return new LifecareEbRoster(personId, coApplicant, members);
+	}
+
 	/** The decision with the most recent period (to/from), used to read the current household constellation. */
 	private static Optional<PersonBasedDecisionDTO> latestDecision(final List<PersonBasedDecisionDTO> decisions) {
 		return decisions.stream()
@@ -101,6 +137,28 @@ public class LifecareEbCaseService {
 			.map(PersonBasedDecisionPersonDTO::getPersonId)
 			.anyMatch(StringUtils::hasText);
 		return flagged || hasText(decision.getCoApplicant());
+	}
+
+	/** The co-applicant's personnummer on a decision — a flagged participant, falling back to the scalar field. */
+	private static Optional<String> coApplicantPersonId(final PersonBasedDecisionDTO decision) {
+		final var flagged = ofNullable(decision.getDecisionPersonDTOs()).orElseGet(List::of).stream()
+			.filter(person -> Boolean.TRUE.equals(person.getIsCoApplicant()))
+			.map(PersonBasedDecisionPersonDTO::getPersonId)
+			.filter(StringUtils::hasText)
+			.findFirst();
+		return flagged.or(() -> ofNullable(decision.getCoApplicant()).filter(StringUtils::hasText));
+	}
+
+	/** The normberäkning with the most recent period (to/from), whose persons form the household constellation. */
+	private static Optional<PersonBasedCalculationDTO> latestCalculation(final List<PersonBasedCalculationDTO> calculations) {
+		return calculations.stream()
+			.filter(calculation -> periodOf(calculation) != null)
+			.max(comparing(LifecareEbCaseService::periodOf));
+	}
+
+	/** The representative period of a normberäkning — its {@code toDate} month, falling back to {@code fromDate}. */
+	private static YearMonth periodOf(final PersonBasedCalculationDTO calculation) {
+		return toYearMonth(calculation.getToDate()).or(() -> toYearMonth(calculation.getFromDate())).orElse(null);
 	}
 
 	/** The year-months a decision's from/to period covers (bounded; a single side covers just that month). */

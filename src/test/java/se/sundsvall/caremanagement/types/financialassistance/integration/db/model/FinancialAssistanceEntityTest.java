@@ -39,8 +39,7 @@ class FinancialAssistanceEntityTest {
 			.withChildrenResidenceChanged(false)
 			.withChildrenResidenceChangeDescription("Bor växelvis")
 			.withHousingForm("RENTAL")
-			.withHousingAdultsCount(2)
-			.withHousingChildrenCount(1)
+			.withHousingPersonCount(3)
 			.withHousingRoomsPlusKitchen(3)
 			.withHousingDescription("Trerumslägenhet")
 			.withHousingChanged(false)
@@ -77,8 +76,7 @@ class FinancialAssistanceEntityTest {
 		assertThat(entity.getChildrenResidenceChanged()).isFalse();
 		assertThat(entity.getChildrenResidenceChangeDescription()).isEqualTo("Bor växelvis");
 		assertThat(entity.getHousingForm()).isEqualTo("RENTAL");
-		assertThat(entity.getHousingAdultsCount()).isEqualTo(2);
-		assertThat(entity.getHousingChildrenCount()).isEqualTo(1);
+		assertThat(entity.getHousingPersonCount()).isEqualTo(3);
 		assertThat(entity.getHousingRoomsPlusKitchen()).isEqualTo(3);
 		assertThat(entity.getHousingDescription()).isEqualTo("Trerumslägenhet");
 		assertThat(entity.getHousingChanged()).isFalse();
@@ -129,8 +127,7 @@ class FinancialAssistanceEntityTest {
 		entity.setChildrenResidenceChanged(true);
 		entity.setChildrenResidenceChangeDescription("Flytt");
 		entity.setHousingForm("SUBLET");
-		entity.setHousingAdultsCount(1);
-		entity.setHousingChildrenCount(0);
+		entity.setHousingPersonCount(3);
 		entity.setHousingRoomsPlusKitchen(2);
 		entity.setHousingDescription("Andrahand");
 		entity.setHousingChanged(true);
@@ -167,8 +164,7 @@ class FinancialAssistanceEntityTest {
 		assertThat(entity.getChildrenResidenceChanged()).isTrue();
 		assertThat(entity.getChildrenResidenceChangeDescription()).isEqualTo("Flytt");
 		assertThat(entity.getHousingForm()).isEqualTo("SUBLET");
-		assertThat(entity.getHousingAdultsCount()).isEqualTo(1);
-		assertThat(entity.getHousingChildrenCount()).isZero();
+		assertThat(entity.getHousingPersonCount()).isEqualTo(3);
 		assertThat(entity.getHousingRoomsPlusKitchen()).isEqualTo(2);
 		assertThat(entity.getHousingDescription()).isEqualTo("Andrahand");
 		assertThat(entity.getHousingChanged()).isTrue();

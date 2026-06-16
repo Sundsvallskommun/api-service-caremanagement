@@ -69,11 +69,8 @@ public class FinancialAssistanceEntity implements Auditable {
 	@Column(name = "housing_form", length = 32)
 	private String housingForm;
 
-	@Column(name = "housing_adults_count")
-	private Integer housingAdultsCount;
-
-	@Column(name = "housing_children_count")
-	private Integer housingChildrenCount;
+	@Column(name = "housing_person_count")
+	private Integer housingPersonCount;
 
 	@Column(name = "housing_rooms_plus_kitchen")
 	private Integer housingRoomsPlusKitchen;
@@ -261,20 +258,12 @@ public class FinancialAssistanceEntity implements Auditable {
 		this.housingForm = housingForm;
 	}
 
-	public Integer getHousingAdultsCount() {
-		return housingAdultsCount;
+	public Integer getHousingPersonCount() {
+		return housingPersonCount;
 	}
 
-	public void setHousingAdultsCount(final Integer housingAdultsCount) {
-		this.housingAdultsCount = housingAdultsCount;
-	}
-
-	public Integer getHousingChildrenCount() {
-		return housingChildrenCount;
-	}
-
-	public void setHousingChildrenCount(final Integer housingChildrenCount) {
-		this.housingChildrenCount = housingChildrenCount;
+	public void setHousingPersonCount(final Integer housingPersonCount) {
+		this.housingPersonCount = housingPersonCount;
 	}
 
 	public Integer getHousingRoomsPlusKitchen() {
@@ -520,13 +509,8 @@ public class FinancialAssistanceEntity implements Auditable {
 		return this;
 	}
 
-	public FinancialAssistanceEntity withHousingAdultsCount(final Integer v) {
-		this.housingAdultsCount = v;
-		return this;
-	}
-
-	public FinancialAssistanceEntity withHousingChildrenCount(final Integer v) {
-		this.housingChildrenCount = v;
+	public FinancialAssistanceEntity withHousingPersonCount(final Integer v) {
+		this.housingPersonCount = v;
 		return this;
 	}
 
@@ -652,8 +636,8 @@ public class FinancialAssistanceEntity implements Auditable {
 			&& Objects.equals(livelihoodDescription, that.livelihoodDescription) && Objects.equals(hasChildrenUnder21, that.hasChildrenUnder21)
 			&& Objects.equals(childrenResidenceChanged, that.childrenResidenceChanged)
 			&& Objects.equals(childrenResidenceChangeDescription, that.childrenResidenceChangeDescription)
-			&& Objects.equals(housingForm, that.housingForm) && Objects.equals(housingAdultsCount, that.housingAdultsCount)
-			&& Objects.equals(housingChildrenCount, that.housingChildrenCount) && Objects.equals(housingRoomsPlusKitchen, that.housingRoomsPlusKitchen)
+			&& Objects.equals(housingForm, that.housingForm) && Objects.equals(housingPersonCount, that.housingPersonCount)
+			&& Objects.equals(housingRoomsPlusKitchen, that.housingRoomsPlusKitchen)
 			&& Objects.equals(housingDescription, that.housingDescription) && Objects.equals(housingChanged, that.housingChanged)
 			&& Objects.equals(housingChangeDescription, that.housingChangeDescription) && Objects.equals(hasIncomes, that.hasIncomes)
 			&& Objects.equals(hasPendingBenefits, that.hasPendingBenefits) && Objects.equals(hasAssets, that.hasAssets)
@@ -670,7 +654,7 @@ public class FinancialAssistanceEntity implements Auditable {
 	public int hashCode() {
 		return Objects.hash(errandId, applicationType, maritalStatus, periodMonth, periodYear, periodChoice, normType,
 			otherBenefitDescription, livelihoodDescription, hasChildrenUnder21, childrenResidenceChanged, childrenResidenceChangeDescription,
-			housingForm, housingAdultsCount, housingChildrenCount, housingRoomsPlusKitchen, housingDescription, housingChanged,
+			housingForm, housingPersonCount, housingRoomsPlusKitchen, housingDescription, housingChanged,
 			housingChangeDescription, hasIncomes, hasPendingBenefits, hasAssets, staysInMunicipality, stayDescription, attestation,
 			attestedAt, children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
 			created, modified);

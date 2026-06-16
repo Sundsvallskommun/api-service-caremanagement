@@ -14,8 +14,10 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Eligibili
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
+import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
 
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +44,9 @@ class FinancialAssistanceResourceTest {
 
 	@MockitoBean
 	private EligibilityService eligibilityServiceMock;
+
+	@MockitoBean
+	private RenewalPrefillService prefillServiceMock;
 
 	@Autowired
 	private WebTestClient webTestClient;
@@ -97,6 +102,23 @@ class FinancialAssistanceResourceTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getReasonCode()).isEqualTo("EXISTING_CASE");
 		verify(eligibilityServiceMock).evaluate(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(EligibilityRequest.class));
+	}
+
+	@Test
+	void prefill() {
+		when(prefillServiceMock.prefill("198001012389")).thenReturn(RenewalPrefill.create().withLifecareChecked(true));
+
+		final var prefill = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/prefill").queryParam("personalNumber", "198001012389").build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(RenewalPrefill.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(prefill).isNotNull();
+		assertThat(prefill.isLifecareChecked()).isTrue();
+		verify(prefillServiceMock).prefill("198001012389");
 	}
 
 	@Test

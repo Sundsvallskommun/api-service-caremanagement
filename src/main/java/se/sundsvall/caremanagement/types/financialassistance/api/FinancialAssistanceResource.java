@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
@@ -24,9 +25,12 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Eligibili
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
+import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
+import se.sundsvall.dept44.common.validators.annotation.ValidPersonalNumber;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -54,10 +58,13 @@ class FinancialAssistanceResource {
 
 	private final FinancialAssistanceService service;
 	private final EligibilityService eligibilityService;
+	private final RenewalPrefillService renewalPrefillService;
 
-	FinancialAssistanceResource(final FinancialAssistanceService service, final EligibilityService eligibilityService) {
+	FinancialAssistanceResource(final FinancialAssistanceService service, final EligibilityService eligibilityService,
+		final RenewalPrefillService renewalPrefillService) {
 		this.service = service;
 		this.eligibilityService = eligibilityService;
+		this.renewalPrefillService = renewalPrefillService;
 	}
 
 	@PostMapping(path = "/{typeSlug:" + SLUG_REGEXP + "}", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
@@ -90,6 +97,20 @@ class FinancialAssistanceResource {
 		@Valid @NotNull @RequestBody final EligibilityRequest request) {
 
 		return ok(eligibilityService.evaluate(municipalityId, namespace, request));
+	}
+
+	@GetMapping(path = "/financial-assistance/prefill", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Renewal pre-fill from Lifecare",
+		description = "Returns the applicant's household from the most recent Lifecare normberäkning (persons + children) to pre-fill an EB återansökan. Best-effort — degrades to an empty result (lifecareChecked=false) when Lifecare is unreachable.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
+		})
+	ResponseEntity<RenewalPrefill> prefill(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@ValidPersonalNumber @RequestParam final String personalNumber) {
+
+		return ok(renewalPrefillService.prefill(personalNumber));
 	}
 
 	@GetMapping(path = "/financial-assistance/{errandId}", produces = APPLICATION_JSON_VALUE)

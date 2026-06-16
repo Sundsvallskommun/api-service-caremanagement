@@ -1,7 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDate;
 import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
@@ -42,12 +41,6 @@ public class Planning {
 		"100", "75", "50", "25"
 	}, nullable = true)
 	private String sickLeaveLevel;
-
-	@Schema(description = "Sick leave from date", examples = "2026-05-01")
-	private LocalDate sickFrom;
-
-	@Schema(description = "Sick leave to date", examples = "2026-06-30")
-	private LocalDate sickTo;
 
 	@Schema(description = "SFI study path", examples = "1", allowableValues = {
 		"1", "2", "3"
@@ -137,32 +130,6 @@ public class Planning {
 		return this;
 	}
 
-	public LocalDate getSickFrom() {
-		return sickFrom;
-	}
-
-	public void setSickFrom(final LocalDate sickFrom) {
-		this.sickFrom = sickFrom;
-	}
-
-	public Planning withSickFrom(final LocalDate sickFrom) {
-		this.sickFrom = sickFrom;
-		return this;
-	}
-
-	public LocalDate getSickTo() {
-		return sickTo;
-	}
-
-	public void setSickTo(final LocalDate sickTo) {
-		this.sickTo = sickTo;
-	}
-
-	public Planning withSickTo(final LocalDate sickTo) {
-		this.sickTo = sickTo;
-		return this;
-	}
-
 	public String getSfiStudyPath() {
 		return sfiStudyPath;
 	}
@@ -209,22 +176,20 @@ public class Planning {
 		final Planning that = (Planning) o;
 		return Objects.equals(person, that.person) && Objects.equals(planningType, that.planningType)
 			&& Objects.equals(workExtent, that.workExtent) && Objects.equals(workDescription, that.workDescription)
-			&& Objects.equals(sickLeaveLevel, that.sickLeaveLevel) && Objects.equals(sickFrom, that.sickFrom)
-			&& Objects.equals(sickTo, that.sickTo) && Objects.equals(sfiStudyPath, that.sfiStudyPath)
+			&& Objects.equals(sickLeaveLevel, that.sickLeaveLevel) && Objects.equals(sfiStudyPath, that.sfiStudyPath)
 			&& Objects.equals(sfiCourse, that.sfiCourse) && Objects.equals(otherDescription, that.otherDescription);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(person, planningType, workExtent, workDescription, sickLeaveLevel, sickFrom, sickTo,
+		return Objects.hash(person, planningType, workExtent, workDescription, sickLeaveLevel,
 			sfiStudyPath, sfiCourse, otherDescription);
 	}
 
 	@Override
 	public String toString() {
 		return "Planning{person='" + person + "', planningType='" + planningType + "', workExtent='" + workExtent
-			+ "', workDescription='" + workDescription + "', sickLeaveLevel='" + sickLeaveLevel + "', sickFrom=" + sickFrom
-			+ ", sickTo=" + sickTo + ", sfiStudyPath='" + sfiStudyPath + "', sfiCourse='" + sfiCourse
-			+ "', otherDescription='" + otherDescription + "'}";
+			+ "', workDescription='" + workDescription + "', sickLeaveLevel='" + sickLeaveLevel + "', sfiStudyPath='" + sfiStudyPath
+			+ "', sfiCourse='" + sfiCourse + "', otherDescription='" + otherDescription + "'}";
 	}
 }

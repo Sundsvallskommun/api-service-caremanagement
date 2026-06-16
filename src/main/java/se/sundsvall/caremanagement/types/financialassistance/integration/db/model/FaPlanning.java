@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.types.financialassistance.integration.db.mod
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
-import java.time.LocalDate;
 import java.util.Objects;
 
 import static org.hibernate.Length.LONG32;
@@ -24,12 +23,6 @@ public class FaPlanning {
 
 	@Column(name = "sick_leave_level")
 	private String sickLeaveLevel;
-
-	@Column(name = "sick_from")
-	private LocalDate sickFrom;
-
-	@Column(name = "sick_to")
-	private LocalDate sickTo;
 
 	@Column(name = "sfi_study_path")
 	private String sfiStudyPath;
@@ -64,14 +57,6 @@ public class FaPlanning {
 		return sickLeaveLevel;
 	}
 
-	public LocalDate getSickFrom() {
-		return sickFrom;
-	}
-
-	public LocalDate getSickTo() {
-		return sickTo;
-	}
-
 	public String getSfiStudyPath() {
 		return sfiStudyPath;
 	}
@@ -102,14 +87,6 @@ public class FaPlanning {
 
 	public void setSickLeaveLevel(final String sickLeaveLevel) {
 		this.sickLeaveLevel = sickLeaveLevel;
-	}
-
-	public void setSickFrom(final LocalDate sickFrom) {
-		this.sickFrom = sickFrom;
-	}
-
-	public void setSickTo(final LocalDate sickTo) {
-		this.sickTo = sickTo;
 	}
 
 	public void setSfiStudyPath(final String sfiStudyPath) {
@@ -149,16 +126,6 @@ public class FaPlanning {
 		return this;
 	}
 
-	public FaPlanning withSickFrom(final LocalDate sickFrom) {
-		this.sickFrom = sickFrom;
-		return this;
-	}
-
-	public FaPlanning withSickTo(final LocalDate sickTo) {
-		this.sickTo = sickTo;
-		return this;
-	}
-
 	public FaPlanning withSfiStudyPath(final String sfiStudyPath) {
 		this.sfiStudyPath = sfiStudyPath;
 		return this;
@@ -181,22 +148,20 @@ public class FaPlanning {
 		final FaPlanning that = (FaPlanning) o;
 		return Objects.equals(person, that.person) && Objects.equals(planningType, that.planningType)
 			&& Objects.equals(workExtent, that.workExtent) && Objects.equals(workDescription, that.workDescription)
-			&& Objects.equals(sickLeaveLevel, that.sickLeaveLevel) && Objects.equals(sickFrom, that.sickFrom)
-			&& Objects.equals(sickTo, that.sickTo) && Objects.equals(sfiStudyPath, that.sfiStudyPath)
+			&& Objects.equals(sickLeaveLevel, that.sickLeaveLevel) && Objects.equals(sfiStudyPath, that.sfiStudyPath)
 			&& Objects.equals(sfiCourse, that.sfiCourse) && Objects.equals(otherDescription, that.otherDescription);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(person, planningType, workExtent, workDescription, sickLeaveLevel, sickFrom, sickTo,
+		return Objects.hash(person, planningType, workExtent, workDescription, sickLeaveLevel,
 			sfiStudyPath, sfiCourse, otherDescription);
 	}
 
 	@Override
 	public String toString() {
 		return "FaPlanning{person='" + person + "', planningType='" + planningType + "', workExtent='" + workExtent
-			+ "', workDescription='" + workDescription + "', sickLeaveLevel='" + sickLeaveLevel + "', sickFrom=" + sickFrom
-			+ ", sickTo=" + sickTo + ", sfiStudyPath='" + sfiStudyPath + "', sfiCourse='" + sfiCourse
-			+ "', otherDescription='" + otherDescription + "'}";
+			+ "', workDescription='" + workDescription + "', sickLeaveLevel='" + sickLeaveLevel + "', sfiStudyPath='" + sfiStudyPath
+			+ "', sfiCourse='" + sfiCourse + "', otherDescription='" + otherDescription + "'}";
 	}
 }

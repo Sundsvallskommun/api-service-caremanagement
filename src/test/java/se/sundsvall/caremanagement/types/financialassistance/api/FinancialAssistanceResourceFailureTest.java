@@ -14,6 +14,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Eligibili
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
+import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
 
 import static java.util.UUID.randomUUID;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -35,6 +36,9 @@ class FinancialAssistanceResourceFailureTest {
 
 	@MockitoBean
 	private EligibilityService eligibilityServiceMock;
+
+	@MockitoBean
+	private RenewalPrefillService prefillServiceMock;
 
 	@Autowired
 	private WebTestClient webTestClient;
@@ -103,6 +107,16 @@ class FinancialAssistanceResourceFailureTest {
 			.expectStatus().isBadRequest();
 
 		verifyNoInteractions(eligibilityServiceMock);
+	}
+
+	@Test
+	void prefill_invalidPersonalNumber() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/prefill").queryParam("personalNumber", "123").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(prefillServiceMock);
 	}
 
 	@Test

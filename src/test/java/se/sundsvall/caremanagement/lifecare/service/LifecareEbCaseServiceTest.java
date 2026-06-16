@@ -5,6 +5,7 @@ import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalcul
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedDecisionPersonDTO;
 import java.time.LocalDate;
@@ -152,6 +153,72 @@ class LifecareEbCaseServiceTest {
 		assertThat(summary.latestDecisionPeriod()).isEqualTo(YearMonth.of(2026, 5));
 		assertThat(summary.hasCoApplicant()).isFalse(); // newest decision has none
 		assertThat(summary.decisionMonths()).containsExactlyInAnyOrder(YearMonth.of(2026, 3), YearMonth.of(2026, 5));
+	}
+
+	@Test
+	void latestRosterReadsLatestCalculationMembersAndFlaggedCoApplicant() {
+		final var olderCalc = new PersonBasedCalculationDTO().toDate("2026-04-30")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("198001019999").name("Old"));
+		final var newerCalc = new PersonBasedCalculationDTO().toDate("2026-06-30")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT).name("Anna"))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("201801012380").name("Kid"));
+		final var decision = new PersonBasedDecisionDTO().toDate("2026-06-30")
+			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId("198202022397").isCoApplicant(true));
+
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(olderCalc, newerCalc)));
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().addResultItem(decision));
+
+		final var roster = service().latestRoster(APPLICANT, REFERENCE);
+
+		assertThat(roster.applicant()).isEqualTo(APPLICANT);
+		assertThat(roster.coApplicant()).isEqualTo("198202022397");
+		assertThat(roster.members()).extracting(LifecareEbRoster.Member::personalNumber).containsExactly(APPLICANT, "201801012380");
+		assertThat(roster.members()).extracting(LifecareEbRoster.Member::name).containsExactly("Anna", "Kid");
+	}
+
+	@Test
+	void latestRosterFiltersBlankPersonIdsAndFallsBackToScalarCoApplicant() {
+		final var calc = new PersonBasedCalculationDTO().toDate("2026-06-30")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT).name("Anna"))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("  ").name("Blank"));
+
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(calc));
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO()
+				.addResultItem(new PersonBasedDecisionDTO().toDate("2026-06-30").coApplicant("198202022397")));
+
+		final var roster = service().latestRoster(APPLICANT, REFERENCE);
+
+		assertThat(roster.members()).extracting(LifecareEbRoster.Member::personalNumber).containsExactly(APPLICANT);
+		assertThat(roster.coApplicant()).isEqualTo("198202022397");
+	}
+
+	@Test
+	void latestRosterEmptyWhenNoCalculationsOrDecisions() {
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO());
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
+
+		final var roster = service().latestRoster(APPLICANT, REFERENCE);
+
+		assertThat(roster.applicant()).isEqualTo(APPLICANT);
+		assertThat(roster.coApplicant()).isNull();
+		assertThat(roster.members()).isEmpty();
+	}
+
+	@Test
+	void latestRosterToleratesNullComposites() {
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
+
+		final var roster = service().latestRoster(APPLICANT, REFERENCE);
+
+		assertThat(roster.members()).isEmpty();
+		assertThat(roster.coApplicant()).isNull();
 	}
 
 	@Test
