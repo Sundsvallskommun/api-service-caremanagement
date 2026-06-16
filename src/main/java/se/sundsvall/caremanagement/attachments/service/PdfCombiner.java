@@ -18,6 +18,8 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts.FontName;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.apache.poi.hwpf.HWPFDocument;
+import org.apache.poi.hwpf.extractor.WordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -29,15 +31,16 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
  *
  * <p>
  * Each source is parsed into a {@link PDDocument} first — existing PDFs are loaded, images are rasterised onto a page
- * sized to the image, and {@code .docx} documents are rendered via POI/XDocReport. Anything we cannot parse (an unknown
- * or corrupt file) becomes a one-page placeholder naming the file, so combining a list <em>never</em> fails because of
- * a
- * single odd attachment. The per-source documents are then concatenated with PDFBox.
+ * sized to the image, {@code .docx} is rendered via POI/XDocReport, and legacy {@code .doc} (HWPF) is laid out as its
+ * extracted text. Anything we cannot parse (an unknown or corrupt file) becomes a one-page placeholder naming the file,
+ * so combining a list <em>never</em> fails because of a single odd attachment. The per-source documents are then
+ * concatenated with PDFBox.
  * </p>
  */
 final class PdfCombiner {
 
 	private static final String DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+	private static final String DOC_MIME = "application/msword";
 	private static final byte[] PDF_MAGIC = {
 		'%', 'P', 'D', 'F'
 	};
@@ -91,9 +94,12 @@ final class PdfCombiner {
 			if (isDocx(source)) {
 				return Loader.loadPDF(docxToPdf(source.content()));
 			}
-			return placeholderDocument("Bilaga: %s (filtypen kunde inte infogas i sammanställningen)".formatted(name));
+			if (isDoc(source)) {
+				return docToDocument(source.content());
+			}
+			return textDocument("Bilaga: %s (filtypen kunde inte infogas i sammanställningen)".formatted(name));
 		} catch (final Exception e) {
-			return placeholderDocument("Bilaga: %s (kunde inte läsas: %s)".formatted(name, e.getMessage()));
+			return textDocument("Bilaga: %s (kunde inte läsas: %s)".formatted(name, e.getMessage()));
 		}
 	}
 
@@ -111,6 +117,11 @@ final class PdfCombiner {
 	private static boolean isDocx(final SourceFile source) {
 		return DOCX_MIME.equalsIgnoreCase(source.contentType())
 			|| hasExtension(source.fileName(), ".docx");
+	}
+
+	private static boolean isDoc(final SourceFile source) {
+		return DOC_MIME.equalsIgnoreCase(source.contentType())
+			|| hasExtension(source.fileName(), ".doc");
 	}
 
 	private static PDDocument imageDocument(final byte[] content, final String name) throws IOException {
@@ -133,43 +144,76 @@ final class PdfCombiner {
 		}
 	}
 
-	private static PDDocument placeholderDocument(final String text) {
-		try {
-			final var document = new PDDocument();
-			final var page = new PDPage(PDRectangle.A4);
-			document.addPage(page);
-			try (final var contentStream = new PDPageContentStream(document, page)) {
-				contentStream.beginText();
-				contentStream.setFont(new PDType1Font(FontName.HELVETICA), FONT_SIZE);
-				contentStream.setLeading(LEADING);
-				contentStream.newLineAtOffset(MARGIN, PDRectangle.A4.getHeight() - MARGIN);
-				for (final var line : wrap(sanitize(text))) {
-					contentStream.showText(line);
-					contentStream.newLine();
-				}
-				contentStream.endText();
-			}
-			return document;
-		} catch (final IOException e) {
-			throw Problem.valueOf(INTERNAL_SERVER_ERROR, "Could not render placeholder page: %s".formatted(e.getMessage()));
+	/** Legacy binary {@code .doc}: there is no in-process renderer, so lay out the document's extracted text. */
+	private static PDDocument docToDocument(final byte[] content) throws IOException {
+		try (final var input = new ByteArrayInputStream(content);
+			final var document = new HWPFDocument(input);
+			final var extractor = new WordExtractor(document)) {
+			return textDocument(extractor.getText());
 		}
 	}
 
-	/** Keep the placeholder text to glyphs the standard Helvetica font can render. */
+	/** Render the given text across as many A4 pages as it takes; also serves as the placeholder page renderer. */
+	static PDDocument textDocument(final String text) {
+		try {
+			final var lines = layout(text);
+			final var document = new PDDocument();
+			var index = 0;
+			do {
+				final var page = new PDPage(PDRectangle.A4);
+				document.addPage(page);
+				try (final var contentStream = new PDPageContentStream(document, page)) {
+					contentStream.beginText();
+					contentStream.setFont(new PDType1Font(FontName.HELVETICA), FONT_SIZE);
+					contentStream.setLeading(LEADING);
+					contentStream.newLineAtOffset(MARGIN, PDRectangle.A4.getHeight() - MARGIN);
+					var y = PDRectangle.A4.getHeight() - MARGIN;
+					while (index < lines.size() && y > MARGIN) {
+						contentStream.showText(lines.get(index));
+						contentStream.newLine();
+						y -= LEADING;
+						index++;
+					}
+					contentStream.endText();
+				}
+			} while (index < lines.size());
+			return document;
+		} catch (final IOException e) {
+			throw Problem.valueOf(INTERNAL_SERVER_ERROR, "Could not render text page: %s".formatted(e.getMessage()));
+		}
+	}
+
+	/** Split on line breaks, sanitise each line, and wrap it to the page width. */
+	private static List<String> layout(final String text) {
+		final var lines = new ArrayList<String>();
+		for (final var raw : text.split("\r\n|\r|\n", -1)) {
+			final var clean = sanitize(raw);
+			if (clean.isEmpty()) {
+				lines.add("");
+				continue;
+			}
+			for (var start = 0; start < clean.length(); start += WRAP) {
+				lines.add(clean.substring(start, Math.min(start + WRAP, clean.length())));
+			}
+		}
+		return lines.isEmpty() ? List.of("") : lines;
+	}
+
+	/** Keep a single line to glyphs the standard Helvetica font can render (tabs and control chars become spaces). */
 	private static String sanitize(final String text) {
 		final var builder = new StringBuilder(text.length());
 		for (final var character : text.toCharArray()) {
-			builder.append((character >= 32 && character <= 255) ? character : '?');
+			if (character == '\t') {
+				builder.append("    ");
+			} else if (character < 32) {
+				builder.append(' ');
+			} else if (character <= 255) {
+				builder.append(character);
+			} else {
+				builder.append('?');
+			}
 		}
 		return builder.toString();
-	}
-
-	private static List<String> wrap(final String text) {
-		final var lines = new ArrayList<String>();
-		for (var start = 0; start < text.length(); start += WRAP) {
-			lines.add(text.substring(start, Math.min(start + WRAP, text.length())));
-		}
-		return lines.isEmpty() ? List.of("") : lines;
 	}
 
 	private static boolean startsWith(final byte[] content, final byte[] prefix) {

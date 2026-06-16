@@ -103,6 +103,12 @@
 			<version>${poi.version}</version>
 		</dependency>
 		<dependency>
+			<!-- Parse legacy .doc (HWPF) -->
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-scratchpad</artifactId>
+			<version>${poi.version}</version>
+		</dependency>
+		<dependency>
 			<!-- Render .docx to PDF -->
 			<groupId>fr.opensagres.xdocreport</groupId>
 			<artifactId>fr.opensagres.poi.xwpf.converter.pdf</artifactId>
@@ -121,6 +127,13 @@
 		</dependency>
 	</dependencies>
 	<build>
+		<testResources>
+			<!-- Don't filter test resources — they include binary fixtures (e.g. the legacy .doc the PDF combiner reads). -->
+			<testResource>
+				<filtering>false</filtering>
+				<directory>src/test/resources</directory>
+			</testResource>
+		</testResources>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

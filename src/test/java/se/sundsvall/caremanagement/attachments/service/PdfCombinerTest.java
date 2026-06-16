@@ -9,6 +9,7 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +45,27 @@ class PdfCombinerTest {
 	}
 
 	@Test
+	void rendersLegacyDocByExtractingItsText() throws IOException {
+		final var sources = List.of(new SourceFile("kontrakt.doc", "application/msword", fixture("/pdfcombiner/sample.doc")));
+
+		final var combined = PdfCombiner.combine(sources);
+
+		assertThat(pageCount(combined)).isGreaterThanOrEqualTo(1);
+		// Proves the HWPF render path ran rather than falling back to a "kunde inte" placeholder.
+		assertThat(text(combined)).doesNotContain("kunde inte");
+	}
+
+	@Test
+	void corruptDocDegradesToPlaceholder() throws IOException {
+		final var sources = List.of(new SourceFile("kontrakt.doc", "application/msword", "not a real doc".getBytes()));
+
+		final var combined = PdfCombiner.combine(sources);
+
+		assertThat(pageCount(combined)).isEqualTo(1);
+		assertThat(text(combined)).contains("kunde inte");
+	}
+
+	@Test
 	void corruptPdfDegradesToPlaceholderInsteadOfFailingTheBatch() throws IOException {
 		final var sources = List.of(new SourceFile("broken.pdf", PDF_MIME, "this is not a pdf".getBytes()));
 
@@ -60,6 +82,16 @@ class PdfCombinerTest {
 	}
 
 	@Test
+	void textDocumentPaginatesLongTextAndSanitisesControlAndNonLatinChars() throws IOException {
+		// 80 lines forces a second page; each line exercises tab, a non-tab control char, Latin-1 and a >255 (CJK) glyph.
+		final var text = "Kolumn1\tKolumn2 åäö  文書\n".repeat(80);
+
+		try (final var document = PdfCombiner.textDocument(text)) {
+			assertThat(document.getNumberOfPages()).isGreaterThanOrEqualTo(2);
+		}
+	}
+
+	@Test
 	void placeholderSanitisesNonLatinTextAndWrapsLongFilenames() throws IOException {
 		final var oddName = "ärende_" + "x".repeat(120) + "_文書.bin"; // å-range kept, CJK replaced, length forces wrapping
 		final var sources = List.of(new SourceFile(oddName, "application/octet-stream", new byte[] {
@@ -72,6 +104,18 @@ class PdfCombinerTest {
 	private static int pageCount(final byte[] pdf) throws IOException {
 		try (final var document = Loader.loadPDF(pdf)) {
 			return document.getNumberOfPages();
+		}
+	}
+
+	private static String text(final byte[] pdf) throws IOException {
+		try (final var document = Loader.loadPDF(pdf)) {
+			return new PDFTextStripper().getText(document);
+		}
+	}
+
+	private static byte[] fixture(final String path) throws IOException {
+		try (final var in = PdfCombinerTest.class.getResourceAsStream(path)) {
+			return in.readAllBytes();
 		}
 	}
 
