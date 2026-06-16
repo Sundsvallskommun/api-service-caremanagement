@@ -30,6 +30,7 @@ public final class MessageMapper {
 				.withDirection(e.getDirection())
 				.withBody(e.getBody())
 				.withAuthor(e.getAuthor())
+				.withInReplyToId(e.getInReplyToId())
 				.withCreated(e.getCreated())
 				.withAttachments(toMessageAttachmentList(attachments)))
 			.orElse(null);

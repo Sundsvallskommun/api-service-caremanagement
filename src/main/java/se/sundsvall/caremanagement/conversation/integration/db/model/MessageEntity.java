@@ -37,6 +37,9 @@ public class MessageEntity {
 	@Column(name = "author", length = 64)
 	private String author;
 
+	@Column(name = "in_reply_to_id", length = 255)
+	private String inReplyToId;
+
 	@Column(name = "created", nullable = false)
 	@TimeZoneStorage(NORMALIZE)
 	private OffsetDateTime created;
@@ -65,6 +68,10 @@ public class MessageEntity {
 		return author;
 	}
 
+	public String getInReplyToId() {
+		return inReplyToId;
+	}
+
 	public OffsetDateTime getCreated() {
 		return created;
 	}
@@ -91,6 +98,11 @@ public class MessageEntity {
 
 	public MessageEntity withAuthor(final String author) {
 		this.author = author;
+		return this;
+	}
+
+	public MessageEntity withInReplyToId(final String inReplyToId) {
+		this.inReplyToId = inReplyToId;
 		return this;
 	}
 

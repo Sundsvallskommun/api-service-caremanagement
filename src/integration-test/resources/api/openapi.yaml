@@ -4439,6 +4439,12 @@ components:
           - joe01doe
           maxLength: 64
           minLength: 0
+        inReplyToId:
+          type: string
+          description: Id of the message this one replies to. Optional; when set it
+            must reference a message on the same errand.
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
       required:
       - body
       - direction
@@ -4990,6 +4996,12 @@ components:
           description: Author id
           examples:
           - joe01doe
+        inReplyToId:
+          type: string
+          description: "Id of the message this one replies to, when it is a reply\
+            \ (same errand)"
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
         created:
           type: string
           format: date-time

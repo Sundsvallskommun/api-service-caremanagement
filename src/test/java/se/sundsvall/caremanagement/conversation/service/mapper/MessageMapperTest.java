@@ -27,6 +27,7 @@ class MessageMapperTest {
 			.withDirection("OUTBOUND")
 			.withBody("body")
 			.withAuthor("author")
+			.withInReplyToId("r1")
 			.withCreated(FIXED_TIMESTAMP);
 		final var attachment = MessageAttachmentEntity.create().withId("a1").withMessageId("m1").withFileName("f.pdf").withMimeType("application/pdf").withFileSize(4);
 
@@ -38,6 +39,7 @@ class MessageMapperTest {
 		assertThat(message.getDirection()).isEqualTo("OUTBOUND");
 		assertThat(message.getBody()).isEqualTo("body");
 		assertThat(message.getAuthor()).isEqualTo("author");
+		assertThat(message.getInReplyToId()).isEqualTo("r1");
 		assertThat(message.getCreated()).isEqualTo(FIXED_TIMESTAMP);
 		assertThat(message.getAttachments()).hasSize(1);
 		assertThat(message.getAttachments().getFirst().getId()).isEqualTo("a1");

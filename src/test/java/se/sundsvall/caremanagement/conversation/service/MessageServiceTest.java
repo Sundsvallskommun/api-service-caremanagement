@@ -34,6 +34,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -61,7 +62,7 @@ class MessageServiceTest {
 		final var saved = MessageEntity.create().withId("message-1").withErrandId("errand-1").withDirection("OUTBOUND").withAuthor("author").withCreated(FIXED_TIMESTAMP);
 		when(repositoryMock.save(any(MessageEntity.class))).thenReturn(saved);
 
-		final var id = service.post("errand-1", new CreateMessage("OUTBOUND", "body", "author"), null);
+		final var id = service.post("errand-1", new CreateMessage("OUTBOUND", "body", "author", null), null);
 
 		assertThat(id).isEqualTo("message-1");
 
@@ -71,6 +72,7 @@ class MessageServiceTest {
 		assertThat(entityCaptor.getValue().getDirection()).isEqualTo("OUTBOUND");
 		assertThat(entityCaptor.getValue().getBody()).isEqualTo("body");
 		assertThat(entityCaptor.getValue().getAuthor()).isEqualTo("author");
+		assertThat(entityCaptor.getValue().getInReplyToId()).isNull();
 		assertThat(entityCaptor.getValue().getCreated()).isNotNull();
 
 		verifyNoInteractions(attachmentRepositoryMock, attachmentDataRepositoryMock);
@@ -92,7 +94,7 @@ class MessageServiceTest {
 
 		final var file = new MockMultipartFile("attachments", "certificate.pdf", "application/pdf", "%PDF".getBytes());
 
-		final var id = service.post("errand-1", new CreateMessage("OUTBOUND", "body", null), List.of(file));
+		final var id = service.post("errand-1", new CreateMessage("OUTBOUND", "body", null, null), List.of(file));
 
 		assertThat(id).isEqualTo("message-1");
 
@@ -109,6 +111,35 @@ class MessageServiceTest {
 		assertThat(dataCaptor.getValue().getFile()).isNotNull();
 
 		verify(eventsMock).publishEvent(any(MessagePosted.class));
+	}
+
+	@Test
+	void postWithInReplyToValidatesAndPersistsTheReference() {
+		when(repositoryMock.findByIdAndErrandId("parent-1", "errand-1"))
+			.thenReturn(Optional.of(MessageEntity.create().withId("parent-1").withErrandId("errand-1")));
+		when(repositoryMock.save(any(MessageEntity.class))).thenReturn(MessageEntity.create().withId("message-1"));
+
+		final var id = service.post("errand-1", new CreateMessage("OUTBOUND", "body", "author", "parent-1"), null);
+
+		assertThat(id).isEqualTo("message-1");
+
+		final ArgumentCaptor<MessageEntity> entityCaptor = ArgumentCaptor.forClass(MessageEntity.class);
+		verify(repositoryMock).save(entityCaptor.capture());
+		assertThat(entityCaptor.getValue().getInReplyToId()).isEqualTo("parent-1");
+
+		verify(eventsMock).publishEvent(any(MessagePosted.class));
+	}
+
+	@Test
+	void postWithUnknownInReplyToIsBadRequestAndPersistsNothing() {
+		when(repositoryMock.findByIdAndErrandId("missing-parent", "errand-1")).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.post("errand-1", new CreateMessage("OUTBOUND", "body", "author", "missing-parent"), null))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+
+		verify(repositoryMock, never()).save(any());
+		verifyNoInteractions(eventsMock);
 	}
 
 	@Test

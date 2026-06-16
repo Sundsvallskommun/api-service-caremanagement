@@ -16,6 +16,7 @@ class MessageTest {
 		final var direction = "OUTBOUND";
 		final var body = "body";
 		final var author = "author";
+		final var inReplyToId = "in-reply-to-1";
 		final var created = FIXED_TIMESTAMP;
 		final var attachments = List.of(MessageAttachment.create().withId("a1").withFileName("f.pdf"));
 
@@ -25,6 +26,7 @@ class MessageTest {
 			.withDirection(direction)
 			.withBody(body)
 			.withAuthor(author)
+			.withInReplyToId(inReplyToId)
 			.withCreated(created)
 			.withAttachments(attachments);
 
@@ -33,6 +35,7 @@ class MessageTest {
 		assertThat(message.getDirection()).isEqualTo(direction);
 		assertThat(message.getBody()).isEqualTo(body);
 		assertThat(message.getAuthor()).isEqualTo(author);
+		assertThat(message.getInReplyToId()).isEqualTo(inReplyToId);
 		assertThat(message.getCreated()).isEqualTo(created);
 		assertThat(message.getAttachments()).isEqualTo(attachments);
 	}
@@ -45,6 +48,7 @@ class MessageTest {
 		message.setDirection("INBOUND");
 		message.setBody("b");
 		message.setAuthor("a");
+		message.setInReplyToId("r1");
 		final var ts = FIXED_TIMESTAMP;
 		message.setCreated(ts);
 		final var attachments = List.of(MessageAttachment.create().withId("a1"));
@@ -55,6 +59,7 @@ class MessageTest {
 		assertThat(message.getDirection()).isEqualTo("INBOUND");
 		assertThat(message.getBody()).isEqualTo("b");
 		assertThat(message.getAuthor()).isEqualTo("a");
+		assertThat(message.getInReplyToId()).isEqualTo("r1");
 		assertThat(message.getCreated()).isEqualTo(ts);
 		assertThat(message.getAttachments()).isEqualTo(attachments);
 	}

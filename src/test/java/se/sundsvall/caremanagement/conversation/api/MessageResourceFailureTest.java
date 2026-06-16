@@ -51,21 +51,26 @@ class MessageResourceFailureTest {
 
 	@Test
 	void post_blankDirection() {
-		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("", "body", "author"));
+		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("", "body", "author", null));
 	}
 
 	@Test
 	void post_invalidDirection() {
-		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("SIDEWAYS", "body", "author"));
+		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("SIDEWAYS", "body", "author", null));
 	}
 
 	@Test
 	void post_blankBody() {
-		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("OUTBOUND", "", "author"));
+		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("OUTBOUND", "", "author", null));
 	}
 
 	@Test
 	void post_invalidErrandId() {
-		postMessageExpectingBadRequest("not-a-uuid", new CreateMessage("OUTBOUND", "body", "author"));
+		postMessageExpectingBadRequest("not-a-uuid", new CreateMessage("OUTBOUND", "body", "author", null));
+	}
+
+	@Test
+	void post_invalidInReplyToId() {
+		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("OUTBOUND", "body", "author", "not-a-uuid"));
 	}
 }

@@ -27,6 +27,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpHeaders.CONTENT_DISPOSITION;
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.conversation.service.mapper.MessageMapper.toMessage;
@@ -44,6 +45,7 @@ import static se.sundsvall.caremanagement.conversation.service.mapper.MessageMap
 public class MessageService {
 
 	private static final String MESSAGE_NOT_FOUND_MESSAGE = "No message with id '%s'";
+	private static final String IN_REPLY_TO_NOT_FOUND_MESSAGE = "Cannot reply to message '%s' - no such message on errand '%s'";
 	private static final String ATTACHMENT_NOT_FOUND_MESSAGE = "No attachment with id '%s' found on message '%s'";
 	private static final String DATA_NOT_FOUND_MESSAGE = "No file content found for attachment with id '%s'";
 	private static final String STREAM_ERROR_MESSAGE = "%s occurred when copying file with attachment id '%s' to response: %s";
@@ -62,11 +64,14 @@ public class MessageService {
 	}
 
 	public String post(final String errandId, final CreateMessage request, final List<MultipartFile> attachments) {
+		validateInReplyTo(errandId, request.inReplyToId());
+
 		final var saved = repository.save(MessageEntity.create()
 			.withErrandId(errandId)
 			.withDirection(request.direction())
 			.withBody(request.body())
 			.withAuthor(request.author())
+			.withInReplyToId(request.inReplyToId())
 			.withCreated(now(systemDefault()).truncatedTo(MILLIS)));
 
 		ofNullable(attachments).orElse(emptyList())
@@ -120,5 +125,17 @@ public class MessageService {
 	private void ensureMessageBelongsToErrand(final String errandId, final String messageId) {
 		repository.findByIdAndErrandId(messageId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, MESSAGE_NOT_FOUND_MESSAGE.formatted(messageId)));
+	}
+
+	/**
+	 * A reply may only reference a message on the same errand. A null reference (the common case) is allowed; a
+	 * non-null one that does not resolve to a message on this errand is a client error.
+	 */
+	private void validateInReplyTo(final String errandId, final String inReplyToId) {
+		if (inReplyToId == null) {
+			return;
+		}
+		repository.findByIdAndErrandId(inReplyToId, errandId)
+			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, IN_REPLY_TO_NOT_FOUND_MESSAGE.formatted(inReplyToId, errandId)));
 	}
 }

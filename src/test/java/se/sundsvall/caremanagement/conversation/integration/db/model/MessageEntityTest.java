@@ -15,6 +15,7 @@ class MessageEntityTest {
 		final var direction = "OUTBOUND";
 		final var body = "body";
 		final var author = "author";
+		final var inReplyToId = "in-reply-to-1";
 		final var created = FIXED_TIMESTAMP;
 
 		final var entity = MessageEntity.create()
@@ -23,6 +24,7 @@ class MessageEntityTest {
 			.withDirection(direction)
 			.withBody(body)
 			.withAuthor(author)
+			.withInReplyToId(inReplyToId)
 			.withCreated(created);
 
 		assertThat(entity.getId()).isEqualTo(id);
@@ -30,6 +32,7 @@ class MessageEntityTest {
 		assertThat(entity.getDirection()).isEqualTo(direction);
 		assertThat(entity.getBody()).isEqualTo(body);
 		assertThat(entity.getAuthor()).isEqualTo(author);
+		assertThat(entity.getInReplyToId()).isEqualTo(inReplyToId);
 		assertThat(entity.getCreated()).isEqualTo(created);
 	}
 

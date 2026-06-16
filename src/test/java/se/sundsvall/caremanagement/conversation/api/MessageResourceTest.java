@@ -50,7 +50,7 @@ class MessageResourceTest {
 		when(serviceMock.post(eq(ERRAND_ID), any(CreateMessage.class), any())).thenReturn(MESSAGE_ID);
 
 		final var builder = new MultipartBodyBuilder();
-		builder.part("message", new CreateMessage("OUTBOUND", "body", "author"), APPLICATION_JSON);
+		builder.part("message", new CreateMessage("OUTBOUND", "body", "author", null), APPLICATION_JSON);
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -67,7 +67,7 @@ class MessageResourceTest {
 		when(serviceMock.post(eq(ERRAND_ID), any(CreateMessage.class), any())).thenReturn(MESSAGE_ID);
 
 		final var builder = new MultipartBodyBuilder();
-		builder.part("message", new CreateMessage("OUTBOUND", "Please see attached", "author"), APPLICATION_JSON);
+		builder.part("message", new CreateMessage("OUTBOUND", "Please see attached", "author", null), APPLICATION_JSON);
 		builder.part("attachments", "certificate".getBytes()).filename("certificate.pdf");
 		builder.part("attachments", "photo".getBytes()).filename("photo.png");
 

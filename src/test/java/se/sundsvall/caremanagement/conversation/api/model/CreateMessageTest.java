@@ -8,19 +8,21 @@ class CreateMessageTest {
 
 	@Test
 	void accessors() {
-		final var message = new CreateMessage("OUTBOUND", "message body", "joe01doe");
+		final var message = new CreateMessage("OUTBOUND", "message body", "joe01doe", "f47ac10b-58cc-4372-a567-0e02b2c3d479");
 
 		assertThat(message.direction()).isEqualTo("OUTBOUND");
 		assertThat(message.body()).isEqualTo("message body");
 		assertThat(message.author()).isEqualTo("joe01doe");
+		assertThat(message.inReplyToId()).isEqualTo("f47ac10b-58cc-4372-a567-0e02b2c3d479");
 	}
 
 	@Test
-	void authorIsOptional() {
-		final var message = new CreateMessage("INBOUND", "message body", null);
+	void authorAndInReplyToAreOptional() {
+		final var message = new CreateMessage("INBOUND", "message body", null, null);
 
 		assertThat(message.direction()).isEqualTo("INBOUND");
 		assertThat(message.body()).isEqualTo("message body");
 		assertThat(message.author()).isNull();
+		assertThat(message.inReplyToId()).isNull();
 	}
 }

@@ -28,6 +28,9 @@ public class Message {
 	@Schema(description = "Author id", examples = "joe01doe")
 	private String author;
 
+	@Schema(description = "Id of the message this one replies to, when it is a reply (same errand)", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479")
+	private String inReplyToId;
+
 	@Schema(description = "Created timestamp")
 	private OffsetDateTime created;
 
@@ -58,6 +61,10 @@ public class Message {
 		return author;
 	}
 
+	public String getInReplyToId() {
+		return inReplyToId;
+	}
+
 	public OffsetDateTime getCreated() {
 		return created;
 	}
@@ -84,6 +91,10 @@ public class Message {
 
 	public void setAuthor(final String author) {
 		this.author = author;
+	}
+
+	public void setInReplyToId(final String inReplyToId) {
+		this.inReplyToId = inReplyToId;
 	}
 
 	public void setCreated(final OffsetDateTime created) {
@@ -119,6 +130,11 @@ public class Message {
 		return this;
 	}
 
+	public Message withInReplyToId(final String inReplyToId) {
+		this.inReplyToId = inReplyToId;
+		return this;
+	}
+
 	public Message withCreated(final OffsetDateTime created) {
 		this.created = created;
 		return this;
@@ -135,18 +151,18 @@ public class Message {
 			return false;
 		final Message that = (Message) o;
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(direction, that.direction)
-			&& Objects.equals(body, that.body) && Objects.equals(author, that.author) && Objects.equals(created, that.created)
-			&& Objects.equals(attachments, that.attachments);
+			&& Objects.equals(body, that.body) && Objects.equals(author, that.author) && Objects.equals(inReplyToId, that.inReplyToId)
+			&& Objects.equals(created, that.created) && Objects.equals(attachments, that.attachments);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, direction, body, author, created, attachments);
+		return Objects.hash(id, errandId, direction, body, author, inReplyToId, created, attachments);
 	}
 
 	@Override
 	public String toString() {
 		return "Message{id='" + id + "', errandId='" + errandId + "', direction='" + direction + "', body='" + body
-			+ "', author='" + author + "', created=" + created + ", attachments=" + attachments + '}';
+			+ "', author='" + author + "', inReplyToId='" + inReplyToId + "', created=" + created + ", attachments=" + attachments + '}';
 	}
 }
