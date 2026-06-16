@@ -15,6 +15,10 @@ springdoc:
 spring:
   application:
     name: care-management
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: -1
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
   flyway:
