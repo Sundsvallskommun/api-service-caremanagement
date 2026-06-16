@@ -39,6 +39,20 @@ public interface CitizenClient {
 		@PathVariable final String personNumber);
 
 	/**
+	 * Resolve a citizen's personnummer from their personId (GUID) — the reverse of {@link #getGuid}.
+	 * <p>
+	 * api-service-citizen v3: {@code GET /{municipalityId}/{personId}/personnumber}
+	 *
+	 * @param  municipalityId the id of the municipality (path variable)
+	 * @param  personId       the citizen's personId (GUID / partyId)
+	 * @return                the citizen's personnummer, or {@code null} on 204 No Content
+	 */
+	@GetMapping(path = "/{municipalityId}/{personId}/personnumber", produces = APPLICATION_JSON_VALUE)
+	String getPersonNumber(
+		@PathVariable final String municipalityId,
+		@PathVariable final String personId);
+
+	/**
 	 * Fetch a citizen (incl. addresses) by personId.
 	 * <p>
 	 * api-service-citizen v3: {@code GET /{municipalityId}/{personId}?ShowClassified=...}

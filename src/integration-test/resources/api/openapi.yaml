@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:56223
+- url: http://localhost:56809
   description: Generated server url
 tags:
 - name: Notes
@@ -2918,9 +2918,12 @@ paths:
       tags:
       - Financial Assistance
       summary: Renewal pre-fill from Lifecare
-      description: Returns the applicant's household from the most recent Lifecare
-        normberäkning (persons + children) to pre-fill an EB återansökan. Best-effort
-        — degrades to an empty result (lifecareChecked=false) when Lifecare is unreachable.
+      description: Returns the household children from the applicant's most recent
+        Lifecare normberäkning to pre-fill an EB återansökan. The applicant is identified
+        by partyId (resolved to a personnummer via the citizen service). Only children
+        are pre-filled — the sökande is the logged-in citizen and the medsökande comes
+        from the portal. Best-effort — degrades to an empty result (lifecareChecked=false)
+        when the partyId cannot be resolved or Lifecare is unreachable.
       operationId: prefill
       parameters:
       - name: municipalityId
@@ -2934,7 +2937,7 @@ paths:
         schema:
           type: string
           pattern: "[\\w|\\-]+"
-      - name: personalNumber
+      - name: partyId
         in: query
         required: true
         schema:
@@ -2995,10 +2998,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri

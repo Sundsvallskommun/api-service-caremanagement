@@ -127,10 +127,11 @@ class FinancialAssistanceResourceTest {
 
 	@Test
 	void prefill() {
-		when(prefillServiceMock.prefill("198001012389")).thenReturn(RenewalPrefill.create().withLifecareChecked(true));
+		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+		when(prefillServiceMock.prefill(MUNICIPALITY_ID, partyId)).thenReturn(RenewalPrefill.create().withLifecareChecked(true));
 
 		final var prefill = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/prefill").queryParam("personalNumber", "198001012389").build(base()))
+			.uri(uri -> uri.path(PATH + "/prefill").queryParam("partyId", partyId).build(base()))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(RenewalPrefill.class)
@@ -139,7 +140,7 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(prefill).isNotNull();
 		assertThat(prefill.isLifecareChecked()).isTrue();
-		verify(prefillServiceMock).prefill("198001012389");
+		verify(prefillServiceMock).prefill(MUNICIPALITY_ID, partyId);
 	}
 
 	@Test

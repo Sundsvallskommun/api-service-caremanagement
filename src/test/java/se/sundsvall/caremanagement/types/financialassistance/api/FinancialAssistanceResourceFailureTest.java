@@ -133,9 +133,9 @@ class FinancialAssistanceResourceFailureTest {
 	}
 
 	@Test
-	void prefill_invalidPersonalNumber() {
+	void prefill_invalidPartyId() {
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/prefill").queryParam("personalNumber", "123").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/prefill").queryParam("partyId", "not-a-uuid").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isBadRequest();
 

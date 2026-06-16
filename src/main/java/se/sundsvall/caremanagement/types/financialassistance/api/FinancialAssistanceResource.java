@@ -32,7 +32,6 @@ import se.sundsvall.caremanagement.types.financialassistance.service.Eligibility
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
-import se.sundsvall.dept44.common.validators.annotation.ValidPersonalNumber;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -118,16 +117,16 @@ class FinancialAssistanceResource {
 
 	@GetMapping(path = "/financial-assistance/prefill", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Renewal pre-fill from Lifecare",
-		description = "Returns the applicant's household from the most recent Lifecare normberäkning (persons + children) to pre-fill an EB återansökan. Best-effort — degrades to an empty result (lifecareChecked=false) when Lifecare is unreachable.",
+		description = "Returns the household children from the applicant's most recent Lifecare normberäkning to pre-fill an EB återansökan. The applicant is identified by partyId (resolved to a personnummer via the citizen service). Only children are pre-filled — the sökande is the logged-in citizen and the medsökande comes from the portal. Best-effort — degrades to an empty result (lifecareChecked=false) when the partyId cannot be resolved or Lifecare is unreachable.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 		})
 	ResponseEntity<RenewalPrefill> prefill(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@ValidPersonalNumber @RequestParam final String personalNumber) {
+		@ValidUuid @RequestParam final String partyId) {
 
-		return ok(renewalPrefillService.prefill(personalNumber));
+		return ok(renewalPrefillService.prefill(municipalityId, partyId));
 	}
 
 	@GetMapping(path = "/financial-assistance/{errandId}", produces = APPLICATION_JSON_VALUE)
