@@ -2,7 +2,11 @@ package se.sundsvall.caremanagement.conversation.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+
+import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 
 @Schema(description = "A message in the errand's conversation")
 public class Message {
@@ -26,6 +30,9 @@ public class Message {
 
 	@Schema(description = "Created timestamp")
 	private OffsetDateTime created;
+
+	@Schema(description = "Files attached to the message", accessMode = READ_ONLY)
+	private List<MessageAttachment> attachments = new ArrayList<>();
 
 	public static Message create() {
 		return new Message();
@@ -55,6 +62,10 @@ public class Message {
 		return created;
 	}
 
+	public List<MessageAttachment> getAttachments() {
+		return attachments;
+	}
+
 	public void setId(final String id) {
 		this.id = id;
 	}
@@ -77,6 +88,10 @@ public class Message {
 
 	public void setCreated(final OffsetDateTime created) {
 		this.created = created;
+	}
+
+	public void setAttachments(final List<MessageAttachment> attachments) {
+		this.attachments = attachments;
 	}
 
 	public Message withId(final String id) {
@@ -109,23 +124,29 @@ public class Message {
 		return this;
 	}
 
+	public Message withAttachments(final List<MessageAttachment> attachments) {
+		this.attachments = attachments;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final Message that = (Message) o;
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(direction, that.direction)
-			&& Objects.equals(body, that.body) && Objects.equals(author, that.author) && Objects.equals(created, that.created);
+			&& Objects.equals(body, that.body) && Objects.equals(author, that.author) && Objects.equals(created, that.created)
+			&& Objects.equals(attachments, that.attachments);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, direction, body, author, created);
+		return Objects.hash(id, errandId, direction, body, author, created, attachments);
 	}
 
 	@Override
 	public String toString() {
 		return "Message{id='" + id + "', errandId='" + errandId + "', direction='" + direction + "', body='" + body
-			+ "', author='" + author + "', created=" + created + '}';
+			+ "', author='" + author + "', created=" + created + ", attachments=" + attachments + '}';
 	}
 }

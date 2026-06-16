@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:53928
+- url: http://localhost:55525
   description: Generated server url
 tags:
 - name: Notes
@@ -1223,6 +1223,8 @@ paths:
       tags:
       - Conversation
       summary: Post a message on the errand
+      description: Multipart request. The 'message' part carries the message (JSON);
+        the optional 'attachments' part carries the files to attach (any type).
       operationId: post
       parameters:
       - name: municipalityId
@@ -1243,13 +1245,28 @@ paths:
           type: string
       requestBody:
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: "#/components/schemas/CreateMessage"
+              type: object
+              properties:
+                message:
+                  $ref: "#/components/schemas/CreateMessage"
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+              required:
+              - message
         required: true
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Successful operation
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
   /{municipalityId}/{namespace}/errands/{errandId}/decisions:
     get:
       tags:
@@ -2607,6 +2624,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Message"
+  /{municipalityId}/{namespace}/errands/{errandId}/messages/{messageId}/attachments/{attachmentId}/file:
+    get:
+      tags:
+      - Conversation
+      summary: Download a message attachment
+      description: Streams the attachment file content
+      operationId: streamAttachmentFile
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: attachmentId
+        in: path
+        description: Attachment id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/{errandId}/decisions/{decisionId}:
     get:
       tags:
@@ -2841,7 +2902,7 @@ paths:
       - Errand attachments
       summary: Download attachment file
       description: Streams the attachment file content
-      operationId: streamAttachmentFile
+      operationId: streamAttachmentFile_1
       parameters:
       - name: municipalityId
         in: path
@@ -3108,10 +3169,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -4792,6 +4853,45 @@ components:
           type: string
           format: date-time
           description: Created timestamp
+        attachments:
+          type: array
+          description: Files attached to the message
+          items:
+            $ref: "#/components/schemas/MessageAttachment"
+          readOnly: true
+    MessageAttachment:
+      type: object
+      description: "Metadata of a file attached to a message. Download the content\
+        \ via GET .../messages/{messageId}/attachments/{id}/file"
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+          readOnly: true
+        fileName:
+          type: string
+          description: File name
+          examples:
+          - certificate.pdf
+        mimeType:
+          type: string
+          description: Mime type
+          examples:
+          - application/pdf
+        fileSize:
+          type: integer
+          format: int32
+          description: File size in bytes
+          examples:
+          - 1024
+          readOnly: true
+        created:
+          type: string
+          format: date-time
+          description: Created timestamp
+          readOnly: true
     Attachment:
       type: object
       description: Attachment model

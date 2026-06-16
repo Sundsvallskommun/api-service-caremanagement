@@ -1,11 +1,13 @@
 package se.sundsvall.caremanagement.conversation.api;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -16,9 +18,14 @@ import se.sundsvall.caremanagement.conversation.service.MessageService;
 
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -29,6 +36,7 @@ class MessageResourceTest {
 	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = randomUUID().toString();
 	private static final String MESSAGE_ID = randomUUID().toString();
+	private static final String ATTACHMENT_ID = randomUUID().toString();
 	private static final String PATH = "/{municipalityId}/{namespace}/errands/{errandId}/messages";
 
 	@MockitoBean
@@ -39,15 +47,38 @@ class MessageResourceTest {
 
 	@Test
 	void post() {
-		when(serviceMock.post(ERRAND_ID, new CreateMessage("OUTBOUND", "body", "author"))).thenReturn(MESSAGE_ID);
+		when(serviceMock.post(eq(ERRAND_ID), any(CreateMessage.class), any())).thenReturn(MESSAGE_ID);
+
+		final var builder = new MultipartBodyBuilder();
+		builder.part("message", new CreateMessage("OUTBOUND", "body", "author"), APPLICATION_JSON);
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
-			.bodyValue(new CreateMessage("OUTBOUND", "body", "author"))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).post(ERRAND_ID, new CreateMessage("OUTBOUND", "body", "author"));
+		verify(serviceMock).post(eq(ERRAND_ID), any(CreateMessage.class), any());
+	}
+
+	@Test
+	void postWithAttachments() {
+		when(serviceMock.post(eq(ERRAND_ID), any(CreateMessage.class), any())).thenReturn(MESSAGE_ID);
+
+		final var builder = new MultipartBodyBuilder();
+		builder.part("message", new CreateMessage("OUTBOUND", "Please see attached", "author"), APPLICATION_JSON);
+		builder.part("attachments", "certificate".getBytes()).filename("certificate.pdf");
+		builder.part("attachments", "photo".getBytes()).filename("photo.png");
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isCreated();
+
+		verify(serviceMock).post(eq(ERRAND_ID), any(CreateMessage.class), any());
 	}
 
 	@Test
@@ -81,5 +112,26 @@ class MessageResourceTest {
 		assertThat(message).isNotNull();
 		assertThat(message.getId()).isEqualTo(MESSAGE_ID);
 		verify(serviceMock).read(MESSAGE_ID);
+	}
+
+	@Test
+	void streamAttachmentFile() {
+		doAnswer(invocation -> {
+			final HttpServletResponse response = invocation.getArgument(3);
+			response.getOutputStream().write("file-bytes".getBytes());
+			return null;
+		}).when(serviceMock).streamAttachmentFile(eq(ERRAND_ID), eq(MESSAGE_ID), eq(ATTACHMENT_ID), any());
+
+		final var body = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/{messageId}/attachments/{attachmentId}/file")
+				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "messageId", MESSAGE_ID, "attachmentId", ATTACHMENT_ID)))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(byte[].class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(new String(body)).isEqualTo("file-bytes");
+		verify(serviceMock).streamAttachmentFile(eq(ERRAND_ID), eq(MESSAGE_ID), eq(ATTACHMENT_ID), any());
 	}
 }

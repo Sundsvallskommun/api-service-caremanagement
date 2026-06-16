@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.conversation.api.model;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,6 +17,7 @@ class MessageTest {
 		final var body = "body";
 		final var author = "author";
 		final var created = FIXED_TIMESTAMP;
+		final var attachments = List.of(MessageAttachment.create().withId("a1").withFileName("f.pdf"));
 
 		final var message = Message.create()
 			.withId(id)
@@ -23,7 +25,8 @@ class MessageTest {
 			.withDirection(direction)
 			.withBody(body)
 			.withAuthor(author)
-			.withCreated(created);
+			.withCreated(created)
+			.withAttachments(attachments);
 
 		assertThat(message.getId()).isEqualTo(id);
 		assertThat(message.getErrandId()).isEqualTo(errandId);
@@ -31,6 +34,7 @@ class MessageTest {
 		assertThat(message.getBody()).isEqualTo(body);
 		assertThat(message.getAuthor()).isEqualTo(author);
 		assertThat(message.getCreated()).isEqualTo(created);
+		assertThat(message.getAttachments()).isEqualTo(attachments);
 	}
 
 	@Test
@@ -43,6 +47,8 @@ class MessageTest {
 		message.setAuthor("a");
 		final var ts = FIXED_TIMESTAMP;
 		message.setCreated(ts);
+		final var attachments = List.of(MessageAttachment.create().withId("a1"));
+		message.setAttachments(attachments);
 
 		assertThat(message.getId()).isEqualTo("id");
 		assertThat(message.getErrandId()).isEqualTo("eid");
@@ -50,11 +56,14 @@ class MessageTest {
 		assertThat(message.getBody()).isEqualTo("b");
 		assertThat(message.getAuthor()).isEqualTo("a");
 		assertThat(message.getCreated()).isEqualTo(ts);
+		assertThat(message.getAttachments()).isEqualTo(attachments);
 	}
 
 	@Test
-	void createReturnsBlankInstance() {
-		assertThat(Message.create()).hasAllNullFieldsOrProperties();
+	void createReturnsBlankInstanceWithEmptyAttachments() {
+		final var message = Message.create();
+		assertThat(message).hasAllNullFieldsOrPropertiesExcept("attachments");
+		assertThat(message.getAttachments()).isEmpty();
 	}
 
 	@Test
