@@ -12,7 +12,7 @@ Recipe (see Phase 3 in the migration plan):
 
 ```
 types/<slug>/
-├── configuration/<Slug>ModuleConfig.java   ← ErrandTypeContribution + StakeholderRoleContribution beans
+├── configuration/<Slug>ModuleConfig.java   ← ErrandTypeContribution + StakeholderRoleContribution (+ optional ErrandTypeSchemaContribution) beans
 ├── api/
 │   ├── <Slug>Resource.java                 ← REST controller
 │   └── model/                              ← DTOs (strongly-typed; NO parameters blob)
@@ -29,3 +29,17 @@ Plus a Flyway migration `db/migration/V<n>_0__create_errand_<slug>.sql` and a
 
 The `Application` class already has `additionalPackages = "se.sundsvall.caremanagement.types"`
 in its `@Modulithic` annotation, so any new sub-package is auto-discovered.
+
+## Exposing the type to clients (`/errand-types`)
+
+The `errandtypes` module serves a read-only catalogue at
+`GET /{municipalityId}/{namespace}/errand-types` and `/{typeSlug}`, returning an
+`ErrandTypeSchema` per registered type: slug, optional `applicationType` variant, display name,
+allowed statuses, stakeholder roles and a per-type `FieldDescriptor[]` form spec (so a frontend can
+discover what e.g. a financial-assistance renewal looks like without hard-coding it).
+
+Statuses/display name come from the core `ErrandTypeRegistry` and roles from the stakeholder
+registry — those appear automatically. To also describe the fields its `data` payload carries, a type
+module exposes an `ErrandTypeSchemaContribution` bean (one per slug) declaring the `FieldDescriptor`s.
+A type without one still appears, with a null `applicationType` and an empty field list. See
+`types/financialassistance/configuration/FinancialAssistanceSchema.java` for the reference contribution.
