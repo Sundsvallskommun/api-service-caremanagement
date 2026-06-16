@@ -94,7 +94,7 @@ class FinancialAssistanceResourceTest {
 
 		final var response = webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/eligibility").build(base()))
-			.bodyValue(EligibilityRequest.create().withApplicant("198001012389"))
+			.bodyValue(EligibilityRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479"))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(EligibilityResponse.class)
@@ -113,7 +113,7 @@ class FinancialAssistanceResourceTest {
 
 		final var response = webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/normberakning").build(base()))
-			.bodyValue(NormberakningRequest.create().withApplicant("198001012389").withApplicationMonth("2026-06"))
+			.bodyValue(NormberakningRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(NormberakningResponse.class)

@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:56809
+- url: http://localhost:58774
   description: Generated server url
 tags:
 - name: Notes
@@ -3094,6 +3094,7 @@ components:
           - HUSVAGN
           - MOPED
           - SNOSKOTER
+          - ANNAT
           examples:
           - BIL
         registrationNumber:
@@ -3111,11 +3112,11 @@ components:
       type: object
       description: A child included in the financial assistance application.
       properties:
-        personalNumber:
+        partyId:
           type: string
-          description: Personal number of the child
+          description: Party id (personId GUID) of the child
           examples:
-          - "200501012389"
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
         firstName:
           type: string
           description: First name
@@ -3478,11 +3479,11 @@ components:
           - CO_APPLICANT
           examples:
           - APPLICANT
-        personalNumber:
+        partyId:
           type: string
-          description: Personal number
+          description: Party id (personId GUID) of the person
           examples:
-          - "198001012389"
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
         needsInterpreter:
           type: boolean
           description: Whether the person needs an interpreter
@@ -4218,15 +4219,15 @@ components:
       properties:
         applicant:
           type: string
-          description: The applicant's personal number (12 digits)
+          description: The applicant's partyId (personId GUID)
           examples:
-          - "198001012389"
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
         coApplicant:
           type: string
-          description: "The co-applicant's (medsökande) personal number (12 digits),\
-            \ when applying together with a partner"
+          description: "The co-applicant's (medsökande) partyId (personId GUID), when\
+            \ applying together with a partner"
           examples:
-          - "198202022397"
+          - a1b2c3d4-e5f6-7890-abcd-ef1234567890
         applicationMonth:
           type: string
           description: "The application month (ISO year-month, yyyy-MM)"
@@ -4270,15 +4271,15 @@ components:
       properties:
         applicant:
           type: string
-          description: The applicant's personal number (12 digits)
+          description: The applicant's partyId (personId GUID)
           examples:
-          - "198001012389"
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
         coApplicant:
           type: string
-          description: "The co-applicant's (medsökande) personal number (12 digits),\
-            \ when applying together with a partner"
+          description: "The co-applicant's (medsökande) partyId (personId GUID), when\
+            \ applying together with a partner"
           examples:
-          - "198202022397"
+          - a1b2c3d4-e5f6-7890-abcd-ef1234567890
       required:
       - applicant
     ApplicationSuggestion:
@@ -4346,6 +4347,7 @@ components:
           - NO_EXISTING_CASE
           - CIVILSTAND_CHANGED
           - EXISTING_CASE
+          - ALL_TYPES_TEST
           examples:
           - EXISTING_CASE
         message:
@@ -4776,11 +4778,11 @@ components:
         \ Carries only what Lifecare provides — personnummer and name; the citizen\
         \ completes residence, school etc. on the form."
       properties:
-        personalNumber:
+        partyId:
           type: string
-          description: Personal number
+          description: Party id (personId GUID) of the child
           examples:
-          - "201801012380"
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
         name:
           type: string
           description: Name as registered in Lifecare

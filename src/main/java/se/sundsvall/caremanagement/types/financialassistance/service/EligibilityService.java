@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseService;
@@ -18,12 +19,14 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Eligibili
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.util.Comparator.comparing;
 import static java.util.Comparator.naturalOrder;
 import static java.util.Comparator.nullsFirst;
 import static java.util.Optional.ofNullable;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_RENEWAL;
@@ -57,6 +60,7 @@ public class EligibilityService {
 	static final String REASON_NO_EXISTING_CASE = "NO_EXISTING_CASE";
 	static final String REASON_CIVILSTAND_CHANGED = "CIVILSTAND_CHANGED";
 	static final String REASON_EXISTING_CASE = "EXISTING_CASE";
+	static final String REASON_ALL_TYPES_TEST = "ALL_TYPES_TEST";
 
 	private static final String[] MONTHS_SV = {
 		"januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"
@@ -65,15 +69,20 @@ public class EligibilityService {
 	private final ErrandRepository errandRepository;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final LifecareEbCaseService lifecareEbCaseService;
+	private final CitizenService citizenService;
 	private final int windowDays;
+	private final boolean returnAllTypes;
 
 	EligibilityService(final ErrandRepository errandRepository, final FinancialAssistanceRepository financialAssistanceRepository,
-		final LifecareEbCaseService lifecareEbCaseService,
-		@Value("${financial-assistance.eligibility.duplicate-window-days:90}") final int windowDays) {
+		final LifecareEbCaseService lifecareEbCaseService, final CitizenService citizenService,
+		@Value("${financial-assistance.eligibility.duplicate-window-days:90}") final int windowDays,
+		@Value("${financial-assistance.eligibility.return-all-types:false}") final boolean returnAllTypes) {
 		this.errandRepository = errandRepository;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.lifecareEbCaseService = lifecareEbCaseService;
+		this.citizenService = citizenService;
 		this.windowDays = windowDays;
+		this.returnAllTypes = returnAllTypes;
 	}
 
 	public EligibilityResponse evaluate(final String municipalityId, final String namespace, final EligibilityRequest request) {
@@ -82,6 +91,13 @@ public class EligibilityService {
 		final var nextMonth = currentMonth.plusMonths(1);
 		final var cutoff = OffsetDateTime.now().minusDays(windowDays);
 		final var hasCoApplicant = hasText(request.getCoApplicant());
+
+		// TEST OVERRIDE (financial-assistance.eligibility.return-all-types): short-circuit the routing and offer all three
+		// application types so the frontend can exercise nyansökan / återansökan / tilläggsansökan regardless of any
+		// existing case. Turn off to restore the real gemensam-ingång decision flow.
+		if (returnAllTypes) {
+			return allTypesResponse(hasCoApplicant, currentMonth);
+		}
 
 		final var response = EligibilityResponse.create()
 			.withWindowDays(windowDays)
@@ -92,9 +108,9 @@ public class EligibilityService {
 		LifecareEbCaseSummary applicantLc;
 		LifecareEbCaseSummary coApplicantLc = null;
 		try {
-			applicantLc = lifecareEbCaseService.summarize(request.getApplicant(), today);
+			applicantLc = lifecareEbCaseService.summarize(personalNumber(municipalityId, request.getApplicant()), today);
 			if (hasCoApplicant) {
-				coApplicantLc = lifecareEbCaseService.summarize(request.getCoApplicant(), today);
+				coApplicantLc = lifecareEbCaseService.summarize(personalNumber(municipalityId, request.getCoApplicant()), today);
 			}
 		} catch (final ThrowableProblem e) {
 			lifecareChecked = false;
@@ -155,6 +171,21 @@ public class EligibilityService {
 		return response;
 	}
 
+	/**
+	 * TEST OVERRIDE response: all three application types, with the recommended/new one first. Carries no real CM/Lifecare
+	 * facts — it deliberately bypasses every gate so the frontend can open any of the three forms.
+	 */
+	private static EligibilityResponse allTypesResponse(final boolean hasCoApplicant, final YearMonth currentMonth) {
+		return EligibilityResponse.create()
+			.withHasCoApplicant(hasCoApplicant)
+			.withReasonCode(REASON_ALL_TYPES_TEST)
+			.withMessage("Testläge: alla ansökningstyper returneras (gemensam-ingång-routingen är förbikopplad).")
+			.withSuggestions(List.of(
+				suggestion(SLUG_NEW, null, true),
+				suggestion(SLUG_RENEWAL, currentMonth, false),
+				suggestion(SLUG_SUPPLEMENTARY, currentMonth, false)));
+	}
+
 	private static EligibilityResponse newApplication(final EligibilityResponse response, final String reasonCode, final String message) {
 		response.setSuggestions(List.of(suggestion(SLUG_NEW, null, true)));
 		response.setReasonCode(reasonCode);
@@ -188,9 +219,9 @@ public class EligibilityService {
 
 	/** EB errands (newest first) for either applicant, scoped to the namespace/municipality and the EB type slugs. */
 	private List<CmRecord> loadCmRecords(final String municipalityId, final String namespace, final EligibilityRequest request) {
-		final var ids = new LinkedHashSet<>(financialAssistanceRepository.findErrandIdsByPerson(request.getApplicant()));
+		final var ids = new LinkedHashSet<>(financialAssistanceRepository.findErrandIdsByPartyId(request.getApplicant()));
 		if (hasText(request.getCoApplicant())) {
-			ids.addAll(financialAssistanceRepository.findErrandIdsByPerson(request.getCoApplicant()));
+			ids.addAll(financialAssistanceRepository.findErrandIdsByPartyId(request.getCoApplicant()));
 		}
 		return ids.stream()
 			.map(id -> errandRepository.findByIdAndNamespaceAndMunicipalityId(id, namespace, municipalityId))
@@ -202,14 +233,22 @@ public class EligibilityService {
 			.toList();
 	}
 
-	private static boolean personIn(final FinancialAssistanceEntity fa, final String personalNumber) {
+	private static boolean personIn(final FinancialAssistanceEntity fa, final String partyId) {
 		return ofNullable(fa.getPersons()).orElseGet(List::of).stream()
-			.anyMatch(person -> personalNumber.equals(person.getPersonalNumber()));
+			.anyMatch(person -> partyId.equals(person.getPartyId()));
 	}
 
 	private static boolean hasCoApplicantPerson(final FinancialAssistanceEntity fa) {
 		return ofNullable(fa.getPersons()).orElseGet(List::of).stream()
-			.anyMatch(person -> ROLE_CO_APPLICANT.equals(person.getRole()) && hasText(person.getPersonalNumber()));
+			.anyMatch(person -> ROLE_CO_APPLICANT.equals(person.getRole()) && hasText(person.getPartyId()));
+	}
+
+	/**
+	 * Resolve a partyId to the personnummer Lifecare needs; throws (caught upstream → lifecareChecked=false) when unknown.
+	 */
+	private String personalNumber(final String municipalityId, final String partyId) {
+		return citizenService.getPersonalNumber(municipalityId, partyId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No citizen found for partyId " + partyId));
 	}
 
 	private static boolean periodEquals(final FinancialAssistanceEntity fa, final YearMonth month) {

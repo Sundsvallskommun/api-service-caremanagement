@@ -18,7 +18,7 @@ public class EligibilityResponse {
 	@Schema(description = "Machine-readable code for the gate that drove the suggestion",
 		examples = "EXISTING_CASE",
 		allowableValues = {
-			"NO_EXISTING_CASE", "CIVILSTAND_CHANGED", "EXISTING_CASE"
+			"NO_EXISTING_CASE", "CIVILSTAND_CHANGED", "EXISTING_CASE", "ALL_TYPES_TEST"
 		})
 	private String reasonCode;
 

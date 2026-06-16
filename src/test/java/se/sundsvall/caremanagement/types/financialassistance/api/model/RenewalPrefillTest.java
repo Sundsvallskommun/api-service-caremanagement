@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RenewalPrefillTest {
 
 	private static final List<PrefilledChild> CHILDREN = List.of(
-		PrefilledChild.create().withPersonalNumber("201801012380").withName("Kid Andersson"));
+		PrefilledChild.create().withPartyId("201801012380").withName("Kid Andersson"));
 
 	@Test
 	void builderMethods() {

@@ -37,18 +37,25 @@ public class RenewalPrefillService {
 	public RenewalPrefill prefill(final String municipalityId, final String partyId) {
 		try {
 			return citizenService.getPersonalNumber(municipalityId, partyId)
-				.map(personalNumber -> toPrefill(lifecareEbCaseService.latestRoster(personalNumber, LocalDate.now())))
+				.map(personalNumber -> toPrefill(municipalityId, lifecareEbCaseService.latestRoster(personalNumber, LocalDate.now())))
 				.orElseGet(RenewalPrefillService::empty);
 		} catch (final ThrowableProblem e) {
 			return empty();
 		}
 	}
 
-	private static RenewalPrefill toPrefill(final LifecareEbRoster roster) {
+	/**
+	 * Lifecare carries the children's personnummer; resolve each back to a partyId so the API never returns personnummer.
+	 * A child whose personnummer the citizen service can't resolve (204) keeps a {@code null} partyId — its name is still
+	 * useful for the citizen to recognise.
+	 */
+	private RenewalPrefill toPrefill(final String municipalityId, final LifecareEbRoster roster) {
 		final var children = roster.members().stream()
 			.filter(member -> !Objects.equals(member.personalNumber(), roster.applicant()))
 			.filter(member -> !Objects.equals(member.personalNumber(), roster.coApplicant()))
-			.map(member -> PrefilledChild.create().withPersonalNumber(member.personalNumber()).withName(member.name()))
+			.map(member -> PrefilledChild.create()
+				.withPartyId(citizenService.getPartyId(municipalityId, member.personalNumber()).orElse(null))
+				.withName(member.name()))
 			.toList();
 
 		return RenewalPrefill.create()

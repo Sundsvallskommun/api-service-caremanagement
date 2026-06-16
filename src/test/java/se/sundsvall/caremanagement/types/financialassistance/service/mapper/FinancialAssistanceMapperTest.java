@@ -71,7 +71,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);
 
 		assertThat(entity.getChildren()).hasSize(1);
-		assertThat(entity.getChildren().getFirst().getPersonalNumber()).isEqualTo("20180101-1234");
+		assertThat(entity.getChildren().getFirst().getPartyId()).isEqualTo("20180101-1234");
 		assertThat(entity.getChildren().getFirst().getFirstName()).isEqualTo("Kid");
 		assertThat(entity.getChildren().getFirst().getLastName()).isEqualTo("Karlsson");
 		assertThat(entity.getChildren().getFirst().getSchoolName()).isEqualTo("Skolan");
@@ -110,7 +110,7 @@ class FinancialAssistanceMapperTest {
 
 		assertThat(entity.getPersons()).hasSize(1);
 		assertThat(entity.getPersons().getFirst().getRole()).isEqualTo("APPLICANT");
-		assertThat(entity.getPersons().getFirst().getPersonalNumber()).isEqualTo("19900101-1234");
+		assertThat(entity.getPersons().getFirst().getPartyId()).isEqualTo("19900101-1234");
 		assertThat(entity.getPersons().getFirst().getNeedsInterpreter()).isTrue();
 		assertThat(entity.getPersons().getFirst().getInterpreterLanguage()).isEqualTo("Arabiska");
 		assertThat(entity.getPersons().getFirst().getHadWorkLast12Months()).isFalse();
@@ -275,7 +275,7 @@ class FinancialAssistanceMapperTest {
 			.withAttestation(true)
 			.withAttestedAt(ATTESTED_AT)
 			.withChildren(List.of(Child.create()
-				.withPersonalNumber("20180101-1234")
+				.withPartyId("20180101-1234")
 				.withFirstName("Kid")
 				.withLastName("Karlsson")
 				.withSchoolName("Skolan")
@@ -309,7 +309,7 @@ class FinancialAssistanceMapperTest {
 				.withPurchaseDate(DATE)))
 			.withPersons(List.of(Person.create()
 				.withRole("APPLICANT")
-				.withPersonalNumber("19900101-1234")
+				.withPartyId("19900101-1234")
 				.withNeedsInterpreter(true)
 				.withInterpreterLanguage("Arabiska")
 				.withHadWorkLast12Months(false)
@@ -368,7 +368,7 @@ class FinancialAssistanceMapperTest {
 			.withAttestation(false)
 			.withAttestedAt(ATTESTED_AT)
 			.withChildren(List.of(FaChild.create()
-				.withPersonalNumber("20180101-1234")
+				.withPartyId("20180101-1234")
 				.withFirstName("Kid")
 				.withLastName("Karlsson")
 				.withSchoolName("Skolan")
@@ -402,7 +402,7 @@ class FinancialAssistanceMapperTest {
 				.withPurchaseDate(DATE)))
 			.withPersons(List.of(FaPerson.create()
 				.withRole("APPLICANT")
-				.withPersonalNumber("19900101-1234")
+				.withPartyId("19900101-1234")
 				.withNeedsInterpreter(true)
 				.withInterpreterLanguage("Arabiska")
 				.withHadWorkLast12Months(false)

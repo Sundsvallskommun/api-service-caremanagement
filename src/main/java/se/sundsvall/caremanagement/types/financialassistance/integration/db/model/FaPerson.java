@@ -12,8 +12,8 @@ public class FaPerson {
 	@Column(name = "role")
 	private String role;
 
-	@Column(name = "personal_number")
-	private String personalNumber;
+	@Column(name = "party_id")
+	private String partyId;
 
 	@Column(name = "needs_interpreter")
 	private Boolean needsInterpreter;
@@ -50,8 +50,8 @@ public class FaPerson {
 		return role;
 	}
 
-	public String getPersonalNumber() {
-		return personalNumber;
+	public String getPartyId() {
+		return partyId;
 	}
 
 	public Boolean getNeedsInterpreter() {
@@ -94,8 +94,8 @@ public class FaPerson {
 		this.role = role;
 	}
 
-	public void setPersonalNumber(final String personalNumber) {
-		this.personalNumber = personalNumber;
+	public void setPartyId(final String partyId) {
+		this.partyId = partyId;
 	}
 
 	public void setNeedsInterpreter(final Boolean needsInterpreter) {
@@ -139,8 +139,8 @@ public class FaPerson {
 		return this;
 	}
 
-	public FaPerson withPersonalNumber(final String personalNumber) {
-		this.personalNumber = personalNumber;
+	public FaPerson withPartyId(final String partyId) {
+		this.partyId = partyId;
 		return this;
 	}
 
@@ -194,7 +194,7 @@ public class FaPerson {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FaPerson that = (FaPerson) o;
-		return Objects.equals(role, that.role) && Objects.equals(personalNumber, that.personalNumber)
+		return Objects.equals(role, that.role) && Objects.equals(partyId, that.partyId)
 			&& Objects.equals(needsInterpreter, that.needsInterpreter) && Objects.equals(interpreterLanguage, that.interpreterLanguage)
 			&& Objects.equals(hadWorkLast12Months, that.hadWorkLast12Months) && Objects.equals(hadWorkDescription, that.hadWorkDescription)
 			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(clearingNumber, that.clearingNumber)
@@ -204,13 +204,13 @@ public class FaPerson {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(role, personalNumber, needsInterpreter, interpreterLanguage, hadWorkLast12Months, hadWorkDescription,
+		return Objects.hash(role, partyId, needsInterpreter, interpreterLanguage, hadWorkLast12Months, hadWorkDescription,
 			paymentMethod, clearingNumber, accountNumber, otherPaymentDescription, paymentSameAsPrevious);
 	}
 
 	@Override
 	public String toString() {
-		return "FaPerson{role='" + role + "', personalNumber='" + personalNumber + "', needsInterpreter=" + needsInterpreter
+		return "FaPerson{role='" + role + "', partyId='" + partyId + "', needsInterpreter=" + needsInterpreter
 			+ ", interpreterLanguage='" + interpreterLanguage + "', hadWorkLast12Months=" + hadWorkLast12Months
 			+ ", hadWorkDescription='" + hadWorkDescription + "', paymentMethod='" + paymentMethod + "', clearingNumber='"
 			+ clearingNumber + "', accountNumber='" + accountNumber + "', otherPaymentDescription='" + otherPaymentDescription

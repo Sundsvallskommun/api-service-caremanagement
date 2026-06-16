@@ -144,7 +144,7 @@ public final class FinancialAssistanceMapper {
 
 	static FaChild toFaChild(final Child c) {
 		return FaChild.create()
-			.withPersonalNumber(c.getPersonalNumber())
+			.withPartyId(c.getPartyId())
 			.withFirstName(c.getFirstName())
 			.withLastName(c.getLastName())
 			.withSchoolName(c.getSchoolName())
@@ -158,7 +158,7 @@ public final class FinancialAssistanceMapper {
 
 	static Child toChild(final FaChild e) {
 		return Child.create()
-			.withPersonalNumber(e.getPersonalNumber())
+			.withPartyId(e.getPartyId())
 			.withFirstName(e.getFirstName())
 			.withLastName(e.getLastName())
 			.withSchoolName(e.getSchoolName())
@@ -291,7 +291,7 @@ public final class FinancialAssistanceMapper {
 	static FaPerson toFaPerson(final Person c) {
 		return FaPerson.create()
 			.withRole(c.getRole())
-			.withPersonalNumber(c.getPersonalNumber())
+			.withPartyId(c.getPartyId())
 			.withNeedsInterpreter(c.getNeedsInterpreter())
 			.withInterpreterLanguage(c.getInterpreterLanguage())
 			.withHadWorkLast12Months(c.getHadWorkLast12Months())
@@ -310,7 +310,7 @@ public final class FinancialAssistanceMapper {
 	static Person toPerson(final FaPerson e) {
 		return Person.create()
 			.withRole(e.getRole())
-			.withPersonalNumber(e.getPersonalNumber())
+			.withPartyId(e.getPartyId())
 			.withNeedsInterpreter(e.getNeedsInterpreter())
 			.withInterpreterLanguage(e.getInterpreterLanguage())
 			.withHadWorkLast12Months(e.getHadWorkLast12Months())

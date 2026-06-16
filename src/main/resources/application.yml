@@ -138,3 +138,7 @@ financial-assistance:
   eligibility:
     # "Inom X dagar" duplicate-application guard for the gemensam-ingång eligibility check. A request may override it.
     duplicate-window-days: 90
+    # TEST OVERRIDE: when true the eligibility check short-circuits and returns all three application types
+    # (nyansökan/återansökan/tilläggsansökan) regardless of any existing case, so the frontend can exercise all three
+    # flows. Set to false to restore the real gemensam-ingång routing.
+    return-all-types: true

@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.util.Objects;
-import se.sundsvall.dept44.common.validators.annotation.ValidPersonalNumber;
+import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
  * Request to build and post an SSBTEK-driven normberäkning to Lifecare FC for one applicant (and optional co-applicant)
@@ -14,12 +14,12 @@ import se.sundsvall.dept44.common.validators.annotation.ValidPersonalNumber;
 @Schema(description = "Request to build and post the SSBTEK-driven normberäkning for an application month.")
 public class NormberakningRequest {
 
-	@Schema(description = "The applicant's personal number (12 digits)", examples = "198001012389", requiredMode = Schema.RequiredMode.REQUIRED)
-	@ValidPersonalNumber
+	@Schema(description = "The applicant's partyId (personId GUID)", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", requiredMode = Schema.RequiredMode.REQUIRED)
+	@ValidUuid
 	private String applicant;
 
-	@Schema(description = "The co-applicant's (medsökande) personal number (12 digits), when applying together with a partner", examples = "198202022397")
-	@ValidPersonalNumber(nullable = true)
+	@Schema(description = "The co-applicant's (medsökande) partyId (personId GUID), when applying together with a partner", examples = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+	@ValidUuid(nullable = true)
 	private String coApplicant;
 
 	@Schema(description = "The application month (ISO year-month, yyyy-MM)", examples = "2026-06", requiredMode = Schema.RequiredMode.REQUIRED)

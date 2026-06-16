@@ -7,8 +7,8 @@ import java.util.Objects;
 @Embeddable
 public class FaChild {
 
-	@Column(name = "personal_number")
-	private String personalNumber;
+	@Column(name = "party_id")
+	private String partyId;
 
 	@Column(name = "first_name")
 	private String firstName;
@@ -29,8 +29,8 @@ public class FaChild {
 		return new FaChild();
 	}
 
-	public String getPersonalNumber() {
-		return personalNumber;
+	public String getPartyId() {
+		return partyId;
 	}
 
 	public String getFirstName() {
@@ -53,8 +53,8 @@ public class FaChild {
 		return daysInHome;
 	}
 
-	public void setPersonalNumber(final String personalNumber) {
-		this.personalNumber = personalNumber;
+	public void setPartyId(final String partyId) {
+		this.partyId = partyId;
 	}
 
 	public void setFirstName(final String firstName) {
@@ -77,8 +77,8 @@ public class FaChild {
 		this.daysInHome = daysInHome;
 	}
 
-	public FaChild withPersonalNumber(final String personalNumber) {
-		this.personalNumber = personalNumber;
+	public FaChild withPartyId(final String partyId) {
+		this.partyId = partyId;
 		return this;
 	}
 
@@ -112,19 +112,19 @@ public class FaChild {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FaChild that = (FaChild) o;
-		return Objects.equals(personalNumber, that.personalNumber) && Objects.equals(firstName, that.firstName)
+		return Objects.equals(partyId, that.partyId) && Objects.equals(firstName, that.firstName)
 			&& Objects.equals(lastName, that.lastName) && Objects.equals(schoolName, that.schoolName)
 			&& Objects.equals(residenceExtent, that.residenceExtent) && Objects.equals(daysInHome, that.daysInHome);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(personalNumber, firstName, lastName, schoolName, residenceExtent, daysInHome);
+		return Objects.hash(partyId, firstName, lastName, schoolName, residenceExtent, daysInHome);
 	}
 
 	@Override
 	public String toString() {
-		return "FaChild{personalNumber='" + personalNumber + "', firstName='" + firstName + "', lastName='" + lastName
+		return "FaChild{partyId='" + partyId + "', firstName='" + firstName + "', lastName='" + lastName
 			+ "', schoolName='" + schoolName + "', residenceExtent='" + residenceExtent + "', daysInHome=" + daysInHome + '}';
 	}
 }

@@ -15,8 +15,8 @@ public class Person {
 	}, nullable = true)
 	private String role;
 
-	@Schema(description = "Personal number", examples = "198001012389")
-	private String personalNumber;
+	@Schema(description = "Party id (personId GUID) of the person", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479")
+	private String partyId;
 
 	@Schema(description = "Whether the person needs an interpreter", examples = "true")
 	private Boolean needsInterpreter;
@@ -67,16 +67,16 @@ public class Person {
 		return this;
 	}
 
-	public String getPersonalNumber() {
-		return personalNumber;
+	public String getPartyId() {
+		return partyId;
 	}
 
-	public void setPersonalNumber(final String personalNumber) {
-		this.personalNumber = personalNumber;
+	public void setPartyId(final String partyId) {
+		this.partyId = partyId;
 	}
 
-	public Person withPersonalNumber(final String personalNumber) {
-		this.personalNumber = personalNumber;
+	public Person withPartyId(final String partyId) {
+		this.partyId = partyId;
 		return this;
 	}
 
@@ -202,7 +202,7 @@ public class Person {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final Person that = (Person) o;
-		return Objects.equals(role, that.role) && Objects.equals(personalNumber, that.personalNumber)
+		return Objects.equals(role, that.role) && Objects.equals(partyId, that.partyId)
 			&& Objects.equals(needsInterpreter, that.needsInterpreter) && Objects.equals(interpreterLanguage, that.interpreterLanguage)
 			&& Objects.equals(hadWorkLast12Months, that.hadWorkLast12Months) && Objects.equals(hadWorkDescription, that.hadWorkDescription)
 			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(clearingNumber, that.clearingNumber)
@@ -212,13 +212,13 @@ public class Person {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(role, personalNumber, needsInterpreter, interpreterLanguage, hadWorkLast12Months,
+		return Objects.hash(role, partyId, needsInterpreter, interpreterLanguage, hadWorkLast12Months,
 			hadWorkDescription, paymentMethod, clearingNumber, accountNumber, otherPaymentDescription, paymentSameAsPrevious);
 	}
 
 	@Override
 	public String toString() {
-		return "Person{role='" + role + "', personalNumber='" + personalNumber + "', needsInterpreter=" + needsInterpreter
+		return "Person{role='" + role + "', partyId='" + partyId + "', needsInterpreter=" + needsInterpreter
 			+ ", interpreterLanguage='" + interpreterLanguage + "', hadWorkLast12Months=" + hadWorkLast12Months
 			+ ", hadWorkDescription='" + hadWorkDescription + "', paymentMethod='" + paymentMethod + "', clearingNumber='"
 			+ clearingNumber + "', accountNumber='" + accountNumber + "', otherPaymentDescription='" + otherPaymentDescription

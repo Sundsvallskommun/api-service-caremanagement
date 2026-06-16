@@ -2,7 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
-import se.sundsvall.dept44.common.validators.annotation.ValidPersonalNumber;
+import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
  * Request for the financial-assistance application-eligibility check. The applicant is mandatory; a co-applicant
@@ -14,12 +14,12 @@ import se.sundsvall.dept44.common.validators.annotation.ValidPersonalNumber;
 @Schema(description = "Request to evaluate which financial assistance application a citizen should be offered.")
 public class EligibilityRequest {
 
-	@Schema(description = "The applicant's personal number (12 digits)", examples = "198001012389", requiredMode = Schema.RequiredMode.REQUIRED)
-	@ValidPersonalNumber
+	@Schema(description = "The applicant's partyId (personId GUID)", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", requiredMode = Schema.RequiredMode.REQUIRED)
+	@ValidUuid
 	private String applicant;
 
-	@Schema(description = "The co-applicant's (medsökande) personal number (12 digits), when applying together with a partner", examples = "198202022397")
-	@ValidPersonalNumber(nullable = true)
+	@Schema(description = "The co-applicant's (medsökande) partyId (personId GUID), when applying together with a partner", examples = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+	@ValidUuid(nullable = true)
 	private String coApplicant;
 
 	public static EligibilityRequest create() {

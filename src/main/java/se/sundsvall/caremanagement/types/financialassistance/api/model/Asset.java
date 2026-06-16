@@ -44,10 +44,10 @@ public class Asset {
 	private BigDecimal companyAssetSum;
 
 	@Schema(description = "Type of vehicle", examples = "BIL", allowableValues = {
-		"BIL", "BAT", "MC", "HUSVAGN", "MOPED", "SNOSKOTER"
+		"BIL", "BAT", "MC", "HUSVAGN", "MOPED", "SNOSKOTER", "ANNAT"
 	})
 	@OneOf(value = {
-		"BIL", "BAT", "MC", "HUSVAGN", "MOPED", "SNOSKOTER"
+		"BIL", "BAT", "MC", "HUSVAGN", "MOPED", "SNOSKOTER", "ANNAT"
 	}, nullable = true)
 	private String vehicleType;
 

@@ -103,7 +103,7 @@ class FinancialAssistanceResourceFailureTest {
 	void checkEligibility_invalidCoApplicant() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/eligibility").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
-			.bodyValue(EligibilityRequest.create().withApplicant("198001012389").withCoApplicant("nope"))
+			.bodyValue(EligibilityRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withCoApplicant("nope"))
 			.exchange()
 			.expectStatus().isBadRequest();
 
@@ -125,7 +125,7 @@ class FinancialAssistanceResourceFailureTest {
 	void createNormberakning_invalidMonth() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/normberakning").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
-			.bodyValue(NormberakningRequest.create().withApplicant("198001012389").withApplicationMonth("2026-13"))
+			.bodyValue(NormberakningRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-13"))
 			.exchange()
 			.expectStatus().isBadRequest();
 

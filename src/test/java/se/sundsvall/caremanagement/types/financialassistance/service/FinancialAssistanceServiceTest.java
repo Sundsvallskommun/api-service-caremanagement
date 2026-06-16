@@ -9,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
@@ -49,8 +50,14 @@ class FinancialAssistanceServiceTest {
 	@Mock
 	private NormberakningService normberakningServiceMock;
 
+	@Mock
+	private CitizenService citizenServiceMock;
+
 	@InjectMocks
 	private FinancialAssistanceService service;
+
+	private static final String APPLICANT_PARTY_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+	private static final String CO_APPLICANT_PARTY_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
 	@Test
 	void createBuildsEnvelopeAndSavesData() {
@@ -160,19 +167,34 @@ class FinancialAssistanceServiceTest {
 	}
 
 	@Test
-	void createNormberakningDelegatesAndMaps() {
+	void createNormberakningResolvesPartyIdsDelegatesAndMaps() {
 		final var month = YearMonth.of(2026, 6);
 		final var result = new NormberakningResult(4711, List.of(), List.of());
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CO_APPLICANT_PARTY_ID)).thenReturn(Optional.of("199202022345"));
 		when(normberakningServiceMock.buildAndPost(MUNICIPALITY_ID, "199001011234", "199202022345", month)).thenReturn(result);
 
 		final var request = NormberakningRequest.create()
-			.withApplicant("199001011234")
-			.withCoApplicant("199202022345")
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withCoApplicant(CO_APPLICANT_PARTY_ID)
 			.withApplicationMonth("2026-06");
 
 		final var response = service.createNormberakning(MUNICIPALITY_ID, request);
 
 		assertThat(response.getCalculationId()).isEqualTo(4711);
 		verify(normberakningServiceMock).buildAndPost(MUNICIPALITY_ID, "199001011234", "199202022345", month);
+	}
+
+	@Test
+	void createNormberakningUnresolvedPartyIdYields404() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.empty());
+
+		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
+
+		assertThatThrownBy(() -> service.createNormberakning(MUNICIPALITY_ID, request))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verify(normberakningServiceMock, never()).buildAndPost(any(), any(), any(), any());
 	}
 }

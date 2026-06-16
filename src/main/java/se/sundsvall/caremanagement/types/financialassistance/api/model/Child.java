@@ -7,8 +7,8 @@ import se.sundsvall.dept44.common.validators.annotation.OneOf;
 @Schema(description = "A child included in the financial assistance application.")
 public class Child {
 
-	@Schema(description = "Personal number of the child", examples = "200501012389")
-	private String personalNumber;
+	@Schema(description = "Party id (personId GUID) of the child", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479")
+	private String partyId;
 
 	@Schema(description = "First name", examples = "Astrid")
 	private String firstName;
@@ -34,16 +34,16 @@ public class Child {
 		return new Child();
 	}
 
-	public String getPersonalNumber() {
-		return personalNumber;
+	public String getPartyId() {
+		return partyId;
 	}
 
-	public void setPersonalNumber(final String personalNumber) {
-		this.personalNumber = personalNumber;
+	public void setPartyId(final String partyId) {
+		this.partyId = partyId;
 	}
 
-	public Child withPersonalNumber(final String personalNumber) {
-		this.personalNumber = personalNumber;
+	public Child withPartyId(final String partyId) {
+		this.partyId = partyId;
 		return this;
 	}
 
@@ -117,19 +117,19 @@ public class Child {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final Child that = (Child) o;
-		return Objects.equals(personalNumber, that.personalNumber) && Objects.equals(firstName, that.firstName)
+		return Objects.equals(partyId, that.partyId) && Objects.equals(firstName, that.firstName)
 			&& Objects.equals(lastName, that.lastName) && Objects.equals(schoolName, that.schoolName)
 			&& Objects.equals(residenceExtent, that.residenceExtent) && Objects.equals(daysInHome, that.daysInHome);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(personalNumber, firstName, lastName, schoolName, residenceExtent, daysInHome);
+		return Objects.hash(partyId, firstName, lastName, schoolName, residenceExtent, daysInHome);
 	}
 
 	@Override
 	public String toString() {
-		return "Child{personalNumber='" + personalNumber + "', firstName='" + firstName + "', lastName='" + lastName
+		return "Child{partyId='" + partyId + "', firstName='" + firstName + "', lastName='" + lastName
 			+ "', schoolName='" + schoolName + "', residenceExtent='" + residenceExtent + "', daysInHome=" + daysInHome + '}';
 	}
 }

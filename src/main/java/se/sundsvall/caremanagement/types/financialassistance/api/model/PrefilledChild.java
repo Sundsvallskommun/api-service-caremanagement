@@ -6,8 +6,8 @@ import java.util.Objects;
 @Schema(description = "A child pre-filled from Lifecare for a financial assistance renewal. Carries only what Lifecare provides — personnummer and name; the citizen completes residence, school etc. on the form.")
 public class PrefilledChild {
 
-	@Schema(description = "Personal number", examples = "201801012380")
-	private String personalNumber;
+	@Schema(description = "Party id (personId GUID) of the child", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479")
+	private String partyId;
 
 	@Schema(description = "Name as registered in Lifecare", examples = "Kid Andersson")
 	private String name;
@@ -16,16 +16,16 @@ public class PrefilledChild {
 		return new PrefilledChild();
 	}
 
-	public String getPersonalNumber() {
-		return personalNumber;
+	public String getPartyId() {
+		return partyId;
 	}
 
-	public void setPersonalNumber(final String personalNumber) {
-		this.personalNumber = personalNumber;
+	public void setPartyId(final String partyId) {
+		this.partyId = partyId;
 	}
 
-	public PrefilledChild withPersonalNumber(final String personalNumber) {
-		this.personalNumber = personalNumber;
+	public PrefilledChild withPartyId(final String partyId) {
+		this.partyId = partyId;
 		return this;
 	}
 
@@ -47,16 +47,16 @@ public class PrefilledChild {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final PrefilledChild that = (PrefilledChild) o;
-		return Objects.equals(personalNumber, that.personalNumber) && Objects.equals(name, that.name);
+		return Objects.equals(partyId, that.partyId) && Objects.equals(name, that.name);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(personalNumber, name);
+		return Objects.hash(partyId, name);
 	}
 
 	@Override
 	public String toString() {
-		return "PrefilledChild{personalNumber='" + personalNumber + "', name='" + name + "'}";
+		return "PrefilledChild{partyId='" + partyId + "', name='" + name + "'}";
 	}
 }
