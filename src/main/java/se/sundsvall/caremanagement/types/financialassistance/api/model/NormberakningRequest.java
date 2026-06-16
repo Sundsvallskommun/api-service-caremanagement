@@ -27,6 +27,12 @@ public class NormberakningRequest {
 	@Pattern(regexp = "^\\d{4}-(0[1-9]|1[0-2])$", message = "must be an ISO year-month (yyyy-MM)")
 	private String applicationMonth;
 
+	@Schema(
+		description = "The id of the caremanagement errand the normberäkning concerns. When present, a Decision(RECOMMENDATION) summarising the income warnings is recorded on the errand for the handläggare to review; when omitted, the normberäkning is built without recording a recommendation.",
+		examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec")
+	@ValidUuid(nullable = true)
+	private String errandId;
+
 	public static NormberakningRequest create() {
 		return new NormberakningRequest();
 	}
@@ -70,21 +76,35 @@ public class NormberakningRequest {
 		return this;
 	}
 
+	public String getErrandId() {
+		return errandId;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public NormberakningRequest withErrandId(final String errandId) {
+		this.errandId = errandId;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final NormberakningRequest that = (NormberakningRequest) o;
-		return Objects.equals(applicant, that.applicant) && Objects.equals(coApplicant, that.coApplicant) && Objects.equals(applicationMonth, that.applicationMonth);
+		return Objects.equals(applicant, that.applicant) && Objects.equals(coApplicant, that.coApplicant) && Objects.equals(applicationMonth, that.applicationMonth)
+			&& Objects.equals(errandId, that.errandId);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(applicant, coApplicant, applicationMonth);
+		return Objects.hash(applicant, coApplicant, applicationMonth, errandId);
 	}
 
 	@Override
 	public String toString() {
-		return "NormberakningRequest{applicant='" + applicant + "', coApplicant='" + coApplicant + "', applicationMonth='" + applicationMonth + "'}";
+		return "NormberakningRequest{applicant='" + applicant + "', coApplicant='" + coApplicant + "', applicationMonth='" + applicationMonth + "', errandId='" + errandId + "'}";
 	}
 }

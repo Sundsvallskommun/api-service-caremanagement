@@ -112,7 +112,7 @@ class FinancialAssistanceResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Valid @NotNull @RequestBody final NormberakningRequest request) {
 
-		return ok(service.createNormberakning(municipalityId, request));
+		return ok(service.createNormberakning(municipalityId, namespace, request));
 	}
 
 	@GetMapping(path = "/financial-assistance/prefill", produces = APPLICATION_JSON_VALUE)

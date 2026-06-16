@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
@@ -12,8 +13,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.decisions.api.model.Decision;
+import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
 import se.sundsvall.caremanagement.lifecare.service.model.NormberakningResult;
+import se.sundsvall.caremanagement.lifecare.service.model.SsbtekChangeWarning;
+import se.sundsvall.caremanagement.lifecare.service.model.UnhandledIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.UnhandledReason;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
@@ -52,6 +58,9 @@ class FinancialAssistanceServiceTest {
 
 	@Mock
 	private CitizenService citizenServiceMock;
+
+	@Mock
+	private DecisionService decisionServiceMock;
 
 	@InjectMocks
 	private FinancialAssistanceService service;
@@ -179,10 +188,61 @@ class FinancialAssistanceServiceTest {
 			.withCoApplicant(CO_APPLICANT_PARTY_ID)
 			.withApplicationMonth("2026-06");
 
-		final var response = service.createNormberakning(MUNICIPALITY_ID, request);
+		final var response = service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
 
 		assertThat(response.getCalculationId()).isEqualTo(4711);
 		verify(normberakningServiceMock).buildAndPost(MUNICIPALITY_ID, "199001011234", "199202022345", month);
+		// No errandId on the request → nothing recorded on an errand.
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+	}
+
+	@Test
+	void createNormberakningWithWarningsRecordsReviewRequiredRecommendation() {
+		final var month = YearMonth.of(2026, 6);
+		final var result = new NormberakningResult(4711,
+			List.of(new UnhandledIncome("Bostadstillägg", null, null, UnhandledReason.NOT_ON_WHITELIST)),
+			List.of(new SsbtekChangeWarning("Bostadsbidrag", new BigDecimal("2400"), new BigDecimal("1850"), new BigDecimal("-23"))));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(normberakningServiceMock.buildAndPost(MUNICIPALITY_ID, "199001011234", null, month)).thenReturn(result);
+
+		final var request = NormberakningRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06")
+			.withErrandId(ERRAND_ID);
+
+		service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+
+		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
+		final var decision = decisionCaptor.getValue();
+		assertThat(decision.getDecisionType()).isEqualTo("RECOMMENDATION");
+		assertThat(decision.getValue()).isEqualTo("REVIEW_REQUIRED");
+		assertThat(decision.getCreatedBy()).isEqualTo("drakel");
+		assertThat(decision.getDescription())
+			.contains("id 4711")
+			.contains("Ej överförd inkomst: Bostadstillägg (NOT_ON_WHITELIST)")
+			.contains("Förändrad inkomst: Bostadsbidrag");
+	}
+
+	@Test
+	void createNormberakningWithoutWarningsRecordsOkRecommendation() {
+		final var month = YearMonth.of(2026, 6);
+		final var result = new NormberakningResult(4711, List.of(), List.of());
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(normberakningServiceMock.buildAndPost(MUNICIPALITY_ID, "199001011234", null, month)).thenReturn(result);
+
+		final var request = NormberakningRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06")
+			.withErrandId(ERRAND_ID);
+
+		service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+
+		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
+		final var decision = decisionCaptor.getValue();
+		assertThat(decision.getValue()).isEqualTo("OK");
+		assertThat(decision.getDescription()).contains("Inga varningar");
 	}
 
 	@Test
@@ -191,10 +251,11 @@ class FinancialAssistanceServiceTest {
 
 		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
 
-		assertThatThrownBy(() -> service.createNormberakning(MUNICIPALITY_ID, request))
+		assertThatThrownBy(() -> service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
 		verify(normberakningServiceMock, never()).buildAndPost(any(), any(), any(), any());
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 	}
 }

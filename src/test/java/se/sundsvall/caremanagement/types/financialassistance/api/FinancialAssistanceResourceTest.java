@@ -108,7 +108,7 @@ class FinancialAssistanceResourceTest {
 
 	@Test
 	void createNormberakning() {
-		when(serviceMock.createNormberakning(eq(MUNICIPALITY_ID), any(NormberakningRequest.class)))
+		when(serviceMock.createNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class)))
 			.thenReturn(NormberakningResponse.create().withCalculationId(4711));
 
 		final var response = webTestClient.post()
@@ -122,7 +122,7 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(response).isNotNull();
 		assertThat(response.getCalculationId()).isEqualTo(4711);
-		verify(serviceMock).createNormberakning(eq(MUNICIPALITY_ID), any(NormberakningRequest.class));
+		verify(serviceMock).createNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class));
 	}
 
 	@Test

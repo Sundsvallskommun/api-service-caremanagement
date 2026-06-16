@@ -28,11 +28,13 @@ class NormberakningRequestTest {
 		final var request = NormberakningRequest.create()
 			.withApplicant("198001012389")
 			.withCoApplicant("198202022397")
-			.withApplicationMonth("2026-06");
+			.withApplicationMonth("2026-06")
+			.withErrandId("cb20c51f-fcf3-42c0-b613-de563634a8ec");
 
 		assertThat(request.getApplicant()).isEqualTo("198001012389");
 		assertThat(request.getCoApplicant()).isEqualTo("198202022397");
 		assertThat(request.getApplicationMonth()).isEqualTo("2026-06");
+		assertThat(request.getErrandId()).isEqualTo("cb20c51f-fcf3-42c0-b613-de563634a8ec");
 	}
 
 	@Test

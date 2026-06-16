@@ -1,12 +1,15 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.YearMonth;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.decisions.api.model.Decision;
+import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
@@ -40,17 +43,25 @@ public class FinancialAssistanceService {
 
 	private static final String DEFAULT_TITLE = "Ekonomiskt bistånd";
 
+	/** Recommendation Decision recorded by the automated normberäkning pipeline. */
+	private static final String RECOMMENDATION_TYPE = "RECOMMENDATION";
+	private static final String RECOMMENDATION_CREATED_BY = "drakel";
+	private static final String VALUE_REVIEW_REQUIRED = "REVIEW_REQUIRED";
+	private static final String VALUE_OK = "OK";
+
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository repository;
 	private final NormberakningService normberakningService;
 	private final CitizenService citizenService;
+	private final DecisionService decisionService;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final NormberakningService normberakningService,
-		final CitizenService citizenService) {
+		final CitizenService citizenService, final DecisionService decisionService) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.normberakningService = normberakningService;
 		this.citizenService = citizenService;
+		this.decisionService = decisionService;
 	}
 
 	public String create(final String municipalityId, final String namespace, final String typeSlug, final CreateFinancialAssistanceRequest request) {
@@ -87,15 +98,45 @@ public class FinancialAssistanceService {
 
 	/**
 	 * Build the SSBTEK-driven normberäkning for the application month and post it to Lifecare FC, returning the created
-	 * calculation id plus the income warnings the handläggare must review.
+	 * calculation id plus the income warnings the handläggare must review. When the request carries an {@code errandId},
+	 * the warnings are also recorded on that errand as a {@code Decision(RECOMMENDATION)} so the handläggare sees them on
+	 * the case.
 	 */
-	public NormberakningResponse createNormberakning(final String municipalityId, final NormberakningRequest request) {
+	public NormberakningResponse createNormberakning(final String municipalityId, final String namespace, final NormberakningRequest request) {
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var coApplicant = ofNullable(request.getCoApplicant()).filter(StringUtils::hasText)
 			.map(partyId -> personalNumber(municipalityId, partyId))
 			.orElse(null);
 		final var result = normberakningService.buildAndPost(municipalityId, applicant, coApplicant, YearMonth.parse(request.getApplicationMonth()));
-		return toResponse(result);
+		final var response = toResponse(result);
+
+		ofNullable(request.getErrandId()).filter(StringUtils::hasText)
+			.ifPresent(errandId -> recordRecommendation(municipalityId, namespace, errandId, response));
+
+		return response;
+	}
+
+	/**
+	 * Surface the normberäkning's income warnings on the errand as a {@code Decision(RECOMMENDATION)} — the canonical flag
+	 * vehicle handläggaren reviews in the case. The value is {@code REVIEW_REQUIRED} when there is anything to review
+	 * (unhandled incomes or significant period-over-period changes) and {@code OK} otherwise; the description lists the
+	 * warnings in plain language.
+	 */
+	private void recordRecommendation(final String municipalityId, final String namespace, final String errandId, final NormberakningResponse response) {
+		final var warnings = Stream.concat(
+			response.getUnhandledIncomes().stream().map("Ej överförd inkomst: "::concat),
+			response.getChangeWarnings().stream().map("Förändrad inkomst: "::concat))
+			.toList();
+		final var header = "Normberäkning skapad i Lifecare (id %s). ".formatted(response.getCalculationId());
+		final var description = warnings.isEmpty()
+			? header + "Inga varningar – inkomsterna överfördes utan anmärkning."
+			: header + warnings.size() + " varning(ar) att granska:\n" + String.join("\n", warnings);
+
+		decisionService.create(municipalityId, namespace, errandId, Decision.create()
+			.withDecisionType(RECOMMENDATION_TYPE)
+			.withValue(warnings.isEmpty() ? VALUE_OK : VALUE_REVIEW_REQUIRED)
+			.withDescription(description)
+			.withCreatedBy(RECOMMENDATION_CREATED_BY));
 	}
 
 	/** Resolve a partyId to the personnummer the Lifecare/SSBTEK pipeline needs, or 404 when the citizen is unknown. */

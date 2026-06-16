@@ -4256,6 +4256,14 @@ components:
           examples:
           - 2026-06
           pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
+        errandId:
+          type: string
+          description: "The id of the caremanagement errand the normberäkning concerns.\
+            \ When present, a Decision(RECOMMENDATION) summarising the income warnings\
+            \ is recorded on the errand for the handläggare to review; when omitted,\
+            \ the normberäkning is built without recording a recommendation."
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
       required:
       - applicant
       - applicationMonth
