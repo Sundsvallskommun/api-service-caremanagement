@@ -3532,6 +3532,28 @@ components:
           description: Whether the payment details are the same as previously used
           examples:
           - "true"
+        email:
+          type: string
+          description: Email address used for notifications about the application
+          examples:
+          - anna.andersson@example.com
+        phone:
+          type: string
+          description: Phone number used for SMS notifications about the application
+          examples:
+          - "+46701234567"
+        notifyByEmail:
+          type: boolean
+          description: Whether the person wants notifications about the application
+            by email
+          examples:
+          - "true"
+        notifyBySms:
+          type: boolean
+          description: Whether the person wants notifications about the application
+            by SMS
+          examples:
+          - "true"
     PlannedActivity:
       type: object
       description: A planned activity for the applicant or co-applicant.

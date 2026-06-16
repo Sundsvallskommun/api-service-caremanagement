@@ -30,15 +30,32 @@ class PermitEntityTest {
 	@Test
 	void setters() {
 		final var entity = PermitEntity.create();
-		entity.setStatus("REVOKED");
+		entity.setId("p1");
+		entity.setErrandId("e1");
+		entity.setPermitType("PARKING_PERMIT");
 		entity.setValidFrom(FROM);
+		entity.setValidUntil(FROM.plusYears(1));
+		entity.setConditions("c");
+		entity.setStatus("REVOKED");
 		entity.setCreated(CREATED);
 		entity.setModified(CREATED);
 
-		assertThat(entity.getStatus()).isEqualTo("REVOKED");
+		assertThat(entity.getId()).isEqualTo("p1");
+		assertThat(entity.getErrandId()).isEqualTo("e1");
+		assertThat(entity.getPermitType()).isEqualTo("PARKING_PERMIT");
 		assertThat(entity.getValidFrom()).isEqualTo(FROM);
+		assertThat(entity.getValidUntil()).isEqualTo(FROM.plusYears(1));
+		assertThat(entity.getConditions()).isEqualTo("c");
+		assertThat(entity.getStatus()).isEqualTo("REVOKED");
 		assertThat(entity.getCreated()).isEqualTo(CREATED);
 		assertThat(entity.getModified()).isEqualTo(CREATED);
+	}
+
+	@Test
+	void toStringContainsValues() {
+		final var entity = PermitEntity.create().withId("p1").withErrandId("e1").withStatus("ACTIVE");
+
+		assertThat(entity.toString()).contains("PermitEntity{", "id='p1'", "errandId='e1'", "status='ACTIVE'");
 	}
 
 	@Test

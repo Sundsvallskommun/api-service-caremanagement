@@ -300,7 +300,11 @@ public final class FinancialAssistanceMapper {
 			.withClearingNumber(c.getClearingNumber())
 			.withAccountNumber(c.getAccountNumber())
 			.withOtherPaymentDescription(c.getOtherPaymentDescription())
-			.withPaymentSameAsPrevious(c.getPaymentSameAsPrevious());
+			.withPaymentSameAsPrevious(c.getPaymentSameAsPrevious())
+			.withEmail(c.getEmail())
+			.withPhone(c.getPhone())
+			.withNotifyByEmail(c.getNotifyByEmail())
+			.withNotifyBySms(c.getNotifyBySms());
 	}
 
 	static List<Person> toPersons(final List<FaPerson> source) {
@@ -319,7 +323,11 @@ public final class FinancialAssistanceMapper {
 			.withClearingNumber(e.getClearingNumber())
 			.withAccountNumber(e.getAccountNumber())
 			.withOtherPaymentDescription(e.getOtherPaymentDescription())
-			.withPaymentSameAsPrevious(e.getPaymentSameAsPrevious());
+			.withPaymentSameAsPrevious(e.getPaymentSameAsPrevious())
+			.withEmail(e.getEmail())
+			.withPhone(e.getPhone())
+			.withNotifyByEmail(e.getNotifyByEmail())
+			.withNotifyBySms(e.getNotifyBySms());
 	}
 
 	// ---- Planning -----------------------------------------------------------------------------------------------------

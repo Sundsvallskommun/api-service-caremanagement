@@ -120,6 +120,10 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getPersons().getFirst().getAccountNumber()).isEqualTo("567890");
 		assertThat(entity.getPersons().getFirst().getOtherPaymentDescription()).isEqualTo("Annat");
 		assertThat(entity.getPersons().getFirst().getPaymentSameAsPrevious()).isTrue();
+		assertThat(entity.getPersons().getFirst().getEmail()).isEqualTo("anna@example.com");
+		assertThat(entity.getPersons().getFirst().getPhone()).isEqualTo("+46701234567");
+		assertThat(entity.getPersons().getFirst().getNotifyByEmail()).isTrue();
+		assertThat(entity.getPersons().getFirst().getNotifyBySms()).isFalse();
 
 		assertThat(entity.getPlannings()).hasSize(1);
 		assertThat(entity.getPlannings().getFirst().getPerson()).isEqualTo("Anna");
@@ -188,6 +192,10 @@ class FinancialAssistanceMapperTest {
 		assertThat(data.getAssets().getFirst().getValue()).isEqualByComparingTo("80000.00");
 		assertThat(data.getPersons()).hasSize(1);
 		assertThat(data.getPersons().getFirst().getRole()).isEqualTo("APPLICANT");
+		assertThat(data.getPersons().getFirst().getEmail()).isEqualTo("anna@example.com");
+		assertThat(data.getPersons().getFirst().getPhone()).isEqualTo("+46701234567");
+		assertThat(data.getPersons().getFirst().getNotifyByEmail()).isTrue();
+		assertThat(data.getPersons().getFirst().getNotifyBySms()).isFalse();
 		assertThat(data.getPlannings()).hasSize(1);
 		assertThat(data.getPlannings().getFirst().getPlanningType()).isEqualTo("WORK");
 		assertThat(data.getPlannedActivities()).hasSize(1);
@@ -318,7 +326,11 @@ class FinancialAssistanceMapperTest {
 				.withClearingNumber("1234")
 				.withAccountNumber("567890")
 				.withOtherPaymentDescription("Annat")
-				.withPaymentSameAsPrevious(true)))
+				.withPaymentSameAsPrevious(true)
+				.withEmail("anna@example.com")
+				.withPhone("+46701234567")
+				.withNotifyByEmail(true)
+				.withNotifyBySms(false)))
 			.withPlannings(List.of(Planning.create()
 				.withPerson("Anna")
 				.withPlanningType("WORK")
@@ -411,7 +423,11 @@ class FinancialAssistanceMapperTest {
 				.withClearingNumber("1234")
 				.withAccountNumber("567890")
 				.withOtherPaymentDescription("Annat")
-				.withPaymentSameAsPrevious(true)))
+				.withPaymentSameAsPrevious(true)
+				.withEmail("anna@example.com")
+				.withPhone("+46701234567")
+				.withNotifyByEmail(true)
+				.withNotifyBySms(false)))
 			.withPlannings(List.of(FaPlanning.create()
 				.withPerson("Anna")
 				.withPlanningType("WORK")

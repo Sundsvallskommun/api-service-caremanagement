@@ -31,15 +31,34 @@ class ReferralEntityTest {
 	@Test
 	void setters() {
 		final var entity = ReferralEntity.create();
+		entity.setId("r1");
+		entity.setErrandId("e1");
+		entity.setAuthority("ENVIRONMENTAL_OFFICE");
+		entity.setRecipient("Env");
+		entity.setSentAt(SENT);
+		entity.setDueAt(SENT.plusWeeks(4));
 		entity.setStatus("RESPONDED");
 		entity.setResponseText("ok");
 		entity.setCreated(CREATED);
 		entity.setModified(CREATED);
 
+		assertThat(entity.getId()).isEqualTo("r1");
+		assertThat(entity.getErrandId()).isEqualTo("e1");
+		assertThat(entity.getAuthority()).isEqualTo("ENVIRONMENTAL_OFFICE");
+		assertThat(entity.getRecipient()).isEqualTo("Env");
+		assertThat(entity.getSentAt()).isEqualTo(SENT);
+		assertThat(entity.getDueAt()).isEqualTo(SENT.plusWeeks(4));
 		assertThat(entity.getStatus()).isEqualTo("RESPONDED");
 		assertThat(entity.getResponseText()).isEqualTo("ok");
 		assertThat(entity.getCreated()).isEqualTo(CREATED);
 		assertThat(entity.getModified()).isEqualTo(CREATED);
+	}
+
+	@Test
+	void toStringContainsValues() {
+		final var entity = ReferralEntity.create().withId("r1").withErrandId("e1").withStatus("SENT");
+
+		assertThat(entity.toString()).contains("ReferralEntity{", "id='r1'", "errandId='e1'", "status='SENT'");
 	}
 
 	@Test

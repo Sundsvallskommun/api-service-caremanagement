@@ -42,6 +42,18 @@ public class FaPerson {
 	@Column(name = "payment_same_as_previous")
 	private Boolean paymentSameAsPrevious;
 
+	@Column(name = "email")
+	private String email;
+
+	@Column(name = "phone")
+	private String phone;
+
+	@Column(name = "notify_by_email")
+	private Boolean notifyByEmail;
+
+	@Column(name = "notify_by_sms")
+	private Boolean notifyBySms;
+
 	public static FaPerson create() {
 		return new FaPerson();
 	}
@@ -90,6 +102,22 @@ public class FaPerson {
 		return paymentSameAsPrevious;
 	}
 
+	public String getEmail() {
+		return email;
+	}
+
+	public String getPhone() {
+		return phone;
+	}
+
+	public Boolean getNotifyByEmail() {
+		return notifyByEmail;
+	}
+
+	public Boolean getNotifyBySms() {
+		return notifyBySms;
+	}
+
 	public void setRole(final String role) {
 		this.role = role;
 	}
@@ -132,6 +160,22 @@ public class FaPerson {
 
 	public void setPaymentSameAsPrevious(final Boolean paymentSameAsPrevious) {
 		this.paymentSameAsPrevious = paymentSameAsPrevious;
+	}
+
+	public void setEmail(final String email) {
+		this.email = email;
+	}
+
+	public void setPhone(final String phone) {
+		this.phone = phone;
+	}
+
+	public void setNotifyByEmail(final Boolean notifyByEmail) {
+		this.notifyByEmail = notifyByEmail;
+	}
+
+	public void setNotifyBySms(final Boolean notifyBySms) {
+		this.notifyBySms = notifyBySms;
 	}
 
 	public FaPerson withRole(final String role) {
@@ -189,6 +233,26 @@ public class FaPerson {
 		return this;
 	}
 
+	public FaPerson withEmail(final String email) {
+		this.email = email;
+		return this;
+	}
+
+	public FaPerson withPhone(final String phone) {
+		this.phone = phone;
+		return this;
+	}
+
+	public FaPerson withNotifyByEmail(final Boolean notifyByEmail) {
+		this.notifyByEmail = notifyByEmail;
+		return this;
+	}
+
+	public FaPerson withNotifyBySms(final Boolean notifyBySms) {
+		this.notifyBySms = notifyBySms;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -199,13 +263,16 @@ public class FaPerson {
 			&& Objects.equals(hadWorkLast12Months, that.hadWorkLast12Months) && Objects.equals(hadWorkDescription, that.hadWorkDescription)
 			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(clearingNumber, that.clearingNumber)
 			&& Objects.equals(accountNumber, that.accountNumber) && Objects.equals(otherPaymentDescription, that.otherPaymentDescription)
-			&& Objects.equals(paymentSameAsPrevious, that.paymentSameAsPrevious);
+			&& Objects.equals(paymentSameAsPrevious, that.paymentSameAsPrevious) && Objects.equals(email, that.email)
+			&& Objects.equals(phone, that.phone) && Objects.equals(notifyByEmail, that.notifyByEmail)
+			&& Objects.equals(notifyBySms, that.notifyBySms);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(role, partyId, needsInterpreter, interpreterLanguage, hadWorkLast12Months, hadWorkDescription,
-			paymentMethod, clearingNumber, accountNumber, otherPaymentDescription, paymentSameAsPrevious);
+			paymentMethod, clearingNumber, accountNumber, otherPaymentDescription, paymentSameAsPrevious, email, phone,
+			notifyByEmail, notifyBySms);
 	}
 
 	@Override
@@ -214,6 +281,7 @@ public class FaPerson {
 			+ ", interpreterLanguage='" + interpreterLanguage + "', hadWorkLast12Months=" + hadWorkLast12Months
 			+ ", hadWorkDescription='" + hadWorkDescription + "', paymentMethod='" + paymentMethod + "', clearingNumber='"
 			+ clearingNumber + "', accountNumber='" + accountNumber + "', otherPaymentDescription='" + otherPaymentDescription
-			+ "', paymentSameAsPrevious=" + paymentSameAsPrevious + '}';
+			+ "', paymentSameAsPrevious=" + paymentSameAsPrevious + ", email='" + email + "', phone='" + phone
+			+ "', notifyByEmail=" + notifyByEmail + ", notifyBySms=" + notifyBySms + '}';
 	}
 }
