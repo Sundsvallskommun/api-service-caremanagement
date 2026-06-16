@@ -18,7 +18,7 @@ public class EligibilityResponse {
 	@Schema(description = "Machine-readable code for the gate that drove the suggestion",
 		examples = "EXISTING_CASE",
 		allowableValues = {
-			"NO_EXISTING_CASE", "CIVILSTAND_CHANGED", "EXISTING_CASE", "PROTECTED_IDENTITY", "ALL_TYPES_TEST"
+			"NO_EXISTING_CASE", "CIVILSTAND_CHANGED", "EXISTING_CASE", "ALL_TYPES_TEST"
 		})
 	private String reasonCode;
 
@@ -60,10 +60,6 @@ public class EligibilityResponse {
 
 	@Schema(description = "True when the request included a co-applicant (medsökande)", examples = "false")
 	private boolean hasCoApplicant;
-
-	@Schema(description = "True when the applicant or co-applicant has skyddad identitet (protected identity) in folkbokföring or Lifecare. When true no application is offered (suggestions is empty) and the citizen is directed to a handläggare.",
-		examples = "false")
-	private boolean protectedIdentity;
 
 	public static EligibilityResponse create() {
 		return new EligibilityResponse();
@@ -264,19 +260,6 @@ public class EligibilityResponse {
 		return this;
 	}
 
-	public boolean isProtectedIdentity() {
-		return protectedIdentity;
-	}
-
-	public void setProtectedIdentity(final boolean protectedIdentity) {
-		this.protectedIdentity = protectedIdentity;
-	}
-
-	public EligibilityResponse withProtectedIdentity(final boolean protectedIdentity) {
-		this.protectedIdentity = protectedIdentity;
-		return this;
-	}
-
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -286,8 +269,7 @@ public class EligibilityResponse {
 			&& applicationExistsThisMonth == that.applicationExistsThisMonth
 			&& applicationExistsNextMonth == that.applicationExistsNextMonth && currentMonthDecided == that.currentMonthDecided
 			&& hasPreviousCalculation == that.hasPreviousCalculation && lifecareChecked == that.lifecareChecked
-			&& hasCoApplicant == that.hasCoApplicant && protectedIdentity == that.protectedIdentity
-			&& Objects.equals(suggestions, that.suggestions)
+			&& hasCoApplicant == that.hasCoApplicant && Objects.equals(suggestions, that.suggestions)
 			&& Objects.equals(reasonCode, that.reasonCode) && Objects.equals(message, that.message)
 			&& Objects.equals(civilstandMatches, that.civilstandMatches)
 			&& Objects.equals(latestDecisionPeriodMonth, that.latestDecisionPeriodMonth)
@@ -298,7 +280,7 @@ public class EligibilityResponse {
 	public int hashCode() {
 		return Objects.hash(suggestions, reasonCode, message, existsInCm, existsInLc, civilstandMatches, windowDays,
 			applicationExistsThisMonth, applicationExistsNextMonth, currentMonthDecided, latestDecisionPeriodMonth,
-			latestDecisionPeriodYear, hasPreviousCalculation, lifecareChecked, hasCoApplicant, protectedIdentity);
+			latestDecisionPeriodYear, hasPreviousCalculation, lifecareChecked, hasCoApplicant);
 	}
 
 	@Override
@@ -309,6 +291,6 @@ public class EligibilityResponse {
 			+ ", applicationExistsNextMonth=" + applicationExistsNextMonth + ", currentMonthDecided=" + currentMonthDecided
 			+ ", latestDecisionPeriodMonth=" + latestDecisionPeriodMonth + ", latestDecisionPeriodYear="
 			+ latestDecisionPeriodYear + ", hasPreviousCalculation=" + hasPreviousCalculation + ", lifecareChecked="
-			+ lifecareChecked + ", hasCoApplicant=" + hasCoApplicant + ", protectedIdentity=" + protectedIdentity + '}';
+			+ lifecareChecked + ", hasCoApplicant=" + hasCoApplicant + '}';
 	}
 }

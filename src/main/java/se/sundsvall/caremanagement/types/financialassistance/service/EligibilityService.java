@@ -42,8 +42,9 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  *
  * <ol>
  * <li><b>Skyddad identitet</b> — a safety gate ahead of the routing: if the applicant or co-applicant has protected
- * identity in folkbokföring (citizen) or Lifecare, no application is offered (empty suggestions,
- * {@code reasonCode=PROTECTED_IDENTITY}) and the citizen is directed to a handläggare.</li>
+ * identity in folkbokföring (citizen) or Lifecare, no application is offered (empty suggestions). The response carries
+ * <em>no</em> reason or flag — the protected status must not leak across the API edge — so the frontend simply sees
+ * that nothing can be recommended and directs the citizen to a handläggare.</li>
  * <li><b>Finns i CM? + LC</b> — does the applicant already exist (an EB errand in caremanagement, or a Lifecare
  * footprint)? When applying together, <em>both</em> must exist. If not → nyansökan.</li>
  * <li><b>Samma civilstånd?</b> — does the requested constellation (alone vs with a partner, inferred from the
@@ -63,7 +64,6 @@ public class EligibilityService {
 	static final String REASON_NO_EXISTING_CASE = "NO_EXISTING_CASE";
 	static final String REASON_CIVILSTAND_CHANGED = "CIVILSTAND_CHANGED";
 	static final String REASON_EXISTING_CASE = "EXISTING_CASE";
-	static final String REASON_PROTECTED_IDENTITY = "PROTECTED_IDENTITY";
 	static final String REASON_ALL_TYPES_TEST = "ALL_TYPES_TEST";
 
 	private static final String[] MONTHS_SV = {
@@ -104,9 +104,9 @@ public class EligibilityService {
 		}
 
 		// Skyddad identitet — hard safety gate (checked in folkbokföring/citizen and Lifecare). A protected applicant or
-		// co-applicant must not be routed into self-service: offer no application and let the frontend hand off to a
-		// handläggare. Best-effort per source, so an upstream outage degrades to normal routing rather than blocking
-		// every applicant.
+		// co-applicant must not be routed into self-service: offer no application (empty suggestions) and let the frontend
+		// hand off to a handläggare. The protected status is kept internal — it never leaves this service. Best-effort per
+		// source, so an upstream outage degrades to normal routing rather than blocking every applicant.
 		if (hasProtectedIdentity(municipalityId, request.getApplicant())
 			|| (hasCoApplicant && hasProtectedIdentity(municipalityId, request.getCoApplicant()))) {
 			return protectedIdentityResponse(hasCoApplicant);
@@ -227,15 +227,13 @@ public class EligibilityService {
 	}
 
 	/**
-	 * Skyddad-identitet response: no application is offered (empty suggestions, no recommended slug) — the frontend
-	 * directs the citizen to a handläggare. Carries no CM/Lifecare facts beyond the protected flag.
+	 * Skyddad-identitet response: an empty suggestion list and nothing else. Deliberately carries no reasonCode, message
+	 * or flag — the protected status must not leak across the API edge — so the response is just "nothing can be
+	 * recommended"; the frontend turns that into a "contact a handläggare" message.
 	 */
 	private static EligibilityResponse protectedIdentityResponse(final boolean hasCoApplicant) {
 		return EligibilityResponse.create()
 			.withHasCoApplicant(hasCoApplicant)
-			.withProtectedIdentity(true)
-			.withReasonCode(REASON_PROTECTED_IDENTITY)
-			.withMessage("Skyddad identitet. Ansökan kan inte hanteras via självservice – hänvisa till handläggare.")
 			.withSuggestions(List.of());
 	}
 

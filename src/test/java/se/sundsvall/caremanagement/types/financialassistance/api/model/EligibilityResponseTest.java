@@ -27,8 +27,7 @@ class EligibilityResponseTest {
 			.withLatestDecisionPeriodYear(2026)
 			.withHasPreviousCalculation(true)
 			.withLifecareChecked(true)
-			.withHasCoApplicant(true)
-			.withProtectedIdentity(true);
+			.withHasCoApplicant(true);
 
 		assertThat(response.getSuggestions()).isEqualTo(SUGGESTIONS);
 		assertThat(response.getReasonCode()).isEqualTo("EXISTING_CASE");
@@ -45,7 +44,6 @@ class EligibilityResponseTest {
 		assertThat(response.isHasPreviousCalculation()).isTrue();
 		assertThat(response.isLifecareChecked()).isTrue();
 		assertThat(response.isHasCoApplicant()).isTrue();
-		assertThat(response.isProtectedIdentity()).isTrue();
 		assertThat(response).hasNoNullFieldsOrProperties();
 	}
 
@@ -67,14 +65,12 @@ class EligibilityResponseTest {
 		response.setHasPreviousCalculation(false);
 		response.setLifecareChecked(false);
 		response.setHasCoApplicant(false);
-		response.setProtectedIdentity(false);
 
 		assertThat(response.getReasonCode()).isEqualTo("NO_EXISTING_CASE");
 		assertThat(response.getMessage()).isEqualTo("Föreslår nyansökan");
 		assertThat(response.getWindowDays()).isEqualTo(30);
 		assertThat(response.getCivilstandMatches()).isNull();
 		assertThat(response.isLifecareChecked()).isFalse();
-		assertThat(response.isProtectedIdentity()).isFalse();
 	}
 
 	@Test

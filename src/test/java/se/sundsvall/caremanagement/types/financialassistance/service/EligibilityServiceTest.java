@@ -36,7 +36,6 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_CIVILSTAND_CHANGED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_EXISTING_CASE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_NO_EXISTING_CASE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_PROTECTED_IDENTITY;
 
 @ExtendWith(MockitoExtension.class)
 class EligibilityServiceTest {
@@ -114,40 +113,38 @@ class EligibilityServiceTest {
 	// ---- 0) Skyddad identitet gate -----------------------------------------------------------------------------------
 
 	@Test
-	void protectedApplicantViaCitizenSuggestsNone() {
+	void protectedApplicantViaCitizenYieldsEmptySuggestions() {
 		when(citizenServiceMock.hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT)).thenReturn(true);
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
-		assertThat(response.getReasonCode()).isEqualTo(REASON_PROTECTED_IDENTITY);
-		assertThat(response.isProtectedIdentity()).isTrue();
+		// No application offered, and the protected status must not leak — no reasonCode, no message.
 		assertThat(response.getSuggestions()).isEmpty();
+		assertThat(response.getReasonCode()).isNull();
+		assertThat(response.getMessage()).isNull();
 	}
 
 	@Test
-	void protectedApplicantViaLifecareSuggestsNone() {
-		// Citizen says not protected, but Lifecare flags the person → still None.
+	void protectedApplicantViaLifecareYieldsEmptySuggestions() {
+		// Citizen says not protected, but Lifecare flags the person → still no suggestions.
 		when(lifecareEbCaseServiceMock.hasProtectedIdentity(APPLICANT_PNR)).thenReturn(true);
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
-		assertThat(response.getReasonCode()).isEqualTo(REASON_PROTECTED_IDENTITY);
-		assertThat(response.isProtectedIdentity()).isTrue();
 		assertThat(response.getSuggestions()).isEmpty();
+		assertThat(response.getReasonCode()).isNull();
 	}
 
 	@Test
-	void protectedCoApplicantSuggestsNone() {
+	void protectedCoApplicantYieldsEmptySuggestions() {
 		// Applicant is fine, but the medsökande has skyddad identitet → the joint application is blocked too.
 		when(citizenServiceMock.hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT)).thenReturn(false);
 		when(citizenServiceMock.hasProtectedIdentity(MUNICIPALITY_ID, CO_APPLICANT)).thenReturn(true);
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
 
-		assertThat(response.getReasonCode()).isEqualTo(REASON_PROTECTED_IDENTITY);
-		assertThat(response.isProtectedIdentity()).isTrue();
-		assertThat(response.isHasCoApplicant()).isTrue();
 		assertThat(response.getSuggestions()).isEmpty();
+		assertThat(response.getReasonCode()).isNull();
 	}
 
 	@Test
@@ -160,8 +157,8 @@ class EligibilityServiceTest {
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
-		assertThat(response.isProtectedIdentity()).isFalse();
 		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_EXISTING_CASE);
+		assertThat(response.getSuggestions()).isNotEmpty();
 	}
 
 	// ---- 1) Existence gate -------------------------------------------------------------------------------------------
