@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:58774
+- url: http://localhost:51069
   description: Generated server url
 tags:
 - name: Notes
@@ -19,6 +19,9 @@ tags:
 - name: Permits
   description: "Permits issued on an errand: validity period, conditions and status.\
     \ Revoking sets the status to REVOKED."
+- name: Errand Types
+  description: "Describes the errand types: their statuses, stakeholder roles and\
+    \ the fields a type's data payload should carry, as form guidance for clients."
 - name: Referrals
   description: "Referrals/consultations on an errand: receiving authority, due date,\
     \ free-text response and status (SENT → RESPONDED)."
@@ -2949,6 +2952,100 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RenewalPrefill"
+  /{municipalityId}/{namespace}/errand-types:
+    get:
+      tags:
+      - Errand Types
+      summary: List errand types
+      description: Returns the descriptor for every registered errand type.
+      operationId: findErrandTypes
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ErrandTypeSchema"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errand-types/{typeSlug}:
+    get:
+      tags:
+      - Errand Types
+      summary: Read errand type
+      description: "Returns the descriptor for a single errand type slug, e.g. financial-assistance-renewal."
+      operationId: readErrandType
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: typeSlug
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrandTypeSchema"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /api-docs:
     get:
       tags:
@@ -2998,10 +3095,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -4834,4 +4931,117 @@ components:
             is degraded (empty children).
           examples:
           - "true"
+    ErrandTypeSchema:
+      type: object
+      description: "Form descriptor for an errand type slug — statuses, roles and\
+        \ the fields its data payload should carry."
+      properties:
+        typeSlug:
+          type: string
+          description: The errand type slug
+          examples:
+          - financial-assistance-renewal
+        applicationType:
+          type: string
+          description: "The application-type variant the slug maps to, when the type\
+            \ exposes one; null otherwise"
+          examples:
+          - RENEWAL
+        displayName:
+          type: string
+          description: Human-readable display name of the type
+          examples:
+          - Ekonomiskt bistånd – återansökan
+        statuses:
+          type: array
+          description: "Allowed status codes for the type, sorted"
+          examples:
+          - - AVSLAGEN
+            - BEVILJAD
+            - INKOMMEN
+          items:
+            type: string
+        roles:
+          type: array
+          description: Stakeholder roles valid for the type
+          items:
+            $ref: "#/components/schemas/RoleDefinition"
+        fields:
+          type: array
+          description: "The fields the type's data payload should carry, as form guidance"
+          items:
+            $ref: "#/components/schemas/FieldDescriptor"
+    FieldDescriptor:
+      type: object
+      description: Form-guidance descriptor for a single data field of an errand type.
+      properties:
+        name:
+          type: string
+          description: The data field name
+          examples:
+          - maritalStatus
+        type:
+          type: string
+          description: The field kind
+          enum:
+          - STRING
+          - BOOLEAN
+          - INTEGER
+          - DECIMAL
+          - DATE_TIME
+          - ENUM
+          - ARRAY
+          examples:
+          - ENUM
+        required:
+          type: boolean
+          description: True when the field is unconditionally required for the application
+            types it applies to
+          examples:
+          - "true"
+        options:
+          type: array
+          description: "Allowable values when type is ENUM, otherwise null"
+          examples:
+          - - SINGLE
+            - COHABITING
+          items:
+            type: string
+        itemsRef:
+          type: string
+          description: "For ARRAY fields, the OpenAPI component name of the element\
+            \ shape (resolve via /api-docs); null otherwise"
+          examples:
+          - Cost
+        appliesTo:
+          type: array
+          description: The application types that collect this field
+          examples:
+          - - NEW
+            - RENEWAL
+          items:
+            type: string
+        condition:
+          type: string
+          description: "Human-readable gate describing when the field is collected,\
+            \ when conditional; null when always collected"
+          examples:
+          - periodChoice == OTHER_BENEFIT
+        description:
+          type: string
+          description: Short description of the field
+          examples:
+          - Marital status of the applicant
+    RoleDefinition:
+      type: object
+      properties:
+        code:
+          type: string
+        displayName:
+          type: string
+        maxOccurrences:
+          type: integer
+          format: int32
+        required:
+          type: boolean
   securitySchemes: {}

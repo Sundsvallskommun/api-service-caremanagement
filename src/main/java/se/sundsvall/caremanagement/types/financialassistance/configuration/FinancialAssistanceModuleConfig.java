@@ -5,6 +5,7 @@ import java.util.Set;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import se.sundsvall.caremanagement.core.service.registry.ErrandTypeContribution;
+import se.sundsvall.caremanagement.errandtypes.service.ErrandTypeSchemaContribution;
 import se.sundsvall.caremanagement.stakeholders.api.model.RoleDefinition;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderRoleContribution;
 
@@ -99,6 +100,21 @@ public class FinancialAssistanceModuleConfig {
 	@Bean
 	StakeholderRoleContribution financialAssistanceSupplementaryRoles() {
 		return roleContribution(SLUG_SUPPLEMENTARY);
+	}
+
+	@Bean
+	ErrandTypeSchemaContribution financialAssistanceNewSchema() {
+		return FinancialAssistanceSchema.contribution(SLUG_NEW, APPLICATION_TYPE_NEW);
+	}
+
+	@Bean
+	ErrandTypeSchemaContribution financialAssistanceRenewalSchema() {
+		return FinancialAssistanceSchema.contribution(SLUG_RENEWAL, APPLICATION_TYPE_RENEWAL);
+	}
+
+	@Bean
+	ErrandTypeSchemaContribution financialAssistanceSupplementarySchema() {
+		return FinancialAssistanceSchema.contribution(SLUG_SUPPLEMENTARY, APPLICATION_TYPE_SUPPLEMENTARY);
 	}
 
 	/** Identical status lifecycle for every EB slug — only the slug and display name differ. */
