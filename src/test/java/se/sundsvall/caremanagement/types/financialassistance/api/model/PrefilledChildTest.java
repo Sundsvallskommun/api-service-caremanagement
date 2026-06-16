@@ -10,11 +10,11 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
-class PrefillPersonTest {
+class PrefilledChildTest {
 
 	@Test
 	void testBean() {
-		assertThat(PrefillPerson.class, allOf(
+		assertThat(PrefilledChild.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),

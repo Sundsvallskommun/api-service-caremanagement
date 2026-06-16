@@ -7,7 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareEbRoster;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.PrefillPerson;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PrefilledChild;
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,7 +32,7 @@ class RenewalPrefillServiceTest {
 	}
 
 	@Test
-	void mapsApplicantCoApplicantAndChildren() {
+	void prefillsOnlyChildrenExcludingApplicantAndCoApplicant() {
 		final var roster = new LifecareEbRoster(APPLICANT, CO_APPLICANT, List.of(
 			new LifecareEbRoster.Member(APPLICANT, "Anna Andersson"),
 			new LifecareEbRoster.Member(CO_APPLICANT, "Björn Andersson"),
@@ -42,14 +42,9 @@ class RenewalPrefillServiceTest {
 		final var prefill = service().prefill(APPLICANT);
 
 		assertThat(prefill.isLifecareChecked()).isTrue();
-		assertThat(prefill.getPersons())
-			.extracting(PrefillPerson::getRole, PrefillPerson::getPersonalNumber, PrefillPerson::getName)
-			.containsExactly(
-				tuple("APPLICANT", APPLICANT, "Anna Andersson"),
-				tuple("CO_APPLICANT", CO_APPLICANT, "Björn Andersson"));
 		assertThat(prefill.getChildren())
-			.extracting(PrefillPerson::getRole, PrefillPerson::getPersonalNumber, PrefillPerson::getName)
-			.containsExactly(tuple(null, CHILD, "Kid Andersson"));
+			.extracting(PrefilledChild::getPersonalNumber, PrefilledChild::getName)
+			.containsExactly(tuple(CHILD, "Kid Andersson"));
 	}
 
 	@Test
@@ -61,20 +56,17 @@ class RenewalPrefillServiceTest {
 
 		final var prefill = service().prefill(APPLICANT);
 
-		assertThat(prefill.getPersons()).extracting(PrefillPerson::getRole).containsExactly("APPLICANT");
-		assertThat(prefill.getChildren()).extracting(PrefillPerson::getPersonalNumber).containsExactly(CHILD);
+		assertThat(prefill.getChildren()).extracting(PrefilledChild::getPersonalNumber).containsExactly(CHILD);
 	}
 
 	@Test
-	void emptyRosterStillReturnsApplicant() {
+	void emptyRosterYieldsNoChildren() {
 		when(lifecareEbCaseServiceMock.latestRoster(eq(APPLICANT), any()))
 			.thenReturn(new LifecareEbRoster(APPLICANT, null, List.of()));
 
 		final var prefill = service().prefill(APPLICANT);
 
 		assertThat(prefill.isLifecareChecked()).isTrue();
-		assertThat(prefill.getPersons()).extracting(PrefillPerson::getPersonalNumber).containsExactly(APPLICANT);
-		assertThat(prefill.getPersons()).extracting(PrefillPerson::getName).containsOnlyNulls();
 		assertThat(prefill.getChildren()).isEmpty();
 	}
 
@@ -86,7 +78,6 @@ class RenewalPrefillServiceTest {
 		final var prefill = service().prefill(APPLICANT);
 
 		assertThat(prefill.isLifecareChecked()).isFalse();
-		assertThat(prefill.getPersons()).isEmpty();
 		assertThat(prefill.getChildren()).isEmpty();
 	}
 }

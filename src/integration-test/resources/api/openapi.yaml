@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:54198
+- url: http://localhost:55166
   description: Generated server url
 tags:
 - name: Notes
@@ -2953,10 +2953,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -4673,50 +4673,36 @@ components:
         data:
           $ref: "#/components/schemas/FinancialAssistanceData"
           description: The typed financial assistance application payload
-    PrefillPerson:
+    PrefilledChild:
       type: object
-      description: A person pre-filled from Lifecare for a financial assistance renewal.
-        Carries only what Lifecare provides — personnummer and name; the citizen completes
-        the rest on the form.
+      description: "A child pre-filled from Lifecare for a financial assistance renewal.\
+        \ Carries only what Lifecare provides — personnummer and name; the citizen\
+        \ completes residence, school etc. on the form."
       properties:
-        role:
-          type: string
-          description: Role on the application; null for a household child
-          enum:
-          - APPLICANT
-          - CO_APPLICANT
-          examples:
-          - APPLICANT
         personalNumber:
           type: string
           description: Personal number
           examples:
-          - "198001012389"
+          - "201801012380"
         name:
           type: string
           description: Name as registered in Lifecare
           examples:
-          - Anna Andersson
+          - Kid Andersson
     RenewalPrefill:
       type: object
-      description: "Pre-fill data for a financial assistance renewal (återansökan),\
-        \ read from Lifecare."
+      description: "Pre-fill data for a financial assistance renewal (återansökan):\
+        \ household children read from Lifecare."
       properties:
-        persons:
-          type: array
-          description: "The applicant and, when applying together, the co-applicant\
-            \ (medsökande)"
-          items:
-            $ref: "#/components/schemas/PrefillPerson"
         children:
           type: array
           description: Children in the household from the most recent normberäkning
           items:
-            $ref: "#/components/schemas/PrefillPerson"
+            $ref: "#/components/schemas/PrefilledChild"
         lifecareChecked:
           type: boolean
           description: True when the Lifecare lookup succeeded. False means the answer
-            is degraded (empty lists).
+            is degraded (empty children).
           examples:
           - "true"
   securitySchemes: {}
