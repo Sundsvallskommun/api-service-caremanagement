@@ -12,6 +12,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.notes.api.model.CreateNote;
 import se.sundsvall.caremanagement.notes.api.model.Note;
+import se.sundsvall.caremanagement.notes.api.model.UpdateNote;
 import se.sundsvall.caremanagement.notes.service.NoteService;
 
 import static java.util.UUID.randomUUID;
@@ -81,6 +82,26 @@ class NoteResourceTest {
 		assertThat(note).isNotNull();
 		assertThat(note.getId()).isEqualTo(NOTE_ID);
 		verify(serviceMock).read(NOTE_ID);
+	}
+
+	@Test
+	void update() {
+		final var request = new UpdateNote("updated body", "editor");
+		when(serviceMock.update(NOTE_ID, request)).thenReturn(Note.create().withId(NOTE_ID).withBody("updated body").withModifiedBy("editor"));
+
+		final var note = webTestClient.patch()
+			.uri(uri -> uri.path(PATH + "/{noteId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "noteId", NOTE_ID)))
+			.bodyValue(request)
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(Note.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(note).isNotNull();
+		assertThat(note.getBody()).isEqualTo("updated body");
+		assertThat(note.getModifiedBy()).isEqualTo("editor");
+		verify(serviceMock).update(NOTE_ID, request);
 	}
 
 	@Test

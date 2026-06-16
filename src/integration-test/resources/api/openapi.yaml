@@ -2559,6 +2559,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Note"
+    patch:
+      tags:
+      - Notes
+      summary: Update note
+      operationId: update
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNote"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
     delete:
       tags:
       - Notes
@@ -3212,6 +3252,7 @@ components:
           - REAL_ESTATE
           - COMPANY
           - VEHICLE
+          - OTHER
           examples:
           - VEHICLE
         description:
@@ -4329,6 +4370,19 @@ components:
           minLength: 0
       required:
       - body
+    UpdateNote:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 8192
+          minLength: 0
+        modifiedBy:
+          type: string
+          maxLength: 64
+          minLength: 0
+      required:
+      - body
     CreateMessage:
       type: object
       description: A new message in the errand's conversation
@@ -4548,6 +4602,7 @@ components:
           - NO_EXISTING_CASE
           - CIVILSTAND_CHANGED
           - EXISTING_CASE
+          - PROTECTED_IDENTITY
           - ALL_TYPES_TEST
           examples:
           - EXISTING_CASE
@@ -4624,6 +4679,13 @@ components:
         hasCoApplicant:
           type: boolean
           description: True when the request included a co-applicant (medsökande)
+          examples:
+          - "false"
+        protectedIdentity:
+          type: boolean
+          description: "True when the applicant or co-applicant has skyddad identitet\
+            \ (protected identity) in folkbokföring or Lifecare. When true no application\
+            \ is offered (suggestions is empty) and the citizen is directed to a handläggare."
           examples:
           - "false"
     PatchErrand:
@@ -4821,6 +4883,14 @@ components:
           type: string
           format: date-time
           description: Created timestamp
+        modifiedBy:
+          type: string
+          description: User id of the last editor
+          example: jane01doe
+        modified:
+          type: string
+          format: date-time
+          description: Last modified timestamp; null until the note has been edited
     Message:
       type: object
       description: A message in the errand's conversation

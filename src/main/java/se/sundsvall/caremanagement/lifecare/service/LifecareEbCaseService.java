@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 
+import static java.lang.Boolean.TRUE;
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Comparator.comparing;
 import static java.util.Optional.ofNullable;
@@ -86,6 +87,21 @@ public class LifecareEbCaseService {
 			latestDecision.map(LifecareEbCaseService::periodOf).orElse(null),
 			!calculations.isEmpty(),
 			latestDecision.map(LifecareEbCaseService::hasCoApplicant).orElse(false));
+	}
+
+	/**
+	 * Whether the person is flagged with skyddad identitet in Lifecare FC — protected address (skyddad
+	 * folkbokföring/kvarskrivning) or protected registration (sekretessmarkering). Propagates the integration's
+	 * {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
+	 *
+	 * @param  personId the person's personnummer
+	 * @return          {@code true} when either protection flag is set; {@code false} when neither is set or FC has no
+	 *                  record
+	 */
+	public boolean hasProtectedIdentity(final String personId) {
+		return ofNullable(lifecareFcIntegration.getPerson(personId))
+			.map(person -> TRUE.equals(person.getAddressProtection()) || TRUE.equals(person.getProtectedRegistration()))
+			.orElse(false);
 	}
 
 	/**

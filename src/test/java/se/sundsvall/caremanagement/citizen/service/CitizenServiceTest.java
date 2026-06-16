@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.citizen.service;
 
+import generated.se.sundsvall.citizen.CitizenExtended;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -63,5 +64,35 @@ class CitizenServiceTest {
 		when(citizenClientMock.getGuid(MUNICIPALITY_ID, PERSONAL_NUMBER)).thenReturn("   ");
 
 		assertThat(service().getPartyId(MUNICIPALITY_ID, PERSONAL_NUMBER)).isEmpty();
+	}
+
+	@Test
+	void protectedWhenClassifiedSet() {
+		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true))
+			.thenReturn(new CitizenExtended().classified("PROTECTED"));
+
+		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isTrue();
+	}
+
+	@Test
+	void protectedWhenProtectedNrSet() {
+		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true))
+			.thenReturn(new CitizenExtended().protectedNR("PROTECTED_IDENTITY"));
+
+		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isTrue();
+	}
+
+	@Test
+	void notProtectedWhenNeitherFlagSet() {
+		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true)).thenReturn(new CitizenExtended());
+
+		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isFalse();
+	}
+
+	@Test
+	void notProtectedWhenNoCitizenRecord() {
+		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true)).thenReturn(null);
+
+		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isFalse();
 	}
 }

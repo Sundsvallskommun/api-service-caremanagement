@@ -22,6 +22,12 @@ public class Note {
 	@Schema(description = "Created timestamp")
 	private OffsetDateTime created;
 
+	@Schema(description = "User id of the last editor", example = "jane01doe")
+	private String modifiedBy;
+
+	@Schema(description = "Last modified timestamp; null until the note has been edited")
+	private OffsetDateTime modified;
+
 	public static Note create() {
 		return new Note();
 	}
@@ -46,6 +52,14 @@ public class Note {
 		return created;
 	}
 
+	public String getModifiedBy() {
+		return modifiedBy;
+	}
+
+	public OffsetDateTime getModified() {
+		return modified;
+	}
+
 	public void setId(final String v) {
 		this.id = v;
 	}
@@ -64,6 +78,14 @@ public class Note {
 
 	public void setCreated(final OffsetDateTime v) {
 		this.created = v;
+	}
+
+	public void setModifiedBy(final String v) {
+		this.modifiedBy = v;
+	}
+
+	public void setModified(final OffsetDateTime v) {
+		this.modified = v;
 	}
 
 	public Note withId(final String v) {
@@ -91,6 +113,16 @@ public class Note {
 		return this;
 	}
 
+	public Note withModifiedBy(final String v) {
+		this.modifiedBy = v;
+		return this;
+	}
+
+	public Note withModified(final OffsetDateTime v) {
+		this.modified = v;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -98,11 +130,12 @@ public class Note {
 		final Note that = (Note) o;
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
 			&& Objects.equals(body, that.body) && Objects.equals(author, that.author)
-			&& Objects.equals(created, that.created);
+			&& Objects.equals(created, that.created) && Objects.equals(modifiedBy, that.modifiedBy)
+			&& Objects.equals(modified, that.modified);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, body, author, created);
+		return Objects.hash(id, errandId, body, author, created, modifiedBy, modified);
 	}
 }

@@ -44,4 +44,20 @@ public class CitizenService {
 	public Optional<String> getPartyId(final String municipalityId, final String personalNumber) {
 		return Optional.ofNullable(citizenClient.getGuid(municipalityId, personalNumber)).filter(value -> hasText(value));
 	}
+
+	/**
+	 * Whether the citizen has skyddad identitet in folkbokföring — a sekretessmarkering ({@code protectedNR}) or skyddad
+	 * folkbokföring/classification ({@code classified}). The lookup asks for classified data ({@code ShowClassified=true})
+	 * since otherwise the citizen service filters protected persons out entirely; the flags only surface that way.
+	 *
+	 * @param  municipalityId the id of the municipality
+	 * @param  partyId        the citizen's partyId (personId GUID)
+	 * @return                {@code true} when either protection flag is set; {@code false} when neither is set or the
+	 *                        citizen service has no record (204 No Content)
+	 */
+	public boolean hasProtectedIdentity(final String municipalityId, final String partyId) {
+		return Optional.ofNullable(citizenClient.getCitizen(municipalityId, partyId, true))
+			.map(citizen -> hasText(citizen.getClassified()) || hasText(citizen.getProtectedNR()))
+			.orElse(false);
+	}
 }

@@ -38,6 +38,13 @@ public class NoteEntity {
 	@TimeZoneStorage(NORMALIZE)
 	private OffsetDateTime created;
 
+	@Column(name = "modified_by", length = 64)
+	private String modifiedBy;
+
+	@Column(name = "modified")
+	@TimeZoneStorage(NORMALIZE)
+	private OffsetDateTime modified;
+
 	public static NoteEntity create() {
 		return new NoteEntity();
 	}
@@ -62,6 +69,14 @@ public class NoteEntity {
 		return created;
 	}
 
+	public String getModifiedBy() {
+		return modifiedBy;
+	}
+
+	public OffsetDateTime getModified() {
+		return modified;
+	}
+
 	public NoteEntity withId(final String v) {
 		this.id = v;
 		return this;
@@ -84,6 +99,16 @@ public class NoteEntity {
 
 	public NoteEntity withCreated(final OffsetDateTime v) {
 		this.created = v;
+		return this;
+	}
+
+	public NoteEntity withModifiedBy(final String v) {
+		this.modifiedBy = v;
+		return this;
+	}
+
+	public NoteEntity withModified(final OffsetDateTime v) {
+		this.modified = v;
 		return this;
 	}
 }

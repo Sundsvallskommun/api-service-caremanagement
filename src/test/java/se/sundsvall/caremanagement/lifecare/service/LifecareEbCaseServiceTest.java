@@ -8,6 +8,7 @@ import generated.se.sundsvall.lifecarefc.PersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedDecisionPersonDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedPersonDTO;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -219,6 +220,34 @@ class LifecareEbCaseServiceTest {
 
 		assertThat(roster.members()).isEmpty();
 		assertThat(roster.coApplicant()).isNull();
+	}
+
+	@Test
+	void protectedIdentityFromAddressProtection() {
+		when(integrationMock.getPerson(APPLICANT)).thenReturn(new PersonBasedPersonDTO().addressProtection(true));
+
+		assertThat(service().hasProtectedIdentity(APPLICANT)).isTrue();
+	}
+
+	@Test
+	void protectedIdentityFromProtectedRegistration() {
+		when(integrationMock.getPerson(APPLICANT)).thenReturn(new PersonBasedPersonDTO().protectedRegistration(true));
+
+		assertThat(service().hasProtectedIdentity(APPLICANT)).isTrue();
+	}
+
+	@Test
+	void notProtectedWhenFlagsUnsetOrAbsent() {
+		when(integrationMock.getPerson(APPLICANT)).thenReturn(new PersonBasedPersonDTO());
+
+		assertThat(service().hasProtectedIdentity(APPLICANT)).isFalse();
+	}
+
+	@Test
+	void notProtectedWhenNoPersonRecord() {
+		when(integrationMock.getPerson(APPLICANT)).thenReturn(null);
+
+		assertThat(service().hasProtectedIdentity(APPLICANT)).isFalse();
 	}
 
 	@Test

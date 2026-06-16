@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.notes.api.model.CreateNote;
 import se.sundsvall.caremanagement.notes.api.model.Note;
+import se.sundsvall.caremanagement.notes.api.model.UpdateNote;
 import se.sundsvall.caremanagement.notes.service.NoteService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
@@ -77,6 +79,18 @@ class NoteResource {
 		@ValidUuid @PathVariable final String noteId) {
 
 		return ok(service.read(noteId));
+	}
+
+	@PatchMapping(path = "/{noteId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Update note")
+	ResponseEntity<Note> update(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String noteId,
+		@Valid @NotNull @RequestBody final UpdateNote request) {
+
+		return ok(service.update(noteId, request));
 	}
 
 	@DeleteMapping(path = "/{noteId}", produces = ALL_VALUE)

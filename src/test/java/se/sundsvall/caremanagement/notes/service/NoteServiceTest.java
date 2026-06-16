@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import se.sundsvall.caremanagement.notes.api.model.CreateNote;
+import se.sundsvall.caremanagement.notes.api.model.UpdateNote;
 import se.sundsvall.caremanagement.notes.integration.db.NoteRepository;
 import se.sundsvall.caremanagement.notes.integration.db.model.NoteEntity;
 import se.sundsvall.caremanagement.notes.service.event.NoteAdded;
@@ -94,6 +95,38 @@ class NoteServiceTest {
 		assertThatThrownBy(() -> service.read("missing"))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+	}
+
+	@Test
+	void updateUpdatesBodyAndReturnsNote() {
+		final var existing = NoteEntity.create().withId("n1").withErrandId("e1").withBody("old").withCreated(FIXED_TIMESTAMP);
+		when(repositoryMock.findById("n1")).thenReturn(Optional.of(existing));
+		when(repositoryMock.save(any(NoteEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.update("n1", new UpdateNote("new body", "editor"));
+
+		assertThat(result.getBody()).isEqualTo("new body");
+		assertThat(result.getModifiedBy()).isEqualTo("editor");
+		assertThat(result.getModified()).isNotNull();
+		assertThat(result.getCreated()).isEqualTo(FIXED_TIMESTAMP);
+
+		final ArgumentCaptor<NoteEntity> entityCaptor = ArgumentCaptor.forClass(NoteEntity.class);
+		verify(repositoryMock).save(entityCaptor.capture());
+		assertThat(entityCaptor.getValue().getBody()).isEqualTo("new body");
+		assertThat(entityCaptor.getValue().getModifiedBy()).isEqualTo("editor");
+		assertThat(entityCaptor.getValue().getModified()).isNotNull();
+		verify(eventsMock, never()).publishEvent(any());
+	}
+
+	@Test
+	void updateNotFound() {
+		when(repositoryMock.findById("missing")).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.update("missing", new UpdateNote("b", "editor")))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verify(repositoryMock, never()).save(any());
 	}
 
 	@Test

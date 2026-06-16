@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.notes.api.model.CreateNote;
 import se.sundsvall.caremanagement.notes.api.model.Note;
+import se.sundsvall.caremanagement.notes.api.model.UpdateNote;
 import se.sundsvall.caremanagement.notes.integration.db.NoteRepository;
 import se.sundsvall.caremanagement.notes.integration.db.model.NoteEntity;
 import se.sundsvall.caremanagement.notes.service.event.NoteAdded;
@@ -49,12 +50,25 @@ public class NoteService {
 
 	@Transactional(readOnly = true)
 	public Note read(final String noteId) {
-		return toNote(repository.findById(noteId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No note with id '" + noteId + "'")));
+		return toNote(findNote(noteId));
+	}
+
+	public Note update(final String noteId, final UpdateNote request) {
+		final var entity = findNote(noteId)
+			.withBody(request.body())
+			.withModifiedBy(request.modifiedBy())
+			.withModified(now(systemDefault()).truncatedTo(MILLIS));
+
+		return toNote(repository.save(entity));
 	}
 
 	public void delete(final String noteId) {
 		repository.deleteById(noteId);
+	}
+
+	private NoteEntity findNote(final String noteId) {
+		return repository.findById(noteId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No note with id '" + noteId + "'"));
 	}
 
 	private static Note toNote(final NoteEntity e) {
@@ -63,6 +77,8 @@ public class NoteService {
 			.withErrandId(e.getErrandId())
 			.withBody(e.getBody())
 			.withAuthor(e.getAuthor())
-			.withCreated(e.getCreated());
+			.withCreated(e.getCreated())
+			.withModifiedBy(e.getModifiedBy())
+			.withModified(e.getModified());
 	}
 }

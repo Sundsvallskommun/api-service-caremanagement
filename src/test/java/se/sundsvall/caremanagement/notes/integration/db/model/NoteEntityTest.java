@@ -15,19 +15,25 @@ class NoteEntityTest {
 		final var body = "body";
 		final var author = "author";
 		final var created = FIXED_TIMESTAMP;
+		final var modifiedBy = "editor";
+		final var modified = FIXED_TIMESTAMP.plusHours(1);
 
 		final var entity = NoteEntity.create()
 			.withId(id)
 			.withErrandId(errandId)
 			.withBody(body)
 			.withAuthor(author)
-			.withCreated(created);
+			.withCreated(created)
+			.withModifiedBy(modifiedBy)
+			.withModified(modified);
 
 		assertThat(entity.getId()).isEqualTo(id);
 		assertThat(entity.getErrandId()).isEqualTo(errandId);
 		assertThat(entity.getBody()).isEqualTo(body);
 		assertThat(entity.getAuthor()).isEqualTo(author);
 		assertThat(entity.getCreated()).isEqualTo(created);
+		assertThat(entity.getModifiedBy()).isEqualTo(modifiedBy);
+		assertThat(entity.getModified()).isEqualTo(modified);
 	}
 
 	@Test

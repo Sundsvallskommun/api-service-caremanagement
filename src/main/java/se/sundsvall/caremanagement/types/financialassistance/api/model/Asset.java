@@ -10,10 +10,10 @@ import se.sundsvall.dept44.common.validators.annotation.OneOf;
 public class Asset {
 
 	@Schema(description = "The category of asset", examples = "VEHICLE", allowableValues = {
-		"BANK_SAVINGS", "REAL_ESTATE", "COMPANY", "VEHICLE"
+		"BANK_SAVINGS", "REAL_ESTATE", "COMPANY", "VEHICLE", "OTHER"
 	})
 	@OneOf(value = {
-		"BANK_SAVINGS", "REAL_ESTATE", "COMPANY", "VEHICLE"
+		"BANK_SAVINGS", "REAL_ESTATE", "COMPANY", "VEHICLE", "OTHER"
 	}, nullable = true)
 	private String assetCategory;
 
