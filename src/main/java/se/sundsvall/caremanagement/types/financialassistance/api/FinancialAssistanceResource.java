@@ -25,6 +25,8 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Eligibili
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
@@ -97,6 +99,21 @@ class FinancialAssistanceResource {
 		@Valid @NotNull @RequestBody final EligibilityRequest request) {
 
 		return ok(eligibilityService.evaluate(municipalityId, namespace, request));
+	}
+
+	@PostMapping(path = "/financial-assistance/normberakning", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Build and post the SSBTEK-driven normberäkning",
+		description = "Fetches the household's SSBTEK income basis for the application month, builds the normberäkning against the applicant's Lifecare FC calculation proposal, and posts it. Returns the created Lifecare calculation id plus the income warnings (unhandled incomes, significant period-over-period changes) the handläggare must review.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<NormberakningResponse> createNormberakning(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Valid @NotNull @RequestBody final NormberakningRequest request) {
+
+		return ok(service.createNormberakning(municipalityId, request));
 	}
 
 	@GetMapping(path = "/financial-assistance/prefill", produces = APPLICATION_JSON_VALUE)

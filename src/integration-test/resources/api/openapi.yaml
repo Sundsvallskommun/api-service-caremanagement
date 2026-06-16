@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:55166
+- url: http://localhost:56223
   description: Generated server url
 tags:
 - name: Notes
@@ -1444,6 +1444,48 @@ paths:
                 - $ref: "#/components/schemas/ConstraintViolationProblem"
         "500":
           description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/normberakning:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Build and post the SSBTEK-driven normberäkning
+      description: "Fetches the household's SSBTEK income basis for the application\
+        \ month, builds the normberäkning against the applicant's Lifecare FC calculation\
+        \ proposal, and posts it. Returns the created Lifecare calculation id plus\
+        \ the income warnings (unhandled incomes, significant period-over-period changes)\
+        \ the handläggare must review."
+      operationId: createNormberakning
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormberakningRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormberakningResponse"
+        "502":
+          description: Bad Gateway
           content:
             application/problem+json:
               schema:
@@ -2953,10 +2995,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -4166,6 +4208,58 @@ components:
           format: date-time
           description: Timestamp the decision was recorded (server-assigned)
           readOnly: true
+    NormberakningRequest:
+      type: object
+      description: Request to build and post the SSBTEK-driven normberäkning for an
+        application month.
+      properties:
+        applicant:
+          type: string
+          description: The applicant's personal number (12 digits)
+          examples:
+          - "198001012389"
+        coApplicant:
+          type: string
+          description: "The co-applicant's (medsökande) personal number (12 digits),\
+            \ when applying together with a partner"
+          examples:
+          - "198202022397"
+        applicationMonth:
+          type: string
+          description: "The application month (ISO year-month, yyyy-MM)"
+          examples:
+          - 2026-06
+          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
+      required:
+      - applicant
+      - applicationMonth
+    NormberakningResponse:
+      type: object
+      description: The created Lifecare normberäkning id plus the income warnings
+        to review.
+      properties:
+        calculationId:
+          type: integer
+          format: int32
+          description: The id of the normberäkning created in Lifecare FC
+          examples:
+          - 4711
+        unhandledIncomes:
+          type: array
+          description: SSBTEK incomes that could not be auto-transferred and must
+            be reviewed
+          examples:
+          - - Bostadstillägg (NOT_ON_WHITELIST)
+          items:
+            type: string
+        changeWarnings:
+          type: array
+          description: Förmåner whose net income changed beyond the threshold between
+            the periods
+          examples:
+          - - "Bostadsbidrag: -23% (jämförelse 2400 → kontroll 1850)"
+          items:
+            type: string
     EligibilityRequest:
       type: object
       description: Request to evaluate which financial assistance application a citizen

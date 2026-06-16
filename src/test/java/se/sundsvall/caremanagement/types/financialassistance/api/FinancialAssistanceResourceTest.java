@@ -14,6 +14,8 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Eligibili
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
@@ -102,6 +104,25 @@ class FinancialAssistanceResourceTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getReasonCode()).isEqualTo("EXISTING_CASE");
 		verify(eligibilityServiceMock).evaluate(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(EligibilityRequest.class));
+	}
+
+	@Test
+	void createNormberakning() {
+		when(serviceMock.createNormberakning(eq(MUNICIPALITY_ID), any(NormberakningRequest.class)))
+			.thenReturn(NormberakningResponse.create().withCalculationId(4711));
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/normberakning").build(base()))
+			.bodyValue(NormberakningRequest.create().withApplicant("198001012389").withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(NormberakningResponse.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getCalculationId()).isEqualTo(4711);
+		verify(serviceMock).createNormberakning(eq(MUNICIPALITY_ID), any(NormberakningRequest.class));
 	}
 
 	@Test

@@ -1,12 +1,16 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.time.YearMonth;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
@@ -15,6 +19,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.applicationTypeForSlug;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toEntity;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toView;
+import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.NormberakningMapper.toResponse;
 
 /**
  * Creates and reads financial-assistance (EB) errands. The envelope is owned by the exposed core {@link ErrandService};
@@ -33,10 +38,12 @@ public class FinancialAssistanceService {
 
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository repository;
+	private final NormberakningService normberakningService;
 
-	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository) {
+	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final NormberakningService normberakningService) {
 		this.errandService = errandService;
 		this.repository = repository;
+		this.normberakningService = normberakningService;
 	}
 
 	public String create(final String municipalityId, final String namespace, final String typeSlug, final CreateFinancialAssistanceRequest request) {
@@ -69,5 +76,14 @@ public class FinancialAssistanceService {
 		// Scope check — throws 404 when the errand is missing in this namespace/municipality.
 		errandService.readErrand(municipalityId, namespace, errandId);
 		repository.save(toEntity(data, errandId));
+	}
+
+	/**
+	 * Build the SSBTEK-driven normberäkning for the application month and post it to Lifecare FC, returning the created
+	 * calculation id plus the income warnings the handläggare must review.
+	 */
+	public NormberakningResponse createNormberakning(final String municipalityId, final NormberakningRequest request) {
+		final var result = normberakningService.buildAndPost(municipalityId, request.getApplicant(), request.getCoApplicant(), YearMonth.parse(request.getApplicationMonth()));
+		return toResponse(result);
 	}
 }

@@ -12,6 +12,7 @@ import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
@@ -107,6 +108,28 @@ class FinancialAssistanceResourceFailureTest {
 			.expectStatus().isBadRequest();
 
 		verifyNoInteractions(eligibilityServiceMock);
+	}
+
+	@Test
+	void createNormberakning_invalidApplicant() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/normberakning").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.bodyValue(NormberakningRequest.create().withApplicant("123").withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void createNormberakning_invalidMonth() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/normberakning").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.bodyValue(NormberakningRequest.create().withApplicant("198001012389").withApplicationMonth("2026-13"))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
 	}
 
 	@Test

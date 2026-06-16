@@ -1,5 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.time.YearMonth;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,8 +11,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
+import se.sundsvall.caremanagement.lifecare.service.model.NormberakningResult;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -40,6 +45,9 @@ class FinancialAssistanceServiceTest {
 
 	@Mock
 	private FinancialAssistanceRepository repositoryMock;
+
+	@Mock
+	private NormberakningService normberakningServiceMock;
 
 	@InjectMocks
 	private FinancialAssistanceService service;
@@ -149,5 +157,22 @@ class FinancialAssistanceServiceTest {
 		final ArgumentCaptor<FinancialAssistanceEntity> entityCaptor = ArgumentCaptor.forClass(FinancialAssistanceEntity.class);
 		verify(repositoryMock).save(entityCaptor.capture());
 		assertThat(entityCaptor.getValue().getApplicationType()).isEqualTo("RENEWAL");
+	}
+
+	@Test
+	void createNormberakningDelegatesAndMaps() {
+		final var month = YearMonth.of(2026, 6);
+		final var result = new NormberakningResult(4711, List.of(), List.of());
+		when(normberakningServiceMock.buildAndPost(MUNICIPALITY_ID, "199001011234", "199202022345", month)).thenReturn(result);
+
+		final var request = NormberakningRequest.create()
+			.withApplicant("199001011234")
+			.withCoApplicant("199202022345")
+			.withApplicationMonth("2026-06");
+
+		final var response = service.createNormberakning(MUNICIPALITY_ID, request);
+
+		assertThat(response.getCalculationId()).isEqualTo(4711);
+		verify(normberakningServiceMock).buildAndPost(MUNICIPALITY_ID, "199001011234", "199202022345", month);
 	}
 }
