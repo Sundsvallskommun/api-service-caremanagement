@@ -1598,6 +1598,44 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/payment-status:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Read whether the Lifecare utbetalning has been effectuated
+      description: "Reads whether the manual Lifecare utbetalning for the applicant and application month has been registered, returning the effectuated flag and (when effectuated) the payment date. caremanagement makes no payment — utbetalning is a manual handläggare step in Lifecare; the process polls this to detect when it is done."
+      operationId: checkPaymentStatus
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentStatusRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentStatusResponse"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/metadata/{name}:
     get:
       tags:
@@ -4752,6 +4790,38 @@ components:
           description: The id of the aktualisering created in Lifecare FC
           examples:
           - 5012
+    PaymentStatusRequest:
+      type: object
+      description: Request to read whether the Lifecare utbetalning for an application month has been effectuated.
+      properties:
+        applicant:
+          type: string
+          description: The applicant's partyId (personId GUID)
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+        applicationMonth:
+          type: string
+          description: The application month (ISO year-month, yyyy-MM) the payment concerns
+          examples:
+          - 2026-06
+          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
+      required:
+      - applicant
+      - applicationMonth
+    PaymentStatusResponse:
+      type: object
+      description: Whether the Lifecare utbetalning for the application month has been effectuated.
+      properties:
+        effectuated:
+          type: boolean
+          description: True when a Lifecare utbetalning concerning the application month has been registered
+          examples:
+          - true
+        paymentDate:
+          type: string
+          description: The date the utbetalning was made (Lifecare PayDate), when effectuated
+          examples:
+          - 2026-05-27
     PatchErrand:
       type: object
       description: PatchErrand model — patchable envelope fields only

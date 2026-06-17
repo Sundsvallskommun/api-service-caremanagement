@@ -15,6 +15,8 @@ import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
+import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
+import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
@@ -22,6 +24,8 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Financial
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -60,16 +64,19 @@ public class FinancialAssistanceService {
 	private final FinancialAssistanceRepository repository;
 	private final NormberakningService normberakningService;
 	private final ActualisationService actualisationService;
+	private final PaymentStatusService paymentStatusService;
 	private final CitizenService citizenService;
 	private final DecisionService decisionService;
 	private final AttachmentService attachmentService;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final NormberakningService normberakningService,
-		final ActualisationService actualisationService, final CitizenService citizenService, final DecisionService decisionService, final AttachmentService attachmentService) {
+		final ActualisationService actualisationService, final PaymentStatusService paymentStatusService, final CitizenService citizenService, final DecisionService decisionService,
+		final AttachmentService attachmentService) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.normberakningService = normberakningService;
 		this.actualisationService = actualisationService;
+		this.paymentStatusService = paymentStatusService;
 		this.citizenService = citizenService;
 		this.decisionService = decisionService;
 		this.attachmentService = attachmentService;
@@ -176,6 +183,19 @@ public class FinancialAssistanceService {
 			.ifPresent(errandId -> recordActualisation(municipalityId, namespace, errandId, actualisationId));
 
 		return ActualisationResponse.create().withActualisationId(actualisationId);
+	}
+
+	/**
+	 * Read whether the manual Lifecare utbetalning for the application month has been effectuated for the applicant.
+	 * caremanagement makes no payment — the handläggare does it in Lifecare; the process polls this to detect when the
+	 * payment is registered. Returns the effectuated flag and, when effectuated, the Lifecare PayDate.
+	 */
+	public PaymentStatusResponse checkPaymentStatus(final String municipalityId, final PaymentStatusRequest request) {
+		final var applicant = personalNumber(municipalityId, request.getApplicant());
+		final PaymentStatus status = paymentStatusService.read(applicant, YearMonth.parse(request.getApplicationMonth()));
+		return PaymentStatusResponse.create()
+			.withEffectuated(status.effectuated())
+			.withPaymentDate(status.paymentDate());
 	}
 
 	/**

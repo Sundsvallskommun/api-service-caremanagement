@@ -21,6 +21,8 @@ import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
+import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
+import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
 import se.sundsvall.caremanagement.lifecare.service.model.NormberakningResult;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekChangeWarning;
 import se.sundsvall.caremanagement.lifecare.service.model.UnhandledIncome;
@@ -29,6 +31,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Actualisa
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -64,6 +67,9 @@ class FinancialAssistanceServiceTest {
 
 	@Mock
 	private ActualisationService actualisationServiceMock;
+
+	@Mock
+	private PaymentStatusService paymentStatusServiceMock;
 
 	@Mock
 	private CitizenService citizenServiceMock;
@@ -346,5 +352,45 @@ class FinancialAssistanceServiceTest {
 
 		verify(actualisationServiceMock, never()).create(any(), any());
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+	}
+
+	@Test
+	void checkPaymentStatusEffectuated() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(paymentStatusServiceMock.read("199001011234", YearMonth.of(2026, 6))).thenReturn(new PaymentStatus(true, "2026-05-27"));
+
+		final var request = PaymentStatusRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, request);
+
+		assertThat(response.getEffectuated()).isTrue();
+		assertThat(response.getPaymentDate()).isEqualTo("2026-05-27");
+		verify(paymentStatusServiceMock).read("199001011234", YearMonth.of(2026, 6));
+	}
+
+	@Test
+	void checkPaymentStatusNotEffectuated() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(paymentStatusServiceMock.read("199001011234", YearMonth.of(2026, 6))).thenReturn(new PaymentStatus(false, null));
+
+		final var request = PaymentStatusRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, request);
+
+		assertThat(response.getEffectuated()).isFalse();
+		assertThat(response.getPaymentDate()).isNull();
+	}
+
+	@Test
+	void checkPaymentStatusUnresolvedPartyIdYields404() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.empty());
+
+		final var request = PaymentStatusRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
+
+		assertThatThrownBy(() -> service.checkPaymentStatus(MUNICIPALITY_ID, request))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verify(paymentStatusServiceMock, never()).read(any(), any());
 	}
 }

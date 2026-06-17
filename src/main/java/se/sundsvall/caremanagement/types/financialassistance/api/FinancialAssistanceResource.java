@@ -32,6 +32,8 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Financial
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
@@ -137,6 +139,21 @@ class FinancialAssistanceResource {
 		@Valid @NotNull @RequestBody final ActualisationRequest request) {
 
 		return ok(service.createActualisation(municipalityId, namespace, request));
+	}
+
+	@PostMapping(path = "/financial-assistance/payment-status", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Read whether the Lifecare utbetalning has been effectuated",
+		description = "Reads whether the manual Lifecare utbetalning for the applicant and application month has been registered, returning the effectuated flag and (when effectuated) the payment date. caremanagement makes no payment — utbetalning is a manual handläggare step in Lifecare; the process polls this to detect when it is done.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<PaymentStatusResponse> checkPaymentStatus(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Valid @NotNull @RequestBody final PaymentStatusRequest request) {
+
+		return ok(service.checkPaymentStatus(municipalityId, request));
 	}
 
 	@GetMapping(path = "/financial-assistance/prefill", produces = APPLICATION_JSON_VALUE)
