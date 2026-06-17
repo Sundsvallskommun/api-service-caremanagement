@@ -49,15 +49,18 @@ public final class MessageMapper {
 				.withFileName(e.getFileName())
 				.withMimeType(e.getMimeType())
 				.withFileSize(e.getFileSize())
+				.withSenderRole(e.getSenderRole())
 				.withCreated(e.getCreated()))
 			.orElse(null);
 	}
 
 	/**
 	 * Build the attachment metadata row for an uploaded file. The binary content is stored separately via
-	 * {@link #toMessageAttachmentDataEntity(String, MultipartFile)} once this row's id is known.
+	 * {@link #toMessageAttachmentDataEntity(String, MultipartFile)} once this row's id is known. {@code senderRole} is
+	 * denormalised from the message {@code direction} (INBOUND = CLIENT, OUTBOUND = HANDLAGGARE) so the unified
+	 * attachment list and the client-attachment consolidation never have to re-join to the message.
 	 */
-	public static MessageAttachmentEntity toMessageAttachmentEntity(final String messageId, final MultipartFile file) {
+	public static MessageAttachmentEntity toMessageAttachmentEntity(final String messageId, final String direction, final MultipartFile file) {
 		if (messageId == null || file == null) {
 			return null;
 		}
@@ -66,7 +69,13 @@ public final class MessageMapper {
 			.withFileName(file.getOriginalFilename())
 			.withMimeType(file.getContentType())
 			.withFileSize(Math.toIntExact(file.getSize()))
+			.withSenderRole(senderRoleFromDirection(direction))
 			.withCreated(now(systemDefault()).truncatedTo(MILLIS));
+	}
+
+	/** INBOUND messages come from the applicant (CLIENT); everything else is the caseworker (HANDLAGGARE). */
+	private static String senderRoleFromDirection(final String direction) {
+		return "INBOUND".equals(direction) ? "CLIENT" : "HANDLAGGARE";
 	}
 
 	/**

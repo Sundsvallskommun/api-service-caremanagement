@@ -26,6 +26,24 @@ public class Attachment {
 	@Schema(description = "File size in bytes", examples = "1024", accessMode = READ_ONLY)
 	private Integer fileSize;
 
+	@Schema(description = "Where the file came from: APPLICATION (citizen's application files), CONVERSATION (sent in a "
+		+ "message thread), GENERATED (a consolidated PDF produced by the platform) or ERRAND (uploaded directly to the "
+		+ "errand)", allowableValues = {
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND"
+	}, examples = "CONVERSATION", accessMode = READ_ONLY)
+	private String origin;
+
+	@Schema(description = "Who the file came from: CLIENT (applicant) or HANDLAGGARE (caseworker). May be null for "
+		+ "files predating the distinction or with no clear sender.", allowableValues = {
+			"CLIENT", "HANDLAGGARE"
+	}, examples = "CLIENT", accessMode = READ_ONLY)
+	private String senderRole;
+
+	@Schema(description = "For CONVERSATION attachments, the id of the message the file is attached to — download it via "
+		+ ".../messages/{messageId}/attachments/{id}/file. Null for non-conversation attachments, which download via "
+		+ ".../attachments/{id}/file.", accessMode = READ_ONLY)
+	private String messageId;
+
 	@Schema(description = "Created timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
@@ -90,6 +108,45 @@ public class Attachment {
 		return this;
 	}
 
+	public String getOrigin() {
+		return origin;
+	}
+
+	public void setOrigin(final String origin) {
+		this.origin = origin;
+	}
+
+	public Attachment withOrigin(final String origin) {
+		this.origin = origin;
+		return this;
+	}
+
+	public String getSenderRole() {
+		return senderRole;
+	}
+
+	public void setSenderRole(final String senderRole) {
+		this.senderRole = senderRole;
+	}
+
+	public Attachment withSenderRole(final String senderRole) {
+		this.senderRole = senderRole;
+		return this;
+	}
+
+	public String getMessageId() {
+		return messageId;
+	}
+
+	public void setMessageId(final String messageId) {
+		this.messageId = messageId;
+	}
+
+	public Attachment withMessageId(final String messageId) {
+		this.messageId = messageId;
+		return this;
+	}
+
 	public OffsetDateTime getCreated() {
 		return created;
 	}
@@ -122,12 +179,13 @@ public class Attachment {
 			return false;
 		final Attachment that = (Attachment) o;
 		return Objects.equals(id, that.id) && Objects.equals(fileName, that.fileName) && Objects.equals(mimeType, that.mimeType) && Objects.equals(fileSize, that.fileSize)
+			&& Objects.equals(origin, that.origin) && Objects.equals(senderRole, that.senderRole) && Objects.equals(messageId, that.messageId)
 			&& Objects.equals(created, that.created) && Objects.equals(modified, that.modified);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, fileName, mimeType, fileSize, created, modified);
+		return Objects.hash(id, fileName, mimeType, fileSize, origin, senderRole, messageId, created, modified);
 	}
 
 	@Override
@@ -137,6 +195,9 @@ public class Attachment {
 			", fileName='" + fileName + '\'' +
 			", mimeType='" + mimeType + '\'' +
 			", fileSize=" + fileSize +
+			", origin='" + origin + '\'' +
+			", senderRole='" + senderRole + '\'' +
+			", messageId='" + messageId + '\'' +
 			", created=" + created +
 			", modified=" + modified +
 			'}';

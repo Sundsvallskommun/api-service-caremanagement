@@ -40,6 +40,7 @@ class MessageAttachmentTest {
 		final var fileName = "certificate.pdf";
 		final var mimeType = "application/pdf";
 		final var fileSize = 1024;
+		final var senderRole = "CLIENT";
 		final var created = FIXED_TIMESTAMP;
 
 		final var result = MessageAttachment.create()
@@ -47,6 +48,7 @@ class MessageAttachmentTest {
 			.withFileName(fileName)
 			.withMimeType(mimeType)
 			.withFileSize(fileSize)
+			.withSenderRole(senderRole)
 			.withCreated(created);
 
 		assertThat(result).hasNoNullFieldsOrProperties();
@@ -54,6 +56,7 @@ class MessageAttachmentTest {
 		assertThat(result.getFileName()).isEqualTo(fileName);
 		assertThat(result.getMimeType()).isEqualTo(mimeType);
 		assertThat(result.getFileSize()).isEqualTo(fileSize);
+		assertThat(result.getSenderRole()).isEqualTo(senderRole);
 		assertThat(result.getCreated()).isEqualTo(created);
 	}
 

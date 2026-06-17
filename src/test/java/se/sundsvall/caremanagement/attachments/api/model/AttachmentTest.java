@@ -40,6 +40,9 @@ class AttachmentTest {
 		final var fileName = "file.pdf";
 		final var mimeType = "application/pdf";
 		final var fileSize = 1024;
+		final var origin = "CONVERSATION";
+		final var senderRole = "CLIENT";
+		final var messageId = "message-1";
 		final var created = FIXED_TIMESTAMP;
 		final var modified = FIXED_TIMESTAMP;
 
@@ -48,6 +51,9 @@ class AttachmentTest {
 			.withFileName(fileName)
 			.withMimeType(mimeType)
 			.withFileSize(fileSize)
+			.withOrigin(origin)
+			.withSenderRole(senderRole)
+			.withMessageId(messageId)
 			.withCreated(created)
 			.withModified(modified);
 
@@ -56,6 +62,9 @@ class AttachmentTest {
 		assertThat(result.getFileName()).isEqualTo(fileName);
 		assertThat(result.getMimeType()).isEqualTo(mimeType);
 		assertThat(result.getFileSize()).isEqualTo(fileSize);
+		assertThat(result.getOrigin()).isEqualTo(origin);
+		assertThat(result.getSenderRole()).isEqualTo(senderRole);
+		assertThat(result.getMessageId()).isEqualTo(messageId);
 		assertThat(result.getCreated()).isEqualTo(created);
 		assertThat(result.getModified()).isEqualTo(modified);
 	}

@@ -11,12 +11,15 @@ class MessagePostedTest {
 	@Test
 	void accessors() {
 		final var timestamp = FIXED_TIMESTAMP;
-		final var event = new MessagePosted("message-1", "errand-1", "OUTBOUND", "author-1", timestamp);
+		final var event = new MessagePosted("message-1", "2281", "my-namespace", "errand-1", "OUTBOUND", "author-1", true, timestamp);
 
 		assertThat(event.messageId()).isEqualTo("message-1");
+		assertThat(event.municipalityId()).isEqualTo("2281");
+		assertThat(event.namespace()).isEqualTo("my-namespace");
 		assertThat(event.errandId()).isEqualTo("errand-1");
 		assertThat(event.direction()).isEqualTo("OUTBOUND");
 		assertThat(event.author()).isEqualTo("author-1");
+		assertThat(event.hasAttachments()).isTrue();
 		assertThat(event.timestamp()).isEqualTo(timestamp);
 	}
 }

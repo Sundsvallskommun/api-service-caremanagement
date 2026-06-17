@@ -62,7 +62,7 @@ class MessageServiceTest {
 		final var saved = MessageEntity.create().withId("message-1").withErrandId("errand-1").withDirection("OUTBOUND").withAuthor("author").withCreated(FIXED_TIMESTAMP);
 		when(repositoryMock.save(any(MessageEntity.class))).thenReturn(saved);
 
-		final var id = service.post("errand-1", new CreateMessage("OUTBOUND", "body", "author", null), null);
+		final var id = service.post("2281", "my-namespace", "errand-1", new CreateMessage("OUTBOUND", "body", "author", null), null);
 
 		assertThat(id).isEqualTo("message-1");
 
@@ -80,21 +80,24 @@ class MessageServiceTest {
 		final ArgumentCaptor<MessagePosted> eventCaptor = ArgumentCaptor.forClass(MessagePosted.class);
 		verify(eventsMock).publishEvent(eventCaptor.capture());
 		assertThat(eventCaptor.getValue().messageId()).isEqualTo("message-1");
+		assertThat(eventCaptor.getValue().municipalityId()).isEqualTo("2281");
+		assertThat(eventCaptor.getValue().namespace()).isEqualTo("my-namespace");
 		assertThat(eventCaptor.getValue().errandId()).isEqualTo("errand-1");
 		assertThat(eventCaptor.getValue().direction()).isEqualTo("OUTBOUND");
 		assertThat(eventCaptor.getValue().author()).isEqualTo("author");
+		assertThat(eventCaptor.getValue().hasAttachments()).isFalse();
 	}
 
 	@Test
 	void postWithAttachmentsStoresEachAttachment() {
-		final var saved = MessageEntity.create().withId("message-1").withErrandId("errand-1").withDirection("OUTBOUND").withCreated(FIXED_TIMESTAMP);
+		final var saved = MessageEntity.create().withId("message-1").withErrandId("errand-1").withDirection("INBOUND").withCreated(FIXED_TIMESTAMP);
 		when(repositoryMock.save(any(MessageEntity.class))).thenReturn(saved);
 		when(attachmentRepositoryMock.save(any(MessageAttachmentEntity.class)))
 			.thenReturn(MessageAttachmentEntity.create().withId("attachment-1"));
 
 		final var file = new MockMultipartFile("attachments", "certificate.pdf", "application/pdf", "%PDF".getBytes());
 
-		final var id = service.post("errand-1", new CreateMessage("OUTBOUND", "body", null, null), List.of(file));
+		final var id = service.post("2281", "my-namespace", "errand-1", new CreateMessage("INBOUND", "body", null, null), List.of(file));
 
 		assertThat(id).isEqualTo("message-1");
 
@@ -104,13 +107,17 @@ class MessageServiceTest {
 		assertThat(attachmentCaptor.getValue().getFileName()).isEqualTo("certificate.pdf");
 		assertThat(attachmentCaptor.getValue().getMimeType()).isEqualTo("application/pdf");
 		assertThat(attachmentCaptor.getValue().getFileSize()).isEqualTo(4);
+		assertThat(attachmentCaptor.getValue().getSenderRole()).isEqualTo("CLIENT");
 
 		final ArgumentCaptor<MessageAttachmentDataEntity> dataCaptor = ArgumentCaptor.forClass(MessageAttachmentDataEntity.class);
 		verify(attachmentDataRepositoryMock).save(dataCaptor.capture());
 		assertThat(dataCaptor.getValue().getMessageAttachmentId()).isEqualTo("attachment-1");
 		assertThat(dataCaptor.getValue().getFile()).isNotNull();
 
-		verify(eventsMock).publishEvent(any(MessagePosted.class));
+		final ArgumentCaptor<MessagePosted> eventCaptor = ArgumentCaptor.forClass(MessagePosted.class);
+		verify(eventsMock).publishEvent(eventCaptor.capture());
+		assertThat(eventCaptor.getValue().hasAttachments()).isTrue();
+		assertThat(eventCaptor.getValue().direction()).isEqualTo("INBOUND");
 	}
 
 	@Test
@@ -119,7 +126,7 @@ class MessageServiceTest {
 			.thenReturn(Optional.of(MessageEntity.create().withId("parent-1").withErrandId("errand-1")));
 		when(repositoryMock.save(any(MessageEntity.class))).thenReturn(MessageEntity.create().withId("message-1"));
 
-		final var id = service.post("errand-1", new CreateMessage("OUTBOUND", "body", "author", "parent-1"), null);
+		final var id = service.post("2281", "my-namespace", "errand-1", new CreateMessage("OUTBOUND", "body", "author", "parent-1"), null);
 
 		assertThat(id).isEqualTo("message-1");
 
@@ -134,7 +141,7 @@ class MessageServiceTest {
 	void postWithUnknownInReplyToIsBadRequestAndPersistsNothing() {
 		when(repositoryMock.findByIdAndErrandId("missing-parent", "errand-1")).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.post("errand-1", new CreateMessage("OUTBOUND", "body", "author", "missing-parent"), null))
+		assertThatThrownBy(() -> service.post("2281", "my-namespace", "errand-1", new CreateMessage("OUTBOUND", "body", "author", "missing-parent"), null))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 

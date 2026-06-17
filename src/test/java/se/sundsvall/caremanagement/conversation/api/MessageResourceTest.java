@@ -47,7 +47,7 @@ class MessageResourceTest {
 
 	@Test
 	void post() {
-		when(serviceMock.post(eq(ERRAND_ID), any(CreateMessage.class), any())).thenReturn(MESSAGE_ID);
+		when(serviceMock.post(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(CreateMessage.class), any())).thenReturn(MESSAGE_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("message", new CreateMessage("OUTBOUND", "body", "author", null), APPLICATION_JSON);
@@ -59,12 +59,12 @@ class MessageResourceTest {
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).post(eq(ERRAND_ID), any(CreateMessage.class), any());
+		verify(serviceMock).post(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(CreateMessage.class), any());
 	}
 
 	@Test
 	void postWithAttachments() {
-		when(serviceMock.post(eq(ERRAND_ID), any(CreateMessage.class), any())).thenReturn(MESSAGE_ID);
+		when(serviceMock.post(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(CreateMessage.class), any())).thenReturn(MESSAGE_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("message", new CreateMessage("OUTBOUND", "Please see attached", "author", null), APPLICATION_JSON);
@@ -78,7 +78,7 @@ class MessageResourceTest {
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).post(eq(ERRAND_ID), any(CreateMessage.class), any());
+		verify(serviceMock).post(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(CreateMessage.class), any());
 	}
 
 	@Test

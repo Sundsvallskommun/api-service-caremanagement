@@ -41,6 +41,7 @@ class MessageAttachmentEntityTest {
 		final var fileName = "certificate.pdf";
 		final var mimeType = "application/pdf";
 		final var fileSize = 1024;
+		final var senderRole = "CLIENT";
 		final var created = FIXED_TIMESTAMP;
 
 		final var entity = MessageAttachmentEntity.create()
@@ -49,6 +50,7 @@ class MessageAttachmentEntityTest {
 			.withFileName(fileName)
 			.withMimeType(mimeType)
 			.withFileSize(fileSize)
+			.withSenderRole(senderRole)
 			.withCreated(created);
 
 		assertThat(entity).hasNoNullFieldsOrProperties();
@@ -57,6 +59,7 @@ class MessageAttachmentEntityTest {
 		assertThat(entity.getFileName()).isEqualTo(fileName);
 		assertThat(entity.getMimeType()).isEqualTo(mimeType);
 		assertThat(entity.getFileSize()).isEqualTo(fileSize);
+		assertThat(entity.getSenderRole()).isEqualTo(senderRole);
 		assertThat(entity.getCreated()).isEqualTo(created);
 	}
 

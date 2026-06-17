@@ -29,7 +29,7 @@ class MessageMapperTest {
 			.withAuthor("author")
 			.withInReplyToId("r1")
 			.withCreated(FIXED_TIMESTAMP);
-		final var attachment = MessageAttachmentEntity.create().withId("a1").withMessageId("m1").withFileName("f.pdf").withMimeType("application/pdf").withFileSize(4);
+		final var attachment = MessageAttachmentEntity.create().withId("a1").withMessageId("m1").withFileName("f.pdf").withMimeType("application/pdf").withFileSize(4).withSenderRole("HANDLAGGARE");
 
 		final var message = MessageMapper.toMessage(entity, List.of(attachment));
 
@@ -44,6 +44,7 @@ class MessageMapperTest {
 		assertThat(message.getAttachments()).hasSize(1);
 		assertThat(message.getAttachments().getFirst().getId()).isEqualTo("a1");
 		assertThat(message.getAttachments().getFirst().getFileName()).isEqualTo("f.pdf");
+		assertThat(message.getAttachments().getFirst().getSenderRole()).isEqualTo("HANDLAGGARE");
 	}
 
 	@Test
@@ -61,7 +62,7 @@ class MessageMapperTest {
 
 	@Test
 	void toMessageAttachmentMapsAllFields() {
-		final var entity = MessageAttachmentEntity.create().withId("a1").withFileName("f.pdf").withMimeType("application/pdf").withFileSize(4).withCreated(FIXED_TIMESTAMP);
+		final var entity = MessageAttachmentEntity.create().withId("a1").withFileName("f.pdf").withMimeType("application/pdf").withFileSize(4).withSenderRole("CLIENT").withCreated(FIXED_TIMESTAMP);
 
 		final var attachment = MessageMapper.toMessageAttachment(entity);
 
@@ -70,6 +71,7 @@ class MessageMapperTest {
 		assertThat(attachment.getFileName()).isEqualTo("f.pdf");
 		assertThat(attachment.getMimeType()).isEqualTo("application/pdf");
 		assertThat(attachment.getFileSize()).isEqualTo(4);
+		assertThat(attachment.getSenderRole()).isEqualTo("CLIENT");
 		assertThat(attachment.getCreated()).isEqualTo(FIXED_TIMESTAMP);
 	}
 
@@ -92,29 +94,40 @@ class MessageMapperTest {
 	}
 
 	@Test
-	void toMessageAttachmentEntityBuildsMetadata() {
+	void toMessageAttachmentEntityInboundBuildsClientMetadata() {
 		final var file = new MockMultipartFile("attachments", "hello.txt", "text/plain", "hello".getBytes());
 
-		final var entity = MessageMapper.toMessageAttachmentEntity("m1", file);
+		final var entity = MessageMapper.toMessageAttachmentEntity("m1", "INBOUND", file);
 
 		assertThat(entity).isNotNull();
 		assertThat(entity.getMessageId()).isEqualTo("m1");
 		assertThat(entity.getFileName()).isEqualTo("hello.txt");
 		assertThat(entity.getMimeType()).isEqualTo("text/plain");
 		assertThat(entity.getFileSize()).isEqualTo(5);
+		assertThat(entity.getSenderRole()).isEqualTo("CLIENT");
 		assertThat(entity.getCreated()).isNotNull();
 	}
 
 	@Test
+	void toMessageAttachmentEntityOutboundBuildsHandlaggareMetadata() {
+		final var file = new MockMultipartFile("attachments", "beslut.pdf", "application/pdf", "x".getBytes());
+
+		final var entity = MessageMapper.toMessageAttachmentEntity("m1", "OUTBOUND", file);
+
+		assertThat(entity).isNotNull();
+		assertThat(entity.getSenderRole()).isEqualTo("HANDLAGGARE");
+	}
+
+	@Test
 	void toMessageAttachmentEntityNullMessageIdReturnsNull() {
-		assertThat(MessageMapper.toMessageAttachmentEntity(null, new MockMultipartFile("attachments", new byte[] {
+		assertThat(MessageMapper.toMessageAttachmentEntity(null, "INBOUND", new MockMultipartFile("attachments", new byte[] {
 			1
 		}))).isNull();
 	}
 
 	@Test
 	void toMessageAttachmentEntityNullFileReturnsNull() {
-		assertThat(MessageMapper.toMessageAttachmentEntity("m1", null)).isNull();
+		assertThat(MessageMapper.toMessageAttachmentEntity("m1", "INBOUND", null)).isNull();
 	}
 
 	@Test

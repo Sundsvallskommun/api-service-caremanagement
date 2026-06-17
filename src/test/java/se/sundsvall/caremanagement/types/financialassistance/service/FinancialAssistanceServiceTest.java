@@ -267,7 +267,7 @@ class FinancialAssistanceServiceTest {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(normberakningServiceMock.buildAndPostFromClassified("199001011234", month, "[json]"))
-			.thenReturn(new NormberakningResult(4712, false, List.of("Dagersättning")));
+			.thenReturn(new NormberakningResult(4712, true, List.of()));
 
 		final var request = NormberakningRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -278,11 +278,10 @@ class FinancialAssistanceServiceTest {
 
 		final var response = service.commitNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
 
+		// commit returns the created id + the warnings it echoed; completeness is a prepare-only concern
 		assertThat(response.getCalculationId()).isEqualTo(4712);
 		assertThat(response.getUnhandledIncomes()).containsExactly("Något (EJ_PA_LISTAN)");
 		assertThat(response.getChangeWarnings()).containsExactly("Bostadsbidrag: -23%");
-		assertThat(response.isInformationComplete()).isFalse();
-		assertThat(response.getMissingIncomeTypes()).containsExactly("Dagersättning");
 		verify(normberakningServiceMock).buildAndPostFromClassified("199001011234", month, "[json]");
 		// commit does not touch the errand status/recommendation — that is prepare's job
 		verifyNoInteractions(decisionServiceMock);
