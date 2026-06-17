@@ -1,7 +1,11 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
+import java.util.ArrayList;
 import java.util.List;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
+import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Asset;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Child;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Cost;
@@ -33,6 +37,11 @@ import static java.util.Optional.ofNullable;
  * response from the core {@link Errand} envelope plus the typed data. Null-safe throughout; null lists stay null.
  */
 public final class FinancialAssistanceMapper {
+
+	/** How an applicant's partyId is typed when promoted to a core stakeholder externalId. */
+	private static final String EXTERNAL_ID_TYPE_PRIVATE = "PRIVATE";
+	private static final String CONTACT_CHANNEL_EMAIL = "EMAIL";
+	private static final String CONTACT_CHANNEL_PHONE = "PHONE";
 
 	private FinancialAssistanceMapper() {}
 
@@ -328,6 +337,39 @@ public final class FinancialAssistanceMapper {
 			.withPhone(e.getPhone())
 			.withNotifyByEmail(e.getNotifyByEmail())
 			.withNotifyBySms(e.getNotifyBySms());
+	}
+
+	// ---- Person → core Stakeholder ------------------------------------------------------------------------------------
+
+	/**
+	 * Promote the application's persons to core {@link Stakeholder} rows so the errand carries its sökande/medsökande in
+	 * the shared stakeholders collection. Each {@link Person} with a role maps to a stakeholder holding that role, the
+	 * partyId as a {@code PRIVATE} externalId, and the supplied email/phone as contact channels. Identity (name, address)
+	 * is deliberately not denormalised here — it is resolved from the partyId on demand and is subject to
+	 * protected-identity handling. Persons without a role are skipped; a null list yields an empty list.
+	 */
+	public static List<Stakeholder> toStakeholders(final List<Person> source) {
+		return ofNullable(source).orElseGet(List::of).stream()
+			.filter(person -> StringUtils.hasText(person.getRole()))
+			.map(FinancialAssistanceMapper::toStakeholder)
+			.toList();
+	}
+
+	static Stakeholder toStakeholder(final Person person) {
+		return Stakeholder.create()
+			.withRole(person.getRole())
+			.withExternalId(person.getPartyId())
+			.withExternalIdType(ofNullable(person.getPartyId()).filter(StringUtils::hasText).map(_ -> EXTERNAL_ID_TYPE_PRIVATE).orElse(null))
+			.withContactChannels(toContactChannels(person));
+	}
+
+	private static List<ContactChannel> toContactChannels(final Person person) {
+		final var channels = new ArrayList<ContactChannel>();
+		ofNullable(person.getEmail()).filter(StringUtils::hasText)
+			.ifPresent(email -> channels.add(ContactChannel.create().withKey(CONTACT_CHANNEL_EMAIL).withValue(email)));
+		ofNullable(person.getPhone()).filter(StringUtils::hasText)
+			.ifPresent(phone -> channels.add(ContactChannel.create().withKey(CONTACT_CHANNEL_PHONE).withValue(phone)));
+		return channels;
 	}
 
 	// ---- Planning -----------------------------------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Asset;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Child;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Cost;
@@ -28,6 +29,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class FinancialAssistanceMapperTest {
 
@@ -254,6 +256,42 @@ class FinancialAssistanceMapperTest {
 		assertThat(view).isNotNull();
 		assertThat(view.getId()).isEqualTo("errand-1");
 		assertThat(view.getData()).isNull();
+	}
+
+	@Test
+	void toStakeholdersMapsRolePartyIdAndContactChannels() {
+		final var persons = List.of(
+			Person.create().withRole("APPLICANT").withPartyId("pid-1").withEmail("a@b.se").withPhone("070"),
+			Person.create().withRole("CO_APPLICANT").withPartyId("pid-2"),
+			Person.create().withPartyId("pid-3")); // no role → filtered out
+
+		final var result = FinancialAssistanceMapper.toStakeholders(persons);
+
+		assertThat(result).hasSize(2);
+		assertThat(result.getFirst().getRole()).isEqualTo("APPLICANT");
+		assertThat(result.getFirst().getExternalId()).isEqualTo("pid-1");
+		assertThat(result.getFirst().getExternalIdType()).isEqualTo("PRIVATE");
+		assertThat(result.getFirst().getContactChannels()).extracting(ContactChannel::getKey, ContactChannel::getValue)
+			.containsExactly(tuple("EMAIL", "a@b.se"), tuple("PHONE", "070"));
+		assertThat(result.get(1).getRole()).isEqualTo("CO_APPLICANT");
+		assertThat(result.get(1).getExternalId()).isEqualTo("pid-2");
+		assertThat(result.get(1).getExternalIdType()).isEqualTo("PRIVATE");
+		assertThat(result.get(1).getContactChannels()).isEmpty();
+	}
+
+	@Test
+	void toStakeholdersNullSafe() {
+		assertThat(FinancialAssistanceMapper.toStakeholders(null)).isEmpty();
+	}
+
+	@Test
+	void toStakeholderWithoutPartyIdHasNoExternalId() {
+		final var result = FinancialAssistanceMapper.toStakeholder(Person.create().withRole("APPLICANT"));
+
+		assertThat(result.getRole()).isEqualTo("APPLICANT");
+		assertThat(result.getExternalId()).isNull();
+		assertThat(result.getExternalIdType()).isNull();
+		assertThat(result.getContactChannels()).isEmpty();
 	}
 
 	private static FinancialAssistanceData fullData() {

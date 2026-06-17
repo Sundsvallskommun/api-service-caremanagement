@@ -27,11 +27,15 @@ import se.sundsvall.caremanagement.lifecare.service.model.NormberakningResult;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekChangeWarning;
 import se.sundsvall.caremanagement.lifecare.service.model.UnhandledIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.UnhandledReason;
+import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
+import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
+import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Person;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -39,9 +43,11 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -80,6 +86,9 @@ class FinancialAssistanceServiceTest {
 	@Mock
 	private AttachmentService attachmentServiceMock;
 
+	@Mock
+	private StakeholderService stakeholderServiceMock;
+
 	@InjectMocks
 	private FinancialAssistanceService service;
 
@@ -111,6 +120,37 @@ class FinancialAssistanceServiceTest {
 		assertThat(entityCaptor.getValue().getApplicationType()).isEqualTo("NEW"); // derived from SLUG_NEW, not the client value
 
 		verify(attachmentServiceMock, never()).storeAndCombine(any(), any(), any(), any()); // no attachments supplied
+		verify(stakeholderServiceMock, never()).create(any(), any(), any(), any()); // no persons → no stakeholders
+	}
+
+	@Test
+	void createSavesStakeholdersFromPersons() {
+		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
+
+		final var request = CreateFinancialAssistanceRequest.create()
+			.withTitle("Återansökan")
+			.withData(FinancialAssistanceData.create().withPersons(List.of(
+				Person.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID).withEmail("anna@example.com").withPhone("+46701234567"),
+				Person.create().withRole("CO_APPLICANT").withPartyId(CO_APPLICANT_PARTY_ID),
+				Person.create().withEmail("noone@example.com")))); // no role → skipped
+
+		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_RENEWAL, request, null);
+
+		final ArgumentCaptor<Stakeholder> stakeholderCaptor = ArgumentCaptor.forClass(Stakeholder.class);
+		verify(stakeholderServiceMock, times(2)).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), stakeholderCaptor.capture());
+
+		final var applicant = stakeholderCaptor.getAllValues().getFirst();
+		assertThat(applicant.getRole()).isEqualTo("APPLICANT");
+		assertThat(applicant.getExternalId()).isEqualTo(APPLICANT_PARTY_ID);
+		assertThat(applicant.getExternalIdType()).isEqualTo("PRIVATE");
+		assertThat(applicant.getContactChannels()).extracting(ContactChannel::getKey, ContactChannel::getValue)
+			.containsExactly(tuple("EMAIL", "anna@example.com"), tuple("PHONE", "+46701234567"));
+
+		final var coApplicant = stakeholderCaptor.getAllValues().get(1);
+		assertThat(coApplicant.getRole()).isEqualTo("CO_APPLICANT");
+		assertThat(coApplicant.getExternalId()).isEqualTo(CO_APPLICANT_PARTY_ID);
+		assertThat(coApplicant.getExternalIdType()).isEqualTo("PRIVATE");
+		assertThat(coApplicant.getContactChannels()).isEmpty();
 	}
 
 	@Test

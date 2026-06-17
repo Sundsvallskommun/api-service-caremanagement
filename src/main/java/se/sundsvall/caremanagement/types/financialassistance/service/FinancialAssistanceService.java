@@ -17,6 +17,7 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
+import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
@@ -35,6 +36,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_INKOMMEN;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.applicationTypeForSlug;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toEntity;
+import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toStakeholders;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toView;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.NormberakningMapper.toResponse;
 
@@ -68,10 +70,11 @@ public class FinancialAssistanceService {
 	private final CitizenService citizenService;
 	private final DecisionService decisionService;
 	private final AttachmentService attachmentService;
+	private final StakeholderService stakeholderService;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final NormberakningService normberakningService,
 		final ActualisationService actualisationService, final PaymentStatusService paymentStatusService, final CitizenService citizenService, final DecisionService decisionService,
-		final AttachmentService attachmentService) {
+		final AttachmentService attachmentService, final StakeholderService stakeholderService) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.normberakningService = normberakningService;
@@ -80,12 +83,14 @@ public class FinancialAssistanceService {
 		this.citizenService = citizenService;
 		this.decisionService = decisionService;
 		this.attachmentService = attachmentService;
+		this.stakeholderService = stakeholderService;
 	}
 
 	/**
-	 * Create the EB errand, persist its strongly-typed data, and — when the citizen supplied supporting files — store each
-	 * attachment plus a single combined PDF merging them all. Attachments are type-agnostic: the list is handed to the
-	 * attachments module as-is.
+	 * Create the EB errand, persist its strongly-typed data, promote the application's persons (sökande/medsökande) to
+	 * core stakeholder rows on the errand, and — when the citizen supplied supporting files — store each attachment plus a
+	 * single combined PDF merging them all. Attachments are type-agnostic: the list is handed to the attachments module
+	 * as-is.
 	 */
 	public String create(final String municipalityId, final String namespace, final String typeSlug, final CreateFinancialAssistanceRequest request,
 		final List<MultipartFile> attachments) {
@@ -104,6 +109,11 @@ public class FinancialAssistanceService {
 			.orElseGet(() -> FinancialAssistanceEntity.create().withErrandId(errandId));
 		entity.setApplicationType(applicationTypeForSlug(typeSlug)); // slug is authoritative — overrides any client-sent value
 		repository.save(entity);
+
+		// Promote the application's persons to stakeholders so the errand carries its sökande/medsökande in the shared
+		// collection.
+		toStakeholders(ofNullable(request.getData()).map(FinancialAssistanceData::getPersons).orElse(null))
+			.forEach(stakeholder -> stakeholderService.create(municipalityId, namespace, errandId, stakeholder));
 
 		ofNullable(attachments)
 			.filter(files -> !files.isEmpty())
