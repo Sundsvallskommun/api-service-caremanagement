@@ -88,6 +88,9 @@ class FinancialAssistanceServiceTest {
 	@Mock
 	private StakeholderService stakeholderServiceMock;
 
+	@Mock
+	private WarningService warningServiceMock;
+
 	@InjectMocks
 	private FinancialAssistanceService service;
 
@@ -340,6 +343,8 @@ class FinancialAssistanceServiceTest {
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
 		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("KOMPLETTERING");
 		verify(normberakningServiceMock, never()).buildAndPostFromClassified(any(), any(), any());
+		verify(warningServiceMock).reconcileIncomeWarnings(ERRAND_ID,
+			List.of("Bostadstillägg (NOT_ON_WHITELIST)"), List.of("Bostadsbidrag: -23%"), List.of("Dagersättning"));
 	}
 
 	@Test

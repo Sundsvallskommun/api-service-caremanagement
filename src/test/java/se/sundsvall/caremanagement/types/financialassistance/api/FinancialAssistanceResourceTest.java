@@ -23,6 +23,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Normberak
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
@@ -155,6 +156,42 @@ class FinancialAssistanceResourceTest {
 		assertThat(response.isInformationComplete()).isFalse();
 		assertThat(response.getMissingIncomeTypes()).containsExactly("Dagersättning");
 		verify(serviceMock).prepareNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class));
+	}
+
+	@Test
+	void listWarnings() {
+		when(serviceMock.listWarnings(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1")))
+			.thenReturn(List.of(Warning.create().withId("w1").withType("MISSING_SSBTEK").withStatus("OPEN")));
+
+		final var response = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/errand-1/warnings").build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBodyList(Warning.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).hasSize(1);
+		assertThat(response.getFirst().getType()).isEqualTo("MISSING_SSBTEK");
+		verify(serviceMock).listWarnings(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"));
+	}
+
+	@Test
+	void updateWarning() {
+		when(serviceMock.updateWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("w1"), eq("CLOSED")))
+			.thenReturn(Warning.create().withId("w1").withStatus("CLOSED"));
+
+		final var response = webTestClient.patch()
+			.uri(uri -> uri.path(PATH + "/errand-1/warnings/w1").queryParam("status", "CLOSED").build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(Warning.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getStatus()).isEqualTo("CLOSED");
+		verify(serviceMock).updateWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("w1"), eq("CLOSED"));
 	}
 
 	@Test

@@ -28,6 +28,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Normberak
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -74,10 +75,11 @@ public class FinancialAssistanceService {
 	private final DecisionService decisionService;
 	private final AttachmentService attachmentService;
 	private final StakeholderService stakeholderService;
+	private final WarningService warningService;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final NormberakningService normberakningService,
 		final ActualisationService actualisationService, final PaymentStatusService paymentStatusService, final CitizenService citizenService, final DecisionService decisionService,
-		final AttachmentService attachmentService, final StakeholderService stakeholderService) {
+		final AttachmentService attachmentService, final StakeholderService stakeholderService, final WarningService warningService) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.normberakningService = normberakningService;
@@ -87,6 +89,7 @@ public class FinancialAssistanceService {
 		this.decisionService = decisionService;
 		this.attachmentService = attachmentService;
 		this.stakeholderService = stakeholderService;
+		this.warningService = warningService;
 	}
 
 	/**
@@ -160,9 +163,29 @@ public class FinancialAssistanceService {
 
 		ofNullable(request.getErrandId()).filter(StringUtils::hasText).ifPresent(errandId -> {
 			recordRecommendationOnce(municipalityId, namespace, errandId, response);
+			warningService.reconcileIncomeWarnings(errandId, response.getUnhandledIncomes(), response.getChangeWarnings(), response.getMissingIncomeTypes());
 			applyCompletenessStatus(municipalityId, namespace, errandId, completeness.informationComplete());
 		});
 		return response;
+	}
+
+	/**
+	 * The EB income warnings on an errand — the acknowledgeable objects a handläggare reviews in Draken. Scoped: throws
+	 * {@code 404} when the errand is missing in this namespace/municipality.
+	 */
+	@Transactional(readOnly = true)
+	public List<Warning> listWarnings(final String municipalityId, final String namespace, final String errandId) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		return warningService.list(errandId);
+	}
+
+	/**
+	 * Acknowledge or close a warning on an errand. Scoped: throws {@code 404} when the errand or warning is missing,
+	 * {@code 400} when the target status is not {@code ACKNOWLEDGED}/{@code CLOSED}.
+	 */
+	public Warning updateWarning(final String municipalityId, final String namespace, final String errandId, final String warningId, final String status) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		return warningService.updateStatus(errandId, warningId, status);
 	}
 
 	/**
