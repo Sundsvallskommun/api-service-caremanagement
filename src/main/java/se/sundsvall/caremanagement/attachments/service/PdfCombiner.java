@@ -127,10 +127,25 @@ final class PdfCombiner {
 	private static PDDocument imageDocument(final byte[] content, final String name) throws IOException {
 		final var document = new PDDocument();
 		final var image = PDImageXObject.createFromByteArray(document, content, name);
-		final var page = new PDPage(new PDRectangle(image.getWidth(), image.getHeight()));
+
+		// Normalise every image onto a standard A4 page — landscape for images wider than tall, portrait otherwise — so a
+		// wide wallpaper and a portrait scan end up the same page size in the combined PDF rather than each keeping its own
+		// pixel dimensions. The image is scaled to fit within the page margins, preserving aspect ratio, and centred;
+		// images already smaller than that are left at their natural size (never upscaled).
+		final var pageSize = image.getWidth() > image.getHeight()
+			? new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth())
+			: PDRectangle.A4;
+		final var page = new PDPage(pageSize);
 		document.addPage(page);
+
+		final var scale = Math.min(Math.min((pageSize.getWidth() - 2 * MARGIN) / image.getWidth(), (pageSize.getHeight() - 2 * MARGIN) / image.getHeight()), 1f);
+		final var width = image.getWidth() * scale;
+		final var height = image.getHeight() * scale;
+		final var x = (pageSize.getWidth() - width) / 2;
+		final var y = (pageSize.getHeight() - height) / 2;
+
 		try (final var contentStream = new PDPageContentStream(document, page)) {
-			contentStream.drawImage(image, 0, 0, image.getWidth(), image.getHeight());
+			contentStream.drawImage(image, x, y, width, height);
 		}
 		return document;
 	}

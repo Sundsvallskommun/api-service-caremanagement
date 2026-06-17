@@ -14,6 +14,7 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 class PdfCombinerTest {
 
@@ -32,6 +33,29 @@ class PdfCombinerTest {
 
 		// 2 (pdf) + 1 (image) + >=1 (docx) + 1 (placeholder for the unknown text file).
 		assertThat(pageCount(combined)).isGreaterThanOrEqualTo(5);
+	}
+
+	@Test
+	void normalisesWideImageToA4LandscapePage() throws IOException {
+		// An ultrawide image must not become a giant page sized to its pixels — it lands on a normal A4 landscape page.
+		final var combined = PdfCombiner.combine(List.of(new SourceFile("wallpaper.png", "image/png", png(2400, 600))));
+
+		try (final var document = Loader.loadPDF(combined)) {
+			final var box = document.getPage(0).getMediaBox();
+			assertThat(box.getWidth()).isCloseTo(PDRectangle.A4.getHeight(), within(1f));
+			assertThat(box.getHeight()).isCloseTo(PDRectangle.A4.getWidth(), within(1f));
+		}
+	}
+
+	@Test
+	void normalisesTallImageToA4PortraitPage() throws IOException {
+		final var combined = PdfCombiner.combine(List.of(new SourceFile("scan.png", "image/png", png(600, 2400))));
+
+		try (final var document = Loader.loadPDF(combined)) {
+			final var box = document.getPage(0).getMediaBox();
+			assertThat(box.getWidth()).isCloseTo(PDRectangle.A4.getWidth(), within(1f));
+			assertThat(box.getHeight()).isCloseTo(PDRectangle.A4.getHeight(), within(1f));
+		}
 	}
 
 	@Test
@@ -131,7 +155,11 @@ class PdfCombinerTest {
 	}
 
 	private static byte[] png() throws IOException {
-		final var image = new BufferedImage(12, 8, BufferedImage.TYPE_INT_RGB);
+		return png(12, 8);
+	}
+
+	private static byte[] png(final int width, final int height) throws IOException {
+		final var image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		final var output = new ByteArrayOutputStream();
 		ImageIO.write(image, "png", output);
 		return output.toByteArray();
