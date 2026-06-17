@@ -7,6 +7,7 @@ import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -34,34 +35,76 @@ class NormberakningServiceTest {
 	private LifecareFcIntegration lifecareFcIntegrationMock;
 
 	@Mock
+	private LifecareEbCaseService lifecareEbCaseServiceMock;
+
+	@Mock
 	private ObjectMapper objectMapperMock;
 
 	@InjectMocks
 	private NormberakningService service;
 
-	@Test
-	void buildAndPostFromClassifiedMapsCategoryToFcAndPosts() {
-		final var classified = new ClassifiedIncome(
+	private static ClassifiedIncome bostadsbidrag() {
+		return new ClassifiedIncome(
 			new SsbtekIncome("Bostadsbidrag", null, "Månad", new BigDecimal("1850"), LocalDate.of(2026, 5, 15), ApplicantRole.APPLICANT),
 			"TA_MED_KVITTNING", "Bostadsbidrag", false, "Ta med kvittning");
-		final var proposal = new PersonBasedCalculationProposalDTO()
+	}
+
+	private static PersonBasedCalculationProposalDTO proposal() {
+		return new PersonBasedCalculationProposalDTO()
 			.addServicesItem(new PersonBasedCalculationServiceDTO().id(5))
 			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(20).name("Bostadsbidrag"));
+	}
 
+	@Test
+	void buildAndPostFromClassifiedMapsCategoryToFcAndPosts() {
 		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
-			classified
+			bostadsbidrag()
 		});
-		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal);
+		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
 		when(lifecareFcIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4712);
+		when(lifecareEbCaseServiceMock.previousNormberakningIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag"));
 
-		final var calculationId = service.buildAndPostFromClassified(APPLICANT, MONTH, "[json]");
+		final var result = service.buildAndPostFromClassified(APPLICANT, MONTH, "[json]");
 
-		assertThat(calculationId).isEqualTo(4712);
+		assertThat(result.calculationId()).isEqualTo(4712);
+		assertThat(result.informationComplete()).isTrue();
+		assertThat(result.missingIncomeTypes()).isEmpty();
 		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
 		verify(lifecareFcIntegrationMock).createCalculation(captor.capture());
 		assertThat(captor.getValue().getPersonId()).isEqualTo(APPLICANT);
 		assertThat(captor.getValue().getServiceId()).isEqualTo(5);
 		assertThat(captor.getValue().getCalculationIncomes()).hasSize(1);
 		assertThat(captor.getValue().getCalculationIncomes().getFirst().getId()).isEqualTo(20);
+	}
+
+	@Test
+	void reportsIncompleteWhenAPreviousIncomeTypeIsMissingThisMonth() {
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			bostadsbidrag()
+		});
+		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
+		when(lifecareFcIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4712);
+		when(lifecareEbCaseServiceMock.previousNormberakningIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag", "Dagersättning"));
+
+		final var result = service.buildAndPostFromClassified(APPLICANT, MONTH, "[json]");
+
+		assertThat(result.informationComplete()).isFalse();
+		assertThat(result.missingIncomeTypes()).containsExactly("Dagersättning");
+	}
+
+	@Test
+	void treatsCompletenessAsCompleteWhenPreviousLookupFails() {
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			bostadsbidrag()
+		});
+		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
+		when(lifecareFcIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4712);
+		when(lifecareEbCaseServiceMock.previousNormberakningIncomeTypes(APPLICANT, MONTH)).thenThrow(new RuntimeException("FC down"));
+
+		final var result = service.buildAndPostFromClassified(APPLICANT, MONTH, "[json]");
+
+		assertThat(result.calculationId()).isEqualTo(4712);
+		assertThat(result.informationComplete()).isTrue();
+		assertThat(result.missingIncomeTypes()).isEmpty();
 	}
 }

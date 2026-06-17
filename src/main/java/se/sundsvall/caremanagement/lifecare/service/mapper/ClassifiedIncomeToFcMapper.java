@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
@@ -22,6 +23,7 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.APPLICANT;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;
 
@@ -58,6 +60,39 @@ public final class ClassifiedIncomeToFcMapper {
 			.entrySet().stream()
 			.map(entry -> toDto(entry.getKey(), entry.getValue()))
 			.toList();
+	}
+
+	/**
+	 * The previous-month FC income-type names not covered by this month's classified incomes — the basis for the EB "all
+	 * last month's normberäkning values present" completeness check. Matching is on the normalised type name, the same key
+	 * {@link #toCalculationIncomes} resolves on, so the two months compare like-for-like. An empty result means every
+	 * previous income type has a transferable income this month (i.e. the information is complete).
+	 *
+	 * @param  previousTypeNames the income-type names on the previous normberäkning (FC {@code getType()})
+	 * @param  classified        this month's classified incomes
+	 * @param  proposal          this month's FC calculation proposal (supplies the valid type names)
+	 * @return                   the previous type names with no transferable income this month
+	 */
+	public static List<String> missingPreviousIncomeTypes(final List<String> previousTypeNames,
+		final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
+
+		final var covered = coveredTypeNames(classified, proposal);
+		return ofNullable(previousTypeNames).orElseGet(List::of).stream()
+			.filter(name -> (name != null) && !name.isBlank())
+			.distinct()
+			.filter(name -> !covered.contains(normalize(name)))
+			.toList();
+	}
+
+	/** The normalised FC income-type names this month's transferable classified incomes resolve to. */
+	private static Set<String> coveredTypeNames(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
+		final var typeIdByName = indexIncomeTypeIds(proposal);
+		return ofNullable(classified).orElseGet(List::of).stream()
+			.filter(Objects::nonNull)
+			.filter(ClassifiedIncomeToFcMapper::isTransferable)
+			.map(income -> normalize(income.normberakning()))
+			.filter(typeIdByName::containsKey)
+			.collect(toSet());
 	}
 
 	private static boolean isTransferable(final ClassifiedIncome classified) {

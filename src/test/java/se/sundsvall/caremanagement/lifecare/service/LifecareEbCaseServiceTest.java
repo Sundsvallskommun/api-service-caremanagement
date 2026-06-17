@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.lifecare.service;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefc.CommonCalculationIncomeDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonDTO;
@@ -220,6 +221,31 @@ class LifecareEbCaseServiceTest {
 
 		assertThat(roster.members()).isEmpty();
 		assertThat(roster.coApplicant()).isNull();
+	}
+
+	@Test
+	void previousNormberakningIncomeTypesFromLatestCalcBeforeApplicationMonth() {
+		final var older = new PersonBasedCalculationDTO().toDate("2026-03-31")
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Aktivitetsstöd"));
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Bostadsbidrag"))
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Dagersättning"))
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Bostadsbidrag")); // duplicate collapses
+		final var thisMonth = new PersonBasedCalculationDTO().toDate("2026-06-30")
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Bostadsbidrag"));
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, thisMonth)));
+
+		final var types = service().previousNormberakningIncomeTypes(APPLICANT, YearMonth.of(2026, 6));
+
+		assertThat(types).containsExactlyInAnyOrder("Bostadsbidrag", "Dagersättning");
+	}
+
+	@Test
+	void previousNormberakningIncomeTypesEmptyWhenNoPriorCalc() {
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
+
+		assertThat(service().previousNormberakningIncomeTypes(APPLICANT, YearMonth.of(2026, 6))).isEmpty();
 	}
 
 	@Test

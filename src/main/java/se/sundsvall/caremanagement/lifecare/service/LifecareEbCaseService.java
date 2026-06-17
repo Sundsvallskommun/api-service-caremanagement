@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.lifecare.service;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefc.CommonCalculationIncomeDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedDecisionPersonDTO;
@@ -137,6 +138,36 @@ public class LifecareEbCaseService {
 			.orElse(null);
 
 		return new LifecareEbRoster(personId, coApplicant, members);
+	}
+
+	/**
+	 * The distinct FC income-type names on the person's most recent normberäkning strictly before
+	 * {@code applicationMonth} — the baseline for the EB "all last month's values present" completeness check. Empty when
+	 * there is no prior normberäkning. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the caller
+	 * decides whether to treat the lookup as best-effort.
+	 *
+	 * @param  personId         the applicant's personnummer
+	 * @param  applicationMonth the month being applied for; only normberäkningar before it are considered
+	 * @return                  the previous normberäkning's distinct income-type names, or empty
+	 */
+	public List<String> previousNormberakningIncomeTypes(final String personId, final YearMonth applicationMonth) {
+		final var referenceDate = applicationMonth.atDay(1);
+		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
+		final var end = referenceDate.format(ISO_LOCAL_DATE);
+
+		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end, null, null, false))
+			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
+			.orElseGet(List::of).stream()
+			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
+			.toList();
+
+		return latestCalculation(calculations)
+			.map(PersonBasedCalculationDTO::getCalculationIncomesDTOs)
+			.orElseGet(List::of).stream()
+			.map(CommonCalculationIncomeDTO::getType)
+			.filter(StringUtils::hasText)
+			.distinct()
+			.toList();
 	}
 
 	/** The decision with the most recent period (to/from), used to read the current household constellation. */

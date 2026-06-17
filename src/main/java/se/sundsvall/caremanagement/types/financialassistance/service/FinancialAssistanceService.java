@@ -148,11 +148,13 @@ public class FinancialAssistanceService {
 		final var classifiedIncomes = ofNullable(request.getClassifiedIncomes()).filter(StringUtils::hasText)
 			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, "classifiedIncomes is required — the SSBTEK regelverk is evaluated in the process, not caremanagement"));
 
-		final var calculationId = normberakningService.buildAndPostFromClassified(applicant, applicationMonth, classifiedIncomes);
+		final var result = normberakningService.buildAndPostFromClassified(applicant, applicationMonth, classifiedIncomes);
 		final var response = NormberakningResponse.create()
-			.withCalculationId(calculationId)
+			.withCalculationId(result.calculationId())
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
-			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of));
+			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of))
+			.withInformationComplete(result.informationComplete())
+			.withMissingIncomeTypes(result.missingIncomeTypes());
 
 		ofNullable(request.getErrandId()).filter(StringUtils::hasText)
 			.ifPresent(errandId -> recordRecommendation(municipalityId, namespace, errandId, response));

@@ -24,6 +24,12 @@ public class NormberakningResponse {
 	@Schema(description = "Förmåner whose net income changed beyond the threshold between the periods", examples = "[\"Bostadsbidrag: -23% (jämförelse 2400 → kontroll 1850)\"]")
 	private List<String> changeWarnings = new ArrayList<>();
 
+	@Schema(description = "Whether this month's normberäkning covers every income type the previous month's did — false means SSBTEK data is still missing and the process should poll again", examples = "true")
+	private boolean informationComplete = true;
+
+	@Schema(description = "Previous-month income types not yet present this month (the SSBTEK data still being awaited)", examples = "[\"Bostadsbidrag\"]")
+	private List<String> missingIncomeTypes = new ArrayList<>();
+
 	public static NormberakningResponse create() {
 		return new NormberakningResponse();
 	}
@@ -67,21 +73,49 @@ public class NormberakningResponse {
 		return this;
 	}
 
+	public boolean isInformationComplete() {
+		return informationComplete;
+	}
+
+	public void setInformationComplete(final boolean informationComplete) {
+		this.informationComplete = informationComplete;
+	}
+
+	public NormberakningResponse withInformationComplete(final boolean informationComplete) {
+		this.informationComplete = informationComplete;
+		return this;
+	}
+
+	public List<String> getMissingIncomeTypes() {
+		return missingIncomeTypes;
+	}
+
+	public void setMissingIncomeTypes(final List<String> missingIncomeTypes) {
+		this.missingIncomeTypes = missingIncomeTypes;
+	}
+
+	public NormberakningResponse withMissingIncomeTypes(final List<String> missingIncomeTypes) {
+		this.missingIncomeTypes = missingIncomeTypes;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final NormberakningResponse that = (NormberakningResponse) o;
-		return Objects.equals(calculationId, that.calculationId) && Objects.equals(unhandledIncomes, that.unhandledIncomes) && Objects.equals(changeWarnings, that.changeWarnings);
+		return informationComplete == that.informationComplete && Objects.equals(calculationId, that.calculationId) && Objects.equals(unhandledIncomes, that.unhandledIncomes)
+			&& Objects.equals(changeWarnings, that.changeWarnings) && Objects.equals(missingIncomeTypes, that.missingIncomeTypes);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(calculationId, unhandledIncomes, changeWarnings);
+		return Objects.hash(calculationId, unhandledIncomes, changeWarnings, informationComplete, missingIncomeTypes);
 	}
 
 	@Override
 	public String toString() {
-		return "NormberakningResponse{calculationId=" + calculationId + ", unhandledIncomes=" + unhandledIncomes + ", changeWarnings=" + changeWarnings + "}";
+		return "NormberakningResponse{calculationId=" + calculationId + ", unhandledIncomes=" + unhandledIncomes + ", changeWarnings=" + changeWarnings
+			+ ", informationComplete=" + informationComplete + ", missingIncomeTypes=" + missingIncomeTypes + "}";
 	}
 }
