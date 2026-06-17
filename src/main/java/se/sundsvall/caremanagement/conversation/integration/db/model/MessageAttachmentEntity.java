@@ -41,6 +41,9 @@ public class MessageAttachmentEntity {
 	@Column(name = "file_size")
 	private Integer fileSize;
 
+	@Column(name = "sender_role", length = 32)
+	private String senderRole;
+
 	@Column(name = "created")
 	@TimeZoneStorage(NORMALIZE)
 	private OffsetDateTime created;
@@ -69,6 +72,10 @@ public class MessageAttachmentEntity {
 		return fileSize;
 	}
 
+	public String getSenderRole() {
+		return senderRole;
+	}
+
 	public OffsetDateTime getCreated() {
 		return created;
 	}
@@ -91,6 +98,10 @@ public class MessageAttachmentEntity {
 
 	public void setFileSize(final Integer v) {
 		this.fileSize = v;
+	}
+
+	public void setSenderRole(final String v) {
+		this.senderRole = v;
 	}
 
 	public void setCreated(final OffsetDateTime v) {
@@ -122,6 +133,11 @@ public class MessageAttachmentEntity {
 		return this;
 	}
 
+	public MessageAttachmentEntity withSenderRole(final String v) {
+		this.senderRole = v;
+		return this;
+	}
+
 	public MessageAttachmentEntity withCreated(final OffsetDateTime v) {
 		this.created = v;
 		return this;
@@ -134,17 +150,18 @@ public class MessageAttachmentEntity {
 		final MessageAttachmentEntity that = (MessageAttachmentEntity) o;
 		return Objects.equals(id, that.id) && Objects.equals(messageId, that.messageId)
 			&& Objects.equals(fileName, that.fileName) && Objects.equals(mimeType, that.mimeType)
-			&& Objects.equals(fileSize, that.fileSize) && Objects.equals(created, that.created);
+			&& Objects.equals(fileSize, that.fileSize) && Objects.equals(senderRole, that.senderRole)
+			&& Objects.equals(created, that.created);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, messageId, fileName, mimeType, fileSize, created);
+		return Objects.hash(id, messageId, fileName, mimeType, fileSize, senderRole, created);
 	}
 
 	@Override
 	public String toString() {
 		return "MessageAttachmentEntity{id='" + id + "', messageId='" + messageId + "', fileName='" + fileName
-			+ "', mimeType='" + mimeType + "', fileSize=" + fileSize + ", created=" + created + '}';
+			+ "', mimeType='" + mimeType + "', fileSize=" + fileSize + ", senderRole='" + senderRole + "', created=" + created + '}';
 	}
 }

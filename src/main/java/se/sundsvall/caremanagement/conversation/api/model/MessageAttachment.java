@@ -24,6 +24,12 @@ public class MessageAttachment {
 	@Schema(description = "File size in bytes", examples = "1024", accessMode = READ_ONLY)
 	private Integer fileSize;
 
+	@Schema(description = "Who sent the file, derived from the message direction: CLIENT (applicant, INBOUND) or "
+		+ "HANDLAGGARE (caseworker, OUTBOUND)", allowableValues = {
+			"CLIENT", "HANDLAGGARE"
+	}, examples = "CLIENT", accessMode = READ_ONLY)
+	private String senderRole;
+
 	@Schema(description = "Created timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
@@ -84,6 +90,19 @@ public class MessageAttachment {
 		return this;
 	}
 
+	public String getSenderRole() {
+		return senderRole;
+	}
+
+	public void setSenderRole(final String senderRole) {
+		this.senderRole = senderRole;
+	}
+
+	public MessageAttachment withSenderRole(final String senderRole) {
+		this.senderRole = senderRole;
+		return this;
+	}
+
 	public OffsetDateTime getCreated() {
 		return created;
 	}
@@ -103,17 +122,17 @@ public class MessageAttachment {
 			return false;
 		final MessageAttachment that = (MessageAttachment) o;
 		return Objects.equals(id, that.id) && Objects.equals(fileName, that.fileName) && Objects.equals(mimeType, that.mimeType)
-			&& Objects.equals(fileSize, that.fileSize) && Objects.equals(created, that.created);
+			&& Objects.equals(fileSize, that.fileSize) && Objects.equals(senderRole, that.senderRole) && Objects.equals(created, that.created);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, fileName, mimeType, fileSize, created);
+		return Objects.hash(id, fileName, mimeType, fileSize, senderRole, created);
 	}
 
 	@Override
 	public String toString() {
 		return "MessageAttachment{id='" + id + "', fileName='" + fileName + "', mimeType='" + mimeType
-			+ "', fileSize=" + fileSize + ", created=" + created + '}';
+			+ "', fileSize=" + fileSize + ", senderRole='" + senderRole + "', created=" + created + '}';
 	}
 }

@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 import tools.jackson.databind.ObjectMapper;
 
@@ -106,5 +107,40 @@ class NormberakningServiceTest {
 		assertThat(result.calculationId()).isEqualTo(4712);
 		assertThat(result.informationComplete()).isTrue();
 		assertThat(result.missingIncomeTypes()).isEmpty();
+	}
+
+	@Test
+	void buildDraftReturnsRowsAndCompletenessWithoutPosting() {
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			bostadsbidrag()
+		});
+		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
+		when(lifecareEbCaseServiceMock.previousNormberakningIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag"));
+
+		final var result = service.buildDraft(APPLICANT, MONTH, "[json]");
+
+		assertThat(result.informationComplete()).isTrue();
+		assertThat(result.missingIncomeTypes()).isEmpty();
+		assertThat(result.rows()).hasSize(1);
+		assertThat(result.rows().getFirst().typeId()).isEqualTo(20);
+		assertThat(result.rows().getFirst().typeName()).isEqualTo("Bostadsbidrag");
+		assertThat(result.rows().getFirst().applicantAmount()).isEqualTo(1850.0);
+		verify(lifecareFcIntegrationMock, org.mockito.Mockito.never()).createCalculation(any());
+	}
+
+	@Test
+	void postDraftRowsAssemblesFromRowsAndPosts() {
+		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
+		when(lifecareFcIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4713);
+
+		final var rows = List.of(new DraftRow(20, "Bostadsbidrag", 1850.0, "2026-05-15T00:00:00Z", null, null, "SSBTEK: Bostadsbidrag"));
+		final var calculationId = service.postDraftRows(APPLICANT, MONTH, rows);
+
+		assertThat(calculationId).isEqualTo(4713);
+		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
+		verify(lifecareFcIntegrationMock).createCalculation(captor.capture());
+		assertThat(captor.getValue().getCalculationIncomes()).hasSize(1);
+		assertThat(captor.getValue().getCalculationIncomes().getFirst().getId()).isEqualTo(20);
+		assertThat(captor.getValue().getCalculationIncomes().getFirst().getApplicantAmount()).isEqualTo(1850.0);
 	}
 }

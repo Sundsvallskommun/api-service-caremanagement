@@ -18,12 +18,15 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
+import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.DraftIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
@@ -76,10 +79,11 @@ public class FinancialAssistanceService {
 	private final AttachmentService attachmentService;
 	private final StakeholderService stakeholderService;
 	private final WarningService warningService;
+	private final DraftService draftService;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final NormberakningService normberakningService,
 		final ActualisationService actualisationService, final PaymentStatusService paymentStatusService, final CitizenService citizenService, final DecisionService decisionService,
-		final AttachmentService attachmentService, final StakeholderService stakeholderService, final WarningService warningService) {
+		final AttachmentService attachmentService, final StakeholderService stakeholderService, final WarningService warningService, final DraftService draftService) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.normberakningService = normberakningService;
@@ -90,6 +94,7 @@ public class FinancialAssistanceService {
 		this.attachmentService = attachmentService;
 		this.stakeholderService = stakeholderService;
 		this.warningService = warningService;
+		this.draftService = draftService;
 	}
 
 	/**
@@ -154,19 +159,37 @@ public class FinancialAssistanceService {
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 		final var classifiedIncomes = requireClassifiedIncomes(request);
 
-		final var completeness = normberakningService.completeness(applicant, applicationMonth, classifiedIncomes);
+		final var draft = normberakningService.buildDraft(applicant, applicationMonth, classifiedIncomes);
 		final var response = NormberakningResponse.create()
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
 			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of))
-			.withInformationComplete(completeness.informationComplete())
-			.withMissingIncomeTypes(completeness.missingIncomeTypes());
+			.withInformationComplete(draft.informationComplete())
+			.withMissingIncomeTypes(draft.missingIncomeTypes());
 
 		ofNullable(request.getErrandId()).filter(StringUtils::hasText).ifPresent(errandId -> {
+			// Refresh the editable draft (preserved once the handläggare has edited it) — new income then surfaces as a warning.
+			final var newIncome = draftService.refresh(errandId, request.getApplicationMonth(), toDraftIncomeRows(draft.rows()));
 			recordRecommendationOnce(municipalityId, namespace, errandId, response);
-			warningService.reconcileIncomeWarnings(errandId, response.getUnhandledIncomes(), response.getChangeWarnings(), response.getMissingIncomeTypes());
-			applyCompletenessStatus(municipalityId, namespace, errandId, completeness.informationComplete());
+			warningService.reconcileIncomeWarnings(errandId, response.getUnhandledIncomes(), response.getChangeWarnings(), response.getMissingIncomeTypes(), newIncome);
+			applyCompletenessStatus(municipalityId, namespace, errandId, draft.informationComplete());
 		});
 		return response;
+	}
+
+	/**
+	 * The (editable) draft normberäkning for an errand — the FC income rows the handläggare reviews and may edit before a
+	 * beslut. Scoped: throws {@code 404} when the errand (or its draft) is missing.
+	 */
+	@Transactional(readOnly = true)
+	public NormberakningDraft getDraft(final String municipalityId, final String namespace, final String errandId) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		return draftService.get(errandId);
+	}
+
+	/** Replace the draft's rows with a handläggare's edit; the daily refresh then preserves them. Scoped to the errand. */
+	public NormberakningDraft updateDraft(final String municipalityId, final String namespace, final String errandId, final NormberakningDraft draft) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		return draftService.replace(errandId, draft.getApplicationMonth(), draft.getRows());
 	}
 
 	/**
@@ -197,13 +220,36 @@ public class FinancialAssistanceService {
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 		final var classifiedIncomes = requireClassifiedIncomes(request);
 
-		final var result = normberakningService.buildAndPostFromClassified(applicant, applicationMonth, classifiedIncomes);
+		// When the handläggare has edited the draft, post the edited rows; otherwise build + post from the classified incomes.
+		final var editedRows = ofNullable(request.getErrandId()).filter(StringUtils::hasText).flatMap(draftService::editedRows);
+		final var calculationId = editedRows.isPresent()
+			? normberakningService.postDraftRows(applicant, applicationMonth, toDraftRows(editedRows.get()))
+			: normberakningService.buildAndPostFromClassified(applicant, applicationMonth, classifiedIncomes).calculationId();
+
 		return NormberakningResponse.create()
-			.withCalculationId(result.calculationId())
+			.withCalculationId(calculationId)
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
-			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of))
-			.withInformationComplete(result.informationComplete())
-			.withMissingIncomeTypes(result.missingIncomeTypes());
+			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of));
+	}
+
+	private static List<DraftIncomeRow> toDraftIncomeRows(final List<DraftRow> rows) {
+		return ofNullable(rows).orElseGet(List::of).stream()
+			.map(row -> DraftIncomeRow.create()
+				.withTypeId(row.typeId())
+				.withTypeName(row.typeName())
+				.withApplicantAmount(row.applicantAmount())
+				.withApplicantAmountDate(row.applicantAmountDate())
+				.withCoApplicantAmount(row.coApplicantAmount())
+				.withCoApplicantAmountDate(row.coApplicantAmountDate())
+				.withNote(row.note()))
+			.toList();
+	}
+
+	private static List<DraftRow> toDraftRows(final List<DraftIncomeRow> rows) {
+		return ofNullable(rows).orElseGet(List::of).stream()
+			.map(row -> new DraftRow(row.getTypeId(), row.getTypeName(), row.getApplicantAmount(), row.getApplicantAmountDate(),
+				row.getCoApplicantAmount(), row.getCoApplicantAmountDate(), row.getNote()))
+			.toList();
 	}
 
 	private static String requireClassifiedIncomes(final NormberakningRequest request) {

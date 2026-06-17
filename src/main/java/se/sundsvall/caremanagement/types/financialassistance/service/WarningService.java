@@ -44,14 +44,17 @@ public class WarningService {
 	}
 
 	/**
-	 * Reconcile the income warnings produced by the regelverk + completeness check (unhandled / changed / missing) into
-	 * the errand's warning objects.
+	 * Reconcile the income warnings produced by the regelverk + completeness + draft checks into the errand's warning
+	 * objects: unhandled / changed / still-missing incomes, plus income that has newly arrived in SSBTEK but is not in the
+	 * handläggare's edited draft normberäkning.
 	 */
-	public void reconcileIncomeWarnings(final String errandId, final List<String> unhandled, final List<String> changes, final List<String> missing) {
+	public void reconcileIncomeWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
+		final List<String> missing, final List<String> newIncome) {
 		final List<WarningInput> inputs = new ArrayList<>();
 		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
 		ofList(changes).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_CHANGE, sourceKey(text), text)));
 		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Saknas ännu i SSBTEK: " + text)));
+		ofList(newIncome).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, text, "Ny inkomst i SSBTEK, ej införd i normberäkningen: " + text)));
 		reconcile(errandId, inputs);
 	}
 

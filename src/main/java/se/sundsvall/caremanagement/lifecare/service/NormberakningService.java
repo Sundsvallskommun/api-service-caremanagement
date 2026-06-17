@@ -1,20 +1,29 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationCalculationIncomeTypeDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationIncomePostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFcMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.NormberakningAssembler;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
+import se.sundsvall.caremanagement.lifecare.service.model.NormberakningDraftBuild;
 import se.sundsvall.caremanagement.lifecare.service.model.NormberakningResult;
 import se.sundsvall.dept44.problem.Problem;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
+import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
@@ -65,21 +74,69 @@ public class NormberakningService {
 	}
 
 	/**
-	 * Whether this month's classified incomes cover every income type the previous month's normberäkning had — the EB
-	 * process's daily-poll signal — <strong>without</strong> creating anything in Lifecare. Reads the previous
-	 * normberäkning (best-effort, as {@link #buildAndPostFromClassified}) and the proposal only to align the comparison
-	 * vocabulary; nothing is written. The returned {@code calculationId} is always {@code null}.
+	 * Build the draft normberäkning from the classified incomes — the FC income rows plus the completeness verdict —
+	 * <strong>without</strong> creating anything in Lifecare. The EB process stores the rows as an editable draft and
+	 * polls SSBTEK daily until the information is complete; the Lifecare normberäkning is created later, on a beslut, from
+	 * the (possibly edited) draft (see {@link #postDraftRows}).
 	 *
-	 * @param  applicantPersonId     the applicant's personnummer
+	 * @param  applicantPersonId     the applicant's personnummer (the FC proposal owner)
 	 * @param  applicationMonth      the month the application concerns
 	 * @param  classifiedIncomesJson the operaton {@code classifiedIncomes} JSON
-	 * @return                       completeness + missing income types, with a {@code null} calculation id
+	 * @return                       the FC income rows + completeness verdict; nothing is written to Lifecare
 	 */
-	public NormberakningResult completeness(final String applicantPersonId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
+	public NormberakningDraftBuild buildDraft(final String applicantPersonId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
 		final var classified = parse(classifiedIncomesJson);
 		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		final var incomes = ClassifiedIncomeToFcMapper.toCalculationIncomes(classified, proposal);
+		final var typeNamesById = incomeTypeNamesById(proposal);
+		final var rows = incomes.stream().map(income -> toDraftRow(income, typeNamesById)).toList();
 		final var missing = missingPreviousIncomeTypes(applicantPersonId, applicationMonth, classified, proposal);
-		return new NormberakningResult(null, missing.isEmpty(), missing);
+		return new NormberakningDraftBuild(rows, missing.isEmpty(), missing);
+	}
+
+	/**
+	 * Create the normberäkning in Lifecare FC from the (possibly handläggare-edited) draft income rows — called on a
+	 * beslut. Assembles against the applicant's proposal and posts; returns the created calculation id.
+	 */
+	public Integer postDraftRows(final String applicantPersonId, final YearMonth applicationMonth, final List<DraftRow> rows) {
+		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		final var incomes = ofNullable(rows).orElseGet(List::of).stream().map(NormberakningService::toPostDto).toList();
+		final var body = NormberakningAssembler.assemble(applicantPersonId, proposal, incomes, applicationMonth);
+		return lifecareFcIntegration.createCalculation(body);
+	}
+
+	private static Map<Integer, String> incomeTypeNamesById(final PersonBasedCalculationProposalDTO proposal) {
+		return ofNullable(proposal)
+			.map(PersonBasedCalculationProposalDTO::getCalculationIncomeTypes)
+			.orElseGet(List::of).stream()
+			.filter(type -> (type.getId() != null) && (type.getName() != null))
+			.collect(java.util.stream.Collectors.toMap(PersonBasedCalculationCalculationIncomeTypeDTO::getId,
+				PersonBasedCalculationCalculationIncomeTypeDTO::getName, (first, second) -> first, LinkedHashMap::new));
+	}
+
+	private static DraftRow toDraftRow(final PersonBasedCalculationIncomePostDTO income, final Map<Integer, String> typeNamesById) {
+		return new DraftRow(income.getId(), typeNamesById.get(income.getId()),
+			income.getApplicantAmount(), toIso(income.getApplicantAmountDate()),
+			income.getCoApplicantAmount(), toIso(income.getCoApplicantAmountDate()),
+			income.getNote());
+	}
+
+	private static PersonBasedCalculationIncomePostDTO toPostDto(final DraftRow row) {
+		return new PersonBasedCalculationIncomePostDTO()
+			.id(row.typeId())
+			.applicantAmount(row.applicantAmount())
+			.applicantAmountDate(fromIso(row.applicantAmountDate()))
+			.coApplicantAmount(row.coApplicantAmount())
+			.coApplicantAmountDate(fromIso(row.coApplicantAmountDate()))
+			.note(row.note());
+	}
+
+	private static String toIso(final OffsetDateTime date) {
+		return ofNullable(date).map(OffsetDateTime::toString).orElse(null);
+	}
+
+	private static OffsetDateTime fromIso(final String iso) {
+		return ofNullable(iso).filter(StringUtils::hasText).map(OffsetDateTime::parse).orElse(null);
 	}
 
 	private List<String> missingPreviousIncomeTypes(final String applicantPersonId, final YearMonth applicationMonth,

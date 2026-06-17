@@ -23,6 +23,7 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
+import se.sundsvall.caremanagement.lifecare.service.model.NormberakningDraftBuild;
 import se.sundsvall.caremanagement.lifecare.service.model.NormberakningResult;
 import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
@@ -90,6 +91,9 @@ class FinancialAssistanceServiceTest {
 
 	@Mock
 	private WarningService warningServiceMock;
+
+	@Mock
+	private DraftService draftServiceMock;
 
 	@InjectMocks
 	private FinancialAssistanceService service;
@@ -288,8 +292,8 @@ class FinancialAssistanceServiceTest {
 	void prepareNormberakningReportsCompletenessWithoutLifecareWrite() {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(normberakningServiceMock.completeness("199001011234", month, "[json]"))
-			.thenReturn(new NormberakningResult(null, false, List.of("Dagersättning")));
+		when(normberakningServiceMock.buildDraft("199001011234", month, "[json]"))
+			.thenReturn(new NormberakningDraftBuild(List.of(), false, List.of("Dagersättning")));
 
 		final var request = NormberakningRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -311,8 +315,9 @@ class FinancialAssistanceServiceTest {
 	void prepareRecordsReviewRequiredRecommendationAndKompletteringWhenIncomplete() {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(normberakningServiceMock.completeness("199001011234", month, "[json]"))
-			.thenReturn(new NormberakningResult(null, false, List.of("Dagersättning")));
+		when(normberakningServiceMock.buildDraft("199001011234", month, "[json]"))
+			.thenReturn(new NormberakningDraftBuild(List.of(), false, List.of("Dagersättning")));
+		when(draftServiceMock.refresh(eq(ERRAND_ID), eq("2026-06"), any())).thenReturn(List.of());
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("UNDER_BEREDNING"));
 
@@ -344,15 +349,16 @@ class FinancialAssistanceServiceTest {
 		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("KOMPLETTERING");
 		verify(normberakningServiceMock, never()).buildAndPostFromClassified(any(), any(), any());
 		verify(warningServiceMock).reconcileIncomeWarnings(ERRAND_ID,
-			List.of("Bostadstillägg (NOT_ON_WHITELIST)"), List.of("Bostadsbidrag: -23%"), List.of("Dagersättning"));
+			List.of("Bostadstillägg (NOT_ON_WHITELIST)"), List.of("Bostadsbidrag: -23%"), List.of("Dagersättning"), List.of());
 	}
 
 	@Test
 	void prepareRecordsOkRecommendationAndVantarWhenComplete() {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(normberakningServiceMock.completeness("199001011234", month, "[]"))
-			.thenReturn(new NormberakningResult(null, true, List.of()));
+		when(normberakningServiceMock.buildDraft("199001011234", month, "[]"))
+			.thenReturn(new NormberakningDraftBuild(List.of(), true, List.of()));
+		when(draftServiceMock.refresh(eq(ERRAND_ID), eq("2026-06"), any())).thenReturn(List.of());
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("KOMPLETTERING"));
 
@@ -378,8 +384,9 @@ class FinancialAssistanceServiceTest {
 	void prepareDoesNotDuplicateRecommendationOrRewriteUnchangedStatus() {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(normberakningServiceMock.completeness("199001011234", month, "[]"))
-			.thenReturn(new NormberakningResult(null, true, List.of()));
+		when(normberakningServiceMock.buildDraft("199001011234", month, "[]"))
+			.thenReturn(new NormberakningDraftBuild(List.of(), true, List.of()));
+		when(draftServiceMock.refresh(eq(ERRAND_ID), eq("2026-06"), any())).thenReturn(List.of());
 		// a recommendation already exists, and the errand is already in the target status
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(List.of(Decision.create().withDecisionType("RECOMMENDATION")));
@@ -404,7 +411,7 @@ class FinancialAssistanceServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
-		verify(normberakningServiceMock, never()).completeness(any(), any(), any());
+		verify(normberakningServiceMock, never()).buildDraft(any(), any(), any());
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 	}
 
@@ -418,7 +425,7 @@ class FinancialAssistanceServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 
-		verify(normberakningServiceMock, never()).completeness(any(), any(), any());
+		verify(normberakningServiceMock, never()).buildDraft(any(), any(), any());
 	}
 
 	@Test

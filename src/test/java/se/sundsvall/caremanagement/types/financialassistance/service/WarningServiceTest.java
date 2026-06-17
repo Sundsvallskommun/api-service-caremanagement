@@ -45,17 +45,19 @@ class WarningServiceTest {
 		service.reconcileIncomeWarnings(ERRAND_ID,
 			List.of("Bostadstillägg (NOT_ON_WHITELIST)"),
 			List.of("Bostadsbidrag: -23%"),
-			List.of("Dagersättning"));
+			List.of("Dagersättning"),
+			List.of("Lön"));
 
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
-		verify(repositoryMock, org.mockito.Mockito.times(3)).save(captor.capture());
+		verify(repositoryMock, org.mockito.Mockito.times(4)).save(captor.capture());
 		final var saved = captor.getAllValues();
 		assertThat(saved).allMatch(w -> "OPEN".equals(w.getStatus()) && !w.isAutoResolved());
 		assertThat(saved).extracting(FaWarningEntity::getType, FaWarningEntity::getSourceKey)
 			.containsExactlyInAnyOrder(
 				org.assertj.core.groups.Tuple.tuple("UNHANDLED_INCOME", "Bostadstillägg"),
 				org.assertj.core.groups.Tuple.tuple("INCOME_CHANGE", "Bostadsbidrag"),
-				org.assertj.core.groups.Tuple.tuple("MISSING_SSBTEK", "Dagersättning"));
+				org.assertj.core.groups.Tuple.tuple("MISSING_SSBTEK", "Dagersättning"),
+				org.assertj.core.groups.Tuple.tuple("NEW_INCOME", "Lön"));
 	}
 
 	@Test
@@ -67,6 +69,7 @@ class WarningServiceTest {
 		service.reconcileIncomeWarnings(ERRAND_ID,
 			List.of("Bostadstillägg (NOT_ON_WHITELIST)"), // matches the OPEN one → update
 			List.of("Bostadsbidrag: -23%"), // matches the CLOSED one → must NOT re-open
+			List.of(),
 			List.of());
 
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
@@ -83,7 +86,7 @@ class WarningServiceTest {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(open, acknowledged, alreadyClosed));
 
 		// nothing computed this round → all causes resolved
-		service.reconcileIncomeWarnings(ERRAND_ID, List.of(), List.of(), List.of());
+		service.reconcileIncomeWarnings(ERRAND_ID, List.of(), List.of(), List.of(), List.of());
 
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
 		verify(repositoryMock, org.mockito.Mockito.times(2)).save(captor.capture()); // open + acknowledged auto-close; closed untouched

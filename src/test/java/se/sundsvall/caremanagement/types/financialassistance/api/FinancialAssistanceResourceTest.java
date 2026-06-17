@@ -14,10 +14,12 @@ import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.DraftIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
@@ -192,6 +194,46 @@ class FinancialAssistanceResourceTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getStatus()).isEqualTo("CLOSED");
 		verify(serviceMock).updateWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("w1"), eq("CLOSED"));
+	}
+
+	@Test
+	void getDraft() {
+		when(serviceMock.getDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1")))
+			.thenReturn(NormberakningDraft.create().withErrandId("errand-1").withEdited(false)
+				.withRows(List.of(DraftIncomeRow.create().withTypeName("Bostadsbidrag").withApplicantAmount(1850.0))));
+
+		final var response = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft").build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(NormberakningDraft.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getRows()).hasSize(1);
+		assertThat(response.getRows().getFirst().getTypeName()).isEqualTo("Bostadsbidrag");
+		verify(serviceMock).getDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"));
+	}
+
+	@Test
+	void updateDraft() {
+		when(serviceMock.updateDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormberakningDraft.class)))
+			.thenReturn(NormberakningDraft.create().withErrandId("errand-1").withEdited(true));
+
+		final var response = webTestClient.put()
+			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft").build(base()))
+			.bodyValue(NormberakningDraft.create().withApplicationMonth("2026-06")
+				.withRows(List.of(DraftIncomeRow.create().withTypeName("Bostadsbidrag").withApplicantAmount(2000.0))))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(NormberakningDraft.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.isEdited()).isTrue();
+		verify(serviceMock).updateDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormberakningDraft.class));
 	}
 
 	@Test

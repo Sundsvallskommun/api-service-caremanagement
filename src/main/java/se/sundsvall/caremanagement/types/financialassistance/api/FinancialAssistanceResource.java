@@ -32,6 +32,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Eligibili
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
@@ -177,6 +178,37 @@ class FinancialAssistanceResource {
 		})) @RequestParam final String status) {
 
 		return ok(service.updateWarning(municipalityId, namespace, errandId, warningId, status));
+	}
+
+	@GetMapping(path = "/financial-assistance/{errandId}/normberakning/draft", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Read the draft normberäkning",
+		description = "The FC income rows the EB process prepared (not yet created in Lifecare) for the handläggare to review and edit before a beslut. 404 when no draft exists yet.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<NormberakningDraft> getDraft(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@PathVariable final String errandId) {
+
+		return ok(service.getDraft(municipalityId, namespace, errandId));
+	}
+
+	@PutMapping(path = "/financial-assistance/{errandId}/normberakning/draft", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Edit the draft normberäkning",
+		description = "Replace the draft's income rows with the handläggare's edit and mark it edited — the daily SSBTEK refresh then preserves these rows and surfaces newly-arrived income as a NEW_INCOME warning instead of overwriting. The edited draft is what gets posted to Lifecare on a beslut.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<NormberakningDraft> updateDraft(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@PathVariable final String errandId,
+		@Valid @NotNull @RequestBody final NormberakningDraft draft) {
+
+		return ok(service.updateDraft(municipalityId, namespace, errandId, draft));
 	}
 
 	@PostMapping(path = "/financial-assistance/actualisation", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
