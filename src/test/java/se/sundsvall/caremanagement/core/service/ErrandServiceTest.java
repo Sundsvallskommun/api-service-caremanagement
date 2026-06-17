@@ -202,4 +202,28 @@ class ErrandServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 	}
+
+	@Test
+	void linkProcessInstanceStoresIdAndPublishesNothing() {
+		final var entity = ErrandEntity.create().withId(ERRAND_ID).withTypeSlug("t");
+		when(repositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(entity));
+
+		service.linkProcessInstance(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "proc-1");
+
+		final var entityCaptor = ArgumentCaptor.forClass(ErrandEntity.class);
+		verify(repositoryMock).save(entityCaptor.capture());
+		assertThat(entityCaptor.getValue().getProcessInstanceId()).isEqualTo("proc-1");
+		verify(eventPublisherMock, never()).publishEvent(any());
+	}
+
+	@Test
+	void linkProcessInstanceMissingThrows() {
+		when(repositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.linkProcessInstance(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "proc-1"))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+	}
 }
