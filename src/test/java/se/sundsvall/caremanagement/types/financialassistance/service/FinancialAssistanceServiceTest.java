@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
@@ -18,11 +19,13 @@ import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
+import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
 import se.sundsvall.caremanagement.lifecare.service.model.NormberakningResult;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekChangeWarning;
 import se.sundsvall.caremanagement.lifecare.service.model.UnhandledIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.UnhandledReason;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
@@ -58,6 +61,9 @@ class FinancialAssistanceServiceTest {
 
 	@Mock
 	private NormberakningService normberakningServiceMock;
+
+	@Mock
+	private ActualisationService actualisationServiceMock;
 
 	@Mock
 	private CitizenService citizenServiceMock;
@@ -285,6 +291,60 @@ class FinancialAssistanceServiceTest {
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
 		verify(normberakningServiceMock, never()).buildAndPost(any(), any(), any(), any());
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+	}
+
+	@Test
+	void createActualisationResolvesPartyDelegatesAndMaps() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, 6, 1))).thenReturn(5012);
+
+		final var request = ActualisationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06");
+
+		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request);
+
+		assertThat(response.getActualisationId()).isEqualTo(5012);
+		verify(actualisationServiceMock).create("199001011234", LocalDate.of(2026, 6, 1));
+		// No errandId on the request → nothing recorded on an errand.
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+	}
+
+	@Test
+	void createActualisationWithErrandIdRecordsActualisationDecision() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, 6, 1))).thenReturn(5012);
+
+		final var request = ActualisationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06")
+			.withErrandId(ERRAND_ID);
+
+		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request);
+
+		assertThat(response.getActualisationId()).isEqualTo(5012);
+
+		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
+		final var decision = decisionCaptor.getValue();
+		assertThat(decision.getDecisionType()).isEqualTo("ACTUALISATION");
+		assertThat(decision.getValue()).isEqualTo("5012");
+		assertThat(decision.getCreatedBy()).isEqualTo("drakel");
+		assertThat(decision.getDescription()).contains("id 5012");
+	}
+
+	@Test
+	void createActualisationUnresolvedPartyIdYields404() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.empty());
+
+		final var request = ActualisationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
+
+		assertThatThrownBy(() -> service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verify(actualisationServiceMock, never()).create(any(), any());
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 	}
 }

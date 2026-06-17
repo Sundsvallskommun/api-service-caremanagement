@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
@@ -120,6 +122,21 @@ class FinancialAssistanceResource {
 		@Valid @NotNull @RequestBody final NormberakningRequest request) {
 
 		return ok(service.createNormberakning(municipalityId, namespace, request));
+	}
+
+	@PostMapping(path = "/financial-assistance/actualisation", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Create the Lifecare aktualisering (case intake)",
+		description = "Builds the aktualisering against the applicant's Lifecare FC aktualisering proposal and creates it in Lifecare, returning the created aktualisering id. When the request carries an errandId, the creation is recorded on the errand as a Decision(ACTUALISATION) for the audit trail.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<ActualisationResponse> createActualisation(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Valid @NotNull @RequestBody final ActualisationRequest request) {
+
+		return ok(service.createActualisation(municipalityId, namespace, request));
 	}
 
 	@GetMapping(path = "/financial-assistance/prefill", produces = APPLICATION_JSON_VALUE)

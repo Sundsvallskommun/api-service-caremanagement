@@ -13,7 +13,10 @@ import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
+import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
@@ -46,24 +49,27 @@ public class FinancialAssistanceService {
 
 	private static final String DEFAULT_TITLE = "Ekonomiskt bistånd";
 
-	/** Recommendation Decision recorded by the automated normberäkning pipeline. */
+	/** Decisions recorded by the automated pipelines, written as the drakel system actor. */
 	private static final String RECOMMENDATION_TYPE = "RECOMMENDATION";
-	private static final String RECOMMENDATION_CREATED_BY = "drakel";
+	private static final String ACTUALISATION_TYPE = "ACTUALISATION";
+	private static final String CREATED_BY = "drakel";
 	private static final String VALUE_REVIEW_REQUIRED = "REVIEW_REQUIRED";
 	private static final String VALUE_OK = "OK";
 
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository repository;
 	private final NormberakningService normberakningService;
+	private final ActualisationService actualisationService;
 	private final CitizenService citizenService;
 	private final DecisionService decisionService;
 	private final AttachmentService attachmentService;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final NormberakningService normberakningService,
-		final CitizenService citizenService, final DecisionService decisionService, final AttachmentService attachmentService) {
+		final ActualisationService actualisationService, final CitizenService citizenService, final DecisionService decisionService, final AttachmentService attachmentService) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.normberakningService = normberakningService;
+		this.actualisationService = actualisationService;
 		this.citizenService = citizenService;
 		this.decisionService = decisionService;
 		this.attachmentService = attachmentService;
@@ -152,7 +158,36 @@ public class FinancialAssistanceService {
 			.withDecisionType(RECOMMENDATION_TYPE)
 			.withValue(warnings.isEmpty() ? VALUE_OK : VALUE_REVIEW_REQUIRED)
 			.withDescription(description)
-			.withCreatedBy(RECOMMENDATION_CREATED_BY));
+			.withCreatedBy(CREATED_BY));
+	}
+
+	/**
+	 * Create the Lifecare aktualisering (case intake) for the application month and return the created aktualisering id.
+	 * The intake date is the first day of the application month. When the request carries an {@code errandId}, the
+	 * creation is recorded on that errand as a {@code Decision(ACTUALISATION)} so the handläggare sees it in the case's
+	 * audit trail.
+	 */
+	public ActualisationResponse createActualisation(final String municipalityId, final String namespace, final ActualisationRequest request) {
+		final var applicant = personalNumber(municipalityId, request.getApplicant());
+		final var intakeDate = YearMonth.parse(request.getApplicationMonth()).atDay(1);
+		final var actualisationId = actualisationService.create(applicant, intakeDate);
+
+		ofNullable(request.getErrandId()).filter(StringUtils::hasText)
+			.ifPresent(errandId -> recordActualisation(municipalityId, namespace, errandId, actualisationId));
+
+		return ActualisationResponse.create().withActualisationId(actualisationId);
+	}
+
+	/**
+	 * Record the created aktualisering on the errand as a {@code Decision(ACTUALISATION)} — the canonical audit-trail
+	 * vehicle on the case — carrying the Lifecare aktualisering id as the value.
+	 */
+	private void recordActualisation(final String municipalityId, final String namespace, final String errandId, final Integer actualisationId) {
+		decisionService.create(municipalityId, namespace, errandId, Decision.create()
+			.withDecisionType(ACTUALISATION_TYPE)
+			.withValue(String.valueOf(actualisationId))
+			.withDescription("Aktualisering skapad i Lifecare (id %d).".formatted(actualisationId))
+			.withCreatedBy(CREATED_BY));
 	}
 
 	/** Resolve a partyId to the personnummer the Lifecare/SSBTEK pipeline needs, or 404 when the citizen is unknown. */

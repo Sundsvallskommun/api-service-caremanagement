@@ -10,6 +10,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
@@ -149,6 +151,25 @@ class FinancialAssistanceResourceTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getCalculationId()).isEqualTo(4711);
 		verify(serviceMock).createNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class));
+	}
+
+	@Test
+	void createActualisation() {
+		when(serviceMock.createActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(ActualisationRequest.class)))
+			.thenReturn(ActualisationResponse.create().withActualisationId(5012));
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/actualisation").build(base()))
+			.bodyValue(ActualisationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(ActualisationResponse.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getActualisationId()).isEqualTo(5012);
+		verify(serviceMock).createActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(ActualisationRequest.class));
 	}
 
 	@Test

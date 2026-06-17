@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:55525
+- url: http://localhost:64874
   description: Generated server url
 tags:
 - name: Notes
@@ -1557,6 +1557,47 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EligibilityResponse"
+  /{municipalityId}/{namespace}/errands/financial-assistance/actualisation:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Create the Lifecare aktualisering (case intake)
+      description: "Builds the aktualisering against the applicant's Lifecare FC aktualisering\
+        \ proposal and creates it in Lifecare, returning the created aktualisering\
+        \ id. When the request carries an errandId, the creation is recorded on the\
+        \ errand as a Decision(ACTUALISATION) for the audit trail."
+      operationId: createActualisation
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualisationRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActualisationResponse"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/metadata/{name}:
     get:
       tags:
@@ -2242,6 +2283,111 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/notes/{noteId}:
+    get:
+      tags:
+      - Notes
+      summary: Read note
+      operationId: read
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+    delete:
+      tags:
+      - Notes
+      summary: Delete note
+      operationId: delete
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+    patch:
+      tags:
+      - Notes
+      summary: Update note
+      operationId: update
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNote"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
   /{municipalityId}/{namespace}/statistics:
     get:
       tags:
@@ -2517,111 +2663,6 @@ paths:
         schema:
           type: string
       - name: permitId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-  /{municipalityId}/{namespace}/errands/{errandId}/notes/{noteId}:
-    get:
-      tags:
-      - Notes
-      summary: Read note
-      operationId: read
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: noteId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Note"
-    patch:
-      tags:
-      - Notes
-      summary: Update note
-      operationId: update
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: noteId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateNote"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Note"
-    delete:
-      tags:
-      - Notes
-      summary: Delete note
-      operationId: delete
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: noteId
         in: path
         required: true
         schema:
@@ -4370,19 +4411,6 @@ components:
           minLength: 0
       required:
       - body
-    UpdateNote:
-      type: object
-      properties:
-        body:
-          type: string
-          maxLength: 8192
-          minLength: 0
-        modifiedBy:
-          type: string
-          maxLength: 64
-          minLength: 0
-      required:
-      - body
     CreateMessage:
       type: object
       description: A new message in the errand's conversation
@@ -4680,6 +4708,44 @@ components:
           description: True when the request included a co-applicant (medsökande)
           examples:
           - "false"
+    ActualisationRequest:
+      type: object
+      description: Request to create the Lifecare aktualisering (case intake) for
+        an application month.
+      properties:
+        applicant:
+          type: string
+          description: The applicant's partyId (personId GUID)
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+        applicationMonth:
+          type: string
+          description: "The application month (ISO year-month, yyyy-MM); the aktualisering's\
+            \ intake date is the first day of this month"
+          examples:
+          - 2026-06
+          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
+        errandId:
+          type: string
+          description: "The id of the caremanagement errand the aktualisering concerns.\
+            \ When present, a Decision(ACTUALISATION) recording the created Lifecare\
+            \ aktualisering id is added to the errand's audit trail; when omitted,\
+            \ the aktualisering is created without recording anything on an errand."
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+      required:
+      - applicant
+      - applicationMonth
+    ActualisationResponse:
+      type: object
+      description: The created Lifecare aktualisering id.
+      properties:
+        actualisationId:
+          type: integer
+          format: int32
+          description: The id of the aktualisering created in Lifecare FC
+          examples:
+          - 5012
     PatchErrand:
       type: object
       description: PatchErrand model — patchable envelope fields only
@@ -4712,6 +4778,49 @@ components:
           description: User id of the assignee
           examples:
           - jane02doe
+    UpdateNote:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 8192
+          minLength: 0
+        modifiedBy:
+          type: string
+          maxLength: 64
+          minLength: 0
+      required:
+      - body
+    Note:
+      type: object
+      description: Note attached to an errand
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+        errandId:
+          type: string
+          description: Errand id this note belongs to
+        body:
+          type: string
+          description: Note body
+          example: "Spoke to family today, awaiting docs."
+        author:
+          type: string
+          description: Author user id
+          example: jane01doe
+        created:
+          type: string
+          format: date-time
+          description: Created timestamp
+        modifiedBy:
+          type: string
+          description: User id of the last editor
+          example: jane01doe
+        modified:
+          type: string
+          format: date-time
+          description: Last modified timestamp; null until the note has been edited
     AssigneeCount:
       type: object
       description: Number of errands assigned to a given user
@@ -4853,36 +4962,6 @@ components:
         changedAt:
           type: string
           format: date-time
-    Note:
-      type: object
-      description: Note attached to an errand
-      properties:
-        id:
-          type: string
-          description: Unique identifier
-        errandId:
-          type: string
-          description: Errand id this note belongs to
-        body:
-          type: string
-          description: Note body
-          example: "Spoke to family today, awaiting docs."
-        author:
-          type: string
-          description: Author user id
-          example: jane01doe
-        created:
-          type: string
-          format: date-time
-          description: Created timestamp
-        modifiedBy:
-          type: string
-          description: User id of the last editor
-          example: jane01doe
-        modified:
-          type: string
-          format: date-time
-          description: Last modified timestamp; null until the note has been edited
     Message:
       type: object
       description: A message in the errand's conversation
