@@ -64,6 +64,24 @@ public class NormberakningService {
 		return new NormberakningResult(calculationId, missing.isEmpty(), missing);
 	}
 
+	/**
+	 * Whether this month's classified incomes cover every income type the previous month's normberäkning had — the EB
+	 * process's daily-poll signal — <strong>without</strong> creating anything in Lifecare. Reads the previous
+	 * normberäkning (best-effort, as {@link #buildAndPostFromClassified}) and the proposal only to align the comparison
+	 * vocabulary; nothing is written. The returned {@code calculationId} is always {@code null}.
+	 *
+	 * @param  applicantPersonId     the applicant's personnummer
+	 * @param  applicationMonth      the month the application concerns
+	 * @param  classifiedIncomesJson the operaton {@code classifiedIncomes} JSON
+	 * @return                       completeness + missing income types, with a {@code null} calculation id
+	 */
+	public NormberakningResult completeness(final String applicantPersonId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
+		final var classified = parse(classifiedIncomesJson);
+		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		final var missing = missingPreviousIncomeTypes(applicantPersonId, applicationMonth, classified, proposal);
+		return new NormberakningResult(null, missing.isEmpty(), missing);
+	}
+
 	private List<String> missingPreviousIncomeTypes(final String applicantPersonId, final YearMonth applicationMonth,
 		final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
 		try {

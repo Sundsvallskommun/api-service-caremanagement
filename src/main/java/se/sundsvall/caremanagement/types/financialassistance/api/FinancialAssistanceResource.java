@@ -111,19 +111,34 @@ class FinancialAssistanceResource {
 		return ok(eligibilityService.evaluate(municipalityId, namespace, request));
 	}
 
-	@PostMapping(path = "/financial-assistance/normberakning", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Build and post the SSBTEK-driven normberäkning",
-		description = "Fetches the household's SSBTEK income basis for the application month, builds the normberäkning against the applicant's Lifecare FC calculation proposal, and posts it. Returns the created Lifecare calculation id plus the income warnings (unhandled incomes, significant period-over-period changes) the handläggare must review.",
+	@PostMapping(path = "/financial-assistance/normberakning/prepare", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Prepare the normberäkning (no Lifecare write)",
+		description = "Reports whether this month's classified incomes cover every income type the previous normberäkning had (informationComplete + missingIncomeTypes), records the income warnings on the errand as a single Decision(RECOMMENDATION), and reflects completeness in the errand status (KOMPLETTERING ⇄ VANTAR_PA_BESLUT). Does NOT create a normberäkning in Lifecare — the EB process calls this each daily loop. Use /commit after a beslut to create it in Lifecare.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
-	ResponseEntity<NormberakningResponse> createNormberakning(
+	ResponseEntity<NormberakningResponse> prepareNormberakning(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Valid @NotNull @RequestBody final NormberakningRequest request) {
 
-		return ok(service.createNormberakning(municipalityId, namespace, request));
+		return ok(service.prepareNormberakning(municipalityId, namespace, request));
+	}
+
+	@PostMapping(path = "/financial-assistance/normberakning/commit", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Create the normberäkning in Lifecare (after beslut)",
+		description = "Builds the normberäkning from the classified incomes and creates it in Lifecare FC, returning the created calculation id. Called once a beslut is taken — never during the daily SSBTEK loop.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<NormberakningResponse> commitNormberakning(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Valid @NotNull @RequestBody final NormberakningRequest request) {
+
+		return ok(service.commitNormberakning(municipalityId, namespace, request));
 	}
 
 	@PostMapping(path = "/financial-assistance/actualisation", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)

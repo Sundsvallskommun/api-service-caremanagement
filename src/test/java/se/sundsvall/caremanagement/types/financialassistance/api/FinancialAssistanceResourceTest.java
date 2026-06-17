@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -137,12 +138,32 @@ class FinancialAssistanceResourceTest {
 	}
 
 	@Test
-	void createNormberakning() {
-		when(serviceMock.createNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class)))
+	void prepareNormberakning() {
+		when(serviceMock.prepareNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class)))
+			.thenReturn(NormberakningResponse.create().withInformationComplete(false).withMissingIncomeTypes(List.of("Dagersättning")));
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/normberakning/prepare").build(base()))
+			.bodyValue(NormberakningRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(NormberakningResponse.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.isInformationComplete()).isFalse();
+		assertThat(response.getMissingIncomeTypes()).containsExactly("Dagersättning");
+		verify(serviceMock).prepareNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class));
+	}
+
+	@Test
+	void commitNormberakning() {
+		when(serviceMock.commitNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class)))
 			.thenReturn(NormberakningResponse.create().withCalculationId(4711));
 
 		final var response = webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/normberakning").build(base()))
+			.uri(uri -> uri.path(PATH + "/normberakning/commit").build(base()))
 			.bodyValue(NormberakningRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
 			.exchange()
 			.expectStatus().isOk()
@@ -152,7 +173,7 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(response).isNotNull();
 		assertThat(response.getCalculationId()).isEqualTo(4711);
-		verify(serviceMock).createNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class));
+		verify(serviceMock).commitNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class));
 	}
 
 	@Test

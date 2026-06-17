@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.api.model.PatchErrand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
@@ -35,6 +36,8 @@ import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_INKOMMEN;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_KOMPLETTERING;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_VANTAR_PA_BESLUT;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.applicationTypeForSlug;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toEntity;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toStakeholders;
@@ -136,46 +139,78 @@ public class FinancialAssistanceService {
 	}
 
 	/**
-	 * Post the normberäkning for the application month to Lifecare FC from incomes already classified by the operaton
-	 * regelverk ({@code classifiedIncomes}), returning the created calculation id plus the income warnings the handläggare
-	 * must review. caremanagement no longer fetches SSBTEK or evaluates the rålista — the regelverk lives in the process,
-	 * so {@code classifiedIncomes} is required. When the request carries an {@code errandId}, the warnings are recorded on
-	 * that errand as a {@code Decision(RECOMMENDATION)} so the handläggare sees them on the case.
+	 * Prepare — but do <strong>not</strong> create in Lifecare — the normberäkning for the application month from incomes
+	 * already classified by the operaton regelverk. The EB process calls this each daily loop: it reports whether the
+	 * information is complete (does this month cover every income type the previous normberäkning had?), records the income
+	 * warnings on the errand as a single {@code Decision(RECOMMENDATION)} the handläggare reviews, and reflects
+	 * completeness in the errand status ({@code KOMPLETTERING} while incomplete, {@code VANTAR_PA_BESLUT} when complete).
+	 * No Lifecare normberäkning is created here — that happens only after a beslut, via {@link #commitNormberakning}.
 	 */
-	public NormberakningResponse createNormberakning(final String municipalityId, final String namespace, final NormberakningRequest request) {
+	public NormberakningResponse prepareNormberakning(final String municipalityId, final String namespace, final NormberakningRequest request) {
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
-		final var classifiedIncomes = ofNullable(request.getClassifiedIncomes()).filter(StringUtils::hasText)
-			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, "classifiedIncomes is required — the SSBTEK regelverk is evaluated in the process, not caremanagement"));
+		final var classifiedIncomes = requireClassifiedIncomes(request);
+
+		final var completeness = normberakningService.completeness(applicant, applicationMonth, classifiedIncomes);
+		final var response = NormberakningResponse.create()
+			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
+			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of))
+			.withInformationComplete(completeness.informationComplete())
+			.withMissingIncomeTypes(completeness.missingIncomeTypes());
+
+		ofNullable(request.getErrandId()).filter(StringUtils::hasText).ifPresent(errandId -> {
+			recordRecommendationOnce(municipalityId, namespace, errandId, response);
+			applyCompletenessStatus(municipalityId, namespace, errandId, completeness.informationComplete());
+		});
+		return response;
+	}
+
+	/**
+	 * Create the normberäkning in Lifecare FC from the classified incomes — called once a beslut is taken, never during
+	 * the daily SSBTEK loop. Returns the created calculation id (plus the completeness verdict for reference).
+	 */
+	public NormberakningResponse commitNormberakning(final String municipalityId, final String namespace, final NormberakningRequest request) {
+		final var applicant = personalNumber(municipalityId, request.getApplicant());
+		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
+		final var classifiedIncomes = requireClassifiedIncomes(request);
 
 		final var result = normberakningService.buildAndPostFromClassified(applicant, applicationMonth, classifiedIncomes);
-		final var response = NormberakningResponse.create()
+		return NormberakningResponse.create()
 			.withCalculationId(result.calculationId())
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
 			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of))
 			.withInformationComplete(result.informationComplete())
 			.withMissingIncomeTypes(result.missingIncomeTypes());
+	}
 
-		ofNullable(request.getErrandId()).filter(StringUtils::hasText)
-			.ifPresent(errandId -> recordRecommendation(municipalityId, namespace, errandId, response));
-
-		return response;
+	private static String requireClassifiedIncomes(final NormberakningRequest request) {
+		return ofNullable(request.getClassifiedIncomes()).filter(StringUtils::hasText)
+			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, "classifiedIncomes is required — the SSBTEK regelverk is evaluated in the process, not caremanagement"));
 	}
 
 	/**
-	 * Surface the normberäkning's income warnings on the errand as a {@code Decision(RECOMMENDATION)} — the canonical flag
-	 * vehicle handläggaren reviews in the case. The value is {@code REVIEW_REQUIRED} when there is anything to review
-	 * (unhandled incomes or significant period-over-period changes) and {@code OK} otherwise; the description lists the
-	 * warnings in plain language.
+	 * Surface the normberäkning's income warnings on the errand as a single {@code Decision(RECOMMENDATION)} — written
+	 * once (the daily loop re-runs prepare, but the recommendation is not duplicated). The value is {@code REVIEW_REQUIRED}
+	 * when there is anything to review (unhandled or significantly changed incomes, or still-missing SSBTEK data) and
+	 * {@code OK} otherwise; the description lists the warnings in plain language. No Lifecare calculation exists yet, so
+	 * the recommendation is explicitly preliminary.
 	 */
-	private void recordRecommendation(final String municipalityId, final String namespace, final String errandId, final NormberakningResponse response) {
-		final var warnings = Stream.concat(
+	private void recordRecommendationOnce(final String municipalityId, final String namespace, final String errandId, final NormberakningResponse response) {
+		final var alreadyRecorded = decisionService.readAll(municipalityId, namespace, errandId).stream()
+			.anyMatch(decision -> RECOMMENDATION_TYPE.equals(decision.getDecisionType()));
+		if (alreadyRecorded) {
+			return;
+		}
+
+		final var warnings = Stream.of(
 			response.getUnhandledIncomes().stream().map("Ej överförd inkomst: "::concat),
-			response.getChangeWarnings().stream().map("Förändrad inkomst: "::concat))
+			response.getChangeWarnings().stream().map("Förändrad inkomst: "::concat),
+			response.getMissingIncomeTypes().stream().map("Saknas ännu i SSBTEK: "::concat))
+			.flatMap(stream -> stream)
 			.toList();
-		final var header = "Normberäkning skapad i Lifecare (id %s). ".formatted(response.getCalculationId());
+		final var header = "Inkomstunderlag berett (preliminärt – normberäkningen skapas i Lifecare efter beslut). ";
 		final var description = warnings.isEmpty()
-			? header + "Inga varningar – inkomsterna överfördes utan anmärkning."
+			? header + "Inga varningar – inkomsterna kunde överföras utan anmärkning."
 			: header + warnings.size() + " varning(ar) att granska:\n" + String.join("\n", warnings);
 
 		decisionService.create(municipalityId, namespace, errandId, Decision.create()
@@ -183,6 +218,19 @@ public class FinancialAssistanceService {
 			.withValue(warnings.isEmpty() ? VALUE_OK : VALUE_REVIEW_REQUIRED)
 			.withDescription(description)
 			.withCreatedBy(CREATED_BY));
+	}
+
+	/**
+	 * Reflect SSBTEK completeness in the errand status — {@code KOMPLETTERING} while incomplete, {@code VANTAR_PA_BESLUT}
+	 * when complete — writing only when it actually changes (the daily loop re-runs prepare, so an unchanged status is a
+	 * no-op).
+	 */
+	private void applyCompletenessStatus(final String municipalityId, final String namespace, final String errandId, final boolean informationComplete) {
+		final var target = informationComplete ? STATUS_VANTAR_PA_BESLUT : STATUS_KOMPLETTERING;
+		final var current = errandService.readErrand(municipalityId, namespace, errandId).getStatus();
+		if (!target.equals(current)) {
+			errandService.updateErrand(municipalityId, namespace, errandId, PatchErrand.create().withStatus(target));
+		}
 	}
 
 	/**

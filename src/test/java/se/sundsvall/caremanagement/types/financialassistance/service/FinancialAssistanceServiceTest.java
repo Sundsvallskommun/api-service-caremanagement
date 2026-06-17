@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.api.model.PatchErrand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
@@ -45,6 +46,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -254,7 +256,7 @@ class FinancialAssistanceServiceTest {
 	}
 
 	@Test
-	void createNormberakningFromClassifiedIncomesUsesSlimPath() {
+	void commitNormberakningPostsToLifecareAndReturnsId() {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(normberakningServiceMock.buildAndPostFromClassified("199001011234", month, "[json]"))
@@ -267,7 +269,7 @@ class FinancialAssistanceServiceTest {
 			.withUnhandledIncomes(List.of("Något (EJ_PA_LISTAN)"))
 			.withChangeWarnings(List.of("Bostadsbidrag: -23%"));
 
-		final var response = service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+		final var response = service.commitNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
 
 		assertThat(response.getCalculationId()).isEqualTo(4712);
 		assertThat(response.getUnhandledIncomes()).containsExactly("Något (EJ_PA_LISTAN)");
@@ -275,14 +277,41 @@ class FinancialAssistanceServiceTest {
 		assertThat(response.isInformationComplete()).isFalse();
 		assertThat(response.getMissingIncomeTypes()).containsExactly("Dagersättning");
 		verify(normberakningServiceMock).buildAndPostFromClassified("199001011234", month, "[json]");
+		// commit does not touch the errand status/recommendation — that is prepare's job
+		verifyNoInteractions(decisionServiceMock);
 	}
 
 	@Test
-	void createNormberakningWithWarningsRecordsReviewRequiredRecommendation() {
+	void prepareNormberakningReportsCompletenessWithoutLifecareWrite() {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(normberakningServiceMock.buildAndPostFromClassified("199001011234", month, "[json]"))
-			.thenReturn(new NormberakningResult(4711, true, List.of()));
+		when(normberakningServiceMock.completeness("199001011234", month, "[json]"))
+			.thenReturn(new NormberakningResult(null, false, List.of("Dagersättning")));
+
+		final var request = NormberakningRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06")
+			.withClassifiedIncomes("[json]")
+			.withUnhandledIncomes(List.of("Något (EJ_PA_LISTAN)"));
+
+		final var response = service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+
+		assertThat(response.getCalculationId()).isNull();
+		assertThat(response.isInformationComplete()).isFalse();
+		assertThat(response.getMissingIncomeTypes()).containsExactly("Dagersättning");
+		assertThat(response.getUnhandledIncomes()).containsExactly("Något (EJ_PA_LISTAN)");
+		// no Lifecare write during the loop
+		verify(normberakningServiceMock, never()).buildAndPostFromClassified(any(), any(), any());
+	}
+
+	@Test
+	void prepareRecordsReviewRequiredRecommendationAndKompletteringWhenIncomplete() {
+		final var month = YearMonth.of(2026, 6);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(normberakningServiceMock.completeness("199001011234", month, "[json]"))
+			.thenReturn(new NormberakningResult(null, false, List.of("Dagersättning")));
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("UNDER_BEREDNING"));
 
 		final var request = NormberakningRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -292,7 +321,7 @@ class FinancialAssistanceServiceTest {
 			.withUnhandledIncomes(List.of("Bostadstillägg (NOT_ON_WHITELIST)"))
 			.withChangeWarnings(List.of("Bostadsbidrag: -23%"));
 
-		service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+		service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
 
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
@@ -301,17 +330,26 @@ class FinancialAssistanceServiceTest {
 		assertThat(decision.getValue()).isEqualTo("REVIEW_REQUIRED");
 		assertThat(decision.getCreatedBy()).isEqualTo("drakel");
 		assertThat(decision.getDescription())
-			.contains("id 4711")
+			.contains("preliminärt")
+			.doesNotContain("id ")
 			.contains("Ej överförd inkomst: Bostadstillägg (NOT_ON_WHITELIST)")
-			.contains("Förändrad inkomst: Bostadsbidrag: -23%");
+			.contains("Förändrad inkomst: Bostadsbidrag: -23%")
+			.contains("Saknas ännu i SSBTEK: Dagersättning");
+
+		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
+		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
+		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("KOMPLETTERING");
+		verify(normberakningServiceMock, never()).buildAndPostFromClassified(any(), any(), any());
 	}
 
 	@Test
-	void createNormberakningWithoutWarningsRecordsOkRecommendation() {
+	void prepareRecordsOkRecommendationAndVantarWhenComplete() {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(normberakningServiceMock.buildAndPostFromClassified("199001011234", month, "[]"))
-			.thenReturn(new NormberakningResult(4711, true, List.of()));
+		when(normberakningServiceMock.completeness("199001011234", month, "[]"))
+			.thenReturn(new NormberakningResult(null, true, List.of()));
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("KOMPLETTERING"));
 
 		final var request = NormberakningRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -319,40 +357,63 @@ class FinancialAssistanceServiceTest {
 			.withErrandId(ERRAND_ID)
 			.withClassifiedIncomes("[]");
 
-		service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+		service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
 
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
-		final var decision = decisionCaptor.getValue();
-		assertThat(decision.getValue()).isEqualTo("OK");
-		assertThat(decision.getDescription()).contains("Inga varningar");
+		assertThat(decisionCaptor.getValue().getValue()).isEqualTo("OK");
+		assertThat(decisionCaptor.getValue().getDescription()).contains("Inga varningar");
+
+		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
+		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
+		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("VANTAR_PA_BESLUT");
 	}
 
 	@Test
-	void createNormberakningUnresolvedPartyIdYields404() {
+	void prepareDoesNotDuplicateRecommendationOrRewriteUnchangedStatus() {
+		final var month = YearMonth.of(2026, 6);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(normberakningServiceMock.completeness("199001011234", month, "[]"))
+			.thenReturn(new NormberakningResult(null, true, List.of()));
+		// a recommendation already exists, and the errand is already in the target status
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(List.of(Decision.create().withDecisionType("RECOMMENDATION")));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("VANTAR_PA_BESLUT"));
+
+		final var request = NormberakningRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
+
+		service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
+	}
+
+	@Test
+	void prepareNormberakningUnresolvedPartyIdYields404() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.empty());
 
 		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withClassifiedIncomes("[]");
 
-		assertThatThrownBy(() -> service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
+		assertThatThrownBy(() -> service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
-		verify(normberakningServiceMock, never()).buildAndPostFromClassified(any(), any(), any());
+		verify(normberakningServiceMock, never()).completeness(any(), any(), any());
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 	}
 
 	@Test
-	void createNormberakningRequiresClassifiedIncomes() {
+	void prepareNormberakningRequiresClassifiedIncomes() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 
 		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
 
-		assertThatThrownBy(() -> service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
+		assertThatThrownBy(() -> service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 
-		verify(normberakningServiceMock, never()).buildAndPostFromClassified(any(), any(), any());
+		verify(normberakningServiceMock, never()).completeness(any(), any(), any());
 	}
 
 	@Test
