@@ -10,6 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.core.service.event.ErrandCreated;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
@@ -34,8 +35,12 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.even
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedListener.VAR_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedListener.VAR_APPLICATION_MONTH;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedListener.VAR_CO_APPLICANT;
+import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedListener.VAR_CO_APPLICANT_PERSONAL_NUMBER;
+import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedListener.VAR_FROM_DATE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedListener.VAR_MUNICIPALITY_ID;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedListener.VAR_NAMESPACE;
+import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedListener.VAR_PERSONAL_NUMBER;
+import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedListener.VAR_TO_DATE;
 
 @ExtendWith(MockitoExtension.class)
 class FinancialAssistanceErrandCreatedListenerTest {
@@ -46,6 +51,8 @@ class FinancialAssistanceErrandCreatedListenerTest {
 	private static final String PROCESS_INSTANCE_ID = "proc-1";
 	private static final String APPLICANT_PARTY_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 	private static final String CO_APPLICANT_PARTY_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+	private static final String APPLICANT_PERSONAL_NUMBER = "199001011234";
+	private static final String CO_APPLICANT_PERSONAL_NUMBER = "198202022345";
 
 	@Mock
 	private FinancialAssistanceRepository repositoryMock;
@@ -55,6 +62,9 @@ class FinancialAssistanceErrandCreatedListenerTest {
 
 	@Mock
 	private ErrandService errandServiceMock;
+
+	@Mock
+	private CitizenService citizenServiceMock;
 
 	@InjectMocks
 	private FinancialAssistanceErrandCreatedListener listener;
@@ -74,6 +84,8 @@ class FinancialAssistanceErrandCreatedListenerTest {
 				FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID),
 				FaPerson.create().withRole("CO_APPLICANT").withPartyId(CO_APPLICANT_PARTY_ID)));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CO_APPLICANT_PARTY_ID)).thenReturn(Optional.of(CO_APPLICANT_PERSONAL_NUMBER));
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
 
@@ -87,7 +99,11 @@ class FinancialAssistanceErrandCreatedListenerTest {
 			.containsEntry(VAR_NAMESPACE, NAMESPACE)
 			.containsEntry(VAR_APPLICANT, APPLICANT_PARTY_ID)
 			.containsEntry(VAR_CO_APPLICANT, CO_APPLICANT_PARTY_ID)
-			.containsEntry(VAR_APPLICATION_MONTH, "2026-06");
+			.containsEntry(VAR_APPLICATION_MONTH, "2026-06")
+			.containsEntry(VAR_PERSONAL_NUMBER, APPLICANT_PERSONAL_NUMBER)
+			.containsEntry(VAR_CO_APPLICANT_PERSONAL_NUMBER, CO_APPLICANT_PERSONAL_NUMBER)
+			.containsEntry(VAR_FROM_DATE, "2026-04-01")
+			.containsEntry(VAR_TO_DATE, "2026-06-30");
 
 		verify(errandServiceMock).linkProcessInstance(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PROCESS_INSTANCE_ID);
 	}
@@ -98,6 +114,7 @@ class FinancialAssistanceErrandCreatedListenerTest {
 			.withErrandId(ERRAND_ID)
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID)));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
 
@@ -108,8 +125,12 @@ class FinancialAssistanceErrandCreatedListenerTest {
 		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), varsCaptor.capture());
 		assertThat(varsCaptor.getValue())
 			.containsEntry(VAR_APPLICANT, APPLICANT_PARTY_ID)
+			.containsEntry(VAR_PERSONAL_NUMBER, APPLICANT_PERSONAL_NUMBER)
+			.containsEntry(VAR_CO_APPLICANT_PERSONAL_NUMBER, "")
 			.doesNotContainKey(VAR_CO_APPLICANT)
-			.doesNotContainKey(VAR_APPLICATION_MONTH);
+			.doesNotContainKey(VAR_APPLICATION_MONTH)
+			.doesNotContainKey(VAR_FROM_DATE)
+			.doesNotContainKey(VAR_TO_DATE);
 
 		verify(errandServiceMock).linkProcessInstance(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PROCESS_INSTANCE_ID);
 	}
@@ -138,6 +159,7 @@ class FinancialAssistanceErrandCreatedListenerTest {
 			.withErrandId(ERRAND_ID)
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID)));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenThrow(Problem.valueOf(BAD_REQUEST, "No Operaton process definition found"));
 
@@ -152,6 +174,7 @@ class FinancialAssistanceErrandCreatedListenerTest {
 			.withErrandId(ERRAND_ID)
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID)));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.empty());
 
