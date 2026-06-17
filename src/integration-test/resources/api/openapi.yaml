@@ -4816,7 +4816,7 @@ components:
           type: boolean
           description: True when a Lifecare utbetalning concerning the application month has been registered
           examples:
-          - true
+          - "true"
         paymentDate:
           type: string
           description: The date the utbetalning was made (Lifecare PayDate), when effectuated
