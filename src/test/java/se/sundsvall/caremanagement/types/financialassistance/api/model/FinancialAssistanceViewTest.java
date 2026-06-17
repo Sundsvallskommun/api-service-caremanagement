@@ -25,7 +25,7 @@ class FinancialAssistanceViewTest {
 	void builderMethods() {
 		final var view = FinancialAssistanceView.create()
 			.withId("cb20c51f-fcf3-42c0-b613-de563634a8ec")
-			.withErrandNumber("EB-2026-00042")
+			.withErrandNumber("EB_2026_0042")
 			.withMunicipalityId("2281")
 			.withNamespace("FINANCIAL_ASSISTANCE")
 			.withTypeSlug("financial-assistance")
@@ -41,7 +41,7 @@ class FinancialAssistanceViewTest {
 			.withData(DATA);
 
 		assertThat(view.getId()).isEqualTo("cb20c51f-fcf3-42c0-b613-de563634a8ec");
-		assertThat(view.getErrandNumber()).isEqualTo("EB-2026-00042");
+		assertThat(view.getErrandNumber()).isEqualTo("EB_2026_0042");
 		assertThat(view.getMunicipalityId()).isEqualTo("2281");
 		assertThat(view.getNamespace()).isEqualTo("FINANCIAL_ASSISTANCE");
 		assertThat(view.getTypeSlug()).isEqualTo("financial-assistance");
@@ -62,7 +62,7 @@ class FinancialAssistanceViewTest {
 	void settersWork() {
 		final var view = FinancialAssistanceView.create();
 		view.setId("id");
-		view.setErrandNumber("EB-2026-00001");
+		view.setErrandNumber("EB_2026_0001");
 		view.setMunicipalityId("2281");
 		view.setNamespace("FINANCIAL_ASSISTANCE");
 		view.setTypeSlug("financial-assistance");
@@ -78,7 +78,7 @@ class FinancialAssistanceViewTest {
 		view.setData(DATA);
 
 		assertThat(view.getId()).isEqualTo("id");
-		assertThat(view.getErrandNumber()).isEqualTo("EB-2026-00001");
+		assertThat(view.getErrandNumber()).isEqualTo("EB_2026_0001");
 		assertThat(view.getStatus()).isEqualTo("NEW");
 		assertThat(view.getTouched()).isEqualTo(TOUCHED);
 		assertThat(view.getData()).isEqualTo(DATA);

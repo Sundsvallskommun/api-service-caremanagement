@@ -128,40 +128,13 @@ class ErrandEntityTest {
 	}
 
 	@Test
-	void onCreateOrUpdateSetsTouchedAndGeneratesErrandNumber() {
+	void onCreateOrUpdateSetsTouchedAndLeavesErrandNumberToTheService() {
 		final var entity = new ErrandEntity().withStatus("status");
 
 		entity.onCreateOrUpdate();
 
 		assertThat(entity.getTouched()).isNotNull();
-		assertThat(entity.getErrandNumber()).matches("ERRAND-\\d{4}-[0-9A-F]{8}");
-		assertThat(entity).hasAllNullFieldsOrPropertiesExcept("touched", "status", "errandNumber");
-	}
-
-	@Test
-	void onCreateOrUpdateDerivesErrandNumberPrefixFromNamespace() {
-		final var entity = new ErrandEntity().withNamespace("ekb");
-
-		entity.onCreateOrUpdate();
-
-		assertThat(entity.getErrandNumber()).matches("EKB-\\d{4}-[0-9A-F]{8}");
-	}
-
-	@Test
-	void onCreateOrUpdateFallsBackToErrandPrefixWhenNamespaceBlank() {
-		final var entity = new ErrandEntity().withNamespace(" ");
-
-		entity.onCreateOrUpdate();
-
-		assertThat(entity.getErrandNumber()).matches("ERRAND-\\d{4}-[0-9A-F]{8}");
-	}
-
-	@Test
-	void onCreateOrUpdateDoesNotOverwriteExistingErrandNumber() {
-		final var entity = new ErrandEntity().withErrandNumber("EXISTING-1");
-
-		entity.onCreateOrUpdate();
-
-		assertThat(entity.getErrandNumber()).isEqualTo("EXISTING-1");
+		assertThat(entity.getErrandNumber()).isNull();
+		assertThat(entity).hasAllNullFieldsOrPropertiesExcept("touched", "status");
 	}
 }

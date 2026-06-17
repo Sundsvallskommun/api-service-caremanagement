@@ -210,7 +210,7 @@ class FinancialAssistanceMapperTest {
 	void toViewAssemblesEnvelopeAndData() {
 		final var envelope = Errand.create()
 			.withId("errand-1")
-			.withErrandNumber("EB-2026-00042")
+			.withErrandNumber("EB_2026_0042")
 			.withMunicipalityId("2281")
 			.withNamespace("FINANCIAL_ASSISTANCE")
 			.withTypeSlug("financial-assistance")
@@ -229,7 +229,7 @@ class FinancialAssistanceMapperTest {
 
 		assertThat(view).isNotNull();
 		assertThat(view.getId()).isEqualTo("errand-1");
-		assertThat(view.getErrandNumber()).isEqualTo("EB-2026-00042");
+		assertThat(view.getErrandNumber()).isEqualTo("EB_2026_0042");
 		assertThat(view.getMunicipalityId()).isEqualTo("2281");
 		assertThat(view.getNamespace()).isEqualTo("FINANCIAL_ASSISTANCE");
 		assertThat(view.getTypeSlug()).isEqualTo("financial-assistance");

@@ -12,7 +12,7 @@ public class FinancialAssistanceView {
 	@Schema(description = "Unique id", examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec", accessMode = READ_ONLY)
 	private String id;
 
-	@Schema(description = "Errand number", examples = "EB-2026-00042", accessMode = READ_ONLY)
+	@Schema(description = "Errand number", examples = "EB_2026_0001", accessMode = READ_ONLY)
 	private String errandNumber;
 
 	@Schema(description = "Municipality id", examples = "2281", accessMode = READ_ONLY)

@@ -10,10 +10,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
-import java.time.Year;
-import java.util.Locale;
 import java.util.Objects;
-import java.util.UUID;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 import se.sundsvall.caremanagement.shared.Auditable;
@@ -23,7 +20,6 @@ import static java.time.OffsetDateTime.now;
 import static java.time.ZoneId.systemDefault;
 import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.Optional.ofNullable;
-import static java.util.function.Predicate.not;
 import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
@@ -112,24 +108,7 @@ public class ErrandEntity implements Auditable {
 	@PrePersist
 	@PreUpdate
 	void onCreateOrUpdate() {
-		if (errandNumber == null || errandNumber.isBlank()) {
-			errandNumber = generateErrandNumber();
-		}
 		touched = now(systemDefault()).truncatedTo(MILLIS);
-	}
-
-	/**
-	 * Human-readable, unique-enough errand reference on the form {@code <NAMESPACE>-<year>-<8 hex>} (e.g.
-	 * {@code EKB-2026-3F7A9C2B}). The prefix is derived from the errand's namespace so the platform stays
-	 * domain-agnostic; it falls back to {@code ERRAND} when no namespace is set. Assigned once at first persist,
-	 * and only when a client has not already supplied one.
-	 */
-	private String generateErrandNumber() {
-		final var prefix = ofNullable(namespace)
-			.filter(not(String::isBlank))
-			.map(value -> value.toUpperCase(Locale.ROOT))
-			.orElse("ERRAND");
-		return "%s-%d-%s".formatted(prefix, Year.now().getValue(), UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT));
 	}
 
 	public String getId() {

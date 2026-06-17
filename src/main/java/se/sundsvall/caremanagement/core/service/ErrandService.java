@@ -46,15 +46,22 @@ public class ErrandService {
 	private static final String NOT_FOUND_MESSAGE = "No errand with id '%s' found in namespace '%s' for municipality id '%s'";
 
 	private final ErrandRepository errandRepository;
+	private final ErrandNumberGenerator errandNumberGenerator;
 	private final ApplicationEventPublisher eventPublisher;
 
-	ErrandService(final ErrandRepository errandRepository, final ApplicationEventPublisher eventPublisher) {
+	ErrandService(final ErrandRepository errandRepository, final ErrandNumberGenerator errandNumberGenerator, final ApplicationEventPublisher eventPublisher) {
 		this.errandRepository = errandRepository;
+		this.errandNumberGenerator = errandNumberGenerator;
 		this.eventPublisher = eventPublisher;
 	}
 
 	public String createErrand(final String municipalityId, final String namespace, final Errand errand) {
-		final var saved = errandRepository.save(toErrandEntity(errand, namespace, municipalityId));
+		final var entity = toErrandEntity(errand, namespace, municipalityId);
+		if (!hasText(entity.getErrandNumber())) {
+			entity.setErrandNumber(errandNumberGenerator.generate(municipalityId, namespace));
+		}
+
+		final var saved = errandRepository.save(entity);
 		final var timestamp = nowTs();
 
 		eventPublisher.publishEvent(new ErrandCreated(

@@ -39,8 +39,13 @@ class ErrandServiceTest {
 	private static final String NAMESPACE = "MY_NAMESPACE";
 	private static final String ERRAND_ID = "11111111-1111-1111-1111-111111111111";
 
+	private static final String ERRAND_NUMBER = "EB_2026_0001";
+
 	@Mock
 	private ErrandRepository repositoryMock;
+
+	@Mock
+	private ErrandNumberGenerator errandNumberGeneratorMock;
 
 	@Mock
 	private ApplicationEventPublisher eventPublisherMock;
@@ -49,19 +54,24 @@ class ErrandServiceTest {
 	private ErrandService service;
 
 	@Test
-	void createPublishesErrandCreatedAndAssignmentNotification() {
+	void createPublishesErrandCreatedAndAssignmentNotificationAndAssignsGeneratedNumber() {
+		when(errandNumberGeneratorMock.generate(MUNICIPALITY_ID, NAMESPACE)).thenReturn(ERRAND_NUMBER);
 		when(repositoryMock.save(any(ErrandEntity.class))).thenAnswer(inv -> ((ErrandEntity) inv.getArgument(0)).withId(ERRAND_ID));
 
 		final var id = service.createErrand(MUNICIPALITY_ID, NAMESPACE,
 			Errand.create().withTypeSlug("t").withReporterUserId("reporter").withAssignedUserId("assignee"));
 
 		assertThat(id).isEqualTo(ERRAND_ID);
+		final var entityCaptor = ArgumentCaptor.forClass(ErrandEntity.class);
+		verify(repositoryMock).save(entityCaptor.capture());
+		assertThat(entityCaptor.getValue().getErrandNumber()).isEqualTo(ERRAND_NUMBER);
 		verify(eventPublisherMock).publishEvent(any(ErrandCreated.class));
 		verify(eventPublisherMock).publishEvent(any(NotificationRequest.class));
 	}
 
 	@Test
 	void createWithoutAssigneeSkipsAssignmentNotification() {
+		when(errandNumberGeneratorMock.generate(MUNICIPALITY_ID, NAMESPACE)).thenReturn(ERRAND_NUMBER);
 		when(repositoryMock.save(any(ErrandEntity.class))).thenAnswer(inv -> ((ErrandEntity) inv.getArgument(0)).withId(ERRAND_ID));
 
 		service.createErrand(MUNICIPALITY_ID, NAMESPACE, Errand.create().withTypeSlug("t").withReporterUserId("r"));
@@ -72,6 +82,7 @@ class ErrandServiceTest {
 
 	@Test
 	void createWhenReporterIsAssigneeSkipsAssignmentNotification() {
+		when(errandNumberGeneratorMock.generate(MUNICIPALITY_ID, NAMESPACE)).thenReturn(ERRAND_NUMBER);
 		when(repositoryMock.save(any(ErrandEntity.class))).thenAnswer(inv -> ((ErrandEntity) inv.getArgument(0)).withId(ERRAND_ID));
 
 		service.createErrand(MUNICIPALITY_ID, NAMESPACE,

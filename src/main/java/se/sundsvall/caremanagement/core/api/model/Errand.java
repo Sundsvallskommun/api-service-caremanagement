@@ -29,7 +29,7 @@ public class Errand {
 	@Schema(description = "Namespace", examples = "MY_NAMESPACE", accessMode = READ_ONLY)
 	private String namespace;
 
-	@Schema(description = "Human-readable errand number", examples = "CAREM-2026-00042", accessMode = READ_ONLY)
+	@Schema(description = "Human-readable errand number", examples = "EB_2026_0001", accessMode = READ_ONLY)
 	@Null(groups = OnCreate.class)
 	private String errandNumber;
 

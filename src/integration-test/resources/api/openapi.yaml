@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:64874
+- url: http://localhost:60386
   description: Generated server url
 tags:
 - name: Notes
@@ -98,6 +98,90 @@ paths:
                 - $ref: "#/components/schemas/ConstraintViolationProblem"
         "500":
           description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft:
+    get:
+      tags:
+      - Financial Assistance
+      summary: Read the draft normberäkning
+      description: The FC income rows the EB process prepared (not yet created in
+        Lifecare) for the handläggare to review and edit before a beslut. 404 when
+        no draft exists yet.
+      operationId: getDraft
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormberakningDraft"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+      - Financial Assistance
+      summary: Edit the draft normberäkning
+      description: Replace the draft's income rows with the handläggare's edit and
+        mark it edited — the daily SSBTEK refresh then preserves these rows and surfaces
+        newly-arrived income as a NEW_INCOME warning instead of overwriting. The edited
+        draft is what gets posted to Lifecare on a beslut.
+      operationId: updateDraft
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormberakningDraft"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormberakningDraft"
+        "404":
+          description: Not Found
           content:
             application/problem+json:
               schema:
@@ -1481,17 +1565,100 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/normberakning:
+  /{municipalityId}/{namespace}/errands/financial-assistance/payment-status:
     post:
       tags:
       - Financial Assistance
-      summary: Build and post the SSBTEK-driven normberäkning
-      description: "Fetches the household's SSBTEK income basis for the application\
-        \ month, builds the normberäkning against the applicant's Lifecare FC calculation\
-        \ proposal, and posts it. Returns the created Lifecare calculation id plus\
-        \ the income warnings (unhandled incomes, significant period-over-period changes)\
-        \ the handläggare must review."
-      operationId: createNormberakning
+      summary: Read whether the Lifecare utbetalning has been effectuated
+      description: "Reads whether the manual Lifecare utbetalning for the applicant\
+        \ and application month has been registered, returning the effectuated flag\
+        \ and (when effectuated) the payment date. caremanagement makes no payment\
+        \ — utbetalning is a manual handläggare step in Lifecare; the process polls\
+        \ this to detect when it is done."
+      operationId: checkPaymentStatus
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentStatusRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentStatusResponse"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/normberakning/prepare:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Prepare the normberäkning (no Lifecare write)
+      description: "Reports whether this month's classified incomes cover every income\
+        \ type the previous normberäkning had (informationComplete + missingIncomeTypes),\
+        \ records the income warnings on the errand as a single Decision(RECOMMENDATION),\
+        \ and reflects completeness in the errand status (KOMPLETTERING ⇄ VANTAR_PA_BESLUT).\
+        \ Does NOT create a normberäkning in Lifecare — the EB process calls this\
+        \ each daily loop. Use /commit after a beslut to create it in Lifecare."
+      operationId: prepareNormberakning
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormberakningRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormberakningResponse"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/normberakning/commit:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Create the normberäkning in Lifecare (after beslut)
+      description: "Builds the normberäkning from the classified incomes and creates\
+        \ it in Lifecare FC, returning the created calculation id. Called once a beslut\
+        \ is taken — never during the daily SSBTEK loop."
+      operationId: commitNormberakning
       parameters:
       - name: municipalityId
         in: path
@@ -1592,44 +1759,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActualisationResponse"
-        "502":
-          description: Bad Gateway
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/payment-status:
-    post:
-      tags:
-      - Financial Assistance
-      summary: Read whether the Lifecare utbetalning has been effectuated
-      description: "Reads whether the manual Lifecare utbetalning for the applicant and application month has been registered, returning the effectuated flag and (when effectuated) the payment date. caremanagement makes no payment — utbetalning is a manual handläggare step in Lifecare; the process polls this to detect when it is done."
-      operationId: checkPaymentStatus
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PaymentStatusRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PaymentStatusResponse"
         "502":
           description: Bad Gateway
           content:
@@ -2426,6 +2555,64 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Note"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/warnings/{warningId}:
+    patch:
+      tags:
+      - Financial Assistance
+      summary: Acknowledge or close an EB income warning
+      description: "A handläggare acknowledges (seen, kept on record) or closes (dismisses)\
+        \ a warning. Re-opening to OPEN is not allowed."
+      operationId: updateWarning
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: warningId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: status
+        in: query
+        description: The target status
+        required: true
+        schema:
+          type: string
+          enum:
+          - ACKNOWLEDGED
+          - CLOSED
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Warning"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/statistics:
     get:
       tags:
@@ -3109,6 +3296,47 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/warnings:
+    get:
+      tags:
+      - Financial Assistance
+      summary: List the EB income warnings on an errand
+      description: "The acknowledgeable income warnings the handläggare reviews —\
+        \ unhandled incomes, significant changes, and income types still missing from\
+        \ SSBTEK. The daily prepare step reconciles them."
+      operationId: listWarnings
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Warning"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/prefill:
     get:
       tags:
@@ -3288,10 +3516,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -3319,6 +3547,81 @@ components:
           type: string
         message:
           type: string
+    DraftIncomeRow:
+      type: object
+      description: One income row of the draft normberäkning (FC income type + amounts).
+      properties:
+        typeId:
+          type: integer
+          format: int32
+          description: The FC income-type id
+          examples:
+          - 20
+        typeName:
+          type: string
+          description: The FC income-type name
+          examples:
+          - Bostadsbidrag
+        applicantAmount:
+          type: number
+          format: double
+          description: The applicant's amount for this income type
+          examples:
+          - 1850.0
+        applicantAmountDate:
+          type: string
+          description: The date the applicant's amount is attributed to (ISO)
+          examples:
+          - 2026-05-15T00:00:00Z
+        coApplicantAmount:
+          type: number
+          format: double
+          description: The co-applicant's amount for this income type
+          examples:
+          - 0.0
+        coApplicantAmountDate:
+          type: string
+          description: The date the co-applicant's amount is attributed to (ISO)
+        note:
+          type: string
+          description: Free-text note (e.g. the SSBTEK source)
+          examples:
+          - "SSBTEK: Bostadsbidrag"
+    NormberakningDraft:
+      type: object
+      description: "The (editable) draft normberäkning — FC income rows, not yet created\
+        \ in Lifecare."
+      properties:
+        errandId:
+          type: string
+          description: The errand id
+          readOnly: true
+        applicationMonth:
+          type: string
+          description: The application month (ISO yyyy-MM)
+          examples:
+          - 2026-06
+        edited:
+          type: boolean
+          description: Whether a handläggare has edited the draft (the daily refresh
+            then preserves the rows)
+          examples:
+          - "false"
+        rows:
+          type: array
+          description: The income rows
+          items:
+            $ref: "#/components/schemas/DraftIncomeRow"
+        created:
+          type: string
+          format: date-time
+          description: When the draft was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the draft was last updated
+          readOnly: true
     Asset:
       type: object
       description: An asset owned by the applicant or co-applicant.
@@ -4023,7 +4326,7 @@ components:
           type: string
           description: Human-readable errand number
           examples:
-          - CAREM-2026-00042
+          - EB_2026_0001
           readOnly: true
         typeSlug:
           type: string
@@ -4531,6 +4834,43 @@ components:
           format: date-time
           description: Timestamp the decision was recorded (server-assigned)
           readOnly: true
+    PaymentStatusRequest:
+      type: object
+      description: Request to read whether the Lifecare utbetalning for an application
+        month has been effectuated.
+      properties:
+        applicant:
+          type: string
+          description: The applicant's partyId (personId GUID)
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+        applicationMonth:
+          type: string
+          description: "The application month (ISO year-month, yyyy-MM) the payment\
+            \ concerns"
+          examples:
+          - 2026-06
+          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
+      required:
+      - applicant
+      - applicationMonth
+    PaymentStatusResponse:
+      type: object
+      description: Whether the Lifecare utbetalning for the application month has
+        been effectuated.
+      properties:
+        effectuated:
+          type: boolean
+          description: True when a Lifecare utbetalning concerning the application
+            month has been registered
+          examples:
+          - "true"
+        paymentDate:
+          type: string
+          description: "The date the utbetalning was made (Lifecare PayDate), when\
+            \ effectuated"
+          examples:
+          - 2026-05-27
     NormberakningRequest:
       type: object
       description: Request to build and post the SSBTEK-driven normberäkning for an
@@ -4563,15 +4903,20 @@ components:
           - cb20c51f-fcf3-42c0-b613-de563634a8ec
         classifiedIncomes:
           type: string
-          description: "The incomes classified by the operaton regelverk (the evaluate-income-regelverk worker output), as JSON. When present, caremanagement maps these to FC income rows instead of fetching SSBTEK and evaluating the rålista itself."
+          description: "The incomes classified by the operaton regelverk (the evaluate-income-regelverk\
+            \ worker output), as JSON. When present, caremanagement maps these to\
+            \ FC income rows instead of fetching SSBTEK and evaluating the rålista\
+            \ itself."
         unhandledIncomes:
           type: array
-          description: "The unhandled-income warnings from the operaton regelverk, recorded on the errand recommendation"
+          description: "The unhandled-income warnings from the operaton regelverk,\
+            \ recorded on the errand recommendation"
           items:
             type: string
         changeWarnings:
           type: array
-          description: "The period-over-period change warnings from the operaton regelverk, recorded on the errand recommendation"
+          description: "The period-over-period change warnings from the operaton regelverk,\
+            \ recorded on the errand recommendation"
           items:
             type: string
       required:
@@ -4602,6 +4947,21 @@ components:
             the periods
           examples:
           - - "Bostadsbidrag: -23% (jämförelse 2400 → kontroll 1850)"
+          items:
+            type: string
+        informationComplete:
+          type: boolean
+          description: Whether this month's normberäkning covers every income type
+            the previous month's did — false means SSBTEK data is still missing and
+            the process should poll again
+          examples:
+          - "true"
+        missingIncomeTypes:
+          type: array
+          description: Previous-month income types not yet present this month (the
+            SSBTEK data still being awaited)
+          examples:
+          - - Bostadsbidrag
           items:
             type: string
     EligibilityRequest:
@@ -4803,38 +5163,6 @@ components:
           description: The id of the aktualisering created in Lifecare FC
           examples:
           - 5012
-    PaymentStatusRequest:
-      type: object
-      description: Request to read whether the Lifecare utbetalning for an application month has been effectuated.
-      properties:
-        applicant:
-          type: string
-          description: The applicant's partyId (personId GUID)
-          examples:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-        applicationMonth:
-          type: string
-          description: The application month (ISO year-month, yyyy-MM) the payment concerns
-          examples:
-          - 2026-06
-          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
-      required:
-      - applicant
-      - applicationMonth
-    PaymentStatusResponse:
-      type: object
-      description: Whether the Lifecare utbetalning for the application month has been effectuated.
-      properties:
-        effectuated:
-          type: boolean
-          description: True when a Lifecare utbetalning concerning the application month has been registered
-          examples:
-          - "true"
-        paymentDate:
-          type: string
-          description: The date the utbetalning was made (Lifecare PayDate), when effectuated
-          examples:
-          - 2026-05-27
     PatchErrand:
       type: object
       description: PatchErrand model — patchable envelope fields only
@@ -4910,6 +5238,62 @@ components:
           type: string
           format: date-time
           description: Last modified timestamp; null until the note has been edited
+    Warning:
+      type: object
+      description: An EB income warning the handläggare can acknowledge or close.
+      properties:
+        id:
+          type: string
+          description: The warning id
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+          readOnly: true
+        type:
+          type: string
+          description: The warning type
+          enum:
+          - UNHANDLED_INCOME
+          - INCOME_CHANGE
+          - MISSING_SSBTEK
+          - NEW_INCOME
+          examples:
+          - MISSING_SSBTEK
+        sourceKey:
+          type: string
+          description: A stable key for the income the warning concerns (förmån/inkomsttyp)
+            — the dedup key
+          examples:
+          - Bostadsbidrag
+        message:
+          type: string
+          description: Human-readable warning text
+          examples:
+          - "Saknas ännu i SSBTEK: Dagersättning"
+        status:
+          type: string
+          description: The warning status
+          enum:
+          - OPEN
+          - ACKNOWLEDGED
+          - CLOSED
+          examples:
+          - OPEN
+        autoResolved:
+          type: boolean
+          description: Whether the warning was closed automatically (its cause resolved)
+            rather than by a handläggare
+          examples:
+          - "false"
+        created:
+          type: string
+          format: date-time
+          description: When the warning was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the warning was last updated
+          readOnly: true
     AssigneeCount:
       type: object
       description: Number of errands assigned to a given user
@@ -5123,6 +5507,16 @@ components:
           examples:
           - 1024
           readOnly: true
+        senderRole:
+          type: string
+          description: "Who sent the file, derived from the message direction: CLIENT\
+            \ (applicant, INBOUND) or HANDLAGGARE (caseworker, OUTBOUND)"
+          enum:
+          - CLIENT
+          - HANDLAGGARE
+          examples:
+          - CLIENT
+          readOnly: true
         created:
           type: string
           format: date-time
@@ -5155,6 +5549,36 @@ components:
           examples:
           - 1024
           readOnly: true
+        origin:
+          type: string
+          description: "Where the file came from: APPLICATION (citizen's application\
+            \ files), CONVERSATION (sent in a message thread), GENERATED (a consolidated\
+            \ PDF produced by the platform) or ERRAND (uploaded directly to the errand)"
+          enum:
+          - APPLICATION
+          - CONVERSATION
+          - GENERATED
+          - ERRAND
+          examples:
+          - CONVERSATION
+          readOnly: true
+        senderRole:
+          type: string
+          description: "Who the file came from: CLIENT (applicant) or HANDLAGGARE\
+            \ (caseworker). May be null for files predating the distinction or with\
+            \ no clear sender."
+          enum:
+          - CLIENT
+          - HANDLAGGARE
+          examples:
+          - CLIENT
+          readOnly: true
+        messageId:
+          type: string
+          description: "For CONVERSATION attachments, the id of the message the file\
+            \ is attached to — download it via .../messages/{messageId}/attachments/{id}/file.\
+            \ Null for non-conversation attachments, which download via .../attachments/{id}/file."
+          readOnly: true
         created:
           type: string
           format: date-time
@@ -5179,7 +5603,7 @@ components:
           type: string
           description: Errand number
           examples:
-          - EB-2026-00042
+          - EB_2026_0001
           readOnly: true
         municipalityId:
           type: string

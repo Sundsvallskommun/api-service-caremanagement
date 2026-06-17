@@ -23,6 +23,7 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
+import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
 import se.sundsvall.caremanagement.lifecare.service.model.NormberakningDraftBuild;
 import se.sundsvall.caremanagement.lifecare.service.model.NormberakningResult;
 import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
@@ -30,10 +31,13 @@ import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.DraftIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Person;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -425,6 +429,102 @@ class FinancialAssistanceServiceTest {
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 
 		verify(normberakningServiceMock, never()).buildDraft(any(), any(), any());
+	}
+
+	@Test
+	void prepareNormberakningRefreshesEditableDraftWithRows() {
+		final var month = YearMonth.of(2026, 6);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(normberakningServiceMock.buildDraft("199001011234", month, "[json]"))
+			.thenReturn(new NormberakningDraftBuild(
+				List.of(new DraftRow(1, "Lön", 12000.0, "2026-06-01", null, null, "SSBTEK")), true, List.of()));
+		when(draftServiceMock.refresh(eq(ERRAND_ID), eq("2026-06"), any())).thenReturn(List.of());
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("KOMPLETTERING"));
+
+		final var request = NormberakningRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[json]");
+
+		service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+
+		// the auto-built FC rows are mapped to the editable draft (DraftRow -> DraftIncomeRow)
+		final ArgumentCaptor<List<DraftIncomeRow>> rowsCaptor = ArgumentCaptor.captor();
+		verify(draftServiceMock).refresh(eq(ERRAND_ID), eq("2026-06"), rowsCaptor.capture());
+		assertThat(rowsCaptor.getValue()).singleElement().satisfies(row -> {
+			assertThat(row.getTypeId()).isEqualTo(1);
+			assertThat(row.getTypeName()).isEqualTo("Lön");
+			assertThat(row.getApplicantAmount()).isEqualTo(12000.0);
+			assertThat(row.getNote()).isEqualTo("SSBTEK");
+		});
+	}
+
+	@Test
+	void getDraftReturnsDraftAfterScopeCheck() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
+		final var draft = NormberakningDraft.create().withApplicationMonth("2026-06").withRows(List.of());
+		when(draftServiceMock.get(ERRAND_ID)).thenReturn(draft);
+
+		assertThat(service.getDraft(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isSameAs(draft);
+		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	@Test
+	void updateDraftReplacesRowsAfterScopeCheck() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
+		final var edited = NormberakningDraft.create().withApplicationMonth("2026-06")
+			.withRows(List.of(DraftIncomeRow.create().withTypeId(1).withTypeName("Lön").withApplicantAmount(12000.0)));
+		final var stored = NormberakningDraft.create().withApplicationMonth("2026-06").withRows(edited.getRows());
+		when(draftServiceMock.replace(ERRAND_ID, "2026-06", edited.getRows())).thenReturn(stored);
+
+		assertThat(service.updateDraft(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, edited)).isSameAs(stored);
+		verify(draftServiceMock).replace(ERRAND_ID, "2026-06", edited.getRows());
+	}
+
+	@Test
+	void listWarningsReturnsWarningsAfterScopeCheck() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
+		final var warnings = List.of(Warning.create().withId("w-1").withType("NEW_INCOME").withStatus("UNHANDLED"));
+		when(warningServiceMock.list(ERRAND_ID)).thenReturn(warnings);
+
+		assertThat(service.listWarnings(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(warnings);
+		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	@Test
+	void updateWarningDelegatesAfterScopeCheck() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
+		final var warning = Warning.create().withId("w-1").withStatus("ACKNOWLEDGED");
+		when(warningServiceMock.updateStatus(ERRAND_ID, "w-1", "ACKNOWLEDGED")).thenReturn(warning);
+
+		assertThat(service.updateWarning(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "w-1", "ACKNOWLEDGED")).isSameAs(warning);
+		verify(warningServiceMock).updateStatus(ERRAND_ID, "w-1", "ACKNOWLEDGED");
+	}
+
+	@Test
+	void commitNormberakningPostsEditedDraftRowsWhenHandlaggareHasEdited() {
+		final var month = YearMonth.of(2026, 6);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(draftServiceMock.editedRows(ERRAND_ID)).thenReturn(Optional.of(
+			List.of(DraftIncomeRow.create().withTypeId(1).withTypeName("Lön").withApplicantAmount(12000.0)
+				.withApplicantAmountDate("2026-06-01").withNote("redigerad"))));
+		when(normberakningServiceMock.postDraftRows(eq("199001011234"), eq(month), any())).thenReturn(9000);
+
+		final var request = NormberakningRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[json]");
+
+		final var response = service.commitNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+
+		assertThat(response.getCalculationId()).isEqualTo(9000);
+		// the edited rows are posted (DraftIncomeRow -> DraftRow), the classified incomes are NOT re-built
+		final ArgumentCaptor<List<DraftRow>> rowsCaptor = ArgumentCaptor.captor();
+		verify(normberakningServiceMock).postDraftRows(eq("199001011234"), eq(month), rowsCaptor.capture());
+		assertThat(rowsCaptor.getValue()).singleElement().satisfies(row -> {
+			assertThat(row.typeId()).isEqualTo(1);
+			assertThat(row.typeName()).isEqualTo("Lön");
+			assertThat(row.applicantAmount()).isEqualTo(12000.0);
+			assertThat(row.note()).isEqualTo("redigerad");
+		});
+		verify(normberakningServiceMock, never()).buildAndPostFromClassified(any(), any(), any());
 	}
 
 	@Test

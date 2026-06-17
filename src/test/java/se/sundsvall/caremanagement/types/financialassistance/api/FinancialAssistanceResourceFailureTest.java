@@ -127,9 +127,9 @@ class FinancialAssistanceResourceFailureTest {
 	}
 
 	@Test
-	void createNormberakning_invalidApplicant() {
+	void prepareNormberakning_invalidApplicant() {
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/normberakning").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/normberakning/prepare").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(NormberakningRequest.create().withApplicant("123").withApplicationMonth("2026-06"))
 			.exchange()
 			.expectStatus().isBadRequest();
@@ -138,9 +138,9 @@ class FinancialAssistanceResourceFailureTest {
 	}
 
 	@Test
-	void createNormberakning_invalidMonth() {
+	void commitNormberakning_invalidMonth() {
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/normberakning").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/normberakning/commit").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(NormberakningRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-13"))
 			.exchange()
 			.expectStatus().isBadRequest();

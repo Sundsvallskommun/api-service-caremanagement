@@ -8,6 +8,7 @@ TRUNCATE TABLE errand_status_history;
 TRUNCATE TABLE notification;
 TRUNCATE TABLE stakeholder;
 TRUNCATE TABLE errand;
+TRUNCATE TABLE errand_number_sequence;
 TRUNCATE TABLE lookup;
 TRUNCATE TABLE namespace_config;
 TRUNCATE TABLE shedlock;
