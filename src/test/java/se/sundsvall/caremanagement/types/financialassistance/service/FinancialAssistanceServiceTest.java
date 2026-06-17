@@ -238,6 +238,28 @@ class FinancialAssistanceServiceTest {
 	}
 
 	@Test
+	void createNormberakningFromClassifiedIncomesUsesSlimPath() {
+		final var month = YearMonth.of(2026, 6);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(normberakningServiceMock.buildAndPostFromClassified("199001011234", month, "[json]")).thenReturn(4712);
+
+		final var request = NormberakningRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06")
+			.withClassifiedIncomes("[json]")
+			.withUnhandledIncomes(List.of("Något (EJ_PA_LISTAN)"))
+			.withChangeWarnings(List.of("Bostadsbidrag: -23%"));
+
+		final var response = service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+
+		assertThat(response.getCalculationId()).isEqualTo(4712);
+		assertThat(response.getUnhandledIncomes()).containsExactly("Något (EJ_PA_LISTAN)");
+		assertThat(response.getChangeWarnings()).containsExactly("Bostadsbidrag: -23%");
+		verify(normberakningServiceMock).buildAndPostFromClassified("199001011234", month, "[json]");
+		verify(normberakningServiceMock, never()).buildAndPost(any(), any(), any(), any());
+	}
+
+	@Test
 	void createNormberakningWithWarningsRecordsReviewRequiredRecommendation() {
 		final var month = YearMonth.of(2026, 6);
 		final var result = new NormberakningResult(4711,

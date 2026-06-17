@@ -133,16 +133,33 @@ public class FinancialAssistanceService {
 	 */
 	public NormberakningResponse createNormberakning(final String municipalityId, final String namespace, final NormberakningRequest request) {
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
-		final var coApplicant = ofNullable(request.getCoApplicant()).filter(StringUtils::hasText)
-			.map(partyId -> personalNumber(municipalityId, partyId))
-			.orElse(null);
-		final var result = normberakningService.buildAndPost(municipalityId, applicant, coApplicant, YearMonth.parse(request.getApplicationMonth()));
-		final var response = toResponse(result);
+		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
+
+		final var response = ofNullable(request.getClassifiedIncomes()).filter(StringUtils::hasText)
+			.map(classifiedIncomes -> fromClassified(applicant, applicationMonth, classifiedIncomes, request))
+			.orElseGet(() -> fromSsbtek(municipalityId, applicant, applicationMonth, request));
 
 		ofNullable(request.getErrandId()).filter(StringUtils::hasText)
 			.ifPresent(errandId -> recordRecommendation(municipalityId, namespace, errandId, response));
 
 		return response;
+	}
+
+	/** Slim path: incomes already classified by the operaton regelverk — caremanagement only assembles + posts. */
+	private NormberakningResponse fromClassified(final String applicant, final YearMonth applicationMonth, final String classifiedIncomes, final NormberakningRequest request) {
+		final var calculationId = normberakningService.buildAndPostFromClassified(applicant, applicationMonth, classifiedIncomes);
+		return NormberakningResponse.create()
+			.withCalculationId(calculationId)
+			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
+			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of));
+	}
+
+	/** Legacy path (to be removed): caremanagement fetches SSBTEK and evaluates the rålista itself. */
+	private NormberakningResponse fromSsbtek(final String municipalityId, final String applicant, final YearMonth applicationMonth, final NormberakningRequest request) {
+		final var coApplicant = ofNullable(request.getCoApplicant()).filter(StringUtils::hasText)
+			.map(partyId -> personalNumber(municipalityId, partyId))
+			.orElse(null);
+		return toResponse(normberakningService.buildAndPost(municipalityId, applicant, coApplicant, applicationMonth));
 	}
 
 	/**

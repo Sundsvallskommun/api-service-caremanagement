@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import java.util.List;
 import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
@@ -32,6 +33,15 @@ public class NormberakningRequest {
 		examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec")
 	@ValidUuid(nullable = true)
 	private String errandId;
+
+	@Schema(description = "The incomes classified by the operaton regelverk (the evaluate-income-regelverk worker output), as JSON. When present, caremanagement maps these to FC income rows instead of fetching SSBTEK and evaluating the rålista itself.")
+	private String classifiedIncomes;
+
+	@Schema(description = "The unhandled-income warnings from the operaton regelverk, recorded on the errand recommendation")
+	private List<String> unhandledIncomes;
+
+	@Schema(description = "The period-over-period change warnings from the operaton regelverk, recorded on the errand recommendation")
+	private List<String> changeWarnings;
 
 	public static NormberakningRequest create() {
 		return new NormberakningRequest();
@@ -89,22 +99,63 @@ public class NormberakningRequest {
 		return this;
 	}
 
+	public String getClassifiedIncomes() {
+		return classifiedIncomes;
+	}
+
+	public void setClassifiedIncomes(final String classifiedIncomes) {
+		this.classifiedIncomes = classifiedIncomes;
+	}
+
+	public NormberakningRequest withClassifiedIncomes(final String classifiedIncomes) {
+		this.classifiedIncomes = classifiedIncomes;
+		return this;
+	}
+
+	public List<String> getUnhandledIncomes() {
+		return unhandledIncomes;
+	}
+
+	public void setUnhandledIncomes(final List<String> unhandledIncomes) {
+		this.unhandledIncomes = unhandledIncomes;
+	}
+
+	public NormberakningRequest withUnhandledIncomes(final List<String> unhandledIncomes) {
+		this.unhandledIncomes = unhandledIncomes;
+		return this;
+	}
+
+	public List<String> getChangeWarnings() {
+		return changeWarnings;
+	}
+
+	public void setChangeWarnings(final List<String> changeWarnings) {
+		this.changeWarnings = changeWarnings;
+	}
+
+	public NormberakningRequest withChangeWarnings(final List<String> changeWarnings) {
+		this.changeWarnings = changeWarnings;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final NormberakningRequest that = (NormberakningRequest) o;
 		return Objects.equals(applicant, that.applicant) && Objects.equals(coApplicant, that.coApplicant) && Objects.equals(applicationMonth, that.applicationMonth)
-			&& Objects.equals(errandId, that.errandId);
+			&& Objects.equals(errandId, that.errandId) && Objects.equals(classifiedIncomes, that.classifiedIncomes) && Objects.equals(unhandledIncomes, that.unhandledIncomes)
+			&& Objects.equals(changeWarnings, that.changeWarnings);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(applicant, coApplicant, applicationMonth, errandId);
+		return Objects.hash(applicant, coApplicant, applicationMonth, errandId, classifiedIncomes, unhandledIncomes, changeWarnings);
 	}
 
 	@Override
 	public String toString() {
-		return "NormberakningRequest{applicant='" + applicant + "', coApplicant='" + coApplicant + "', applicationMonth='" + applicationMonth + "', errandId='" + errandId + "'}";
+		return "NormberakningRequest{applicant='" + applicant + "', coApplicant='" + coApplicant + "', applicationMonth='" + applicationMonth + "', errandId='" + errandId
+			+ "', classifiedIncomes='" + classifiedIncomes + "', unhandledIncomes=" + unhandledIncomes + ", changeWarnings=" + changeWarnings + "}";
 	}
 }
