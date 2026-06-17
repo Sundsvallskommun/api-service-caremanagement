@@ -3,7 +3,7 @@ package se.sundsvall.caremanagement.core.service;
 import java.util.Optional;
 
 /**
- * SPI for resolving the prefix segment of an errand number (e.g. {@code EB} in {@code EB_2026_0001}).
+ * SPI for resolving the prefix segment of an errand number (e.g. {@code EB} in {@code EB-26060071}).
  *
  * Errand numbering is a core concern, but the prefix comes from the namespace's short code, which the core module
  * must not reach into directly. The {@code namespaceconfig} module provides the implementation; core depends only on

@@ -12,8 +12,8 @@ public interface ErrandNumberSequenceRepository extends JpaRepository<ErrandNumb
 
 	/**
 	 * Loads the counter row for the given scope under a pessimistic write lock so concurrent errand creations within
-	 * the same {@code (municipality, namespace, year)} are serialized and never hand out the same number.
+	 * the same {@code (municipality, namespace, year, month)} are serialized and never hand out the same number.
 	 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	Optional<ErrandNumberSequenceEntity> findByMunicipalityIdAndNamespaceAndSequenceYear(String municipalityId, String namespace, Integer sequenceYear);
+	Optional<ErrandNumberSequenceEntity> findByMunicipalityIdAndNamespaceAndSequenceYearAndSequenceMonth(String municipalityId, String namespace, Integer sequenceYear, Integer sequenceMonth);
 }

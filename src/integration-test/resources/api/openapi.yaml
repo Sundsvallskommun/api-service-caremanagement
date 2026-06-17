@@ -4326,7 +4326,7 @@ components:
           type: string
           description: Human-readable errand number
           examples:
-          - EB_2026_0001
+          - EB-26060071
           readOnly: true
         typeSlug:
           type: string
@@ -5603,7 +5603,7 @@ components:
           type: string
           description: Errand number
           examples:
-          - EB_2026_0001
+          - EB-26060071
           readOnly: true
         municipalityId:
           type: string

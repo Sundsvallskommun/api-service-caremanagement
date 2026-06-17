@@ -39,7 +39,7 @@ class ErrandServiceTest {
 	private static final String NAMESPACE = "MY_NAMESPACE";
 	private static final String ERRAND_ID = "11111111-1111-1111-1111-111111111111";
 
-	private static final String ERRAND_NUMBER = "EB_2026_0001";
+	private static final String ERRAND_NUMBER = "EB-26060001";
 
 	@Mock
 	private ErrandRepository repositoryMock;

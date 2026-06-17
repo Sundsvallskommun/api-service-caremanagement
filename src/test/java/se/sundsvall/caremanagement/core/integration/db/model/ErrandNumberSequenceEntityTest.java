@@ -29,6 +29,7 @@ class ErrandNumberSequenceEntityTest {
 		final var municipalityId = "2281";
 		final var namespace = "FINANCIAL_ASSISTANCE";
 		final var sequenceYear = 2026;
+		final var sequenceMonth = 6;
 		final var currentValue = 42L;
 
 		final var entity = ErrandNumberSequenceEntity.create()
@@ -36,6 +37,7 @@ class ErrandNumberSequenceEntityTest {
 			.withMunicipalityId(municipalityId)
 			.withNamespace(namespace)
 			.withSequenceYear(sequenceYear)
+			.withSequenceMonth(sequenceMonth)
 			.withCurrentValue(currentValue);
 
 		assertThat(entity).hasNoNullFieldsOrProperties();
@@ -43,6 +45,7 @@ class ErrandNumberSequenceEntityTest {
 		assertThat(entity.getMunicipalityId()).isEqualTo(municipalityId);
 		assertThat(entity.getNamespace()).isEqualTo(namespace);
 		assertThat(entity.getSequenceYear()).isEqualTo(sequenceYear);
+		assertThat(entity.getSequenceMonth()).isEqualTo(sequenceMonth);
 		assertThat(entity.getCurrentValue()).isEqualTo(currentValue);
 	}
 
