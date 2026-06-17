@@ -1,6 +1,5 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -23,10 +22,6 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
-import se.sundsvall.caremanagement.lifecare.service.model.NormberakningResult;
-import se.sundsvall.caremanagement.lifecare.service.model.SsbtekChangeWarning;
-import se.sundsvall.caremanagement.lifecare.service.model.UnhandledIncome;
-import se.sundsvall.caremanagement.lifecare.service.model.UnhandledReason;
 import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
@@ -50,6 +45,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
@@ -257,27 +253,6 @@ class FinancialAssistanceServiceTest {
 	}
 
 	@Test
-	void createNormberakningResolvesPartyIdsDelegatesAndMaps() {
-		final var month = YearMonth.of(2026, 6);
-		final var result = new NormberakningResult(4711, List.of(), List.of());
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CO_APPLICANT_PARTY_ID)).thenReturn(Optional.of("199202022345"));
-		when(normberakningServiceMock.buildAndPost(MUNICIPALITY_ID, "199001011234", "199202022345", month)).thenReturn(result);
-
-		final var request = NormberakningRequest.create()
-			.withApplicant(APPLICANT_PARTY_ID)
-			.withCoApplicant(CO_APPLICANT_PARTY_ID)
-			.withApplicationMonth("2026-06");
-
-		final var response = service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
-
-		assertThat(response.getCalculationId()).isEqualTo(4711);
-		verify(normberakningServiceMock).buildAndPost(MUNICIPALITY_ID, "199001011234", "199202022345", month);
-		// No errandId on the request → nothing recorded on an errand.
-		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
-	}
-
-	@Test
 	void createNormberakningFromClassifiedIncomesUsesSlimPath() {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
@@ -296,22 +271,21 @@ class FinancialAssistanceServiceTest {
 		assertThat(response.getUnhandledIncomes()).containsExactly("Något (EJ_PA_LISTAN)");
 		assertThat(response.getChangeWarnings()).containsExactly("Bostadsbidrag: -23%");
 		verify(normberakningServiceMock).buildAndPostFromClassified("199001011234", month, "[json]");
-		verify(normberakningServiceMock, never()).buildAndPost(any(), any(), any(), any());
 	}
 
 	@Test
 	void createNormberakningWithWarningsRecordsReviewRequiredRecommendation() {
 		final var month = YearMonth.of(2026, 6);
-		final var result = new NormberakningResult(4711,
-			List.of(new UnhandledIncome("Bostadstillägg", null, null, UnhandledReason.NOT_ON_WHITELIST)),
-			List.of(new SsbtekChangeWarning("Bostadsbidrag", new BigDecimal("2400"), new BigDecimal("1850"), new BigDecimal("-23"))));
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(normberakningServiceMock.buildAndPost(MUNICIPALITY_ID, "199001011234", null, month)).thenReturn(result);
+		when(normberakningServiceMock.buildAndPostFromClassified("199001011234", month, "[json]")).thenReturn(4711);
 
 		final var request = NormberakningRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
 			.withApplicationMonth("2026-06")
-			.withErrandId(ERRAND_ID);
+			.withErrandId(ERRAND_ID)
+			.withClassifiedIncomes("[json]")
+			.withUnhandledIncomes(List.of("Bostadstillägg (NOT_ON_WHITELIST)"))
+			.withChangeWarnings(List.of("Bostadsbidrag: -23%"));
 
 		service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
 
@@ -324,20 +298,20 @@ class FinancialAssistanceServiceTest {
 		assertThat(decision.getDescription())
 			.contains("id 4711")
 			.contains("Ej överförd inkomst: Bostadstillägg (NOT_ON_WHITELIST)")
-			.contains("Förändrad inkomst: Bostadsbidrag");
+			.contains("Förändrad inkomst: Bostadsbidrag: -23%");
 	}
 
 	@Test
 	void createNormberakningWithoutWarningsRecordsOkRecommendation() {
 		final var month = YearMonth.of(2026, 6);
-		final var result = new NormberakningResult(4711, List.of(), List.of());
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(normberakningServiceMock.buildAndPost(MUNICIPALITY_ID, "199001011234", null, month)).thenReturn(result);
+		when(normberakningServiceMock.buildAndPostFromClassified("199001011234", month, "[]")).thenReturn(4711);
 
 		final var request = NormberakningRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
 			.withApplicationMonth("2026-06")
-			.withErrandId(ERRAND_ID);
+			.withErrandId(ERRAND_ID)
+			.withClassifiedIncomes("[]");
 
 		service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
 
@@ -352,14 +326,27 @@ class FinancialAssistanceServiceTest {
 	void createNormberakningUnresolvedPartyIdYields404() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.empty());
 
-		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
+		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withClassifiedIncomes("[]");
 
 		assertThatThrownBy(() -> service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
-		verify(normberakningServiceMock, never()).buildAndPost(any(), any(), any(), any());
+		verify(normberakningServiceMock, never()).buildAndPostFromClassified(any(), any(), any());
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+	}
+
+	@Test
+	void createNormberakningRequiresClassifiedIncomes() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+
+		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
+
+		assertThatThrownBy(() -> service.createNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+
+		verify(normberakningServiceMock, never()).buildAndPostFromClassified(any(), any(), any());
 	}
 
 	@Test

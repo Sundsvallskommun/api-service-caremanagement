@@ -32,13 +32,13 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_INKOMMEN;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.applicationTypeForSlug;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toEntity;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toStakeholders;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toView;
-import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.NormberakningMapper.toResponse;
 
 /**
  * Creates and reads financial-assistance (EB) errands. The envelope is owned by the exposed core {@link ErrandService};
@@ -136,40 +136,28 @@ public class FinancialAssistanceService {
 	}
 
 	/**
-	 * Build the SSBTEK-driven normberäkning for the application month and post it to Lifecare FC, returning the created
-	 * calculation id plus the income warnings the handläggare must review. When the request carries an {@code errandId},
-	 * the warnings are also recorded on that errand as a {@code Decision(RECOMMENDATION)} so the handläggare sees them on
-	 * the case.
+	 * Post the normberäkning for the application month to Lifecare FC from incomes already classified by the operaton
+	 * regelverk ({@code classifiedIncomes}), returning the created calculation id plus the income warnings the handläggare
+	 * must review. caremanagement no longer fetches SSBTEK or evaluates the rålista — the regelverk lives in the process,
+	 * so {@code classifiedIncomes} is required. When the request carries an {@code errandId}, the warnings are recorded on
+	 * that errand as a {@code Decision(RECOMMENDATION)} so the handläggare sees them on the case.
 	 */
 	public NormberakningResponse createNormberakning(final String municipalityId, final String namespace, final NormberakningRequest request) {
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
+		final var classifiedIncomes = ofNullable(request.getClassifiedIncomes()).filter(StringUtils::hasText)
+			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, "classifiedIncomes is required — the SSBTEK regelverk is evaluated in the process, not caremanagement"));
 
-		final var response = ofNullable(request.getClassifiedIncomes()).filter(StringUtils::hasText)
-			.map(classifiedIncomes -> fromClassified(applicant, applicationMonth, classifiedIncomes, request))
-			.orElseGet(() -> fromSsbtek(municipalityId, applicant, applicationMonth, request));
+		final var calculationId = normberakningService.buildAndPostFromClassified(applicant, applicationMonth, classifiedIncomes);
+		final var response = NormberakningResponse.create()
+			.withCalculationId(calculationId)
+			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
+			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of));
 
 		ofNullable(request.getErrandId()).filter(StringUtils::hasText)
 			.ifPresent(errandId -> recordRecommendation(municipalityId, namespace, errandId, response));
 
 		return response;
-	}
-
-	/** Slim path: incomes already classified by the operaton regelverk — caremanagement only assembles + posts. */
-	private NormberakningResponse fromClassified(final String applicant, final YearMonth applicationMonth, final String classifiedIncomes, final NormberakningRequest request) {
-		final var calculationId = normberakningService.buildAndPostFromClassified(applicant, applicationMonth, classifiedIncomes);
-		return NormberakningResponse.create()
-			.withCalculationId(calculationId)
-			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
-			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of));
-	}
-
-	/** Legacy path (to be removed): caremanagement fetches SSBTEK and evaluates the rålista itself. */
-	private NormberakningResponse fromSsbtek(final String municipalityId, final String applicant, final YearMonth applicationMonth, final NormberakningRequest request) {
-		final var coApplicant = ofNullable(request.getCoApplicant()).filter(StringUtils::hasText)
-			.map(partyId -> personalNumber(municipalityId, partyId))
-			.orElse(null);
-		return toResponse(normberakningService.buildAndPost(municipalityId, applicant, coApplicant, applicationMonth));
 	}
 
 	/**

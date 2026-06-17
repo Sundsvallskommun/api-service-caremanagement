@@ -5,12 +5,10 @@ import java.time.LocalDate;
 
 /**
  * A single normalised income read out of SSBTEK, expressed in SSBTEK's own terms (förmån / delförmån / beloppstyp) plus
- * the net amount, the date it is attributed to, and which household member it belongs to. This is the clean seam
- * between
- * the SSBTEK reader (which turns financial-aid's per-agency payloads into these) and
- * {@link se.sundsvall.caremanagement.lifecare.service.mapper.SsbtekToFcIncomeMapper}, which turns these into FC
- * normberäkning income rows. Period selection (kontroll-/jämförelseperiod transfer rules, see ssbtek-regelverk.txt) is
- * applied upstream — the mapper sums whatever incomes it is handed.
+ * the net amount, the date it is attributed to, and which household member it belongs to. It backs
+ * {@link ClassifiedIncome}: the operaton regelverk classifies these (rålista + thresholds + period selection) and
+ * caremanagement maps the result onto FC normberäkning income rows via
+ * {@link se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFcMapper}.
  *
  * @param forman     the SSBTEK förmån (e.g. "Bostadsbidrag", "Dagersättning") — the whitelist key
  * @param delforman  the SSBTEK delförmån, may be {@code null}

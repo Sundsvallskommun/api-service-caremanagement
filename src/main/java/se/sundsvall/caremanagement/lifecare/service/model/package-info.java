@@ -1,12 +1,7 @@
 /**
- * Lifecare service-layer domain models.
- *
- * <p>
- * Exposed so type modules (e.g. financial assistance) can consume what the lifecare service layer returns — the
- * normberäkning outcome ({@code NormberakningResult}) and the SSBTEK income warnings it carries
- * ({@code SsbtekChangeWarning}, {@code UnhandledIncome}) — without reaching into the integration layer or the generated
- * FC DTOs.
- * </p>
+ * Lifecare service-layer domain models: the normalised SSBTEK income shape ({@code SsbtekIncome},
+ * {@code ApplicantRole}) and the regelverk-classified income ({@code ClassifiedIncome}) the operaton process produces
+ * and caremanagement maps onto FC normberäkning rows.
  */
 @NamedInterface("model")
 package se.sundsvall.caremanagement.lifecare.service.model;
