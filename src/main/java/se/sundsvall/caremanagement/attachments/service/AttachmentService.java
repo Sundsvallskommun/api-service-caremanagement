@@ -4,9 +4,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StreamUtils;
@@ -14,12 +12,9 @@ import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.api.model.Attachment;
 import se.sundsvall.caremanagement.attachments.integration.db.AttachmentRepository;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEntity;
-import se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper;
-import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentQueryService;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.dept44.problem.Problem;
 
-import static java.util.Comparator.nullsLast;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpHeaders.CONTENT_DISPOSITION;
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
@@ -39,34 +34,21 @@ public class AttachmentService {
 	private static final String STREAM_ERROR_MESSAGE = "%s occurred when copying file with attachment id '%s' to response: %s";
 	private static final String READ_ERROR_MESSAGE = "Could not read input stream: %s";
 
-	private static final String PDF_MIME_TYPE = "application/pdf";
-
-	/** Filename of the create-time combined PDF that merges the citizen's application files. */
+	/** Filename + MIME type of the generated combined-PDF attachment that merges all uploaded files. */
 	private static final String COMBINED_PDF_FILE_NAME = "sammanstallning.pdf";
-	/** Filename of the living consolidation of the client's conversation attachments (regenerated in place). */
-	private static final String CLIENT_PDF_FILE_NAME = "klientbilagor.pdf";
-
-	/** Attachment origin facet — see the {@code Attachment} schema. */
-	private static final String ORIGIN_APPLICATION = "APPLICATION";
-	private static final String ORIGIN_GENERATED = "GENERATED";
-	private static final String ORIGIN_ERRAND = "ERRAND";
-	/** Sender-role facet — the application files and the consolidated client PDF are the applicant's. */
-	private static final String SENDER_CLIENT = "CLIENT";
+	private static final String PDF_MIME_TYPE = "application/pdf";
 
 	private final ErrandRepository errandRepository;
 	private final AttachmentRepository attachmentRepository;
-	private final ConversationAttachmentQueryService conversationAttachmentQueryService;
 
-	AttachmentService(final ErrandRepository errandRepository, final AttachmentRepository attachmentRepository,
-		final ConversationAttachmentQueryService conversationAttachmentQueryService) {
+	AttachmentService(final ErrandRepository errandRepository, final AttachmentRepository attachmentRepository) {
 		this.errandRepository = errandRepository;
 		this.attachmentRepository = attachmentRepository;
-		this.conversationAttachmentQueryService = conversationAttachmentQueryService;
 	}
 
 	public String createAttachment(final String municipalityId, final String namespace, final String errandId, final MultipartFile file) {
 		ensureErrandExists(municipalityId, namespace, errandId);
-		final var saved = attachmentRepository.save(toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_ERRAND, null, file));
+		final var saved = attachmentRepository.save(toAttachmentEntity(errandId, namespace, municipalityId, file));
 		return saved.getId();
 	}
 
@@ -86,59 +68,21 @@ public class AttachmentService {
 
 		final var ids = new ArrayList<String>();
 		sources.forEach(source -> ids.add(attachmentRepository
-			.save(toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_APPLICATION, SENDER_CLIENT, source.fileName(), source.contentType(), source.content()))
+			.save(toAttachmentEntity(errandId, namespace, municipalityId, source.fileName(), source.contentType(), source.content()))
 			.getId()));
 
 		final var combined = PdfCombiner.combine(sources);
 		ids.add(attachmentRepository
-			.save(toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_GENERATED, SENDER_CLIENT, COMBINED_PDF_FILE_NAME, PDF_MIME_TYPE, combined))
+			.save(toAttachmentEntity(errandId, namespace, municipalityId, COMBINED_PDF_FILE_NAME, PDF_MIME_TYPE, combined))
 			.getId());
 
 		return ids;
 	}
 
-	/**
-	 * Rebuild the consolidated client-attachment PDF for the errand from all client-sent (INBOUND) conversation
-	 * attachments and store it in place as a single {@code GENERATED} attachment named {@value #CLIENT_PDF_FILE_NAME}.
-	 * Idempotent: if the row already exists its content is overwritten (same id/URL), otherwise it is created — safe to
-	 * call repeatedly (incl. on Modulith event re-delivery). No-op when the client has not sent any attachments yet.
-	 */
-	public void regenerateClientAttachmentPdf(final String municipalityId, final String namespace, final String errandId) {
-		final var contents = conversationAttachmentQueryService.clientAttachmentContentsForErrand(errandId);
-		if (contents.isEmpty()) {
-			return;
-		}
-
-		final var sources = contents.stream()
-			.map(content -> new SourceFile(content.fileName(), content.mimeType(), content.content()))
-			.toList();
-		final var combined = PdfCombiner.combine(sources);
-		final var rebuilt = toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_GENERATED, SENDER_CLIENT, CLIENT_PDF_FILE_NAME, PDF_MIME_TYPE, combined);
-
-		attachmentRepository.findFirstByErrandIdAndFileNameAndOrigin(errandId, CLIENT_PDF_FILE_NAME, ORIGIN_GENERATED)
-			.ifPresentOrElse(existing -> {
-				existing.getAttachmentData().setFile(rebuilt.getAttachmentData().getFile());
-				existing.setFileSize(rebuilt.getFileSize());
-				attachmentRepository.save(existing);
-			}, () -> attachmentRepository.save(rebuilt));
-	}
-
-	/**
-	 * The unified errand document list: the errand's own attachments (application files, generated PDFs, manual
-	 * uploads) merged with the conversation's attachments, each tagged with {@code origin} + {@code senderRole}, oldest
-	 * first.
-	 */
 	@Transactional(readOnly = true)
 	public List<Attachment> readAttachments(final String municipalityId, final String namespace, final String errandId) {
 		ensureErrandExists(municipalityId, namespace, errandId);
-
-		final var errandAttachments = toAttachmentList(attachmentRepository.findByErrandId(errandId)).stream();
-		final var conversationAttachments = conversationAttachmentQueryService.listForErrand(errandId).stream()
-			.map(AttachmentMapper::toAttachment);
-
-		return Stream.concat(errandAttachments, conversationAttachments)
-			.sorted(Comparator.comparing(Attachment::getCreated, nullsLast(Comparator.naturalOrder())))
-			.toList();
+		return toAttachmentList(attachmentRepository.findByErrandId(errandId));
 	}
 
 	@Transactional(readOnly = true)

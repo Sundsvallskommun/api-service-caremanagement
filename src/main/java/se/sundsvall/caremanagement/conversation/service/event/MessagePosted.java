@@ -9,16 +9,11 @@ import java.time.OffsetDateTime;
  * leaves the in-app thread; the event only signals that a new message exists.
  *
  * {@code direction} is INBOUND (applicant → caseworker) or OUTBOUND (caseworker → applicant); consumers typically act
- * only on OUTBOUND. {@code hasAttachments} lets a consumer cheaply skip messages with no files (e.g. the attachments
- * module only rebuilds the client-attachment PDF on INBOUND messages that actually carry attachments). The
- * {@code municipalityId}/{@code namespace} are carried so a consumer can act on the errand without re-deriving them.
+ * only on OUTBOUND.
  */
 public record MessagePosted(
 	String messageId,
-	String municipalityId,
-	String namespace,
 	String errandId,
 	String direction,
 	String author,
-	boolean hasAttachments,
 	OffsetDateTime timestamp) {}

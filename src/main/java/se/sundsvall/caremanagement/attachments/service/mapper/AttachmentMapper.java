@@ -7,7 +7,6 @@ import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.api.model.Attachment;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentDataEntity;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEntity;
-import se.sundsvall.caremanagement.conversation.spi.ConversationAttachment;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Collections.emptyList;
@@ -25,15 +24,13 @@ public final class AttachmentMapper {
 				.withFileName(e.getFileName())
 				.withMimeType(e.getMimeType())
 				.withFileSize(e.getFileSize())
-				.withOrigin(e.getOrigin())
-				.withSenderRole(e.getSenderRole())
 				.withCreated(e.getCreated())
 				.withModified(e.getModified()))
 			.orElse(null);
 	}
 
 	public static AttachmentEntity toAttachmentEntity(final String errandId, final String namespace,
-		final String municipalityId, final String origin, final String senderRole, final MultipartFile file) {
+		final String municipalityId, final MultipartFile file) {
 
 		if (errandId == null || file == null) {
 			return null;
@@ -46,8 +43,6 @@ public final class AttachmentMapper {
 				.withFileName(file.getOriginalFilename())
 				.withMimeType(file.getContentType())
 				.withFileSize(Math.toIntExact(file.getSize()))
-				.withOrigin(origin)
-				.withSenderRole(senderRole)
 				.withAttachmentData(AttachmentDataEntity.create()
 					.withFile(Hibernate.getLobHelper().createBlob(file.getInputStream(), file.getSize())));
 		} catch (final IOException ioException) {
@@ -56,7 +51,7 @@ public final class AttachmentMapper {
 	}
 
 	public static AttachmentEntity toAttachmentEntity(final String errandId, final String namespace,
-		final String municipalityId, final String origin, final String senderRole, final String fileName, final String mimeType, final byte[] content) {
+		final String municipalityId, final String fileName, final String mimeType, final byte[] content) {
 
 		if (errandId == null || content == null) {
 			return null;
@@ -68,25 +63,8 @@ public final class AttachmentMapper {
 			.withFileName(fileName)
 			.withMimeType(mimeType)
 			.withFileSize(content.length)
-			.withOrigin(origin)
-			.withSenderRole(senderRole)
 			.withAttachmentData(AttachmentDataEntity.create()
 				.withFile(Hibernate.getLobHelper().createBlob(content)));
-	}
-
-	/** Project a conversation attachment into the unified errand attachment list, tagged with origin CONVERSATION. */
-	public static Attachment toAttachment(final ConversationAttachment attachment) {
-		return ofNullable(attachment)
-			.map(a -> Attachment.create()
-				.withId(a.id())
-				.withMessageId(a.messageId())
-				.withFileName(a.fileName())
-				.withMimeType(a.mimeType())
-				.withFileSize(a.fileSize())
-				.withOrigin("CONVERSATION")
-				.withSenderRole(a.senderRole())
-				.withCreated(a.created()))
-			.orElse(null);
 	}
 
 	public static List<Attachment> toAttachmentList(final List<AttachmentEntity> entities) {

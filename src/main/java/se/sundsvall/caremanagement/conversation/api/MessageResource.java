@@ -65,7 +65,7 @@ class MessageResource {
 		@Valid @NotNull @RequestPart("message") final CreateMessage message,
 		@RequestPart(value = "attachments", required = false) final List<MultipartFile> attachments) {
 
-		final var messageId = service.post(municipalityId, namespace, errandId, message, attachments);
+		final var messageId = service.post(errandId, message, attachments);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/{errandId}/messages/{messageId}")
 			.buildAndExpand(municipalityId, namespace, errandId, messageId).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)

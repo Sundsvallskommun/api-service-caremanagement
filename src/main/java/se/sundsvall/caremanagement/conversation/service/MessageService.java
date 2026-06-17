@@ -63,7 +63,7 @@ public class MessageService {
 		this.events = events;
 	}
 
-	public String post(final String municipalityId, final String namespace, final String errandId, final CreateMessage request, final List<MultipartFile> attachments) {
+	public String post(final String errandId, final CreateMessage request, final List<MultipartFile> attachments) {
 		validateInReplyTo(errandId, request.inReplyToId());
 
 		final var saved = repository.save(MessageEntity.create()
@@ -74,11 +74,10 @@ public class MessageService {
 			.withInReplyToId(request.inReplyToId())
 			.withCreated(now(systemDefault()).truncatedTo(MILLIS)));
 
-		final var files = ofNullable(attachments).orElse(emptyList());
-		files.forEach(file -> store(saved.getId(), saved.getDirection(), file));
+		ofNullable(attachments).orElse(emptyList())
+			.forEach(file -> store(saved.getId(), file));
 
-		events.publishEvent(new MessagePosted(saved.getId(), municipalityId, namespace, errandId,
-			saved.getDirection(), saved.getAuthor(), !files.isEmpty(), saved.getCreated()));
+		events.publishEvent(new MessagePosted(saved.getId(), errandId, saved.getDirection(), saved.getAuthor(), saved.getCreated()));
 		return saved.getId();
 	}
 
@@ -118,8 +117,8 @@ public class MessageService {
 		}
 	}
 
-	private void store(final String messageId, final String direction, final MultipartFile file) {
-		final var attachment = attachmentRepository.save(toMessageAttachmentEntity(messageId, direction, file));
+	private void store(final String messageId, final MultipartFile file) {
+		final var attachment = attachmentRepository.save(toMessageAttachmentEntity(messageId, file));
 		attachmentDataRepository.save(toMessageAttachmentDataEntity(attachment.getId(), file));
 	}
 
