@@ -4,14 +4,17 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaWarningRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaWarningEntity;
+import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Comparator.comparing;
 import static java.util.Comparator.naturalOrder;
 import static java.util.Comparator.nullsLast;
+import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toSet;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -28,6 +31,10 @@ public class WarningService {
 	public static final String TYPE_INCOME_CHANGE = "INCOME_CHANGE";
 	public static final String TYPE_MISSING_SSBTEK = "MISSING_SSBTEK";
 	public static final String TYPE_NEW_INCOME = "NEW_INCOME";
+	public static final String TYPE_NEW_EXPENSE = "NEW_EXPENSE";
+	public static final String TYPE_NEW_PERSON = "NEW_PERSON";
+	public static final String TYPE_INCOME_DROPPED = "INCOME_DROPPED";
+	public static final String TYPE_HOUSEHOLD_CHANGE = "HOUSEHOLD_CHANGE";
 
 	public static final String STATUS_OPEN = "OPEN";
 	public static final String STATUS_ACKNOWLEDGED = "ACKNOWLEDGED";
@@ -55,6 +62,31 @@ public class WarningService {
 		ofList(changes).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_CHANGE, sourceKey(text), text)));
 		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Saknas ännu i SSBTEK: " + text)));
 		ofList(newIncome).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, text, "Ny inkomst i SSBTEK, ej införd i normberäkningen: " + text)));
+		reconcile(errandId, inputs);
+	}
+
+	/**
+	 * Reconcile the full normberäkning warnings into the errand's warning objects: the regelverk income warnings
+	 * (unhandled / changed / still-missing), the rows the daily refresh newly added (NEW_*) or saw disappear, and the
+	 * household drift detected against the previous normberäkning. Supersedes {@link #reconcileIncomeWarnings} once the
+	 * three-section draft is in play.
+	 */
+	public void reconcileNormberakningWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
+		final List<String> missing, final DraftChanges draftChanges, final List<String> householdWarnings) {
+
+		final List<WarningInput> inputs = new ArrayList<>();
+		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
+		ofList(changes).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_CHANGE, sourceKey(text), text)));
+		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Saknas ännu i SSBTEK: " + text)));
+
+		if (draftChanges != null) {
+			ofList(draftChanges.addedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, sourceKey(text), "Ny inkomst i SSBTEK, ej införd i normberäkningen: " + text)));
+			ofList(draftChanges.addedExpenses()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_EXPENSE, sourceKey(text), "Ny utgift i ansökan: " + text)));
+			ofList(draftChanges.addedPersons()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_PERSON, sourceKey(text), "Ny hushållsmedlem: " + text)));
+			ofList(draftChanges.droppedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_DROPPED, sourceKey(text), "Inkomst ej längre i SSBTEK: " + text)));
+		}
+
+		ofList(householdWarnings).forEach(text -> inputs.add(new WarningInput(TYPE_HOUSEHOLD_CHANGE, text, text)));
 		reconcile(errandId, inputs);
 	}
 
@@ -98,6 +130,21 @@ public class WarningService {
 			.sorted(comparing(FaWarningEntity::getCreated, nullsLast(naturalOrder())))
 			.map(WarningService::toWarning)
 			.toList();
+	}
+
+	/**
+	 * Create a warning directly on an errand — the careM temp stage, with no Lifecare round-trip. The warning is born
+	 * {@code OPEN}; the {@code sourceKey} is derived from the message when not supplied (the same rule reconcile uses).
+	 */
+	@Transactional
+	public Warning create(final String errandId, final String type, final String sourceKey, final String message) {
+		return toWarning(repository.save(FaWarningEntity.create()
+			.withErrandId(errandId)
+			.withType(type)
+			.withSourceKey(ofNullable(sourceKey).filter(StringUtils::hasText).orElseGet(() -> sourceKey(message)))
+			.withMessage(message)
+			.withStatus(STATUS_OPEN)
+			.withAutoResolved(false)));
 	}
 
 	/** Acknowledge or close a warning (a handläggare action). Re-opening to OPEN is not allowed. */

@@ -1,9 +1,11 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationAktualiseringDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationExpensePostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationIncomePostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationInvestigationDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationNormDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonPostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationServiceDTO;
 import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
@@ -65,6 +67,42 @@ public final class NormberakningAssembler {
 		});
 
 		return body;
+	}
+
+	/**
+	 * Build the full three-section FC normberäkning body — incomes (subtracted), expenses (added) and the household
+	 * persons (the norm base) — for one applicant and application month. Reuses the income + proposal-link selection of
+	 * {@link #assemble(String, PersonBasedCalculationProposalDTO, List, YearMonth)}; adds the expenses and persons and,
+	 * when given, overrides the proposal-selected norm with the one chosen on the draft.
+	 *
+	 * @param  applicantPersonId  the applicant's personnummer (the FC calculation owner)
+	 * @param  proposal           the FC calculation proposal supplying the link ids; may be {@code null}
+	 * @param  calculationIncomes the effective FC income rows; may be {@code null}
+	 * @param  expenses           the effective FC expense rows; may be {@code null}
+	 * @param  persons            the household person rows; may be {@code null}
+	 * @param  normIdOverride     the norm chosen on the draft, overriding the proposal selection; may be {@code null}
+	 * @param  applicationMonth   the month the application concerns
+	 * @return                    the assembled {@link PostCalculationBodyRequest}
+	 */
+	public static PostCalculationBodyRequest assemble(
+		final String applicantPersonId,
+		final PersonBasedCalculationProposalDTO proposal,
+		final List<PersonBasedCalculationIncomePostDTO> calculationIncomes,
+		final List<PersonBasedCalculationExpensePostDTO> expenses,
+		final List<PersonBasedCalculationPersonPostDTO> persons,
+		final Integer normIdOverride,
+		final YearMonth applicationMonth) {
+
+		final var body = assemble(applicantPersonId, proposal, calculationIncomes, applicationMonth);
+		ofNullable(expenses).ifPresent(body::calculationExpenses);
+		ofNullable(persons).ifPresent(body::calculationPersons);
+		ofNullable(normIdOverride).ifPresent(body::normId);
+		return body;
+	}
+
+	/** The norm id the proposal offers for the application month (the window covering it, else the first), or empty. */
+	public static Optional<Integer> selectNormId(final PersonBasedCalculationProposalDTO proposal, final YearMonth applicationMonth) {
+		return ofNullable(proposal).flatMap(p -> normIdForMonth(p, applicationMonth.atDay(1)));
 	}
 
 	private static Optional<Integer> firstServiceId(final PersonBasedCalculationProposalDTO proposal) {

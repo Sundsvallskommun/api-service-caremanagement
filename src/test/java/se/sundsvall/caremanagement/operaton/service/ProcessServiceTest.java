@@ -14,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.operaton.integration.OperatonClient;
+import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRequest;
+import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -113,5 +115,28 @@ class ProcessServiceTest {
 		final ArgumentCaptor<CorrelationMessageRequest> captor = ArgumentCaptor.forClass(CorrelationMessageRequest.class);
 		verify(operatonClientMock).correlateMessage(eq(MUNICIPALITY_ID), captor.capture());
 		assertThat(captor.getValue().getProcessVariables()).isEmpty();
+	}
+
+	@Test
+	void evaluateDecisionReturnsResultRows() {
+		when(operatonClientMock.evaluateDecision(eq(MUNICIPALITY_ID), eq("Decision_x"), any(EvaluateDecisionRequest.class)))
+			.thenReturn(new EvaluateDecisionResponse(List.of(Map.of("out", "v"))));
+
+		assertThat(service.evaluateDecision(MUNICIPALITY_ID, "Decision_x", Map.of("in", 1))).containsExactly(Map.of("out", "v"));
+
+		final ArgumentCaptor<EvaluateDecisionRequest> captor = ArgumentCaptor.forClass(EvaluateDecisionRequest.class);
+		verify(operatonClientMock).evaluateDecision(eq(MUNICIPALITY_ID), eq("Decision_x"), captor.capture());
+		assertThat(captor.getValue().variables()).containsEntry("in", 1);
+	}
+
+	@Test
+	void evaluateDecisionReturnsEmptyWhenResponseNullOrNoVariables() {
+		when(operatonClientMock.evaluateDecision(eq(MUNICIPALITY_ID), eq("Decision_x"), any(EvaluateDecisionRequest.class))).thenReturn(null);
+
+		assertThat(service.evaluateDecision(MUNICIPALITY_ID, "Decision_x", null)).isEmpty();
+
+		final ArgumentCaptor<EvaluateDecisionRequest> captor = ArgumentCaptor.forClass(EvaluateDecisionRequest.class);
+		verify(operatonClientMock).evaluateDecision(eq(MUNICIPALITY_ID), eq("Decision_x"), captor.capture());
+		assertThat(captor.getValue().variables()).isEmpty();
 	}
 }

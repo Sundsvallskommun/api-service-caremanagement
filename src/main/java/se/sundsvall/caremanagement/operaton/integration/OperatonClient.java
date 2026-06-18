@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import se.sundsvall.caremanagement.operaton.integration.configuration.OperatonConfiguration;
+import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRequest;
+import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static se.sundsvall.caremanagement.operaton.integration.configuration.OperatonConfiguration.CLIENT_ID;
@@ -91,4 +93,19 @@ public interface OperatonClient {
 	void correlateMessage(
 		@PathVariable final String municipalityId,
 		@RequestBody final CorrelationMessageRequest request);
+
+	/**
+	 * Evaluate a deployed DMN decision in the engine and return its result rows — used to run the (modeler-editable)
+	 * normberäkning regelverk, e.g. the expense cap decision, from caremanagement.
+	 *
+	 * @param  municipalityId the id of the municipality
+	 * @param  key            the decision definition key (e.g. {@code Decision_utgiftRegelverk})
+	 * @param  request        the input variables to evaluate the decision against
+	 * @return                the decision result rows (one map of output name → value per matched rule)
+	 */
+	@PostMapping(path = "/{municipalityId}/decision-definitions/{key}/evaluate", produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
+	EvaluateDecisionResponse evaluateDecision(
+		@PathVariable final String municipalityId,
+		@PathVariable final String key,
+		@RequestBody final EvaluateDecisionRequest request);
 }

@@ -1,24 +1,34 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationCalculationIncomeTypeDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationExpensePostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationIncomePostDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonPostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFcMapper;
+import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.NormberakningAssembler;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
 import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
+import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.NormberakningDraftBuild;
 import se.sundsvall.caremanagement.lifecare.service.model.NormberakningResult;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.dept44.problem.Problem;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -103,6 +113,76 @@ public class NormberakningService {
 		final var incomes = ofNullable(rows).orElseGet(List::of).stream().map(NormberakningService::toPostDto).toList();
 		final var body = NormberakningAssembler.assemble(applicantPersonId, proposal, incomes, applicationMonth);
 		return lifecareFcIntegration.createCalculation(body);
+	}
+
+	/**
+	 * The process-derived income lines for the draft — one per (FC income type, recipient) — from the operaton-classified
+	 * incomes resolved against the applicant's calculation proposal. Writes nothing to Lifecare.
+	 */
+	public List<FcIncomeLine> incomeLines(final String applicantPersonId, final String classifiedIncomesJson) {
+		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		return ClassifiedIncomeToFcMapper.toIncomeLines(parse(classifiedIncomesJson), proposal);
+	}
+
+	/**
+	 * Whether this month's classified incomes cover every income type the previous normberäkning had. Best-effort: a
+	 * failure reading the previous month is treated as complete so the EB process is not wedged.
+	 */
+	public Completeness completeness(final String applicantPersonId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
+		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		final var missing = missingPreviousIncomeTypes(applicantPersonId, applicationMonth, parse(classifiedIncomesJson), proposal);
+		return new Completeness(missing.isEmpty(), missing);
+	}
+
+	/** The household on the applicant's previous normberäkning in Lifecare — the baseline for the household drift check. */
+	public PreviousHousehold previousHousehold(final String applicantPersonId, final YearMonth applicationMonth) {
+		return lifecareEbCaseService.previousHousehold(applicantPersonId, applicationMonth);
+	}
+
+	/** The norm id the FC proposal offers for the application month (covering window, else first), or {@code null}. */
+	public Integer selectNormId(final String applicantPersonId, final YearMonth applicationMonth) {
+		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		return NormberakningAssembler.selectNormId(proposal, applicationMonth).orElse(null);
+	}
+
+	/**
+	 * Create the normberäkning in Lifecare FC from the draft's effective rows — called on a beslut. Folds the effective
+	 * incomes, expenses (resolving each cost type to an FC expense-type id, skipping the unresolvable) and household
+	 * persons into the FC body, overriding the proposal norm with the one chosen on the draft, and posts it.
+	 *
+	 * @return the created Lifecare calculation id
+	 */
+	public Integer commitEffective(final String applicantPersonId, final YearMonth applicationMonth, final Integer normId,
+		final List<EffectiveIncome> incomes, final List<EffectiveExpense> expenses, final List<EffectivePerson> persons) {
+
+		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		final var incomeDtos = ofNullable(incomes).orElseGet(List::of).stream().map(NormberakningService::toIncomeDto).toList();
+		final var expenseDtos = ofNullable(expenses).orElseGet(List::of).stream()
+			.map(expense -> toExpenseDto(expense, proposal)).filter(Objects::nonNull).toList();
+		final var personDtos = ofNullable(persons).orElseGet(List::of).stream().map(NormberakningService::toPersonDto).toList();
+
+		final var body = NormberakningAssembler.assemble(applicantPersonId, proposal, incomeDtos, expenseDtos, personDtos, normId, applicationMonth);
+		return lifecareFcIntegration.createCalculation(body);
+	}
+
+	private static PersonBasedCalculationIncomePostDTO toIncomeDto(final EffectiveIncome income) {
+		return new PersonBasedCalculationIncomePostDTO()
+			.id(income.typeId())
+			.applicantAmount(income.applicantAmount())
+			.applicantAmountDate(income.applicantAmountDate())
+			.coApplicantAmount(income.coApplicantAmount())
+			.coApplicantAmountDate(income.coApplicantAmountDate())
+			.note(income.note());
+	}
+
+	private static PersonBasedCalculationExpensePostDTO toExpenseDto(final EffectiveExpense expense, final PersonBasedCalculationProposalDTO proposal) {
+		return ExpenseTypeMapper.resolveExpenseTypeId(expense.costType(), proposal)
+			.map(id -> new PersonBasedCalculationExpensePostDTO().id(id).amount(expense.appliedAmount()).approvedAmount(expense.approvedAmount()).note(expense.note()))
+			.orElse(null);
+	}
+
+	private static PersonBasedCalculationPersonPostDTO toPersonDto(final EffectivePerson person) {
+		return new PersonBasedCalculationPersonPostDTO().personId(person.partyId()).numberOfDays(person.numberOfDays());
 	}
 
 	private static Map<Integer, String> incomeTypeNamesById(final PersonBasedCalculationProposalDTO proposal) {

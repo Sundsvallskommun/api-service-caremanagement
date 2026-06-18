@@ -39,20 +39,20 @@ class FaNormberakningDraftEntityTest {
 		final var entity = FaNormberakningDraftEntity.create()
 			.withErrandId("errand")
 			.withApplicationMonth("2026-06")
-			.withEdited(true)
-			.withRowsJson("[]")
+			.withNormId(7)
+			.withNormType("RIKSNORM")
 			.withCreated(created)
 			.withUpdated(created);
 
 		org.assertj.core.api.Assertions.assertThat(entity).hasNoNullFieldsOrProperties();
 		org.assertj.core.api.Assertions.assertThat(entity.getErrandId()).isEqualTo("errand");
-		org.assertj.core.api.Assertions.assertThat(entity.isEdited()).isTrue();
+		org.assertj.core.api.Assertions.assertThat(entity.getNormId()).isEqualTo(7);
 	}
 
 	@Test
 	void testNoDirtOnCreatedBean() {
-		org.assertj.core.api.Assertions.assertThat(FaNormberakningDraftEntity.create()).hasAllNullFieldsOrPropertiesExcept("edited");
-		org.assertj.core.api.Assertions.assertThat(new FaNormberakningDraftEntity()).hasAllNullFieldsOrPropertiesExcept("edited");
+		org.assertj.core.api.Assertions.assertThat(FaNormberakningDraftEntity.create()).hasAllNullFieldsOrProperties();
+		org.assertj.core.api.Assertions.assertThat(new FaNormberakningDraftEntity()).hasAllNullFieldsOrProperties();
 	}
 
 	@Test

@@ -10,15 +10,14 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 
-import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * The draft normberäkning for an errand — the computed FC income rows (as a JSON array) the EB process prepares each
- * day
- * without writing to Lifecare, and that a handläggare can edit in Draken before deciding. {@code edited} guards the
- * daily refresh: while {@code false} the rows are overwritten, once {@code true} they are preserved. The errand id is
- * the primary key (one draft per errand).
+ * The draft normberäkning header for an errand — one row per errand, holding the application month and the selected
+ * norm. The section rows (personer, inkomster, utgifter) live in their own tables ({@code errand_fa_norm_person},
+ * {@code errand_fa_norm_income}, {@code errand_fa_norm_expense}), each row owning its process and handläggare values
+ * separately. The EB process prepares the draft each day without writing to Lifecare; on a beslut the effective values
+ * are posted. The errand id is the primary key.
  */
 @Entity
 @Table(name = "errand_financial_assistance_normberakning_draft")
@@ -31,11 +30,11 @@ public class FaNormberakningDraftEntity {
 	@Column(name = "application_month")
 	private String applicationMonth;
 
-	@Column(name = "edited")
-	private boolean edited;
+	@Column(name = "norm_id")
+	private Integer normId;
 
-	@Column(name = "rows_json", length = LONG32)
-	private String rowsJson;
+	@Column(name = "norm_type")
+	private String normType;
 
 	@Column(name = "created")
 	@TimeZoneStorage(NORMALIZE)
@@ -87,29 +86,29 @@ public class FaNormberakningDraftEntity {
 		return this;
 	}
 
-	public boolean isEdited() {
-		return edited;
+	public Integer getNormId() {
+		return normId;
 	}
 
-	public void setEdited(final boolean edited) {
-		this.edited = edited;
+	public void setNormId(final Integer normId) {
+		this.normId = normId;
 	}
 
-	public FaNormberakningDraftEntity withEdited(final boolean edited) {
-		this.edited = edited;
+	public FaNormberakningDraftEntity withNormId(final Integer normId) {
+		this.normId = normId;
 		return this;
 	}
 
-	public String getRowsJson() {
-		return rowsJson;
+	public String getNormType() {
+		return normType;
 	}
 
-	public void setRowsJson(final String rowsJson) {
-		this.rowsJson = rowsJson;
+	public void setNormType(final String normType) {
+		this.normType = normType;
 	}
 
-	public FaNormberakningDraftEntity withRowsJson(final String rowsJson) {
-		this.rowsJson = rowsJson;
+	public FaNormberakningDraftEntity withNormType(final String normType) {
+		this.normType = normType;
 		return this;
 	}
 
@@ -144,13 +143,14 @@ public class FaNormberakningDraftEntity {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FaNormberakningDraftEntity that = (FaNormberakningDraftEntity) o;
-		return edited == that.edited && Objects.equals(errandId, that.errandId) && Objects.equals(applicationMonth, that.applicationMonth)
-			&& Objects.equals(rowsJson, that.rowsJson) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
+		return Objects.equals(errandId, that.errandId) && Objects.equals(applicationMonth, that.applicationMonth)
+			&& Objects.equals(normId, that.normId) && Objects.equals(normType, that.normType)
+			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(errandId, applicationMonth, edited, rowsJson, created, updated);
+		return Objects.hash(errandId, applicationMonth, normId, normType, created, updated);
 	}
 
 	@Override
@@ -158,8 +158,8 @@ public class FaNormberakningDraftEntity {
 		return "FaNormberakningDraftEntity{" +
 			"errandId='" + errandId + '\'' +
 			", applicationMonth='" + applicationMonth + '\'' +
-			", edited=" + edited +
-			", rowsJson='" + rowsJson + '\'' +
+			", normId=" + normId +
+			", normType='" + normType + '\'' +
 			", created=" + created +
 			", updated=" + updated +
 			'}';

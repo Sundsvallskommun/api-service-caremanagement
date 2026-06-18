@@ -5,6 +5,7 @@ import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalcul
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefc.CommonCalculationIncomeDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedDecisionPersonDTO;
 import java.time.DateTimeException;
@@ -19,11 +20,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 
 import static java.lang.Boolean.TRUE;
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Comparator.comparing;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toSet;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
@@ -168,6 +171,39 @@ public class LifecareEbCaseService {
 			.filter(StringUtils::hasText)
 			.distinct()
 			.toList();
+	}
+
+	/**
+	 * The household on the person's most recent normberäkning strictly before {@code applicationMonth} — its person ids,
+	 * member count and norm sum — the baseline the current application's household is compared against to warn on drift.
+	 * Empty when there is no prior normberäkning. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the
+	 * caller decides whether to treat the lookup as best-effort.
+	 *
+	 * @param  personId         the applicant's personnummer
+	 * @param  applicationMonth the month being applied for; only normberäkningar before it are considered
+	 * @return                  the previous household (empty when none)
+	 */
+	public PreviousHousehold previousHousehold(final String personId, final YearMonth applicationMonth) {
+		final var referenceDate = applicationMonth.atDay(1);
+		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
+		final var end = referenceDate.format(ISO_LOCAL_DATE);
+
+		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end, null, null, false))
+			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
+			.orElseGet(List::of).stream()
+			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
+			.toList();
+
+		final var latest = latestCalculation(calculations);
+		final var personIds = latest
+			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
+			.orElseGet(List::of).stream()
+			.map(PersonBasedCalculationPersonDTO::getPersonId)
+			.filter(StringUtils::hasText)
+			.collect(toSet());
+		final var normSum = latest.map(PersonBasedCalculationDTO::getNormSum).orElse(null);
+
+		return new PreviousHousehold(personIds, personIds.size(), normSum);
 	}
 
 	/** The decision with the most recent period (to/from), used to read the current household constellation. */

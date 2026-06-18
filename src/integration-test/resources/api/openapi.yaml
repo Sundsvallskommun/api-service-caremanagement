@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:61410
+- url: http://localhost:53585
   description: Generated server url
 tags:
 - name: Notes
@@ -98,90 +98,6 @@ paths:
                 - $ref: "#/components/schemas/ConstraintViolationProblem"
         "500":
           description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft:
-    get:
-      tags:
-      - Financial Assistance
-      summary: Read the draft normberäkning
-      description: The FC income rows the EB process prepared (not yet created in
-        Lifecare) for the handläggare to review and edit before a beslut. 404 when
-        no draft exists yet.
-      operationId: getDraft
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NormberakningDraft"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    put:
-      tags:
-      - Financial Assistance
-      summary: Edit the draft normberäkning
-      description: Replace the draft's income rows with the handläggare's edit and
-        mark it edited — the daily SSBTEK refresh then preserves these rows and surfaces
-        newly-arrived income as a NEW_INCOME warning instead of overwriting. The edited
-        draft is what gets posted to Lifecare on a beslut.
-      operationId: updateDraft
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/NormberakningDraft"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NormberakningDraft"
-        "404":
-          description: Not Found
           content:
             application/problem+json:
               schema:
@@ -1587,6 +1503,345 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/warnings:
+    get:
+      tags:
+      - Financial Assistance
+      summary: List the EB income warnings on an errand
+      description: "The acknowledgeable income warnings the handläggare reviews —\
+        \ unhandled incomes, significant changes, and income types still missing from\
+        \ SSBTEK. The daily prepare step reconciles them."
+      operationId: listWarnings
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Warning"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+      - Financial Assistance
+      summary: Create an EB income warning on an errand
+      description: "Creates an acknowledgeable income warning directly on the errand\
+        \ — the careM temp stage, with no Lifecare round-trip. The warning is created\
+        \ OPEN; use the PATCH endpoint to acknowledge or close it."
+      operationId: createWarning
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWarningRequest"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Warning"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/persons:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Add a person row to the draft (handläggare)
+      operationId: addDraftPerson
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormPersonInput"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormPersonRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/persons/{rowId}/restore:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Restore a soft-deleted person row
+      operationId: restoreDraftPerson
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rowId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormPersonRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/incomes:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Add an income row to the draft (handläggare)
+      operationId: addDraftIncome
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormIncomeInput"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormIncomeRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/incomes/{rowId}/restore:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Restore a soft-deleted income row
+      operationId: restoreDraftIncome
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rowId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormIncomeRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/expenses:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Add an expense row to the draft (handläggare)
+      operationId: addDraftExpense
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormExpenseInput"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormExpenseRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/expenses/{rowId}/restore:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Restore a soft-deleted expense row
+      operationId: restoreDraftExpense
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rowId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormExpenseRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/payment-status:
     post:
       tags:
@@ -2635,6 +2890,268 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/persons/{rowId}:
+    delete:
+      tags:
+      - Financial Assistance
+      summary: Soft-delete a person row
+      operationId: deleteDraftPerson
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rowId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormPersonRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    patch:
+      tags:
+      - Financial Assistance
+      summary: Set the handläggare days / note on a person row
+      operationId: patchDraftPerson
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rowId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormPersonInput"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormPersonRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/incomes/{rowId}:
+    delete:
+      tags:
+      - Financial Assistance
+      summary: "Soft-delete an income row (excluded from the calculation, survives\
+        \ the daily refresh)"
+      operationId: deleteDraftIncome
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rowId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormIncomeRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    patch:
+      tags:
+      - Financial Assistance
+      summary: Set the handläggare value / note on an income row
+      operationId: patchDraftIncome
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rowId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormIncomeInput"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormIncomeRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/expenses/{rowId}:
+    delete:
+      tags:
+      - Financial Assistance
+      summary: Soft-delete an expense row
+      operationId: deleteDraftExpense
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rowId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormExpenseRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    patch:
+      tags:
+      - Financial Assistance
+      summary: Set the handläggare value / note on an expense row
+      operationId: patchDraftExpense
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rowId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormExpenseInput"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormExpenseRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/statistics:
     get:
       tags:
@@ -3318,15 +3835,15 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/warnings:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft:
     get:
       tags:
       - Financial Assistance
-      summary: List the EB income warnings on an errand
-      description: "The acknowledgeable income warnings the handläggare reviews —\
-        \ unhandled incomes, significant changes, and income types still missing from\
-        \ SSBTEK. The daily prepare step reconciles them."
-      operationId: listWarnings
+      summary: Read the draft normberäkning
+      description: The FC income rows the EB process prepared (not yet created in
+        Lifecare) for the handläggare to review and edit before a beslut. 404 when
+        no draft exists yet.
+      operationId: getDraft
       parameters:
       - name: municipalityId
         in: path
@@ -3350,9 +3867,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Warning"
+                $ref: "#/components/schemas/NormberakningDraft"
         "404":
           description: Not Found
           content:
@@ -3569,81 +4084,6 @@ components:
           type: string
         message:
           type: string
-    DraftIncomeRow:
-      type: object
-      description: One income row of the draft normberäkning (FC income type + amounts).
-      properties:
-        typeId:
-          type: integer
-          format: int32
-          description: The FC income-type id
-          examples:
-          - 20
-        typeName:
-          type: string
-          description: The FC income-type name
-          examples:
-          - Bostadsbidrag
-        applicantAmount:
-          type: number
-          format: double
-          description: The applicant's amount for this income type
-          examples:
-          - 1850.0
-        applicantAmountDate:
-          type: string
-          description: The date the applicant's amount is attributed to (ISO)
-          examples:
-          - 2026-05-15T00:00:00Z
-        coApplicantAmount:
-          type: number
-          format: double
-          description: The co-applicant's amount for this income type
-          examples:
-          - 0.0
-        coApplicantAmountDate:
-          type: string
-          description: The date the co-applicant's amount is attributed to (ISO)
-        note:
-          type: string
-          description: Free-text note (e.g. the SSBTEK source)
-          examples:
-          - "SSBTEK: Bostadsbidrag"
-    NormberakningDraft:
-      type: object
-      description: "The (editable) draft normberäkning — FC income rows, not yet created\
-        \ in Lifecare."
-      properties:
-        errandId:
-          type: string
-          description: The errand id
-          readOnly: true
-        applicationMonth:
-          type: string
-          description: The application month (ISO yyyy-MM)
-          examples:
-          - 2026-06
-        edited:
-          type: boolean
-          description: Whether a handläggare has edited the draft (the daily refresh
-            then preserves the rows)
-          examples:
-          - "false"
-        rows:
-          type: array
-          description: The income rows
-          items:
-            $ref: "#/components/schemas/DraftIncomeRow"
-        created:
-          type: string
-          format: date-time
-          description: When the draft was created
-          readOnly: true
-        updated:
-          type: string
-          format: date-time
-          description: When the draft was last updated
-          readOnly: true
     Asset:
       type: object
       description: An asset owned by the applicant or co-applicant.
@@ -4856,6 +5296,402 @@ components:
           format: date-time
           description: Timestamp the decision was recorded (server-assigned)
           readOnly: true
+    CreateWarningRequest:
+      type: object
+      description: Request to create an EB income warning on an errand (no Lifecare
+        round-trip).
+      properties:
+        type:
+          type: string
+          description: The warning type
+          enum:
+          - UNHANDLED_INCOME
+          - INCOME_CHANGE
+          - MISSING_SSBTEK
+          - NEW_INCOME
+          - NEW_EXPENSE
+          - NEW_PERSON
+          - INCOME_DROPPED
+          - HOUSEHOLD_CHANGE
+          examples:
+          - UNHANDLED_INCOME
+          minLength: 1
+        message:
+          type: string
+          description: Human-readable warning text
+          examples:
+          - "Swish-insättningar: 2 400 kr – ej överförd, kräver manuell bedömning"
+          minLength: 1
+        sourceKey:
+          type: string
+          description: A stable key for the income the warning concerns (förmån/inkomsttyp)
+            — the dedup key. Derived from the message when omitted.
+          examples:
+          - Swish-insättningar
+      required:
+      - message
+      - type
+    Warning:
+      type: object
+      description: An EB income warning the handläggare can acknowledge or close.
+      properties:
+        id:
+          type: string
+          description: The warning id
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+          readOnly: true
+        type:
+          type: string
+          description: The warning type
+          enum:
+          - UNHANDLED_INCOME
+          - INCOME_CHANGE
+          - MISSING_SSBTEK
+          - NEW_INCOME
+          examples:
+          - MISSING_SSBTEK
+        sourceKey:
+          type: string
+          description: A stable key for the income the warning concerns (förmån/inkomsttyp)
+            — the dedup key
+          examples:
+          - Bostadsbidrag
+        message:
+          type: string
+          description: Human-readable warning text
+          examples:
+          - "Saknas ännu i SSBTEK: Dagersättning"
+        status:
+          type: string
+          description: The warning status
+          enum:
+          - OPEN
+          - ACKNOWLEDGED
+          - CLOSED
+          examples:
+          - OPEN
+        autoResolved:
+          type: boolean
+          description: Whether the warning was closed automatically (its cause resolved)
+            rather than by a handläggare
+          examples:
+          - "false"
+        created:
+          type: string
+          format: date-time
+          description: When the warning was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the warning was last updated
+          readOnly: true
+    NormPersonInput:
+      type: object
+      description: What a handläggare sends to add or patch a person row (identity
+        + handläggare-writable fields only).
+      properties:
+        partyId:
+          type: string
+          description: The party id of the household member
+        role:
+          type: string
+          description: The role of the household member
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          - CHILD
+        name:
+          type: string
+          description: The name of the household member
+        handlaggareDays:
+          type: integer
+          format: int32
+          description: The number of days the handläggare decided
+          examples:
+          - 15
+        note:
+          type: string
+          description: Free-text note
+    NormPersonRow:
+      type: object
+      description: "One person row of the normberäkning draft (household member, process\
+        \ vs handläggare days)."
+      properties:
+        id:
+          type: string
+          description: The row id
+          readOnly: true
+        origin:
+          type: string
+          description: "Who created the row: the process or a handläggare"
+          enum:
+          - SYSTEM
+          - HANDLAGGARE
+          readOnly: true
+        partyId:
+          type: string
+          description: The party id of the household member
+          readOnly: true
+        role:
+          type: string
+          description: The role of the household member
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          - CHILD
+          readOnly: true
+        name:
+          type: string
+          description: The name of the household member
+          readOnly: true
+        processDays:
+          type: integer
+          format: int32
+          description: The number of days in the home the process derived
+          examples:
+          - 30
+          readOnly: true
+        handlaggareDays:
+          type: integer
+          format: int32
+          description: The number of days a handläggare decided; overrides the process
+            value when set
+          examples:
+          - 15
+        effectiveDays:
+          type: integer
+          format: int32
+          description: "The number of days actually used (handläggare value when set,\
+            \ otherwise process value)"
+          readOnly: true
+        deleted:
+          type: boolean
+          description: "Whether the row is soft-deleted (excluded from the calculation,\
+            \ not resurrected by the daily refresh)"
+          readOnly: true
+        note:
+          type: string
+          description: Free-text note
+        created:
+          type: string
+          format: date-time
+          description: When the row was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the row was last updated
+          readOnly: true
+    NormIncomeInput:
+      type: object
+      description: What a handläggare sends to add or patch an income row (identity
+        + handläggare-writable fields only).
+      properties:
+        typeId:
+          type: integer
+          format: int32
+          description: The FC income-type id
+          examples:
+          - 20
+        typeName:
+          type: string
+          description: The FC income-type name
+          examples:
+          - Bostadsbidrag
+        recipient:
+          type: string
+          description: Whose income this is
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+        handlaggareAmount:
+          type: number
+          description: The amount the handläggare decided
+          examples:
+          - 1900.0
+        handlaggareAmountDate:
+          type: string
+          format: date-time
+          description: The date the handläggare amount is attributed to
+        note:
+          type: string
+          description: Free-text note
+    NormIncomeRow:
+      type: object
+      description: "One income row of the normberäkning draft (FC income type + recipient,\
+        \ process vs handläggare amount)."
+      properties:
+        id:
+          type: string
+          description: The row id
+          readOnly: true
+        origin:
+          type: string
+          description: "Who created the row: the process or a handläggare"
+          enum:
+          - SYSTEM
+          - HANDLAGGARE
+          readOnly: true
+        typeId:
+          type: integer
+          format: int32
+          description: The FC income-type id
+          examples:
+          - 20
+          readOnly: true
+        typeName:
+          type: string
+          description: The FC income-type name
+          examples:
+          - Bostadsbidrag
+          readOnly: true
+        recipient:
+          type: string
+          description: Whose income this is
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          readOnly: true
+        processAmount:
+          type: number
+          description: The amount the process decided (from the classified SSBTEK
+            income)
+          examples:
+          - 1850.0
+          readOnly: true
+        processAmountDate:
+          type: string
+          format: date-time
+          description: The date the process amount is attributed to
+          readOnly: true
+        handlaggareAmount:
+          type: number
+          description: The amount a handläggare decided; overrides the process amount
+            when set
+          examples:
+          - 1900.0
+        handlaggareAmountDate:
+          type: string
+          format: date-time
+          description: The date the handläggare amount is attributed to
+        effectiveAmount:
+          type: number
+          description: "The amount actually used (handläggare amount when set, otherwise\
+            \ process amount)"
+          readOnly: true
+        deleted:
+          type: boolean
+          description: "Whether the row is soft-deleted (excluded from the calculation,\
+            \ not resurrected by the daily refresh)"
+          readOnly: true
+        note:
+          type: string
+          description: Free-text note
+          examples:
+          - "SSBTEK: Bostadsbidrag"
+        created:
+          type: string
+          format: date-time
+          description: When the row was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the row was last updated
+          readOnly: true
+    NormExpenseInput:
+      type: object
+      description: What a handläggare sends to add or patch an expense row (identity
+        + handläggare-writable fields only).
+      properties:
+        costType:
+          type: string
+          description: The cost type
+        otherSubType:
+          type: string
+          description: The other sub-type (when the cost type is 'other')
+        specification:
+          type: string
+          description: The cost specification
+        handlaggareAmount:
+          type: number
+          description: The amount the handläggare decided
+          examples:
+          - 1100.0
+        note:
+          type: string
+          description: Free-text note
+    NormExpenseRow:
+      type: object
+      description: "One expense row of the normberäkning draft (applied cost, process\
+        \ vs handläggare amount)."
+      properties:
+        id:
+          type: string
+          description: The row id
+          readOnly: true
+        origin:
+          type: string
+          description: "Who created the row: the process or a handläggare"
+          enum:
+          - SYSTEM
+          - HANDLAGGARE
+          readOnly: true
+        costType:
+          type: string
+          description: The cost type
+          readOnly: true
+        otherSubType:
+          type: string
+          description: The other sub-type (when the cost type is 'other')
+          readOnly: true
+        specification:
+          type: string
+          description: The cost specification
+          readOnly: true
+        appliedAmount:
+          type: number
+          description: The amount the citizen applied for
+          examples:
+          - 1200.0
+          readOnly: true
+        processAmount:
+          type: number
+          description: The amount the regelverk allowed (the process amount)
+          examples:
+          - 1000.0
+          readOnly: true
+        handlaggareAmount:
+          type: number
+          description: The amount a handläggare decided; overrides the process amount
+            when set
+          examples:
+          - 1100.0
+        effectiveAmount:
+          type: number
+          description: "The amount actually used (handläggare amount when set, otherwise\
+            \ process amount)"
+          readOnly: true
+        deleted:
+          type: boolean
+          description: "Whether the row is soft-deleted (excluded from the calculation,\
+            \ not resurrected by the daily refresh)"
+          readOnly: true
+        note:
+          type: string
+          description: Free-text note
+        created:
+          type: string
+          format: date-time
+          description: When the row was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the row was last updated
+          readOnly: true
     PaymentStatusRequest:
       type: object
       description: Request to read whether the Lifecare utbetalning for an application
@@ -5260,62 +6096,6 @@ components:
           type: string
           format: date-time
           description: Last modified timestamp; null until the note has been edited
-    Warning:
-      type: object
-      description: An EB income warning the handläggare can acknowledge or close.
-      properties:
-        id:
-          type: string
-          description: The warning id
-          examples:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-          readOnly: true
-        type:
-          type: string
-          description: The warning type
-          enum:
-          - UNHANDLED_INCOME
-          - INCOME_CHANGE
-          - MISSING_SSBTEK
-          - NEW_INCOME
-          examples:
-          - MISSING_SSBTEK
-        sourceKey:
-          type: string
-          description: A stable key for the income the warning concerns (förmån/inkomsttyp)
-            — the dedup key
-          examples:
-          - Bostadsbidrag
-        message:
-          type: string
-          description: Human-readable warning text
-          examples:
-          - "Saknas ännu i SSBTEK: Dagersättning"
-        status:
-          type: string
-          description: The warning status
-          enum:
-          - OPEN
-          - ACKNOWLEDGED
-          - CLOSED
-          examples:
-          - OPEN
-        autoResolved:
-          type: boolean
-          description: Whether the warning was closed automatically (its cause resolved)
-            rather than by a handläggare
-          examples:
-          - "false"
-        created:
-          type: string
-          format: date-time
-          description: When the warning was created
-          readOnly: true
-        updated:
-          type: string
-          format: date-time
-          description: When the warning was last updated
-          readOnly: true
     AssigneeCount:
       type: object
       description: Number of errands assigned to a given user
@@ -5694,6 +6474,60 @@ components:
         data:
           $ref: "#/components/schemas/FinancialAssistanceData"
           description: The typed financial assistance application payload
+    NormberakningDraft:
+      type: object
+      description: "The full draft normberäkning — header, the three sections (personer,\
+        \ inkomster, utgifter) and the section sums."
+      properties:
+        errandId:
+          type: string
+          description: The errand id
+          readOnly: true
+        applicationMonth:
+          type: string
+          description: The application month (ISO yyyy-MM)
+          examples:
+          - 2026-06
+        normId:
+          type: integer
+          format: int32
+          description: The selected norm id
+        normType:
+          type: string
+          description: The selected norm type
+        persons:
+          type: array
+          description: The person rows (personer)
+          items:
+            $ref: "#/components/schemas/NormPersonRow"
+        incomes:
+          type: array
+          description: The income rows (inkomster)
+          items:
+            $ref: "#/components/schemas/NormIncomeRow"
+        expenses:
+          type: array
+          description: The expense rows (utgifter)
+          items:
+            $ref: "#/components/schemas/NormExpenseRow"
+        incomeSum:
+          type: number
+          description: The sum of the effective income amounts
+          readOnly: true
+        expenseSum:
+          type: number
+          description: The sum of the effective expense amounts
+          readOnly: true
+        created:
+          type: string
+          format: date-time
+          description: When the draft was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the draft was last updated
+          readOnly: true
     PrefilledChild:
       type: object
       description: "A child pre-filled from Lifecare for a financial assistance renewal.\

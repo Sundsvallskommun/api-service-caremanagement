@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 
 import static java.util.Optional.ofNullable;
@@ -60,6 +61,47 @@ public final class ClassifiedIncomeToFcMapper {
 			.entrySet().stream()
 			.map(entry -> toDto(entry.getKey(), entry.getValue()))
 			.toList();
+	}
+
+	/**
+	 * Map the classified incomes to draft income lines — one line per (FC income type, recipient), the granularity the
+	 * normberäkning draft stores so a handläggare can override or soft-delete a single person's income of a type. The same
+	 * transferability + type-id resolution as {@link #toCalculationIncomes} is used; the difference is the rows are not
+	 * folded across recipients.
+	 *
+	 * @param  classified the incomes classified by the operaton regelverk (maybe {@code null})
+	 * @param  proposal   the FC calculation proposal whose {@code calculationIncomeTypes} supply the numeric type ids +
+	 *                    names
+	 * @return            one income line per (type id, recipient), amounts summed within the pair
+	 */
+	public static List<FcIncomeLine> toIncomeLines(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
+		final var typeIdByName = indexIncomeTypeIds(proposal);
+		final var nameById = indexIncomeTypeNamesById(proposal);
+
+		return ofNullable(classified).orElseGet(List::of).stream()
+			.filter(Objects::nonNull)
+			.filter(ClassifiedIncomeToFcMapper::isTransferable)
+			.map(income -> resolve(income, typeIdByName))
+			.filter(Objects::nonNull)
+			.collect(groupingBy(resolved -> resolved.typeId() + "|" + resolved.income().role().name(), LinkedHashMap::new, toList()))
+			.values().stream()
+			.map(group -> toLine(group, nameById))
+			.toList();
+	}
+
+	private static FcIncomeLine toLine(final List<Resolved> group, final Map<Integer, String> nameById) {
+		final var typeId = group.getFirst().typeId();
+		final var role = group.getFirst().income().role();
+		return new FcIncomeLine(typeId, nameById.get(typeId), role.name(),
+			sumByRole(group, role), toOffsetDateTime(latestDateByRole(group, role)), noteFor(group));
+	}
+
+	private static Map<Integer, String> indexIncomeTypeNamesById(final PersonBasedCalculationProposalDTO proposal) {
+		return ofNullable(proposal)
+			.map(PersonBasedCalculationProposalDTO::getCalculationIncomeTypes)
+			.orElseGet(List::of).stream()
+			.filter(type -> (type.getName() != null) && (type.getId() != null))
+			.collect(toMap(PersonBasedCalculationCalculationIncomeTypeDTO::getId, PersonBasedCalculationCalculationIncomeTypeDTO::getName, (first, second) -> first, LinkedHashMap::new));
 	}
 
 	/**

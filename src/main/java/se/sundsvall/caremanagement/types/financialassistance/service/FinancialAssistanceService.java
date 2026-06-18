@@ -1,8 +1,13 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -18,14 +23,23 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
-import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.DraftIncomeRow;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateWarningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeInput;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonInput;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
@@ -33,16 +47,23 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentSt
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_INKOMMEN;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_KOMPLETTERING;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_VANTAR_PA_BESLUT;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.applicationTypeForSlug;
+import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.RECIPIENT_APPLICANT;
+import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.RECIPIENT_CO_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toEntity;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toStakeholders;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toView;
@@ -59,6 +80,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.mapp
 @Service
 @Transactional
 public class FinancialAssistanceService {
+
+	private static final Logger LOG = LoggerFactory.getLogger(FinancialAssistanceService.class);
 
 	private static final String DEFAULT_TITLE = "Ekonomiskt bistånd";
 
@@ -80,10 +103,12 @@ public class FinancialAssistanceService {
 	private final StakeholderService stakeholderService;
 	private final WarningService warningService;
 	private final DraftService draftService;
+	private final NormberakningFeeder normberakningFeeder;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final NormberakningService normberakningService,
 		final ActualisationService actualisationService, final PaymentStatusService paymentStatusService, final CitizenService citizenService, final DecisionService decisionService,
-		final AttachmentService attachmentService, final StakeholderService stakeholderService, final WarningService warningService, final DraftService draftService) {
+		final AttachmentService attachmentService, final StakeholderService stakeholderService, final WarningService warningService, final DraftService draftService,
+		final NormberakningFeeder normberakningFeeder) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.normberakningService = normberakningService;
@@ -95,6 +120,7 @@ public class FinancialAssistanceService {
 		this.stakeholderService = stakeholderService;
 		this.warningService = warningService;
 		this.draftService = draftService;
+		this.normberakningFeeder = normberakningFeeder;
 	}
 
 	/**
@@ -155,25 +181,45 @@ public class FinancialAssistanceService {
 	 * No Lifecare normberäkning is created here — that happens only after a beslut, via {@link #commitNormberakning}.
 	 */
 	public NormberakningResponse prepareNormberakning(final String municipalityId, final String namespace, final NormberakningRequest request) {
+		final var errandId = requireErrandId(request);
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 		final var classifiedIncomes = requireClassifiedIncomes(request);
+		final var errand = repository.findByErrandId(errandId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No financial-assistance errand for id " + errandId));
 
-		final var draft = normberakningService.buildDraft(applicant, applicationMonth, classifiedIncomes);
+		// Compute the fresh process rows for the three sections, then merge them into the editable draft (the merge keeps
+		// the handläggare's values + soft-deletes; only the process columns are refreshed).
+		final var incomeRows = normberakningFeeder.incomeRows(errandId, normberakningService.incomeLines(applicant, classifiedIncomes));
+		final var expenseRows = normberakningFeeder.expenseRows(municipalityId, errandId, errand);
+		final var personRows = normberakningFeeder.personRows(errandId, errand);
+		final var normId = normberakningService.selectNormId(applicant, applicationMonth);
+		final var draftChanges = draftService.refresh(errandId, request.getApplicationMonth(), normId, errand.getNormType(), personRows, incomeRows, expenseRows);
+
+		final var completeness = normberakningService.completeness(applicant, applicationMonth, classifiedIncomes);
+		final var householdWarnings = normberakningFeeder.householdWarnings(personRows, previousHousehold(applicant, applicationMonth));
+
 		final var response = NormberakningResponse.create()
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
 			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of))
-			.withInformationComplete(draft.informationComplete())
-			.withMissingIncomeTypes(draft.missingIncomeTypes());
+			.withInformationComplete(completeness.informationComplete())
+			.withMissingIncomeTypes(completeness.missingIncomeTypes());
 
-		ofNullable(request.getErrandId()).filter(StringUtils::hasText).ifPresent(errandId -> {
-			// Refresh the editable draft (preserved once the handläggare has edited it) — new income then surfaces as a warning.
-			final var newIncome = draftService.refresh(errandId, request.getApplicationMonth(), toDraftIncomeRows(draft.rows()));
-			recordRecommendationOnce(municipalityId, namespace, errandId, response);
-			warningService.reconcileIncomeWarnings(errandId, response.getUnhandledIncomes(), response.getChangeWarnings(), response.getMissingIncomeTypes(), newIncome);
-			applyCompletenessStatus(municipalityId, namespace, errandId, draft.informationComplete());
-		});
+		recordRecommendationOnce(municipalityId, namespace, errandId, response);
+		warningService.reconcileNormberakningWarnings(errandId, response.getUnhandledIncomes(), response.getChangeWarnings(),
+			response.getMissingIncomeTypes(), draftChanges, householdWarnings);
+		applyCompletenessStatus(municipalityId, namespace, errandId, completeness.informationComplete());
 		return response;
+	}
+
+	/** The previous normberäkning household, best-effort — a failed Lifecare read degrades to "no previous household". */
+	private PreviousHousehold previousHousehold(final String applicant, final YearMonth applicationMonth) {
+		try {
+			return normberakningService.previousHousehold(applicant, applicationMonth);
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not read the previous normberäkning household — skipping the household drift check", e);
+			return PreviousHousehold.empty();
+		}
 	}
 
 	/**
@@ -186,10 +232,60 @@ public class FinancialAssistanceService {
 		return draftService.get(errandId);
 	}
 
-	/** Replace the draft's rows with a handläggare's edit; the daily refresh then preserves them. Scoped to the errand. */
-	public NormberakningDraft updateDraft(final String municipalityId, final String namespace, final String errandId, final NormberakningDraft draft) {
+	// --- per-row handläggare edits on the draft (scoped to the errand; touch only handläggare columns / soft-delete) ---
+
+	public NormIncomeRow addDraftIncome(final String municipalityId, final String namespace, final String errandId, final NormIncomeInput input) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return draftService.replace(errandId, draft.getApplicationMonth(), draft.getRows());
+		return draftService.addIncome(errandId, input);
+	}
+
+	public NormIncomeRow patchDraftIncome(final String municipalityId, final String namespace, final String errandId, final String rowId, final NormIncomeInput input) {
+		errandService.readErrand(municipalityId, namespace, errandId);
+		return draftService.patchIncome(errandId, rowId, input);
+	}
+
+	public NormIncomeRow setDraftIncomeDeleted(final String municipalityId, final String namespace, final String errandId, final String rowId, final boolean deleted) {
+		errandService.readErrand(municipalityId, namespace, errandId);
+		return draftService.setIncomeDeleted(errandId, rowId, deleted);
+	}
+
+	public NormExpenseRow addDraftExpense(final String municipalityId, final String namespace, final String errandId, final NormExpenseInput input) {
+		errandService.readErrand(municipalityId, namespace, errandId);
+		return draftService.addExpense(errandId, input);
+	}
+
+	public NormExpenseRow patchDraftExpense(final String municipalityId, final String namespace, final String errandId, final String rowId, final NormExpenseInput input) {
+		errandService.readErrand(municipalityId, namespace, errandId);
+		return draftService.patchExpense(errandId, rowId, input);
+	}
+
+	public NormExpenseRow setDraftExpenseDeleted(final String municipalityId, final String namespace, final String errandId, final String rowId, final boolean deleted) {
+		errandService.readErrand(municipalityId, namespace, errandId);
+		return draftService.setExpenseDeleted(errandId, rowId, deleted);
+	}
+
+	public NormPersonRow addDraftPerson(final String municipalityId, final String namespace, final String errandId, final NormPersonInput input) {
+		errandService.readErrand(municipalityId, namespace, errandId);
+		return draftService.addPerson(errandId, input);
+	}
+
+	public NormPersonRow patchDraftPerson(final String municipalityId, final String namespace, final String errandId, final String rowId, final NormPersonInput input) {
+		errandService.readErrand(municipalityId, namespace, errandId);
+		return draftService.patchPerson(errandId, rowId, input);
+	}
+
+	public NormPersonRow setDraftPersonDeleted(final String municipalityId, final String namespace, final String errandId, final String rowId, final boolean deleted) {
+		errandService.readErrand(municipalityId, namespace, errandId);
+		return draftService.setPersonDeleted(errandId, rowId, deleted);
+	}
+
+	/**
+	 * Create a warning on an errand directly — the careM temp stage, with no Lifecare round-trip. Scoped: throws
+	 * {@code 404} when the errand is missing in this namespace/municipality.
+	 */
+	public Warning createWarning(final String municipalityId, final String namespace, final String errandId, final CreateWarningRequest request) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		return warningService.create(errandId, request.getType(), request.getSourceKey(), request.getMessage());
 	}
 
 	/**
@@ -216,15 +312,19 @@ public class FinancialAssistanceService {
 	 * the daily SSBTEK loop. Returns the created calculation id (plus the completeness verdict for reference).
 	 */
 	public NormberakningResponse commitNormberakning(final String municipalityId, final String namespace, final NormberakningRequest request) {
+		final var errandId = requireErrandId(request);
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
-		final var classifiedIncomes = requireClassifiedIncomes(request);
 
-		// When the handläggare has edited the draft, post the edited rows; otherwise build + post from the classified incomes.
-		final var editedRows = ofNullable(request.getErrandId()).filter(StringUtils::hasText).flatMap(draftService::editedRows);
-		final var calculationId = editedRows.isPresent()
-			? normberakningService.postDraftRows(applicant, applicationMonth, toDraftRows(editedRows.get()))
-			: normberakningService.buildAndPostFromClassified(applicant, applicationMonth, classifiedIncomes).calculationId();
+		// Post the (possibly handläggare-edited) draft to Lifecare: the effective value of each live row, soft-deleted rows
+		// skipped.
+		final var header = draftService.header(errandId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft normberäkning to commit for errand " + errandId));
+		final var incomes = foldEffectiveIncomes(draftService.liveIncomes(errandId));
+		final var expenses = draftService.liveExpenses(errandId).stream().map(FinancialAssistanceService::toEffectiveExpense).toList();
+		final var persons = draftService.livePersons(errandId).stream().map(FinancialAssistanceService::toEffectivePerson).toList();
+
+		final var calculationId = normberakningService.commitEffective(applicant, applicationMonth, header.getNormId(), incomes, expenses, persons);
 
 		return NormberakningResponse.create()
 			.withCalculationId(calculationId)
@@ -232,24 +332,52 @@ public class FinancialAssistanceService {
 			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of));
 	}
 
-	private static List<DraftIncomeRow> toDraftIncomeRows(final List<DraftRow> rows) {
-		return ofNullable(rows).orElseGet(List::of).stream()
-			.map(row -> DraftIncomeRow.create()
-				.withTypeId(row.typeId())
-				.withTypeName(row.typeName())
-				.withApplicantAmount(row.applicantAmount())
-				.withApplicantAmountDate(row.applicantAmountDate())
-				.withCoApplicantAmount(row.coApplicantAmount())
-				.withCoApplicantAmountDate(row.coApplicantAmountDate())
-				.withNote(row.note()))
+	/**
+	 * Fold the per-(type, recipient) live income rows back into one effective FC income per type (applicant +
+	 * co-applicant).
+	 */
+	private static List<EffectiveIncome> foldEffectiveIncomes(final List<FaNormIncomeEntity> rows) {
+		return rows.stream()
+			.filter(row -> row.getTypeId() != null)
+			.collect(groupingBy(FaNormIncomeEntity::getTypeId, LinkedHashMap::new, toList()))
+			.entrySet().stream()
+			.map(entry -> {
+				final var group = entry.getValue();
+				final var applicant = group.stream().filter(row -> RECIPIENT_APPLICANT.equals(row.getRecipient())).findFirst();
+				final var coApplicant = group.stream().filter(row -> RECIPIENT_CO_APPLICANT.equals(row.getRecipient())).findFirst();
+				final var note = group.stream().map(FaNormIncomeEntity::getNote).filter(StringUtils::hasText).findFirst().orElse(null);
+				return new EffectiveIncome(entry.getKey(),
+					applicant.map(FinancialAssistanceService::effectiveIncomeAmount).orElse(null),
+					applicant.map(FinancialAssistanceService::effectiveIncomeDate).orElse(null),
+					coApplicant.map(FinancialAssistanceService::effectiveIncomeAmount).orElse(null),
+					coApplicant.map(FinancialAssistanceService::effectiveIncomeDate).orElse(null),
+					note);
+			})
 			.toList();
 	}
 
-	private static List<DraftRow> toDraftRows(final List<DraftIncomeRow> rows) {
-		return ofNullable(rows).orElseGet(List::of).stream()
-			.map(row -> new DraftRow(row.getTypeId(), row.getTypeName(), row.getApplicantAmount(), row.getApplicantAmountDate(),
-				row.getCoApplicantAmount(), row.getCoApplicantAmountDate(), row.getNote()))
-			.toList();
+	private static Double effectiveIncomeAmount(final FaNormIncomeEntity row) {
+		return ofNullable(DraftService.effectiveAmount(row.getHandlaggareAmount(), row.getProcessAmount())).map(BigDecimal::doubleValue).orElse(null);
+	}
+
+	private static OffsetDateTime effectiveIncomeDate(final FaNormIncomeEntity row) {
+		return row.getHandlaggareAmount() != null ? row.getHandlaggareAmountDate() : row.getProcessAmountDate();
+	}
+
+	private static EffectiveExpense toEffectiveExpense(final FaNormExpenseEntity row) {
+		return new EffectiveExpense(row.getCostType(),
+			ofNullable(row.getAppliedAmount()).map(BigDecimal::doubleValue).orElse(null),
+			ofNullable(DraftService.effectiveAmount(row.getHandlaggareAmount(), row.getProcessAmount())).map(BigDecimal::doubleValue).orElse(null),
+			row.getNote());
+	}
+
+	private static EffectivePerson toEffectivePerson(final FaNormPersonEntity row) {
+		return new EffectivePerson(row.getPartyId(), DraftService.effectiveDays(row.getHandlaggareDays(), row.getProcessDays()));
+	}
+
+	private static String requireErrandId(final NormberakningRequest request) {
+		return ofNullable(request.getErrandId()).filter(StringUtils::hasText)
+			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, "errandId is required for the normberäkning"));
 	}
 
 	private static String requireClassifiedIncomes(final NormberakningRequest request) {

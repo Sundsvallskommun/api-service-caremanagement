@@ -4,10 +4,13 @@ import generated.se.sundsvall.operaton.CorrelationMessageRequest;
 import generated.se.sundsvall.operaton.ProcessDefinitionResponse;
 import generated.se.sundsvall.operaton.ProcessDefinitionsResponse;
 import generated.se.sundsvall.operaton.StartProcessInstanceRequest;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.operaton.integration.OperatonClient;
+import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRequest;
+import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
@@ -58,6 +61,16 @@ public class ProcessService {
 			.messageName(messageName)
 			.businessKey(businessKey)
 			.processVariables(ofNullable(variables).orElseGet(Map::of)));
+	}
+
+	/**
+	 * Evaluate a deployed DMN decision in the engine and return its result rows (one map of output name → value per
+	 * matched rule). Used by type modules to run modeler-editable regelverk — e.g. the normberäkning expense cap — without
+	 * reaching into the Operaton REST client directly. Returns an empty list when the decision produces no rows.
+	 */
+	public List<Map<String, Object>> evaluateDecision(final String municipalityId, final String decisionKey, final Map<String, Object> variables) {
+		final var response = operatonClient.evaluateDecision(municipalityId, decisionKey, new EvaluateDecisionRequest(ofNullable(variables).orElseGet(Map::of)));
+		return ofNullable(response).map(EvaluateDecisionResponse::results).orElseGet(List::of);
 	}
 
 	private String resolveDefinitionKey(final String municipalityId, final String name) {

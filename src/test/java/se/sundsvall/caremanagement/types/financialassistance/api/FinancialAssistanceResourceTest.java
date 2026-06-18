@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -14,11 +15,16 @@ import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.DraftIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeInput;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonInput;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
@@ -199,8 +205,8 @@ class FinancialAssistanceResourceTest {
 	@Test
 	void getDraft() {
 		when(serviceMock.getDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1")))
-			.thenReturn(NormberakningDraft.create().withErrandId("errand-1").withEdited(false)
-				.withRows(List.of(DraftIncomeRow.create().withTypeName("Bostadsbidrag").withApplicantAmount(1850.0))));
+			.thenReturn(NormberakningDraft.create().withErrandId("errand-1")
+				.withIncomes(List.of(NormIncomeRow.create().withTypeName("Bostadsbidrag").withProcessAmount(new BigDecimal("1850")))));
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft").build(base()))
@@ -211,29 +217,114 @@ class FinancialAssistanceResourceTest {
 			.getResponseBody();
 
 		assertThat(response).isNotNull();
-		assertThat(response.getRows()).hasSize(1);
-		assertThat(response.getRows().getFirst().getTypeName()).isEqualTo("Bostadsbidrag");
+		assertThat(response.getIncomes()).hasSize(1);
+		assertThat(response.getIncomes().getFirst().getTypeName()).isEqualTo("Bostadsbidrag");
 		verify(serviceMock).getDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"));
 	}
 
 	@Test
-	void updateDraft() {
-		when(serviceMock.updateDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormberakningDraft.class)))
-			.thenReturn(NormberakningDraft.create().withErrandId("errand-1").withEdited(true));
+	void addDraftIncome() {
+		when(serviceMock.addDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormIncomeInput.class)))
+			.thenReturn(NormIncomeRow.create().withId("r1").withOrigin("HANDLAGGARE"));
 
-		final var response = webTestClient.put()
-			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft").build(base()))
-			.bodyValue(NormberakningDraft.create().withApplicationMonth("2026-06")
-				.withRows(List.of(DraftIncomeRow.create().withTypeName("Bostadsbidrag").withApplicantAmount(2000.0))))
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes").build(base()))
+			.bodyValue(new NormIncomeInput().withTypeId(20).withRecipient("APPLICANT").withHandlaggareAmount(new BigDecimal("3000")))
 			.exchange()
 			.expectStatus().isOk()
-			.expectBody(NormberakningDraft.class)
+			.expectBody(NormIncomeRow.class)
 			.returnResult()
 			.getResponseBody();
 
 		assertThat(response).isNotNull();
-		assertThat(response.isEdited()).isTrue();
-		verify(serviceMock).updateDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormberakningDraft.class));
+		assertThat(response.getId()).isEqualTo("r1");
+		verify(serviceMock).addDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormIncomeInput.class));
+	}
+
+	@Test
+	void patchDraftPerson() {
+		when(serviceMock.patchDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r2"), any(NormPersonInput.class)))
+			.thenReturn(NormPersonRow.create().withId("r2").withHandlaggareDays(15));
+
+		final var response = webTestClient.patch()
+			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/persons/r2").build(base()))
+			.bodyValue(new NormPersonInput().withHandlaggareDays(15))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(NormPersonRow.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getHandlaggareDays()).isEqualTo(15);
+		verify(serviceMock).patchDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r2"), any(NormPersonInput.class));
+	}
+
+	@Test
+	void deleteDraftExpense() {
+		when(serviceMock.setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r9", true))
+			.thenReturn(NormExpenseRow.create().withId("r9").withDeleted(true));
+
+		final var response = webTestClient.delete()
+			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/expenses/r9").build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(NormExpenseRow.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.isDeleted()).isTrue();
+		verify(serviceMock).setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r9", true);
+	}
+
+	@Test
+	void incomeRowRemainingEndpoints() {
+		when(serviceMock.patchDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r1"), any(NormIncomeInput.class))).thenReturn(NormIncomeRow.create().withId("r1"));
+		when(serviceMock.setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", true)).thenReturn(NormIncomeRow.create().withId("r1").withDeleted(true));
+		when(serviceMock.setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", false)).thenReturn(NormIncomeRow.create().withId("r1").withDeleted(false));
+
+		webTestClient.patch().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes/r1").build(base()))
+			.bodyValue(new NormIncomeInput().withHandlaggareAmount(new BigDecimal("1000"))).exchange().expectStatus().isOk();
+		webTestClient.delete().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes/r1").build(base())).exchange().expectStatus().isOk();
+		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes/r1/restore").build(base())).exchange().expectStatus().isOk();
+
+		verify(serviceMock).patchDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r1"), any(NormIncomeInput.class));
+		verify(serviceMock).setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", true);
+		verify(serviceMock).setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", false);
+	}
+
+	@Test
+	void expenseRowRemainingEndpoints() {
+		when(serviceMock.addDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormExpenseInput.class))).thenReturn(NormExpenseRow.create().withId("e1"));
+		when(serviceMock.patchDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("e1"), any(NormExpenseInput.class))).thenReturn(NormExpenseRow.create().withId("e1"));
+		when(serviceMock.setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "e1", false)).thenReturn(NormExpenseRow.create().withId("e1"));
+
+		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/expenses").build(base()))
+			.bodyValue(new NormExpenseInput().withCostType("RENT")).exchange().expectStatus().isOk();
+		webTestClient.patch().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/expenses/e1").build(base()))
+			.bodyValue(new NormExpenseInput().withHandlaggareAmount(new BigDecimal("8000"))).exchange().expectStatus().isOk();
+		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/expenses/e1/restore").build(base())).exchange().expectStatus().isOk();
+
+		verify(serviceMock).addDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormExpenseInput.class));
+		verify(serviceMock).patchDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("e1"), any(NormExpenseInput.class));
+		verify(serviceMock).setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "e1", false);
+	}
+
+	@Test
+	void personRowRemainingEndpoints() {
+		when(serviceMock.addDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormPersonInput.class))).thenReturn(NormPersonRow.create().withId("p1"));
+		when(serviceMock.setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", true)).thenReturn(NormPersonRow.create().withId("p1").withDeleted(true));
+		when(serviceMock.setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", false)).thenReturn(NormPersonRow.create().withId("p1"));
+
+		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/persons").build(base()))
+			.bodyValue(new NormPersonInput().withPartyId("party-1").withRole("CHILD")).exchange().expectStatus().isOk();
+		webTestClient.delete().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/persons/p1").build(base())).exchange().expectStatus().isOk();
+		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/persons/p1/restore").build(base())).exchange().expectStatus().isOk();
+
+		verify(serviceMock).addDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormPersonInput.class));
+		verify(serviceMock).setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", true);
+		verify(serviceMock).setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", false);
 	}
 
 	@Test

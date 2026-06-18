@@ -1,6 +1,8 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationCalculationIncomeTypeDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationExpenseTypeDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationNormDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationServiceDTO;
 import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
@@ -8,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -18,6 +21,10 @@ import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 import tools.jackson.databind.ObjectMapper;
 
@@ -142,5 +149,83 @@ class NormberakningServiceTest {
 		assertThat(captor.getValue().getCalculationIncomes()).hasSize(1);
 		assertThat(captor.getValue().getCalculationIncomes().getFirst().getId()).isEqualTo(20);
 		assertThat(captor.getValue().getCalculationIncomes().getFirst().getApplicantAmount()).isEqualTo(1850.0);
+	}
+
+	@Test
+	void incomeLinesResolvesPerRecipientRows() {
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			bostadsbidrag()
+		});
+		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
+
+		final var lines = service.incomeLines(APPLICANT, "[json]");
+
+		assertThat(lines).singleElement().satisfies(line -> {
+			assertThat(line.typeId()).isEqualTo(20);
+			assertThat(line.typeName()).isEqualTo("Bostadsbidrag");
+			assertThat(line.recipient()).isEqualTo("APPLICANT");
+			assertThat(line.amount()).isEqualByComparingTo("1850");
+		});
+	}
+
+	@Test
+	void completenessReportsMissingPreviousTypes() {
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			bostadsbidrag()
+		});
+		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
+		when(lifecareEbCaseServiceMock.previousNormberakningIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag", "Dagersättning"));
+
+		final var completeness = service.completeness(APPLICANT, MONTH, "[json]");
+
+		assertThat(completeness.informationComplete()).isFalse();
+		assertThat(completeness.missingIncomeTypes()).containsExactly("Dagersättning");
+	}
+
+	@Test
+	void selectNormIdPicksTheNormCoveringTheMonth() {
+		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal()
+			.addNormsItem(new PersonBasedCalculationNormDTO().id(99).fromDate("2026-01-01").toDate("2026-12-31")));
+
+		assertThat(service.selectNormId(APPLICANT, MONTH)).isEqualTo(99);
+	}
+
+	@Test
+	void previousHouseholdDelegatesToLifecare() {
+		final var household = new PreviousHousehold(Set.of("p1", "p2"), 2, 9000.0);
+		when(lifecareEbCaseServiceMock.previousHousehold(APPLICANT, MONTH)).thenReturn(household);
+
+		assertThat(service.previousHousehold(APPLICANT, MONTH)).isSameAs(household);
+	}
+
+	@Test
+	void commitEffectiveAssemblesIncomesExpensesAndPersonsAndPosts() {
+		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal()
+			.addCalculationExpenseTypesItem(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Hyra")));
+		when(lifecareFcIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(5000);
+
+		final var incomes = List.of(new EffectiveIncome(20, 1850.0, null, null, null, "SSBTEK"));
+		final var expenses = List.of(
+			new EffectiveExpense("RENT", 9000.0, 8000.0, null), // resolves to FC id 42
+			new EffectiveExpense("UNMAPPED_NONSENSE", 100.0, 100.0, null)); // skipped (no FC id)
+		final var persons = List.of(new EffectivePerson("p1", 30));
+
+		final var calculationId = service.commitEffective(APPLICANT, MONTH, 7, incomes, expenses, persons);
+
+		assertThat(calculationId).isEqualTo(5000);
+		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
+		verify(lifecareFcIntegrationMock).createCalculation(captor.capture());
+		final var body = captor.getValue();
+		assertThat(body.getNormId()).isEqualTo(7); // override applied
+		assertThat(body.getCalculationIncomes()).singleElement().satisfies(income -> assertThat(income.getId()).isEqualTo(20));
+		assertThat(body.getCalculationExpenses()).singleElement().satisfies(expense -> {
+			assertThat(expense.getId()).isEqualTo(42);
+			assertThat(expense.getAmount()).isEqualTo(9000.0);
+			assertThat(expense.getApprovedAmount()).isEqualTo(8000.0);
+		});
+		assertThat(body.getCalculationPersons()).singleElement().satisfies(person -> {
+			assertThat(person.getPersonId()).isEqualTo("p1");
+			assertThat(person.getNumberOfDays()).isEqualTo(30);
+		});
 	}
 }

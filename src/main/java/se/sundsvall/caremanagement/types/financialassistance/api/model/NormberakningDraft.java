@@ -1,17 +1,20 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
- * The draft normberäkning for an errand — the FC income rows the EB process prepared (no Lifecare write yet) and that a
- * handläggare may edit in Draken before deciding. {@code edited} marks that a handläggare has touched it, after which
- * the daily refresh preserves the rows and surfaces newly-arrived SSBTEK income as a {@code NEW_INCOME} warning.
+ * The full draft normberäkning for an errand — header (month + selected norm), the three sections (personer, inkomster,
+ * utgifter) and the section sums. personer give the norm base, inkomster are subtracted, utgifter added.
  */
-@Schema(description = "The (editable) draft normberäkning — FC income rows, not yet created in Lifecare.")
+@Schema(description = "The full draft normberäkning — header, the three sections (personer, inkomster, utgifter) and the section sums.")
 public class NormberakningDraft {
 
 	@Schema(description = "The errand id", accessMode = Schema.AccessMode.READ_ONLY)
@@ -20,16 +23,33 @@ public class NormberakningDraft {
 	@Schema(description = "The application month (ISO yyyy-MM)", examples = "2026-06")
 	private String applicationMonth;
 
-	@Schema(description = "Whether a handläggare has edited the draft (the daily refresh then preserves the rows)", examples = "false")
-	private boolean edited;
+	@Schema(description = "The selected norm id")
+	private Integer normId;
 
-	@Schema(description = "The income rows")
-	private List<DraftIncomeRow> rows = new ArrayList<>();
+	@Schema(description = "The selected norm type")
+	private String normType;
+
+	@Schema(description = "The person rows (personer)")
+	private List<NormPersonRow> persons = new ArrayList<>();
+
+	@Schema(description = "The income rows (inkomster)")
+	private List<NormIncomeRow> incomes = new ArrayList<>();
+
+	@Schema(description = "The expense rows (utgifter)")
+	private List<NormExpenseRow> expenses = new ArrayList<>();
+
+	@Schema(description = "The sum of the effective income amounts", accessMode = Schema.AccessMode.READ_ONLY)
+	private BigDecimal incomeSum;
+
+	@Schema(description = "The sum of the effective expense amounts", accessMode = Schema.AccessMode.READ_ONLY)
+	private BigDecimal expenseSum;
 
 	@Schema(description = "When the draft was created", accessMode = Schema.AccessMode.READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
 	@Schema(description = "When the draft was last updated", accessMode = Schema.AccessMode.READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime updated;
 
 	public static NormberakningDraft create() {
@@ -62,29 +82,94 @@ public class NormberakningDraft {
 		return this;
 	}
 
-	public boolean isEdited() {
-		return edited;
+	public Integer getNormId() {
+		return normId;
 	}
 
-	public void setEdited(final boolean edited) {
-		this.edited = edited;
+	public void setNormId(final Integer normId) {
+		this.normId = normId;
 	}
 
-	public NormberakningDraft withEdited(final boolean edited) {
-		this.edited = edited;
+	public NormberakningDraft withNormId(final Integer normId) {
+		this.normId = normId;
 		return this;
 	}
 
-	public List<DraftIncomeRow> getRows() {
-		return rows;
+	public String getNormType() {
+		return normType;
 	}
 
-	public void setRows(final List<DraftIncomeRow> rows) {
-		this.rows = rows;
+	public void setNormType(final String normType) {
+		this.normType = normType;
 	}
 
-	public NormberakningDraft withRows(final List<DraftIncomeRow> rows) {
-		this.rows = rows;
+	public NormberakningDraft withNormType(final String normType) {
+		this.normType = normType;
+		return this;
+	}
+
+	public List<NormPersonRow> getPersons() {
+		return persons;
+	}
+
+	public void setPersons(final List<NormPersonRow> persons) {
+		this.persons = persons;
+	}
+
+	public NormberakningDraft withPersons(final List<NormPersonRow> persons) {
+		this.persons = persons;
+		return this;
+	}
+
+	public List<NormIncomeRow> getIncomes() {
+		return incomes;
+	}
+
+	public void setIncomes(final List<NormIncomeRow> incomes) {
+		this.incomes = incomes;
+	}
+
+	public NormberakningDraft withIncomes(final List<NormIncomeRow> incomes) {
+		this.incomes = incomes;
+		return this;
+	}
+
+	public List<NormExpenseRow> getExpenses() {
+		return expenses;
+	}
+
+	public void setExpenses(final List<NormExpenseRow> expenses) {
+		this.expenses = expenses;
+	}
+
+	public NormberakningDraft withExpenses(final List<NormExpenseRow> expenses) {
+		this.expenses = expenses;
+		return this;
+	}
+
+	public BigDecimal getIncomeSum() {
+		return incomeSum;
+	}
+
+	public void setIncomeSum(final BigDecimal incomeSum) {
+		this.incomeSum = incomeSum;
+	}
+
+	public NormberakningDraft withIncomeSum(final BigDecimal incomeSum) {
+		this.incomeSum = incomeSum;
+		return this;
+	}
+
+	public BigDecimal getExpenseSum() {
+		return expenseSum;
+	}
+
+	public void setExpenseSum(final BigDecimal expenseSum) {
+		this.expenseSum = expenseSum;
+	}
+
+	public NormberakningDraft withExpenseSum(final BigDecimal expenseSum) {
+		this.expenseSum = expenseSum;
 		return this;
 	}
 
@@ -119,13 +204,15 @@ public class NormberakningDraft {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final NormberakningDraft that = (NormberakningDraft) o;
-		return edited == that.edited && Objects.equals(errandId, that.errandId) && Objects.equals(applicationMonth, that.applicationMonth)
-			&& Objects.equals(rows, that.rows) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
+		return Objects.equals(errandId, that.errandId) && Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(normId, that.normId)
+			&& Objects.equals(normType, that.normType) && Objects.equals(persons, that.persons) && Objects.equals(incomes, that.incomes)
+			&& Objects.equals(expenses, that.expenses) && Objects.equals(incomeSum, that.incomeSum) && Objects.equals(expenseSum, that.expenseSum)
+			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(errandId, applicationMonth, edited, rows, created, updated);
+		return Objects.hash(errandId, applicationMonth, normId, normType, persons, incomes, expenses, incomeSum, expenseSum, created, updated);
 	}
 
 	@Override
@@ -133,8 +220,13 @@ public class NormberakningDraft {
 		return "NormberakningDraft{" +
 			"errandId='" + errandId + '\'' +
 			", applicationMonth='" + applicationMonth + '\'' +
-			", edited=" + edited +
-			", rows=" + rows +
+			", normId=" + normId +
+			", normType='" + normType + '\'' +
+			", persons=" + persons +
+			", incomes=" + incomes +
+			", expenses=" + expenses +
+			", incomeSum=" + incomeSum +
+			", expenseSum=" + expenseSum +
 			", created=" + created +
 			", updated=" + updated +
 			'}';

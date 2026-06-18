@@ -1,0 +1,55 @@
+package se.sundsvall.caremanagement.types.financialassistance.api.model;
+
+import java.math.BigDecimal;
+import org.junit.jupiter.api.Test;
+
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.AllOf.allOf;
+
+class NormExpenseInputTest {
+
+	@Test
+	void testBean() {
+		assertThat(NormExpenseInput.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
+		final var costType = "rent";
+		final var otherSubType = "other";
+		final var specification = "specification";
+		final var handlaggareAmount = BigDecimal.valueOf(1100.00);
+		final var note = "note";
+
+		final var result = NormExpenseInput.create()
+			.withCostType(costType)
+			.withOtherSubType(otherSubType)
+			.withSpecification(specification)
+			.withHandlaggareAmount(handlaggareAmount)
+			.withNote(note);
+
+		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getCostType()).isEqualTo(costType);
+		assertThat(result.getOtherSubType()).isEqualTo(otherSubType);
+		assertThat(result.getSpecification()).isEqualTo(specification);
+		assertThat(result.getHandlaggareAmount()).isEqualTo(handlaggareAmount);
+		assertThat(result.getNote()).isEqualTo(note);
+	}
+
+	@Test
+	void testNoDirtOnCreatedBean() {
+		assertThat(NormExpenseInput.create()).hasAllNullFieldsOrProperties();
+		assertThat(new NormExpenseInput()).hasAllNullFieldsOrProperties();
+	}
+}
