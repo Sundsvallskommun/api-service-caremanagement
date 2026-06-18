@@ -147,7 +147,10 @@ public class WarningService {
 			.withAutoResolved(false)));
 	}
 
-	/** Acknowledge or close a warning (a handläggare action). Re-opening to OPEN is not allowed. */
+	/**
+	 * Set a warning's status (a handläggare action) — acknowledge, close, or re-open to {@code OPEN} (undo an earlier
+	 * acknowledge/close). Re-opening clears the auto-resolved flag, since it is a manual action.
+	 */
 	@Transactional
 	public Warning updateStatus(final String errandId, final String warningId, final String status) {
 		final var target = validateTargetStatus(status);
@@ -157,8 +160,8 @@ public class WarningService {
 	}
 
 	private static String validateTargetStatus(final String status) {
-		if (!STATUS_ACKNOWLEDGED.equals(status) && !STATUS_CLOSED.equals(status)) {
-			throw Problem.valueOf(BAD_REQUEST, "status must be ACKNOWLEDGED or CLOSED");
+		if (!STATUS_OPEN.equals(status) && !STATUS_ACKNOWLEDGED.equals(status) && !STATUS_CLOSED.equals(status)) {
+			throw Problem.valueOf(BAD_REQUEST, "status must be OPEN, ACKNOWLEDGED or CLOSED");
 		}
 		return status;
 	}

@@ -117,8 +117,20 @@ class WarningServiceTest {
 	}
 
 	@Test
+	void updateStatusReopensToOpen() {
+		final var entity = warning("MISSING_SSBTEK", "Dagersättning", "ACKNOWLEDGED").withCreated(OffsetDateTime.parse("2026-06-01T00:00:00Z"));
+		when(repositoryMock.findByIdAndErrandId("w-Dagersättning", ERRAND_ID)).thenReturn(Optional.of(entity));
+		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.updateStatus(ERRAND_ID, "w-Dagersättning", "OPEN");
+
+		assertThat(result.getStatus()).isEqualTo("OPEN");
+		assertThat(result.isAutoResolved()).isFalse();
+	}
+
+	@Test
 	void updateStatusInvalidTargetYields400() {
-		assertThatThrownBy(() -> service.updateStatus(ERRAND_ID, "w-1", "OPEN"))
+		assertThatThrownBy(() -> service.updateStatus(ERRAND_ID, "w-1", "BOGUS"))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 

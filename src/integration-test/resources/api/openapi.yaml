@@ -2836,9 +2836,9 @@ paths:
     patch:
       tags:
       - Financial Assistance
-      summary: Acknowledge or close an EB income warning
-      description: "A handläggare acknowledges (seen, kept on record) or closes (dismisses)\
-        \ a warning. Re-opening to OPEN is not allowed."
+      summary: Set the status of an EB income warning
+      description: "A handläggare acknowledges (seen, kept on record), closes (dismisses),\
+        \ or re-opens a warning to OPEN (undoing an earlier acknowledge/close)."
       operationId: updateWarning
       parameters:
       - name: municipalityId
@@ -2869,6 +2869,7 @@ paths:
         schema:
           type: string
           enum:
+          - OPEN
           - ACKNOWLEDGED
           - CLOSED
       responses:

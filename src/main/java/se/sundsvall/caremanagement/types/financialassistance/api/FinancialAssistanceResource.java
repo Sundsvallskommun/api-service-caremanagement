@@ -189,8 +189,8 @@ class FinancialAssistanceResource {
 	}
 
 	@PatchMapping(path = "/financial-assistance/{errandId}/warnings/{warningId}", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Acknowledge or close an EB income warning",
-		description = "A handläggare acknowledges (seen, kept on record) or closes (dismisses) a warning. Re-opening to OPEN is not allowed.",
+	@Operation(summary = "Set the status of an EB income warning",
+		description = "A handläggare acknowledges (seen, kept on record), closes (dismisses), or re-opens a warning to OPEN (undoing an earlier acknowledge/close).",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "400", description = "Bad Request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
@@ -202,7 +202,7 @@ class FinancialAssistanceResource {
 		@PathVariable final String errandId,
 		@PathVariable final String warningId,
 		@Parameter(description = "The target status", schema = @Schema(allowableValues = {
-			"ACKNOWLEDGED", "CLOSED"
+			"OPEN", "ACKNOWLEDGED", "CLOSED"
 		})) @RequestParam final String status) {
 
 		return ok(service.updateWarning(municipalityId, namespace, errandId, warningId, status));
