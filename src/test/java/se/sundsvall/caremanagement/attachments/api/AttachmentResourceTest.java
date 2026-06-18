@@ -20,7 +20,9 @@ import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
@@ -62,7 +64,7 @@ class AttachmentResourceTest {
 
 	@Test
 	void readAttachments() {
-		when(serviceMock.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Attachment.create()));
+		when(serviceMock.readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), isNull())).thenReturn(List.of(Attachment.create()));
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -73,7 +75,29 @@ class AttachmentResourceTest {
 			.getResponseBody();
 
 		assertThat(response).isNotNull();
-		verify(serviceMock).readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(serviceMock).readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), isNull());
+	}
+
+	@Test
+	void readAttachmentsFilteredByOrigin() {
+		when(serviceMock.readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CONVERSATION"), isNull())).thenReturn(List.of(Attachment.create()));
+
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH).queryParam("origin", "CONVERSATION").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isOk();
+
+		verify(serviceMock).readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CONVERSATION"), isNull());
+	}
+
+	@Test
+	void readAttachmentsInvalidOriginIsBadRequest() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH).queryParam("origin", "BOGUS").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
 	}
 
 	@Test

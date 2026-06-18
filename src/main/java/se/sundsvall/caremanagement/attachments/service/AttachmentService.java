@@ -126,10 +126,10 @@ public class AttachmentService {
 	/**
 	 * The unified errand document list: the errand's own attachments (application files, generated PDFs, manual
 	 * uploads) merged with the conversation's attachments, each tagged with {@code origin} + {@code senderRole}, oldest
-	 * first.
+	 * first. {@code origin} and {@code senderRole} are optional filters — a null value matches everything.
 	 */
 	@Transactional(readOnly = true)
-	public List<Attachment> readAttachments(final String municipalityId, final String namespace, final String errandId) {
+	public List<Attachment> readAttachments(final String municipalityId, final String namespace, final String errandId, final String origin, final String senderRole) {
 		ensureErrandExists(municipalityId, namespace, errandId);
 
 		final var errandAttachments = toAttachmentList(attachmentRepository.findByErrandId(errandId)).stream();
@@ -137,6 +137,8 @@ public class AttachmentService {
 			.map(AttachmentMapper::toAttachment);
 
 		return Stream.concat(errandAttachments, conversationAttachments)
+			.filter(attachment -> origin == null || origin.equals(attachment.getOrigin()))
+			.filter(attachment -> senderRole == null || senderRole.equals(attachment.getSenderRole()))
 			.sorted(Comparator.comparing(Attachment::getCreated, nullsLast(Comparator.naturalOrder())))
 			.toList();
 	}

@@ -19,11 +19,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.api.model.Attachment;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
+import se.sundsvall.dept44.common.validators.annotation.OneOf;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
@@ -78,15 +80,27 @@ class AttachmentResource {
 	}
 
 	@GetMapping(produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "List attachments", description = "Fetches all attachment metadata for the errand", responses = {
-		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
-	})
+	@Operation(summary = "List attachments",
+		description = "Fetches all attachment metadata for the errand (application files, generated PDFs, manual uploads and conversation attachments), oldest first. Optionally filtered by origin and/or sender role.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
+		})
 	ResponseEntity<List<Attachment>> readAttachments(
 		@Parameter(name = "municipalityId", description = "Municipality id", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,
 		@Parameter(name = "namespace", description = "Namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@Parameter(name = "errandId", description = "Errand id") @ValidUuid @PathVariable final String errandId) {
+		@Parameter(name = "errandId", description = "Errand id") @ValidUuid @PathVariable final String errandId,
+		@Parameter(name = "origin", description = "Only return attachments with this origin", schema = @Schema(allowableValues = {
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND"
+		})) @OneOf(value = {
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND"
+		}, nullable = true) @RequestParam(required = false) final String origin,
+		@Parameter(name = "senderRole", description = "Only return attachments from this sender", schema = @Schema(allowableValues = {
+			"CLIENT", "HANDLAGGARE"
+		})) @OneOf(value = {
+			"CLIENT", "HANDLAGGARE"
+		}, nullable = true) @RequestParam(required = false) final String senderRole) {
 
-		return ok(service.readAttachments(municipalityId, namespace, errandId));
+		return ok(service.readAttachments(municipalityId, namespace, errandId, origin, senderRole));
 	}
 
 	@GetMapping(path = "/{attachmentId}", produces = APPLICATION_JSON_VALUE)

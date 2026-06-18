@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:60386
+- url: http://localhost:61410
   description: Generated server url
 tags:
 - name: Notes
@@ -1456,7 +1456,9 @@ paths:
       tags:
       - Errand attachments
       summary: List attachments
-      description: Fetches all attachment metadata for the errand
+      description: "Fetches all attachment metadata for the errand (application files,\
+        \ generated PDFs, manual uploads and conversation attachments), oldest first.\
+        \ Optionally filtered by origin and/or sender role."
       operationId: readAttachments
       parameters:
       - name: municipalityId
@@ -1480,6 +1482,26 @@ paths:
         required: true
         schema:
           type: string
+      - name: origin
+        in: query
+        description: Only return attachments with this origin
+        required: false
+        schema:
+          type: string
+          enum:
+          - APPLICATION
+          - CONVERSATION
+          - GENERATED
+          - ERRAND
+      - name: senderRole
+        in: query
+        description: Only return attachments from this sender
+        required: false
+        schema:
+          type: string
+          enum:
+          - CLIENT
+          - HANDLAGGARE
       responses:
         "200":
           description: Successful Operation
@@ -3516,10 +3538,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri

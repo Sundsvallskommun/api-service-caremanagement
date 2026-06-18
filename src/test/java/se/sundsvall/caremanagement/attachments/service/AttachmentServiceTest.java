@@ -125,7 +125,7 @@ class AttachmentServiceTest {
 		when(conversationAttachmentQueryServiceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(
 			new ConversationAttachment("conv", "msg-1", "intyg.pdf", "application/pdf", 10, t2, "CLIENT")));
 
-		final var result = service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		final var result = service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, null);
 
 		assertThat(result).extracting(Attachment::getId).containsExactly("app", "conv", "gen");
 		assertThat(result).extracting(Attachment::getOrigin).containsExactly("APPLICATION", "CONVERSATION", "GENERATED");
@@ -141,7 +141,7 @@ class AttachmentServiceTest {
 			AttachmentEntity.create().withId("app").withOrigin("APPLICATION").withCreated(OffsetDateTime.parse("2024-01-01T10:00:00Z"))));
 		when(conversationAttachmentQueryServiceMock.listForErrand(ERRAND_ID)).thenReturn(List.of());
 
-		final var result = service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		final var result = service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, null);
 
 		assertThat(result).extracting(Attachment::getId).containsExactly("app");
 	}
@@ -155,9 +155,43 @@ class AttachmentServiceTest {
 			AttachmentEntity.create().withId("dated").withCreated(OffsetDateTime.parse("2024-01-01T10:00:00Z"))));
 		when(conversationAttachmentQueryServiceMock.listForErrand(ERRAND_ID)).thenReturn(List.of());
 
-		final var result = service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		final var result = service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, null);
 
 		assertThat(result).extracting(Attachment::getId).containsExactly("dated", "no-date");
+	}
+
+	@Test
+	void readAttachmentsFilteredByOriginReturnsOnlyMatching() {
+		final var t1 = OffsetDateTime.parse("2024-01-01T10:00:00Z");
+		final var t2 = OffsetDateTime.parse("2024-01-01T11:00:00Z");
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(attachmentRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			AttachmentEntity.create().withId("app").withOrigin("APPLICATION").withSenderRole("CLIENT").withCreated(t1)));
+		when(conversationAttachmentQueryServiceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(
+			new ConversationAttachment("conv", "msg-1", "intyg.pdf", "application/pdf", 10, t2, "CLIENT")));
+
+		final var result = service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CONVERSATION", null);
+
+		assertThat(result).extracting(Attachment::getId).containsExactly("conv");
+		assertThat(result).extracting(Attachment::getOrigin).containsOnly("CONVERSATION");
+	}
+
+	@Test
+	void readAttachmentsFilteredBySenderRoleReturnsOnlyMatching() {
+		final var t1 = OffsetDateTime.parse("2024-01-01T10:00:00Z");
+		final var t2 = OffsetDateTime.parse("2024-01-01T11:00:00Z");
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(attachmentRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			AttachmentEntity.create().withId("upload").withOrigin("ERRAND").withSenderRole("HANDLAGGARE").withCreated(t1)));
+		when(conversationAttachmentQueryServiceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(
+			new ConversationAttachment("conv", "msg-1", "intyg.pdf", "application/pdf", 10, t2, "CLIENT")));
+
+		final var result = service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, "CLIENT");
+
+		assertThat(result).extracting(Attachment::getId).containsExactly("conv");
+		assertThat(result).extracting(Attachment::getSenderRole).containsOnly("CLIENT");
 	}
 
 	@Test
@@ -165,7 +199,7 @@ class AttachmentServiceTest {
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
 			.thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+		assertThatThrownBy(() -> service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, null))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
