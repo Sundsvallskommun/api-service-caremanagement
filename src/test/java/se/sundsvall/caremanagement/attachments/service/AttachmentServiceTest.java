@@ -121,7 +121,7 @@ class AttachmentServiceTest {
 			.thenReturn(Optional.of(mock(ErrandEntity.class)));
 		when(attachmentRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			AttachmentEntity.create().withId("app").withFileName("ansokan.pdf").withOrigin("APPLICATION").withSenderRole("CLIENT").withCreated(t1),
-			AttachmentEntity.create().withId("gen").withFileName(CLIENT_PDF_FILE_NAME).withOrigin("GENERATED").withSenderRole("CLIENT").withCreated(t3)));
+			AttachmentEntity.create().withId("gen").withFileName("sammanstallning.pdf").withOrigin("GENERATED").withSenderRole("CLIENT").withCreated(t3)));
 		when(conversationAttachmentQueryServiceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(
 			new ConversationAttachment("conv", "msg-1", "intyg.pdf", "application/pdf", 10, t2, "CLIENT")));
 
@@ -210,7 +210,7 @@ class AttachmentServiceTest {
 	void regenerateClientAttachmentPdfInsertsWhenAbsent() {
 		when(conversationAttachmentQueryServiceMock.clientAttachmentContentsForErrand(ERRAND_ID)).thenReturn(List.of(
 			new ConversationAttachmentContent("intyg.pdf", "application/pdf", "%PDF-1.4 minimal".getBytes())));
-		when(attachmentRepositoryMock.findFirstByErrandIdAndFileNameAndOrigin(ERRAND_ID, CLIENT_PDF_FILE_NAME, "GENERATED"))
+		when(attachmentRepositoryMock.findFirstByErrandIdAndFileNameAndOrigin(ERRAND_ID, CLIENT_PDF_FILE_NAME, "CONVERSATION"))
 			.thenReturn(Optional.empty());
 
 		service.regenerateClientAttachmentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
@@ -218,7 +218,7 @@ class AttachmentServiceTest {
 		final ArgumentCaptor<AttachmentEntity> captor = ArgumentCaptor.forClass(AttachmentEntity.class);
 		verify(attachmentRepositoryMock).save(captor.capture());
 		assertThat(captor.getValue().getFileName()).isEqualTo(CLIENT_PDF_FILE_NAME);
-		assertThat(captor.getValue().getOrigin()).isEqualTo("GENERATED");
+		assertThat(captor.getValue().getOrigin()).isEqualTo("CONVERSATION");
 		assertThat(captor.getValue().getSenderRole()).isEqualTo("CLIENT");
 		assertThat(captor.getValue().getMimeType()).isEqualTo("application/pdf");
 		assertThat(captor.getValue().getErrandId()).isEqualTo(ERRAND_ID);
@@ -228,11 +228,11 @@ class AttachmentServiceTest {
 	void regenerateClientAttachmentPdfUpdatesInPlaceWhenPresent() {
 		final var originalBlob = mock(Blob.class);
 		final var existing = AttachmentEntity.create()
-			.withId("existing-id").withErrandId(ERRAND_ID).withFileName(CLIENT_PDF_FILE_NAME).withOrigin("GENERATED")
+			.withId("existing-id").withErrandId(ERRAND_ID).withFileName(CLIENT_PDF_FILE_NAME).withOrigin("CONVERSATION")
 			.withAttachmentData(AttachmentDataEntity.create().withFile(originalBlob));
 		when(conversationAttachmentQueryServiceMock.clientAttachmentContentsForErrand(ERRAND_ID)).thenReturn(List.of(
 			new ConversationAttachmentContent("intyg.pdf", "application/pdf", "%PDF-1.4 minimal".getBytes())));
-		when(attachmentRepositoryMock.findFirstByErrandIdAndFileNameAndOrigin(ERRAND_ID, CLIENT_PDF_FILE_NAME, "GENERATED"))
+		when(attachmentRepositoryMock.findFirstByErrandIdAndFileNameAndOrigin(ERRAND_ID, CLIENT_PDF_FILE_NAME, "CONVERSATION"))
 			.thenReturn(Optional.of(existing));
 
 		service.regenerateClientAttachmentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);

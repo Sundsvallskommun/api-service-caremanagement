@@ -48,6 +48,7 @@ public class AttachmentService {
 
 	/** Attachment origin facet — see the {@code Attachment} schema. */
 	private static final String ORIGIN_APPLICATION = "APPLICATION";
+	private static final String ORIGIN_CONVERSATION = "CONVERSATION";
 	private static final String ORIGIN_GENERATED = "GENERATED";
 	private static final String ORIGIN_ERRAND = "ERRAND";
 	/** Sender-role facet — the application files and the consolidated client PDF are the applicant's. */
@@ -99,9 +100,11 @@ public class AttachmentService {
 
 	/**
 	 * Rebuild the consolidated client-attachment PDF for the errand from all client-sent (INBOUND) conversation
-	 * attachments and store it in place as a single {@code GENERATED} attachment named {@value #CLIENT_PDF_FILE_NAME}.
-	 * Idempotent: if the row already exists its content is overwritten (same id/URL), otherwise it is created — safe to
-	 * call repeatedly (incl. on Modulith event re-delivery). No-op when the client has not sent any attachments yet.
+	 * attachments and store it in place as a single {@code CONVERSATION} attachment named {@value #CLIENT_PDF_FILE_NAME}
+	 * (it consolidates conversation files, so it shares their origin — a {@code ?origin=CONVERSATION} listing returns the
+	 * client's conversation files together with this consolidation). Idempotent: if the row already exists its content is
+	 * overwritten (same id/URL), otherwise it is created — safe to call repeatedly (incl. on Modulith event
+	 * re-delivery). No-op when the client has not sent any attachments yet.
 	 */
 	public void regenerateClientAttachmentPdf(final String municipalityId, final String namespace, final String errandId) {
 		final var contents = conversationAttachmentQueryService.clientAttachmentContentsForErrand(errandId);
@@ -113,9 +116,9 @@ public class AttachmentService {
 			.map(content -> new SourceFile(content.fileName(), content.mimeType(), content.content()))
 			.toList();
 		final var combined = PdfCombiner.combine(sources);
-		final var rebuilt = toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_GENERATED, SENDER_CLIENT, CLIENT_PDF_FILE_NAME, PDF_MIME_TYPE, combined);
+		final var rebuilt = toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_CONVERSATION, SENDER_CLIENT, CLIENT_PDF_FILE_NAME, PDF_MIME_TYPE, combined);
 
-		attachmentRepository.findFirstByErrandIdAndFileNameAndOrigin(errandId, CLIENT_PDF_FILE_NAME, ORIGIN_GENERATED)
+		attachmentRepository.findFirstByErrandIdAndFileNameAndOrigin(errandId, CLIENT_PDF_FILE_NAME, ORIGIN_CONVERSATION)
 			.ifPresentOrElse(existing -> {
 				existing.getAttachmentData().setFile(rebuilt.getAttachmentData().getFile());
 				existing.setFileSize(rebuilt.getFileSize());
