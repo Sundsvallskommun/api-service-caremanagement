@@ -10,7 +10,7 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 
 /**
  * What a handläggare sends to add a new income row (origin HANDLAGGARE) or patch an existing one — only the handläggare
- * amount + note are honoured on a patch.
+ * amounts (applicant/co-applicant sides) + note are honoured on a patch.
  */
 @Schema(description = "What a handläggare sends to add or patch an income row (identity + handläggare-writable fields only).")
 public class NormIncomeInput {
@@ -21,17 +21,19 @@ public class NormIncomeInput {
 	@Schema(description = "The FC income-type name", examples = "Bostadsbidrag")
 	private String typeName;
 
-	@Schema(description = "Whose income this is", allowableValues = {
-		"APPLICANT", "CO_APPLICANT"
-	})
-	private String recipient;
+	@Schema(description = "The amount the handläggare decided for the applicant", examples = "1900.00")
+	private BigDecimal applicantHandlaggareAmount;
 
-	@Schema(description = "The amount the handläggare decided", examples = "1900.00")
-	private BigDecimal handlaggareAmount;
-
-	@Schema(description = "The date the handläggare amount is attributed to")
+	@Schema(description = "The date the applicant amount is attributed to")
 	@DateTimeFormat(iso = DATE_TIME)
-	private OffsetDateTime handlaggareAmountDate;
+	private OffsetDateTime applicantAmountDate;
+
+	@Schema(description = "The amount the handläggare decided for the co-applicant", examples = "1900.00")
+	private BigDecimal coapplicantHandlaggareAmount;
+
+	@Schema(description = "The date the co-applicant amount is attributed to")
+	@DateTimeFormat(iso = DATE_TIME)
+	private OffsetDateTime coapplicantAmountDate;
 
 	@Schema(description = "Free-text note")
 	private String note;
@@ -66,42 +68,55 @@ public class NormIncomeInput {
 		return this;
 	}
 
-	public String getRecipient() {
-		return recipient;
+	public BigDecimal getApplicantHandlaggareAmount() {
+		return applicantHandlaggareAmount;
 	}
 
-	public void setRecipient(final String recipient) {
-		this.recipient = recipient;
+	public void setApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
+		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
 	}
 
-	public NormIncomeInput withRecipient(final String recipient) {
-		this.recipient = recipient;
+	public NormIncomeInput withApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
+		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
 		return this;
 	}
 
-	public BigDecimal getHandlaggareAmount() {
-		return handlaggareAmount;
+	public OffsetDateTime getApplicantAmountDate() {
+		return applicantAmountDate;
 	}
 
-	public void setHandlaggareAmount(final BigDecimal handlaggareAmount) {
-		this.handlaggareAmount = handlaggareAmount;
+	public void setApplicantAmountDate(final OffsetDateTime applicantAmountDate) {
+		this.applicantAmountDate = applicantAmountDate;
 	}
 
-	public NormIncomeInput withHandlaggareAmount(final BigDecimal handlaggareAmount) {
-		this.handlaggareAmount = handlaggareAmount;
+	public NormIncomeInput withApplicantAmountDate(final OffsetDateTime applicantAmountDate) {
+		this.applicantAmountDate = applicantAmountDate;
 		return this;
 	}
 
-	public OffsetDateTime getHandlaggareAmountDate() {
-		return handlaggareAmountDate;
+	public BigDecimal getCoapplicantHandlaggareAmount() {
+		return coapplicantHandlaggareAmount;
 	}
 
-	public void setHandlaggareAmountDate(final OffsetDateTime handlaggareAmountDate) {
-		this.handlaggareAmountDate = handlaggareAmountDate;
+	public void setCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
+		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
 	}
 
-	public NormIncomeInput withHandlaggareAmountDate(final OffsetDateTime handlaggareAmountDate) {
-		this.handlaggareAmountDate = handlaggareAmountDate;
+	public NormIncomeInput withCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
+		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
+		return this;
+	}
+
+	public OffsetDateTime getCoapplicantAmountDate() {
+		return coapplicantAmountDate;
+	}
+
+	public void setCoapplicantAmountDate(final OffsetDateTime coapplicantAmountDate) {
+		this.coapplicantAmountDate = coapplicantAmountDate;
+	}
+
+	public NormIncomeInput withCoapplicantAmountDate(final OffsetDateTime coapplicantAmountDate) {
+		this.coapplicantAmountDate = coapplicantAmountDate;
 		return this;
 	}
 
@@ -123,14 +138,15 @@ public class NormIncomeInput {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final NormIncomeInput that = (NormIncomeInput) o;
-		return Objects.equals(typeId, that.typeId) && Objects.equals(typeName, that.typeName) && Objects.equals(recipient, that.recipient)
-			&& Objects.equals(handlaggareAmount, that.handlaggareAmount) && Objects.equals(handlaggareAmountDate, that.handlaggareAmountDate)
+		return Objects.equals(typeId, that.typeId) && Objects.equals(typeName, that.typeName)
+			&& Objects.equals(applicantHandlaggareAmount, that.applicantHandlaggareAmount) && Objects.equals(applicantAmountDate, that.applicantAmountDate)
+			&& Objects.equals(coapplicantHandlaggareAmount, that.coapplicantHandlaggareAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate)
 			&& Objects.equals(note, that.note);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(typeId, typeName, recipient, handlaggareAmount, handlaggareAmountDate, note);
+		return Objects.hash(typeId, typeName, applicantHandlaggareAmount, applicantAmountDate, coapplicantHandlaggareAmount, coapplicantAmountDate, note);
 	}
 
 	@Override
@@ -138,9 +154,10 @@ public class NormIncomeInput {
 		return "NormIncomeInput{" +
 			"typeId=" + typeId +
 			", typeName='" + typeName + '\'' +
-			", recipient='" + recipient + '\'' +
-			", handlaggareAmount=" + handlaggareAmount +
-			", handlaggareAmountDate=" + handlaggareAmountDate +
+			", applicantHandlaggareAmount=" + applicantHandlaggareAmount +
+			", applicantAmountDate=" + applicantAmountDate +
+			", coapplicantHandlaggareAmount=" + coapplicantHandlaggareAmount +
+			", coapplicantAmountDate=" + coapplicantAmountDate +
 			", note='" + note + '\'' +
 			'}';
 	}

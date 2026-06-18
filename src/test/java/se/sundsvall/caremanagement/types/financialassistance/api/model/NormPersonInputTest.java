@@ -1,5 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
@@ -29,6 +31,11 @@ class NormPersonInputTest {
 		final var role = "APPLICANT";
 		final var name = "name";
 		final var handlaggareDays = 15;
+		final var included = true;
+		final var deviationFromDate = LocalDate.of(2026, 6, 1);
+		final var deviationToDate = LocalDate.of(2026, 6, 15);
+		final var normInterval = "MONTH";
+		final var jobbstimulansAmount = BigDecimal.valueOf(1000.00);
 		final var note = "note";
 
 		final var result = NormPersonInput.create()
@@ -36,6 +43,11 @@ class NormPersonInputTest {
 			.withRole(role)
 			.withName(name)
 			.withHandlaggareDays(handlaggareDays)
+			.withIncluded(included)
+			.withDeviationFromDate(deviationFromDate)
+			.withDeviationToDate(deviationToDate)
+			.withNormInterval(normInterval)
+			.withJobbstimulansAmount(jobbstimulansAmount)
 			.withNote(note);
 
 		assertThat(result).hasNoNullFieldsOrProperties();
@@ -43,6 +55,11 @@ class NormPersonInputTest {
 		assertThat(result.getRole()).isEqualTo(role);
 		assertThat(result.getName()).isEqualTo(name);
 		assertThat(result.getHandlaggareDays()).isEqualTo(handlaggareDays);
+		assertThat(result.getIncluded()).isEqualTo(included);
+		assertThat(result.getDeviationFromDate()).isEqualTo(deviationFromDate);
+		assertThat(result.getDeviationToDate()).isEqualTo(deviationToDate);
+		assertThat(result.getNormInterval()).isEqualTo(normInterval);
+		assertThat(result.getJobbstimulansAmount()).isEqualTo(jobbstimulansAmount);
 		assertThat(result.getNote()).isEqualTo(note);
 	}
 

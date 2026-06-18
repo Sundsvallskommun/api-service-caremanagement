@@ -1,9 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 import java.time.YearMonth;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -26,6 +24,7 @@ import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
+import se.sundsvall.caremanagement.lifecare.service.model.NormberakningHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
@@ -36,6 +35,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Financial
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonInput;
@@ -54,7 +54,6 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -62,8 +61,6 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_KOMPLETTERING;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_VANTAR_PA_BESLUT;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.applicationTypeForSlug;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.RECIPIENT_APPLICANT;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.RECIPIENT_CO_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toEntity;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toStakeholders;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toView;
@@ -232,6 +229,12 @@ public class FinancialAssistanceService {
 		return draftService.get(errandId);
 	}
 
+	/** Handläggare edit of the draft header — norm, calculation dates and custom household size (Gemensamma kostnader). */
+	public NormberakningDraft patchDraftHeader(final String municipalityId, final String namespace, final String errandId, final NormHeaderInput input) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		return draftService.patchHeader(errandId, input);
+	}
+
 	// --- per-row handläggare edits on the draft (scoped to the errand; touch only handläggare columns / soft-delete) ---
 
 	public NormIncomeRow addDraftIncome(final String municipalityId, final String namespace, final String errandId, final NormIncomeInput input) {
@@ -320,11 +323,13 @@ public class FinancialAssistanceService {
 		// skipped.
 		final var header = draftService.header(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft normberäkning to commit for errand " + errandId));
-		final var incomes = foldEffectiveIncomes(draftService.liveIncomes(errandId));
+		final var incomes = draftService.liveIncomes(errandId).stream().map(FinancialAssistanceService::toEffectiveIncome).toList();
 		final var expenses = draftService.liveExpenses(errandId).stream().map(FinancialAssistanceService::toEffectiveExpense).toList();
 		final var persons = draftService.livePersons(errandId).stream().map(FinancialAssistanceService::toEffectivePerson).toList();
 
-		final var calculationId = normberakningService.commitEffective(applicant, applicationMonth, header.getNormId(), incomes, expenses, persons);
+		final var normberakningHeader = new NormberakningHeader(header.getNormId(), header.getCalculationFromDate(), header.getCalculationToDate(),
+			header.getCalculationDate(), header.getHasCustomHouseholdSize(), header.getHouseholdSize());
+		final var calculationId = normberakningService.commitEffective(applicant, applicationMonth, normberakningHeader, incomes, expenses, persons);
 
 		return NormberakningResponse.create()
 			.withCalculationId(calculationId)
@@ -332,47 +337,28 @@ public class FinancialAssistanceService {
 			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of));
 	}
 
-	/**
-	 * Fold the per-(type, recipient) live income rows back into one effective FC income per type (applicant +
-	 * co-applicant).
-	 */
-	private static List<EffectiveIncome> foldEffectiveIncomes(final List<FaNormIncomeEntity> rows) {
-		return rows.stream()
-			.filter(row -> row.getTypeId() != null)
-			.collect(groupingBy(FaNormIncomeEntity::getTypeId, LinkedHashMap::new, toList()))
-			.entrySet().stream()
-			.map(entry -> {
-				final var group = entry.getValue();
-				final var applicant = group.stream().filter(row -> RECIPIENT_APPLICANT.equals(row.getRecipient())).findFirst();
-				final var coApplicant = group.stream().filter(row -> RECIPIENT_CO_APPLICANT.equals(row.getRecipient())).findFirst();
-				final var note = group.stream().map(FaNormIncomeEntity::getNote).filter(StringUtils::hasText).findFirst().orElse(null);
-				return new EffectiveIncome(entry.getKey(),
-					applicant.map(FinancialAssistanceService::effectiveIncomeAmount).orElse(null),
-					applicant.map(FinancialAssistanceService::effectiveIncomeDate).orElse(null),
-					coApplicant.map(FinancialAssistanceService::effectiveIncomeAmount).orElse(null),
-					coApplicant.map(FinancialAssistanceService::effectiveIncomeDate).orElse(null),
-					note);
-			})
-			.toList();
-	}
-
-	private static Double effectiveIncomeAmount(final FaNormIncomeEntity row) {
-		return ofNullable(DraftService.effectiveAmount(row.getHandlaggareAmount(), row.getProcessAmount())).map(BigDecimal::doubleValue).orElse(null);
-	}
-
-	private static OffsetDateTime effectiveIncomeDate(final FaNormIncomeEntity row) {
-		return row.getHandlaggareAmount() != null ? row.getHandlaggareAmountDate() : row.getProcessAmountDate();
+	/** One live income row → its effective FC income (sökande + medsökande effective amounts), ready to post. */
+	private static EffectiveIncome toEffectiveIncome(final FaNormIncomeEntity row) {
+		return new EffectiveIncome(row.getTypeId(),
+			effectiveDouble(row.getApplicantHandlaggareAmount(), row.getApplicantProcessAmount()), row.getApplicantAmountDate(),
+			effectiveDouble(row.getCoapplicantHandlaggareAmount(), row.getCoapplicantProcessAmount()), row.getCoapplicantAmountDate(),
+			row.getNote());
 	}
 
 	private static EffectiveExpense toEffectiveExpense(final FaNormExpenseEntity row) {
-		return new EffectiveExpense(row.getCostType(),
+		return new EffectiveExpense(row.getCostType(), row.getBucket(),
 			ofNullable(row.getAppliedAmount()).map(BigDecimal::doubleValue).orElse(null),
-			ofNullable(DraftService.effectiveAmount(row.getHandlaggareAmount(), row.getProcessAmount())).map(BigDecimal::doubleValue).orElse(null),
+			effectiveDouble(row.getHandlaggareAmount(), row.getProcessAmount()),
 			row.getNote());
 	}
 
 	private static EffectivePerson toEffectivePerson(final FaNormPersonEntity row) {
-		return new EffectivePerson(row.getPartyId(), DraftService.effectiveDays(row.getHandlaggareDays(), row.getProcessDays()));
+		return new EffectivePerson(row.getPartyId(), DraftService.effectiveDays(row.getHandlaggareDays(), row.getProcessDays()),
+			row.getDeviationFromDate(), row.getDeviationToDate());
+	}
+
+	private static Double effectiveDouble(final BigDecimal handlaggareAmount, final BigDecimal processAmount) {
+		return ofNullable(DraftService.effectiveAmount(handlaggareAmount, processAmount)).map(BigDecimal::doubleValue).orElse(null);
 	}
 
 	private static String requireErrandId(final NormberakningRequest request) {

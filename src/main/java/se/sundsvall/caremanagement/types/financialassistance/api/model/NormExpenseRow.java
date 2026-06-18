@@ -26,6 +26,11 @@ public class NormExpenseRow {
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String origin;
 
+	@Schema(description = "Which Lifecare bucket the expense posts to", allowableValues = {
+		"EXPENSE", "SPECIAL_EXPENSE"
+	}, accessMode = Schema.AccessMode.READ_ONLY)
+	private String bucket;
+
 	@Schema(description = "The cost type", accessMode = Schema.AccessMode.READ_ONLY)
 	private String costType;
 
@@ -88,6 +93,19 @@ public class NormExpenseRow {
 
 	public NormExpenseRow withOrigin(final String origin) {
 		this.origin = origin;
+		return this;
+	}
+
+	public String getBucket() {
+		return bucket;
+	}
+
+	public void setBucket(final String bucket) {
+		this.bucket = bucket;
+	}
+
+	public NormExpenseRow withBucket(final String bucket) {
+		this.bucket = bucket;
 		return this;
 	}
 
@@ -239,8 +257,9 @@ public class NormExpenseRow {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final NormExpenseRow that = (NormExpenseRow) o;
-		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(origin, that.origin) && Objects.equals(costType, that.costType)
-			&& Objects.equals(otherSubType, that.otherSubType) && Objects.equals(specification, that.specification) && Objects.equals(appliedAmount, that.appliedAmount)
+		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(origin, that.origin) && Objects.equals(bucket, that.bucket)
+			&& Objects.equals(costType, that.costType) && Objects.equals(otherSubType, that.otherSubType) && Objects.equals(specification, that.specification)
+			&& Objects.equals(appliedAmount, that.appliedAmount)
 			&& Objects.equals(processAmount, that.processAmount) && Objects.equals(handlaggareAmount, that.handlaggareAmount)
 			&& Objects.equals(effectiveAmount, that.effectiveAmount) && Objects.equals(note, that.note) && Objects.equals(created, that.created)
 			&& Objects.equals(updated, that.updated);
@@ -248,8 +267,8 @@ public class NormExpenseRow {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, costType, otherSubType, specification, appliedAmount, processAmount, handlaggareAmount, effectiveAmount, deleted, note, created,
-			updated);
+		return Objects.hash(id, origin, bucket, costType, otherSubType, specification, appliedAmount, processAmount, handlaggareAmount, effectiveAmount, deleted, note,
+			created, updated);
 	}
 
 	@Override
@@ -257,6 +276,7 @@ public class NormExpenseRow {
 		return "NormExpenseRow{" +
 			"id='" + id + '\'' +
 			", origin='" + origin + '\'' +
+			", bucket='" + bucket + '\'' +
 			", costType='" + costType + '\'' +
 			", otherSubType='" + otherSubType + '\'' +
 			", specification='" + specification + '\'' +

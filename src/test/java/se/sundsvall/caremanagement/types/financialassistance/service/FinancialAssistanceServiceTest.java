@@ -26,12 +26,14 @@ import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.NormberakningHeader;
 import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningDraft;
@@ -63,7 +65,6 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_INKOMMEN;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.RECIPIENT_APPLICANT;
 
 @ExtendWith(MockitoExtension.class)
 class FinancialAssistanceServiceTest {
@@ -281,10 +282,10 @@ class FinancialAssistanceServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.of(FaNormberakningDraftEntity.create().withErrandId(ERRAND_ID).withNormId(7)));
 		when(draftServiceMock.liveIncomes(ERRAND_ID)).thenReturn(List.of(
-			FaNormIncomeEntity.create().withTypeId(20).withRecipient(RECIPIENT_APPLICANT).withProcessAmount(new BigDecimal("1000")).withHandlaggareAmount(new BigDecimal("1100"))));
+			FaNormIncomeEntity.create().withTypeId(20).withApplicantProcessAmount(new BigDecimal("1000")).withApplicantHandlaggareAmount(new BigDecimal("1100"))));
 		when(draftServiceMock.liveExpenses(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
 		when(draftServiceMock.livePersons(ERRAND_ID)).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
-		when(normberakningServiceMock.commitEffective(eq("199001011234"), eq(month), eq(7), any(), any(), any())).thenReturn(4712);
+		when(normberakningServiceMock.commitEffective(eq("199001011234"), eq(month), any(NormberakningHeader.class), any(), any(), any())).thenReturn(4712);
 
 		final var request = NormberakningRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID)
@@ -297,7 +298,7 @@ class FinancialAssistanceServiceTest {
 		assertThat(response.getChangeWarnings()).containsExactly("Bostadsbidrag: -23%");
 
 		final ArgumentCaptor<List<EffectiveIncome>> incomeCaptor = ArgumentCaptor.captor();
-		verify(normberakningServiceMock).commitEffective(eq("199001011234"), eq(month), eq(7), incomeCaptor.capture(), any(), any());
+		verify(normberakningServiceMock).commitEffective(eq("199001011234"), eq(month), any(NormberakningHeader.class), incomeCaptor.capture(), any(), any());
 		assertThat(incomeCaptor.getValue()).singleElement().satisfies(income -> {
 			assertThat(income.typeId()).isEqualTo(20);
 			assertThat(income.applicantAmount()).isEqualTo(1100.0); // handläggare value wins over the process value
@@ -449,10 +450,20 @@ class FinancialAssistanceServiceTest {
 	}
 
 	@Test
+	void patchDraftHeaderScopeChecksThenDelegates() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
+		final var draft = NormberakningDraft.create().withNormId(5);
+		when(draftServiceMock.patchHeader(eq(ERRAND_ID), any(NormHeaderInput.class))).thenReturn(draft);
+
+		assertThat(service.patchDraftHeader(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new NormHeaderInput().withHouseholdSize(1))).isSameAs(draft);
+		verify(draftServiceMock).patchHeader(eq(ERRAND_ID), any(NormHeaderInput.class));
+	}
+
+	@Test
 	void perRowDraftEditsScopeCheckThenDelegate() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
 		final var row = NormIncomeRow.create().withId("r1");
-		final var input = new NormIncomeInput().withTypeId(20).withRecipient(RECIPIENT_APPLICANT);
+		final var input = new NormIncomeInput().withTypeId(20);
 		when(draftServiceMock.addIncome(eq(ERRAND_ID), any())).thenReturn(row);
 		when(draftServiceMock.patchIncome(eq(ERRAND_ID), eq("r1"), any())).thenReturn(row);
 		when(draftServiceMock.setIncomeDeleted(ERRAND_ID, "r1", true)).thenReturn(row);

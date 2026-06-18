@@ -42,6 +42,9 @@ public class FaNormExpenseEntity {
 	@Column(name = "origin")
 	private String origin;
 
+	@Column(name = "bucket")
+	private String bucket;
+
 	@Column(name = "cost_type")
 	private String costType;
 
@@ -126,6 +129,19 @@ public class FaNormExpenseEntity {
 
 	public FaNormExpenseEntity withOrigin(final String origin) {
 		this.origin = origin;
+		return this;
+	}
+
+	public String getBucket() {
+		return bucket;
+	}
+
+	public void setBucket(final String bucket) {
+		this.bucket = bucket;
+	}
+
+	public FaNormExpenseEntity withBucket(final String bucket) {
+		this.bucket = bucket;
 		return this;
 	}
 
@@ -265,7 +281,8 @@ public class FaNormExpenseEntity {
 			return false;
 		final FaNormExpenseEntity that = (FaNormExpenseEntity) o;
 		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(origin, that.origin)
-			&& Objects.equals(costType, that.costType) && Objects.equals(otherSubType, that.otherSubType) && Objects.equals(specification, that.specification)
+			&& Objects.equals(bucket, that.bucket) && Objects.equals(costType, that.costType) && Objects.equals(otherSubType, that.otherSubType)
+			&& Objects.equals(specification, that.specification)
 			&& Objects.equals(appliedAmount, that.appliedAmount) && Objects.equals(processAmount, that.processAmount)
 			&& Objects.equals(handlaggareAmount, that.handlaggareAmount) && Objects.equals(note, that.note) && Objects.equals(created, that.created)
 			&& Objects.equals(updated, that.updated);
@@ -273,7 +290,7 @@ public class FaNormExpenseEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, origin, costType, otherSubType, specification, appliedAmount, processAmount, handlaggareAmount, deleted, note, created,
+		return Objects.hash(id, errandId, origin, bucket, costType, otherSubType, specification, appliedAmount, processAmount, handlaggareAmount, deleted, note, created,
 			updated);
 	}
 
@@ -283,6 +300,7 @@ public class FaNormExpenseEntity {
 			"id='" + id + '\'' +
 			", errandId='" + errandId + '\'' +
 			", origin='" + origin + '\'' +
+			", bucket='" + bucket + '\'' +
 			", costType='" + costType + '\'' +
 			", otherSubType='" + otherSubType + '\'' +
 			", specification='" + specification + '\'' +

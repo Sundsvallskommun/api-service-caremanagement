@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
@@ -35,6 +36,21 @@ public class FaNormberakningDraftEntity {
 
 	@Column(name = "norm_type")
 	private String normType;
+
+	@Column(name = "calculation_from_date")
+	private LocalDate calculationFromDate;
+
+	@Column(name = "calculation_to_date")
+	private LocalDate calculationToDate;
+
+	@Column(name = "calculation_date")
+	private LocalDate calculationDate;
+
+	@Column(name = "has_custom_household_size")
+	private Boolean hasCustomHouseholdSize;
+
+	@Column(name = "household_size")
+	private Integer householdSize;
 
 	@Column(name = "created")
 	@TimeZoneStorage(NORMALIZE)
@@ -112,6 +128,71 @@ public class FaNormberakningDraftEntity {
 		return this;
 	}
 
+	public LocalDate getCalculationFromDate() {
+		return calculationFromDate;
+	}
+
+	public void setCalculationFromDate(final LocalDate calculationFromDate) {
+		this.calculationFromDate = calculationFromDate;
+	}
+
+	public FaNormberakningDraftEntity withCalculationFromDate(final LocalDate calculationFromDate) {
+		this.calculationFromDate = calculationFromDate;
+		return this;
+	}
+
+	public LocalDate getCalculationToDate() {
+		return calculationToDate;
+	}
+
+	public void setCalculationToDate(final LocalDate calculationToDate) {
+		this.calculationToDate = calculationToDate;
+	}
+
+	public FaNormberakningDraftEntity withCalculationToDate(final LocalDate calculationToDate) {
+		this.calculationToDate = calculationToDate;
+		return this;
+	}
+
+	public LocalDate getCalculationDate() {
+		return calculationDate;
+	}
+
+	public void setCalculationDate(final LocalDate calculationDate) {
+		this.calculationDate = calculationDate;
+	}
+
+	public FaNormberakningDraftEntity withCalculationDate(final LocalDate calculationDate) {
+		this.calculationDate = calculationDate;
+		return this;
+	}
+
+	public Boolean getHasCustomHouseholdSize() {
+		return hasCustomHouseholdSize;
+	}
+
+	public void setHasCustomHouseholdSize(final Boolean hasCustomHouseholdSize) {
+		this.hasCustomHouseholdSize = hasCustomHouseholdSize;
+	}
+
+	public FaNormberakningDraftEntity withHasCustomHouseholdSize(final Boolean hasCustomHouseholdSize) {
+		this.hasCustomHouseholdSize = hasCustomHouseholdSize;
+		return this;
+	}
+
+	public Integer getHouseholdSize() {
+		return householdSize;
+	}
+
+	public void setHouseholdSize(final Integer householdSize) {
+		this.householdSize = householdSize;
+	}
+
+	public FaNormberakningDraftEntity withHouseholdSize(final Integer householdSize) {
+		this.householdSize = householdSize;
+		return this;
+	}
+
 	public OffsetDateTime getCreated() {
 		return created;
 	}
@@ -145,12 +226,15 @@ public class FaNormberakningDraftEntity {
 		final FaNormberakningDraftEntity that = (FaNormberakningDraftEntity) o;
 		return Objects.equals(errandId, that.errandId) && Objects.equals(applicationMonth, that.applicationMonth)
 			&& Objects.equals(normId, that.normId) && Objects.equals(normType, that.normType)
-			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
+			&& Objects.equals(calculationFromDate, that.calculationFromDate) && Objects.equals(calculationToDate, that.calculationToDate)
+			&& Objects.equals(calculationDate, that.calculationDate) && Objects.equals(hasCustomHouseholdSize, that.hasCustomHouseholdSize)
+			&& Objects.equals(householdSize, that.householdSize) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(errandId, applicationMonth, normId, normType, created, updated);
+		return Objects.hash(errandId, applicationMonth, normId, normType, calculationFromDate, calculationToDate, calculationDate, hasCustomHouseholdSize, householdSize,
+			created, updated);
 	}
 
 	@Override
@@ -160,6 +244,11 @@ public class FaNormberakningDraftEntity {
 			", applicationMonth='" + applicationMonth + '\'' +
 			", normId=" + normId +
 			", normType='" + normType + '\'' +
+			", calculationFromDate=" + calculationFromDate +
+			", calculationToDate=" + calculationToDate +
+			", calculationDate=" + calculationDate +
+			", hasCustomHouseholdSize=" + hasCustomHouseholdSize +
+			", householdSize=" + householdSize +
 			", created=" + created +
 			", updated=" + updated +
 			'}';

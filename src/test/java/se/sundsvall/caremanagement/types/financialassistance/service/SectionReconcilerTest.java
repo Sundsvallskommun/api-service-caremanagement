@@ -12,7 +12,6 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import static org.assertj.core.api.Assertions.assertThat;
 import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.ORIGIN_HANDLAGGARE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.ORIGIN_SYSTEM;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.RECIPIENT_APPLICANT;
 
 /**
  * The normberäkning merge invariant — the heart of the process-vs-handläggare ownership design. Exercised over income
@@ -20,13 +19,13 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Norm
  */
 class SectionReconcilerTest {
 
-	private static final Function<FaNormIncomeEntity, String> KEY = entity -> entity.getTypeId() + "|" + entity.getRecipient();
+	private static final Function<FaNormIncomeEntity, String> KEY = entity -> String.valueOf(entity.getTypeId());
 	private static final Predicate<FaNormIncomeEntity> IS_SYSTEM = entity -> ORIGIN_SYSTEM.equals(entity.getOrigin());
 	private static final BiConsumer<FaNormIncomeEntity, FaNormIncomeEntity> COPY_PROCESS = (target, fresh) -> {
-		target.setProcessAmount(fresh.getProcessAmount());
+		target.setApplicantProcessAmount(fresh.getApplicantProcessAmount());
 		target.setTypeName(fresh.getTypeName());
 	};
-	private static final Function<FaNormIncomeEntity, String> LABEL = entity -> entity.getTypeName() + " (" + entity.getRecipient() + ")";
+	private static final Function<FaNormIncomeEntity, String> LABEL = FaNormIncomeEntity::getTypeName;
 
 	private final List<FaNormIncomeEntity> persisted = new ArrayList<>();
 
@@ -40,22 +39,22 @@ class SectionReconcilerTest {
 
 		final var diff = reconcile(List.of(), List.of(fresh));
 
-		assertThat(diff.added()).containsExactly("Bostadsbidrag (APPLICANT)");
+		assertThat(diff.added()).containsExactly("Bostadsbidrag");
 		assertThat(diff.dropped()).isEmpty();
 		assertThat(persisted).containsExactly(fresh);
 	}
 
 	@Test
 	void matchedSystemRowRefreshesTheProcessColumnAndPreservesTheHandlaggareValue() {
-		final var existing = systemRow(20, "Bostadsbidrag", "1850").withHandlaggareAmount(new BigDecimal("1900")).withNote("ok");
+		final var existing = systemRow(20, "Bostadsbidrag", "1850").withApplicantHandlaggareAmount(new BigDecimal("1900")).withNote("ok");
 		final var fresh = systemRow(20, "Bostadsbidrag", "2000");
 
 		final var diff = reconcile(new ArrayList<>(List.of(existing)), List.of(fresh));
 
 		assertThat(diff.added()).isEmpty();
 		assertThat(diff.dropped()).isEmpty();
-		assertThat(existing.getProcessAmount()).isEqualByComparingTo("2000"); // process refreshed
-		assertThat(existing.getHandlaggareAmount()).isEqualByComparingTo("1900"); // handläggare value untouched
+		assertThat(existing.getApplicantProcessAmount()).isEqualByComparingTo("2000"); // process refreshed
+		assertThat(existing.getApplicantHandlaggareAmount()).isEqualByComparingTo("1900"); // handläggare value untouched
 		assertThat(existing.getNote()).isEqualTo("ok"); // note untouched
 		assertThat(persisted).containsExactly(existing);
 	}
@@ -69,19 +68,19 @@ class SectionReconcilerTest {
 
 		assertThat(diff.added()).isEmpty(); // not re-added
 		assertThat(existing.isDeleted()).isTrue(); // still deleted — never resurrected
-		assertThat(existing.getProcessAmount()).isEqualByComparingTo("2000"); // process still refreshed in place
+		assertThat(existing.getApplicantProcessAmount()).isEqualByComparingTo("2000"); // process still refreshed in place
 		assertThat(persisted).containsExactly(existing);
 	}
 
 	@Test
 	void handlaggareAddedRowIsNeverMatchedOrRefreshedByTheProcess() {
-		final var handlaggareRow = systemRow(20, "Bostadsbidrag", null).withOrigin(ORIGIN_HANDLAGGARE).withHandlaggareAmount(new BigDecimal("500"));
+		final var handlaggareRow = systemRow(20, "Bostadsbidrag", null).withOrigin(ORIGIN_HANDLAGGARE).withApplicantHandlaggareAmount(new BigDecimal("500"));
 		final var fresh = systemRow(20, "Bostadsbidrag", "2000");
 
 		final var diff = reconcile(new ArrayList<>(List.of(handlaggareRow)), List.of(fresh));
 
-		assertThat(diff.added()).containsExactly("Bostadsbidrag (APPLICANT)"); // the fresh row is inserted as new
-		assertThat(handlaggareRow.getProcessAmount()).isNull(); // handläggare row untouched
+		assertThat(diff.added()).containsExactly("Bostadsbidrag"); // the fresh row is inserted as new
+		assertThat(handlaggareRow.getApplicantProcessAmount()).isNull(); // handläggare row untouched
 		assertThat(persisted).containsExactly(fresh); // only the new system row is persisted
 	}
 
@@ -91,7 +90,7 @@ class SectionReconcilerTest {
 
 		final var diff = reconcile(new ArrayList<>(List.of(existing)), List.of());
 
-		assertThat(diff.dropped()).containsExactly("Bostadsbidrag (APPLICANT)");
+		assertThat(diff.dropped()).containsExactly("Bostadsbidrag");
 		assertThat(diff.added()).isEmpty();
 		assertThat(persisted).isEmpty(); // not auto-deleted, not re-saved
 	}
@@ -101,7 +100,6 @@ class SectionReconcilerTest {
 			.withOrigin(ORIGIN_SYSTEM)
 			.withTypeId(typeId)
 			.withTypeName(typeName)
-			.withRecipient(RECIPIENT_APPLICANT)
-			.withProcessAmount(processAmount == null ? null : new BigDecimal(processAmount));
+			.withApplicantProcessAmount(processAmount == null ? null : new BigDecimal(processAmount));
 	}
 }

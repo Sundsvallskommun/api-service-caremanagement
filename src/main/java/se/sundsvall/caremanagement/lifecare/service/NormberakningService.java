@@ -5,8 +5,11 @@ import generated.se.sundsvall.lifecarefc.PersonBasedCalculationExpensePostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationIncomePostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonPostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationSpecialExpensePostDTO;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +30,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.NormberakningDraftBuild;
+import se.sundsvall.caremanagement.lifecare.service.model.NormberakningHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.NormberakningResult;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.dept44.problem.Problem;
@@ -35,6 +39,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper.BUCKET_SPECIAL_EXPENSE;
 
 /**
  * Builds and posts the normberäkning to Lifecare FC from incomes already classified by the operaton regelverk.
@@ -152,16 +157,23 @@ public class NormberakningService {
 	 *
 	 * @return the created Lifecare calculation id
 	 */
-	public Integer commitEffective(final String applicantPersonId, final YearMonth applicationMonth, final Integer normId,
+	public Integer commitEffective(final String applicantPersonId, final YearMonth applicationMonth, final NormberakningHeader header,
 		final List<EffectiveIncome> incomes, final List<EffectiveExpense> expenses, final List<EffectivePerson> persons) {
 
 		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
 		final var incomeDtos = ofNullable(incomes).orElseGet(List::of).stream().map(NormberakningService::toIncomeDto).toList();
-		final var expenseDtos = ofNullable(expenses).orElseGet(List::of).stream()
+
+		final var allExpenses = ofNullable(expenses).orElseGet(List::of);
+		final var expenseDtos = allExpenses.stream()
+			.filter(expense -> !BUCKET_SPECIAL_EXPENSE.equals(expense.bucket()))
 			.map(expense -> toExpenseDto(expense, proposal)).filter(Objects::nonNull).toList();
+		final var specialExpenseDtos = allExpenses.stream()
+			.filter(expense -> BUCKET_SPECIAL_EXPENSE.equals(expense.bucket()))
+			.map(expense -> toSpecialExpenseDto(expense, proposal)).filter(Objects::nonNull).toList();
+
 		final var personDtos = ofNullable(persons).orElseGet(List::of).stream().map(NormberakningService::toPersonDto).toList();
 
-		final var body = NormberakningAssembler.assemble(applicantPersonId, proposal, incomeDtos, expenseDtos, personDtos, normId, applicationMonth);
+		final var body = NormberakningAssembler.assemble(applicantPersonId, proposal, incomeDtos, expenseDtos, specialExpenseDtos, personDtos, header, applicationMonth);
 		return lifecareFcIntegration.createCalculation(body);
 	}
 
@@ -176,13 +188,27 @@ public class NormberakningService {
 	}
 
 	private static PersonBasedCalculationExpensePostDTO toExpenseDto(final EffectiveExpense expense, final PersonBasedCalculationProposalDTO proposal) {
-		return ExpenseTypeMapper.resolveExpenseTypeId(expense.costType(), proposal)
+		return ExpenseTypeMapper.resolveExpenseTypeId(expense.costType(), proposal, expense.bucket())
 			.map(id -> new PersonBasedCalculationExpensePostDTO().id(id).amount(expense.appliedAmount()).approvedAmount(expense.approvedAmount()).note(expense.note()))
 			.orElse(null);
 	}
 
+	private static PersonBasedCalculationSpecialExpensePostDTO toSpecialExpenseDto(final EffectiveExpense expense, final PersonBasedCalculationProposalDTO proposal) {
+		return ExpenseTypeMapper.resolveExpenseTypeId(expense.costType(), proposal, expense.bucket())
+			.map(id -> new PersonBasedCalculationSpecialExpensePostDTO().id(id).amount(expense.appliedAmount()).approvedAmount(expense.approvedAmount()).note(expense.note()))
+			.orElse(null);
+	}
+
 	private static PersonBasedCalculationPersonPostDTO toPersonDto(final EffectivePerson person) {
-		return new PersonBasedCalculationPersonPostDTO().personId(person.partyId()).numberOfDays(person.numberOfDays());
+		return new PersonBasedCalculationPersonPostDTO()
+			.personId(person.partyId())
+			.numberOfDays(person.numberOfDays())
+			.deviationFromDate(toOffsetDateTime(person.deviationFromDate()))
+			.deviationToDate(toOffsetDateTime(person.deviationToDate()));
+	}
+
+	private static OffsetDateTime toOffsetDateTime(final LocalDate date) {
+		return ofNullable(date).map(value -> value.atStartOfDay().atOffset(ZoneOffset.UTC)).orElse(null);
 	}
 
 	private static Map<Integer, String> incomeTypeNamesById(final PersonBasedCalculationProposalDTO proposal) {

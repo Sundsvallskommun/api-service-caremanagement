@@ -8,12 +8,14 @@ import generated.se.sundsvall.lifecarefc.PersonBasedCalculationNormDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonPostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationServiceDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationSpecialExpensePostDTO;
 import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import se.sundsvall.caremanagement.lifecare.service.model.NormberakningHeader;
 
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
@@ -89,15 +91,29 @@ public final class NormberakningAssembler {
 		final PersonBasedCalculationProposalDTO proposal,
 		final List<PersonBasedCalculationIncomePostDTO> calculationIncomes,
 		final List<PersonBasedCalculationExpensePostDTO> expenses,
+		final List<PersonBasedCalculationSpecialExpensePostDTO> specialExpenses,
 		final List<PersonBasedCalculationPersonPostDTO> persons,
-		final Integer normIdOverride,
+		final NormberakningHeader header,
 		final YearMonth applicationMonth) {
 
 		final var body = assemble(applicantPersonId, proposal, calculationIncomes, applicationMonth);
 		ofNullable(expenses).ifPresent(body::calculationExpenses);
+		ofNullable(specialExpenses).ifPresent(body::calculationSpecialExpenses);
 		ofNullable(persons).ifPresent(body::calculationPersons);
-		ofNullable(normIdOverride).ifPresent(body::normId);
+		ofNullable(header).ifPresent(h -> applyHeader(body, h));
 		return body;
+	}
+
+	/**
+	 * Apply the draft header onto the body — the chosen norm overrides the proposal selection, dates + household when set.
+	 */
+	private static void applyHeader(final PostCalculationBodyRequest body, final NormberakningHeader header) {
+		ofNullable(header.normId()).ifPresent(body::normId);
+		ofNullable(header.calculationFromDate()).map(date -> date.format(ISO_LOCAL_DATE)).ifPresent(body::calculationFromDate);
+		ofNullable(header.calculationToDate()).map(date -> date.format(ISO_LOCAL_DATE)).ifPresent(body::calculationToDate);
+		ofNullable(header.calculationDate()).map(date -> date.format(ISO_LOCAL_DATE)).ifPresent(body::calculationDate);
+		ofNullable(header.hasCustomHouseholdSize()).ifPresent(body::hasCustomHouseholdSize);
+		ofNullable(header.householdSize()).ifPresent(body::householdSize);
 	}
 
 	/** The norm id the proposal offers for the application month (the window covering it, else the first), or empty. */

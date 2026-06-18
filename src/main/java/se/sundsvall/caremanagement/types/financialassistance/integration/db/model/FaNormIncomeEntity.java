@@ -17,14 +17,12 @@ import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * One income row of the normberäkning draft — an FC income type for a single recipient (applicant or co-applicant). The
- * amount the process decided ({@code processAmount}, written only by the daily prepare from the classified SSBTEK
- * incomes) is kept separate from the amount a handläggare decided ({@code handlaggareAmount}, written only from
- * Draken);
- * the effective amount posted to Lifecare is the handläggare amount when set, otherwise the process amount. A row can
- * be
- * soft-deleted ({@code deleted}) and is then excluded from the calculation but never resurrected by the daily refresh.
- * Subtracted from the norm.
+ * One income row of the normberäkning draft — one FC income type, with a sökande (applicant, "S") side and a medsökande
+ * (co-applicant, "M") side, mirroring the Lifecare INKOMSTER tab and FC {@code CalculationIncomes}. Each side keeps the
+ * amount the process decided (from the classified SSBTEK income, written only by the daily prepare) separate from the
+ * amount a handläggare decided (written only from Draken); the effective amount per side is the handläggare amount when
+ * set, otherwise the process amount. A row can be soft-deleted and is then excluded but never resurrected by the daily
+ * refresh. Subtracted from the norm.
  */
 @Entity
 @Table(name = "errand_fa_norm_income", indexes = {
@@ -49,22 +47,25 @@ public class FaNormIncomeEntity {
 	@Column(name = "type_name")
 	private String typeName;
 
-	@Column(name = "recipient")
-	private String recipient;
+	@Column(name = "applicant_process_amount", precision = 12, scale = 2)
+	private BigDecimal applicantProcessAmount;
 
-	@Column(name = "process_amount", precision = 12, scale = 2)
-	private BigDecimal processAmount;
+	@Column(name = "applicant_handlaggare_amount", precision = 12, scale = 2)
+	private BigDecimal applicantHandlaggareAmount;
 
-	@Column(name = "process_amount_date")
+	@Column(name = "applicant_amount_date")
 	@TimeZoneStorage(NORMALIZE)
-	private OffsetDateTime processAmountDate;
+	private OffsetDateTime applicantAmountDate;
 
-	@Column(name = "handlaggare_amount", precision = 12, scale = 2)
-	private BigDecimal handlaggareAmount;
+	@Column(name = "coapplicant_process_amount", precision = 12, scale = 2)
+	private BigDecimal coapplicantProcessAmount;
 
-	@Column(name = "handlaggare_amount_date")
+	@Column(name = "coapplicant_handlaggare_amount", precision = 12, scale = 2)
+	private BigDecimal coapplicantHandlaggareAmount;
+
+	@Column(name = "coapplicant_amount_date")
 	@TimeZoneStorage(NORMALIZE)
-	private OffsetDateTime handlaggareAmountDate;
+	private OffsetDateTime coapplicantAmountDate;
 
 	@Column(name = "deleted")
 	private boolean deleted;
@@ -161,68 +162,81 @@ public class FaNormIncomeEntity {
 		return this;
 	}
 
-	public String getRecipient() {
-		return recipient;
+	public BigDecimal getApplicantProcessAmount() {
+		return applicantProcessAmount;
 	}
 
-	public void setRecipient(final String recipient) {
-		this.recipient = recipient;
+	public void setApplicantProcessAmount(final BigDecimal applicantProcessAmount) {
+		this.applicantProcessAmount = applicantProcessAmount;
 	}
 
-	public FaNormIncomeEntity withRecipient(final String recipient) {
-		this.recipient = recipient;
+	public FaNormIncomeEntity withApplicantProcessAmount(final BigDecimal applicantProcessAmount) {
+		this.applicantProcessAmount = applicantProcessAmount;
 		return this;
 	}
 
-	public BigDecimal getProcessAmount() {
-		return processAmount;
+	public BigDecimal getApplicantHandlaggareAmount() {
+		return applicantHandlaggareAmount;
 	}
 
-	public void setProcessAmount(final BigDecimal processAmount) {
-		this.processAmount = processAmount;
+	public void setApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
+		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
 	}
 
-	public FaNormIncomeEntity withProcessAmount(final BigDecimal processAmount) {
-		this.processAmount = processAmount;
+	public FaNormIncomeEntity withApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
+		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
 		return this;
 	}
 
-	public OffsetDateTime getProcessAmountDate() {
-		return processAmountDate;
+	public OffsetDateTime getApplicantAmountDate() {
+		return applicantAmountDate;
 	}
 
-	public void setProcessAmountDate(final OffsetDateTime processAmountDate) {
-		this.processAmountDate = processAmountDate;
+	public void setApplicantAmountDate(final OffsetDateTime applicantAmountDate) {
+		this.applicantAmountDate = applicantAmountDate;
 	}
 
-	public FaNormIncomeEntity withProcessAmountDate(final OffsetDateTime processAmountDate) {
-		this.processAmountDate = processAmountDate;
+	public FaNormIncomeEntity withApplicantAmountDate(final OffsetDateTime applicantAmountDate) {
+		this.applicantAmountDate = applicantAmountDate;
 		return this;
 	}
 
-	public BigDecimal getHandlaggareAmount() {
-		return handlaggareAmount;
+	public BigDecimal getCoapplicantProcessAmount() {
+		return coapplicantProcessAmount;
 	}
 
-	public void setHandlaggareAmount(final BigDecimal handlaggareAmount) {
-		this.handlaggareAmount = handlaggareAmount;
+	public void setCoapplicantProcessAmount(final BigDecimal coapplicantProcessAmount) {
+		this.coapplicantProcessAmount = coapplicantProcessAmount;
 	}
 
-	public FaNormIncomeEntity withHandlaggareAmount(final BigDecimal handlaggareAmount) {
-		this.handlaggareAmount = handlaggareAmount;
+	public FaNormIncomeEntity withCoapplicantProcessAmount(final BigDecimal coapplicantProcessAmount) {
+		this.coapplicantProcessAmount = coapplicantProcessAmount;
 		return this;
 	}
 
-	public OffsetDateTime getHandlaggareAmountDate() {
-		return handlaggareAmountDate;
+	public BigDecimal getCoapplicantHandlaggareAmount() {
+		return coapplicantHandlaggareAmount;
 	}
 
-	public void setHandlaggareAmountDate(final OffsetDateTime handlaggareAmountDate) {
-		this.handlaggareAmountDate = handlaggareAmountDate;
+	public void setCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
+		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
 	}
 
-	public FaNormIncomeEntity withHandlaggareAmountDate(final OffsetDateTime handlaggareAmountDate) {
-		this.handlaggareAmountDate = handlaggareAmountDate;
+	public FaNormIncomeEntity withCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
+		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
+		return this;
+	}
+
+	public OffsetDateTime getCoapplicantAmountDate() {
+		return coapplicantAmountDate;
+	}
+
+	public void setCoapplicantAmountDate(final OffsetDateTime coapplicantAmountDate) {
+		this.coapplicantAmountDate = coapplicantAmountDate;
+	}
+
+	public FaNormIncomeEntity withCoapplicantAmountDate(final OffsetDateTime coapplicantAmountDate) {
+		this.coapplicantAmountDate = coapplicantAmountDate;
 		return this;
 	}
 
@@ -284,16 +298,17 @@ public class FaNormIncomeEntity {
 			return false;
 		final FaNormIncomeEntity that = (FaNormIncomeEntity) o;
 		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(origin, that.origin)
-			&& Objects.equals(typeId, that.typeId) && Objects.equals(typeName, that.typeName) && Objects.equals(recipient, that.recipient)
-			&& Objects.equals(processAmount, that.processAmount) && Objects.equals(processAmountDate, that.processAmountDate)
-			&& Objects.equals(handlaggareAmount, that.handlaggareAmount) && Objects.equals(handlaggareAmountDate, that.handlaggareAmountDate)
+			&& Objects.equals(typeId, that.typeId) && Objects.equals(typeName, that.typeName)
+			&& Objects.equals(applicantProcessAmount, that.applicantProcessAmount) && Objects.equals(applicantHandlaggareAmount, that.applicantHandlaggareAmount)
+			&& Objects.equals(applicantAmountDate, that.applicantAmountDate) && Objects.equals(coapplicantProcessAmount, that.coapplicantProcessAmount)
+			&& Objects.equals(coapplicantHandlaggareAmount, that.coapplicantHandlaggareAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate)
 			&& Objects.equals(note, that.note) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, origin, typeId, typeName, recipient, processAmount, processAmountDate, handlaggareAmount, handlaggareAmountDate, deleted,
-			note, created, updated);
+		return Objects.hash(id, errandId, origin, typeId, typeName, applicantProcessAmount, applicantHandlaggareAmount, applicantAmountDate,
+			coapplicantProcessAmount, coapplicantHandlaggareAmount, coapplicantAmountDate, deleted, note, created, updated);
 	}
 
 	@Override
@@ -304,11 +319,12 @@ public class FaNormIncomeEntity {
 			", origin='" + origin + '\'' +
 			", typeId=" + typeId +
 			", typeName='" + typeName + '\'' +
-			", recipient='" + recipient + '\'' +
-			", processAmount=" + processAmount +
-			", processAmountDate=" + processAmountDate +
-			", handlaggareAmount=" + handlaggareAmount +
-			", handlaggareAmountDate=" + handlaggareAmountDate +
+			", applicantProcessAmount=" + applicantProcessAmount +
+			", applicantHandlaggareAmount=" + applicantHandlaggareAmount +
+			", applicantAmountDate=" + applicantAmountDate +
+			", coapplicantProcessAmount=" + coapplicantProcessAmount +
+			", coapplicantHandlaggareAmount=" + coapplicantHandlaggareAmount +
+			", coapplicantAmountDate=" + coapplicantAmountDate +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +
 			", created=" + created +

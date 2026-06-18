@@ -15,6 +15,11 @@ public class NormExpenseInput {
 	@Schema(description = "The cost type")
 	private String costType;
 
+	@Schema(description = "Which Lifecare bucket the expense posts to", allowableValues = {
+		"EXPENSE", "SPECIAL_EXPENSE"
+	})
+	private String bucket;
+
 	@Schema(description = "The other sub-type (when the cost type is 'other')")
 	private String otherSubType;
 
@@ -41,6 +46,19 @@ public class NormExpenseInput {
 
 	public NormExpenseInput withCostType(final String costType) {
 		this.costType = costType;
+		return this;
+	}
+
+	public String getBucket() {
+		return bucket;
+	}
+
+	public void setBucket(final String bucket) {
+		this.bucket = bucket;
+	}
+
+	public NormExpenseInput withBucket(final String bucket) {
+		this.bucket = bucket;
 		return this;
 	}
 
@@ -101,19 +119,20 @@ public class NormExpenseInput {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final NormExpenseInput that = (NormExpenseInput) o;
-		return Objects.equals(costType, that.costType) && Objects.equals(otherSubType, that.otherSubType) && Objects.equals(specification, that.specification)
-			&& Objects.equals(handlaggareAmount, that.handlaggareAmount) && Objects.equals(note, that.note);
+		return Objects.equals(costType, that.costType) && Objects.equals(bucket, that.bucket) && Objects.equals(otherSubType, that.otherSubType)
+			&& Objects.equals(specification, that.specification) && Objects.equals(handlaggareAmount, that.handlaggareAmount) && Objects.equals(note, that.note);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(costType, otherSubType, specification, handlaggareAmount, note);
+		return Objects.hash(costType, bucket, otherSubType, specification, handlaggareAmount, note);
 	}
 
 	@Override
 	public String toString() {
 		return "NormExpenseInput{" +
 			"costType='" + costType + '\'' +
+			", bucket='" + bucket + '\'' +
 			", otherSubType='" + otherSubType + '\'' +
 			", specification='" + specification + '\'' +
 			", handlaggareAmount=" + handlaggareAmount +

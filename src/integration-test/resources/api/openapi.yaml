@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:53585
+- url: http://localhost:59156
   description: Generated server url
 tags:
 - name: Notes
@@ -3065,6 +3065,51 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/header:
+    patch:
+      tags:
+      - Financial Assistance
+      summary: Edit the draft header (handläggare)
+      description: "Set the norm, the calculation date window (Från/Till/Beräkningsdatum)\
+        \ and the custom household size (Gemensamma kostnader). 404 when no draft\
+        \ exists."
+      operationId: patchDraftHeader
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormHeaderInput"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormberakningDraft"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/expenses/{rowId}:
     delete:
       tags:
@@ -5411,6 +5456,25 @@ components:
           description: The number of days the handläggare decided
           examples:
           - 15
+        included:
+          type: boolean
+          description: Whether the household member is included in the norm
+        deviationFromDate:
+          type: string
+          format: date
+          description: The start date of the member's deviation from the household
+        deviationToDate:
+          type: string
+          format: date
+          description: The end date of the member's deviation from the household
+        normInterval:
+          type: string
+          description: The norm interval applied to the member
+        jobbstimulansAmount:
+          type: number
+          description: The jobbstimulans amount applied to the member
+          examples:
+          - 1000.0
         note:
           type: string
           description: Free-text note
@@ -5466,6 +5530,25 @@ components:
           description: "The number of days actually used (handläggare value when set,\
             \ otherwise process value)"
           readOnly: true
+        included:
+          type: boolean
+          description: Whether the household member is included in the norm
+        deviationFromDate:
+          type: string
+          format: date
+          description: The start date of the member's deviation from the household
+        deviationToDate:
+          type: string
+          format: date
+          description: The end date of the member's deviation from the household
+        normInterval:
+          type: string
+          description: The norm interval applied to the member
+        jobbstimulansAmount:
+          type: number
+          description: The jobbstimulans amount applied to the member
+          examples:
+          - 1000.0
         deleted:
           type: boolean
           description: "Whether the row is soft-deleted (excluded from the calculation,\
@@ -5500,28 +5583,31 @@ components:
           description: The FC income-type name
           examples:
           - Bostadsbidrag
-        recipient:
-          type: string
-          description: Whose income this is
-          enum:
-          - APPLICANT
-          - CO_APPLICANT
-        handlaggareAmount:
+        applicantHandlaggareAmount:
           type: number
-          description: The amount the handläggare decided
+          description: The amount the handläggare decided for the applicant
           examples:
           - 1900.0
-        handlaggareAmountDate:
+        applicantAmountDate:
           type: string
           format: date-time
-          description: The date the handläggare amount is attributed to
+          description: The date the applicant amount is attributed to
+        coapplicantHandlaggareAmount:
+          type: number
+          description: The amount the handläggare decided for the co-applicant
+          examples:
+          - 1900.0
+        coapplicantAmountDate:
+          type: string
+          format: date-time
+          description: The date the co-applicant amount is attributed to
         note:
           type: string
           description: Free-text note
     NormIncomeRow:
       type: object
-      description: "One income row of the normberäkning draft (FC income type + recipient,\
-        \ process vs handläggare amount)."
+      description: "One income row of the normberäkning draft (FC income type with\
+        \ applicant/co-applicant sides, process vs handläggare amounts)."
       properties:
         id:
           type: string
@@ -5547,40 +5633,50 @@ components:
           examples:
           - Bostadsbidrag
           readOnly: true
-        recipient:
-          type: string
-          description: Whose income this is
-          enum:
-          - APPLICANT
-          - CO_APPLICANT
-          readOnly: true
-        processAmount:
+        applicantProcessAmount:
           type: number
-          description: The amount the process decided (from the classified SSBTEK
-            income)
+          description: The amount the process decided for the applicant (from the
+            classified SSBTEK income)
           examples:
           - 1850.0
           readOnly: true
-        processAmountDate:
-          type: string
-          format: date-time
-          description: The date the process amount is attributed to
-          readOnly: true
-        handlaggareAmount:
+        applicantHandlaggareAmount:
           type: number
-          description: The amount a handläggare decided; overrides the process amount
-            when set
+          description: The amount a handläggare decided for the applicant; overrides
+            the process amount when set
           examples:
           - 1900.0
-        handlaggareAmountDate:
+        applicantEffectiveAmount:
+          type: number
+          description: "The amount actually used for the applicant (handläggare amount\
+            \ when set, otherwise process amount)"
+          readOnly: true
+        applicantAmountDate:
           type: string
           format: date-time
-          description: The date the handläggare amount is attributed to
-        effectiveAmount:
+          description: The date the applicant amount is attributed to
+        coapplicantProcessAmount:
           type: number
-          description: "The amount actually used (handläggare amount when set, otherwise\
-            \ process amount)"
+          description: The amount the process decided for the co-applicant (from the
+            classified SSBTEK income)
+          examples:
+          - 1850.0
           readOnly: true
+        coapplicantHandlaggareAmount:
+          type: number
+          description: The amount a handläggare decided for the co-applicant; overrides
+            the process amount when set
+          examples:
+          - 1900.0
+        coapplicantEffectiveAmount:
+          type: number
+          description: "The amount actually used for the co-applicant (handläggare\
+            \ amount when set, otherwise process amount)"
+          readOnly: true
+        coapplicantAmountDate:
+          type: string
+          format: date-time
+          description: The date the co-applicant amount is attributed to
         deleted:
           type: boolean
           description: "Whether the row is soft-deleted (excluded from the calculation,\
@@ -5609,6 +5705,12 @@ components:
         costType:
           type: string
           description: The cost type
+        bucket:
+          type: string
+          description: Which Lifecare bucket the expense posts to
+          enum:
+          - EXPENSE
+          - SPECIAL_EXPENSE
         otherSubType:
           type: string
           description: The other sub-type (when the cost type is 'other')
@@ -5638,6 +5740,13 @@ components:
           enum:
           - SYSTEM
           - HANDLAGGARE
+          readOnly: true
+        bucket:
+          type: string
+          description: Which Lifecare bucket the expense posts to
+          enum:
+          - EXPENSE
+          - SPECIAL_EXPENSE
           readOnly: true
         costType:
           type: string
@@ -6096,6 +6205,130 @@ components:
           type: string
           format: date-time
           description: Last modified timestamp; null until the note has been edited
+    NormHeaderInput:
+      type: object
+      description: "Handläggare edit of the normberäkning header — norm, calculation\
+        \ dates and custom household size."
+      properties:
+        normId:
+          type: integer
+          format: int32
+          description: The selected FC norm id (Norm)
+          examples:
+          - 5
+        normType:
+          type: string
+          description: The norm type
+          enum:
+          - RIKSNORM
+          - OTHER_NORM
+        calculationFromDate:
+          type: string
+          format: date
+          description: Calculation period start (Från)
+        calculationToDate:
+          type: string
+          format: date
+          description: Calculation period end (Till)
+        calculationDate:
+          type: string
+          format: date
+          description: Calculation date (Beräkningsdatum)
+        hasCustomHouseholdSize:
+          type: boolean
+          description: Whether a custom household size is used (Annan hushållsstorlek)
+          examples:
+          - "true"
+        householdSize:
+          type: integer
+          format: int32
+          description: The custom household size (Hushållsstorlek)
+          examples:
+          - 1
+    NormberakningDraft:
+      type: object
+      description: "The full draft normberäkning — header, the three sections (personer,\
+        \ inkomster, utgifter) and the section sums."
+      properties:
+        errandId:
+          type: string
+          description: The errand id
+          readOnly: true
+        applicationMonth:
+          type: string
+          description: The application month (ISO yyyy-MM)
+          examples:
+          - 2026-06
+        normId:
+          type: integer
+          format: int32
+          description: The selected norm id
+        normType:
+          type: string
+          description: The selected norm type
+        calculationFromDate:
+          type: string
+          format: date
+          description: The start date of the calculation period
+        calculationToDate:
+          type: string
+          format: date
+          description: The end date of the calculation period
+        calculationDate:
+          type: string
+          format: date
+          description: The date the calculation is performed
+        hasCustomHouseholdSize:
+          type: boolean
+          description: Whether the household size has been overridden by a handläggare
+        householdSize:
+          type: integer
+          format: int32
+          description: The household size used for the norm
+          examples:
+          - 3
+        persons:
+          type: array
+          description: The person rows (personer)
+          items:
+            $ref: "#/components/schemas/NormPersonRow"
+        incomes:
+          type: array
+          description: The income rows (inkomster)
+          items:
+            $ref: "#/components/schemas/NormIncomeRow"
+        expenses:
+          type: array
+          description: The expense rows (utgifter)
+          items:
+            $ref: "#/components/schemas/NormExpenseRow"
+        specialExpenses:
+          type: array
+          description: The special expense rows (särskilda utgifter)
+          items:
+            $ref: "#/components/schemas/NormExpenseRow"
+        incomeSum:
+          type: number
+          description: The sum of the effective income amounts
+          readOnly: true
+        expenseSum:
+          type: number
+          description: The sum of the effective expense amounts
+          readOnly: true
+        specialExpenseSum:
+          type: number
+          description: The sum of the effective special expense amounts
+          readOnly: true
+        created:
+          type: string
+          format: date-time
+          description: When the draft was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the draft was last updated
+          readOnly: true
     AssigneeCount:
       type: object
       description: Number of errands assigned to a given user
@@ -6474,60 +6707,6 @@ components:
         data:
           $ref: "#/components/schemas/FinancialAssistanceData"
           description: The typed financial assistance application payload
-    NormberakningDraft:
-      type: object
-      description: "The full draft normberäkning — header, the three sections (personer,\
-        \ inkomster, utgifter) and the section sums."
-      properties:
-        errandId:
-          type: string
-          description: The errand id
-          readOnly: true
-        applicationMonth:
-          type: string
-          description: The application month (ISO yyyy-MM)
-          examples:
-          - 2026-06
-        normId:
-          type: integer
-          format: int32
-          description: The selected norm id
-        normType:
-          type: string
-          description: The selected norm type
-        persons:
-          type: array
-          description: The person rows (personer)
-          items:
-            $ref: "#/components/schemas/NormPersonRow"
-        incomes:
-          type: array
-          description: The income rows (inkomster)
-          items:
-            $ref: "#/components/schemas/NormIncomeRow"
-        expenses:
-          type: array
-          description: The expense rows (utgifter)
-          items:
-            $ref: "#/components/schemas/NormExpenseRow"
-        incomeSum:
-          type: number
-          description: The sum of the effective income amounts
-          readOnly: true
-        expenseSum:
-          type: number
-          description: The sum of the effective expense amounts
-          readOnly: true
-        created:
-          type: string
-          format: date-time
-          description: When the draft was created
-          readOnly: true
-        updated:
-          type: string
-          format: date-time
-          description: When the draft was last updated
-          readOnly: true
     PrefilledChild:
       type: object
       description: "A child pre-filled from Lifecare for a financial assistance renewal.\

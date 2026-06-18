@@ -21,6 +21,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Financial
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonInput;
@@ -206,7 +207,7 @@ class FinancialAssistanceResourceTest {
 	void getDraft() {
 		when(serviceMock.getDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1")))
 			.thenReturn(NormberakningDraft.create().withErrandId("errand-1")
-				.withIncomes(List.of(NormIncomeRow.create().withTypeName("Bostadsbidrag").withProcessAmount(new BigDecimal("1850")))));
+				.withIncomes(List.of(NormIncomeRow.create().withTypeName("Bostadsbidrag").withApplicantProcessAmount(new BigDecimal("1850")))));
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft").build(base()))
@@ -223,13 +224,32 @@ class FinancialAssistanceResourceTest {
 	}
 
 	@Test
+	void patchDraftHeader() {
+		when(serviceMock.patchDraftHeader(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormHeaderInput.class)))
+			.thenReturn(NormberakningDraft.create().withNormId(5).withHouseholdSize(1));
+
+		final var response = webTestClient.patch()
+			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/header").build(base()))
+			.bodyValue(new NormHeaderInput().withNormId(5).withHasCustomHouseholdSize(true).withHouseholdSize(1))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(NormberakningDraft.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getNormId()).isEqualTo(5);
+		verify(serviceMock).patchDraftHeader(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormHeaderInput.class));
+	}
+
+	@Test
 	void addDraftIncome() {
 		when(serviceMock.addDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormIncomeInput.class)))
 			.thenReturn(NormIncomeRow.create().withId("r1").withOrigin("HANDLAGGARE"));
 
 		final var response = webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes").build(base()))
-			.bodyValue(new NormIncomeInput().withTypeId(20).withRecipient("APPLICANT").withHandlaggareAmount(new BigDecimal("3000")))
+			.bodyValue(new NormIncomeInput().withTypeId(20).withApplicantHandlaggareAmount(new BigDecimal("3000")))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(NormIncomeRow.class)
@@ -285,7 +305,7 @@ class FinancialAssistanceResourceTest {
 		when(serviceMock.setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", false)).thenReturn(NormIncomeRow.create().withId("r1").withDeleted(false));
 
 		webTestClient.patch().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes/r1").build(base()))
-			.bodyValue(new NormIncomeInput().withHandlaggareAmount(new BigDecimal("1000"))).exchange().expectStatus().isOk();
+			.bodyValue(new NormIncomeInput().withApplicantHandlaggareAmount(new BigDecimal("1000"))).exchange().expectStatus().isOk();
 		webTestClient.delete().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes/r1").build(base())).exchange().expectStatus().isOk();
 		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes/r1/restore").build(base())).exchange().expectStatus().isOk();
 

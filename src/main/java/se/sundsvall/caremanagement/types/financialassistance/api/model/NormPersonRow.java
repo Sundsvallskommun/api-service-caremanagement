@@ -1,10 +1,13 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
@@ -43,6 +46,23 @@ public class NormPersonRow {
 
 	@Schema(description = "The number of days actually used (handläggare value when set, otherwise process value)", accessMode = Schema.AccessMode.READ_ONLY)
 	private Integer effectiveDays;
+
+	@Schema(description = "Whether the household member is included in the norm")
+	private boolean included;
+
+	@Schema(description = "The start date of the member's deviation from the household")
+	@DateTimeFormat(iso = DATE)
+	private LocalDate deviationFromDate;
+
+	@Schema(description = "The end date of the member's deviation from the household")
+	@DateTimeFormat(iso = DATE)
+	private LocalDate deviationToDate;
+
+	@Schema(description = "The norm interval applied to the member")
+	private String normInterval;
+
+	@Schema(description = "The jobbstimulans amount applied to the member", examples = "1000.00")
+	private BigDecimal jobbstimulansAmount;
 
 	@Schema(description = "Whether the row is soft-deleted (excluded from the calculation, not resurrected by the daily refresh)", accessMode = Schema.AccessMode.READ_ONLY)
 	private boolean deleted;
@@ -166,6 +186,71 @@ public class NormPersonRow {
 		return this;
 	}
 
+	public boolean isIncluded() {
+		return included;
+	}
+
+	public void setIncluded(final boolean included) {
+		this.included = included;
+	}
+
+	public NormPersonRow withIncluded(final boolean included) {
+		this.included = included;
+		return this;
+	}
+
+	public LocalDate getDeviationFromDate() {
+		return deviationFromDate;
+	}
+
+	public void setDeviationFromDate(final LocalDate deviationFromDate) {
+		this.deviationFromDate = deviationFromDate;
+	}
+
+	public NormPersonRow withDeviationFromDate(final LocalDate deviationFromDate) {
+		this.deviationFromDate = deviationFromDate;
+		return this;
+	}
+
+	public LocalDate getDeviationToDate() {
+		return deviationToDate;
+	}
+
+	public void setDeviationToDate(final LocalDate deviationToDate) {
+		this.deviationToDate = deviationToDate;
+	}
+
+	public NormPersonRow withDeviationToDate(final LocalDate deviationToDate) {
+		this.deviationToDate = deviationToDate;
+		return this;
+	}
+
+	public String getNormInterval() {
+		return normInterval;
+	}
+
+	public void setNormInterval(final String normInterval) {
+		this.normInterval = normInterval;
+	}
+
+	public NormPersonRow withNormInterval(final String normInterval) {
+		this.normInterval = normInterval;
+		return this;
+	}
+
+	public BigDecimal getJobbstimulansAmount() {
+		return jobbstimulansAmount;
+	}
+
+	public void setJobbstimulansAmount(final BigDecimal jobbstimulansAmount) {
+		this.jobbstimulansAmount = jobbstimulansAmount;
+	}
+
+	public NormPersonRow withJobbstimulansAmount(final BigDecimal jobbstimulansAmount) {
+		this.jobbstimulansAmount = jobbstimulansAmount;
+		return this;
+	}
+
 	public boolean isDeleted() {
 		return deleted;
 	}
@@ -223,15 +308,18 @@ public class NormPersonRow {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final NormPersonRow that = (NormPersonRow) o;
-		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(origin, that.origin) && Objects.equals(partyId, that.partyId)
-			&& Objects.equals(role, that.role) && Objects.equals(name, that.name) && Objects.equals(processDays, that.processDays)
-			&& Objects.equals(handlaggareDays, that.handlaggareDays) && Objects.equals(effectiveDays, that.effectiveDays) && Objects.equals(note, that.note)
+		return deleted == that.deleted && included == that.included && Objects.equals(id, that.id) && Objects.equals(origin, that.origin)
+			&& Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
+			&& Objects.equals(processDays, that.processDays) && Objects.equals(handlaggareDays, that.handlaggareDays) && Objects.equals(effectiveDays, that.effectiveDays)
+			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
+			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobbstimulansAmount, that.jobbstimulansAmount) && Objects.equals(note, that.note)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, partyId, role, name, processDays, handlaggareDays, effectiveDays, deleted, note, created, updated);
+		return Objects.hash(id, origin, partyId, role, name, processDays, handlaggareDays, effectiveDays, included, deviationFromDate, deviationToDate, normInterval,
+			jobbstimulansAmount, deleted, note, created, updated);
 	}
 
 	@Override
@@ -245,6 +333,11 @@ public class NormPersonRow {
 			", processDays=" + processDays +
 			", handlaggareDays=" + handlaggareDays +
 			", effectiveDays=" + effectiveDays +
+			", included=" + included +
+			", deviationFromDate=" + deviationFromDate +
+			", deviationToDate=" + deviationToDate +
+			", normInterval='" + normInterval + '\'' +
+			", jobbstimulansAmount=" + jobbstimulansAmount +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +
 			", created=" + created +

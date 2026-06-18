@@ -24,6 +24,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
+import se.sundsvall.caremanagement.lifecare.service.model.NormberakningHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 import tools.jackson.databind.ObjectMapper;
@@ -206,11 +207,11 @@ class NormberakningServiceTest {
 
 		final var incomes = List.of(new EffectiveIncome(20, 1850.0, null, null, null, "SSBTEK"));
 		final var expenses = List.of(
-			new EffectiveExpense("RENT", 9000.0, 8000.0, null), // resolves to FC id 42
-			new EffectiveExpense("UNMAPPED_NONSENSE", 100.0, 100.0, null)); // skipped (no FC id)
-		final var persons = List.of(new EffectivePerson("p1", 30));
+			new EffectiveExpense("RENT", "EXPENSE", 9000.0, 8000.0, null), // resolves to FC id 42
+			new EffectiveExpense("UNMAPPED_NONSENSE", "EXPENSE", 100.0, 100.0, null)); // skipped (no FC id)
+		final var persons = List.of(new EffectivePerson("p1", 30, null, null));
 
-		final var calculationId = service.commitEffective(APPLICANT, MONTH, 7, incomes, expenses, persons);
+		final var calculationId = service.commitEffective(APPLICANT, MONTH, new NormberakningHeader(7, null, null, null, null, null), incomes, expenses, persons);
 
 		assertThat(calculationId).isEqualTo(5000);
 		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);

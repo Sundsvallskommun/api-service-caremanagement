@@ -7,6 +7,8 @@ import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
@@ -56,6 +58,21 @@ public class FaNormPersonEntity {
 
 	@Column(name = "handlaggare_days")
 	private Integer handlaggareDays;
+
+	@Column(name = "included")
+	private boolean included;
+
+	@Column(name = "deviation_from_date")
+	private LocalDate deviationFromDate;
+
+	@Column(name = "deviation_to_date")
+	private LocalDate deviationToDate;
+
+	@Column(name = "norm_interval")
+	private String normInterval;
+
+	@Column(name = "jobbstimulans_amount", precision = 12, scale = 2)
+	private BigDecimal jobbstimulansAmount;
 
 	@Column(name = "deleted")
 	private boolean deleted;
@@ -191,6 +208,71 @@ public class FaNormPersonEntity {
 		return this;
 	}
 
+	public boolean isIncluded() {
+		return included;
+	}
+
+	public void setIncluded(final boolean included) {
+		this.included = included;
+	}
+
+	public FaNormPersonEntity withIncluded(final boolean included) {
+		this.included = included;
+		return this;
+	}
+
+	public LocalDate getDeviationFromDate() {
+		return deviationFromDate;
+	}
+
+	public void setDeviationFromDate(final LocalDate deviationFromDate) {
+		this.deviationFromDate = deviationFromDate;
+	}
+
+	public FaNormPersonEntity withDeviationFromDate(final LocalDate deviationFromDate) {
+		this.deviationFromDate = deviationFromDate;
+		return this;
+	}
+
+	public LocalDate getDeviationToDate() {
+		return deviationToDate;
+	}
+
+	public void setDeviationToDate(final LocalDate deviationToDate) {
+		this.deviationToDate = deviationToDate;
+	}
+
+	public FaNormPersonEntity withDeviationToDate(final LocalDate deviationToDate) {
+		this.deviationToDate = deviationToDate;
+		return this;
+	}
+
+	public String getNormInterval() {
+		return normInterval;
+	}
+
+	public void setNormInterval(final String normInterval) {
+		this.normInterval = normInterval;
+	}
+
+	public FaNormPersonEntity withNormInterval(final String normInterval) {
+		this.normInterval = normInterval;
+		return this;
+	}
+
+	public BigDecimal getJobbstimulansAmount() {
+		return jobbstimulansAmount;
+	}
+
+	public void setJobbstimulansAmount(final BigDecimal jobbstimulansAmount) {
+		this.jobbstimulansAmount = jobbstimulansAmount;
+	}
+
+	public FaNormPersonEntity withJobbstimulansAmount(final BigDecimal jobbstimulansAmount) {
+		this.jobbstimulansAmount = jobbstimulansAmount;
+		return this;
+	}
+
 	public boolean isDeleted() {
 		return deleted;
 	}
@@ -248,15 +330,18 @@ public class FaNormPersonEntity {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FaNormPersonEntity that = (FaNormPersonEntity) o;
-		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(origin, that.origin)
-			&& Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
-			&& Objects.equals(processDays, that.processDays) && Objects.equals(handlaggareDays, that.handlaggareDays) && Objects.equals(note, that.note)
+		return deleted == that.deleted && included == that.included && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
+			&& Objects.equals(origin, that.origin) && Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
+			&& Objects.equals(processDays, that.processDays) && Objects.equals(handlaggareDays, that.handlaggareDays)
+			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
+			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobbstimulansAmount, that.jobbstimulansAmount) && Objects.equals(note, that.note)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, origin, partyId, role, name, processDays, handlaggareDays, deleted, note, created, updated);
+		return Objects.hash(id, errandId, origin, partyId, role, name, processDays, handlaggareDays, included, deviationFromDate, deviationToDate, normInterval,
+			jobbstimulansAmount, deleted, note, created, updated);
 	}
 
 	@Override
@@ -270,6 +355,11 @@ public class FaNormPersonEntity {
 			", name='" + name + '\'' +
 			", processDays=" + processDays +
 			", handlaggareDays=" + handlaggareDays +
+			", included=" + included +
+			", deviationFromDate=" + deviationFromDate +
+			", deviationToDate=" + deviationToDate +
+			", normInterval='" + normInterval + '\'' +
+			", jobbstimulansAmount=" + jobbstimulansAmount +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +
 			", created=" + created +

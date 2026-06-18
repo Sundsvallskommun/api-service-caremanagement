@@ -41,11 +41,12 @@ class FaNormIncomeEntityTest {
 		final var origin = "SYSTEM";
 		final var typeId = 20;
 		final var typeName = "Bostadsbidrag";
-		final var recipient = "APPLICANT";
-		final var processAmount = BigDecimal.valueOf(1850.00);
-		final var processAmountDate = now();
-		final var handlaggareAmount = BigDecimal.valueOf(1900.00);
-		final var handlaggareAmountDate = now();
+		final var applicantProcessAmount = BigDecimal.valueOf(1850.00);
+		final var applicantHandlaggareAmount = BigDecimal.valueOf(1900.00);
+		final var applicantAmountDate = now();
+		final var coapplicantProcessAmount = BigDecimal.valueOf(950.00);
+		final var coapplicantHandlaggareAmount = BigDecimal.valueOf(975.00);
+		final var coapplicantAmountDate = now();
 		final var deleted = true;
 		final var note = "note";
 		final var created = now();
@@ -57,11 +58,12 @@ class FaNormIncomeEntityTest {
 			.withOrigin(origin)
 			.withTypeId(typeId)
 			.withTypeName(typeName)
-			.withRecipient(recipient)
-			.withProcessAmount(processAmount)
-			.withProcessAmountDate(processAmountDate)
-			.withHandlaggareAmount(handlaggareAmount)
-			.withHandlaggareAmountDate(handlaggareAmountDate)
+			.withApplicantProcessAmount(applicantProcessAmount)
+			.withApplicantHandlaggareAmount(applicantHandlaggareAmount)
+			.withApplicantAmountDate(applicantAmountDate)
+			.withCoapplicantProcessAmount(coapplicantProcessAmount)
+			.withCoapplicantHandlaggareAmount(coapplicantHandlaggareAmount)
+			.withCoapplicantAmountDate(coapplicantAmountDate)
 			.withDeleted(deleted)
 			.withNote(note)
 			.withCreated(created)
@@ -73,11 +75,12 @@ class FaNormIncomeEntityTest {
 		assertThat(entity.getOrigin()).isEqualTo(origin);
 		assertThat(entity.getTypeId()).isEqualTo(typeId);
 		assertThat(entity.getTypeName()).isEqualTo(typeName);
-		assertThat(entity.getRecipient()).isEqualTo(recipient);
-		assertThat(entity.getProcessAmount()).isEqualTo(processAmount);
-		assertThat(entity.getProcessAmountDate()).isEqualTo(processAmountDate);
-		assertThat(entity.getHandlaggareAmount()).isEqualTo(handlaggareAmount);
-		assertThat(entity.getHandlaggareAmountDate()).isEqualTo(handlaggareAmountDate);
+		assertThat(entity.getApplicantProcessAmount()).isEqualTo(applicantProcessAmount);
+		assertThat(entity.getApplicantHandlaggareAmount()).isEqualTo(applicantHandlaggareAmount);
+		assertThat(entity.getApplicantAmountDate()).isEqualTo(applicantAmountDate);
+		assertThat(entity.getCoapplicantProcessAmount()).isEqualTo(coapplicantProcessAmount);
+		assertThat(entity.getCoapplicantHandlaggareAmount()).isEqualTo(coapplicantHandlaggareAmount);
+		assertThat(entity.getCoapplicantAmountDate()).isEqualTo(coapplicantAmountDate);
 		assertThat(entity.isDeleted()).isEqualTo(deleted);
 		assertThat(entity.getNote()).isEqualTo(note);
 		assertThat(entity.getCreated()).isEqualTo(created);

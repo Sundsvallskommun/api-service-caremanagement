@@ -40,12 +40,14 @@ class NormIncomeRowTest {
 		final var origin = "SYSTEM";
 		final var typeId = 20;
 		final var typeName = "Bostadsbidrag";
-		final var recipient = "APPLICANT";
-		final var processAmount = BigDecimal.valueOf(1850.00);
-		final var processAmountDate = now();
-		final var handlaggareAmount = BigDecimal.valueOf(1900.00);
-		final var handlaggareAmountDate = now();
-		final var effectiveAmount = BigDecimal.valueOf(1900.00);
+		final var applicantProcessAmount = BigDecimal.valueOf(1850.00);
+		final var applicantHandlaggareAmount = BigDecimal.valueOf(1900.00);
+		final var applicantEffectiveAmount = BigDecimal.valueOf(1900.00);
+		final var applicantAmountDate = now();
+		final var coapplicantProcessAmount = BigDecimal.valueOf(950.00);
+		final var coapplicantHandlaggareAmount = BigDecimal.valueOf(1000.00);
+		final var coapplicantEffectiveAmount = BigDecimal.valueOf(1000.00);
+		final var coapplicantAmountDate = now();
 		final var deleted = true;
 		final var note = "note";
 		final var created = now();
@@ -56,12 +58,14 @@ class NormIncomeRowTest {
 			.withOrigin(origin)
 			.withTypeId(typeId)
 			.withTypeName(typeName)
-			.withRecipient(recipient)
-			.withProcessAmount(processAmount)
-			.withProcessAmountDate(processAmountDate)
-			.withHandlaggareAmount(handlaggareAmount)
-			.withHandlaggareAmountDate(handlaggareAmountDate)
-			.withEffectiveAmount(effectiveAmount)
+			.withApplicantProcessAmount(applicantProcessAmount)
+			.withApplicantHandlaggareAmount(applicantHandlaggareAmount)
+			.withApplicantEffectiveAmount(applicantEffectiveAmount)
+			.withApplicantAmountDate(applicantAmountDate)
+			.withCoapplicantProcessAmount(coapplicantProcessAmount)
+			.withCoapplicantHandlaggareAmount(coapplicantHandlaggareAmount)
+			.withCoapplicantEffectiveAmount(coapplicantEffectiveAmount)
+			.withCoapplicantAmountDate(coapplicantAmountDate)
 			.withDeleted(deleted)
 			.withNote(note)
 			.withCreated(created)
@@ -72,12 +76,14 @@ class NormIncomeRowTest {
 		assertThat(result.getOrigin()).isEqualTo(origin);
 		assertThat(result.getTypeId()).isEqualTo(typeId);
 		assertThat(result.getTypeName()).isEqualTo(typeName);
-		assertThat(result.getRecipient()).isEqualTo(recipient);
-		assertThat(result.getProcessAmount()).isEqualTo(processAmount);
-		assertThat(result.getProcessAmountDate()).isEqualTo(processAmountDate);
-		assertThat(result.getHandlaggareAmount()).isEqualTo(handlaggareAmount);
-		assertThat(result.getHandlaggareAmountDate()).isEqualTo(handlaggareAmountDate);
-		assertThat(result.getEffectiveAmount()).isEqualTo(effectiveAmount);
+		assertThat(result.getApplicantProcessAmount()).isEqualTo(applicantProcessAmount);
+		assertThat(result.getApplicantHandlaggareAmount()).isEqualTo(applicantHandlaggareAmount);
+		assertThat(result.getApplicantEffectiveAmount()).isEqualTo(applicantEffectiveAmount);
+		assertThat(result.getApplicantAmountDate()).isEqualTo(applicantAmountDate);
+		assertThat(result.getCoapplicantProcessAmount()).isEqualTo(coapplicantProcessAmount);
+		assertThat(result.getCoapplicantHandlaggareAmount()).isEqualTo(coapplicantHandlaggareAmount);
+		assertThat(result.getCoapplicantEffectiveAmount()).isEqualTo(coapplicantEffectiveAmount);
+		assertThat(result.getCoapplicantAmountDate()).isEqualTo(coapplicantAmountDate);
 		assertThat(result.isDeleted()).isEqualTo(deleted);
 		assertThat(result.getNote()).isEqualTo(note);
 		assertThat(result.getCreated()).isEqualTo(created);

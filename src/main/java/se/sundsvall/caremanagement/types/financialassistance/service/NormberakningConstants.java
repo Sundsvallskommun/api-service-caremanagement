@@ -18,4 +18,9 @@ public final class NormberakningConstants {
 	public static final String ROLE_APPLICANT = "APPLICANT";
 	public static final String ROLE_CO_APPLICANT = "CO_APPLICANT";
 	public static final String ROLE_CHILD = "CHILD";
+	public static final String ROLE_UMGANGESBARN = "UMGANGESBARN";
+
+	// Utgift buckets — which FC array the cost posts to (and which GUI tab it shows on).
+	public static final String BUCKET_EXPENSE = "EXPENSE";                 // UTGIFTER → CalculationExpenses
+	public static final String BUCKET_SPECIAL_EXPENSE = "SPECIAL_EXPENSE"; // LEVNADSKOSTNADER I ÖVRIGT → CalculationSpecialExpenses
 }

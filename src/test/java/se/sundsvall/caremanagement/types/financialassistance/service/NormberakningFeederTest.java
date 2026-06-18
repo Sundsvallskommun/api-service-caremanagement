@@ -50,9 +50,8 @@ class NormberakningFeederTest {
 		final var first = rows.getFirst();
 		assertThat(first.getTypeId()).isEqualTo(20);
 		assertThat(first.getTypeName()).isEqualTo("Bostadsbidrag");
-		assertThat(first.getRecipient()).isEqualTo("APPLICANT");
-		assertThat(first.getProcessAmount()).isEqualByComparingTo(new BigDecimal("1850"));
-		assertThat(first.getProcessAmountDate()).isEqualTo(date);
+		assertThat(first.getApplicantProcessAmount()).isEqualByComparingTo(new BigDecimal("1850"));
+		assertThat(first.getApplicantAmountDate()).isEqualTo(date);
 	}
 
 	@Test
@@ -68,8 +67,8 @@ class NormberakningFeederTest {
 			.withHousingForm("RENTAL").withHousingPersonCount(2).withNormType("RIKSNORM")
 			.withCosts(List.of(rent));
 
-		when(expenseRegelverkServiceMock.cap(eq(MUNICIPALITY_ID), eq("RENT"), any(), eq("RENTAL"), eq(2), eq("RIKSNORM"), eq(new BigDecimal("9000"))))
-			.thenReturn(new BigDecimal("8500"));
+		when(expenseRegelverkServiceMock.verdict(eq(MUNICIPALITY_ID), eq("RENT"), any(), eq("RENTAL"), eq(2), eq("RIKSNORM"), eq(new BigDecimal("9000"))))
+			.thenReturn(new ExpenseRegelverkService.ExpenseVerdict(new BigDecimal("8500"), "SPECIAL_EXPENSE"));
 
 		final var rows = feeder.expenseRows(MUNICIPALITY_ID, ERRAND_ID, errand);
 
@@ -81,6 +80,7 @@ class NormberakningFeederTest {
 		assertThat(row.getSpecification()).isEqualTo("spec");
 		assertThat(row.getAppliedAmount()).isEqualByComparingTo(new BigDecimal("9000"));
 		assertThat(row.getProcessAmount()).isEqualByComparingTo(new BigDecimal("8500"));
+		assertThat(row.getBucket()).isEqualTo("SPECIAL_EXPENSE");
 	}
 
 	@Test

@@ -36,6 +36,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Financial
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonInput;
@@ -220,6 +221,22 @@ class FinancialAssistanceResource {
 		@PathVariable final String errandId) {
 
 		return ok(service.getDraft(municipalityId, namespace, errandId));
+	}
+
+	@PatchMapping(path = "/financial-assistance/{errandId}/normberakning/draft/header", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Edit the draft header (handläggare)",
+		description = "Set the norm, the calculation date window (Från/Till/Beräkningsdatum) and the custom household size (Gemensamma kostnader). 404 when no draft exists.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<NormberakningDraft> patchDraftHeader(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@PathVariable final String errandId,
+		@Valid @NotNull @RequestBody final NormHeaderInput input) {
+
+		return ok(service.patchDraftHeader(municipalityId, namespace, errandId, input));
 	}
 
 	// --- per-row handläggare edits on the draft. Each touches only the handläggare value / note / soft-delete; the

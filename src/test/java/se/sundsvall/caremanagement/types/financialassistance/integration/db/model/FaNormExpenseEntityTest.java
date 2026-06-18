@@ -39,6 +39,7 @@ class FaNormExpenseEntityTest {
 		final var id = "id";
 		final var errandId = "errand";
 		final var origin = "SYSTEM";
+		final var bucket = "EXPENSE";
 		final var costType = "rent";
 		final var otherSubType = "other";
 		final var specification = "specification";
@@ -54,6 +55,7 @@ class FaNormExpenseEntityTest {
 			.withId(id)
 			.withErrandId(errandId)
 			.withOrigin(origin)
+			.withBucket(bucket)
 			.withCostType(costType)
 			.withOtherSubType(otherSubType)
 			.withSpecification(specification)
@@ -69,6 +71,7 @@ class FaNormExpenseEntityTest {
 		assertThat(entity.getId()).isEqualTo(id);
 		assertThat(entity.getErrandId()).isEqualTo(errandId);
 		assertThat(entity.getOrigin()).isEqualTo(origin);
+		assertThat(entity.getBucket()).isEqualTo(bucket);
 		assertThat(entity.getCostType()).isEqualTo(costType);
 		assertThat(entity.getOtherSubType()).isEqualTo(otherSubType);
 		assertThat(entity.getSpecification()).isEqualTo(specification);

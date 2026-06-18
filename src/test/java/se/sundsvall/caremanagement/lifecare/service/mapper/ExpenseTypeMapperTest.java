@@ -2,10 +2,12 @@ package se.sundsvall.caremanagement.lifecare.service.mapper;
 
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationExpenseTypeDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedCalculationSpecialExpenseTypeDTO;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper.BUCKET_SPECIAL_EXPENSE;
 
 class ExpenseTypeMapperTest {
 
@@ -65,5 +67,24 @@ class ExpenseTypeMapperTest {
 		final var result = ExpenseTypeMapper.resolveExpenseTypeId("RENT", new PersonBasedCalculationProposalDTO());
 
 		assertThat(result).isEmpty();
+	}
+
+	@Test
+	void specialExpenseBucketResolvesAgainstSpecialCatalogue() {
+		final var proposal = new PersonBasedCalculationProposalDTO()
+			.calculationExpenseTypes(List.of(new PersonBasedCalculationExpenseTypeDTO().id(7).name("El"))) // wrong catalogue
+			.calculationSpecialExpenseTypes(List.of(new PersonBasedCalculationSpecialExpenseTypeDTO().id(88).name("Läkarvård")));
+
+		assertThat(ExpenseTypeMapper.resolveExpenseTypeId("MEDICAL_CARE", proposal, BUCKET_SPECIAL_EXPENSE)).contains(88);
+		// regular bucket would miss it (not in the regular catalogue)
+		assertThat(ExpenseTypeMapper.resolveExpenseTypeId("MEDICAL_CARE", proposal)).isEmpty();
+	}
+
+	@Test
+	void specialExpenseBucketEmptyWhenSpecialCatalogueMissingTheName() {
+		final var proposal = new PersonBasedCalculationProposalDTO()
+			.calculationSpecialExpenseTypes(List.of(new PersonBasedCalculationSpecialExpenseTypeDTO().id(88).name("Glasögon")));
+
+		assertThat(ExpenseTypeMapper.resolveExpenseTypeId("MEDICAL_CARE", proposal, BUCKET_SPECIAL_EXPENSE)).isEmpty();
 	}
 }

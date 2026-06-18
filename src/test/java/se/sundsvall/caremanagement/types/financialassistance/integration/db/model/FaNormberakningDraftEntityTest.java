@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.integration.db.model;
 
 import com.google.code.beanmatchers.BeanMatchers;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Random;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,17 +37,30 @@ class FaNormberakningDraftEntityTest {
 	@Test
 	void testBuilderMethods() {
 		final var created = OffsetDateTime.parse("2026-06-01T12:00:00Z");
+		final var calculationFromDate = LocalDate.of(2026, 6, 1);
+		final var calculationToDate = LocalDate.of(2026, 6, 30);
+		final var calculationDate = LocalDate.of(2026, 6, 15);
 		final var entity = FaNormberakningDraftEntity.create()
 			.withErrandId("errand")
 			.withApplicationMonth("2026-06")
 			.withNormId(7)
 			.withNormType("RIKSNORM")
+			.withCalculationFromDate(calculationFromDate)
+			.withCalculationToDate(calculationToDate)
+			.withCalculationDate(calculationDate)
+			.withHasCustomHouseholdSize(true)
+			.withHouseholdSize(3)
 			.withCreated(created)
 			.withUpdated(created);
 
 		org.assertj.core.api.Assertions.assertThat(entity).hasNoNullFieldsOrProperties();
 		org.assertj.core.api.Assertions.assertThat(entity.getErrandId()).isEqualTo("errand");
 		org.assertj.core.api.Assertions.assertThat(entity.getNormId()).isEqualTo(7);
+		org.assertj.core.api.Assertions.assertThat(entity.getCalculationFromDate()).isEqualTo(calculationFromDate);
+		org.assertj.core.api.Assertions.assertThat(entity.getCalculationToDate()).isEqualTo(calculationToDate);
+		org.assertj.core.api.Assertions.assertThat(entity.getCalculationDate()).isEqualTo(calculationDate);
+		org.assertj.core.api.Assertions.assertThat(entity.getHasCustomHouseholdSize()).isTrue();
+		org.assertj.core.api.Assertions.assertThat(entity.getHouseholdSize()).isEqualTo(3);
 	}
 
 	@Test

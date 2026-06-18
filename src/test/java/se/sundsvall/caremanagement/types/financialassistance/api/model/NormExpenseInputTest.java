@@ -27,6 +27,7 @@ class NormExpenseInputTest {
 	@Test
 	void testBuilderMethods() {
 		final var costType = "rent";
+		final var bucket = "EXPENSE";
 		final var otherSubType = "other";
 		final var specification = "specification";
 		final var handlaggareAmount = BigDecimal.valueOf(1100.00);
@@ -34,6 +35,7 @@ class NormExpenseInputTest {
 
 		final var result = NormExpenseInput.create()
 			.withCostType(costType)
+			.withBucket(bucket)
 			.withOtherSubType(otherSubType)
 			.withSpecification(specification)
 			.withHandlaggareAmount(handlaggareAmount)
@@ -41,6 +43,7 @@ class NormExpenseInputTest {
 
 		assertThat(result).hasNoNullFieldsOrProperties();
 		assertThat(result.getCostType()).isEqualTo(costType);
+		assertThat(result.getBucket()).isEqualTo(bucket);
 		assertThat(result.getOtherSubType()).isEqualTo(otherSubType);
 		assertThat(result.getSpecification()).isEqualTo(specification);
 		assertThat(result.getHandlaggareAmount()).isEqualTo(handlaggareAmount);

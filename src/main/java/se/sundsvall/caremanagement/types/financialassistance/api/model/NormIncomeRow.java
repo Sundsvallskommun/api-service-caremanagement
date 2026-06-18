@@ -9,13 +9,14 @@ import org.springframework.format.annotation.DateTimeFormat;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
- * One income row of the normberäkning draft, as returned to Draken — an FC income type for a single recipient. The
- * amount the process decided ({@code processAmount}) is read-only; the handläggare's override
- * ({@code handlaggareAmount})
- * and the note are editable. {@code effectiveAmount} is what is posted to Lifecare = the handläggare amount when set,
+ * One income row of the normberäkning draft, as returned to Draken — one FC income type with a sökande (applicant, "S")
+ * side and a medsökande (co-applicant, "M") side, mirroring the Lifecare INKOMSTER tab and FC
+ * {@code CalculationIncomes}. Per side the amount the process decided ({@code *ProcessAmount}, from the classified
+ * SSBTEK income) is read-only; the handläggare's override ({@code *HandlaggareAmount}) and the note are editable. The
+ * effective amount per side ({@code *EffectiveAmount}) is what is posted to Lifecare = the handläggare amount when set,
  * otherwise the process amount. Subtracted from the norm.
  */
-@Schema(description = "One income row of the normberäkning draft (FC income type + recipient, process vs handläggare amount).")
+@Schema(description = "One income row of the normberäkning draft (FC income type with applicant/co-applicant sides, process vs handläggare amounts).")
 public class NormIncomeRow {
 
 	@Schema(description = "The row id", accessMode = Schema.AccessMode.READ_ONLY)
@@ -32,27 +33,31 @@ public class NormIncomeRow {
 	@Schema(description = "The FC income-type name", examples = "Bostadsbidrag", accessMode = Schema.AccessMode.READ_ONLY)
 	private String typeName;
 
-	@Schema(description = "Whose income this is", allowableValues = {
-		"APPLICANT", "CO_APPLICANT"
-	}, accessMode = Schema.AccessMode.READ_ONLY)
-	private String recipient;
+	@Schema(description = "The amount the process decided for the applicant (from the classified SSBTEK income)", examples = "1850.00", accessMode = Schema.AccessMode.READ_ONLY)
+	private BigDecimal applicantProcessAmount;
 
-	@Schema(description = "The amount the process decided (from the classified SSBTEK income)", examples = "1850.00", accessMode = Schema.AccessMode.READ_ONLY)
-	private BigDecimal processAmount;
+	@Schema(description = "The amount a handläggare decided for the applicant; overrides the process amount when set", examples = "1900.00")
+	private BigDecimal applicantHandlaggareAmount;
 
-	@Schema(description = "The date the process amount is attributed to", accessMode = Schema.AccessMode.READ_ONLY)
+	@Schema(description = "The amount actually used for the applicant (handläggare amount when set, otherwise process amount)", accessMode = Schema.AccessMode.READ_ONLY)
+	private BigDecimal applicantEffectiveAmount;
+
+	@Schema(description = "The date the applicant amount is attributed to")
 	@DateTimeFormat(iso = DATE_TIME)
-	private OffsetDateTime processAmountDate;
+	private OffsetDateTime applicantAmountDate;
 
-	@Schema(description = "The amount a handläggare decided; overrides the process amount when set", examples = "1900.00")
-	private BigDecimal handlaggareAmount;
+	@Schema(description = "The amount the process decided for the co-applicant (from the classified SSBTEK income)", examples = "1850.00", accessMode = Schema.AccessMode.READ_ONLY)
+	private BigDecimal coapplicantProcessAmount;
 
-	@Schema(description = "The date the handläggare amount is attributed to")
+	@Schema(description = "The amount a handläggare decided for the co-applicant; overrides the process amount when set", examples = "1900.00")
+	private BigDecimal coapplicantHandlaggareAmount;
+
+	@Schema(description = "The amount actually used for the co-applicant (handläggare amount when set, otherwise process amount)", accessMode = Schema.AccessMode.READ_ONLY)
+	private BigDecimal coapplicantEffectiveAmount;
+
+	@Schema(description = "The date the co-applicant amount is attributed to")
 	@DateTimeFormat(iso = DATE_TIME)
-	private OffsetDateTime handlaggareAmountDate;
-
-	@Schema(description = "The amount actually used (handläggare amount when set, otherwise process amount)", accessMode = Schema.AccessMode.READ_ONLY)
-	private BigDecimal effectiveAmount;
+	private OffsetDateTime coapplicantAmountDate;
 
 	@Schema(description = "Whether the row is soft-deleted (excluded from the calculation, not resurrected by the daily refresh)", accessMode = Schema.AccessMode.READ_ONLY)
 	private boolean deleted;
@@ -124,81 +129,107 @@ public class NormIncomeRow {
 		return this;
 	}
 
-	public String getRecipient() {
-		return recipient;
+	public BigDecimal getApplicantProcessAmount() {
+		return applicantProcessAmount;
 	}
 
-	public void setRecipient(final String recipient) {
-		this.recipient = recipient;
+	public void setApplicantProcessAmount(final BigDecimal applicantProcessAmount) {
+		this.applicantProcessAmount = applicantProcessAmount;
 	}
 
-	public NormIncomeRow withRecipient(final String recipient) {
-		this.recipient = recipient;
+	public NormIncomeRow withApplicantProcessAmount(final BigDecimal applicantProcessAmount) {
+		this.applicantProcessAmount = applicantProcessAmount;
 		return this;
 	}
 
-	public BigDecimal getProcessAmount() {
-		return processAmount;
+	public BigDecimal getApplicantHandlaggareAmount() {
+		return applicantHandlaggareAmount;
 	}
 
-	public void setProcessAmount(final BigDecimal processAmount) {
-		this.processAmount = processAmount;
+	public void setApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
+		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
 	}
 
-	public NormIncomeRow withProcessAmount(final BigDecimal processAmount) {
-		this.processAmount = processAmount;
+	public NormIncomeRow withApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
+		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
 		return this;
 	}
 
-	public OffsetDateTime getProcessAmountDate() {
-		return processAmountDate;
+	public BigDecimal getApplicantEffectiveAmount() {
+		return applicantEffectiveAmount;
 	}
 
-	public void setProcessAmountDate(final OffsetDateTime processAmountDate) {
-		this.processAmountDate = processAmountDate;
+	public void setApplicantEffectiveAmount(final BigDecimal applicantEffectiveAmount) {
+		this.applicantEffectiveAmount = applicantEffectiveAmount;
 	}
 
-	public NormIncomeRow withProcessAmountDate(final OffsetDateTime processAmountDate) {
-		this.processAmountDate = processAmountDate;
+	public NormIncomeRow withApplicantEffectiveAmount(final BigDecimal applicantEffectiveAmount) {
+		this.applicantEffectiveAmount = applicantEffectiveAmount;
 		return this;
 	}
 
-	public BigDecimal getHandlaggareAmount() {
-		return handlaggareAmount;
+	public OffsetDateTime getApplicantAmountDate() {
+		return applicantAmountDate;
 	}
 
-	public void setHandlaggareAmount(final BigDecimal handlaggareAmount) {
-		this.handlaggareAmount = handlaggareAmount;
+	public void setApplicantAmountDate(final OffsetDateTime applicantAmountDate) {
+		this.applicantAmountDate = applicantAmountDate;
 	}
 
-	public NormIncomeRow withHandlaggareAmount(final BigDecimal handlaggareAmount) {
-		this.handlaggareAmount = handlaggareAmount;
+	public NormIncomeRow withApplicantAmountDate(final OffsetDateTime applicantAmountDate) {
+		this.applicantAmountDate = applicantAmountDate;
 		return this;
 	}
 
-	public OffsetDateTime getHandlaggareAmountDate() {
-		return handlaggareAmountDate;
+	public BigDecimal getCoapplicantProcessAmount() {
+		return coapplicantProcessAmount;
 	}
 
-	public void setHandlaggareAmountDate(final OffsetDateTime handlaggareAmountDate) {
-		this.handlaggareAmountDate = handlaggareAmountDate;
+	public void setCoapplicantProcessAmount(final BigDecimal coapplicantProcessAmount) {
+		this.coapplicantProcessAmount = coapplicantProcessAmount;
 	}
 
-	public NormIncomeRow withHandlaggareAmountDate(final OffsetDateTime handlaggareAmountDate) {
-		this.handlaggareAmountDate = handlaggareAmountDate;
+	public NormIncomeRow withCoapplicantProcessAmount(final BigDecimal coapplicantProcessAmount) {
+		this.coapplicantProcessAmount = coapplicantProcessAmount;
 		return this;
 	}
 
-	public BigDecimal getEffectiveAmount() {
-		return effectiveAmount;
+	public BigDecimal getCoapplicantHandlaggareAmount() {
+		return coapplicantHandlaggareAmount;
 	}
 
-	public void setEffectiveAmount(final BigDecimal effectiveAmount) {
-		this.effectiveAmount = effectiveAmount;
+	public void setCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
+		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
 	}
 
-	public NormIncomeRow withEffectiveAmount(final BigDecimal effectiveAmount) {
-		this.effectiveAmount = effectiveAmount;
+	public NormIncomeRow withCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
+		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
+		return this;
+	}
+
+	public BigDecimal getCoapplicantEffectiveAmount() {
+		return coapplicantEffectiveAmount;
+	}
+
+	public void setCoapplicantEffectiveAmount(final BigDecimal coapplicantEffectiveAmount) {
+		this.coapplicantEffectiveAmount = coapplicantEffectiveAmount;
+	}
+
+	public NormIncomeRow withCoapplicantEffectiveAmount(final BigDecimal coapplicantEffectiveAmount) {
+		this.coapplicantEffectiveAmount = coapplicantEffectiveAmount;
+		return this;
+	}
+
+	public OffsetDateTime getCoapplicantAmountDate() {
+		return coapplicantAmountDate;
+	}
+
+	public void setCoapplicantAmountDate(final OffsetDateTime coapplicantAmountDate) {
+		this.coapplicantAmountDate = coapplicantAmountDate;
+	}
+
+	public NormIncomeRow withCoapplicantAmountDate(final OffsetDateTime coapplicantAmountDate) {
+		this.coapplicantAmountDate = coapplicantAmountDate;
 		return this;
 	}
 
@@ -260,16 +291,18 @@ public class NormIncomeRow {
 			return false;
 		final NormIncomeRow that = (NormIncomeRow) o;
 		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(origin, that.origin) && Objects.equals(typeId, that.typeId)
-			&& Objects.equals(typeName, that.typeName) && Objects.equals(recipient, that.recipient) && Objects.equals(processAmount, that.processAmount)
-			&& Objects.equals(processAmountDate, that.processAmountDate) && Objects.equals(handlaggareAmount, that.handlaggareAmount)
-			&& Objects.equals(handlaggareAmountDate, that.handlaggareAmountDate) && Objects.equals(effectiveAmount, that.effectiveAmount)
+			&& Objects.equals(typeName, that.typeName) && Objects.equals(applicantProcessAmount, that.applicantProcessAmount)
+			&& Objects.equals(applicantHandlaggareAmount, that.applicantHandlaggareAmount) && Objects.equals(applicantEffectiveAmount, that.applicantEffectiveAmount)
+			&& Objects.equals(applicantAmountDate, that.applicantAmountDate) && Objects.equals(coapplicantProcessAmount, that.coapplicantProcessAmount)
+			&& Objects.equals(coapplicantHandlaggareAmount, that.coapplicantHandlaggareAmount)
+			&& Objects.equals(coapplicantEffectiveAmount, that.coapplicantEffectiveAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate)
 			&& Objects.equals(note, that.note) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, typeId, typeName, recipient, processAmount, processAmountDate, handlaggareAmount, handlaggareAmountDate, effectiveAmount,
-			deleted, note, created, updated);
+		return Objects.hash(id, origin, typeId, typeName, applicantProcessAmount, applicantHandlaggareAmount, applicantEffectiveAmount, applicantAmountDate,
+			coapplicantProcessAmount, coapplicantHandlaggareAmount, coapplicantEffectiveAmount, coapplicantAmountDate, deleted, note, created, updated);
 	}
 
 	@Override
@@ -279,12 +312,14 @@ public class NormIncomeRow {
 			", origin='" + origin + '\'' +
 			", typeId=" + typeId +
 			", typeName='" + typeName + '\'' +
-			", recipient='" + recipient + '\'' +
-			", processAmount=" + processAmount +
-			", processAmountDate=" + processAmountDate +
-			", handlaggareAmount=" + handlaggareAmount +
-			", handlaggareAmountDate=" + handlaggareAmountDate +
-			", effectiveAmount=" + effectiveAmount +
+			", applicantProcessAmount=" + applicantProcessAmount +
+			", applicantHandlaggareAmount=" + applicantHandlaggareAmount +
+			", applicantEffectiveAmount=" + applicantEffectiveAmount +
+			", applicantAmountDate=" + applicantAmountDate +
+			", coapplicantProcessAmount=" + coapplicantProcessAmount +
+			", coapplicantHandlaggareAmount=" + coapplicantHandlaggareAmount +
+			", coapplicantEffectiveAmount=" + coapplicantEffectiveAmount +
+			", coapplicantAmountDate=" + coapplicantAmountDate +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +
 			", created=" + created +

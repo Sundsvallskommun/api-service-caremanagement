@@ -2,12 +2,14 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
@@ -29,6 +31,24 @@ public class NormberakningDraft {
 	@Schema(description = "The selected norm type")
 	private String normType;
 
+	@Schema(description = "The start date of the calculation period")
+	@DateTimeFormat(iso = DATE)
+	private LocalDate calculationFromDate;
+
+	@Schema(description = "The end date of the calculation period")
+	@DateTimeFormat(iso = DATE)
+	private LocalDate calculationToDate;
+
+	@Schema(description = "The date the calculation is performed")
+	@DateTimeFormat(iso = DATE)
+	private LocalDate calculationDate;
+
+	@Schema(description = "Whether the household size has been overridden by a handläggare")
+	private Boolean hasCustomHouseholdSize;
+
+	@Schema(description = "The household size used for the norm", examples = "3")
+	private Integer householdSize;
+
 	@Schema(description = "The person rows (personer)")
 	private List<NormPersonRow> persons = new ArrayList<>();
 
@@ -38,11 +58,17 @@ public class NormberakningDraft {
 	@Schema(description = "The expense rows (utgifter)")
 	private List<NormExpenseRow> expenses = new ArrayList<>();
 
+	@Schema(description = "The special expense rows (särskilda utgifter)")
+	private List<NormExpenseRow> specialExpenses = new ArrayList<>();
+
 	@Schema(description = "The sum of the effective income amounts", accessMode = Schema.AccessMode.READ_ONLY)
 	private BigDecimal incomeSum;
 
 	@Schema(description = "The sum of the effective expense amounts", accessMode = Schema.AccessMode.READ_ONLY)
 	private BigDecimal expenseSum;
+
+	@Schema(description = "The sum of the effective special expense amounts", accessMode = Schema.AccessMode.READ_ONLY)
+	private BigDecimal specialExpenseSum;
 
 	@Schema(description = "When the draft was created", accessMode = Schema.AccessMode.READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
@@ -108,6 +134,71 @@ public class NormberakningDraft {
 		return this;
 	}
 
+	public LocalDate getCalculationFromDate() {
+		return calculationFromDate;
+	}
+
+	public void setCalculationFromDate(final LocalDate calculationFromDate) {
+		this.calculationFromDate = calculationFromDate;
+	}
+
+	public NormberakningDraft withCalculationFromDate(final LocalDate calculationFromDate) {
+		this.calculationFromDate = calculationFromDate;
+		return this;
+	}
+
+	public LocalDate getCalculationToDate() {
+		return calculationToDate;
+	}
+
+	public void setCalculationToDate(final LocalDate calculationToDate) {
+		this.calculationToDate = calculationToDate;
+	}
+
+	public NormberakningDraft withCalculationToDate(final LocalDate calculationToDate) {
+		this.calculationToDate = calculationToDate;
+		return this;
+	}
+
+	public LocalDate getCalculationDate() {
+		return calculationDate;
+	}
+
+	public void setCalculationDate(final LocalDate calculationDate) {
+		this.calculationDate = calculationDate;
+	}
+
+	public NormberakningDraft withCalculationDate(final LocalDate calculationDate) {
+		this.calculationDate = calculationDate;
+		return this;
+	}
+
+	public Boolean getHasCustomHouseholdSize() {
+		return hasCustomHouseholdSize;
+	}
+
+	public void setHasCustomHouseholdSize(final Boolean hasCustomHouseholdSize) {
+		this.hasCustomHouseholdSize = hasCustomHouseholdSize;
+	}
+
+	public NormberakningDraft withHasCustomHouseholdSize(final Boolean hasCustomHouseholdSize) {
+		this.hasCustomHouseholdSize = hasCustomHouseholdSize;
+		return this;
+	}
+
+	public Integer getHouseholdSize() {
+		return householdSize;
+	}
+
+	public void setHouseholdSize(final Integer householdSize) {
+		this.householdSize = householdSize;
+	}
+
+	public NormberakningDraft withHouseholdSize(final Integer householdSize) {
+		this.householdSize = householdSize;
+		return this;
+	}
+
 	public List<NormPersonRow> getPersons() {
 		return persons;
 	}
@@ -147,6 +238,19 @@ public class NormberakningDraft {
 		return this;
 	}
 
+	public List<NormExpenseRow> getSpecialExpenses() {
+		return specialExpenses;
+	}
+
+	public void setSpecialExpenses(final List<NormExpenseRow> specialExpenses) {
+		this.specialExpenses = specialExpenses;
+	}
+
+	public NormberakningDraft withSpecialExpenses(final List<NormExpenseRow> specialExpenses) {
+		this.specialExpenses = specialExpenses;
+		return this;
+	}
+
 	public BigDecimal getIncomeSum() {
 		return incomeSum;
 	}
@@ -170,6 +274,19 @@ public class NormberakningDraft {
 
 	public NormberakningDraft withExpenseSum(final BigDecimal expenseSum) {
 		this.expenseSum = expenseSum;
+		return this;
+	}
+
+	public BigDecimal getSpecialExpenseSum() {
+		return specialExpenseSum;
+	}
+
+	public void setSpecialExpenseSum(final BigDecimal specialExpenseSum) {
+		this.specialExpenseSum = specialExpenseSum;
+	}
+
+	public NormberakningDraft withSpecialExpenseSum(final BigDecimal specialExpenseSum) {
+		this.specialExpenseSum = specialExpenseSum;
 		return this;
 	}
 
@@ -205,14 +322,18 @@ public class NormberakningDraft {
 			return false;
 		final NormberakningDraft that = (NormberakningDraft) o;
 		return Objects.equals(errandId, that.errandId) && Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(normId, that.normId)
-			&& Objects.equals(normType, that.normType) && Objects.equals(persons, that.persons) && Objects.equals(incomes, that.incomes)
-			&& Objects.equals(expenses, that.expenses) && Objects.equals(incomeSum, that.incomeSum) && Objects.equals(expenseSum, that.expenseSum)
-			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
+			&& Objects.equals(normType, that.normType) && Objects.equals(calculationFromDate, that.calculationFromDate)
+			&& Objects.equals(calculationToDate, that.calculationToDate) && Objects.equals(calculationDate, that.calculationDate)
+			&& Objects.equals(hasCustomHouseholdSize, that.hasCustomHouseholdSize) && Objects.equals(householdSize, that.householdSize)
+			&& Objects.equals(persons, that.persons) && Objects.equals(incomes, that.incomes) && Objects.equals(expenses, that.expenses)
+			&& Objects.equals(specialExpenses, that.specialExpenses) && Objects.equals(incomeSum, that.incomeSum) && Objects.equals(expenseSum, that.expenseSum)
+			&& Objects.equals(specialExpenseSum, that.specialExpenseSum) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(errandId, applicationMonth, normId, normType, persons, incomes, expenses, incomeSum, expenseSum, created, updated);
+		return Objects.hash(errandId, applicationMonth, normId, normType, calculationFromDate, calculationToDate, calculationDate, hasCustomHouseholdSize, householdSize,
+			persons, incomes, expenses, specialExpenses, incomeSum, expenseSum, specialExpenseSum, created, updated);
 	}
 
 	@Override
@@ -222,11 +343,18 @@ public class NormberakningDraft {
 			", applicationMonth='" + applicationMonth + '\'' +
 			", normId=" + normId +
 			", normType='" + normType + '\'' +
+			", calculationFromDate=" + calculationFromDate +
+			", calculationToDate=" + calculationToDate +
+			", calculationDate=" + calculationDate +
+			", hasCustomHouseholdSize=" + hasCustomHouseholdSize +
+			", householdSize=" + householdSize +
 			", persons=" + persons +
 			", incomes=" + incomes +
 			", expenses=" + expenses +
+			", specialExpenses=" + specialExpenses +
 			", incomeSum=" + incomeSum +
 			", expenseSum=" + expenseSum +
+			", specialExpenseSum=" + specialExpenseSum +
 			", created=" + created +
 			", updated=" + updated +
 			'}';
