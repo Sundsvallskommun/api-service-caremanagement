@@ -1,6 +1,8 @@
 package se.sundsvall.caremanagement.decisions.integration.db.model;
 
 import com.google.code.beanmatchers.BeanMatchers;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Random;
 import org.junit.jupiter.api.BeforeAll;
@@ -21,6 +23,8 @@ class DecisionEntityTest {
 	@BeforeAll
 	static void setup() {
 		BeanMatchers.registerValueGenerator(() -> now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+		BeanMatchers.registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(1000)), LocalDate.class);
+		BeanMatchers.registerValueGenerator(() -> BigDecimal.valueOf(new Random().nextInt(1_000_000)), BigDecimal.class);
 	}
 
 	@Test
@@ -42,12 +46,21 @@ class DecisionEntityTest {
 	@Test
 	void testBuilderMethods() {
 		final var created = FIXED_TIMESTAMP;
+		final var amount = new BigDecimal("7900.00");
+		final var decisionDate = LocalDate.parse("2026-06-18");
+		final var periodFrom = LocalDate.parse("2026-06-01");
+		final var periodTo = LocalDate.parse("2026-06-30");
 		final var entity = DecisionEntity.create()
 			.withId("id")
 			.withErrandId("errand")
 			.withDecisionType("type")
 			.withValue("value")
 			.withDescription("desc")
+			.withAmount(amount)
+			.withDecisionMessage("message")
+			.withDecisionDate(decisionDate)
+			.withPeriodFrom(periodFrom)
+			.withPeriodTo(periodTo)
 			.withCreatedBy("user")
 			.withCreated(created);
 
@@ -57,6 +70,11 @@ class DecisionEntityTest {
 		org.assertj.core.api.Assertions.assertThat(entity.getDecisionType()).isEqualTo("type");
 		org.assertj.core.api.Assertions.assertThat(entity.getValue()).isEqualTo("value");
 		org.assertj.core.api.Assertions.assertThat(entity.getDescription()).isEqualTo("desc");
+		org.assertj.core.api.Assertions.assertThat(entity.getAmount()).isEqualTo(amount);
+		org.assertj.core.api.Assertions.assertThat(entity.getDecisionMessage()).isEqualTo("message");
+		org.assertj.core.api.Assertions.assertThat(entity.getDecisionDate()).isEqualTo(decisionDate);
+		org.assertj.core.api.Assertions.assertThat(entity.getPeriodFrom()).isEqualTo(periodFrom);
+		org.assertj.core.api.Assertions.assertThat(entity.getPeriodTo()).isEqualTo(periodTo);
 		org.assertj.core.api.Assertions.assertThat(entity.getCreatedBy()).isEqualTo("user");
 		org.assertj.core.api.Assertions.assertThat(entity.getCreated()).isEqualTo(created);
 	}

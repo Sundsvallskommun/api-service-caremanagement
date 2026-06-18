@@ -160,7 +160,16 @@ public class FinancialAssistanceService {
 	public FinancialAssistanceView read(final String municipalityId, final String namespace, final String errandId) {
 		final var envelope = errandService.readErrand(municipalityId, namespace, errandId);
 		final var entity = repository.findByErrandId(errandId).orElse(null);
-		return toView(envelope, entity);
+		return toView(envelope, entity)
+			.withRecommendation(latestRecommendation(municipalityId, namespace, errandId));
+	}
+
+	/** The most recent {@code RECOMMENDATION} decision on the errand (the automated recommendation), or null when none. */
+	private Decision latestRecommendation(final String municipalityId, final String namespace, final String errandId) {
+		return decisionService.readAll(municipalityId, namespace, errandId).stream()
+			.filter(decision -> RECOMMENDATION_TYPE.equals(decision.getDecisionType()))
+			.findFirst()
+			.orElse(null);
 	}
 
 	public void updateData(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceData data) {

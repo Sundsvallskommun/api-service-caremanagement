@@ -6,6 +6,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Objects;
@@ -34,6 +36,21 @@ public class DecisionEntity {
 
 	@Column(name = "description", length = 4096)
 	private String description;
+
+	@Column(name = "amount", precision = 15, scale = 2)
+	private BigDecimal amount;
+
+	@Column(name = "decision_message", length = 8192)
+	private String decisionMessage;
+
+	@Column(name = "decision_date")
+	private LocalDate decisionDate;
+
+	@Column(name = "period_from")
+	private LocalDate periodFrom;
+
+	@Column(name = "period_to")
+	private LocalDate periodTo;
 
 	@Column(name = "created_by")
 	private String createdBy;
@@ -72,6 +89,26 @@ public class DecisionEntity {
 		return description;
 	}
 
+	public BigDecimal getAmount() {
+		return amount;
+	}
+
+	public String getDecisionMessage() {
+		return decisionMessage;
+	}
+
+	public LocalDate getDecisionDate() {
+		return decisionDate;
+	}
+
+	public LocalDate getPeriodFrom() {
+		return periodFrom;
+	}
+
+	public LocalDate getPeriodTo() {
+		return periodTo;
+	}
+
 	public String getCreatedBy() {
 		return createdBy;
 	}
@@ -98,6 +135,26 @@ public class DecisionEntity {
 
 	public void setDescription(final String v) {
 		this.description = v;
+	}
+
+	public void setAmount(final BigDecimal v) {
+		this.amount = v;
+	}
+
+	public void setDecisionMessage(final String v) {
+		this.decisionMessage = v;
+	}
+
+	public void setDecisionDate(final LocalDate v) {
+		this.decisionDate = v;
+	}
+
+	public void setPeriodFrom(final LocalDate v) {
+		this.periodFrom = v;
+	}
+
+	public void setPeriodTo(final LocalDate v) {
+		this.periodTo = v;
 	}
 
 	public void setCreatedBy(final String v) {
@@ -133,6 +190,31 @@ public class DecisionEntity {
 		return this;
 	}
 
+	public DecisionEntity withAmount(final BigDecimal v) {
+		this.amount = v;
+		return this;
+	}
+
+	public DecisionEntity withDecisionMessage(final String v) {
+		this.decisionMessage = v;
+		return this;
+	}
+
+	public DecisionEntity withDecisionDate(final LocalDate v) {
+		this.decisionDate = v;
+		return this;
+	}
+
+	public DecisionEntity withPeriodFrom(final LocalDate v) {
+		this.periodFrom = v;
+		return this;
+	}
+
+	public DecisionEntity withPeriodTo(final LocalDate v) {
+		this.periodTo = v;
+		return this;
+	}
+
 	public DecisionEntity withCreatedBy(final String v) {
 		this.createdBy = v;
 		return this;
@@ -151,18 +233,21 @@ public class DecisionEntity {
 			return false;
 		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
 			&& Objects.equals(decisionType, other.decisionType) && Objects.equals(value, other.value)
-			&& Objects.equals(description, other.description) && Objects.equals(createdBy, other.createdBy)
-			&& Objects.equals(created, other.created);
+			&& Objects.equals(description, other.description) && Objects.equals(amount, other.amount)
+			&& Objects.equals(decisionMessage, other.decisionMessage) && Objects.equals(decisionDate, other.decisionDate)
+			&& Objects.equals(periodFrom, other.periodFrom) && Objects.equals(periodTo, other.periodTo)
+			&& Objects.equals(createdBy, other.createdBy) && Objects.equals(created, other.created);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, decisionType, value, description, createdBy, created);
+		return Objects.hash(id, errandId, decisionType, value, description, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, created);
 	}
 
 	@Override
 	public String toString() {
 		return "DecisionEntity{id='" + id + "', errandId='" + errandId + "', decisionType='" + decisionType
-			+ "', value='" + value + "', createdBy='" + createdBy + "', created=" + created + '}';
+			+ "', value='" + value + "', amount=" + amount + ", decisionDate=" + decisionDate
+			+ ", periodFrom=" + periodFrom + ", periodTo=" + periodTo + ", createdBy='" + createdBy + "', created=" + created + '}';
 	}
 }

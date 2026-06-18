@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:59156
+- url: http://localhost:65395
   description: Generated server url
 tags:
 - name: Notes
@@ -4099,10 +4099,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -5330,6 +5330,40 @@ components:
           description: Optional human-readable description or motivation for the decision
           examples:
           - "Beslutsförslag enligt regelverk: 7900 kr, ingen varning"
+        amount:
+          type: number
+          description: "Optional decision amount, in SEK. For a financial-assistance\
+            \ beslut this is the granted belopp (0 for a rejection); for a recommendation\
+            \ it is the recommended amount when the pipeline has computed one."
+          examples:
+          - 7900.0
+        decisionMessage:
+          type: string
+          description: "Optional decision message (beslutsmeddelande) communicated\
+            \ to the applicant — the free-text justification shown on the decision\
+            \ letter, kept separate from the internal `description`."
+          examples:
+          - Du beviljas ekonomiskt bistånd för juni 2026 enligt riksnorm.
+        decisionDate:
+          type: string
+          format: date
+          description: "Optional date the decision applies (the handläggare-chosen\
+            \ beslutsdatum), distinct from the server-assigned `created` audit timestamp."
+          examples:
+          - 2026-06-18
+        periodFrom:
+          type: string
+          format: date
+          description: "Optional start of the period the decision covers (the month\
+            \ applied for, for a financial-assistance beslut)."
+          examples:
+          - 2026-06-01
+        periodTo:
+          type: string
+          format: date
+          description: Optional end of the period the decision covers.
+          examples:
+          - 2026-06-30
         createdBy:
           type: string
           description: "Identifier of the actor that produced the decision. Use the\
@@ -6708,6 +6742,14 @@ components:
         data:
           $ref: "#/components/schemas/FinancialAssistanceData"
           description: The typed financial assistance application payload
+        recommendation:
+          $ref: "#/components/schemas/Decision"
+          description: "The most recent automated recommendation on the errand (the\
+            \ latest RECOMMENDATION decision the handläggare reviews), or null when\
+            \ none has been produced. Carries the recommended value and, when the\
+            \ pipeline has computed it, the recommended amount/period to prefill the\
+            \ Beslut form."
+          readOnly: true
     PrefilledChild:
       type: object
       description: "A child pre-filled from Lifecare for a financial assistance renewal.\
@@ -6738,6 +6780,26 @@ components:
           type: boolean
           description: True when the Lifecare lookup succeeded. False means the answer
             is degraded (empty children).
+          examples:
+          - "true"
+    DecisionOption:
+      type: object
+      description: An allowed decision outcome (beslutsalternativ) for an errand type.
+      properties:
+        code:
+          type: string
+          description: "The decision outcome code, stored on the Decision row's value"
+          examples:
+          - BIFALL
+        displayName:
+          type: string
+          description: Human-readable label for the outcome
+          examples:
+          - Bifall
+        carriesAmount:
+          type: boolean
+          description: "Whether the outcome carries a belopp — true for outcomes that\
+            \ grant an amount, false for ones that imply 0 (e.g. avslag)"
           examples:
           - "true"
     ErrandTypeSchema:
@@ -6780,6 +6842,12 @@ components:
           description: "The fields the type's data payload should carry, as form guidance"
           items:
             $ref: "#/components/schemas/FieldDescriptor"
+        decisionOptions:
+          type: array
+          description: The allowed decision outcomes (beslutsalternativ) a handläggare
+            may record on the type; empty when the type defines none
+          items:
+            $ref: "#/components/schemas/DecisionOption"
     FieldDescriptor:
       type: object
       description: Form-guidance descriptor for a single data field of an errand type.

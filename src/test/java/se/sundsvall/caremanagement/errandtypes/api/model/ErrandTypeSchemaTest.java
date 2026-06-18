@@ -12,6 +12,8 @@ class ErrandTypeSchemaTest {
 	private static final List<RoleDefinition> ROLES = List.of(new RoleDefinition("APPLICANT", "Sökande", 1, true));
 	private static final List<FieldDescriptor> FIELDS = List.of(
 		FieldDescriptor.create().withName("maritalStatus").withType("ENUM"));
+	private static final List<DecisionOption> DECISION_OPTIONS = List.of(
+		DecisionOption.create().withCode("BIFALL").withDisplayName("Bifall").withCarriesAmount(true));
 
 	@Test
 	void builderMethods() {
@@ -21,7 +23,8 @@ class ErrandTypeSchemaTest {
 			.withDisplayName("Ekonomiskt bistånd – återansökan")
 			.withStatuses(STATUSES)
 			.withRoles(ROLES)
-			.withFields(FIELDS);
+			.withFields(FIELDS)
+			.withDecisionOptions(DECISION_OPTIONS);
 
 		assertThat(schema.getTypeSlug()).isEqualTo("financial-assistance-renewal");
 		assertThat(schema.getApplicationType()).isEqualTo("RENEWAL");
@@ -29,6 +32,7 @@ class ErrandTypeSchemaTest {
 		assertThat(schema.getStatuses()).isEqualTo(STATUSES);
 		assertThat(schema.getRoles()).isEqualTo(ROLES);
 		assertThat(schema.getFields()).isEqualTo(FIELDS);
+		assertThat(schema.getDecisionOptions()).isEqualTo(DECISION_OPTIONS);
 		assertThat(schema).hasNoNullFieldsOrProperties();
 	}
 
@@ -41,6 +45,7 @@ class ErrandTypeSchemaTest {
 		schema.setStatuses(STATUSES);
 		schema.setRoles(ROLES);
 		schema.setFields(FIELDS);
+		schema.setDecisionOptions(DECISION_OPTIONS);
 
 		assertThat(schema.getTypeSlug()).isEqualTo("financial-assistance-new");
 		assertThat(schema.getApplicationType()).isNull();
@@ -48,6 +53,7 @@ class ErrandTypeSchemaTest {
 		assertThat(schema.getStatuses()).isEqualTo(STATUSES);
 		assertThat(schema.getRoles()).isEqualTo(ROLES);
 		assertThat(schema.getFields()).isEqualTo(FIELDS);
+		assertThat(schema.getDecisionOptions()).isEqualTo(DECISION_OPTIONS);
 	}
 
 	@Test

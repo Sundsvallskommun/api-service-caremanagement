@@ -1,5 +1,7 @@
 package se.sundsvall.caremanagement.decisions.api.model;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Random;
 import org.junit.jupiter.api.BeforeAll;
@@ -21,6 +23,8 @@ class DecisionTest {
 	@BeforeAll
 	static void setup() {
 		registerValueGenerator(() -> OffsetDateTime.now().plusDays(new Random().nextInt(1000)), OffsetDateTime.class);
+		registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(1000)), LocalDate.class);
+		registerValueGenerator(() -> BigDecimal.valueOf(new Random().nextInt(1_000_000)), BigDecimal.class);
 	}
 
 	@Test
@@ -39,6 +43,11 @@ class DecisionTest {
 		final var decisionType = "PAYMENT";
 		final var value = "APPROVED";
 		final var description = "desc";
+		final var amount = new BigDecimal("7900.00");
+		final var decisionMessage = "Du beviljas ekonomiskt bistånd för juni 2026.";
+		final var decisionDate = LocalDate.parse("2026-06-18");
+		final var periodFrom = LocalDate.parse("2026-06-01");
+		final var periodTo = LocalDate.parse("2026-06-30");
 		final var createdBy = "jane01doe";
 		final var created = FIXED_TIMESTAMP;
 
@@ -47,6 +56,11 @@ class DecisionTest {
 			.withDecisionType(decisionType)
 			.withValue(value)
 			.withDescription(description)
+			.withAmount(amount)
+			.withDecisionMessage(decisionMessage)
+			.withDecisionDate(decisionDate)
+			.withPeriodFrom(periodFrom)
+			.withPeriodTo(periodTo)
 			.withCreatedBy(createdBy)
 			.withCreated(created);
 
@@ -55,6 +69,11 @@ class DecisionTest {
 		assertThat(result.getDecisionType()).isEqualTo(decisionType);
 		assertThat(result.getValue()).isEqualTo(value);
 		assertThat(result.getDescription()).isEqualTo(description);
+		assertThat(result.getAmount()).isEqualTo(amount);
+		assertThat(result.getDecisionMessage()).isEqualTo(decisionMessage);
+		assertThat(result.getDecisionDate()).isEqualTo(decisionDate);
+		assertThat(result.getPeriodFrom()).isEqualTo(periodFrom);
+		assertThat(result.getPeriodTo()).isEqualTo(periodTo);
 		assertThat(result.getCreatedBy()).isEqualTo(createdBy);
 		assertThat(result.getCreated()).isEqualTo(created);
 	}

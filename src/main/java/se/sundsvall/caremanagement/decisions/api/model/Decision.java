@@ -3,11 +3,15 @@ package se.sundsvall.caremanagement.decisions.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Null;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
 import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
 
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 
 @Schema(
 	description = "Decision recorded against an errand. Both system-generated decisions (e.g. a DMN-evaluated recommendation produced by a BPMN process) and human decisions (e.g. a handläggare approving a payment) are stored here, distinguished by `decisionType`. The list on the errand grows over time and is the audit trail of every decision made on the case.")
@@ -27,6 +31,25 @@ public class Decision {
 
 	@Schema(description = "Optional human-readable description or motivation for the decision", examples = "Beslutsförslag enligt regelverk: 7900 kr, ingen varning")
 	private String description;
+
+	@Schema(description = "Optional decision amount, in SEK. For a financial-assistance beslut this is the granted belopp (0 for a rejection); for a recommendation it is the recommended amount when the pipeline has computed one.", examples = "7900.00")
+	private BigDecimal amount;
+
+	@Schema(description = "Optional decision message (beslutsmeddelande) communicated to the applicant — the free-text justification shown on the decision letter, kept separate from the internal `description`.",
+		examples = "Du beviljas ekonomiskt bistånd för juni 2026 enligt riksnorm.")
+	private String decisionMessage;
+
+	@Schema(description = "Optional date the decision applies (the handläggare-chosen beslutsdatum), distinct from the server-assigned `created` audit timestamp.", examples = "2026-06-18")
+	@DateTimeFormat(iso = DATE)
+	private LocalDate decisionDate;
+
+	@Schema(description = "Optional start of the period the decision covers (the month applied for, for a financial-assistance beslut).", examples = "2026-06-01")
+	@DateTimeFormat(iso = DATE)
+	private LocalDate periodFrom;
+
+	@Schema(description = "Optional end of the period the decision covers.", examples = "2026-06-30")
+	@DateTimeFormat(iso = DATE)
+	private LocalDate periodTo;
 
 	@Schema(description = "Identifier of the actor that produced the decision. Use the handläggare userId for human decisions or a system identifier (e.g. `operaton`, `dmn-engine`) for automated ones.", examples = "jane01doe")
 	private String createdBy;
@@ -91,6 +114,71 @@ public class Decision {
 		return this;
 	}
 
+	public BigDecimal getAmount() {
+		return amount;
+	}
+
+	public void setAmount(final BigDecimal amount) {
+		this.amount = amount;
+	}
+
+	public Decision withAmount(final BigDecimal amount) {
+		this.amount = amount;
+		return this;
+	}
+
+	public String getDecisionMessage() {
+		return decisionMessage;
+	}
+
+	public void setDecisionMessage(final String decisionMessage) {
+		this.decisionMessage = decisionMessage;
+	}
+
+	public Decision withDecisionMessage(final String decisionMessage) {
+		this.decisionMessage = decisionMessage;
+		return this;
+	}
+
+	public LocalDate getDecisionDate() {
+		return decisionDate;
+	}
+
+	public void setDecisionDate(final LocalDate decisionDate) {
+		this.decisionDate = decisionDate;
+	}
+
+	public Decision withDecisionDate(final LocalDate decisionDate) {
+		this.decisionDate = decisionDate;
+		return this;
+	}
+
+	public LocalDate getPeriodFrom() {
+		return periodFrom;
+	}
+
+	public void setPeriodFrom(final LocalDate periodFrom) {
+		this.periodFrom = periodFrom;
+	}
+
+	public Decision withPeriodFrom(final LocalDate periodFrom) {
+		this.periodFrom = periodFrom;
+		return this;
+	}
+
+	public LocalDate getPeriodTo() {
+		return periodTo;
+	}
+
+	public void setPeriodTo(final LocalDate periodTo) {
+		this.periodTo = periodTo;
+	}
+
+	public Decision withPeriodTo(final LocalDate periodTo) {
+		this.periodTo = periodTo;
+		return this;
+	}
+
 	public String getCreatedBy() {
 		return createdBy;
 	}
@@ -122,13 +210,15 @@ public class Decision {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final Decision that = (Decision) o;
-		return Objects.equals(id, that.id) && Objects.equals(decisionType, that.decisionType) && Objects.equals(value, that.value) && Objects.equals(description, that.description) && Objects.equals(createdBy, that.createdBy) && Objects.equals(created,
-			that.created);
+		return Objects.equals(id, that.id) && Objects.equals(decisionType, that.decisionType) && Objects.equals(value, that.value) && Objects.equals(description, that.description)
+			&& Objects.equals(amount, that.amount) && Objects.equals(decisionMessage, that.decisionMessage) && Objects.equals(decisionDate, that.decisionDate)
+			&& Objects.equals(periodFrom, that.periodFrom) && Objects.equals(periodTo, that.periodTo) && Objects.equals(createdBy, that.createdBy) && Objects.equals(created,
+				that.created);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, decisionType, value, description, createdBy, created);
+		return Objects.hash(id, decisionType, value, description, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, created);
 	}
 
 	@Override
@@ -138,6 +228,11 @@ public class Decision {
 			", decisionType='" + decisionType + '\'' +
 			", value='" + value + '\'' +
 			", description='" + description + '\'' +
+			", amount=" + amount +
+			", decisionMessage='" + decisionMessage + '\'' +
+			", decisionDate=" + decisionDate +
+			", periodFrom=" + periodFrom +
+			", periodTo=" + periodTo +
 			", createdBy='" + createdBy + '\'' +
 			", created=" + created +
 			'}';

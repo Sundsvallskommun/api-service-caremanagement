@@ -240,6 +240,21 @@ class FinancialAssistanceServiceTest {
 	}
 
 	@Test
+	void readPopulatesRecommendationFromLatestRecommendationDecision() {
+		final var recommendation = Decision.create().withDecisionType("RECOMMENDATION").withValue("OK");
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_NEW).withStatus("INKOMMEN"));
+		when(repositoryMock.findByErrandId(ERRAND_ID))
+			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withApplicationType("NEW")));
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(List.of(recommendation, Decision.create().withDecisionType("ACTUALISATION").withValue("4711")));
+
+		final var view = service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(view.getRecommendation()).isEqualTo(recommendation);
+	}
+
+	@Test
 	void readWithoutDataReturnsViewWithNullData() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Errand.create().withId(ERRAND_ID));

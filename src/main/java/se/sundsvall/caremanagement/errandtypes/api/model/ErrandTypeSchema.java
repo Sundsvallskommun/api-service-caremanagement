@@ -31,6 +31,9 @@ public class ErrandTypeSchema {
 	@Schema(description = "The fields the type's data payload should carry, as form guidance")
 	private List<FieldDescriptor> fields;
 
+	@Schema(description = "The allowed decision outcomes (beslutsalternativ) a handläggare may record on the type; empty when the type defines none")
+	private List<DecisionOption> decisionOptions;
+
 	public static ErrandTypeSchema create() {
 		return new ErrandTypeSchema();
 	}
@@ -113,6 +116,19 @@ public class ErrandTypeSchema {
 		return this;
 	}
 
+	public List<DecisionOption> getDecisionOptions() {
+		return decisionOptions;
+	}
+
+	public void setDecisionOptions(final List<DecisionOption> decisionOptions) {
+		this.decisionOptions = decisionOptions;
+	}
+
+	public ErrandTypeSchema withDecisionOptions(final List<DecisionOption> decisionOptions) {
+		this.decisionOptions = decisionOptions;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -120,17 +136,19 @@ public class ErrandTypeSchema {
 		final ErrandTypeSchema that = (ErrandTypeSchema) o;
 		return Objects.equals(typeSlug, that.typeSlug) && Objects.equals(applicationType, that.applicationType)
 			&& Objects.equals(displayName, that.displayName) && Objects.equals(statuses, that.statuses)
-			&& Objects.equals(roles, that.roles) && Objects.equals(fields, that.fields);
+			&& Objects.equals(roles, that.roles) && Objects.equals(fields, that.fields)
+			&& Objects.equals(decisionOptions, that.decisionOptions);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(typeSlug, applicationType, displayName, statuses, roles, fields);
+		return Objects.hash(typeSlug, applicationType, displayName, statuses, roles, fields, decisionOptions);
 	}
 
 	@Override
 	public String toString() {
 		return "ErrandTypeSchema{typeSlug='" + typeSlug + "', applicationType='" + applicationType + "', displayName='"
-			+ displayName + "', statuses=" + statuses + ", roles=" + roles + ", fields=" + fields + '}';
+			+ displayName + "', statuses=" + statuses + ", roles=" + roles + ", fields=" + fields
+			+ ", decisionOptions=" + decisionOptions + '}';
 	}
 }

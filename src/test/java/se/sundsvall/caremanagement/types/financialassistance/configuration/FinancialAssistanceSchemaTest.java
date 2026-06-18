@@ -6,6 +6,7 @@ import se.sundsvall.caremanagement.errandtypes.api.model.FieldDescriptor;
 import se.sundsvall.caremanagement.errandtypes.service.ErrandTypeSchemaContribution;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
@@ -64,6 +65,21 @@ class FinancialAssistanceSchemaTest {
 		final var otherBenefit = field(fields, "otherBenefitDescription");
 		assertThat(otherBenefit.isRequired()).isFalse();
 		assertThat(otherBenefit.getCondition()).isEqualTo("periodChoice == OTHER_BENEFIT");
+	}
+
+	@Test
+	void everySlugExposesTheSameBeslutsalternativ() {
+		for (final var contribution : List.of(config.financialAssistanceNewSchema(),
+			config.financialAssistanceRenewalSchema(), config.financialAssistanceSupplementarySchema())) {
+
+			assertThat(contribution.decisionOptions())
+				.extracting("code", "displayName", "carriesAmount")
+				.containsExactly(
+					tuple("BIFALL", "Bifall", true),
+					tuple("DELAVSLAG", "Delavslag", true),
+					tuple("AVSLAG", "Avslag", false),
+					tuple("AVVISNING", "Avvisning", false));
+		}
 	}
 
 	private static List<String> names(final ErrandTypeSchemaContribution contribution) {

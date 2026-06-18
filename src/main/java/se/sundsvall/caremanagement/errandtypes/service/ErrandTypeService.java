@@ -64,6 +64,7 @@ public class ErrandTypeService {
 			.withRoles(roleRegistry.rolesFor(typeSlug).stream()
 				.sorted(Comparator.comparing(RoleDefinition::code))
 				.toList())
-			.withFields(schema.map(ErrandTypeSchemaContribution::fields).orElseGet(List::of));
+			.withFields(schema.map(ErrandTypeSchemaContribution::fields).orElseGet(List::of))
+			.withDecisionOptions(schema.map(ErrandTypeSchemaContribution::decisionOptions).orElseGet(List::of));
 	}
 }

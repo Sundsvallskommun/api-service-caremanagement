@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.Random;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import se.sundsvall.caremanagement.decisions.api.model.Decision;
 
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -15,6 +16,7 @@ class FinancialAssistanceViewTest {
 	private static final OffsetDateTime MODIFIED = OffsetDateTime.parse("2026-06-04T10:00:00Z");
 	private static final OffsetDateTime TOUCHED = OffsetDateTime.parse("2026-06-05T10:00:00Z");
 	private static final FinancialAssistanceData DATA = FinancialAssistanceData.create().withApplicationType("NEW");
+	private static final Decision RECOMMENDATION = Decision.create().withDecisionType("RECOMMENDATION").withValue("OK");
 
 	@BeforeAll
 	static void setup() {
@@ -38,7 +40,8 @@ class FinancialAssistanceViewTest {
 			.withCreated(CREATED)
 			.withModified(MODIFIED)
 			.withTouched(TOUCHED)
-			.withData(DATA);
+			.withData(DATA)
+			.withRecommendation(RECOMMENDATION);
 
 		assertThat(view.getId()).isEqualTo("cb20c51f-fcf3-42c0-b613-de563634a8ec");
 		assertThat(view.getErrandNumber()).isEqualTo("EB-26060042");
@@ -55,6 +58,7 @@ class FinancialAssistanceViewTest {
 		assertThat(view.getModified()).isEqualTo(MODIFIED);
 		assertThat(view.getTouched()).isEqualTo(TOUCHED);
 		assertThat(view.getData()).isEqualTo(DATA);
+		assertThat(view.getRecommendation()).isEqualTo(RECOMMENDATION);
 		assertThat(view).hasNoNullFieldsOrProperties();
 	}
 
@@ -76,12 +80,14 @@ class FinancialAssistanceViewTest {
 		view.setModified(MODIFIED);
 		view.setTouched(TOUCHED);
 		view.setData(DATA);
+		view.setRecommendation(RECOMMENDATION);
 
 		assertThat(view.getId()).isEqualTo("id");
 		assertThat(view.getErrandNumber()).isEqualTo("EB-26060001");
 		assertThat(view.getStatus()).isEqualTo("NEW");
 		assertThat(view.getTouched()).isEqualTo(TOUCHED);
 		assertThat(view.getData()).isEqualTo(DATA);
+		assertThat(view.getRecommendation()).isEqualTo(RECOMMENDATION);
 	}
 
 	@Test

@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.configuration;
 
 import java.util.List;
+import se.sundsvall.caremanagement.errandtypes.api.model.DecisionOption;
 import se.sundsvall.caremanagement.errandtypes.api.model.FieldDescriptor;
 import se.sundsvall.caremanagement.errandtypes.service.ErrandTypeSchemaContribution;
 
@@ -28,6 +29,16 @@ final class FinancialAssistanceSchema {
 	private static final List<String> NR = List.of(APPLICATION_TYPE_NEW, APPLICATION_TYPE_RENEWAL);
 	private static final List<String> N = List.of(APPLICATION_TYPE_NEW);
 	private static final List<String> R = List.of(APPLICATION_TYPE_RENEWAL);
+
+	/**
+	 * The allowed beslutsalternativ for every EB type (the Beslut-form outcome dropdown). {@code carriesAmount} is false
+	 * for the outcomes that imply a 0 belopp (avslag/avvisning), which the frontend uses to zero the amount.
+	 */
+	private static final List<DecisionOption> DECISION_OPTIONS = List.of(
+		decisionOption("BIFALL", "Bifall", true),
+		decisionOption("DELAVSLAG", "Delavslag", true),
+		decisionOption("AVSLAG", "Avslag", false),
+		decisionOption("AVVISNING", "Avvisning", false));
 
 	/** The superset of collectable fields, in form order. */
 	private static final List<FieldDescriptor> CATALOG = List.of(
@@ -71,14 +82,21 @@ final class FinancialAssistanceSchema {
 			.toList();
 	}
 
-	/** A schema contribution for one slug — its fields filtered to the slug's application type. */
+	/** A schema contribution for one slug — its fields filtered to the slug's application type, plus the EB outcomes. */
 	static ErrandTypeSchemaContribution contribution(final String typeSlug, final String applicationType) {
-		return new Contribution(typeSlug, applicationType, forApplicationType(applicationType));
+		return new Contribution(typeSlug, applicationType, forApplicationType(applicationType), DECISION_OPTIONS);
 	}
 
-	private record Contribution(String typeSlug, String applicationType, List<FieldDescriptor> fields)
+	private record Contribution(String typeSlug, String applicationType, List<FieldDescriptor> fields, List<DecisionOption> decisionOptions)
 		implements
 		ErrandTypeSchemaContribution {}
+
+	private static DecisionOption decisionOption(final String code, final String displayName, final boolean carriesAmount) {
+		return DecisionOption.create()
+			.withCode(code)
+			.withDisplayName(displayName)
+			.withCarriesAmount(carriesAmount);
+	}
 
 	private static FieldDescriptor scalar(final String name, final String type, final boolean required,
 		final List<String> appliesTo, final String condition, final String description) {

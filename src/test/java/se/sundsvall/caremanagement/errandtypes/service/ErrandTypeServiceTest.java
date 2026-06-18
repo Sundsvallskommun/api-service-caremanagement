@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.core.service.registry.ErrandTypeContribution;
 import se.sundsvall.caremanagement.core.service.registry.ErrandTypeRegistry;
+import se.sundsvall.caremanagement.errandtypes.api.model.DecisionOption;
 import se.sundsvall.caremanagement.errandtypes.api.model.FieldDescriptor;
 import se.sundsvall.caremanagement.stakeholders.api.model.RoleDefinition;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderRoleRegistry;
@@ -66,6 +67,19 @@ class ErrandTypeServiceTest {
 		assertThat(schema.getStatuses()).containsExactly("AVSLAGEN", "INKOMMEN", "UNDER_BEREDNING");
 		assertThat(schema.getRoles()).extracting(RoleDefinition::code).containsExactly("APPLICANT", "CO_APPLICANT");
 		assertThat(schema.getFields()).containsExactly(FIELD);
+		assertThat(schema.getDecisionOptions()).isEmpty();
+	}
+
+	@Test
+	void findBySlugSurfacesDecisionOptionsFromContribution() {
+		final var option = DecisionOption.create().withCode("BIFALL").withDisplayName("Bifall").withCarriesAmount(true);
+		when(typeRegistryMock.exists(SLUG_NEW)).thenReturn(true);
+		when(typeRegistryMock.get(SLUG_NEW)).thenReturn(type(SLUG_NEW, "New"));
+		when(roleRegistryMock.rolesFor(SLUG_NEW)).thenReturn(Set.of());
+
+		final var schema = newService(List.of(contributionWithOptions(SLUG_NEW, List.of(option)))).findBySlug(SLUG_NEW);
+
+		assertThat(schema.getDecisionOptions()).containsExactly(option);
 	}
 
 	@Test
@@ -78,6 +92,7 @@ class ErrandTypeServiceTest {
 
 		assertThat(schema.getApplicationType()).isNull();
 		assertThat(schema.getFields()).isEmpty();
+		assertThat(schema.getDecisionOptions()).isEmpty();
 	}
 
 	@Test
@@ -115,6 +130,30 @@ class ErrandTypeServiceTest {
 			@Override
 			public List<FieldDescriptor> fields() {
 				return fields;
+			}
+		};
+	}
+
+	private static ErrandTypeSchemaContribution contributionWithOptions(final String slug, final List<DecisionOption> options) {
+		return new ErrandTypeSchemaContribution() {
+			@Override
+			public String typeSlug() {
+				return slug;
+			}
+
+			@Override
+			public String applicationType() {
+				return "NEW";
+			}
+
+			@Override
+			public List<FieldDescriptor> fields() {
+				return List.of();
+			}
+
+			@Override
+			public List<DecisionOption> decisionOptions() {
+				return options;
 			}
 		};
 	}

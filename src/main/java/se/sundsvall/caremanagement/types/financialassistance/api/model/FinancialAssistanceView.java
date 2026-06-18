@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import se.sundsvall.caremanagement.decisions.api.model.Decision;
 
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 
@@ -53,6 +54,11 @@ public class FinancialAssistanceView {
 
 	@Schema(description = "The typed financial assistance application payload")
 	private FinancialAssistanceData data;
+
+	@Schema(
+		description = "The most recent automated recommendation on the errand (the latest RECOMMENDATION decision the handläggare reviews), or null when none has been produced. Carries the recommended value and, when the pipeline has computed it, the recommended amount/period to prefill the Beslut form.",
+		accessMode = READ_ONLY)
+	private Decision recommendation;
 
 	public static FinancialAssistanceView create() {
 		return new FinancialAssistanceView();
@@ -253,6 +259,19 @@ public class FinancialAssistanceView {
 		return this;
 	}
 
+	public Decision getRecommendation() {
+		return recommendation;
+	}
+
+	public void setRecommendation(final Decision recommendation) {
+		this.recommendation = recommendation;
+	}
+
+	public FinancialAssistanceView withRecommendation(final Decision recommendation) {
+		this.recommendation = recommendation;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -264,13 +283,14 @@ public class FinancialAssistanceView {
 			&& Objects.equals(status, that.status) && Objects.equals(priority, that.priority)
 			&& Objects.equals(reporterUserId, that.reporterUserId) && Objects.equals(assignedUserId, that.assignedUserId)
 			&& Objects.equals(processInstanceId, that.processInstanceId) && Objects.equals(created, that.created)
-			&& Objects.equals(modified, that.modified) && Objects.equals(touched, that.touched) && Objects.equals(data, that.data);
+			&& Objects.equals(modified, that.modified) && Objects.equals(touched, that.touched) && Objects.equals(data, that.data)
+			&& Objects.equals(recommendation, that.recommendation);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandNumber, municipalityId, namespace, typeSlug, title, status, priority, reporterUserId,
-			assignedUserId, processInstanceId, created, modified, touched, data);
+			assignedUserId, processInstanceId, created, modified, touched, data, recommendation);
 	}
 
 	@Override
@@ -279,6 +299,6 @@ public class FinancialAssistanceView {
 			+ municipalityId + "', namespace='" + namespace + "', typeSlug='" + typeSlug + "', title='" + title
 			+ "', status='" + status + "', priority='" + priority + "', reporterUserId='" + reporterUserId
 			+ "', assignedUserId='" + assignedUserId + "', processInstanceId='" + processInstanceId + "', created=" + created
-			+ ", modified=" + modified + ", touched=" + touched + ", data=" + data + '}';
+			+ ", modified=" + modified + ", touched=" + touched + ", data=" + data + ", recommendation=" + recommendation + '}';
 	}
 }

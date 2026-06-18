@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.errandtypes.service;
 
 import java.util.List;
+import se.sundsvall.caremanagement.errandtypes.api.model.DecisionOption;
 import se.sundsvall.caremanagement.errandtypes.api.model.FieldDescriptor;
 
 /**
@@ -27,4 +28,12 @@ public interface ErrandTypeSchemaContribution {
 
 	/** The fields this slug's data payload should carry, as form guidance. */
 	List<FieldDescriptor> fields();
+
+	/**
+	 * The allowed decision outcomes (beslutsalternativ) for this slug. Defaults to an empty list — a type that records
+	 * no structured outcomes simply omits them.
+	 */
+	default List<DecisionOption> decisionOptions() {
+		return List.of();
+	}
 }
