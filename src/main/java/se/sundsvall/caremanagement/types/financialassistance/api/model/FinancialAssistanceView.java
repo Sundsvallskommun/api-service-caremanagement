@@ -60,6 +60,11 @@ public class FinancialAssistanceView {
 		accessMode = READ_ONLY)
 	private Decision recommendation;
 
+	@Schema(
+		description = "The handläggare approval state of the three EB view sections (calculation, payment, decision) — whether each has been verified as approved. Always present with all three sections.",
+		accessMode = READ_ONLY)
+	private SectionApprovals sectionApprovals;
+
 	public static FinancialAssistanceView create() {
 		return new FinancialAssistanceView();
 	}
@@ -272,6 +277,19 @@ public class FinancialAssistanceView {
 		return this;
 	}
 
+	public SectionApprovals getSectionApprovals() {
+		return sectionApprovals;
+	}
+
+	public void setSectionApprovals(final SectionApprovals sectionApprovals) {
+		this.sectionApprovals = sectionApprovals;
+	}
+
+	public FinancialAssistanceView withSectionApprovals(final SectionApprovals sectionApprovals) {
+		this.sectionApprovals = sectionApprovals;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -284,13 +302,13 @@ public class FinancialAssistanceView {
 			&& Objects.equals(reporterUserId, that.reporterUserId) && Objects.equals(assignedUserId, that.assignedUserId)
 			&& Objects.equals(processInstanceId, that.processInstanceId) && Objects.equals(created, that.created)
 			&& Objects.equals(modified, that.modified) && Objects.equals(touched, that.touched) && Objects.equals(data, that.data)
-			&& Objects.equals(recommendation, that.recommendation);
+			&& Objects.equals(recommendation, that.recommendation) && Objects.equals(sectionApprovals, that.sectionApprovals);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandNumber, municipalityId, namespace, typeSlug, title, status, priority, reporterUserId,
-			assignedUserId, processInstanceId, created, modified, touched, data, recommendation);
+			assignedUserId, processInstanceId, created, modified, touched, data, recommendation, sectionApprovals);
 	}
 
 	@Override
@@ -299,6 +317,7 @@ public class FinancialAssistanceView {
 			+ municipalityId + "', namespace='" + namespace + "', typeSlug='" + typeSlug + "', title='" + title
 			+ "', status='" + status + "', priority='" + priority + "', reporterUserId='" + reporterUserId
 			+ "', assignedUserId='" + assignedUserId + "', processInstanceId='" + processInstanceId + "', created=" + created
-			+ ", modified=" + modified + ", touched=" + touched + ", data=" + data + ", recommendation=" + recommendation + '}';
+			+ ", modified=" + modified + ", touched=" + touched + ", data=" + data + ", recommendation=" + recommendation
+			+ ", sectionApprovals=" + sectionApprovals + '}';
 	}
 }

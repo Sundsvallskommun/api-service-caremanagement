@@ -47,6 +47,9 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Normberak
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovalRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
@@ -206,6 +209,41 @@ class FinancialAssistanceResource {
 		})) @RequestParam final String status) {
 
 		return ok(service.updateWarning(municipalityId, namespace, errandId, warningId, status));
+	}
+
+	@GetMapping(path = "/financial-assistance/{errandId}/sections/approvals", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Read the section approvals on an errand",
+		description = "The handläggare approval state of the three EB view sections (CALCULATION = normberäkning, PAYMENT = utbetalning, DECISION = beslut). Always returns all three — a section never approved is present with approved=false. The same object is embedded in the errand view.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<SectionApprovals> getSectionApprovals(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@PathVariable final String errandId) {
+
+		return ok(service.getSectionApprovals(municipalityId, namespace, errandId));
+	}
+
+	@PatchMapping(path = "/financial-assistance/{errandId}/sections/{section}/approval", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Set a section's approval (handläggare)",
+		description = "A handläggare verifies one of the EB view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "400", description = "Bad Request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<SectionApproval> setSectionApproval(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@PathVariable final String errandId,
+		@Parameter(description = "The section to approve", schema = @Schema(allowableValues = {
+			"CALCULATION", "PAYMENT", "DECISION"
+		})) @PathVariable final String section,
+		@Valid @NotNull @RequestBody final SectionApprovalRequest request) {
+
+		return ok(service.setSectionApproval(municipalityId, namespace, errandId, section, request.getApproved(), request.getApprovedBy()));
 	}
 
 	@GetMapping(path = "/financial-assistance/{errandId}/normberakning/draft", produces = APPLICATION_JSON_VALUE)

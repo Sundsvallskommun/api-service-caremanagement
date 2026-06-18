@@ -45,6 +45,8 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Normberak
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
@@ -99,13 +101,14 @@ public class FinancialAssistanceService {
 	private final AttachmentService attachmentService;
 	private final StakeholderService stakeholderService;
 	private final WarningService warningService;
+	private final SectionApprovalService sectionApprovalService;
 	private final DraftService draftService;
 	private final NormberakningFeeder normberakningFeeder;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final NormberakningService normberakningService,
 		final ActualisationService actualisationService, final PaymentStatusService paymentStatusService, final CitizenService citizenService, final DecisionService decisionService,
-		final AttachmentService attachmentService, final StakeholderService stakeholderService, final WarningService warningService, final DraftService draftService,
-		final NormberakningFeeder normberakningFeeder) {
+		final AttachmentService attachmentService, final StakeholderService stakeholderService, final WarningService warningService, final SectionApprovalService sectionApprovalService,
+		final DraftService draftService, final NormberakningFeeder normberakningFeeder) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.normberakningService = normberakningService;
@@ -116,6 +119,7 @@ public class FinancialAssistanceService {
 		this.attachmentService = attachmentService;
 		this.stakeholderService = stakeholderService;
 		this.warningService = warningService;
+		this.sectionApprovalService = sectionApprovalService;
 		this.draftService = draftService;
 		this.normberakningFeeder = normberakningFeeder;
 	}
@@ -161,7 +165,8 @@ public class FinancialAssistanceService {
 		final var envelope = errandService.readErrand(municipalityId, namespace, errandId);
 		final var entity = repository.findByErrandId(errandId).orElse(null);
 		return toView(envelope, entity)
-			.withRecommendation(latestRecommendation(municipalityId, namespace, errandId));
+			.withRecommendation(latestRecommendation(municipalityId, namespace, errandId))
+			.withSectionApprovals(sectionApprovalService.approvals(errandId));
 	}
 
 	/** The most recent {@code RECOMMENDATION} decision on the errand (the automated recommendation), or null when none. */
@@ -317,6 +322,26 @@ public class FinancialAssistanceService {
 	public Warning updateWarning(final String municipalityId, final String namespace, final String errandId, final String warningId, final String status) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		return warningService.updateStatus(errandId, warningId, status);
+	}
+
+	/**
+	 * The handläggare approval state of the three EB view sections (calculation / payment / decision). Scoped: throws
+	 * {@code 404} when the errand is missing in this namespace/municipality.
+	 */
+	@Transactional(readOnly = true)
+	public SectionApprovals getSectionApprovals(final String municipalityId, final String namespace, final String errandId) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		return sectionApprovalService.approvals(errandId);
+	}
+
+	/**
+	 * Set a section's approval — a handläggare verifies it as approved (or withdraws the approval). Scoped: throws
+	 * {@code 404} when the errand is missing, {@code 400} when the section is not CALCULATION/PAYMENT/DECISION.
+	 */
+	public SectionApproval setSectionApproval(final String municipalityId, final String namespace, final String errandId, final String section,
+		final boolean approved, final String approvedBy) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		return sectionApprovalService.setApproval(errandId, section, approved, approvedBy);
 	}
 
 	/**

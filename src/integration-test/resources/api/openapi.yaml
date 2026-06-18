@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:65395
+- url: http://localhost:54440
   description: Generated server url
 tags:
 - name: Notes
@@ -2891,6 +2891,67 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/sections/{section}/approval:
+    patch:
+      tags:
+      - Financial Assistance
+      summary: Set a section's approval (handläggare)
+      description: "A handläggare verifies one of the EB view sections (CALCULATION\
+        \ / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving\
+        \ stamps who/when; withdrawing clears them."
+      operationId: setSectionApproval
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: section
+        in: path
+        description: The section to approve
+        required: true
+        schema:
+          type: string
+          enum:
+          - CALCULATION
+          - PAYMENT
+          - DECISION
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SectionApprovalRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SectionApproval"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/persons/{rowId}:
     delete:
       tags:
@@ -3881,6 +3942,46 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/sections/approvals:
+    get:
+      tags:
+      - Financial Assistance
+      summary: Read the section approvals on an errand
+      description: "The handläggare approval state of the three EB view sections (CALCULATION\
+        \ = normberäkning, PAYMENT = utbetalning, DECISION = beslut). Always returns\
+        \ all three — a section never approved is present with approved=false. The\
+        \ same object is embedded in the errand view."
+      operationId: getSectionApprovals
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SectionApprovals"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft:
     get:
       tags:
@@ -4099,10 +4200,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -6240,6 +6341,54 @@ components:
           type: string
           format: date-time
           description: Last modified timestamp; null until the note has been edited
+    SectionApprovalRequest:
+      type: object
+      description: Set the approval state of an EB view section.
+      properties:
+        approved:
+          type: boolean
+          description: Whether the section is approved (true) or its approval withdrawn
+            (false)
+          examples:
+          - "true"
+        approvedBy:
+          type: string
+          description: "The handläggare approving the section (stored when approving,\
+            \ ignored when withdrawing)"
+          examples:
+          - jane02doe
+      required:
+      - approved
+    SectionApproval:
+      type: object
+      description: A handläggare's approval of one section of the EB view (calculation
+        / payment / decision).
+      properties:
+        section:
+          type: string
+          description: The section this approval concerns
+          enum:
+          - CALCULATION
+          - PAYMENT
+          - DECISION
+          examples:
+          - CALCULATION
+        approved:
+          type: boolean
+          description: Whether the section has been verified as approved by a handläggare
+          examples:
+          - "true"
+        approvedBy:
+          type: string
+          description: The handläggare who approved the section (null while not approved)
+          examples:
+          - jane02doe
+          readOnly: true
+        approvedAt:
+          type: string
+          format: date-time
+          description: When the section was approved (null while not approved)
+          readOnly: true
     NormHeaderInput:
       type: object
       description: "Handläggare edit of the normberäkning header — norm, calculation\
@@ -6750,6 +6899,26 @@ components:
             \ pipeline has computed it, the recommended amount/period to prefill the\
             \ Beslut form."
           readOnly: true
+        sectionApprovals:
+          $ref: "#/components/schemas/SectionApprovals"
+          description: "The handläggare approval state of the three EB view sections\
+            \ (calculation, payment, decision) — whether each has been verified as\
+            \ approved. Always present with all three sections."
+          readOnly: true
+    SectionApprovals:
+      type: object
+      description: "The handläggare approval state of the three EB view sections (calculation,\
+        \ payment, decision)."
+      properties:
+        calculation:
+          $ref: "#/components/schemas/SectionApproval"
+          description: Approval of the normberäkning (beräkning) section
+        payment:
+          $ref: "#/components/schemas/SectionApproval"
+          description: Approval of the utbetalning (payment) section
+        decision:
+          $ref: "#/components/schemas/SectionApproval"
+          description: Approval of the beslut (decision) section
     PrefilledChild:
       type: object
       description: "A child pre-filled from Lifecare for a financial assistance renewal.\

@@ -32,6 +32,9 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Normberak
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovalRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
@@ -201,6 +204,49 @@ class FinancialAssistanceResourceTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getStatus()).isEqualTo("CLOSED");
 		verify(serviceMock).updateWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("w1"), eq("CLOSED"));
+	}
+
+	@Test
+	void getSectionApprovals() {
+		final var approvals = SectionApprovals.create()
+			.withCalculation(SectionApproval.create().withSection("CALCULATION").withApproved(true))
+			.withPayment(SectionApproval.create().withSection("PAYMENT").withApproved(false))
+			.withDecision(SectionApproval.create().withSection("DECISION").withApproved(false));
+		when(serviceMock.getSectionApprovals(MUNICIPALITY_ID, NAMESPACE, "errand-1")).thenReturn(approvals);
+
+		final var response = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/errand-1/sections/approvals").build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(SectionApprovals.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getCalculation().isApproved()).isTrue();
+		assertThat(response.getPayment().isApproved()).isFalse();
+		verify(serviceMock).getSectionApprovals(MUNICIPALITY_ID, NAMESPACE, "errand-1");
+	}
+
+	@Test
+	void setSectionApproval() {
+		when(serviceMock.setSectionApproval(MUNICIPALITY_ID, NAMESPACE, "errand-1", "CALCULATION", true, "jane02doe"))
+			.thenReturn(SectionApproval.create().withSection("CALCULATION").withApproved(true).withApprovedBy("jane02doe"));
+
+		final var response = webTestClient.patch()
+			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(base()))
+			.bodyValue(SectionApprovalRequest.create().withApproved(true).withApprovedBy("jane02doe"))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(SectionApproval.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getSection()).isEqualTo("CALCULATION");
+		assertThat(response.isApproved()).isTrue();
+		assertThat(response.getApprovedBy()).isEqualTo("jane02doe");
+		verify(serviceMock).setSectionApproval(MUNICIPALITY_ID, NAMESPACE, "errand-1", "CALCULATION", true, "jane02doe");
 	}
 
 	@Test

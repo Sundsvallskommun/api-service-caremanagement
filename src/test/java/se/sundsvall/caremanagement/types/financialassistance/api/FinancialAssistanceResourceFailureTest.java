@@ -15,6 +15,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFin
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovalRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
@@ -178,6 +179,30 @@ class FinancialAssistanceResourceFailureTest {
 			.expectStatus().isBadRequest();
 
 		verifyNoInteractions(prefillServiceMock);
+	}
+
+	@Test
+	void setSectionApproval_missingApproved() {
+		webTestClient.patch()
+			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.contentType(APPLICATION_JSON)
+			.bodyValue(SectionApprovalRequest.create().withApprovedBy("jane02doe")) // approved is required
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void setSectionApproval_invalidMunicipalityId() {
+		webTestClient.patch()
+			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
+			.contentType(APPLICATION_JSON)
+			.bodyValue(SectionApprovalRequest.create().withApproved(true).withApprovedBy("jane02doe"))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
 	}
 
 	@Test
