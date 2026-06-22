@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:58575
+- url: http://localhost:62670
   description: Generated server url
 tags:
 - name: Notes
@@ -4526,38 +4526,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RenewalPrefill"
-  /{municipalityId}/{namespace}/errands/financial-assistance/metadata:
-    get:
-      tags:
-      - Financial Assistance
-      summary: Read EB type metadata (income / cost / living-cost dropdowns)
-      description: "The labelled type catalogues the frontend feeds its EB dropdowns\
-        \ from: income types (inkomster), cost types (boendekostnader) and living-cost\
-        \ types (levnadskostnader i övrigt), each a code + Swedish display name +\
-        \ citizenReportable flag. The complete set is the handläggare/normberäkning\
-        \ catalogue (= the allowable values of Income.incomeType / Cost.costType);\
-        \ Mina sidor shows only the citizenReportable types, since SSBTEK-sourced\
-        \ incomes are handläggare-only. Static."
-      operationId: getMetadata
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialAssistanceMetadata"
   /{municipalityId}/{namespace}/errand-types:
     get:
       tags:
@@ -4940,27 +4908,21 @@ components:
       properties:
         costType:
           type: string
-          description: The type of cost — boendekostnader (EXPENSE) and levnadskostnader
-            i övrigt (SPECIAL_EXPENSE); see GET .../errands/financial-assistance/metadata
-            for the labelled catalogue
+          description: The type of cost
           enum:
-          - UNEMPLOYMENT_FUND_FEE
-          - WORK_TRAVEL
-          - HOUSING_COST
-          - ELECTRICITY_1
-          - ELECTRICITY_2
-          - UNION_FEE
+          - RENT
+          - ELECTRICITY
           - HOME_INSURANCE
-          - CHILDCARE_FEE
-          - BROADBAND_INTERNET
-          - GLASSES
-          - VISITATION_COST
+          - INTERNET
+          - UNEMPLOYMENT_FUND
+          - UNION_FEE
+          - TRAVEL_APPROVED
+          - TRAVEL_MEDICAL_TRANSPORT
           - MEDICAL_CARE
           - MEDICINE
-          - DENTAL_CARE
-          - OTHER_EXPENSE
+          - OTHER
           examples:
-          - HOUSING_COST
+          - RENT
         appliedAmount:
           type: number
           description: The amount applied for
@@ -5189,46 +5151,17 @@ components:
       properties:
         incomeType:
           type: string
-          description: "The type of income — the complete handläggare set; SSBTEK-sourced\
-            \ types are handläggare-only, the rest are reportable in Mina sidor (see\
-            \ GET .../errands/financial-assistance/metadata for the labelled catalogue\
-            \ + citizenReportable flag)"
+          description: The type of income
           enum:
-          - UNEMPLOYMENT_BENEFIT
-          - UNEMPLOYMENT_OR_ALPHA_BENEFIT
-          - ACTIVITY_COMPENSATION
-          - ACTIVITY_SUPPORT
-          - ALPHA_BENEFIT
-          - CHILD_ALLOWANCE
-          - CHILD_PENSION
-          - HOUSING_ALLOWANCE
-          - HOUSING_SUPPLEMENT
-          - CSN_GRANT
-          - CSN_LOAN
-          - DAILY_ALLOWANCE_FK
-          - SURVIVOR_SUPPORT
+          - OTHER_INCOME
           - FINANCIAL_AID_OTHER_MUNICIPALITY
-          - ESTABLISHMENT_BENEFIT
-          - PARENTAL_BENEFIT
-          - RENT_SHARE_FROM_CHILD
-          - LODGING_ALLOWANCE
-          - CAPITAL_INCOME
-          - SALARY_AFTER_TAX
-          - PENSION
-          - PENSION_ANNUITY_CARE
-          - SICKNESS_COMPENSATION
-          - SICKNESS_BENEFIT
-          - TAX_REFUND
-          - SWISH_DEPOSITS_TRANSFERS
+          - SALARY
+          - SWISH_DEPOSITS
           - OCCUPATIONAL_PENSION_INSURANCE
           - CHILD_SUPPORT
-          - MAINTENANCE_SUPPORT
-          - CARE_ALLOWANCE
-          - ELDERLY_SUPPORT
-          - SURPLUS_FROM_PREVIOUS_MONTH
-          - OTHER_INCOME
+          - RENT_SHARE_FROM_CHILD
           examples:
-          - SALARY_AFTER_TAX
+          - SALARY
         amount:
           type: number
           description: The income amount
@@ -7745,49 +7678,6 @@ components:
           type: boolean
           description: True when the Lifecare lookup succeeded. False means the answer
             is degraded (empty children).
-          examples:
-          - "true"
-    FinancialAssistanceMetadata:
-      type: object
-      description: "EB type catalogues for the frontend dropdowns: income, cost and\
-        \ living-cost types."
-      properties:
-        incomeTypes:
-          type: array
-          description: The income types (inkomster)
-          items:
-            $ref: "#/components/schemas/TypeOption"
-        costTypes:
-          type: array
-          description: "The cost types (kostnader — boendekostnader), shown as the\
-            \ first cost dropdown"
-          items:
-            $ref: "#/components/schemas/TypeOption"
-        livingCostTypes:
-          type: array
-          description: "The living-cost types (levnadskostnader i övrigt), shown as\
-            \ the second cost dropdown"
-          items:
-            $ref: "#/components/schemas/TypeOption"
-    TypeOption:
-      type: object
-      description: "A selectable EB type — the code stored on the payload, its Swedish\
-        \ label and whether the citizen reports it in Mina sidor."
-      properties:
-        code:
-          type: string
-          description: "The type code, stored on the payload (incomeType / costType)"
-          examples:
-          - HOUSING_COST
-        displayName:
-          type: string
-          description: Human-readable Swedish label for the type
-          examples:
-          - Boendekostnad
-        citizenReportable:
-          type: boolean
-          description: "Whether the type is shown on the citizen Mina-sidor form (true)\
-            \ or is handläggare-only, e.g. an SSBTEK-sourced income (false)"
           examples:
           - "true"
     DecisionOption:
