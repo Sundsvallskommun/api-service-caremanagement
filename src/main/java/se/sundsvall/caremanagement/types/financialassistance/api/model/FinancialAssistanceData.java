@@ -40,18 +40,18 @@ public class FinancialAssistanceData {
 	}, nullable = true)
 	private String periodChoice;
 
-	@Schema(description = "The norm type used for the calculation", examples = "RIKSNORM", allowableValues = {
-		"RIKSNORM", "OTHER_NORM"
+	@Schema(description = "The norm type used for the calculation", examples = "NATIONAL_NORM", allowableValues = {
+		"NATIONAL_NORM", "OTHER_NORM"
 	})
 	@OneOf(value = {
-		"RIKSNORM", "OTHER_NORM"
+		"NATIONAL_NORM", "OTHER_NORM"
 	}, nullable = true)
 	private String normType;
 
-	@Schema(description = "Description of the other benefit", examples = "Etableringsersättning")
+	@Schema(description = "Description of the other benefit", examples = "Establishment benefit")
 	private String otherBenefitDescription;
 
-	@Schema(description = "Description of the applicant's livelihood", examples = "Söker arbete via arbetsförmedlingen")
+	@Schema(description = "Description of the applicant's livelihood", examples = "Job-seeking via the employment agency")
 	private String livelihoodDescription;
 
 	@Schema(description = "Whether the household has children under 21", examples = "true")
@@ -60,7 +60,7 @@ public class FinancialAssistanceData {
 	@Schema(description = "Whether the children's residence situation has changed", examples = "false")
 	private Boolean childrenResidenceChanged;
 
-	@Schema(description = "Description of the change in children's residence", examples = "Barnen bor numera växelvis")
+	@Schema(description = "Description of the change in children's residence", examples = "The children now live in shared custody")
 	private String childrenResidenceChangeDescription;
 
 	@Schema(description = "The household's housing form", examples = "RENTAL", allowableValues = {
@@ -77,13 +77,13 @@ public class FinancialAssistanceData {
 	@Schema(description = "Number of rooms plus kitchen", examples = "3")
 	private Integer housingRoomsPlusKitchen;
 
-	@Schema(description = "Free text description of the housing", examples = "Trerumslägenhet med hyresrätt")
+	@Schema(description = "Free text description of the housing", examples = "Three-room rental apartment")
 	private String housingDescription;
 
 	@Schema(description = "Whether the housing situation has changed", examples = "false")
 	private Boolean housingChanged;
 
-	@Schema(description = "Description of the housing change", examples = "Flyttade till mindre lägenhet i maj")
+	@Schema(description = "Description of the housing change", examples = "Moved to a smaller apartment in May")
 	private String housingChangeDescription;
 
 	@Schema(description = "Whether the household has incomes", examples = "true")
@@ -98,7 +98,7 @@ public class FinancialAssistanceData {
 	@Schema(description = "Whether the applicant stays in the municipality", examples = "true")
 	private Boolean staysInMunicipality;
 
-	@Schema(description = "Description of the applicant's stay", examples = "Bor på folkbokföringsadressen")
+	@Schema(description = "Description of the applicant's stay", examples = "Lives at the registered address")
 	private String stayDescription;
 
 	@Schema(description = "Whether the applicant has attested the application", examples = "true")

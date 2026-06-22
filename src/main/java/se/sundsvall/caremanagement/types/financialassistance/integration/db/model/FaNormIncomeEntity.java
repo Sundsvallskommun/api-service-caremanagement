@@ -17,10 +17,11 @@ import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * One income row of the normberäkning draft — one FC income type, with a sökande (applicant, "S") side and a medsökande
- * (co-applicant, "M") side, mirroring the Lifecare INKOMSTER tab and FC {@code CalculationIncomes}. Each side keeps the
+ * One income row of the calculation draft — one FC income type, with a applicant (applicant, "S") side and a
+ * co-applicant
+ * (co-applicant, "M") side, mirroring the Lifecare INCOMES tab and FC {@code CalculationIncomes}. Each side keeps the
  * amount the process decided (from the classified SSBTEK income, written only by the daily prepare) separate from the
- * amount a handläggare decided (written only from Draken); the effective amount per side is the handläggare amount when
+ * amount a caseworker decided (written only from Draken); the effective amount per side is the caseworker amount when
  * set, otherwise the process amount. A row can be soft-deleted and is then excluded but never resurrected by the daily
  * refresh. Subtracted from the norm.
  */
@@ -50,8 +51,8 @@ public class FaNormIncomeEntity {
 	@Column(name = "applicant_process_amount", precision = 12, scale = 2)
 	private BigDecimal applicantProcessAmount;
 
-	@Column(name = "applicant_handlaggare_amount", precision = 12, scale = 2)
-	private BigDecimal applicantHandlaggareAmount;
+	@Column(name = "applicant_caseworker_amount", precision = 12, scale = 2)
+	private BigDecimal applicantCaseworkerAmount;
 
 	@Column(name = "applicant_amount_date")
 	@TimeZoneStorage(NORMALIZE)
@@ -60,8 +61,8 @@ public class FaNormIncomeEntity {
 	@Column(name = "coapplicant_process_amount", precision = 12, scale = 2)
 	private BigDecimal coapplicantProcessAmount;
 
-	@Column(name = "coapplicant_handlaggare_amount", precision = 12, scale = 2)
-	private BigDecimal coapplicantHandlaggareAmount;
+	@Column(name = "coapplicant_caseworker_amount", precision = 12, scale = 2)
+	private BigDecimal coapplicantCaseworkerAmount;
 
 	@Column(name = "coapplicant_amount_date")
 	@TimeZoneStorage(NORMALIZE)
@@ -175,16 +176,16 @@ public class FaNormIncomeEntity {
 		return this;
 	}
 
-	public BigDecimal getApplicantHandlaggareAmount() {
-		return applicantHandlaggareAmount;
+	public BigDecimal getApplicantCaseworkerAmount() {
+		return applicantCaseworkerAmount;
 	}
 
-	public void setApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
-		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
+	public void setApplicantCaseworkerAmount(final BigDecimal applicantCaseworkerAmount) {
+		this.applicantCaseworkerAmount = applicantCaseworkerAmount;
 	}
 
-	public FaNormIncomeEntity withApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
-		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
+	public FaNormIncomeEntity withApplicantCaseworkerAmount(final BigDecimal applicantCaseworkerAmount) {
+		this.applicantCaseworkerAmount = applicantCaseworkerAmount;
 		return this;
 	}
 
@@ -214,16 +215,16 @@ public class FaNormIncomeEntity {
 		return this;
 	}
 
-	public BigDecimal getCoapplicantHandlaggareAmount() {
-		return coapplicantHandlaggareAmount;
+	public BigDecimal getCoapplicantCaseworkerAmount() {
+		return coapplicantCaseworkerAmount;
 	}
 
-	public void setCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
-		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
+	public void setCoapplicantCaseworkerAmount(final BigDecimal coapplicantCaseworkerAmount) {
+		this.coapplicantCaseworkerAmount = coapplicantCaseworkerAmount;
 	}
 
-	public FaNormIncomeEntity withCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
-		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
+	public FaNormIncomeEntity withCoapplicantCaseworkerAmount(final BigDecimal coapplicantCaseworkerAmount) {
+		this.coapplicantCaseworkerAmount = coapplicantCaseworkerAmount;
 		return this;
 	}
 
@@ -299,16 +300,16 @@ public class FaNormIncomeEntity {
 		final FaNormIncomeEntity that = (FaNormIncomeEntity) o;
 		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(origin, that.origin)
 			&& Objects.equals(typeId, that.typeId) && Objects.equals(typeName, that.typeName)
-			&& Objects.equals(applicantProcessAmount, that.applicantProcessAmount) && Objects.equals(applicantHandlaggareAmount, that.applicantHandlaggareAmount)
+			&& Objects.equals(applicantProcessAmount, that.applicantProcessAmount) && Objects.equals(applicantCaseworkerAmount, that.applicantCaseworkerAmount)
 			&& Objects.equals(applicantAmountDate, that.applicantAmountDate) && Objects.equals(coapplicantProcessAmount, that.coapplicantProcessAmount)
-			&& Objects.equals(coapplicantHandlaggareAmount, that.coapplicantHandlaggareAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate)
+			&& Objects.equals(coapplicantCaseworkerAmount, that.coapplicantCaseworkerAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate)
 			&& Objects.equals(note, that.note) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, origin, typeId, typeName, applicantProcessAmount, applicantHandlaggareAmount, applicantAmountDate,
-			coapplicantProcessAmount, coapplicantHandlaggareAmount, coapplicantAmountDate, deleted, note, created, updated);
+		return Objects.hash(id, errandId, origin, typeId, typeName, applicantProcessAmount, applicantCaseworkerAmount, applicantAmountDate,
+			coapplicantProcessAmount, coapplicantCaseworkerAmount, coapplicantAmountDate, deleted, note, created, updated);
 	}
 
 	@Override
@@ -320,10 +321,10 @@ public class FaNormIncomeEntity {
 			", typeId=" + typeId +
 			", typeName='" + typeName + '\'' +
 			", applicantProcessAmount=" + applicantProcessAmount +
-			", applicantHandlaggareAmount=" + applicantHandlaggareAmount +
+			", applicantCaseworkerAmount=" + applicantCaseworkerAmount +
 			", applicantAmountDate=" + applicantAmountDate +
 			", coapplicantProcessAmount=" + coapplicantProcessAmount +
-			", coapplicantHandlaggareAmount=" + coapplicantHandlaggareAmount +
+			", coapplicantCaseworkerAmount=" + coapplicantCaseworkerAmount +
 			", coapplicantAmountDate=" + coapplicantAmountDate +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +

@@ -52,8 +52,8 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getPeriodMonth()).isEqualTo(6);
 		assertThat(entity.getPeriodYear()).isEqualTo(2026);
 		assertThat(entity.getPeriodChoice()).isEqualTo("CURRENT_MONTH");
-		assertThat(entity.getNormType()).isEqualTo("RIKSNORM");
-		assertThat(entity.getOtherBenefitDescription()).isEqualTo("Etableringsersättning");
+		assertThat(entity.getNormType()).isEqualTo("NATIONAL_NORM");
+		assertThat(entity.getOtherBenefitDescription()).isEqualTo("Establishment benefit");
 		assertThat(entity.getLivelihoodDescription()).isEqualTo("Söker arbete");
 		assertThat(entity.getHasChildrenUnder21()).isTrue();
 		assertThat(entity.getChildrenResidenceChanged()).isFalse();
@@ -68,7 +68,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getHasPendingBenefits()).isTrue();
 		assertThat(entity.getHasAssets()).isTrue();
 		assertThat(entity.getStaysInMunicipality()).isTrue();
-		assertThat(entity.getStayDescription()).isEqualTo("Bor på folkbokföringsadressen");
+		assertThat(entity.getStayDescription()).isEqualTo("Lives at the registered address");
 		assertThat(entity.getAttestation()).isTrue();
 		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);
 
@@ -135,7 +135,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getPlannings().getFirst().getSickLeaveLevel()).isEqualTo("50");
 		assertThat(entity.getPlannings().getFirst().getSfiStudyPath()).isEqualTo("PATH_1");
 		assertThat(entity.getPlannings().getFirst().getSfiCourse()).isEqualTo("KURS_A");
-		assertThat(entity.getPlannings().getFirst().getOtherDescription()).isEqualTo("Övrigt");
+		assertThat(entity.getPlannings().getFirst().getOtherDescription()).isEqualTo("Other");
 
 		assertThat(entity.getPlannedActivities()).hasSize(1);
 		assertThat(entity.getPlannedActivities().getFirst().getPerson()).isEqualTo("Anna");
@@ -214,8 +214,8 @@ class FinancialAssistanceMapperTest {
 			.withMunicipalityId("2281")
 			.withNamespace("FINANCIAL_ASSISTANCE")
 			.withTypeSlug("financial-assistance")
-			.withTitle("Ansökan om ekonomiskt bistånd")
-			.withStatus("INKOMMEN")
+			.withTitle("Application for financial assistance")
+			.withStatus("RECEIVED")
 			.withPriority("HIGH")
 			.withReporterUserId("joe01doe")
 			.withAssignedUserId("jane02doe")
@@ -233,8 +233,8 @@ class FinancialAssistanceMapperTest {
 		assertThat(view.getMunicipalityId()).isEqualTo("2281");
 		assertThat(view.getNamespace()).isEqualTo("FINANCIAL_ASSISTANCE");
 		assertThat(view.getTypeSlug()).isEqualTo("financial-assistance");
-		assertThat(view.getTitle()).isEqualTo("Ansökan om ekonomiskt bistånd");
-		assertThat(view.getStatus()).isEqualTo("INKOMMEN");
+		assertThat(view.getTitle()).isEqualTo("Application for financial assistance");
+		assertThat(view.getStatus()).isEqualTo("RECEIVED");
 		assertThat(view.getPriority()).isEqualTo("HIGH");
 		assertThat(view.getReporterUserId()).isEqualTo("joe01doe");
 		assertThat(view.getAssignedUserId()).isEqualTo("jane02doe");
@@ -301,8 +301,8 @@ class FinancialAssistanceMapperTest {
 			.withPeriodMonth(6)
 			.withPeriodYear(2026)
 			.withPeriodChoice("CURRENT_MONTH")
-			.withNormType("RIKSNORM")
-			.withOtherBenefitDescription("Etableringsersättning")
+			.withNormType("NATIONAL_NORM")
+			.withOtherBenefitDescription("Establishment benefit")
 			.withLivelihoodDescription("Söker arbete")
 			.withHasChildrenUnder21(true)
 			.withChildrenResidenceChanged(false)
@@ -317,7 +317,7 @@ class FinancialAssistanceMapperTest {
 			.withHasPendingBenefits(true)
 			.withHasAssets(true)
 			.withStaysInMunicipality(true)
-			.withStayDescription("Bor på folkbokföringsadressen")
+			.withStayDescription("Lives at the registered address")
 			.withAttestation(true)
 			.withAttestedAt(ATTESTED_AT)
 			.withChildren(List.of(Child.create()
@@ -377,7 +377,7 @@ class FinancialAssistanceMapperTest {
 				.withSickLeaveLevel("50")
 				.withSfiStudyPath("PATH_1")
 				.withSfiCourse("KURS_A")
-				.withOtherDescription("Övrigt")))
+				.withOtherDescription("Other")))
 			.withPlannedActivities(List.of(PlannedActivity.create()
 				.withPerson("Anna")
 				.withActivity("Jobbsökning")
@@ -474,7 +474,7 @@ class FinancialAssistanceMapperTest {
 				.withSickLeaveLevel("50")
 				.withSfiStudyPath("PATH_1")
 				.withSfiCourse("KURS_A")
-				.withOtherDescription("Övrigt")))
+				.withOtherDescription("Other")))
 			.withPlannedActivities(List.of(FaPlannedActivity.create()
 				.withPerson("Anna")
 				.withActivity("Jobbsökning")

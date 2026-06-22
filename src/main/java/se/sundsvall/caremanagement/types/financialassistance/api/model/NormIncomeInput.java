@@ -9,10 +9,10 @@ import org.springframework.format.annotation.DateTimeFormat;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
- * What a handläggare sends to add a new income row (origin HANDLAGGARE) or patch an existing one — only the handläggare
+ * What a caseworker sends to add a new income row (origin CASEWORKER) or patch an existing one — only the caseworker
  * amounts (applicant/co-applicant sides) + note are honoured on a patch.
  */
-@Schema(description = "What a handläggare sends to add or patch an income row (identity + handläggare-writable fields only).")
+@Schema(description = "What a caseworker sends to add or patch an income row (identity + caseworker-writable fields only).")
 public class NormIncomeInput {
 
 	@Schema(description = "The FC income-type id", examples = "20")
@@ -21,15 +21,15 @@ public class NormIncomeInput {
 	@Schema(description = "The FC income-type name", examples = "Bostadsbidrag")
 	private String typeName;
 
-	@Schema(description = "The amount the handläggare decided for the applicant", examples = "1900.00")
-	private BigDecimal applicantHandlaggareAmount;
+	@Schema(description = "The amount the caseworker decided for the applicant", examples = "1900.00")
+	private BigDecimal applicantCaseworkerAmount;
 
 	@Schema(description = "The date the applicant amount is attributed to")
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime applicantAmountDate;
 
-	@Schema(description = "The amount the handläggare decided for the co-applicant", examples = "1900.00")
-	private BigDecimal coapplicantHandlaggareAmount;
+	@Schema(description = "The amount the caseworker decided for the co-applicant", examples = "1900.00")
+	private BigDecimal coapplicantCaseworkerAmount;
 
 	@Schema(description = "The date the co-applicant amount is attributed to")
 	@DateTimeFormat(iso = DATE_TIME)
@@ -68,16 +68,16 @@ public class NormIncomeInput {
 		return this;
 	}
 
-	public BigDecimal getApplicantHandlaggareAmount() {
-		return applicantHandlaggareAmount;
+	public BigDecimal getApplicantCaseworkerAmount() {
+		return applicantCaseworkerAmount;
 	}
 
-	public void setApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
-		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
+	public void setApplicantCaseworkerAmount(final BigDecimal applicantCaseworkerAmount) {
+		this.applicantCaseworkerAmount = applicantCaseworkerAmount;
 	}
 
-	public NormIncomeInput withApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
-		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
+	public NormIncomeInput withApplicantCaseworkerAmount(final BigDecimal applicantCaseworkerAmount) {
+		this.applicantCaseworkerAmount = applicantCaseworkerAmount;
 		return this;
 	}
 
@@ -94,16 +94,16 @@ public class NormIncomeInput {
 		return this;
 	}
 
-	public BigDecimal getCoapplicantHandlaggareAmount() {
-		return coapplicantHandlaggareAmount;
+	public BigDecimal getCoapplicantCaseworkerAmount() {
+		return coapplicantCaseworkerAmount;
 	}
 
-	public void setCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
-		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
+	public void setCoapplicantCaseworkerAmount(final BigDecimal coapplicantCaseworkerAmount) {
+		this.coapplicantCaseworkerAmount = coapplicantCaseworkerAmount;
 	}
 
-	public NormIncomeInput withCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
-		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
+	public NormIncomeInput withCoapplicantCaseworkerAmount(final BigDecimal coapplicantCaseworkerAmount) {
+		this.coapplicantCaseworkerAmount = coapplicantCaseworkerAmount;
 		return this;
 	}
 
@@ -139,14 +139,14 @@ public class NormIncomeInput {
 			return false;
 		final NormIncomeInput that = (NormIncomeInput) o;
 		return Objects.equals(typeId, that.typeId) && Objects.equals(typeName, that.typeName)
-			&& Objects.equals(applicantHandlaggareAmount, that.applicantHandlaggareAmount) && Objects.equals(applicantAmountDate, that.applicantAmountDate)
-			&& Objects.equals(coapplicantHandlaggareAmount, that.coapplicantHandlaggareAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate)
+			&& Objects.equals(applicantCaseworkerAmount, that.applicantCaseworkerAmount) && Objects.equals(applicantAmountDate, that.applicantAmountDate)
+			&& Objects.equals(coapplicantCaseworkerAmount, that.coapplicantCaseworkerAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate)
 			&& Objects.equals(note, that.note);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(typeId, typeName, applicantHandlaggareAmount, applicantAmountDate, coapplicantHandlaggareAmount, coapplicantAmountDate, note);
+		return Objects.hash(typeId, typeName, applicantCaseworkerAmount, applicantAmountDate, coapplicantCaseworkerAmount, coapplicantAmountDate, note);
 	}
 
 	@Override
@@ -154,9 +154,9 @@ public class NormIncomeInput {
 		return "NormIncomeInput{" +
 			"typeId=" + typeId +
 			", typeName='" + typeName + '\'' +
-			", applicantHandlaggareAmount=" + applicantHandlaggareAmount +
+			", applicantCaseworkerAmount=" + applicantCaseworkerAmount +
 			", applicantAmountDate=" + applicantAmountDate +
-			", coapplicantHandlaggareAmount=" + coapplicantHandlaggareAmount +
+			", coapplicantCaseworkerAmount=" + coapplicantCaseworkerAmount +
 			", coapplicantAmountDate=" + coapplicantAmountDate +
 			", note='" + note + '\'' +
 			'}';

@@ -28,6 +28,9 @@ import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateWarningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
@@ -41,9 +44,6 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncom
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningDraft;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
@@ -75,7 +75,7 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands")
 @Tag(name = "Financial Assistance",
-	description = "Ekonomiskt bistånd (EB) errands. Create against one of the three application-type slugs (financial-assistance-new / -renewal / -supplementary); read and replace the typed data via the shared financial-assistance path.")
+	description = "Financial assistance (EB) errands. Create against one of the three application-type slugs (financial-assistance-new / -renewal / -supplementary); read and replace the typed data via the shared financial-assistance path.")
 class FinancialAssistanceResource {
 
 	/** Constrains the create path variable to the three EB slugs so it never shadows other errand types. */
@@ -114,8 +114,8 @@ class FinancialAssistanceResource {
 	}
 
 	@PostMapping(path = "/financial-assistance/eligibility", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Check application eligibility (gemensam ingång)",
-		description = "Given an applicant (and an optional co-applicant) suggests which application — nyansökan / återansökan / tilläggsansökan — to offer, checking this system and Lifecare (best-effort).",
+	@Operation(summary = "Check application eligibility (common entry point)",
+		description = "Given an applicant (and an optional co-applicant) suggests which application — new application / renewal / supplementary application — to offer, checking this system and Lifecare (best-effort).",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 		})
@@ -127,34 +127,34 @@ class FinancialAssistanceResource {
 		return ok(eligibilityService.evaluate(municipalityId, namespace, request));
 	}
 
-	@PostMapping(path = "/financial-assistance/normberakning/prepare", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Prepare the normberäkning (no Lifecare write)",
-		description = "Reports whether this month's classified incomes cover every income type the previous normberäkning had (informationComplete + missingIncomeTypes), records the income warnings on the errand as a single Decision(RECOMMENDATION), and reflects completeness in the errand status (KOMPLETTERING ⇄ VANTAR_PA_BESLUT). Does NOT create a normberäkning in Lifecare — the EB process calls this each daily loop. Use /commit after a beslut to create it in Lifecare.",
+	@PostMapping(path = "/financial-assistance/calculation/prepare", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Prepare the calculation (no Lifecare write)",
+		description = "Reports whether this month's classified incomes cover every income type the previous calculation had (informationComplete + missingIncomeTypes), records the income warnings on the errand as a single Decision(RECOMMENDATION), and reflects completeness in the errand status (SUPPLEMENT_REQUESTED ⇄ AWAITING_DECISION). Does NOT create a calculation in Lifecare — the EB process calls this each daily loop. Use /commit after a decision to create it in Lifecare.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
-	ResponseEntity<NormberakningResponse> prepareNormberakning(
+	ResponseEntity<CalculationResponse> prepareCalculation(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@Valid @NotNull @RequestBody final NormberakningRequest request) {
+		@Valid @NotNull @RequestBody final CalculationRequest request) {
 
-		return ok(service.prepareNormberakning(municipalityId, namespace, request));
+		return ok(service.prepareCalculation(municipalityId, namespace, request));
 	}
 
-	@PostMapping(path = "/financial-assistance/normberakning/commit", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Create the normberäkning in Lifecare (after beslut)",
-		description = "Builds the normberäkning from the classified incomes and creates it in Lifecare FC, returning the created calculation id. Called once a beslut is taken — never during the daily SSBTEK loop.",
+	@PostMapping(path = "/financial-assistance/calculation/commit", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Create the calculation in Lifecare (after decision)",
+		description = "Builds the calculation from the classified incomes and creates it in Lifecare FC, returning the created calculation id. Called once a decision is taken — never during the daily SSBTEK loop.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
-	ResponseEntity<NormberakningResponse> commitNormberakning(
+	ResponseEntity<CalculationResponse> commitCalculation(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@Valid @NotNull @RequestBody final NormberakningRequest request) {
+		@Valid @NotNull @RequestBody final CalculationRequest request) {
 
-		return ok(service.commitNormberakning(municipalityId, namespace, request));
+		return ok(service.commitCalculation(municipalityId, namespace, request));
 	}
 
 	@PostMapping(path = "/financial-assistance/{errandId}/warnings", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
@@ -178,7 +178,7 @@ class FinancialAssistanceResource {
 
 	@GetMapping(path = "/financial-assistance/{errandId}/warnings", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "List the EB income warnings on an errand",
-		description = "The acknowledgeable income warnings the handläggare reviews — unhandled incomes, significant changes, and income types still missing from SSBTEK. The daily prepare step reconciles them.",
+		description = "The acknowledgeable income warnings the caseworker reviews — unhandled incomes, significant changes, and income types still missing from SSBTEK. The daily prepare step reconciles them.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -193,7 +193,7 @@ class FinancialAssistanceResource {
 
 	@PatchMapping(path = "/financial-assistance/{errandId}/warnings/{warningId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Set the status of an EB income warning",
-		description = "A handläggare acknowledges (seen, kept on record), closes (dismisses), or re-opens a warning to OPEN (undoing an earlier acknowledge/close).",
+		description = "A caseworker acknowledges (seen, kept on record), closes (dismisses), or re-opens a warning to OPEN (undoing an earlier acknowledge/close).",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "400", description = "Bad Request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
@@ -213,7 +213,7 @@ class FinancialAssistanceResource {
 
 	@GetMapping(path = "/financial-assistance/{errandId}/sections/approvals", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read the section approvals on an errand",
-		description = "The handläggare approval state of the three EB view sections (CALCULATION = normberäkning, PAYMENT = utbetalning, DECISION = beslut). Always returns all three — a section never approved is present with approved=false. The same object is embedded in the errand view.",
+		description = "The caseworker approval state of the three EB view sections (CALCULATION = calculation, PAYMENT = payment, DECISION = decision). Always returns all three — a section never approved is present with approved=false. The same object is embedded in the errand view.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -227,8 +227,8 @@ class FinancialAssistanceResource {
 	}
 
 	@PatchMapping(path = "/financial-assistance/{errandId}/sections/{section}/approval", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Set a section's approval (handläggare)",
-		description = "A handläggare verifies one of the EB view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them.",
+	@Operation(summary = "Set a section's approval (caseworker)",
+		description = "A caseworker verifies one of the EB view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "400", description = "Bad Request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
@@ -246,14 +246,14 @@ class FinancialAssistanceResource {
 		return ok(service.setSectionApproval(municipalityId, namespace, errandId, section, request.getApproved(), request.getApprovedBy()));
 	}
 
-	@GetMapping(path = "/financial-assistance/{errandId}/normberakning/draft", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Read the draft normberäkning",
-		description = "The FC income rows the EB process prepared (not yet created in Lifecare) for the handläggare to review and edit before a beslut. 404 when no draft exists yet.",
+	@GetMapping(path = "/financial-assistance/{errandId}/calculation/draft", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Read the draft calculation",
+		description = "The FC income rows the EB process prepared (not yet created in Lifecare) for the caseworker to review and edit before a decision. 404 when no draft exists yet.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
-	ResponseEntity<NormberakningDraft> getDraft(
+	ResponseEntity<CalculationDraft> getDraft(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@PathVariable final String errandId) {
@@ -261,14 +261,14 @@ class FinancialAssistanceResource {
 		return ok(service.getDraft(municipalityId, namespace, errandId));
 	}
 
-	@PatchMapping(path = "/financial-assistance/{errandId}/normberakning/draft/header", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Edit the draft header (handläggare)",
-		description = "Set the norm, the calculation date window (Från/Till/Beräkningsdatum) and the custom household size (Gemensamma kostnader). 404 when no draft exists.",
+	@PatchMapping(path = "/financial-assistance/{errandId}/calculation/draft/header", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Edit the draft header (caseworker)",
+		description = "Set the norm, the calculation date window (from/to/date) and the custom household size (common costs). 404 when no draft exists.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
-	ResponseEntity<NormberakningDraft> patchDraftHeader(
+	ResponseEntity<CalculationDraft> patchDraftHeader(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@PathVariable final String errandId,
@@ -277,12 +277,12 @@ class FinancialAssistanceResource {
 		return ok(service.patchDraftHeader(municipalityId, namespace, errandId, input));
 	}
 
-	// --- per-row handläggare edits on the draft. Each touches only the handläggare value / note / soft-delete; the
+	// --- per-row caseworker edits on the draft. Each touches only the caseworker value / note / soft-delete; the
 	// process columns are owned by the daily prepare. 404 when the errand or row is missing in this namespace/municipality.
 	// ---
 
-	@PostMapping(path = "/financial-assistance/{errandId}/normberakning/draft/incomes", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Add an income row to the draft (handläggare)", responses = {
+	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/incomes", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Add an income row to the draft (caseworker)", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
@@ -295,8 +295,8 @@ class FinancialAssistanceResource {
 		return ok(service.addDraftIncome(municipalityId, namespace, errandId, input));
 	}
 
-	@PatchMapping(path = "/financial-assistance/{errandId}/normberakning/draft/incomes/{rowId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Set the handläggare value / note on an income row", responses = {
+	@PatchMapping(path = "/financial-assistance/{errandId}/calculation/draft/incomes/{rowId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Set the caseworker value / note on an income row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
@@ -310,7 +310,7 @@ class FinancialAssistanceResource {
 		return ok(service.patchDraftIncome(municipalityId, namespace, errandId, rowId, input));
 	}
 
-	@DeleteMapping(path = "/financial-assistance/{errandId}/normberakning/draft/incomes/{rowId}", produces = APPLICATION_JSON_VALUE)
+	@DeleteMapping(path = "/financial-assistance/{errandId}/calculation/draft/incomes/{rowId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Soft-delete an income row (excluded from the calculation, survives the daily refresh)", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -324,7 +324,7 @@ class FinancialAssistanceResource {
 		return ok(service.setDraftIncomeDeleted(municipalityId, namespace, errandId, rowId, true));
 	}
 
-	@PostMapping(path = "/financial-assistance/{errandId}/normberakning/draft/incomes/{rowId}/restore", produces = APPLICATION_JSON_VALUE)
+	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/incomes/{rowId}/restore", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Restore a soft-deleted income row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -338,8 +338,8 @@ class FinancialAssistanceResource {
 		return ok(service.setDraftIncomeDeleted(municipalityId, namespace, errandId, rowId, false));
 	}
 
-	@PostMapping(path = "/financial-assistance/{errandId}/normberakning/draft/expenses", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Add an expense row to the draft (handläggare)", responses = {
+	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/expenses", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Add an expense row to the draft (caseworker)", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
@@ -352,8 +352,8 @@ class FinancialAssistanceResource {
 		return ok(service.addDraftExpense(municipalityId, namespace, errandId, input));
 	}
 
-	@PatchMapping(path = "/financial-assistance/{errandId}/normberakning/draft/expenses/{rowId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Set the handläggare value / note on an expense row", responses = {
+	@PatchMapping(path = "/financial-assistance/{errandId}/calculation/draft/expenses/{rowId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Set the caseworker value / note on an expense row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
@@ -367,7 +367,7 @@ class FinancialAssistanceResource {
 		return ok(service.patchDraftExpense(municipalityId, namespace, errandId, rowId, input));
 	}
 
-	@DeleteMapping(path = "/financial-assistance/{errandId}/normberakning/draft/expenses/{rowId}", produces = APPLICATION_JSON_VALUE)
+	@DeleteMapping(path = "/financial-assistance/{errandId}/calculation/draft/expenses/{rowId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Soft-delete an expense row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -381,7 +381,7 @@ class FinancialAssistanceResource {
 		return ok(service.setDraftExpenseDeleted(municipalityId, namespace, errandId, rowId, true));
 	}
 
-	@PostMapping(path = "/financial-assistance/{errandId}/normberakning/draft/expenses/{rowId}/restore", produces = APPLICATION_JSON_VALUE)
+	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/expenses/{rowId}/restore", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Restore a soft-deleted expense row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -395,8 +395,8 @@ class FinancialAssistanceResource {
 		return ok(service.setDraftExpenseDeleted(municipalityId, namespace, errandId, rowId, false));
 	}
 
-	@PostMapping(path = "/financial-assistance/{errandId}/normberakning/draft/persons", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Add a person row to the draft (handläggare)", responses = {
+	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/persons", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Add a person row to the draft (caseworker)", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
@@ -409,8 +409,8 @@ class FinancialAssistanceResource {
 		return ok(service.addDraftPerson(municipalityId, namespace, errandId, input));
 	}
 
-	@PatchMapping(path = "/financial-assistance/{errandId}/normberakning/draft/persons/{rowId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Set the handläggare days / note on a person row", responses = {
+	@PatchMapping(path = "/financial-assistance/{errandId}/calculation/draft/persons/{rowId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Set the caseworker days / note on a person row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
@@ -424,7 +424,7 @@ class FinancialAssistanceResource {
 		return ok(service.patchDraftPerson(municipalityId, namespace, errandId, rowId, input));
 	}
 
-	@DeleteMapping(path = "/financial-assistance/{errandId}/normberakning/draft/persons/{rowId}", produces = APPLICATION_JSON_VALUE)
+	@DeleteMapping(path = "/financial-assistance/{errandId}/calculation/draft/persons/{rowId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Soft-delete a person row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -438,7 +438,7 @@ class FinancialAssistanceResource {
 		return ok(service.setDraftPersonDeleted(municipalityId, namespace, errandId, rowId, true));
 	}
 
-	@PostMapping(path = "/financial-assistance/{errandId}/normberakning/draft/persons/{rowId}/restore", produces = APPLICATION_JSON_VALUE)
+	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/persons/{rowId}/restore", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Restore a soft-deleted person row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -453,8 +453,8 @@ class FinancialAssistanceResource {
 	}
 
 	@PostMapping(path = "/financial-assistance/actualisation", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Create the Lifecare aktualisering (case intake)",
-		description = "Builds the aktualisering against the applicant's Lifecare FC aktualisering proposal and creates it in Lifecare, returning the created aktualisering id. When the request carries an errandId, the creation is recorded on the errand as a Decision(ACTUALISATION) for the audit trail.",
+	@Operation(summary = "Create the Lifecare actualisation (case intake)",
+		description = "Builds the actualisation against the applicant's Lifecare FC actualisation proposal and creates it in Lifecare, returning the created actualisation id. When the request carries an errandId, the creation is recorded on the errand as a Decision(ACTUALISATION) for the audit trail.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -468,8 +468,8 @@ class FinancialAssistanceResource {
 	}
 
 	@PostMapping(path = "/financial-assistance/payment-status", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Read whether the Lifecare utbetalning has been effectuated",
-		description = "Reads whether the manual Lifecare utbetalning for the applicant and application month has been registered, returning the effectuated flag and (when effectuated) the payment date. caremanagement makes no payment — utbetalning is a manual handläggare step in Lifecare; the process polls this to detect when it is done.",
+	@Operation(summary = "Read whether the Lifecare payment has been effectuated",
+		description = "Reads whether the manual Lifecare payment for the applicant and application month has been registered, returning the effectuated flag and (when effectuated) the payment date. caremanagement makes no payment — payment is a manual caseworker step in Lifecare; the process polls this to detect when it is done.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -484,7 +484,7 @@ class FinancialAssistanceResource {
 
 	@GetMapping(path = "/financial-assistance/prefill", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Renewal pre-fill from Lifecare",
-		description = "Returns the household children from the applicant's most recent Lifecare normberäkning to pre-fill an EB återansökan. The applicant is identified by partyId (resolved to a personnummer via the citizen service). Only children are pre-filled — the sökande is the logged-in citizen and the medsökande comes from the portal. Best-effort — degrades to an empty result (lifecareChecked=false) when the partyId cannot be resolved or Lifecare is unreachable.",
+		description = "Returns the household children from the applicant's most recent Lifecare calculation to pre-fill an EB renewal. The applicant is identified by partyId (resolved to a personnummer via the citizen service). Only children are pre-filled — the applicant is the logged-in citizen and the co-applicant comes from the portal. Best-effort — degrades to an empty result (lifecareChecked=false) when the partyId cannot be resolved or Lifecare is unreachable.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 		})

@@ -16,22 +16,22 @@ class FinancialAssistanceModuleConfigTest {
 
 	@Test
 	void registersThreeTypesWithSharedLifecycle() {
-		assertType(config.financialAssistanceNewType(), SLUG_NEW, "Ekonomiskt bistånd – nyansökan");
-		assertType(config.financialAssistanceRenewalType(), SLUG_RENEWAL, "Ekonomiskt bistånd – återansökan");
-		assertType(config.financialAssistanceSupplementaryType(), SLUG_SUPPLEMENTARY, "Ekonomiskt bistånd – tilläggsansökan");
+		assertType(config.financialAssistanceNewType(), SLUG_NEW, "Financial assistance – new application");
+		assertType(config.financialAssistanceRenewalType(), SLUG_RENEWAL, "Financial assistance – renewal");
+		assertType(config.financialAssistanceSupplementaryType(), SLUG_SUPPLEMENTARY, "Financial assistance – supplementary application");
 	}
 
 	private static void assertType(final ErrandTypeContribution contribution, final String slug, final String displayName) {
 		assertThat(contribution.typeSlug()).isEqualTo(slug);
 		assertThat(contribution.displayName()).isEqualTo(displayName);
 		assertThat(contribution.allowedStatuses()).containsExactlyInAnyOrder(
-			"INKOMMEN", "UNDER_BEREDNING", "VANTAR_PA_BESLUT", "KOMPLETTERING", "BEVILJAD",
-			"AVSLAGEN", "UTBETALD", "AVSLUTAD", "ATERKALLAD");
-		assertThat(contribution.isValidStatus("INKOMMEN")).isTrue();
+			"RECEIVED", "UNDER_REVIEW", "AWAITING_DECISION", "SUPPLEMENT_REQUESTED", "GRANTED",
+			"REJECTED", "PAID", "CLOSED", "WITHDRAWN");
+		assertThat(contribution.isValidStatus("RECEIVED")).isTrue();
 		assertThat(contribution.isValidStatus("BOGUS")).isFalse();
-		assertThat(contribution.isValidTransition("INKOMMEN", "UNDER_BEREDNING")).isTrue();
-		assertThat(contribution.isValidTransition("BEVILJAD", "UTBETALD")).isTrue();
-		assertThat(contribution.isValidTransition("INKOMMEN", "UTBETALD")).isFalse();
+		assertThat(contribution.isValidTransition("RECEIVED", "UNDER_REVIEW")).isTrue();
+		assertThat(contribution.isValidTransition("GRANTED", "PAID")).isTrue();
+		assertThat(contribution.isValidTransition("RECEIVED", "PAID")).isFalse();
 	}
 
 	@Test

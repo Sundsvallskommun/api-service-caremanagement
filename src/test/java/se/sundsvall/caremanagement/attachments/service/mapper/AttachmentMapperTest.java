@@ -128,7 +128,7 @@ class AttachmentMapperTest {
 		// Will likely fail at Hibernate.getLobHelper() since no JPA context is active.
 		// Either we get a real entity (when running in an integration setup) or an exception.
 		try {
-			final AttachmentEntity entity = AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "ERRAND", "HANDLAGGARE", file);
+			final AttachmentEntity entity = AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "ERRAND", "CASEWORKER", file);
 			assertThat(entity).isNotNull();
 			assertThat(entity.getErrandId()).isEqualTo("eid");
 			assertThat(entity.getNamespace()).isEqualTo("ns");
@@ -137,7 +137,7 @@ class AttachmentMapperTest {
 			assertThat(entity.getMimeType()).isEqualTo("text/plain");
 			assertThat(entity.getFileSize()).isEqualTo(5);
 			assertThat(entity.getOrigin()).isEqualTo("ERRAND");
-			assertThat(entity.getSenderRole()).isEqualTo("HANDLAGGARE");
+			assertThat(entity.getSenderRole()).isEqualTo("CASEWORKER");
 			assertThat(entity.getAttachmentData()).isNotNull();
 		} catch (final Exception e) {
 			// Acceptable in unit context with no Hibernate session

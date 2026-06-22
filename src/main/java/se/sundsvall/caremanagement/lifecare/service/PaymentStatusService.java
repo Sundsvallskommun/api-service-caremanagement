@@ -11,9 +11,9 @@ import static java.util.Optional.ofNullable;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Reads whether a Lifecare utbetalning concerning an application month has been effectuated for an applicant. The
- * payment itself is a manual handläggare step in Lifecare (FC exposes no payment write) — this service only reads the
- * registered utbetalningar via {@link LifecareFcIntegration}. Mirrors {@link ActualisationService}.
+ * Reads whether a Lifecare payment concerning an application month has been effectuated for an applicant. The
+ * payment itself is a manual caseworker step in Lifecare (FC exposes no payment write) — this service only reads the
+ * registered payments via {@link LifecareFcIntegration}. Mirrors {@link ActualisationService}.
  */
 @Service
 public class PaymentStatusService {
@@ -25,9 +25,9 @@ public class PaymentStatusService {
 	}
 
 	/**
-	 * Read the utbetalning status for the applicant and application month. A payment counts as effectuated when it has a
+	 * Read the payment status for the applicant and application month. A payment counts as effectuated when it has a
 	 * PayDate and its ConcernedMonth carries the application month (yyyy-MM). The query window spans the month before the
-	 * application month (utbetalningar are typically made late in the preceding month) through the application month.
+	 * application month (payments are typically made late in the preceding month) through the application month.
 	 *
 	 * @param  applicantPersonId the applicant's personnummer
 	 * @param  applicationMonth  the month the payment concerns

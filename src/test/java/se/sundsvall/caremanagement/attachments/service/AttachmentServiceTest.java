@@ -184,7 +184,7 @@ class AttachmentServiceTest {
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
 			.thenReturn(Optional.of(mock(ErrandEntity.class)));
 		when(attachmentRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
-			AttachmentEntity.create().withId("upload").withOrigin("ERRAND").withSenderRole("HANDLAGGARE").withCreated(t1)));
+			AttachmentEntity.create().withId("upload").withOrigin("ERRAND").withSenderRole("CASEWORKER").withCreated(t1)));
 		when(conversationAttachmentQueryServiceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(
 			new ConversationAttachment("conv", "msg-1", "intyg.pdf", "application/pdf", 10, t2, "CLIENT")));
 

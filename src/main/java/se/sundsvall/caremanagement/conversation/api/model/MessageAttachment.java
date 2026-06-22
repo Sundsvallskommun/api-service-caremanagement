@@ -25,8 +25,8 @@ public class MessageAttachment {
 	private Integer fileSize;
 
 	@Schema(description = "Who sent the file, derived from the message direction: CLIENT (applicant, INBOUND) or "
-		+ "HANDLAGGARE (caseworker, OUTBOUND)", allowableValues = {
-			"CLIENT", "HANDLAGGARE"
+		+ "CASEWORKER (caseworker, OUTBOUND)", allowableValues = {
+			"CLIENT", "CASEWORKER"
 	}, examples = "CLIENT", accessMode = READ_ONLY)
 	private String senderRole;
 

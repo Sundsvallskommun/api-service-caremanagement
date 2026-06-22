@@ -26,8 +26,8 @@ class CreateWarningRequestTest {
 	@Test
 	void testBuilderMethods() {
 		final var type = "UNHANDLED_INCOME";
-		final var message = "Swish-insättningar: 2 400 kr";
-		final var sourceKey = "Swish-insättningar";
+		final var message = "Swish deposits: 2 400 kr";
+		final var sourceKey = "Swish deposits";
 
 		final var result = CreateWarningRequest.create()
 			.withType(type)

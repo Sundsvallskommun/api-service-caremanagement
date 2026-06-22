@@ -5,16 +5,17 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Pre-fill for a financial assistance renewal (återansökan): the children in the applicant's household, read from the
- * most recent Lifecare normberäkning. Only children are pre-filled — the sökande is the logged-in citizen and the
- * medsökande comes from the portal, so neither is returned here. Lifecare only supplies personnummer + name, so the
- * rest of each child (boendeomfattning, skola …) is left for the citizen. Best-effort: {@code lifecareChecked} is false
+ * Pre-fill for a financial assistance renewal (renewal): the children in the applicant's household, read from the
+ * most recent Lifecare calculation. Only children are pre-filled — the applicant is the logged-in citizen and the
+ * co-applicant comes from the portal, so neither is returned here. Lifecare only supplies personnummer + name, so the
+ * rest of each child (housingomfattning, skola …) is left for the citizen. Best-effort: {@code lifecareChecked} is
+ * false
  * when Lifecare could not be reached, in which case {@code children} is empty.
  */
-@Schema(description = "Pre-fill data for a financial assistance renewal (återansökan): household children read from Lifecare.")
+@Schema(description = "Pre-fill data for a financial assistance renewal (renewal): household children read from Lifecare.")
 public class RenewalPrefill {
 
-	@Schema(description = "Children in the household from the most recent normberäkning")
+	@Schema(description = "Children in the household from the most recent calculation")
 	private List<PrefilledChild> children;
 
 	@Schema(description = "True when the Lifecare lookup succeeded. False means the answer is degraded (empty children).", examples = "true")

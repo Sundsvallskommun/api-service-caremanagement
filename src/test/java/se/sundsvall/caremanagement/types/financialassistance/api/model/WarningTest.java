@@ -40,7 +40,7 @@ class WarningTest {
 			.withId("id")
 			.withType("MISSING_SSBTEK")
 			.withSourceKey("Dagersättning")
-			.withMessage("Saknas ännu i SSBTEK: Dagersättning")
+			.withMessage("Still missing in SSBTEK: Dagersättning")
 			.withStatus("OPEN")
 			.withAutoResolved(false)
 			.withCreated(created)
@@ -49,7 +49,7 @@ class WarningTest {
 		org.assertj.core.api.Assertions.assertThat(warning.getId()).isEqualTo("id");
 		org.assertj.core.api.Assertions.assertThat(warning.getType()).isEqualTo("MISSING_SSBTEK");
 		org.assertj.core.api.Assertions.assertThat(warning.getStatus()).isEqualTo("OPEN");
-		org.assertj.core.api.Assertions.assertThat(warning.getMessage()).isEqualTo("Saknas ännu i SSBTEK: Dagersättning");
+		org.assertj.core.api.Assertions.assertThat(warning.getMessage()).isEqualTo("Still missing in SSBTEK: Dagersättning");
 	}
 
 	@Test

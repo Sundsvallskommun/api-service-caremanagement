@@ -7,11 +7,11 @@ import java.util.Objects;
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 
 /**
- * One section of the Draken EB view as an acknowledgeable object — whether a handläggare has verified it as approved.
- * The section is {@code CALCULATION} (normberäkning), {@code PAYMENT} (utbetalning) or {@code DECISION} (beslut).
+ * One section of the Draken EB view as an acknowledgeable object — whether a caseworker has verified it as approved.
+ * The section is {@code CALCULATION} (calculation), {@code PAYMENT} (payment) or {@code DECISION} (decision).
  * {@code approvedBy} / {@code approvedAt} are populated while approved and null once the approval is withdrawn.
  */
-@Schema(description = "A handläggare's approval of one section of the EB view (calculation / payment / decision).")
+@Schema(description = "A caseworker's approval of one section of the EB view (calculation / payment / decision).")
 public class SectionApproval {
 
 	@Schema(description = "The section this approval concerns", examples = "CALCULATION", allowableValues = {
@@ -19,10 +19,10 @@ public class SectionApproval {
 	})
 	private String section;
 
-	@Schema(description = "Whether the section has been verified as approved by a handläggare", examples = "true")
+	@Schema(description = "Whether the section has been verified as approved by a caseworker", examples = "true")
 	private boolean approved;
 
-	@Schema(description = "The handläggare who approved the section (null while not approved)", examples = "jane02doe", accessMode = READ_ONLY)
+	@Schema(description = "The caseworker who approved the section (null while not approved)", examples = "jane02doe", accessMode = READ_ONLY)
 	private String approvedBy;
 
 	@Schema(description = "When the section was approved (null while not approved)", accessMode = READ_ONLY)

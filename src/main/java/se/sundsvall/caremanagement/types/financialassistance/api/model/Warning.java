@@ -5,10 +5,10 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 
 /**
- * An EB income warning on an errand — an acknowledgeable object the handläggare reviews in Draken. Produced and
- * reconciled by the daily prepare step; a handläggare can acknowledge or close it.
+ * An EB income warning on an errand — an acknowledgeable object the caseworker reviews in Draken. Produced and
+ * reconciled by the daily prepare step; a caseworker can acknowledge or close it.
  */
-@Schema(description = "An EB income warning the handläggare can acknowledge or close.")
+@Schema(description = "An EB income warning the caseworker can acknowledge or close.")
 public class Warning {
 
 	@Schema(description = "The warning id", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", accessMode = Schema.AccessMode.READ_ONLY)
@@ -19,10 +19,10 @@ public class Warning {
 	})
 	private String type;
 
-	@Schema(description = "A stable key for the income the warning concerns (förmån/inkomsttyp) — the dedup key", examples = "Bostadsbidrag")
+	@Schema(description = "A stable key for the income the warning concerns (benefit/incomeType) — the dedup key", examples = "Bostadsbidrag")
 	private String sourceKey;
 
-	@Schema(description = "Human-readable warning text", examples = "Saknas ännu i SSBTEK: Dagersättning")
+	@Schema(description = "Human-readable warning text", examples = "Still missing in SSBTEK: Dagersättning")
 	private String message;
 
 	@Schema(description = "The warning status", examples = "OPEN", allowableValues = {
@@ -30,7 +30,7 @@ public class Warning {
 	})
 	private String status;
 
-	@Schema(description = "Whether the warning was closed automatically (its cause resolved) rather than by a handläggare", examples = "false")
+	@Schema(description = "Whether the warning was closed automatically (its cause resolved) rather than by a caseworker", examples = "false")
 	private boolean autoResolved;
 
 	@Schema(description = "When the warning was created", accessMode = Schema.AccessMode.READ_ONLY)

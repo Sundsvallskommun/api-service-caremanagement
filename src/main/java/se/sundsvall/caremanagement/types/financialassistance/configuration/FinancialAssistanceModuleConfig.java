@@ -13,18 +13,20 @@ import se.sundsvall.caremanagement.stakeholders.service.StakeholderRoleContribut
  * Registers the three financial assistance (EB) errand types and their stakeholder roles.
  *
  * <p>
- * Per the frontend contract there is one slug per application type — {@code financial-assistance-new} (nyansökan),
- * {@code financial-assistance-renewal} (återansökan) and {@code financial-assistance-supplementary} (tilläggsansökan).
+ * Per the frontend contract there is one slug per application type — {@code financial-assistance-new} (new
+ * application),
+ * {@code financial-assistance-renewal} (renewal) and {@code financial-assistance-supplementary} (supplementary
+ * application).
  * The three share the same data model, stakeholder roles and status lifecycle; the slug is the discriminator and the
  * service derives the stored {@code applicationType} from it.
  * </p>
  *
  * <p>
  * Status lifecycle (Swedish codes; bifall/avslag split — outcome detail lives on the {@code Decision} row, not the
- * status): {@code INKOMMEN → UNDER_BEREDNING → VANTAR_PA_BESLUT → BEVILJAD → UTBETALD → AVSLUTAD}, with
- * {@code KOMPLETTERING}, {@code AVSLAGEN} and {@code ATERKALLAD} branches. Maps onto the canonical EB BPMN:
- * UNDER_BEREDNING = recommendation write, VANTAR_PA_BESLUT = the receiveTask pause (handläggaren i loopen),
- * BEVILJAD/AVSLAGEN = the gateway after the handläggare's process-message.
+ * status): {@code RECEIVED → UNDER_REVIEW → AWAITING_DECISION → GRANTED → PAID → CLOSED}, with
+ * {@code SUPPLEMENT_REQUESTED}, {@code REJECTED} and {@code WITHDRAWN} branches. Maps onto the canonical EB BPMN:
+ * UNDER_REVIEW = recommendation write, AWAITING_DECISION = the receiveTask pause (caseworkern i loopen),
+ * GRANTED/REJECTED = the gateway after the caseworker's process-message.
  * </p>
  */
 @Configuration
@@ -48,20 +50,20 @@ public class FinancialAssistanceModuleConfig {
 
 	public static final Set<String> SLUGS = SLUG_TO_APPLICATION_TYPE.keySet();
 
-	private static final String DISPLAY_NEW = "Ekonomiskt bistånd – nyansökan";
-	private static final String DISPLAY_RENEWAL = "Ekonomiskt bistånd – återansökan";
-	private static final String DISPLAY_SUPPLEMENTARY = "Ekonomiskt bistånd – tilläggsansökan";
+	private static final String DISPLAY_NEW = "Financial assistance – new application";
+	private static final String DISPLAY_RENEWAL = "Financial assistance – renewal";
+	private static final String DISPLAY_SUPPLEMENTARY = "Financial assistance – supplementary application";
 
 	// Status codes
-	public static final String STATUS_INKOMMEN = "INKOMMEN";
-	public static final String STATUS_UNDER_BEREDNING = "UNDER_BEREDNING";
-	public static final String STATUS_VANTAR_PA_BESLUT = "VANTAR_PA_BESLUT";
-	public static final String STATUS_KOMPLETTERING = "KOMPLETTERING";
-	public static final String STATUS_BEVILJAD = "BEVILJAD";
-	public static final String STATUS_AVSLAGEN = "AVSLAGEN";
-	public static final String STATUS_UTBETALD = "UTBETALD";
-	public static final String STATUS_AVSLUTAD = "AVSLUTAD";
-	public static final String STATUS_ATERKALLAD = "ATERKALLAD";
+	public static final String STATUS_RECEIVED = "RECEIVED";
+	public static final String STATUS_UNDER_REVIEW = "UNDER_REVIEW";
+	public static final String STATUS_AWAITING_DECISION = "AWAITING_DECISION";
+	public static final String STATUS_SUPPLEMENT_REQUESTED = "SUPPLEMENT_REQUESTED";
+	public static final String STATUS_GRANTED = "GRANTED";
+	public static final String STATUS_REJECTED = "REJECTED";
+	public static final String STATUS_PAID = "PAID";
+	public static final String STATUS_CLOSED = "CLOSED";
+	public static final String STATUS_WITHDRAWN = "WITHDRAWN";
 
 	// Stakeholder roles
 	public static final String ROLE_APPLICANT = "APPLICANT";
@@ -121,23 +123,23 @@ public class FinancialAssistanceModuleConfig {
 	private static ErrandTypeContribution typeContribution(final String slug, final String displayName) {
 		return ErrandTypeContribution.builder(slug)
 			.displayName(displayName)
-			.allowedStatuses(STATUS_INKOMMEN, STATUS_UNDER_BEREDNING, STATUS_VANTAR_PA_BESLUT, STATUS_KOMPLETTERING,
-				STATUS_BEVILJAD, STATUS_AVSLAGEN, STATUS_UTBETALD, STATUS_AVSLUTAD, STATUS_ATERKALLAD)
-			.allowedTransition(STATUS_INKOMMEN, STATUS_UNDER_BEREDNING, STATUS_ATERKALLAD)
-			.allowedTransition(STATUS_UNDER_BEREDNING, STATUS_VANTAR_PA_BESLUT, STATUS_KOMPLETTERING)
-			.allowedTransition(STATUS_KOMPLETTERING, STATUS_UNDER_BEREDNING, STATUS_VANTAR_PA_BESLUT, STATUS_ATERKALLAD)
-			.allowedTransition(STATUS_VANTAR_PA_BESLUT, STATUS_BEVILJAD, STATUS_AVSLAGEN, STATUS_KOMPLETTERING)
-			.allowedTransition(STATUS_BEVILJAD, STATUS_UTBETALD)
-			.allowedTransition(STATUS_UTBETALD, STATUS_AVSLUTAD)
-			.allowedTransition(STATUS_AVSLAGEN, STATUS_AVSLUTAD)
-			.allowedTransition(STATUS_ATERKALLAD, STATUS_AVSLUTAD)
+			.allowedStatuses(STATUS_RECEIVED, STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION, STATUS_SUPPLEMENT_REQUESTED,
+				STATUS_GRANTED, STATUS_REJECTED, STATUS_PAID, STATUS_CLOSED, STATUS_WITHDRAWN)
+			.allowedTransition(STATUS_RECEIVED, STATUS_UNDER_REVIEW, STATUS_WITHDRAWN)
+			.allowedTransition(STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION, STATUS_SUPPLEMENT_REQUESTED)
+			.allowedTransition(STATUS_SUPPLEMENT_REQUESTED, STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION, STATUS_WITHDRAWN)
+			.allowedTransition(STATUS_AWAITING_DECISION, STATUS_GRANTED, STATUS_REJECTED, STATUS_SUPPLEMENT_REQUESTED)
+			.allowedTransition(STATUS_GRANTED, STATUS_PAID)
+			.allowedTransition(STATUS_PAID, STATUS_CLOSED)
+			.allowedTransition(STATUS_REJECTED, STATUS_CLOSED)
+			.allowedTransition(STATUS_WITHDRAWN, STATUS_CLOSED)
 			.build();
 	}
 
 	/** Identical roles for every EB slug. */
 	private static StakeholderRoleContribution roleContribution(final String slug) {
 		return new StakeholderRoleContribution(slug, Set.of(
-			new RoleDefinition(ROLE_APPLICANT, "Sökande", 1, true),
-			new RoleDefinition(ROLE_CO_APPLICANT, "Medsökande", 1, false)));
+			new RoleDefinition(ROLE_APPLICANT, "Applicant", 1, true),
+			new RoleDefinition(ROLE_CO_APPLICANT, "Co-applicant", 1, false)));
 	}
 }

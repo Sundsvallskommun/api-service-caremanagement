@@ -41,11 +41,11 @@ class NormIncomeRowTest {
 		final var typeId = 20;
 		final var typeName = "Bostadsbidrag";
 		final var applicantProcessAmount = BigDecimal.valueOf(1850.00);
-		final var applicantHandlaggareAmount = BigDecimal.valueOf(1900.00);
+		final var applicantCaseworkerAmount = BigDecimal.valueOf(1900.00);
 		final var applicantEffectiveAmount = BigDecimal.valueOf(1900.00);
 		final var applicantAmountDate = now();
 		final var coapplicantProcessAmount = BigDecimal.valueOf(950.00);
-		final var coapplicantHandlaggareAmount = BigDecimal.valueOf(1000.00);
+		final var coapplicantCaseworkerAmount = BigDecimal.valueOf(1000.00);
 		final var coapplicantEffectiveAmount = BigDecimal.valueOf(1000.00);
 		final var coapplicantAmountDate = now();
 		final var deleted = true;
@@ -59,11 +59,11 @@ class NormIncomeRowTest {
 			.withTypeId(typeId)
 			.withTypeName(typeName)
 			.withApplicantProcessAmount(applicantProcessAmount)
-			.withApplicantHandlaggareAmount(applicantHandlaggareAmount)
+			.withApplicantCaseworkerAmount(applicantCaseworkerAmount)
 			.withApplicantEffectiveAmount(applicantEffectiveAmount)
 			.withApplicantAmountDate(applicantAmountDate)
 			.withCoapplicantProcessAmount(coapplicantProcessAmount)
-			.withCoapplicantHandlaggareAmount(coapplicantHandlaggareAmount)
+			.withCoapplicantCaseworkerAmount(coapplicantCaseworkerAmount)
 			.withCoapplicantEffectiveAmount(coapplicantEffectiveAmount)
 			.withCoapplicantAmountDate(coapplicantAmountDate)
 			.withDeleted(deleted)
@@ -77,11 +77,11 @@ class NormIncomeRowTest {
 		assertThat(result.getTypeId()).isEqualTo(typeId);
 		assertThat(result.getTypeName()).isEqualTo(typeName);
 		assertThat(result.getApplicantProcessAmount()).isEqualTo(applicantProcessAmount);
-		assertThat(result.getApplicantHandlaggareAmount()).isEqualTo(applicantHandlaggareAmount);
+		assertThat(result.getApplicantCaseworkerAmount()).isEqualTo(applicantCaseworkerAmount);
 		assertThat(result.getApplicantEffectiveAmount()).isEqualTo(applicantEffectiveAmount);
 		assertThat(result.getApplicantAmountDate()).isEqualTo(applicantAmountDate);
 		assertThat(result.getCoapplicantProcessAmount()).isEqualTo(coapplicantProcessAmount);
-		assertThat(result.getCoapplicantHandlaggareAmount()).isEqualTo(coapplicantHandlaggareAmount);
+		assertThat(result.getCoapplicantCaseworkerAmount()).isEqualTo(coapplicantCaseworkerAmount);
 		assertThat(result.getCoapplicantEffectiveAmount()).isEqualTo(coapplicantEffectiveAmount);
 		assertThat(result.getCoapplicantAmountDate()).isEqualTo(coapplicantAmountDate);
 		assertThat(result.isDeleted()).isEqualTo(deleted);

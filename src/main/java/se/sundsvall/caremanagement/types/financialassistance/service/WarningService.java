@@ -22,7 +22,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 /**
  * EB income warnings as acknowledgeable objects. The daily prepare step reconciles the current set against what is
  * stored — creating new warnings, refreshing open ones, and auto-closing ones whose cause has resolved — while never
- * re-opening a warning the handläggare has already acted on. A handläggare can acknowledge or close each warning.
+ * re-opening a warning the caseworker has already acted on. A caseworker can acknowledge or close each warning.
  */
 @Service
 public class WarningService {
@@ -54,40 +54,40 @@ public class WarningService {
 	}
 
 	/**
-	 * Reconcile the income warnings produced by the regelverk + completeness + draft checks into the errand's warning
+	 * Reconcile the income warnings produced by the rules + completeness + draft checks into the errand's warning
 	 * objects: unhandled / changed / still-missing incomes, plus income that has newly arrived in SSBTEK but is not in the
-	 * handläggare's edited draft normberäkning.
+	 * caseworker's edited draft calculation.
 	 */
 	public void reconcileIncomeWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final List<String> newIncome) {
 		final List<WarningInput> inputs = new ArrayList<>();
 		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
 		ofList(changes).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_CHANGE, sourceKey(text), text)));
-		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Saknas ännu i SSBTEK: " + text)));
-		ofList(newIncome).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, text, "Ny inkomst i SSBTEK, ej införd i normberäkningen: " + text)));
+		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Still missing in SSBTEK: " + text)));
+		ofList(newIncome).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, text, "New income in SSBTEK, not entered in the calculation: " + text)));
 		reconcile(errandId, inputs);
 	}
 
 	/**
-	 * Reconcile the full normberäkning warnings into the errand's warning objects: the regelverk income warnings
+	 * Reconcile the full calculation warnings into the errand's warning objects: the rules income warnings
 	 * (unhandled / changed / still-missing), the rows the daily refresh newly added (NEW_*) or saw disappear, and the
-	 * section warnings the feeder pre-typed and DMN-classified — the expense regelverk (skälighet review + cap) and the
-	 * återansökan delta (household-size + boende drift). Supersedes {@link #reconcileIncomeWarnings} once the three-section
+	 * section warnings the feeder pre-typed and DMN-classified — the expense rules (reasonableness review + cap) and the
+	 * renewal delta (household-size + housing drift). Supersedes {@link #reconcileIncomeWarnings} once the three-section
 	 * draft is in play.
 	 */
-	public void reconcileNormberakningWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
+	public void reconcileCalculationWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final DraftChanges draftChanges, final List<WarningInput> sectionWarnings) {
 
 		final List<WarningInput> inputs = new ArrayList<>();
 		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
 		ofList(changes).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_CHANGE, sourceKey(text), text)));
-		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Saknas ännu i SSBTEK: " + text)));
+		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Still missing in SSBTEK: " + text)));
 
 		if (draftChanges != null) {
-			ofList(draftChanges.addedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, sourceKey(text), "Ny inkomst i SSBTEK, ej införd i normberäkningen: " + text)));
-			ofList(draftChanges.addedExpenses()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_EXPENSE, sourceKey(text), "Ny utgift i ansökan: " + text)));
-			ofList(draftChanges.addedPersons()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_PERSON, sourceKey(text), "Ny hushållsmedlem: " + text)));
-			ofList(draftChanges.droppedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_DROPPED, sourceKey(text), "Inkomst ej längre i SSBTEK: " + text)));
+			ofList(draftChanges.addedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, sourceKey(text), "New income in SSBTEK, not entered in the calculation: " + text)));
+			ofList(draftChanges.addedExpenses()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_EXPENSE, sourceKey(text), "Ny expense i application: " + text)));
+			ofList(draftChanges.addedPersons()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_PERSON, sourceKey(text), "New household member: " + text)));
+			ofList(draftChanges.droppedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_DROPPED, sourceKey(text), "Income no longer in SSBTEK: " + text)));
 		}
 
 		ofNullable(sectionWarnings).ifPresent(inputs::addAll);
@@ -152,7 +152,7 @@ public class WarningService {
 	}
 
 	/**
-	 * Set a warning's status (a handläggare action) — acknowledge, close, or re-open to {@code OPEN} (undo an earlier
+	 * Set a warning's status (a caseworker action) — acknowledge, close, or re-open to {@code OPEN} (undo an earlier
 	 * acknowledge/close). Re-opening clears the auto-resolved flag, since it is a manual action.
 	 */
 	@Transactional
@@ -170,7 +170,7 @@ public class WarningService {
 		return status;
 	}
 
-	/** A stable dedup/grouping key for the income a warning concerns — the förmån/type before any " (..." or ": ...". */
+	/** A stable dedup/grouping key for the income a warning concerns — the benefit/type before any " (..." or ": ...". */
 	private static String sourceKey(final String text) {
 		return (text == null) ? "" : text.split("[(:]", 2)[0].trim();
 	}

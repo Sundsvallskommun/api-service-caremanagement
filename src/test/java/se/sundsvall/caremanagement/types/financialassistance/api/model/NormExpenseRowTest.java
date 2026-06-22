@@ -44,7 +44,7 @@ class NormExpenseRowTest {
 		final var specification = "specification";
 		final var appliedAmount = BigDecimal.valueOf(1200.00);
 		final var processAmount = BigDecimal.valueOf(1000.00);
-		final var handlaggareAmount = BigDecimal.valueOf(1100.00);
+		final var caseworkerAmount = BigDecimal.valueOf(1100.00);
 		final var effectiveAmount = BigDecimal.valueOf(1100.00);
 		final var deleted = true;
 		final var note = "note";
@@ -60,7 +60,7 @@ class NormExpenseRowTest {
 			.withSpecification(specification)
 			.withAppliedAmount(appliedAmount)
 			.withProcessAmount(processAmount)
-			.withHandlaggareAmount(handlaggareAmount)
+			.withCaseworkerAmount(caseworkerAmount)
 			.withEffectiveAmount(effectiveAmount)
 			.withDeleted(deleted)
 			.withNote(note)
@@ -76,7 +76,7 @@ class NormExpenseRowTest {
 		assertThat(result.getSpecification()).isEqualTo(specification);
 		assertThat(result.getAppliedAmount()).isEqualTo(appliedAmount);
 		assertThat(result.getProcessAmount()).isEqualTo(processAmount);
-		assertThat(result.getHandlaggareAmount()).isEqualTo(handlaggareAmount);
+		assertThat(result.getCaseworkerAmount()).isEqualTo(caseworkerAmount);
 		assertThat(result.getEffectiveAmount()).isEqualTo(effectiveAmount);
 		assertThat(result.isDeleted()).isEqualTo(deleted);
 		assertThat(result.getNote()).isEqualTo(note);

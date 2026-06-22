@@ -30,36 +30,36 @@ class NormPersonInputTest {
 		final var partyId = "partyId";
 		final var role = "APPLICANT";
 		final var name = "name";
-		final var handlaggareDays = 15;
+		final var caseworkerDays = 15;
 		final var included = true;
 		final var deviationFromDate = LocalDate.of(2026, 6, 1);
 		final var deviationToDate = LocalDate.of(2026, 6, 15);
 		final var normInterval = "MONTH";
-		final var jobbstimulansAmount = BigDecimal.valueOf(1000.00);
+		final var jobStimulusAmount = BigDecimal.valueOf(1000.00);
 		final var note = "note";
 
 		final var result = NormPersonInput.create()
 			.withPartyId(partyId)
 			.withRole(role)
 			.withName(name)
-			.withHandlaggareDays(handlaggareDays)
+			.withCaseworkerDays(caseworkerDays)
 			.withIncluded(included)
 			.withDeviationFromDate(deviationFromDate)
 			.withDeviationToDate(deviationToDate)
 			.withNormInterval(normInterval)
-			.withJobbstimulansAmount(jobbstimulansAmount)
+			.withJobStimulusAmount(jobStimulusAmount)
 			.withNote(note);
 
 		assertThat(result).hasNoNullFieldsOrProperties();
 		assertThat(result.getPartyId()).isEqualTo(partyId);
 		assertThat(result.getRole()).isEqualTo(role);
 		assertThat(result.getName()).isEqualTo(name);
-		assertThat(result.getHandlaggareDays()).isEqualTo(handlaggareDays);
+		assertThat(result.getCaseworkerDays()).isEqualTo(caseworkerDays);
 		assertThat(result.getIncluded()).isEqualTo(included);
 		assertThat(result.getDeviationFromDate()).isEqualTo(deviationFromDate);
 		assertThat(result.getDeviationToDate()).isEqualTo(deviationToDate);
 		assertThat(result.getNormInterval()).isEqualTo(normInterval);
-		assertThat(result.getJobbstimulansAmount()).isEqualTo(jobbstimulansAmount);
+		assertThat(result.getJobStimulusAmount()).isEqualTo(jobStimulusAmount);
 		assertThat(result.getNote()).isEqualTo(note);
 	}
 

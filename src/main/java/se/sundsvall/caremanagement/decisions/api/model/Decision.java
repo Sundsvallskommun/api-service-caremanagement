@@ -14,14 +14,14 @@ import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 
 @Schema(
-	description = "Decision recorded against an errand. Both system-generated decisions (e.g. a DMN-evaluated recommendation produced by a BPMN process) and human decisions (e.g. a handläggare approving a payment) are stored here, distinguished by `decisionType`. The list on the errand grows over time and is the audit trail of every decision made on the case.")
+	description = "Decision recorded against an errand. Both system-generated decisions (e.g. a DMN-evaluated recommendation produced by a BPMN process) and human decisions (e.g. a caseworker approving a payment) are stored here, distinguished by `decisionType`. The list on the errand grows over time and is the audit trail of every decision made on the case.")
 public class Decision {
 
 	@Schema(description = "Unique identifier", examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec", accessMode = READ_ONLY)
 	@Null(groups = OnCreate.class)
 	private String id;
 
-	@Schema(description = "Decision category. Free-form string; conventionally `RECOMMENDATION` for DMN-produced suggestions and `PAYMENT` for handläggare APPROVE/REJECT decisions, but namespaces are encouraged to define their own.", examples = "PAYMENT")
+	@Schema(description = "Decision category. Free-form string; conventionally `RECOMMENDATION` for DMN-produced suggestions and `PAYMENT` for caseworker APPROVE/REJECT decisions, but namespaces are encouraged to define their own.", examples = "PAYMENT")
 	@NotBlank(groups = OnCreate.class)
 	private String decisionType;
 
@@ -29,17 +29,17 @@ public class Decision {
 	@NotBlank(groups = OnCreate.class)
 	private String value;
 
-	@Schema(description = "Optional human-readable description or motivation for the decision", examples = "Beslutsförslag enligt regelverk: 7900 kr, ingen varning")
+	@Schema(description = "Optional human-readable description or motivation for the decision", examples = "Decision proposal per ruleset: 7900 kr, no warning")
 	private String description;
 
 	@Schema(description = "Optional decision amount, in SEK. For a financial-assistance beslut this is the granted belopp (0 for a rejection); for a recommendation it is the recommended amount when the pipeline has computed one.", examples = "7900.00")
 	private BigDecimal amount;
 
 	@Schema(description = "Optional decision message (beslutsmeddelande) communicated to the applicant — the free-text justification shown on the decision letter, kept separate from the internal `description`.",
-		examples = "Du beviljas ekonomiskt bistånd för juni 2026 enligt riksnorm.")
+		examples = "Du beviljas financial assistance för juni 2026 enligt riksnorm.")
 	private String decisionMessage;
 
-	@Schema(description = "Optional date the decision applies (the handläggare-chosen beslutsdatum), distinct from the server-assigned `created` audit timestamp.", examples = "2026-06-18")
+	@Schema(description = "Optional date the decision applies (the caseworker-chosen decision date), distinct from the server-assigned `created` audit timestamp.", examples = "2026-06-18")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate decisionDate;
 
@@ -51,7 +51,7 @@ public class Decision {
 	@DateTimeFormat(iso = DATE)
 	private LocalDate periodTo;
 
-	@Schema(description = "Identifier of the actor that produced the decision. Use the handläggare userId for human decisions or a system identifier (e.g. `operaton`, `dmn-engine`) for automated ones.", examples = "jane01doe")
+	@Schema(description = "Identifier of the actor that produced the decision. Use the caseworker userId for human decisions or a system identifier (e.g. `operaton`, `dmn-engine`) for automated ones.", examples = "jane01doe")
 	private String createdBy;
 
 	@Schema(description = "Timestamp the decision was recorded (server-assigned)", accessMode = READ_ONLY)

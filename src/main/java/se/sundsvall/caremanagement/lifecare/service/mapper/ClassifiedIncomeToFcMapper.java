@@ -29,12 +29,12 @@ import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.A
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;
 
 /**
- * Maps incomes already classified by the operaton regelverk to FC normberäkning income rows. The rålista decision is
- * done — each income carries its target normberäkning category; this mapper only resolves that category to the numeric
+ * Maps incomes already classified by the operaton regelverk to FC calculation income rows. The raw list decision is
+ * done — each income carries its target calculation category; this mapper only resolves that category to the numeric
  * FC type id offered by the calculation proposal and merges incomes of the same type into one row (applicant and
  * co-applicant amounts summed into their own columns). Off-list / "ej ta med" incomes (no {@code TA_MED} action or no
  * category) are skipped — their warnings already come from operaton. This is the plumbing half of the former
- * {@code SsbtekToFcIncomeMapper}; the rålista half moved to the engine.
+ * {@code SsbtekToFcIncomeMapper}; the raw list half moved to the engine.
  */
 public final class ClassifiedIncomeToFcMapper {
 
@@ -43,7 +43,7 @@ public final class ClassifiedIncomeToFcMapper {
 	private ClassifiedIncomeToFcMapper() {}
 
 	/**
-	 * Map the classified incomes to FC normberäkning rows for the given calculation proposal.
+	 * Map the classified incomes to FC calculation rows for the given calculation proposal.
 	 *
 	 * @param  classified the incomes classified by the operaton regelverk (maybe {@code null})
 	 * @param  proposal   the FC calculation proposal whose {@code calculationIncomeTypes} supply the numeric type ids
@@ -65,7 +65,7 @@ public final class ClassifiedIncomeToFcMapper {
 
 	/**
 	 * Map the classified incomes to draft income lines — one line per (FC income type, recipient), the granularity the
-	 * normberäkning draft stores so a handläggare can override or soft-delete a single person's income of a type. The same
+	 * calculation draft stores so a caseworker can override or soft-delete a single person's income of a type. The same
 	 * transferability + type-id resolution as {@link #toCalculationIncomes} is used; the difference is the rows are not
 	 * folded across recipients.
 	 *
@@ -106,11 +106,11 @@ public final class ClassifiedIncomeToFcMapper {
 
 	/**
 	 * The previous-month FC income-type names not covered by this month's classified incomes — the basis for the EB "all
-	 * last month's normberäkning values present" completeness check. Matching is on the normalised type name, the same key
+	 * last month's calculation values present" completeness check. Matching is on the normalised type name, the same key
 	 * {@link #toCalculationIncomes} resolves on, so the two months compare like-for-like. An empty result means every
 	 * previous income type has a transferable income this month (i.e. the information is complete).
 	 *
-	 * @param  previousTypeNames the income-type names on the previous normberäkning (FC {@code getType()})
+	 * @param  previousTypeNames the income-type names on the previous calculation (FC {@code getType()})
 	 * @param  classified        this month's classified incomes
 	 * @param  proposal          this month's FC calculation proposal (supplies the valid type names)
 	 * @return                   the previous type names with no transferable income this month
@@ -132,18 +132,18 @@ public final class ClassifiedIncomeToFcMapper {
 		return ofNullable(classified).orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
 			.filter(ClassifiedIncomeToFcMapper::isTransferable)
-			.map(income -> normalize(income.normberakning()))
+			.map(income -> normalize(income.calculation()))
 			.filter(typeIdByName::containsKey)
 			.collect(toSet());
 	}
 
 	private static boolean isTransferable(final ClassifiedIncome classified) {
 		return (classified.atgard() != null) && classified.atgard().startsWith(TRANSFER_ACTION_PREFIX)
-			&& (classified.normberakning() != null) && !classified.normberakning().isBlank() && !"-".equals(classified.normberakning());
+			&& (classified.calculation() != null) && !classified.calculation().isBlank() && !"-".equals(classified.calculation());
 	}
 
 	private static Resolved resolve(final ClassifiedIncome classified, final Map<String, Integer> typeIdByName) {
-		final var typeId = typeIdByName.get(normalize(classified.normberakning()));
+		final var typeId = typeIdByName.get(normalize(classified.calculation()));
 		return (typeId == null) ? null : new Resolved(typeId, classified.income());
 	}
 
@@ -194,7 +194,7 @@ public final class ClassifiedIncomeToFcMapper {
 	}
 
 	private static String describe(final SsbtekIncome income) {
-		return Stream.of(income.forman(), income.delforman(), income.beloppstyp())
+		return Stream.of(income.benefit(), income.subBenefit(), income.amountType())
 			.filter(Objects::nonNull)
 			.filter(value -> !value.isBlank())
 			.collect(joining(" / "));

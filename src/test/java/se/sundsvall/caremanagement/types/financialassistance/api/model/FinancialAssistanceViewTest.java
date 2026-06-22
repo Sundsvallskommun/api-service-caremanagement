@@ -35,7 +35,7 @@ class FinancialAssistanceViewTest {
 			.withMunicipalityId("2281")
 			.withNamespace("FINANCIAL_ASSISTANCE")
 			.withTypeSlug("financial-assistance")
-			.withTitle("Ansökan om ekonomiskt bistånd")
+			.withTitle("Application for financial assistance")
 			.withStatus("ONGOING")
 			.withPriority("HIGH")
 			.withReporterUserId("joe01doe")
@@ -53,7 +53,7 @@ class FinancialAssistanceViewTest {
 		assertThat(view.getMunicipalityId()).isEqualTo("2281");
 		assertThat(view.getNamespace()).isEqualTo("FINANCIAL_ASSISTANCE");
 		assertThat(view.getTypeSlug()).isEqualTo("financial-assistance");
-		assertThat(view.getTitle()).isEqualTo("Ansökan om ekonomiskt bistånd");
+		assertThat(view.getTitle()).isEqualTo("Application for financial assistance");
 		assertThat(view.getStatus()).isEqualTo("ONGOING");
 		assertThat(view.getPriority()).isEqualTo("HIGH");
 		assertThat(view.getReporterUserId()).isEqualTo("joe01doe");

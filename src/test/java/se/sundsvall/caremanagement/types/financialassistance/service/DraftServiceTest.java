@@ -14,14 +14,14 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpen
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonInput;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaCalculationDraftRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormExpenseRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormIncomeRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormPersonRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormberakningDraftRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCalculationDraftEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormberakningDraftEntity;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,9 +29,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.ORIGIN_HANDLAGGARE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.ORIGIN_SYSTEM;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.ROLE_CHILD;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
 
 @ExtendWith(MockitoExtension.class)
 class DraftServiceTest {
@@ -40,7 +40,7 @@ class DraftServiceTest {
 	private static final String ROW_ID = "row-1";
 
 	@Mock
-	private FaNormberakningDraftRepository headerRepository;
+	private FaCalculationDraftRepository headerRepository;
 	@Mock
 	private FaNormIncomeRepository incomeRepository;
 	@Mock
@@ -52,7 +52,7 @@ class DraftServiceTest {
 	private DraftService service;
 
 	@Test
-	void effectiveValueHelpersPreferHandlaggare() {
+	void effectiveValueHelpersPreferCaseworker() {
 		assertThat(DraftService.effectiveAmount(new BigDecimal("5"), new BigDecimal("9"))).isEqualByComparingTo("5");
 		assertThat(DraftService.effectiveAmount(null, new BigDecimal("9"))).isEqualByComparingTo("9");
 		assertThat(DraftService.effectiveDays(12, 30)).isEqualTo(12);
@@ -68,16 +68,16 @@ class DraftServiceTest {
 
 		final var income = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag");
 
-		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, "RIKSNORM", List.of(), List.of(income), List.of());
+		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, "NATIONAL_NORM", List.of(), List.of(income), List.of());
 
 		assertThat(changes.addedIncomes()).containsExactly("Bostadsbidrag");
-		final var header = ArgumentCaptor.forClass(FaNormberakningDraftEntity.class);
+		final var header = ArgumentCaptor.forClass(FaCalculationDraftEntity.class);
 		verifySaved(header);
 		assertThat(header.getValue().getNormId()).isEqualTo(7);
-		assertThat(header.getValue().getNormType()).isEqualTo("RIKSNORM");
+		assertThat(header.getValue().getNormType()).isEqualTo("NATIONAL_NORM");
 	}
 
-	private void verifySaved(final ArgumentCaptor<FaNormberakningDraftEntity> captor) {
+	private void verifySaved(final ArgumentCaptor<FaCalculationDraftEntity> captor) {
 		org.mockito.Mockito.verify(headerRepository).save(captor.capture());
 	}
 
@@ -93,20 +93,20 @@ class DraftServiceTest {
 	@Test
 	void getBuildsViewWithEffectiveValuesAndSumsExcludingDeleted() {
 		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.of(
-			FaNormberakningDraftEntity.create().withErrandId(ERRAND_ID).withApplicationMonth("2026-06").withNormId(7).withNormType("RIKSNORM")));
+			FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withApplicationMonth("2026-06").withNormId(7).withNormType("NATIONAL_NORM")));
 		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
-			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withApplicantProcessAmount(new BigDecimal("1000")).withApplicantHandlaggareAmount(new BigDecimal("1200")),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withApplicantProcessAmount(new BigDecimal("1000")).withApplicantCaseworkerAmount(new BigDecimal("1200")),
 			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(21).withApplicantProcessAmount(new BigDecimal("500")).withDeleted(true)));
 		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
 		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
-			FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withProcessDays(15).withHandlaggareDays(20)));
+			FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withProcessDays(15).withCaseworkerDays(20)));
 
 		final var draft = service.get(ERRAND_ID);
 
 		assertThat(draft.getNormId()).isEqualTo(7);
 		assertThat(draft.getIncomes()).hasSize(2);
-		assertThat(draft.getIncomes().getFirst().getApplicantEffectiveAmount()).isEqualByComparingTo("1200"); // handläggare wins
+		assertThat(draft.getIncomes().getFirst().getApplicantEffectiveAmount()).isEqualByComparingTo("1200"); // caseworker wins
 		assertThat(draft.getExpenses().getFirst().getEffectiveAmount()).isEqualByComparingTo("8000"); // process (no override)
 		assertThat(draft.getPersons().getFirst().getEffectiveDays()).isEqualTo(20);
 		assertThat(draft.getIncomeSum()).isEqualByComparingTo("1200"); // deleted income (500) excluded
@@ -114,15 +114,15 @@ class DraftServiceTest {
 	}
 
 	@Test
-	void addIncomeRequiresHeaderThenSavesHandlaggareRow() {
+	void addIncomeRequiresHeaderThenSavesCaseworkerRow() {
 		when(headerRepository.existsById(ERRAND_ID)).thenReturn(true);
 		when(incomeRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-		final var input = new NormIncomeInput().withTypeId(20).withTypeName("Lön").withApplicantHandlaggareAmount(new BigDecimal("3000")).withNote("manuell");
+		final var input = new NormIncomeInput().withTypeId(20).withTypeName("Lön").withApplicantCaseworkerAmount(new BigDecimal("3000")).withNote("manuell");
 		final var row = service.addIncome(ERRAND_ID, input);
 
-		assertThat(row.getOrigin()).isEqualTo(ORIGIN_HANDLAGGARE);
-		assertThat(row.getApplicantHandlaggareAmount()).isEqualByComparingTo("3000");
+		assertThat(row.getOrigin()).isEqualTo(ORIGIN_CASEWORKER);
+		assertThat(row.getApplicantCaseworkerAmount()).isEqualByComparingTo("3000");
 		assertThat(row.getApplicantEffectiveAmount()).isEqualByComparingTo("3000");
 	}
 
@@ -136,15 +136,15 @@ class DraftServiceTest {
 	}
 
 	@Test
-	void patchIncomeSetsOnlyHandlaggareFields() {
+	void patchIncomeSetsOnlyCaseworkerFields() {
 		final var existing = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withApplicantProcessAmount(new BigDecimal("1000"));
 		when(incomeRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(existing));
 		when(incomeRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-		final var row = service.patchIncome(ERRAND_ID, ROW_ID, new NormIncomeInput().withApplicantHandlaggareAmount(new BigDecimal("1100")).withNote("ok"));
+		final var row = service.patchIncome(ERRAND_ID, ROW_ID, new NormIncomeInput().withApplicantCaseworkerAmount(new BigDecimal("1100")).withNote("ok"));
 
 		assertThat(row.getApplicantProcessAmount()).isEqualByComparingTo("1000"); // untouched
-		assertThat(row.getApplicantHandlaggareAmount()).isEqualByComparingTo("1100");
+		assertThat(row.getApplicantCaseworkerAmount()).isEqualByComparingTo("1100");
 		assertThat(row.getNote()).isEqualTo("ok");
 	}
 
@@ -174,12 +174,12 @@ class DraftServiceTest {
 		when(expenseRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withProcessAmount(new BigDecimal("8000"))));
 		when(personRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withProcessDays(30)));
 
-		assertThat(service.addExpense(ERRAND_ID, new NormExpenseInput().withCostType("RENT").withHandlaggareAmount(new BigDecimal("7500"))).getEffectiveAmount()).isEqualByComparingTo("7500");
-		assertThat(service.patchExpense(ERRAND_ID, ROW_ID, new NormExpenseInput().withHandlaggareAmount(new BigDecimal("7000"))).getHandlaggareAmount()).isEqualByComparingTo("7000");
+		assertThat(service.addExpense(ERRAND_ID, new NormExpenseInput().withCostType("RENT").withCaseworkerAmount(new BigDecimal("7500"))).getEffectiveAmount()).isEqualByComparingTo("7500");
+		assertThat(service.patchExpense(ERRAND_ID, ROW_ID, new NormExpenseInput().withCaseworkerAmount(new BigDecimal("7000"))).getCaseworkerAmount()).isEqualByComparingTo("7000");
 		assertThat(service.setExpenseDeleted(ERRAND_ID, ROW_ID, true).isDeleted()).isTrue();
 
-		assertThat(service.addPerson(ERRAND_ID, new NormPersonInput().withPartyId("p1").withRole(ROLE_CHILD).withHandlaggareDays(10)).getEffectiveDays()).isEqualTo(10);
-		assertThat(service.patchPerson(ERRAND_ID, ROW_ID, new NormPersonInput().withHandlaggareDays(12)).getHandlaggareDays()).isEqualTo(12);
+		assertThat(service.addPerson(ERRAND_ID, new NormPersonInput().withPartyId("p1").withRole(ROLE_CHILD).withCaseworkerDays(10)).getEffectiveDays()).isEqualTo(10);
+		assertThat(service.patchPerson(ERRAND_ID, ROW_ID, new NormPersonInput().withCaseworkerDays(12)).getCaseworkerDays()).isEqualTo(12);
 		assertThat(service.setPersonDeleted(ERRAND_ID, ROW_ID, true).isDeleted()).isTrue();
 	}
 
@@ -193,12 +193,12 @@ class DraftServiceTest {
 
 		assertThat(service.liveIncomes(ERRAND_ID)).hasSize(1);
 		assertThat(service.liveExpenses(ERRAND_ID)).hasSize(1);
-		assertThat(service.livePersons(ERRAND_ID)).hasSize(1); // p2 excluded (omfattas = false)
+		assertThat(service.livePersons(ERRAND_ID)).hasSize(1); // p2 excluded (is included = false)
 	}
 
 	@Test
 	void headerDelegatesToRepository() {
-		final var header = FaNormberakningDraftEntity.create().withErrandId(ERRAND_ID);
+		final var header = FaCalculationDraftEntity.create().withErrandId(ERRAND_ID);
 		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.of(header));
 
 		assertThat(service.header(ERRAND_ID)).contains(header);
@@ -206,14 +206,14 @@ class DraftServiceTest {
 
 	@Test
 	void patchHeaderUpdatesNormAndHouseholdThenReturnsDraft() {
-		final var header = FaNormberakningDraftEntity.create().withErrandId(ERRAND_ID);
+		final var header = FaCalculationDraftEntity.create().withErrandId(ERRAND_ID);
 		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.of(header));
 		when(headerRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
-		final var draft = service.patchHeader(ERRAND_ID, new NormHeaderInput().withNormId(9).withNormType("RIKSNORM")
+		final var draft = service.patchHeader(ERRAND_ID, new NormHeaderInput().withNormId(9).withNormType("NATIONAL_NORM")
 			.withCalculationFromDate(LocalDate.of(2026, 6, 1)).withCalculationToDate(LocalDate.of(2026, 6, 30)).withCalculationDate(LocalDate.of(2026, 6, 18))
 			.withHasCustomHouseholdSize(true).withHouseholdSize(1));
 

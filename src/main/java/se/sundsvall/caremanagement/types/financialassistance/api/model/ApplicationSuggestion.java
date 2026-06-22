@@ -5,7 +5,8 @@ import java.util.Objects;
 
 /**
  * A single application the citizen can be offered, with the period it concerns. The eligibility check returns one or
- * more of these (e.g. "återansökan for next month" or "tilläggsansökan for the current month"); exactly one is flagged
+ * more of these (e.g. "renewal for next month" or "supplementary application for the current month"); exactly one is
+ * flagged
  * {@code recommended} as the primary suggestion.
  */
 @Schema(description = "A suggested application the citizen can submit, with its target period.")
@@ -25,16 +26,16 @@ public class ApplicationSuggestion {
 		})
 	private String applicationType;
 
-	@Schema(description = "Month (1-12) the suggested application concerns. Null for a new application (nyansökan), which has no prior period.", examples = "7")
+	@Schema(description = "Month (1-12) the suggested application concerns. Null for a new application (new application), which has no prior period.", examples = "7")
 	private Integer periodMonth;
 
-	@Schema(description = "Year the suggested application concerns. Null for a new application (nyansökan).", examples = "2026")
+	@Schema(description = "Year the suggested application concerns. Null for a new application (new application).", examples = "2026")
 	private Integer periodYear;
 
 	@Schema(description = "True for the primary suggestion the citizen should be guided towards", examples = "true")
 	private boolean recommended;
 
-	@Schema(description = "Human-readable Swedish label for the suggestion", examples = "Återansökan för juli 2026")
+	@Schema(description = "Human-readable Swedish label for the suggestion", examples = "Renewal for July 2026")
 	private String label;
 
 	public static ApplicationSuggestion create() {

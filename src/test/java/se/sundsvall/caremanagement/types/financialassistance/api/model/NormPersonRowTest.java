@@ -43,13 +43,13 @@ class NormPersonRowTest {
 		final var role = "APPLICANT";
 		final var name = "name";
 		final var processDays = 30;
-		final var handlaggareDays = 15;
+		final var caseworkerDays = 15;
 		final var effectiveDays = 15;
 		final var included = true;
 		final var deviationFromDate = LocalDate.of(2026, 6, 1);
 		final var deviationToDate = LocalDate.of(2026, 6, 15);
 		final var normInterval = "MONTH";
-		final var jobbstimulansAmount = BigDecimal.valueOf(1000.00);
+		final var jobStimulusAmount = BigDecimal.valueOf(1000.00);
 		final var deleted = true;
 		final var note = "note";
 		final var created = now();
@@ -62,13 +62,13 @@ class NormPersonRowTest {
 			.withRole(role)
 			.withName(name)
 			.withProcessDays(processDays)
-			.withHandlaggareDays(handlaggareDays)
+			.withCaseworkerDays(caseworkerDays)
 			.withEffectiveDays(effectiveDays)
 			.withIncluded(included)
 			.withDeviationFromDate(deviationFromDate)
 			.withDeviationToDate(deviationToDate)
 			.withNormInterval(normInterval)
-			.withJobbstimulansAmount(jobbstimulansAmount)
+			.withJobStimulusAmount(jobStimulusAmount)
 			.withDeleted(deleted)
 			.withNote(note)
 			.withCreated(created)
@@ -81,13 +81,13 @@ class NormPersonRowTest {
 		assertThat(result.getRole()).isEqualTo(role);
 		assertThat(result.getName()).isEqualTo(name);
 		assertThat(result.getProcessDays()).isEqualTo(processDays);
-		assertThat(result.getHandlaggareDays()).isEqualTo(handlaggareDays);
+		assertThat(result.getCaseworkerDays()).isEqualTo(caseworkerDays);
 		assertThat(result.getEffectiveDays()).isEqualTo(effectiveDays);
 		assertThat(result.isIncluded()).isEqualTo(included);
 		assertThat(result.getDeviationFromDate()).isEqualTo(deviationFromDate);
 		assertThat(result.getDeviationToDate()).isEqualTo(deviationToDate);
 		assertThat(result.getNormInterval()).isEqualTo(normInterval);
-		assertThat(result.getJobbstimulansAmount()).isEqualTo(jobbstimulansAmount);
+		assertThat(result.getJobStimulusAmount()).isEqualTo(jobStimulusAmount);
 		assertThat(result.isDeleted()).isEqualTo(deleted);
 		assertThat(result.getNote()).isEqualTo(note);
 		assertThat(result.getCreated()).isEqualTo(created);

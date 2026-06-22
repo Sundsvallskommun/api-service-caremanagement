@@ -57,7 +57,7 @@ public final class MessageMapper {
 	/**
 	 * Build the attachment metadata row for an uploaded file. The binary content is stored separately via
 	 * {@link #toMessageAttachmentDataEntity(String, MultipartFile)} once this row's id is known. {@code senderRole} is
-	 * denormalised from the message {@code direction} (INBOUND = CLIENT, OUTBOUND = HANDLAGGARE) so the unified
+	 * denormalised from the message {@code direction} (INBOUND = CLIENT, OUTBOUND = CASEWORKER) so the unified
 	 * attachment list and the client-attachment consolidation never have to re-join to the message.
 	 */
 	public static MessageAttachmentEntity toMessageAttachmentEntity(final String messageId, final String direction, final MultipartFile file) {
@@ -73,9 +73,9 @@ public final class MessageMapper {
 			.withCreated(now(systemDefault()).truncatedTo(MILLIS));
 	}
 
-	/** INBOUND messages come from the applicant (CLIENT); everything else is the caseworker (HANDLAGGARE). */
+	/** INBOUND messages come from the applicant (CLIENT); everything else is the caseworker (CASEWORKER). */
 	private static String senderRoleFromDirection(final String direction) {
-		return "INBOUND".equals(direction) ? "CLIENT" : "HANDLAGGARE";
+		return "INBOUND".equals(direction) ? "CLIENT" : "CASEWORKER";
 	}
 
 	/**

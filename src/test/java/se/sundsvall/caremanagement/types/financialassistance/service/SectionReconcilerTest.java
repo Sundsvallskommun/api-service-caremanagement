@@ -10,11 +10,11 @@ import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.ORIGIN_HANDLAGGARE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.ORIGIN_SYSTEM;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 
 /**
- * The normberäkning merge invariant — the heart of the process-vs-handläggare ownership design. Exercised over income
+ * The calculation merge invariant — the heart of the process-vs-caseworker ownership design. Exercised over income
  * rows but the logic is section-agnostic.
  */
 class SectionReconcilerTest {
@@ -45,8 +45,8 @@ class SectionReconcilerTest {
 	}
 
 	@Test
-	void matchedSystemRowRefreshesTheProcessColumnAndPreservesTheHandlaggareValue() {
-		final var existing = systemRow(20, "Bostadsbidrag", "1850").withApplicantHandlaggareAmount(new BigDecimal("1900")).withNote("ok");
+	void matchedSystemRowRefreshesTheProcessColumnAndPreservesTheCaseworkerValue() {
+		final var existing = systemRow(20, "Bostadsbidrag", "1850").withApplicantCaseworkerAmount(new BigDecimal("1900")).withNote("ok");
 		final var fresh = systemRow(20, "Bostadsbidrag", "2000");
 
 		final var diff = reconcile(new ArrayList<>(List.of(existing)), List.of(fresh));
@@ -54,7 +54,7 @@ class SectionReconcilerTest {
 		assertThat(diff.added()).isEmpty();
 		assertThat(diff.dropped()).isEmpty();
 		assertThat(existing.getApplicantProcessAmount()).isEqualByComparingTo("2000"); // process refreshed
-		assertThat(existing.getApplicantHandlaggareAmount()).isEqualByComparingTo("1900"); // handläggare value untouched
+		assertThat(existing.getApplicantCaseworkerAmount()).isEqualByComparingTo("1900"); // caseworker value untouched
 		assertThat(existing.getNote()).isEqualTo("ok"); // note untouched
 		assertThat(persisted).containsExactly(existing);
 	}
@@ -73,14 +73,14 @@ class SectionReconcilerTest {
 	}
 
 	@Test
-	void handlaggareAddedRowIsNeverMatchedOrRefreshedByTheProcess() {
-		final var handlaggareRow = systemRow(20, "Bostadsbidrag", null).withOrigin(ORIGIN_HANDLAGGARE).withApplicantHandlaggareAmount(new BigDecimal("500"));
+	void caseworkerAddedRowIsNeverMatchedOrRefreshedByTheProcess() {
+		final var caseworkerRow = systemRow(20, "Bostadsbidrag", null).withOrigin(ORIGIN_CASEWORKER).withApplicantCaseworkerAmount(new BigDecimal("500"));
 		final var fresh = systemRow(20, "Bostadsbidrag", "2000");
 
-		final var diff = reconcile(new ArrayList<>(List.of(handlaggareRow)), List.of(fresh));
+		final var diff = reconcile(new ArrayList<>(List.of(caseworkerRow)), List.of(fresh));
 
 		assertThat(diff.added()).containsExactly("Bostadsbidrag"); // the fresh row is inserted as new
-		assertThat(handlaggareRow.getApplicantProcessAmount()).isNull(); // handläggare row untouched
+		assertThat(caseworkerRow.getApplicantProcessAmount()).isNull(); // caseworker row untouched
 		assertThat(persisted).containsExactly(fresh); // only the new system row is persisted
 	}
 

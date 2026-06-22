@@ -4,12 +4,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * One income row of the draft normberäkning — an FC income type with the applicant's and co-applicant's amounts. Also
- * the persisted JSON shape (in the draft's {@code rows_json}). A handläggare edits these in Draken; on a beslut they
+ * One income row of the draft calculation — an FC income type with the applicant's and co-applicant's amounts. Also
+ * the persisted JSON shape (in the draft's {@code rows_json}). A caseworker edits these in Draken; on a decision they
  * are
  * posted to Lifecare.
  */
-@Schema(description = "One income row of the draft normberäkning (FC income type + amounts).")
+@Schema(description = "One income row of the draft calculation (FC income type + amounts).")
 public class DraftIncomeRow {
 
 	@Schema(description = "The FC income-type id", examples = "20")

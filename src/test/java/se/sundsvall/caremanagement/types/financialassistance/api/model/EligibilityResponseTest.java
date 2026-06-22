@@ -15,10 +15,10 @@ class EligibilityResponseTest {
 		final var response = EligibilityResponse.create()
 			.withSuggestions(SUGGESTIONS)
 			.withReasonCode("EXISTING_CASE")
-			.withMessage("Befintligt ärende")
+			.withMessage("Befintligt errand")
 			.withExistsInCm(true)
 			.withExistsInLc(true)
-			.withCivilstandMatches(true)
+			.withMaritalStatusMatches(true)
 			.withWindowDays(90)
 			.withApplicationExistsThisMonth(true)
 			.withApplicationExistsNextMonth(false)
@@ -31,10 +31,10 @@ class EligibilityResponseTest {
 
 		assertThat(response.getSuggestions()).isEqualTo(SUGGESTIONS);
 		assertThat(response.getReasonCode()).isEqualTo("EXISTING_CASE");
-		assertThat(response.getMessage()).isEqualTo("Befintligt ärende");
+		assertThat(response.getMessage()).isEqualTo("Befintligt errand");
 		assertThat(response.isExistsInCm()).isTrue();
 		assertThat(response.isExistsInLc()).isTrue();
-		assertThat(response.getCivilstandMatches()).isTrue();
+		assertThat(response.getMaritalStatusMatches()).isTrue();
 		assertThat(response.getWindowDays()).isEqualTo(90);
 		assertThat(response.isApplicationExistsThisMonth()).isTrue();
 		assertThat(response.isApplicationExistsNextMonth()).isFalse();
@@ -52,10 +52,10 @@ class EligibilityResponseTest {
 		final var response = EligibilityResponse.create();
 		response.setSuggestions(SUGGESTIONS);
 		response.setReasonCode("NO_EXISTING_CASE");
-		response.setMessage("Föreslår nyansökan");
+		response.setMessage("Föreslår new application");
 		response.setExistsInCm(false);
 		response.setExistsInLc(false);
-		response.setCivilstandMatches(null);
+		response.setMaritalStatusMatches(null);
 		response.setWindowDays(30);
 		response.setApplicationExistsThisMonth(false);
 		response.setApplicationExistsNextMonth(false);
@@ -67,9 +67,9 @@ class EligibilityResponseTest {
 		response.setHasCoApplicant(false);
 
 		assertThat(response.getReasonCode()).isEqualTo("NO_EXISTING_CASE");
-		assertThat(response.getMessage()).isEqualTo("Föreslår nyansökan");
+		assertThat(response.getMessage()).isEqualTo("Föreslår new application");
 		assertThat(response.getWindowDays()).isEqualTo(30);
-		assertThat(response.getCivilstandMatches()).isNull();
+		assertThat(response.getMaritalStatusMatches()).isNull();
 		assertThat(response.isLifecareChecked()).isFalse();
 	}
 
@@ -77,7 +77,7 @@ class EligibilityResponseTest {
 	void equalsAndHashCode() {
 		final var a = EligibilityResponse.create().withReasonCode("NO_EXISTING_CASE").withWindowDays(90).withSuggestions(SUGGESTIONS);
 		final var b = EligibilityResponse.create().withReasonCode("NO_EXISTING_CASE").withWindowDays(90).withSuggestions(SUGGESTIONS);
-		final var c = EligibilityResponse.create().withReasonCode("CIVILSTAND_CHANGED");
+		final var c = EligibilityResponse.create().withReasonCode("MARITAL_STATUS_CHANGED");
 
 		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
 		assertThat(a).isNotEqualTo(c);

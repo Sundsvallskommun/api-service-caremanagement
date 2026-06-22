@@ -138,7 +138,7 @@ class WarningServiceTest {
 	}
 
 	@Test
-	void reconcileNormberakningWarningsFoldsAllSections() {
+	void reconcileCalculationWarningsFoldsAllSections() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
 		final var changes = new se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges(
@@ -146,16 +146,16 @@ class WarningServiceTest {
 			List.of("RENT"), List.of(),
 			List.of("Barn (CHILD)"), List.of());
 
-		service.reconcileNormberakningWarnings(ERRAND_ID,
+		service.reconcileCalculationWarnings(ERRAND_ID,
 			List.of("Bostadstillägg (NOT_ON_WHITELIST)"),
 			List.of("Bostadsbidrag: -23%"),
 			List.of("Dagersättning"),
 			changes,
 			List.of(
-				new WarningService.WarningInput(WarningService.TYPE_HOUSEHOLD_CHANGE, "hushall-storlek", "Antal hushållsmedlemmar ändrat"),
-				new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "boende-kostnad", "Boendekostnad ändrad +32%"),
-				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, "OTHER", "OTHER: skälighet bedöms manuellt"),
-				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, "RENT", "Kapad kostnad: RENT")));
+				new WarningService.WarningInput(WarningService.TYPE_HOUSEHOLD_CHANGE, "hushall-storlek", "Antal household members ändrat"),
+				new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "housing-kostnad", "Housing cost changed +32%"),
+				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, "OTHER", "OTHER: reasonableness bedöms manuellt"),
+				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, "RENT", "Capped cost: RENT")));
 
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
 		// 3 income/change/missing + NEW_INCOME + NEW_EXPENSE + NEW_PERSON + INCOME_DROPPED (draft) + 4 section warnings
@@ -168,10 +168,10 @@ class WarningServiceTest {
 	}
 
 	@Test
-	void reconcileNormberakningWarningsToleratesNullDraftChanges() {
+	void reconcileCalculationWarningsToleratesNullDraftChanges() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
-		service.reconcileNormberakningWarnings(ERRAND_ID, List.of("X (Y)"), List.of(), List.of(), null, null);
+		service.reconcileCalculationWarnings(ERRAND_ID, List.of("X (Y)"), List.of(), List.of(), null, null);
 
 		verify(repositoryMock).save(any()); // only the single unhandled-income warning
 	}

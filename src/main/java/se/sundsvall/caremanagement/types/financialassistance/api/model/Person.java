@@ -27,7 +27,7 @@ public class Person {
 	@Schema(description = "Whether the person had work during the last 12 months", examples = "false")
 	private Boolean hadWorkLast12Months;
 
-	@Schema(description = "Description of the work the person had", examples = "Vikarie inom hemtjänsten")
+	@Schema(description = "Description of the work the person had", examples = "Substitute in home care services")
 	private String hadWorkDescription;
 
 	@Schema(description = "Payment method", examples = "BANK_ACCOUNT", allowableValues = {
@@ -44,7 +44,7 @@ public class Person {
 	@Schema(description = "Bank account number", examples = "123456789")
 	private String accountNumber;
 
-	@Schema(description = "Description of the payment method when OTHER", examples = "Utbetalningskort")
+	@Schema(description = "Description of the payment method when OTHER", examples = "Paymentskort")
 	private String otherPaymentDescription;
 
 	@Schema(description = "Whether the payment details are the same as previously used", examples = "true")

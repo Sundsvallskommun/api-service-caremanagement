@@ -95,9 +95,9 @@ class AttachmentResource {
 			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND"
 		}, nullable = true) @RequestParam(required = false) final String origin,
 		@Parameter(name = "senderRole", description = "Only return attachments from this sender", schema = @Schema(allowableValues = {
-			"CLIENT", "HANDLAGGARE"
+			"CLIENT", "CASEWORKER"
 		})) @OneOf(value = {
-			"CLIENT", "HANDLAGGARE"
+			"CLIENT", "CASEWORKER"
 		}, nullable = true) @RequestParam(required = false) final String senderRole) {
 
 		return ok(service.readAttachments(municipalityId, namespace, errandId, origin, senderRole));

@@ -24,7 +24,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 
 /**
  * Starts the EB decision-support process when a {@code financial-assistance-renewal} errand is created — the Mina sidor
- * återansökan intake. Runs once the create transaction has committed ({@link ApplicationModuleListener} = after-commit,
+ * renewal intake. Runs once the create transaction has committed ({@link ApplicationModuleListener} = after-commit,
  * async, new transaction) so the errand and its typed data are persisted and visible both to the re-read below and to
  * the Operaton workers that call back onto the errand the moment the flow starts.
  *
@@ -75,7 +75,7 @@ class FinancialAssistanceErrandCreatedListener {
 	@ApplicationModuleListener
 	void on(final ErrandCreated event) {
 		if (!SLUG_RENEWAL.equals(event.typeSlug())) {
-			return; // only the återansökan intake starts the EB process
+			return; // only the renewal intake starts the EB process
 		}
 		repository.findByErrandId(event.errandId())
 			.ifPresent(entity -> startProcess(event, entity));
@@ -108,8 +108,8 @@ class FinancialAssistanceErrandCreatedListener {
 
 		applicationMonth(entity).ifPresent(month -> {
 			variables.put(VAR_APPLICATION_MONTH, month);
-			// Fetch jämförelse- (M-2) through ansökningsperioden (M): SSBTEK payouts attributed to the kontrollperiod
-			// (M-1) are often paid the following month, so the window reaches into M; the regelverk DMN then selects the
+			// Fetch comparison- (M-2) through the application period (M): SSBTEK payouts attributed to the control period
+			// (M-1) are often paid the following month, so the window reaches into M; the rules DMN then selects the
 			// relevant periods.
 			final var window = YearMonth.parse(month);
 			variables.put(VAR_FROM_DATE, window.minusMonths(2).atDay(1).toString());

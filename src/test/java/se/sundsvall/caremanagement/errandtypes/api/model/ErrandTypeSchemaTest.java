@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ErrandTypeSchemaTest {
 
-	private static final List<String> STATUSES = List.of("INKOMMEN", "UNDER_BEREDNING");
+	private static final List<String> STATUSES = List.of("RECEIVED", "UNDER_REVIEW");
 	private static final List<RoleDefinition> ROLES = List.of(new RoleDefinition("APPLICANT", "Sökande", 1, true));
 	private static final List<FieldDescriptor> FIELDS = List.of(
 		FieldDescriptor.create().withName("maritalStatus").withType("ENUM"));

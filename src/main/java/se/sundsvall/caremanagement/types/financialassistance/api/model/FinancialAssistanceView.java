@@ -25,7 +25,7 @@ public class FinancialAssistanceView {
 	@Schema(description = "Type slug", examples = "financial-assistance", accessMode = READ_ONLY)
 	private String typeSlug;
 
-	@Schema(description = "Title of the errand", examples = "Ansökan om ekonomiskt bistånd")
+	@Schema(description = "Title of the errand", examples = "Application for financial assistance")
 	private String title;
 
 	@Schema(description = "Status of the errand", examples = "ONGOING")
@@ -56,12 +56,12 @@ public class FinancialAssistanceView {
 	private FinancialAssistanceData data;
 
 	@Schema(
-		description = "The most recent automated recommendation on the errand (the latest RECOMMENDATION decision the handläggare reviews), or null when none has been produced. Carries the recommended value and, when the pipeline has computed it, the recommended amount/period to prefill the Beslut form.",
+		description = "The most recent automated recommendation on the errand (the latest RECOMMENDATION decision the caseworker reviews), or null when none has been produced. Carries the recommended value and, when the pipeline has computed it, the recommended amount/period to prefill the Decision form.",
 		accessMode = READ_ONLY)
 	private Decision recommendation;
 
 	@Schema(
-		description = "The handläggare approval state of the three EB view sections (calculation, payment, decision) — whether each has been verified as approved. Always present with all three sections.",
+		description = "The caseworker approval state of the three EB view sections (calculation, payment, decision) — whether each has been verified as approved. Always present with all three sections.",
 		accessMode = READ_ONLY)
 	private SectionApprovals sectionApprovals;
 

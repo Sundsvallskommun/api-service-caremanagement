@@ -10,11 +10,11 @@ import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
 @Schema(description = "Request to create a financial assistance errand.")
 public class CreateFinancialAssistanceRequest {
 
-	@Schema(description = "Title of the errand", examples = "Ansökan om ekonomiskt bistånd")
+	@Schema(description = "Title of the errand", examples = "Application for financial assistance")
 	@NotBlank(groups = OnCreate.class)
 	private String title;
 
-	@Schema(description = "Description of the errand", examples = "Återansökan om hyra för juni 2026")
+	@Schema(description = "Description of the errand", examples = "Renewal of rent for June 2026")
 	private String description;
 
 	@Schema(description = "Priority of the errand", examples = "HIGH")

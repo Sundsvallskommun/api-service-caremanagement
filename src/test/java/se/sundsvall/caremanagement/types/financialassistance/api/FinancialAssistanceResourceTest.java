@@ -14,6 +14,9 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
@@ -26,9 +29,6 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncom
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningDraft;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
@@ -83,7 +83,7 @@ class FinancialAssistanceResourceTest {
 		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any())).thenReturn(ERRAND_ID);
 
 		final var builder = new MultipartBodyBuilder();
-		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Min ansökan").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
+		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Min application").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
 
 		webTestClient.post()
 			.uri(uri -> uri.path(CREATE_PATH).build(base()))
@@ -151,23 +151,23 @@ class FinancialAssistanceResourceTest {
 	}
 
 	@Test
-	void prepareNormberakning() {
-		when(serviceMock.prepareNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class)))
-			.thenReturn(NormberakningResponse.create().withInformationComplete(false).withMissingIncomeTypes(List.of("Dagersättning")));
+	void prepareCalculation() {
+		when(serviceMock.prepareCalculation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class)))
+			.thenReturn(CalculationResponse.create().withInformationComplete(false).withMissingIncomeTypes(List.of("Dagersättning")));
 
 		final var response = webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/normberakning/prepare").build(base()))
-			.bodyValue(NormberakningRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.uri(uri -> uri.path(PATH + "/calculation/prepare").build(base()))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
 			.exchange()
 			.expectStatus().isOk()
-			.expectBody(NormberakningResponse.class)
+			.expectBody(CalculationResponse.class)
 			.returnResult()
 			.getResponseBody();
 
 		assertThat(response).isNotNull();
 		assertThat(response.isInformationComplete()).isFalse();
 		assertThat(response.getMissingIncomeTypes()).containsExactly("Dagersättning");
-		verify(serviceMock).prepareNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class));
+		verify(serviceMock).prepareCalculation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class));
 	}
 
 	@Test
@@ -252,14 +252,14 @@ class FinancialAssistanceResourceTest {
 	@Test
 	void getDraft() {
 		when(serviceMock.getDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1")))
-			.thenReturn(NormberakningDraft.create().withErrandId("errand-1")
+			.thenReturn(CalculationDraft.create().withErrandId("errand-1")
 				.withIncomes(List.of(NormIncomeRow.create().withTypeName("Bostadsbidrag").withApplicantProcessAmount(new BigDecimal("1850")))));
 
 		final var response = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft").build(base()))
+			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft").build(base()))
 			.exchange()
 			.expectStatus().isOk()
-			.expectBody(NormberakningDraft.class)
+			.expectBody(CalculationDraft.class)
 			.returnResult()
 			.getResponseBody();
 
@@ -272,14 +272,14 @@ class FinancialAssistanceResourceTest {
 	@Test
 	void patchDraftHeader() {
 		when(serviceMock.patchDraftHeader(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormHeaderInput.class)))
-			.thenReturn(NormberakningDraft.create().withNormId(5).withHouseholdSize(1));
+			.thenReturn(CalculationDraft.create().withNormId(5).withHouseholdSize(1));
 
 		final var response = webTestClient.patch()
-			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/header").build(base()))
+			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/header").build(base()))
 			.bodyValue(new NormHeaderInput().withNormId(5).withHasCustomHouseholdSize(true).withHouseholdSize(1))
 			.exchange()
 			.expectStatus().isOk()
-			.expectBody(NormberakningDraft.class)
+			.expectBody(CalculationDraft.class)
 			.returnResult()
 			.getResponseBody();
 
@@ -291,11 +291,11 @@ class FinancialAssistanceResourceTest {
 	@Test
 	void addDraftIncome() {
 		when(serviceMock.addDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormIncomeInput.class)))
-			.thenReturn(NormIncomeRow.create().withId("r1").withOrigin("HANDLAGGARE"));
+			.thenReturn(NormIncomeRow.create().withId("r1").withOrigin("CASEWORKER"));
 
 		final var response = webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes").build(base()))
-			.bodyValue(new NormIncomeInput().withTypeId(20).withApplicantHandlaggareAmount(new BigDecimal("3000")))
+			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/incomes").build(base()))
+			.bodyValue(new NormIncomeInput().withTypeId(20).withApplicantCaseworkerAmount(new BigDecimal("3000")))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(NormIncomeRow.class)
@@ -310,11 +310,11 @@ class FinancialAssistanceResourceTest {
 	@Test
 	void patchDraftPerson() {
 		when(serviceMock.patchDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r2"), any(NormPersonInput.class)))
-			.thenReturn(NormPersonRow.create().withId("r2").withHandlaggareDays(15));
+			.thenReturn(NormPersonRow.create().withId("r2").withCaseworkerDays(15));
 
 		final var response = webTestClient.patch()
-			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/persons/r2").build(base()))
-			.bodyValue(new NormPersonInput().withHandlaggareDays(15))
+			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/persons/r2").build(base()))
+			.bodyValue(new NormPersonInput().withCaseworkerDays(15))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(NormPersonRow.class)
@@ -322,7 +322,7 @@ class FinancialAssistanceResourceTest {
 			.getResponseBody();
 
 		assertThat(response).isNotNull();
-		assertThat(response.getHandlaggareDays()).isEqualTo(15);
+		assertThat(response.getCaseworkerDays()).isEqualTo(15);
 		verify(serviceMock).patchDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r2"), any(NormPersonInput.class));
 	}
 
@@ -332,7 +332,7 @@ class FinancialAssistanceResourceTest {
 			.thenReturn(NormExpenseRow.create().withId("r9").withDeleted(true));
 
 		final var response = webTestClient.delete()
-			.uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/expenses/r9").build(base()))
+			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/expenses/r9").build(base()))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(NormExpenseRow.class)
@@ -350,10 +350,10 @@ class FinancialAssistanceResourceTest {
 		when(serviceMock.setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", true)).thenReturn(NormIncomeRow.create().withId("r1").withDeleted(true));
 		when(serviceMock.setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", false)).thenReturn(NormIncomeRow.create().withId("r1").withDeleted(false));
 
-		webTestClient.patch().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes/r1").build(base()))
-			.bodyValue(new NormIncomeInput().withApplicantHandlaggareAmount(new BigDecimal("1000"))).exchange().expectStatus().isOk();
-		webTestClient.delete().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes/r1").build(base())).exchange().expectStatus().isOk();
-		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/incomes/r1/restore").build(base())).exchange().expectStatus().isOk();
+		webTestClient.patch().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/incomes/r1").build(base()))
+			.bodyValue(new NormIncomeInput().withApplicantCaseworkerAmount(new BigDecimal("1000"))).exchange().expectStatus().isOk();
+		webTestClient.delete().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/incomes/r1").build(base())).exchange().expectStatus().isOk();
+		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/incomes/r1/restore").build(base())).exchange().expectStatus().isOk();
 
 		verify(serviceMock).patchDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r1"), any(NormIncomeInput.class));
 		verify(serviceMock).setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", true);
@@ -366,11 +366,11 @@ class FinancialAssistanceResourceTest {
 		when(serviceMock.patchDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("e1"), any(NormExpenseInput.class))).thenReturn(NormExpenseRow.create().withId("e1"));
 		when(serviceMock.setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "e1", false)).thenReturn(NormExpenseRow.create().withId("e1"));
 
-		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/expenses").build(base()))
+		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/expenses").build(base()))
 			.bodyValue(new NormExpenseInput().withCostType("RENT")).exchange().expectStatus().isOk();
-		webTestClient.patch().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/expenses/e1").build(base()))
-			.bodyValue(new NormExpenseInput().withHandlaggareAmount(new BigDecimal("8000"))).exchange().expectStatus().isOk();
-		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/expenses/e1/restore").build(base())).exchange().expectStatus().isOk();
+		webTestClient.patch().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/expenses/e1").build(base()))
+			.bodyValue(new NormExpenseInput().withCaseworkerAmount(new BigDecimal("8000"))).exchange().expectStatus().isOk();
+		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/expenses/e1/restore").build(base())).exchange().expectStatus().isOk();
 
 		verify(serviceMock).addDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormExpenseInput.class));
 		verify(serviceMock).patchDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("e1"), any(NormExpenseInput.class));
@@ -383,10 +383,10 @@ class FinancialAssistanceResourceTest {
 		when(serviceMock.setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", true)).thenReturn(NormPersonRow.create().withId("p1").withDeleted(true));
 		when(serviceMock.setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", false)).thenReturn(NormPersonRow.create().withId("p1"));
 
-		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/persons").build(base()))
+		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/persons").build(base()))
 			.bodyValue(new NormPersonInput().withPartyId("party-1").withRole("CHILD")).exchange().expectStatus().isOk();
-		webTestClient.delete().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/persons/p1").build(base())).exchange().expectStatus().isOk();
-		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/normberakning/draft/persons/p1/restore").build(base())).exchange().expectStatus().isOk();
+		webTestClient.delete().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/persons/p1").build(base())).exchange().expectStatus().isOk();
+		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/persons/p1/restore").build(base())).exchange().expectStatus().isOk();
 
 		verify(serviceMock).addDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormPersonInput.class));
 		verify(serviceMock).setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", true);
@@ -394,22 +394,22 @@ class FinancialAssistanceResourceTest {
 	}
 
 	@Test
-	void commitNormberakning() {
-		when(serviceMock.commitNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class)))
-			.thenReturn(NormberakningResponse.create().withCalculationId(4711));
+	void commitCalculation() {
+		when(serviceMock.commitCalculation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class)))
+			.thenReturn(CalculationResponse.create().withCalculationId(4711));
 
 		final var response = webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/normberakning/commit").build(base()))
-			.bodyValue(NormberakningRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.uri(uri -> uri.path(PATH + "/calculation/commit").build(base()))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
 			.exchange()
 			.expectStatus().isOk()
-			.expectBody(NormberakningResponse.class)
+			.expectBody(CalculationResponse.class)
 			.returnResult()
 			.getResponseBody();
 
 		assertThat(response).isNotNull();
 		assertThat(response.getCalculationId()).isEqualTo(4711);
-		verify(serviceMock).commitNormberakning(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(NormberakningRequest.class));
+		verify(serviceMock).commitCalculation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class));
 	}
 
 	@Test

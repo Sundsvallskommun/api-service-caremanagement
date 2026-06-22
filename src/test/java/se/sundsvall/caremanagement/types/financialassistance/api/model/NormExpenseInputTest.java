@@ -30,7 +30,7 @@ class NormExpenseInputTest {
 		final var bucket = "EXPENSE";
 		final var otherSubType = "other";
 		final var specification = "specification";
-		final var handlaggareAmount = BigDecimal.valueOf(1100.00);
+		final var caseworkerAmount = BigDecimal.valueOf(1100.00);
 		final var note = "note";
 
 		final var result = NormExpenseInput.create()
@@ -38,7 +38,7 @@ class NormExpenseInputTest {
 			.withBucket(bucket)
 			.withOtherSubType(otherSubType)
 			.withSpecification(specification)
-			.withHandlaggareAmount(handlaggareAmount)
+			.withCaseworkerAmount(caseworkerAmount)
 			.withNote(note);
 
 		assertThat(result).hasNoNullFieldsOrProperties();
@@ -46,7 +46,7 @@ class NormExpenseInputTest {
 		assertThat(result.getBucket()).isEqualTo(bucket);
 		assertThat(result.getOtherSubType()).isEqualTo(otherSubType);
 		assertThat(result.getSpecification()).isEqualTo(specification);
-		assertThat(result.getHandlaggareAmount()).isEqualTo(handlaggareAmount);
+		assertThat(result.getCaseworkerAmount()).isEqualTo(caseworkerAmount);
 		assertThat(result.getNote()).isEqualTo(note);
 	}
 

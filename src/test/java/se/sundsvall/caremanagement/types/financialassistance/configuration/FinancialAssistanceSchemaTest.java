@@ -68,7 +68,7 @@ class FinancialAssistanceSchemaTest {
 	}
 
 	@Test
-	void everySlugExposesTheSameBeslutsalternativ() {
+	void everySlugExposesTheSameDecisionAlternatives() {
 		for (final var contribution : List.of(config.financialAssistanceNewSchema(),
 			config.financialAssistanceRenewalSchema(), config.financialAssistanceSupplementarySchema())) {
 

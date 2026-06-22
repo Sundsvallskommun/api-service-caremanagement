@@ -45,7 +45,7 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands/{errandId}/decisions")
 @Tag(name = "Errand decisions",
-	description = "Decision audit trail on an errand. Stores both system-generated decisions (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions (e.g. handläggare APPROVE/REJECT), distinguished by `decisionType`.")
+	description = "Decision audit trail on an errand. Stores both system-generated decisions (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions (e.g. caseworker APPROVE/REJECT), distinguished by `decisionType`.")
 @ApiResponses(value = {
 	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
 		Problem.class, ConstraintViolationProblem.class

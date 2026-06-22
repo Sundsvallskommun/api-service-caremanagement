@@ -38,23 +38,25 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
 
 /**
- * Application-eligibility (gemensam ingång) routing for ekonomiskt bistånd, encoding the agreed decision flow:
+ * Application-eligibility (common entry point) routing for financial assistance, encoding the agreed decision flow:
  *
  * <ol>
- * <li><b>Skyddad identitet</b> — a safety gate ahead of the routing: if the applicant or co-applicant has protected
- * identity in folkbokföring (citizen) or Lifecare, no application is offered (empty suggestions). The response carries
+ * <li><b>Protected identity</b> — a safety gate ahead of the routing: if the applicant or co-applicant has protected
+ * identity in population register (citizen) or Lifecare, no application is offered (empty suggestions). The response
+ * carries
  * <em>no</em> reason or flag — the protected status must not leak across the API edge — so the frontend simply sees
- * that nothing can be recommended and directs the citizen to a handläggare.</li>
+ * that nothing can be recommended and directs the citizen to a caseworker.</li>
  * <li><b>Finns i CM? + LC</b> — does the applicant already exist (an EB errand in caremanagement, or a Lifecare
- * footprint)? When applying together, <em>both</em> must exist. If not → nyansökan.</li>
- * <li><b>Samma civilstånd?</b> — does the requested constellation (alone vs with a partner, inferred from the
- * co-applicant) match the previous application's? If it changed → nyansökan.</li>
+ * footprint)? When applying together, <em>both</em> must exist. If not → new application.</li>
+ * <li><b>Samma marital status?</b> — does the requested constellation (alone vs with a partner, inferred from the
+ * co-applicant) match the previous application's? If it changed → new application.</li>
  * <li><b>Per-month</b> — for the current and next month, is there already an application/decision (within the window)?
- * If yes → tilläggsansökan for that month; if no → återansökan. The current month being decided in Lifecare makes the
+ * If yes → supplementary application for that month; if no → renewal. The current month being decided in Lifecare makes
+ * the
  * next-month option the recommended one.</li>
  * </ol>
  *
- * The decision is advisory — the handläggare stays in the loop — so the result carries the facts each gate was decided
+ * The decision is advisory — the caseworker stays in the loop — so the result carries the facts each gate was decided
  * from and degrades ({@code lifecareChecked=false}) when Lifecare is unreachable.
  */
 @Service
@@ -62,12 +64,12 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 public class EligibilityService {
 
 	static final String REASON_NO_EXISTING_CASE = "NO_EXISTING_CASE";
-	static final String REASON_CIVILSTAND_CHANGED = "CIVILSTAND_CHANGED";
+	static final String REASON_MARITAL_STATUS_CHANGED = "MARITAL_STATUS_CHANGED";
 	static final String REASON_EXISTING_CASE = "EXISTING_CASE";
 	static final String REASON_ALL_TYPES_TEST = "ALL_TYPES_TEST";
 
-	private static final String[] MONTHS_SV = {
-		"januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"
+	private static final String[] MONTHS_EN = {
+		"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"
 	};
 
 	private final ErrandRepository errandRepository;
@@ -97,15 +99,16 @@ public class EligibilityService {
 		final var hasCoApplicant = hasText(request.getCoApplicant());
 
 		// TEST OVERRIDE (financial-assistance.eligibility.return-all-types): short-circuit the routing and offer all three
-		// application types so the frontend can exercise nyansökan / återansökan / tilläggsansökan regardless of any
-		// existing case. Turn off to restore the real gemensam-ingång decision flow.
+		// application types so the frontend can exercise new application / renewal / supplementary application regardless of
+		// any
+		// existing case. Turn off to restore the real common-entry point decision flow.
 		if (returnAllTypes) {
 			return allTypesResponse(hasCoApplicant, currentMonth);
 		}
 
-		// Skyddad identitet — hard safety gate (checked in folkbokföring/citizen and Lifecare). A protected applicant or
+		// Protected identity — hard safety gate (checked in population register/citizen and Lifecare). A protected applicant or
 		// co-applicant must not be routed into self-service: offer no application (empty suggestions) and let the frontend
-		// hand off to a handläggare. The protected status is kept internal — it never leaves this service. Best-effort per
+		// hand off to a caseworker. The protected status is kept internal — it never leaves this service. Best-effort per
 		// source, so an upstream outage degrades to normal routing rather than blocking every applicant.
 		if (hasProtectedIdentity(municipalityId, request.getApplicant())
 			|| (hasCoApplicant && hasProtectedIdentity(municipalityId, request.getCoApplicant()))) {
@@ -151,16 +154,16 @@ public class EligibilityService {
 			|| (coApplicantLc != null && coApplicantLc.hasFootprint());
 		if (!(applicantExists && coApplicantExists)) {
 			return newApplication(response, REASON_NO_EXISTING_CASE,
-				"Inget befintligt ärende hittades" + (lifecareChecked ? "" : " (Lifecare kunde inte nås)") + ". Föreslår nyansökan.");
+				"No existing errand found" + (lifecareChecked ? "" : " (Lifecare could not be reached)") + ". Suggesting a new application.");
 		}
 
-		// 2) Samma civilstånd? — constellation (alone vs partner) vs the most recent existing case.
+		// 2) Samma marital status? — constellation (alone vs partner) vs the most recent existing case.
 		final var previousHadCoApplicant = previousHadCoApplicant(cmRecords, applicantLc);
-		final var civilstandMatches = hasCoApplicant == previousHadCoApplicant;
-		response.setCivilstandMatches(civilstandMatches);
-		if (!civilstandMatches) {
-			return newApplication(response, REASON_CIVILSTAND_CHANGED,
-				"Civilståndet skiljer sig från föregående ansökan. Föreslår nyansökan.");
+		final var maritalStatusMatches = hasCoApplicant == previousHadCoApplicant;
+		response.setMaritalStatusMatches(maritalStatusMatches);
+		if (!maritalStatusMatches) {
+			return newApplication(response, REASON_MARITAL_STATUS_CHANGED,
+				"The marital status differs from the previous application. Suggesting a new application.");
 		}
 
 		// 3) Per-month — application/decision already present for this/next month?
@@ -175,12 +178,12 @@ public class EligibilityService {
 		final var thisMonth = monthSuggestion(currentMonth, existsThisMonth, !currentMonthDecided);
 		final var nextMonthSuggestion = monthSuggestion(nextMonth, existsNextMonth, currentMonthDecided);
 
-		// Recommended = denna månad while it's still open; nästa månad once the current month is decided.
+		// Recommended = the current month while it's still open; next month once the current month is decided.
 		response.setSuggestions(currentMonthDecided ? List.of(nextMonthSuggestion, thisMonth) : List.of(thisMonth, nextMonthSuggestion));
 		response.setReasonCode(REASON_EXISTING_CASE);
 		response.setMessage(currentMonthDecided
-			? "Beslut finns för innevarande månad. Föreslår återansökan för nästa månad eller tilläggsansökan."
-			: "Befintligt ärende utan beslut för innevarande månad. Föreslår återansökan för innevarande månad.");
+			? "A decision exists for the current month. Suggesting a renewal for next month or a supplementary application."
+			: "Existing errand without a decision for the current month. Suggesting a renewal for the current month.");
 		return response;
 	}
 
@@ -192,7 +195,7 @@ public class EligibilityService {
 		return EligibilityResponse.create()
 			.withHasCoApplicant(hasCoApplicant)
 			.withReasonCode(REASON_ALL_TYPES_TEST)
-			.withMessage("Testläge: alla ansökningstyper returneras (gemensam-ingång-routingen är förbikopplad).")
+			.withMessage("Test mode: all application types are returned (the common entry point routing is bypassed).")
 			.withSuggestions(List.of(
 				suggestion(SLUG_NEW, null, true),
 				suggestion(SLUG_RENEWAL, currentMonth, false),
@@ -200,7 +203,8 @@ public class EligibilityService {
 	}
 
 	/**
-	 * Skyddad identitet for one person — protected in folkbokföring (citizen) <em>or</em> in Lifecare FC. Each source is
+	 * Protected identity for one person — protected in population register (citizen) <em>or</em> in Lifecare FC. Each
+	 * source is
 	 * best-effort: a transport/upstream failure is treated as "not protected" so an outage degrades to normal routing
 	 * rather than blocking the applicant.
 	 */
@@ -229,7 +233,7 @@ public class EligibilityService {
 	/**
 	 * Skyddad-identitet response: an empty suggestion list and nothing else. Deliberately carries no reasonCode, message
 	 * or flag — the protected status must not leak across the API edge — so the response is just "nothing can be
-	 * recommended"; the frontend turns that into a "contact a handläggare" message.
+	 * recommended"; the frontend turns that into a "contact a caseworker" message.
 	 */
 	private static EligibilityResponse protectedIdentityResponse(final boolean hasCoApplicant) {
 		return EligibilityResponse.create()
@@ -244,7 +248,7 @@ public class EligibilityService {
 		return response;
 	}
 
-	/** A month's suggestion: tilläggsansökan when an application already exists for it, otherwise återansökan. */
+	/** A month's suggestion: supplementary application when an application already exists for it, otherwise renewal. */
 	private static ApplicationSuggestion monthSuggestion(final YearMonth month, final boolean exists, final boolean recommended) {
 		return suggestion(exists ? SLUG_SUPPLEMENTARY : SLUG_RENEWAL, month, recommended);
 	}
@@ -331,11 +335,11 @@ public class EligibilityService {
 
 	private static String label(final String slug, final YearMonth period) {
 		final var base = switch (slug) {
-			case SLUG_NEW -> "Nyansökan";
-			case SLUG_RENEWAL -> "Återansökan";
-			default -> "Tilläggsansökan";
+			case SLUG_NEW -> "New application";
+			case SLUG_RENEWAL -> "Renewal";
+			default -> "Supplementary application";
 		};
-		return period == null ? base : base + " för " + MONTHS_SV[period.getMonthValue() - 1] + " " + period.getYear();
+		return period == null ? base : base + " for " + MONTHS_EN[period.getMonthValue() - 1] + " " + period.getYear();
 	}
 
 	/** An EB errand envelope paired with its typed financial-assistance row. */

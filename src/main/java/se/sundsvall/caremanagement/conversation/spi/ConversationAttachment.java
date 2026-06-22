@@ -8,7 +8,7 @@ import java.time.OffsetDateTime;
  * ({@code .../messages/{messageId}/attachments/{id}/file}), so {@code messageId} is included to let the caller build
  * that URL.
  *
- * @param senderRole CLIENT (the applicant sent it, INBOUND) or HANDLAGGARE (the caseworker sent it, OUTBOUND)
+ * @param senderRole CLIENT (the applicant sent it, INBOUND) or CASEWORKER (the caseworker sent it, OUTBOUND)
  */
 public record ConversationAttachment(
 	String id,

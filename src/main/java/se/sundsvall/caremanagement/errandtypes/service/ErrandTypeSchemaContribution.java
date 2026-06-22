@@ -30,7 +30,7 @@ public interface ErrandTypeSchemaContribution {
 	List<FieldDescriptor> fields();
 
 	/**
-	 * The allowed decision outcomes (beslutsalternativ) for this slug. Defaults to an empty list — a type that records
+	 * The allowed decision outcomes (decision alternatives) for this slug. Defaults to an empty list — a type that records
 	 * no structured outcomes simply omits them.
 	 */
 	default List<DecisionOption> decisionOptions() {

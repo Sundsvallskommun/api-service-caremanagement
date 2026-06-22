@@ -6,7 +6,7 @@ import java.util.Objects;
 
 /**
  * Request to set the approval state of one EB view section. {@code approved=true} records the section as verified by
- * {@code approvedBy} (the logged-in handläggare); {@code approved=false} withdraws an earlier approval. The approver is
+ * {@code approvedBy} (the logged-in caseworker); {@code approved=false} withdraws an earlier approval. The approver is
  * stored only when approving — withdrawing clears who/when.
  */
 @Schema(description = "Set the approval state of an EB view section.")
@@ -16,7 +16,7 @@ public class SectionApprovalRequest {
 	@NotNull
 	private Boolean approved;
 
-	@Schema(description = "The handläggare approving the section (stored when approving, ignored when withdrawing)", examples = "jane02doe")
+	@Schema(description = "The caseworker approving the section (stored when approving, ignored when withdrawing)", examples = "jane02doe")
 	private String approvedBy;
 
 	public static SectionApprovalRequest create() {

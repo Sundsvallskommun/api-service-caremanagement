@@ -32,8 +32,8 @@ class FinancialAssistanceEntityTest {
 			.withPeriodMonth(6)
 			.withPeriodYear(2026)
 			.withPeriodChoice("CURRENT_MONTH")
-			.withNormType("RIKSNORM")
-			.withOtherBenefitDescription("Etableringsersättning")
+			.withNormType("NATIONAL_NORM")
+			.withOtherBenefitDescription("Establishment benefit")
 			.withLivelihoodDescription("Söker arbete")
 			.withHasChildrenUnder21(true)
 			.withChildrenResidenceChanged(false)
@@ -48,7 +48,7 @@ class FinancialAssistanceEntityTest {
 			.withHasPendingBenefits(false)
 			.withHasAssets(true)
 			.withStaysInMunicipality(true)
-			.withStayDescription("Bor på folkbokföringsadressen")
+			.withStayDescription("Lives at the registered address")
 			.withAttestation(true)
 			.withAttestedAt(ATTESTED_AT)
 			.withChildren(children)
@@ -69,8 +69,8 @@ class FinancialAssistanceEntityTest {
 		assertThat(entity.getPeriodMonth()).isEqualTo(6);
 		assertThat(entity.getPeriodYear()).isEqualTo(2026);
 		assertThat(entity.getPeriodChoice()).isEqualTo("CURRENT_MONTH");
-		assertThat(entity.getNormType()).isEqualTo("RIKSNORM");
-		assertThat(entity.getOtherBenefitDescription()).isEqualTo("Etableringsersättning");
+		assertThat(entity.getNormType()).isEqualTo("NATIONAL_NORM");
+		assertThat(entity.getOtherBenefitDescription()).isEqualTo("Establishment benefit");
 		assertThat(entity.getLivelihoodDescription()).isEqualTo("Söker arbete");
 		assertThat(entity.getHasChildrenUnder21()).isTrue();
 		assertThat(entity.getChildrenResidenceChanged()).isFalse();
@@ -85,7 +85,7 @@ class FinancialAssistanceEntityTest {
 		assertThat(entity.getHasPendingBenefits()).isFalse();
 		assertThat(entity.getHasAssets()).isTrue();
 		assertThat(entity.getStaysInMunicipality()).isTrue();
-		assertThat(entity.getStayDescription()).isEqualTo("Bor på folkbokföringsadressen");
+		assertThat(entity.getStayDescription()).isEqualTo("Lives at the registered address");
 		assertThat(entity.getAttestation()).isTrue();
 		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);
 		assertThat(entity.getChildren()).isSameAs(children);

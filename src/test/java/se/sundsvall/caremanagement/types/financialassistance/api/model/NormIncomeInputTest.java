@@ -38,27 +38,27 @@ class NormIncomeInputTest {
 	void testBuilderMethods() {
 		final var typeId = 20;
 		final var typeName = "Bostadsbidrag";
-		final var applicantHandlaggareAmount = BigDecimal.valueOf(1900.00);
+		final var applicantCaseworkerAmount = BigDecimal.valueOf(1900.00);
 		final var applicantAmountDate = now();
-		final var coapplicantHandlaggareAmount = BigDecimal.valueOf(1000.00);
+		final var coapplicantCaseworkerAmount = BigDecimal.valueOf(1000.00);
 		final var coapplicantAmountDate = now();
 		final var note = "note";
 
 		final var result = NormIncomeInput.create()
 			.withTypeId(typeId)
 			.withTypeName(typeName)
-			.withApplicantHandlaggareAmount(applicantHandlaggareAmount)
+			.withApplicantCaseworkerAmount(applicantCaseworkerAmount)
 			.withApplicantAmountDate(applicantAmountDate)
-			.withCoapplicantHandlaggareAmount(coapplicantHandlaggareAmount)
+			.withCoapplicantCaseworkerAmount(coapplicantCaseworkerAmount)
 			.withCoapplicantAmountDate(coapplicantAmountDate)
 			.withNote(note);
 
 		assertThat(result).hasNoNullFieldsOrProperties();
 		assertThat(result.getTypeId()).isEqualTo(typeId);
 		assertThat(result.getTypeName()).isEqualTo(typeName);
-		assertThat(result.getApplicantHandlaggareAmount()).isEqualTo(applicantHandlaggareAmount);
+		assertThat(result.getApplicantCaseworkerAmount()).isEqualTo(applicantCaseworkerAmount);
 		assertThat(result.getApplicantAmountDate()).isEqualTo(applicantAmountDate);
-		assertThat(result.getCoapplicantHandlaggareAmount()).isEqualTo(coapplicantHandlaggareAmount);
+		assertThat(result.getCoapplicantCaseworkerAmount()).isEqualTo(coapplicantCaseworkerAmount);
 		assertThat(result.getCoapplicantAmountDate()).isEqualTo(coapplicantAmountDate);
 		assertThat(result.getNote()).isEqualTo(note);
 	}

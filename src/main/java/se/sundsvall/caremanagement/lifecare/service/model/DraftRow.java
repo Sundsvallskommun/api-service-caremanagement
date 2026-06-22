@@ -1,7 +1,7 @@
 package se.sundsvall.caremanagement.lifecare.service.model;
 
 /**
- * One FC income row of a draft normberäkning, in module-neutral terms (amounts as {@code Double}, dates as ISO strings)
+ * One FC income row of a draft calculation, in module-neutral terms (amounts as {@code Double}, dates as ISO strings)
  * so it crosses the lifecare → financial-assistance boundary without leaking the generated Lifecare DTOs. The
  * financial-assistance module maps this to its own API/persistence row.
  *

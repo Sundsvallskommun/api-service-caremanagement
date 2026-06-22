@@ -13,9 +13,9 @@ import static java.util.stream.Collectors.toMap;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
- * The handläggare approval state of the three Draken EB view sections — {@code CALCULATION} (normberäkning),
- * {@code PAYMENT} (utbetalning) and {@code DECISION} (beslut). Each section is an upsertable acknowledgeable object on
- * the errand: a handläggare verifies a section as approved (stamping who/when), or withdraws an earlier approval. A
+ * The caseworker approval state of the three Draken EB view sections — {@code CALCULATION} (calculation),
+ * {@code PAYMENT} (payment) and {@code DECISION} (decision). Each section is an upsertable acknowledgeable object on
+ * the errand: a caseworker verifies a section as approved (stamping who/when), or withdraws an earlier approval. A
  * section that has never been touched reads back as {@code approved=false}, so the bundle always carries all three.
  */
 @Service
@@ -43,7 +43,7 @@ public class SectionApprovalService {
 	}
 
 	/**
-	 * Set a section's approval (a handläggare action) — upserts the one row for {@code (errandId, section)}. Approving
+	 * Set a section's approval (a caseworker action) — upserts the one row for {@code (errandId, section)}. Approving
 	 * stamps {@code approvedBy}/{@code approvedAt}; withdrawing clears them. Throws {@code 400} when the section is not one
 	 * of the three.
 	 */

@@ -4,12 +4,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * Result of creating the Lifecare FC aktualisering (case intake): the id of the aktualisering created in Lifecare.
+ * Result of creating the Lifecare FC actualisation (case intake): the id of the actualisation created in Lifecare.
  */
-@Schema(description = "The created Lifecare aktualisering id.")
+@Schema(description = "The created Lifecare actualisation id.")
 public class ActualisationResponse {
 
-	@Schema(description = "The id of the aktualisering created in Lifecare FC", examples = "5012")
+	@Schema(description = "The id of the actualisation created in Lifecare FC", examples = "5012")
 	private Integer actualisationId;
 
 	public static ActualisationResponse create() {

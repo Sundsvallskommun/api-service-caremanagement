@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:57858
+- url: http://localhost:63933
   description: Generated server url
 tags:
 - name: Notes
@@ -27,23 +27,23 @@ tags:
     \ free-text response and status (SENT → RESPONDED)."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
-- name: Financial Assistance
-  description: Ekonomiskt bistånd (EB) errands. Create against one of the three application-type
-    slugs (financial-assistance-new / -renewal / -supplementary); read and replace
-    the typed data via the shared financial-assistance path.
 - name: Errand decisions
   description: "Decision audit trail on an errand. Stores both system-generated decisions\
     \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
-    \ (e.g. handläggare APPROVE/REJECT), distinguished by `decisionType`."
+    \ (e.g. caseworker APPROVE/REJECT), distinguished by `decisionType`."
 - name: Notifications
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen; expired ones are purged by a daily background job.
-- name: Financial Assistance Bevakningar
-  description: "Ekonomiskt bistånd (EB) bevakningar — date-bound watch/reminder objects\
-    \ on an errand, with full CRUD. Unlike the income warnings they carry no acknowledge\
-    \ lifecycle."
+- name: Financial Assistance Monitorings
+  description: "Financial assistance (EB) monitorings — date-bound watch/reminder\
+    \ objects on an errand, with full CRUD. Unlike the income warnings they carry\
+    \ no acknowledge lifecycle."
 - name: Status History
   description: Status transition log for an errand
+- name: Financial Assistance
+  description: Financial assistance (EB) errands. Create against one of the three
+    application-type slugs (financial-assistance-new / -renewal / -supplementary);
+    read and replace the typed data via the shared financial-assistance path.
 - name: Metadata
   description: Metadata (lookup) operations
 - name: Namespace config
@@ -106,6 +106,135 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/monitorings/{monitoringId}:
+    get:
+      tags:
+      - Financial Assistance Monitorings
+      summary: Read a monitoring on an errand
+      operationId: getMonitoring
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: monitoringId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Monitoring"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+      - Financial Assistance Monitorings
+      summary: Replace a monitoring on an errand
+      operationId: updateMonitoring
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: monitoringId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MonitoringRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Monitoring"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+      - Financial Assistance Monitorings
+      summary: Delete a monitoring on an errand
+      operationId: deleteMonitoring
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: monitoringId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/data:
     put:
       tags:
@@ -135,135 +264,6 @@ paths:
             schema:
               $ref: "#/components/schemas/FinancialAssistanceData"
         required: true
-      responses:
-        "204":
-          description: Successful operation
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/bevakningar/{bevakningId}:
-    get:
-      tags:
-      - Financial Assistance Bevakningar
-      summary: Read a bevakning on an errand
-      operationId: getBevakning
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: bevakningId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Bevakning"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    put:
-      tags:
-      - Financial Assistance Bevakningar
-      summary: Replace a bevakning on an errand
-      operationId: updateBevakning
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: bevakningId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/BevakningRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Bevakning"
-        "400":
-          description: Bad Request
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    delete:
-      tags:
-      - Financial Assistance Bevakningar
-      summary: Delete a bevakning on an errand
-      operationId: deleteBevakning
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: bevakningId
-        in: path
-        required: true
-        schema:
-          type: string
       responses:
         "204":
           description: Successful operation
@@ -958,7 +958,7 @@ paths:
       tags:
       - Process messages
       summary: Send a BPMN message to the running process for an errand
-      description: "Correlates a BPMN message (e.g. a handläggare's APPROVE/REJECT\
+      description: "Correlates a BPMN message (e.g. a caseworker's APPROVE/REJECT\
         \ decision, an external event) to the process instance whose business key\
         \ equals this errand id. The matching receive task or message catch event\
         \ resumes with the supplied process variables."
@@ -1550,7 +1550,7 @@ paths:
           type: string
           enum:
           - CLIENT
-          - HANDLAGGARE
+          - CASEWORKER
       responses:
         "200":
           description: Successful Operation
@@ -1641,9 +1641,9 @@ paths:
       tags:
       - Financial Assistance
       summary: List the EB income warnings on an errand
-      description: "The acknowledgeable income warnings the handläggare reviews —\
-        \ unhandled incomes, significant changes, and income types still missing from\
-        \ SSBTEK. The daily prepare step reconciles them."
+      description: "The acknowledgeable income warnings the caseworker reviews — unhandled\
+        \ incomes, significant changes, and income types still missing from SSBTEK.\
+        \ The daily prepare step reconciles them."
       operationId: listWarnings
       parameters:
       - name: municipalityId
@@ -1726,11 +1726,103 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/persons:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/monitorings:
+    get:
+      tags:
+      - Financial Assistance Monitorings
+      summary: List the monitorings on an errand
+      operationId: listMonitorings
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Monitoring"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+      - Financial Assistance Monitorings
+      summary: Create a monitoring on an errand
+      description: Creates a date-bound monitoring on the errand. Returns the created
+        monitoring and its Location.
+      operationId: createMonitoring
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MonitoringRequest"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Monitoring"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft/persons:
     post:
       tags:
       - Financial Assistance
-      summary: Add a person row to the draft (handläggare)
+      summary: Add a person row to the draft (caseworker)
       operationId: addDraftPerson
       parameters:
       - name: municipalityId
@@ -1768,7 +1860,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/persons/{rowId}/restore:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft/persons/{rowId}/restore:
     post:
       tags:
       - Financial Assistance
@@ -1809,11 +1901,11 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/incomes:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft/incomes:
     post:
       tags:
       - Financial Assistance
-      summary: Add an income row to the draft (handläggare)
+      summary: Add an income row to the draft (caseworker)
       operationId: addDraftIncome
       parameters:
       - name: municipalityId
@@ -1851,7 +1943,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/incomes/{rowId}/restore:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft/incomes/{rowId}/restore:
     post:
       tags:
       - Financial Assistance
@@ -1892,11 +1984,11 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/expenses:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft/expenses:
     post:
       tags:
       - Financial Assistance
-      summary: Add an expense row to the draft (handläggare)
+      summary: Add an expense row to the draft (caseworker)
       operationId: addDraftExpense
       parameters:
       - name: municipalityId
@@ -1934,7 +2026,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/expenses/{rowId}/restore:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft/expenses/{rowId}/restore:
     post:
       tags:
       - Financial Assistance
@@ -1975,108 +2067,16 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/bevakningar:
-    get:
-      tags:
-      - Financial Assistance Bevakningar
-      summary: List the bevakningar on an errand
-      operationId: listBevakningar
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Bevakning"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    post:
-      tags:
-      - Financial Assistance Bevakningar
-      summary: Create a bevakning on an errand
-      description: Creates a date-bound bevakning on the errand. Returns the created
-        bevakning and its Location.
-      operationId: createBevakning
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/BevakningRequest"
-        required: true
-      responses:
-        "201":
-          description: Successful operation
-          headers:
-            Location:
-              style: simple
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Bevakning"
-        "400":
-          description: Bad Request
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/payment-status:
     post:
       tags:
       - Financial Assistance
-      summary: Read whether the Lifecare utbetalning has been effectuated
-      description: "Reads whether the manual Lifecare utbetalning for the applicant\
-        \ and application month has been registered, returning the effectuated flag\
-        \ and (when effectuated) the payment date. caremanagement makes no payment\
-        \ — utbetalning is a manual handläggare step in Lifecare; the process polls\
-        \ this to detect when it is done."
+      summary: Read whether the Lifecare payment has been effectuated
+      description: "Reads whether the manual Lifecare payment for the applicant and\
+        \ application month has been registered, returning the effectuated flag and\
+        \ (when effectuated) the payment date. caremanagement makes no payment — payment\
+        \ is a manual caseworker step in Lifecare; the process polls this to detect\
+        \ when it is done."
       operationId: checkPaymentStatus
       parameters:
       - name: municipalityId
@@ -2109,97 +2109,14 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/normberakning/prepare:
-    post:
-      tags:
-      - Financial Assistance
-      summary: Prepare the normberäkning (no Lifecare write)
-      description: "Reports whether this month's classified incomes cover every income\
-        \ type the previous normberäkning had (informationComplete + missingIncomeTypes),\
-        \ records the income warnings on the errand as a single Decision(RECOMMENDATION),\
-        \ and reflects completeness in the errand status (KOMPLETTERING ⇄ VANTAR_PA_BESLUT).\
-        \ Does NOT create a normberäkning in Lifecare — the EB process calls this\
-        \ each daily loop. Use /commit after a beslut to create it in Lifecare."
-      operationId: prepareNormberakning
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/NormberakningRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NormberakningResponse"
-        "502":
-          description: Bad Gateway
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/normberakning/commit:
-    post:
-      tags:
-      - Financial Assistance
-      summary: Create the normberäkning in Lifecare (after beslut)
-      description: "Builds the normberäkning from the classified incomes and creates\
-        \ it in Lifecare FC, returning the created calculation id. Called once a beslut\
-        \ is taken — never during the daily SSBTEK loop."
-      operationId: commitNormberakning
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/NormberakningRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NormberakningResponse"
-        "502":
-          description: Bad Gateway
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/eligibility:
     post:
       tags:
       - Financial Assistance
-      summary: Check application eligibility (gemensam ingång)
+      summary: Check application eligibility (common entry point)
       description: "Given an applicant (and an optional co-applicant) suggests which\
-        \ application — nyansökan / återansökan / tilläggsansökan — to offer, checking\
-        \ this system and Lifecare (best-effort)."
+        \ application — new application / renewal / supplementary application — to\
+        \ offer, checking this system and Lifecare (best-effort)."
       operationId: checkEligibility
       parameters:
       - name: municipalityId
@@ -2226,13 +2143,96 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EligibilityResponse"
+  /{municipalityId}/{namespace}/errands/financial-assistance/calculation/prepare:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Prepare the calculation (no Lifecare write)
+      description: "Reports whether this month's classified incomes cover every income\
+        \ type the previous calculation had (informationComplete + missingIncomeTypes),\
+        \ records the income warnings on the errand as a single Decision(RECOMMENDATION),\
+        \ and reflects completeness in the errand status (SUPPLEMENT_REQUESTED ⇄ AWAITING_DECISION).\
+        \ Does NOT create a calculation in Lifecare — the EB process calls this each\
+        \ daily loop. Use /commit after a decision to create it in Lifecare."
+      operationId: prepareCalculation
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculationRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalculationResponse"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/calculation/commit:
+    post:
+      tags:
+      - Financial Assistance
+      summary: Create the calculation in Lifecare (after decision)
+      description: "Builds the calculation from the classified incomes and creates\
+        \ it in Lifecare FC, returning the created calculation id. Called once a decision\
+        \ is taken — never during the daily SSBTEK loop."
+      operationId: commitCalculation
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculationRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalculationResponse"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/actualisation:
     post:
       tags:
       - Financial Assistance
-      summary: Create the Lifecare aktualisering (case intake)
-      description: "Builds the aktualisering against the applicant's Lifecare FC aktualisering\
-        \ proposal and creates it in Lifecare, returning the created aktualisering\
+      summary: Create the Lifecare actualisation (case intake)
+      description: "Builds the actualisation against the applicant's Lifecare FC actualisation\
+        \ proposal and creates it in Lifecare, returning the created actualisation\
         \ id. When the request carries an errandId, the creation is recorded on the\
         \ errand as a Decision(ACTUALISATION) for the audit trail."
       operationId: createActualisation
@@ -3062,7 +3062,7 @@ paths:
       tags:
       - Financial Assistance
       summary: Set the status of an EB income warning
-      description: "A handläggare acknowledges (seen, kept on record), closes (dismisses),\
+      description: "A caseworker acknowledges (seen, kept on record), closes (dismisses),\
         \ or re-opens a warning to OPEN (undoing an earlier acknowledge/close)."
       operationId: updateWarning
       parameters:
@@ -3120,8 +3120,8 @@ paths:
     patch:
       tags:
       - Financial Assistance
-      summary: Set a section's approval (handläggare)
-      description: "A handläggare verifies one of the EB view sections (CALCULATION\
+      summary: Set a section's approval (caseworker)
+      description: "A caseworker verifies one of the EB view sections (CALCULATION\
         \ / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving\
         \ stamps who/when; withdrawing clears them."
       operationId: setSectionApproval
@@ -3177,7 +3177,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/persons/{rowId}:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft/persons/{rowId}:
     delete:
       tags:
       - Financial Assistance
@@ -3221,7 +3221,7 @@ paths:
     patch:
       tags:
       - Financial Assistance
-      summary: Set the handläggare days / note on a person row
+      summary: Set the caseworker days / note on a person row
       operationId: patchDraftPerson
       parameters:
       - name: municipalityId
@@ -3264,7 +3264,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/incomes/{rowId}:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft/incomes/{rowId}:
     delete:
       tags:
       - Financial Assistance
@@ -3309,7 +3309,7 @@ paths:
     patch:
       tags:
       - Financial Assistance
-      summary: Set the handläggare value / note on an income row
+      summary: Set the caseworker value / note on an income row
       operationId: patchDraftIncome
       parameters:
       - name: municipalityId
@@ -3352,14 +3352,13 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/header:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft/header:
     patch:
       tags:
       - Financial Assistance
-      summary: Edit the draft header (handläggare)
-      description: "Set the norm, the calculation date window (Från/Till/Beräkningsdatum)\
-        \ and the custom household size (Gemensamma kostnader). 404 when no draft\
-        \ exists."
+      summary: Edit the draft header (caseworker)
+      description: "Set the norm, the calculation date window (from/to/date) and the\
+        \ custom household size (common costs). 404 when no draft exists."
       operationId: patchDraftHeader
       parameters:
       - name: municipalityId
@@ -3390,14 +3389,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/NormberakningDraft"
+                $ref: "#/components/schemas/CalculationDraft"
         "404":
           description: Not Found
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft/expenses/{rowId}:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft/expenses/{rowId}:
     delete:
       tags:
       - Financial Assistance
@@ -3441,7 +3440,7 @@ paths:
     patch:
       tags:
       - Financial Assistance
-      summary: Set the handläggare value / note on an expense row
+      summary: Set the caseworker value / note on an expense row
       operationId: patchDraftExpense
       parameters:
       - name: municipalityId
@@ -4172,10 +4171,10 @@ paths:
       tags:
       - Financial Assistance
       summary: Read the section approvals on an errand
-      description: "The handläggare approval state of the three EB view sections (CALCULATION\
-        \ = normberäkning, PAYMENT = utbetalning, DECISION = beslut). Always returns\
-        \ all three — a section never approved is present with approved=false. The\
-        \ same object is embedded in the errand view."
+      description: "The caseworker approval state of the three EB view sections (CALCULATION\
+        \ = calculation, PAYMENT = payment, DECISION = decision). Always returns all\
+        \ three — a section never approved is present with approved=false. The same\
+        \ object is embedded in the errand view."
       operationId: getSectionApprovals
       parameters:
       - name: municipalityId
@@ -4207,13 +4206,13 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/normberakning/draft:
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft:
     get:
       tags:
       - Financial Assistance
-      summary: Read the draft normberäkning
+      summary: Read the draft calculation
       description: The FC income rows the EB process prepared (not yet created in
-        Lifecare) for the handläggare to review and edit before a beslut. 404 when
+        Lifecare) for the caseworker to review and edit before a decision. 404 when
         no draft exists yet.
       operationId: getDraft
       parameters:
@@ -4239,7 +4238,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/NormberakningDraft"
+                $ref: "#/components/schemas/CalculationDraft"
         "404":
           description: Not Found
           content:
@@ -4252,10 +4251,10 @@ paths:
       - Financial Assistance
       summary: Renewal pre-fill from Lifecare
       description: Returns the household children from the applicant's most recent
-        Lifecare normberäkning to pre-fill an EB återansökan. The applicant is identified
+        Lifecare calculation to pre-fill an EB renewal. The applicant is identified
         by partyId (resolved to a personnummer via the citizen service). Only children
-        are pre-filled — the sökande is the logged-in citizen and the medsökande comes
-        from the portal. Best-effort — degrades to an empty result (lifecareChecked=false)
+        are pre-filled — the applicant is the logged-in citizen and the co-applicant
+        comes from the portal. Best-effort — degrades to an empty result (lifecareChecked=false)
         when the partyId cannot be resolved or Lifecare is unreachable.
       operationId: prefill
       parameters:
@@ -4456,6 +4455,89 @@ components:
           type: string
         message:
           type: string
+    MonitoringRequest:
+      type: object
+      description: Request to create or replace an EB monitoring on an errand.
+      properties:
+        title:
+          type: string
+          description: Short headline for the monitoring
+          examples:
+          - Follow up income details from CSN
+          minLength: 1
+        description:
+          type: string
+          description: Free-text details of what to watch for
+          examples:
+          - Awaiting supplementary documentation before a decision can be made.
+        startDate:
+          type: string
+          format: date
+          description: When the watch becomes relevant (monitoringsdatum)
+          examples:
+          - 2026-07-01
+        endDate:
+          type: string
+          format: date
+          description: When the watch ends — open-ended when omitted. Must not be
+            before the start date.
+          examples:
+          - 2026-07-31
+        createdBy:
+          type: string
+          description: The caseworker who created the monitoring
+          examples:
+          - joe01doe
+      required:
+      - startDate
+      - title
+    Monitoring:
+      type: object
+      description: An EB monitoring (date-bound watch/reminder) on an errand.
+      properties:
+        id:
+          type: string
+          description: The monitoring id
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+          readOnly: true
+        title:
+          type: string
+          description: Short headline for the monitoring
+          examples:
+          - Follow up income details from CSN
+        description:
+          type: string
+          description: Free-text details of what to watch for
+          examples:
+          - Awaiting supplementary documentation before a decision can be made.
+        startDate:
+          type: string
+          format: date
+          description: When the watch becomes relevant (monitoringsdatum)
+          examples:
+          - 2026-07-01
+        endDate:
+          type: string
+          format: date
+          description: When the watch ends — open-ended when omitted
+          examples:
+          - 2026-07-31
+        createdBy:
+          type: string
+          description: The caseworker who created the monitoring
+          examples:
+          - joe01doe
+        created:
+          type: string
+          format: date-time
+          description: When the monitoring was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the monitoring was last updated
+          readOnly: true
     Asset:
       type: object
       description: An asset owned by the applicant or co-applicant.
@@ -4475,7 +4557,7 @@ components:
           type: string
           description: Free text description of the asset
           examples:
-          - Sparkonto hos Swedbank
+          - Savings account at Swedbank
         value:
           type: number
           description: Estimated value of the asset
@@ -4485,12 +4567,12 @@ components:
           type: string
           description: Type of real estate property
           enum:
-          - BOSTADSRATT
-          - VILLA
-          - FASTIGHET
-          - FRITIDSHUS
+          - CONDOMINIUM
+          - HOUSE
+          - PROPERTY
+          - HOLIDAY_HOME
           examples:
-          - VILLA
+          - HOUSE
         purchaseYear:
           type: integer
           format: int32
@@ -4516,15 +4598,15 @@ components:
           type: string
           description: Type of vehicle
           enum:
-          - BIL
-          - BAT
-          - MC
-          - HUSVAGN
+          - CAR
+          - BOAT
+          - MOTORCYCLE
+          - CARAVAN
           - MOPED
-          - SNOSKOTER
-          - ANNAT
+          - SNOWMOBILE
+          - OTHER
           examples:
-          - BIL
+          - CAR
         registrationNumber:
           type: string
           description: Vehicle registration number
@@ -4614,7 +4696,7 @@ components:
           type: string
           description: Free text specification of the cost
           examples:
-          - Tandvård hos folktandvården
+          - Dental care at the public dental service
         recipientOrPeriod:
           type: string
           description: Recipient of the cost or the period it covers
@@ -4666,20 +4748,20 @@ components:
           type: string
           description: The norm type used for the calculation
           enum:
-          - RIKSNORM
+          - NATIONAL_NORM
           - OTHER_NORM
           examples:
-          - RIKSNORM
+          - NATIONAL_NORM
         otherBenefitDescription:
           type: string
           description: Description of the other benefit
           examples:
-          - Etableringsersättning
+          - Establishment benefit
         livelihoodDescription:
           type: string
           description: Description of the applicant's livelihood
           examples:
-          - Söker arbete via arbetsförmedlingen
+          - Job-seeking via the employment agency
         hasChildrenUnder21:
           type: boolean
           description: Whether the household has children under 21
@@ -4694,7 +4776,7 @@ components:
           type: string
           description: Description of the change in children's residence
           examples:
-          - Barnen bor numera växelvis
+          - The children now live in shared custody
         housingForm:
           type: string
           description: The household's housing form
@@ -4726,7 +4808,7 @@ components:
           type: string
           description: Free text description of the housing
           examples:
-          - Trerumslägenhet med hyresrätt
+          - Three-room rental apartment
         housingChanged:
           type: boolean
           description: Whether the housing situation has changed
@@ -4736,7 +4818,7 @@ components:
           type: string
           description: Description of the housing change
           examples:
-          - Flyttade till mindre lägenhet i maj
+          - Moved to a smaller apartment in May
         hasIncomes:
           type: boolean
           description: Whether the household has incomes
@@ -4761,7 +4843,7 @@ components:
           type: string
           description: Description of the applicant's stay
           examples:
-          - Bor på folkbokföringsadressen
+          - Lives at the registered address
         attestation:
           type: boolean
           description: Whether the applicant has attested the application
@@ -4931,7 +5013,7 @@ components:
           type: string
           description: Description of the work the person had
           examples:
-          - Vikarie inom hemtjänsten
+          - Substitute in home care services
         paymentMethod:
           type: string
           description: Payment method
@@ -4954,7 +5036,7 @@ components:
           type: string
           description: Description of the payment method when OTHER
           examples:
-          - Utbetalningskort
+          - Paymentskort
         paymentSameAsPrevious:
           type: boolean
           description: Whether the payment details are the same as previously used
@@ -4995,7 +5077,7 @@ components:
           type: string
           description: Description of the activity
           examples:
-          - Arbetsträning på Återbruket
+          - Work training placement
         periodFrom:
           type: string
           format: date
@@ -5043,7 +5125,7 @@ components:
           type: string
           description: Description of the work
           examples:
-          - Tillsvidareanställning som undersköterska
+          - Permanent employment as an assistant nurse
         sickLeaveLevel:
           type: string
           description: Level of sick leave (percent)
@@ -5077,90 +5159,7 @@ components:
           type: string
           description: Description of other planning
           examples:
-          - Praktik via arbetsförmedlingen
-    BevakningRequest:
-      type: object
-      description: Request to create or replace an EB bevakning on an errand.
-      properties:
-        title:
-          type: string
-          description: Short headline for the bevakning
-          examples:
-          - Följ upp inkomstuppgifter från CSN
-          minLength: 1
-        description:
-          type: string
-          description: Free-text details of what to watch for
-          examples:
-          - Inväntar kompletterande underlag innan beslut kan fattas.
-        startDate:
-          type: string
-          format: date
-          description: When the watch becomes relevant (bevakningsdatum)
-          examples:
-          - 2026-07-01
-        endDate:
-          type: string
-          format: date
-          description: When the watch ends — open-ended when omitted. Must not be
-            before the start date.
-          examples:
-          - 2026-07-31
-        createdBy:
-          type: string
-          description: The handläggare who created the bevakning
-          examples:
-          - joe01doe
-      required:
-      - startDate
-      - title
-    Bevakning:
-      type: object
-      description: An EB bevakning (date-bound watch/reminder) on an errand.
-      properties:
-        id:
-          type: string
-          description: The bevakning id
-          examples:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-          readOnly: true
-        title:
-          type: string
-          description: Short headline for the bevakning
-          examples:
-          - Följ upp inkomstuppgifter från CSN
-        description:
-          type: string
-          description: Free-text details of what to watch for
-          examples:
-          - Inväntar kompletterande underlag innan beslut kan fattas.
-        startDate:
-          type: string
-          format: date
-          description: When the watch becomes relevant (bevakningsdatum)
-          examples:
-          - 2026-07-01
-        endDate:
-          type: string
-          format: date
-          description: When the watch ends — open-ended when omitted
-          examples:
-          - 2026-07-31
-        createdBy:
-          type: string
-          description: The handläggare who created the bevakning
-          examples:
-          - joe01doe
-        created:
-          type: string
-          format: date-time
-          description: When the bevakning was created
-          readOnly: true
-        updated:
-          type: string
-          format: date-time
-          description: When the bevakning was last updated
-          readOnly: true
+          - Internship via the employment agency
     NamespaceConfig:
       type: object
       description: NamespaceConfig model
@@ -5315,12 +5314,12 @@ components:
           type: string
           description: Title of the errand
           examples:
-          - Ansökan om ekonomiskt bistånd
+          - Application for financial assistance
         description:
           type: string
           description: Description of the errand
           examples:
-          - Återansökan om hyra för juni 2026
+          - Renewal of rent for June 2026
         priority:
           type: string
           description: Priority of the errand
@@ -5504,8 +5503,8 @@ components:
       description: "Request body for correlating a BPMN message to the process instance\
         \ currently running for an errand. The errand id is used as the process business\
         \ key, so the message is delivered to that specific process. Use this whenever\
-        \ something outside the process (a handläggare action, an external event,\
-        \ an admin override) needs to resume or interact with a running process instance."
+        \ something outside the process (a caseworker action, an external event, an\
+        \ admin override) needs to resume or interact with a running process instance."
       properties:
         messageName:
           type: string
@@ -5710,7 +5709,7 @@ components:
       type: object
       description: "Decision recorded against an errand. Both system-generated decisions\
         \ (e.g. a DMN-evaluated recommendation produced by a BPMN process) and human\
-        \ decisions (e.g. a handläggare approving a payment) are stored here, distinguished\
+        \ decisions (e.g. a caseworker approving a payment) are stored here, distinguished\
         \ by `decisionType`. The list on the errand grows over time and is the audit\
         \ trail of every decision made on the case."
       properties:
@@ -5723,7 +5722,7 @@ components:
         decisionType:
           type: string
           description: "Decision category. Free-form string; conventionally `RECOMMENDATION`\
-            \ for DMN-produced suggestions and `PAYMENT` for handläggare APPROVE/REJECT\
+            \ for DMN-produced suggestions and `PAYMENT` for caseworker APPROVE/REJECT\
             \ decisions, but namespaces are encouraged to define their own."
           examples:
           - PAYMENT
@@ -5738,7 +5737,7 @@ components:
           type: string
           description: Optional human-readable description or motivation for the decision
           examples:
-          - "Beslutsförslag enligt regelverk: 7900 kr, ingen varning"
+          - "Decision proposal per ruleset: 7900 kr, no warning"
         amount:
           type: number
           description: "Optional decision amount, in SEK. For a financial-assistance\
@@ -5752,12 +5751,12 @@ components:
             \ to the applicant — the free-text justification shown on the decision\
             \ letter, kept separate from the internal `description`."
           examples:
-          - Du beviljas ekonomiskt bistånd för juni 2026 enligt riksnorm.
+          - Du beviljas financial assistance för juni 2026 enligt riksnorm.
         decisionDate:
           type: string
           format: date
-          description: "Optional date the decision applies (the handläggare-chosen\
-            \ beslutsdatum), distinct from the server-assigned `created` audit timestamp."
+          description: "Optional date the decision applies (the caseworker-chosen\
+            \ decision date), distinct from the server-assigned `created` audit timestamp."
           examples:
           - 2026-06-18
         periodFrom:
@@ -5776,8 +5775,8 @@ components:
         createdBy:
           type: string
           description: "Identifier of the actor that produced the decision. Use the\
-            \ handläggare userId for human decisions or a system identifier (e.g.\
-            \ `operaton`, `dmn-engine`) for automated ones."
+            \ caseworker userId for human decisions or a system identifier (e.g. `operaton`,\
+            \ `dmn-engine`) for automated ones."
           examples:
           - jane01doe
         created:
@@ -5809,20 +5808,20 @@ components:
           type: string
           description: Human-readable warning text
           examples:
-          - "Swish-insättningar: 2 400 kr – ej överförd, kräver manuell bedömning"
+          - "Swish deposits: 2 400 kr - not transferred, requires manual assessment"
           minLength: 1
         sourceKey:
           type: string
-          description: A stable key for the income the warning concerns (förmån/inkomsttyp)
+          description: A stable key for the income the warning concerns (benefit/incomeType)
             — the dedup key. Derived from the message when omitted.
           examples:
-          - Swish-insättningar
+          - Swish deposits
       required:
       - message
       - type
     Warning:
       type: object
-      description: An EB income warning the handläggare can acknowledge or close.
+      description: An EB income warning the caseworker can acknowledge or close.
       properties:
         id:
           type: string
@@ -5842,7 +5841,7 @@ components:
           - MISSING_SSBTEK
         sourceKey:
           type: string
-          description: A stable key for the income the warning concerns (förmån/inkomsttyp)
+          description: A stable key for the income the warning concerns (benefit/incomeType)
             — the dedup key
           examples:
           - Bostadsbidrag
@@ -5850,7 +5849,7 @@ components:
           type: string
           description: Human-readable warning text
           examples:
-          - "Saknas ännu i SSBTEK: Dagersättning"
+          - "Still missing in SSBTEK: Dagersättning"
         status:
           type: string
           description: The warning status
@@ -5863,7 +5862,7 @@ components:
         autoResolved:
           type: boolean
           description: Whether the warning was closed automatically (its cause resolved)
-            rather than by a handläggare
+            rather than by a caseworker
           examples:
           - "false"
         created:
@@ -5878,8 +5877,8 @@ components:
           readOnly: true
     NormPersonInput:
       type: object
-      description: What a handläggare sends to add or patch a person row (identity
-        + handläggare-writable fields only).
+      description: What a caseworker sends to add or patch a person row (identity
+        + caseworker-writable fields only).
       properties:
         partyId:
           type: string
@@ -5894,10 +5893,10 @@ components:
         name:
           type: string
           description: The name of the household member
-        handlaggareDays:
+        caseworkerDays:
           type: integer
           format: int32
-          description: The number of days the handläggare decided
+          description: The number of days the caseworker decided
           examples:
           - 15
         included:
@@ -5914,9 +5913,9 @@ components:
         normInterval:
           type: string
           description: The norm interval applied to the member
-        jobbstimulansAmount:
+        jobStimulusAmount:
           type: number
-          description: The jobbstimulans amount applied to the member
+          description: The job stimulus amount applied to the member
           examples:
           - 1000.0
         note:
@@ -5924,8 +5923,8 @@ components:
           description: Free-text note
     NormPersonRow:
       type: object
-      description: "One person row of the normberäkning draft (household member, process\
-        \ vs handläggare days)."
+      description: "One person row of the calculation draft (household member, process\
+        \ vs caseworker days)."
       properties:
         id:
           type: string
@@ -5933,10 +5932,10 @@ components:
           readOnly: true
         origin:
           type: string
-          description: "Who created the row: the process or a handläggare"
+          description: "Who created the row: the process or a caseworker"
           enum:
           - SYSTEM
-          - HANDLAGGARE
+          - CASEWORKER
           readOnly: true
         partyId:
           type: string
@@ -5961,17 +5960,17 @@ components:
           examples:
           - 30
           readOnly: true
-        handlaggareDays:
+        caseworkerDays:
           type: integer
           format: int32
-          description: The number of days a handläggare decided; overrides the process
+          description: The number of days a caseworker decided; overrides the process
             value when set
           examples:
           - 15
         effectiveDays:
           type: integer
           format: int32
-          description: "The number of days actually used (handläggare value when set,\
+          description: "The number of days actually used (caseworker value when set,\
             \ otherwise process value)"
           readOnly: true
         included:
@@ -5988,9 +5987,9 @@ components:
         normInterval:
           type: string
           description: The norm interval applied to the member
-        jobbstimulansAmount:
+        jobStimulusAmount:
           type: number
-          description: The jobbstimulans amount applied to the member
+          description: The job stimulus amount applied to the member
           examples:
           - 1000.0
         deleted:
@@ -6013,8 +6012,8 @@ components:
           readOnly: true
     NormIncomeInput:
       type: object
-      description: What a handläggare sends to add or patch an income row (identity
-        + handläggare-writable fields only).
+      description: What a caseworker sends to add or patch an income row (identity
+        + caseworker-writable fields only).
       properties:
         typeId:
           type: integer
@@ -6027,18 +6026,18 @@ components:
           description: The FC income-type name
           examples:
           - Bostadsbidrag
-        applicantHandlaggareAmount:
+        applicantCaseworkerAmount:
           type: number
-          description: The amount the handläggare decided for the applicant
+          description: The amount the caseworker decided for the applicant
           examples:
           - 1900.0
         applicantAmountDate:
           type: string
           format: date-time
           description: The date the applicant amount is attributed to
-        coapplicantHandlaggareAmount:
+        coapplicantCaseworkerAmount:
           type: number
-          description: The amount the handläggare decided for the co-applicant
+          description: The amount the caseworker decided for the co-applicant
           examples:
           - 1900.0
         coapplicantAmountDate:
@@ -6050,8 +6049,8 @@ components:
           description: Free-text note
     NormIncomeRow:
       type: object
-      description: "One income row of the normberäkning draft (FC income type with\
-        \ applicant/co-applicant sides, process vs handläggare amounts)."
+      description: "One income row of the calculation draft (FC income type with applicant/co-applicant\
+        \ sides, process vs caseworker amounts)."
       properties:
         id:
           type: string
@@ -6059,10 +6058,10 @@ components:
           readOnly: true
         origin:
           type: string
-          description: "Who created the row: the process or a handläggare"
+          description: "Who created the row: the process or a caseworker"
           enum:
           - SYSTEM
-          - HANDLAGGARE
+          - CASEWORKER
           readOnly: true
         typeId:
           type: integer
@@ -6084,15 +6083,15 @@ components:
           examples:
           - 1850.0
           readOnly: true
-        applicantHandlaggareAmount:
+        applicantCaseworkerAmount:
           type: number
-          description: The amount a handläggare decided for the applicant; overrides
+          description: The amount a caseworker decided for the applicant; overrides
             the process amount when set
           examples:
           - 1900.0
         applicantEffectiveAmount:
           type: number
-          description: "The amount actually used for the applicant (handläggare amount\
+          description: "The amount actually used for the applicant (caseworker amount\
             \ when set, otherwise process amount)"
           readOnly: true
         applicantAmountDate:
@@ -6106,15 +6105,15 @@ components:
           examples:
           - 1850.0
           readOnly: true
-        coapplicantHandlaggareAmount:
+        coapplicantCaseworkerAmount:
           type: number
-          description: The amount a handläggare decided for the co-applicant; overrides
+          description: The amount a caseworker decided for the co-applicant; overrides
             the process amount when set
           examples:
           - 1900.0
         coapplicantEffectiveAmount:
           type: number
-          description: "The amount actually used for the co-applicant (handläggare\
+          description: "The amount actually used for the co-applicant (caseworker\
             \ amount when set, otherwise process amount)"
           readOnly: true
         coapplicantAmountDate:
@@ -6143,8 +6142,8 @@ components:
           readOnly: true
     NormExpenseInput:
       type: object
-      description: What a handläggare sends to add or patch an expense row (identity
-        + handläggare-writable fields only).
+      description: What a caseworker sends to add or patch an expense row (identity
+        + caseworker-writable fields only).
       properties:
         costType:
           type: string
@@ -6161,9 +6160,9 @@ components:
         specification:
           type: string
           description: The cost specification
-        handlaggareAmount:
+        caseworkerAmount:
           type: number
-          description: The amount the handläggare decided
+          description: The amount the caseworker decided
           examples:
           - 1100.0
         note:
@@ -6171,8 +6170,8 @@ components:
           description: Free-text note
     NormExpenseRow:
       type: object
-      description: "One expense row of the normberäkning draft (applied cost, process\
-        \ vs handläggare amount)."
+      description: "One expense row of the calculation draft (applied cost, process\
+        \ vs caseworker amount)."
       properties:
         id:
           type: string
@@ -6180,10 +6179,10 @@ components:
           readOnly: true
         origin:
           type: string
-          description: "Who created the row: the process or a handläggare"
+          description: "Who created the row: the process or a caseworker"
           enum:
           - SYSTEM
-          - HANDLAGGARE
+          - CASEWORKER
           readOnly: true
         bucket:
           type: string
@@ -6212,19 +6211,19 @@ components:
           readOnly: true
         processAmount:
           type: number
-          description: The amount the regelverk allowed (the process amount)
+          description: The amount the rules allowed (the process amount)
           examples:
           - 1000.0
           readOnly: true
-        handlaggareAmount:
+        caseworkerAmount:
           type: number
-          description: The amount a handläggare decided; overrides the process amount
+          description: The amount a caseworker decided; overrides the process amount
             when set
           examples:
           - 1100.0
         effectiveAmount:
           type: number
-          description: "The amount actually used (handläggare amount when set, otherwise\
+          description: "The amount actually used (caseworker amount when set, otherwise\
             \ process amount)"
           readOnly: true
         deleted:
@@ -6247,7 +6246,7 @@ components:
           readOnly: true
     PaymentStatusRequest:
       type: object
-      description: Request to read whether the Lifecare utbetalning for an application
+      description: Request to read whether the Lifecare payment for an application
         month has been effectuated.
       properties:
         applicant:
@@ -6267,114 +6266,20 @@ components:
       - applicationMonth
     PaymentStatusResponse:
       type: object
-      description: Whether the Lifecare utbetalning for the application month has
-        been effectuated.
+      description: Whether the Lifecare payment for the application month has been
+        effectuated.
       properties:
         effectuated:
           type: boolean
-          description: True when a Lifecare utbetalning concerning the application
-            month has been registered
+          description: True when a Lifecare payment concerning the application month
+            has been registered
           examples:
           - "true"
         paymentDate:
           type: string
-          description: "The date the utbetalning was made (Lifecare PayDate), when\
-            \ effectuated"
+          description: "The date the payment was made (Lifecare PayDate), when effectuated"
           examples:
           - 2026-05-27
-    NormberakningRequest:
-      type: object
-      description: Request to build and post the SSBTEK-driven normberäkning for an
-        application month.
-      properties:
-        applicant:
-          type: string
-          description: The applicant's partyId (personId GUID)
-          examples:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-        coApplicant:
-          type: string
-          description: "The co-applicant's (medsökande) partyId (personId GUID), when\
-            \ applying together with a partner"
-          examples:
-          - a1b2c3d4-e5f6-7890-abcd-ef1234567890
-        applicationMonth:
-          type: string
-          description: "The application month (ISO year-month, yyyy-MM)"
-          examples:
-          - 2026-06
-          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
-        errandId:
-          type: string
-          description: "The id of the caremanagement errand the normberäkning concerns.\
-            \ When present, a Decision(RECOMMENDATION) summarising the income warnings\
-            \ is recorded on the errand for the handläggare to review; when omitted,\
-            \ the normberäkning is built without recording a recommendation."
-          examples:
-          - cb20c51f-fcf3-42c0-b613-de563634a8ec
-        classifiedIncomes:
-          type: string
-          description: "The incomes classified by the operaton regelverk (the evaluate-income-regelverk\
-            \ worker output), as JSON. When present, caremanagement maps these to\
-            \ FC income rows instead of fetching SSBTEK and evaluating the rålista\
-            \ itself."
-        unhandledIncomes:
-          type: array
-          description: "The unhandled-income warnings from the operaton regelverk,\
-            \ recorded on the errand recommendation"
-          items:
-            type: string
-        changeWarnings:
-          type: array
-          description: "The period-over-period change warnings from the operaton regelverk,\
-            \ recorded on the errand recommendation"
-          items:
-            type: string
-      required:
-      - applicant
-      - applicationMonth
-    NormberakningResponse:
-      type: object
-      description: The created Lifecare normberäkning id plus the income warnings
-        to review.
-      properties:
-        calculationId:
-          type: integer
-          format: int32
-          description: The id of the normberäkning created in Lifecare FC
-          examples:
-          - 4711
-        unhandledIncomes:
-          type: array
-          description: SSBTEK incomes that could not be auto-transferred and must
-            be reviewed
-          examples:
-          - - Bostadstillägg (NOT_ON_WHITELIST)
-          items:
-            type: string
-        changeWarnings:
-          type: array
-          description: Förmåner whose net income changed beyond the threshold between
-            the periods
-          examples:
-          - - "Bostadsbidrag: -23% (jämförelse 2400 → kontroll 1850)"
-          items:
-            type: string
-        informationComplete:
-          type: boolean
-          description: Whether this month's normberäkning covers every income type
-            the previous month's did — false means SSBTEK data is still missing and
-            the process should poll again
-          examples:
-          - "true"
-        missingIncomeTypes:
-          type: array
-          description: Previous-month income types not yet present this month (the
-            SSBTEK data still being awaited)
-          examples:
-          - - Bostadsbidrag
-          items:
-            type: string
     EligibilityRequest:
       type: object
       description: Request to evaluate which financial assistance application a citizen
@@ -6387,8 +6292,8 @@ components:
           - f47ac10b-58cc-4372-a567-0e02b2c3d479
         coApplicant:
           type: string
-          description: "The co-applicant's (medsökande) partyId (personId GUID), when\
-            \ applying together with a partner"
+          description: "The co-applicant's (co-applicant) partyId (personId GUID),\
+            \ when applying together with a partner"
           examples:
           - a1b2c3d4-e5f6-7890-abcd-ef1234567890
       required:
@@ -6420,14 +6325,14 @@ components:
           type: integer
           format: int32
           description: "Month (1-12) the suggested application concerns. Null for\
-            \ a new application (nyansökan), which has no prior period."
+            \ a new application (new application), which has no prior period."
           examples:
           - 7
         periodYear:
           type: integer
           format: int32
           description: Year the suggested application concerns. Null for a new application
-            (nyansökan).
+            (new application).
           examples:
           - 2026
         recommended:
@@ -6440,7 +6345,7 @@ components:
           type: string
           description: Human-readable Swedish label for the suggestion
           examples:
-          - Återansökan för juli 2026
+          - Renewal for July 2026
     EligibilityResponse:
       type: object
       description: "Eligibility result: which application(s) the citizen should be\
@@ -6456,7 +6361,7 @@ components:
           description: Machine-readable code for the gate that drove the suggestion
           enum:
           - NO_EXISTING_CASE
-          - CIVILSTAND_CHANGED
+          - MARITAL_STATUS_CHANGED
           - EXISTING_CASE
           - ALL_TYPES_TEST
           examples:
@@ -6465,7 +6370,7 @@ components:
           type: string
           description: Human-readable Swedish explanation of the suggestion
           examples:
-          - Öppet ärende utan beslut för innevarande månad. Föreslår återansökan.
+          - Open errand without a decision for the current month. Suggesting a renewal.
         existsInCm:
           type: boolean
           description: True when the applicant already has an EB errand in caremanagement
@@ -6473,12 +6378,12 @@ components:
           - "true"
         existsInLc:
           type: boolean
-          description: True when the applicant has an EB footprint in Lifecare (aktualisering/beslut/normberäkning)
+          description: True when the applicant has an EB footprint in Lifecare (actualisation/decision/calculation)
           examples:
           - "true"
-        civilstandMatches:
+        maritalStatusMatches:
           type: boolean
-          description: Whether the requested civilstånd (alone vs with a partner)
+          description: Whether the requested marital status (alone vs with a partner)
             matches the previous application. Null when not evaluated (no existing
             case).
           examples:
@@ -6522,7 +6427,7 @@ components:
           - 2026
         hasPreviousCalculation:
           type: boolean
-          description: True when Lifecare shows a previous normberäkning
+          description: True when Lifecare shows a previous calculation
           examples:
           - "true"
         lifecareChecked:
@@ -6533,12 +6438,105 @@ components:
           - "true"
         hasCoApplicant:
           type: boolean
-          description: True when the request included a co-applicant (medsökande)
+          description: True when the request included a co-applicant (co-applicant)
           examples:
           - "false"
+    CalculationRequest:
+      type: object
+      description: Request to build and post the SSBTEK-driven calculation for an
+        application month.
+      properties:
+        applicant:
+          type: string
+          description: The applicant's partyId (personId GUID)
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+        coApplicant:
+          type: string
+          description: "The co-applicant's (co-applicant) partyId (personId GUID),\
+            \ when applying together with a partner"
+          examples:
+          - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        applicationMonth:
+          type: string
+          description: "The application month (ISO year-month, yyyy-MM)"
+          examples:
+          - 2026-06
+          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
+        errandId:
+          type: string
+          description: "The id of the caremanagement errand the calculation concerns.\
+            \ When present, a Decision(RECOMMENDATION) summarising the income warnings\
+            \ is recorded on the errand for the caseworker to review; when omitted,\
+            \ the calculation is built without recording a recommendation."
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+        classifiedIncomes:
+          type: string
+          description: "The incomes classified by the operaton rules (the evaluate-income-rules\
+            \ worker output), as JSON. When present, caremanagement maps these to\
+            \ FC income rows instead of fetching SSBTEK and evaluating the raw list\
+            \ itself."
+        unhandledIncomes:
+          type: array
+          description: "The unhandled-income warnings from the operaton rules, recorded\
+            \ on the errand recommendation"
+          items:
+            type: string
+        changeWarnings:
+          type: array
+          description: "The period-over-period change warnings from the operaton rules,\
+            \ recorded on the errand recommendation"
+          items:
+            type: string
+      required:
+      - applicant
+      - applicationMonth
+    CalculationResponse:
+      type: object
+      description: The created Lifecare calculation id plus the income warnings to
+        review.
+      properties:
+        calculationId:
+          type: integer
+          format: int32
+          description: The id of the calculation created in Lifecare FC
+          examples:
+          - 4711
+        unhandledIncomes:
+          type: array
+          description: SSBTEK incomes that could not be auto-transferred and must
+            be reviewed
+          examples:
+          - - Bostadstillägg (NOT_ON_WHITELIST)
+          items:
+            type: string
+        changeWarnings:
+          type: array
+          description: Benefits whose net income changed beyond the threshold between
+            the periods
+          examples:
+          - - "Bostadsbidrag: -23% (comparison 2400 -> control 1850)"
+          items:
+            type: string
+        informationComplete:
+          type: boolean
+          description: Whether this month's calculation covers every income type the
+            previous month's did — false means SSBTEK data is still missing and the
+            process should poll again
+          examples:
+          - "true"
+        missingIncomeTypes:
+          type: array
+          description: Previous-month income types not yet present this month (the
+            SSBTEK data still being awaited)
+          examples:
+          - - Bostadsbidrag
+          items:
+            type: string
     ActualisationRequest:
       type: object
-      description: Request to create the Lifecare aktualisering (case intake) for
+      description: Request to create the Lifecare actualisation (case intake) for
         an application month.
       properties:
         applicant:
@@ -6548,17 +6546,17 @@ components:
           - f47ac10b-58cc-4372-a567-0e02b2c3d479
         applicationMonth:
           type: string
-          description: "The application month (ISO year-month, yyyy-MM); the aktualisering's\
+          description: "The application month (ISO year-month, yyyy-MM); the actualisation's\
             \ intake date is the first day of this month"
           examples:
           - 2026-06
           pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
         errandId:
           type: string
-          description: "The id of the caremanagement errand the aktualisering concerns.\
+          description: "The id of the caremanagement errand the actualisation concerns.\
             \ When present, a Decision(ACTUALISATION) recording the created Lifecare\
-            \ aktualisering id is added to the errand's audit trail; when omitted,\
-            \ the aktualisering is created without recording anything on an errand."
+            \ actualisation id is added to the errand's audit trail; when omitted,\
+            \ the actualisation is created without recording anything on an errand."
           examples:
           - cb20c51f-fcf3-42c0-b613-de563634a8ec
       required:
@@ -6566,12 +6564,12 @@ components:
       - applicationMonth
     ActualisationResponse:
       type: object
-      description: The created Lifecare aktualisering id.
+      description: The created Lifecare actualisation id.
       properties:
         actualisationId:
           type: integer
           format: int32
-          description: The id of the aktualisering created in Lifecare FC
+          description: The id of the actualisation created in Lifecare FC
           examples:
           - 5012
     PatchErrand:
@@ -6661,7 +6659,7 @@ components:
           - "true"
         approvedBy:
           type: string
-          description: "The handläggare approving the section (stored when approving,\
+          description: "The caseworker approving the section (stored when approving,\
             \ ignored when withdrawing)"
           examples:
           - jane02doe
@@ -6669,7 +6667,7 @@ components:
       - approved
     SectionApproval:
       type: object
-      description: A handläggare's approval of one section of the EB view (calculation
+      description: A caseworker's approval of one section of the EB view (calculation
         / payment / decision).
       properties:
         section:
@@ -6683,12 +6681,12 @@ components:
           - CALCULATION
         approved:
           type: boolean
-          description: Whether the section has been verified as approved by a handläggare
+          description: Whether the section has been verified as approved by a caseworker
           examples:
           - "true"
         approvedBy:
           type: string
-          description: The handläggare who approved the section (null while not approved)
+          description: The caseworker who approved the section (null while not approved)
           examples:
           - jane02doe
           readOnly: true
@@ -6699,7 +6697,7 @@ components:
           readOnly: true
     NormHeaderInput:
       type: object
-      description: "Handläggare edit of the normberäkning header — norm, calculation\
+      description: "Caseworker edit of the calculation header — norm, calculation\
         \ dates and custom household size."
       properties:
         normId:
@@ -6712,35 +6710,35 @@ components:
           type: string
           description: The norm type
           enum:
-          - RIKSNORM
+          - NATIONAL_NORM
           - OTHER_NORM
         calculationFromDate:
           type: string
           format: date
-          description: Calculation period start (Från)
+          description: Calculation period start (from)
         calculationToDate:
           type: string
           format: date
-          description: Calculation period end (Till)
+          description: Calculation period end (to)
         calculationDate:
           type: string
           format: date
-          description: Calculation date (Beräkningsdatum)
+          description: Calculation date (calculation date)
         hasCustomHouseholdSize:
           type: boolean
-          description: Whether a custom household size is used (Annan hushållsstorlek)
+          description: Whether a custom household size is used
           examples:
           - "true"
         householdSize:
           type: integer
           format: int32
-          description: The custom household size (Hushållsstorlek)
+          description: The custom household size
           examples:
           - 1
-    NormberakningDraft:
+    CalculationDraft:
       type: object
-      description: "The full draft normberäkning — header, the three sections (personer,\
-        \ inkomster, utgifter) and the section sums."
+      description: "The full draft calculation — header, the three sections (persons,\
+        \ incomes, expenses) and the section sums."
       properties:
         errandId:
           type: string
@@ -6772,7 +6770,7 @@ components:
           description: The date the calculation is performed
         hasCustomHouseholdSize:
           type: boolean
-          description: Whether the household size has been overridden by a handläggare
+          description: Whether the household size has been overridden by a caseworker
         householdSize:
           type: integer
           format: int32
@@ -6781,22 +6779,22 @@ components:
           - 3
         persons:
           type: array
-          description: The person rows (personer)
+          description: The person rows (persons)
           items:
             $ref: "#/components/schemas/NormPersonRow"
         incomes:
           type: array
-          description: The income rows (inkomster)
+          description: The income rows (incomes)
           items:
             $ref: "#/components/schemas/NormIncomeRow"
         expenses:
           type: array
-          description: The expense rows (utgifter)
+          description: The expense rows (expenses)
           items:
             $ref: "#/components/schemas/NormExpenseRow"
         specialExpenses:
           type: array
-          description: The special expense rows (särskilda utgifter)
+          description: The special expense rows
           items:
             $ref: "#/components/schemas/NormExpenseRow"
         incomeSum:
@@ -7037,10 +7035,10 @@ components:
         senderRole:
           type: string
           description: "Who sent the file, derived from the message direction: CLIENT\
-            \ (applicant, INBOUND) or HANDLAGGARE (caseworker, OUTBOUND)"
+            \ (applicant, INBOUND) or CASEWORKER (caseworker, OUTBOUND)"
           enum:
           - CLIENT
-          - HANDLAGGARE
+          - CASEWORKER
           examples:
           - CLIENT
           readOnly: true
@@ -7091,12 +7089,11 @@ components:
           readOnly: true
         senderRole:
           type: string
-          description: "Who the file came from: CLIENT (applicant) or HANDLAGGARE\
-            \ (caseworker). May be null for files predating the distinction or with\
-            \ no clear sender."
+          description: "Who the file came from: CLIENT (applicant) or CASEWORKER (caseworker).\
+            \ May be null for files predating the distinction or with no clear sender."
           enum:
           - CLIENT
-          - HANDLAGGARE
+          - CASEWORKER
           examples:
           - CLIENT
           readOnly: true
@@ -7154,7 +7151,7 @@ components:
           type: string
           description: Title of the errand
           examples:
-          - Ansökan om ekonomiskt bistånd
+          - Application for financial assistance
         status:
           type: string
           description: Status of the errand
@@ -7202,31 +7199,31 @@ components:
         recommendation:
           $ref: "#/components/schemas/Decision"
           description: "The most recent automated recommendation on the errand (the\
-            \ latest RECOMMENDATION decision the handläggare reviews), or null when\
+            \ latest RECOMMENDATION decision the caseworker reviews), or null when\
             \ none has been produced. Carries the recommended value and, when the\
             \ pipeline has computed it, the recommended amount/period to prefill the\
-            \ Beslut form."
+            \ Decision form."
           readOnly: true
         sectionApprovals:
           $ref: "#/components/schemas/SectionApprovals"
-          description: "The handläggare approval state of the three EB view sections\
+          description: "The caseworker approval state of the three EB view sections\
             \ (calculation, payment, decision) — whether each has been verified as\
             \ approved. Always present with all three sections."
           readOnly: true
     SectionApprovals:
       type: object
-      description: "The handläggare approval state of the three EB view sections (calculation,\
+      description: "The caseworker approval state of the three EB view sections (calculation,\
         \ payment, decision)."
       properties:
         calculation:
           $ref: "#/components/schemas/SectionApproval"
-          description: Approval of the normberäkning (beräkning) section
+          description: Approval of the calculation (calculation) section
         payment:
           $ref: "#/components/schemas/SectionApproval"
-          description: Approval of the utbetalning (payment) section
+          description: Approval of the payment (payment) section
         decision:
           $ref: "#/components/schemas/SectionApproval"
-          description: Approval of the beslut (decision) section
+          description: Approval of the decision (decision) section
     PrefilledChild:
       type: object
       description: "A child pre-filled from Lifecare for a financial assistance renewal.\
@@ -7245,12 +7242,12 @@ components:
           - Kid Andersson
     RenewalPrefill:
       type: object
-      description: "Pre-fill data for a financial assistance renewal (återansökan):\
-        \ household children read from Lifecare."
+      description: "Pre-fill data for a financial assistance renewal (renewal): household\
+        \ children read from Lifecare."
       properties:
         children:
           type: array
-          description: Children in the household from the most recent normberäkning
+          description: Children in the household from the most recent calculation
           items:
             $ref: "#/components/schemas/PrefilledChild"
         lifecareChecked:
@@ -7261,7 +7258,8 @@ components:
           - "true"
     DecisionOption:
       type: object
-      description: An allowed decision outcome (beslutsalternativ) for an errand type.
+      description: An allowed decision outcome (decision alternatives) for an errand
+        type.
       properties:
         code:
           type: string
@@ -7299,7 +7297,7 @@ components:
           type: string
           description: Human-readable display name of the type
           examples:
-          - Ekonomiskt bistånd – återansökan
+          - Financial assistance – återansökan
         statuses:
           type: array
           description: "Allowed status codes for the type, sorted"
@@ -7321,7 +7319,7 @@ components:
             $ref: "#/components/schemas/FieldDescriptor"
         decisionOptions:
           type: array
-          description: The allowed decision outcomes (beslutsalternativ) a handläggare
+          description: The allowed decision outcomes (decision alternatives) a caseworker
             may record on the type; empty when the type defines none
           items:
             $ref: "#/components/schemas/DecisionOption"

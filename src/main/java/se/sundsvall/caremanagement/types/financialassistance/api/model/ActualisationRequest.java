@@ -7,24 +7,24 @@ import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
- * Request to create the Lifecare FC aktualisering (case intake) for one applicant and one application month. The
- * aktualisering is built against the applicant's FC aktualisering proposal and created in Lifecare; the intake date is
+ * Request to create the Lifecare FC actualisation (case intake) for one applicant and one application month. The
+ * actualisation is built against the applicant's FC actualisation proposal and created in Lifecare; the intake date is
  * the first day of the application month.
  */
-@Schema(description = "Request to create the Lifecare aktualisering (case intake) for an application month.")
+@Schema(description = "Request to create the Lifecare actualisation (case intake) for an application month.")
 public class ActualisationRequest {
 
 	@Schema(description = "The applicant's partyId (personId GUID)", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", requiredMode = Schema.RequiredMode.REQUIRED)
 	@ValidUuid
 	private String applicant;
 
-	@Schema(description = "The application month (ISO year-month, yyyy-MM); the aktualisering's intake date is the first day of this month", examples = "2026-06", requiredMode = Schema.RequiredMode.REQUIRED)
+	@Schema(description = "The application month (ISO year-month, yyyy-MM); the actualisation's intake date is the first day of this month", examples = "2026-06", requiredMode = Schema.RequiredMode.REQUIRED)
 	@NotNull
 	@Pattern(regexp = "^\\d{4}-(0[1-9]|1[0-2])$", message = "must be an ISO year-month (yyyy-MM)")
 	private String applicationMonth;
 
 	@Schema(
-		description = "The id of the caremanagement errand the aktualisering concerns. When present, a Decision(ACTUALISATION) recording the created Lifecare aktualisering id is added to the errand's audit trail; when omitted, the aktualisering is created without recording anything on an errand.",
+		description = "The id of the caremanagement errand the actualisation concerns. When present, a Decision(ACTUALISATION) recording the created Lifecare actualisation id is added to the errand's audit trail; when omitted, the actualisation is created without recording anything on an errand.",
 		examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec")
 	@ValidUuid(nullable = true)
 	private String errandId;

@@ -17,17 +17,17 @@ public class Asset {
 	}, nullable = true)
 	private String assetCategory;
 
-	@Schema(description = "Free text description of the asset", examples = "Sparkonto hos Swedbank")
+	@Schema(description = "Free text description of the asset", examples = "Savings account at Swedbank")
 	private String description;
 
 	@Schema(description = "Estimated value of the asset", examples = "120000.00")
 	private BigDecimal value;
 
-	@Schema(description = "Type of real estate property", examples = "VILLA", allowableValues = {
-		"BOSTADSRATT", "VILLA", "FASTIGHET", "FRITIDSHUS"
+	@Schema(description = "Type of real estate property", examples = "HOUSE", allowableValues = {
+		"CONDOMINIUM", "HOUSE", "PROPERTY", "HOLIDAY_HOME"
 	})
 	@OneOf(value = {
-		"BOSTADSRATT", "VILLA", "FASTIGHET", "FRITIDSHUS"
+		"CONDOMINIUM", "HOUSE", "PROPERTY", "HOLIDAY_HOME"
 	}, nullable = true)
 	private String propertyType;
 
@@ -43,11 +43,11 @@ public class Asset {
 	@Schema(description = "Total sum of the company's assets", examples = "350000.00")
 	private BigDecimal companyAssetSum;
 
-	@Schema(description = "Type of vehicle", examples = "BIL", allowableValues = {
-		"BIL", "BAT", "MC", "HUSVAGN", "MOPED", "SNOSKOTER", "ANNAT"
+	@Schema(description = "Type of vehicle", examples = "CAR", allowableValues = {
+		"CAR", "BOAT", "MOTORCYCLE", "CARAVAN", "MOPED", "SNOWMOBILE", "OTHER"
 	})
 	@OneOf(value = {
-		"BIL", "BAT", "MC", "HUSVAGN", "MOPED", "SNOSKOTER", "ANNAT"
+		"CAR", "BOAT", "MOTORCYCLE", "CARAVAN", "MOPED", "SNOWMOBILE", "OTHER"
 	}, nullable = true)
 	private String vehicleType;
 

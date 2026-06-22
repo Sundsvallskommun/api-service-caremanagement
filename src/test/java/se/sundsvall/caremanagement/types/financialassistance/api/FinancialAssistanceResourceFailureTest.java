@@ -11,10 +11,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovalRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
@@ -128,10 +128,10 @@ class FinancialAssistanceResourceFailureTest {
 	}
 
 	@Test
-	void prepareNormberakning_invalidApplicant() {
+	void prepareCalculation_invalidApplicant() {
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/normberakning/prepare").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
-			.bodyValue(NormberakningRequest.create().withApplicant("123").withApplicationMonth("2026-06"))
+			.uri(uri -> uri.path(PATH + "/calculation/prepare").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.bodyValue(CalculationRequest.create().withApplicant("123").withApplicationMonth("2026-06"))
 			.exchange()
 			.expectStatus().isBadRequest();
 
@@ -139,10 +139,10 @@ class FinancialAssistanceResourceFailureTest {
 	}
 
 	@Test
-	void commitNormberakning_invalidMonth() {
+	void commitCalculation_invalidMonth() {
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/normberakning/commit").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
-			.bodyValue(NormberakningRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-13"))
+			.uri(uri -> uri.path(PATH + "/calculation/commit").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-13"))
 			.exchange()
 			.expectStatus().isBadRequest();
 

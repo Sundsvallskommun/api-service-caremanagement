@@ -11,19 +11,19 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
- * One person row of the normberäkning draft, as returned to Draken — a household member (applicant, co-applicant or
- * child). {@code processDays} is the number of days in the home the process derived (read-only); the handläggare's
- * override ({@code handlaggareDays}) and the note are editable. {@code effectiveDays} is what is used = the handläggare
+ * One person row of the calculation draft, as returned to Draken — a household member (applicant, co-applicant or
+ * child). {@code processDays} is the number of days in the home the process derived (read-only); the caseworker's
+ * override ({@code caseworkerDays}) and the note are editable. {@code effectiveDays} is what is used = the caseworker
  * value when set, otherwise the process value. Drives the norm base.
  */
-@Schema(description = "One person row of the normberäkning draft (household member, process vs handläggare days).")
+@Schema(description = "One person row of the calculation draft (household member, process vs caseworker days).")
 public class NormPersonRow {
 
 	@Schema(description = "The row id", accessMode = Schema.AccessMode.READ_ONLY)
 	private String id;
 
-	@Schema(description = "Who created the row: the process or a handläggare", allowableValues = {
-		"SYSTEM", "HANDLAGGARE"
+	@Schema(description = "Who created the row: the process or a caseworker", allowableValues = {
+		"SYSTEM", "CASEWORKER"
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String origin;
 
@@ -41,10 +41,10 @@ public class NormPersonRow {
 	@Schema(description = "The number of days in the home the process derived", examples = "30", accessMode = Schema.AccessMode.READ_ONLY)
 	private Integer processDays;
 
-	@Schema(description = "The number of days a handläggare decided; overrides the process value when set", examples = "15")
-	private Integer handlaggareDays;
+	@Schema(description = "The number of days a caseworker decided; overrides the process value when set", examples = "15")
+	private Integer caseworkerDays;
 
-	@Schema(description = "The number of days actually used (handläggare value when set, otherwise process value)", accessMode = Schema.AccessMode.READ_ONLY)
+	@Schema(description = "The number of days actually used (caseworker value when set, otherwise process value)", accessMode = Schema.AccessMode.READ_ONLY)
 	private Integer effectiveDays;
 
 	@Schema(description = "Whether the household member is included in the norm")
@@ -61,8 +61,8 @@ public class NormPersonRow {
 	@Schema(description = "The norm interval applied to the member")
 	private String normInterval;
 
-	@Schema(description = "The jobbstimulans amount applied to the member", examples = "1000.00")
-	private BigDecimal jobbstimulansAmount;
+	@Schema(description = "The job stimulus amount applied to the member", examples = "1000.00")
+	private BigDecimal jobStimulusAmount;
 
 	@Schema(description = "Whether the row is soft-deleted (excluded from the calculation, not resurrected by the daily refresh)", accessMode = Schema.AccessMode.READ_ONLY)
 	private boolean deleted;
@@ -160,16 +160,16 @@ public class NormPersonRow {
 		return this;
 	}
 
-	public Integer getHandlaggareDays() {
-		return handlaggareDays;
+	public Integer getCaseworkerDays() {
+		return caseworkerDays;
 	}
 
-	public void setHandlaggareDays(final Integer handlaggareDays) {
-		this.handlaggareDays = handlaggareDays;
+	public void setCaseworkerDays(final Integer caseworkerDays) {
+		this.caseworkerDays = caseworkerDays;
 	}
 
-	public NormPersonRow withHandlaggareDays(final Integer handlaggareDays) {
-		this.handlaggareDays = handlaggareDays;
+	public NormPersonRow withCaseworkerDays(final Integer caseworkerDays) {
+		this.caseworkerDays = caseworkerDays;
 		return this;
 	}
 
@@ -238,16 +238,16 @@ public class NormPersonRow {
 		return this;
 	}
 
-	public BigDecimal getJobbstimulansAmount() {
-		return jobbstimulansAmount;
+	public BigDecimal getJobStimulusAmount() {
+		return jobStimulusAmount;
 	}
 
-	public void setJobbstimulansAmount(final BigDecimal jobbstimulansAmount) {
-		this.jobbstimulansAmount = jobbstimulansAmount;
+	public void setJobStimulusAmount(final BigDecimal jobStimulusAmount) {
+		this.jobStimulusAmount = jobStimulusAmount;
 	}
 
-	public NormPersonRow withJobbstimulansAmount(final BigDecimal jobbstimulansAmount) {
-		this.jobbstimulansAmount = jobbstimulansAmount;
+	public NormPersonRow withJobStimulusAmount(final BigDecimal jobStimulusAmount) {
+		this.jobStimulusAmount = jobStimulusAmount;
 		return this;
 	}
 
@@ -310,16 +310,16 @@ public class NormPersonRow {
 		final NormPersonRow that = (NormPersonRow) o;
 		return deleted == that.deleted && included == that.included && Objects.equals(id, that.id) && Objects.equals(origin, that.origin)
 			&& Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
-			&& Objects.equals(processDays, that.processDays) && Objects.equals(handlaggareDays, that.handlaggareDays) && Objects.equals(effectiveDays, that.effectiveDays)
+			&& Objects.equals(processDays, that.processDays) && Objects.equals(caseworkerDays, that.caseworkerDays) && Objects.equals(effectiveDays, that.effectiveDays)
 			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
-			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobbstimulansAmount, that.jobbstimulansAmount) && Objects.equals(note, that.note)
+			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount) && Objects.equals(note, that.note)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, partyId, role, name, processDays, handlaggareDays, effectiveDays, included, deviationFromDate, deviationToDate, normInterval,
-			jobbstimulansAmount, deleted, note, created, updated);
+		return Objects.hash(id, origin, partyId, role, name, processDays, caseworkerDays, effectiveDays, included, deviationFromDate, deviationToDate, normInterval,
+			jobStimulusAmount, deleted, note, created, updated);
 	}
 
 	@Override
@@ -331,13 +331,13 @@ public class NormPersonRow {
 			", role='" + role + '\'' +
 			", name='" + name + '\'' +
 			", processDays=" + processDays +
-			", handlaggareDays=" + handlaggareDays +
+			", caseworkerDays=" + caseworkerDays +
 			", effectiveDays=" + effectiveDays +
 			", included=" + included +
 			", deviationFromDate=" + deviationFromDate +
 			", deviationToDate=" + deviationToDate +
 			", normInterval='" + normInterval + '\'' +
-			", jobbstimulansAmount=" + jobbstimulansAmount +
+			", jobStimulusAmount=" + jobStimulusAmount +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +
 			", created=" + created +

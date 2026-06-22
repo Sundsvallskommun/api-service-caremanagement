@@ -32,7 +32,7 @@ import static org.springframework.util.StringUtils.hasText;
 
 /**
  * Answers EB-routing questions about a person from Lifecare FC. Wraps {@link LifecareFcIntegration}, reading
- * aktualiseringar, beslut and normberäkningar over a lookback window ending at the reference date, and reduces them to
+ * actualisations, decision and calculationar over a lookback window ending at the reference date, and reduces them to
  * a
  * domain {@link LifecareEbCaseSummary}. FC's date strings (from/to periods) and generated DTOs never leave this module.
  *
@@ -95,8 +95,9 @@ public class LifecareEbCaseService {
 	}
 
 	/**
-	 * Whether the person is flagged with skyddad identitet in Lifecare FC — protected address (skyddad
-	 * folkbokföring/kvarskrivning) or protected registration (sekretessmarkering). Propagates the integration's
+	 * Whether the person is flagged with protected identity in Lifecare FC — protected address (skyddad
+	 * population register/retained registration) or protected registration (confidentiality marking). Propagates the
+	 * integration's
 	 * {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
 	 *
 	 * @param  personId the person's personnummer
@@ -110,13 +111,13 @@ public class LifecareEbCaseService {
 	}
 
 	/**
-	 * The household roster from the person's most recent normberäkning over the lookback window, paired with the
-	 * co-applicant flagged on the most recent beslut — the basis for an EB återansökan pre-fill. Propagates the
+	 * The household roster from the person's most recent calculation over the lookback window, paired with the
+	 * co-applicant flagged on the most recent decision — the basis for an EB renewal pre-fill. Propagates the
 	 * integration's {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
 	 *
 	 * @param  personId      the applicant's personnummer
 	 * @param  referenceDate the date the lookup is evaluated against (bounds the lookback window)
-	 * @return               the roster (applicant, co-applicant and the normberäkning members); members empty when none
+	 * @return               the roster (applicant, co-applicant and the calculation members); members empty when none
 	 */
 	public LifecareEbRoster latestRoster(final String personId, final LocalDate referenceDate) {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
@@ -145,16 +146,16 @@ public class LifecareEbCaseService {
 	}
 
 	/**
-	 * The distinct FC income-type names on the person's most recent normberäkning strictly before
+	 * The distinct FC income-type names on the person's most recent calculation strictly before
 	 * {@code applicationMonth} — the baseline for the EB "all last month's values present" completeness check. Empty when
-	 * there is no prior normberäkning. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the caller
+	 * there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the caller
 	 * decides whether to treat the lookup as best-effort.
 	 *
 	 * @param  personId         the applicant's personnummer
-	 * @param  applicationMonth the month being applied for; only normberäkningar before it are considered
-	 * @return                  the previous normberäkning's distinct income-type names, or empty
+	 * @param  applicationMonth the month being applied for; only calculationar before it are considered
+	 * @return                  the previous calculation's distinct income-type names, or empty
 	 */
-	public List<String> previousNormberakningIncomeTypes(final String personId, final YearMonth applicationMonth) {
+	public List<String> previousCalculationIncomeTypes(final String personId, final YearMonth applicationMonth) {
 		final var referenceDate = applicationMonth.atDay(1);
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
@@ -175,13 +176,13 @@ public class LifecareEbCaseService {
 	}
 
 	/**
-	 * The household on the person's most recent normberäkning strictly before {@code applicationMonth} — its person ids,
+	 * The household on the person's most recent calculation strictly before {@code applicationMonth} — its person ids,
 	 * member count and norm sum — the baseline the current application's household is compared against to warn on drift.
-	 * Empty when there is no prior normberäkning. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the
+	 * Empty when there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the
 	 * caller decides whether to treat the lookup as best-effort.
 	 *
 	 * @param  personId         the applicant's personnummer
-	 * @param  applicationMonth the month being applied for; only normberäkningar before it are considered
+	 * @param  applicationMonth the month being applied for; only calculationar before it are considered
 	 * @return                  the previous household (empty when none)
 	 */
 	public PreviousHousehold previousHousehold(final String personId, final YearMonth applicationMonth) {
@@ -206,7 +207,7 @@ public class LifecareEbCaseService {
 		final var housingCost = latest
 			.map(PersonBasedCalculationDTO::getCalculationExpensesDTOs)
 			.orElseGet(List::of).stream()
-			.filter(expense -> isBoende(expense.getType()))
+			.filter(expense -> isHousing(expense.getType()))
 			.map(LifecareEbCaseService::expenseAmount)
 			.filter(amount -> amount != null)
 			.reduce(Double::sum)
@@ -215,13 +216,13 @@ public class LifecareEbCaseService {
 		return new PreviousHousehold(personIds, personIds.size(), normSum, housingCost);
 	}
 
-	/** The previous boende cost — Hyra/boende expense rows, matched on the FC type name (best-effort). */
-	private static boolean isBoende(final String type) {
+	/** The previous housing cost — Rent/housing expense rows, matched on the FC type name (best-effort). */
+	private static boolean isHousing(final String type) {
 		if (type == null) {
 			return false;
 		}
 		final var lower = type.toLowerCase();
-		return lower.contains("hyra") || lower.contains("boende");
+		return lower.contains("rent") || lower.contains("housing");
 	}
 
 	/** The decided (approved) amount of an expense, falling back to the applied amount. */
@@ -255,14 +256,14 @@ public class LifecareEbCaseService {
 		return flagged.or(() -> ofNullable(decision.getCoApplicant()).filter(StringUtils::hasText));
 	}
 
-	/** The normberäkning with the most recent period (to/from), whose persons form the household constellation. */
+	/** The calculation with the most recent period (to/from), whose persons form the household constellation. */
 	private static Optional<PersonBasedCalculationDTO> latestCalculation(final List<PersonBasedCalculationDTO> calculations) {
 		return calculations.stream()
 			.filter(calculation -> periodOf(calculation) != null)
 			.max(comparing(LifecareEbCaseService::periodOf));
 	}
 
-	/** The representative period of a normberäkning — its {@code toDate} month, falling back to {@code fromDate}. */
+	/** The representative period of a calculation — its {@code toDate} month, falling back to {@code fromDate}. */
 	private static YearMonth periodOf(final PersonBasedCalculationDTO calculation) {
 		return toYearMonth(calculation.getToDate()).or(() -> toYearMonth(calculation.getFromDate())).orElse(null);
 	}

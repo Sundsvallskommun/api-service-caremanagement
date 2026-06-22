@@ -5,7 +5,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Result of the application-eligibility check (gemensam ingång). Carries the ordered {@link ApplicationSuggestion}s the
+ * Result of the application-eligibility check (common entry point). Carries the ordered {@link ApplicationSuggestion}s
+ * the
  * citizen can be offered (one flagged {@code recommended}) together with the facts each gate was decided from, so the
  * frontend can explain the routing.
  */
@@ -18,21 +19,21 @@ public class EligibilityResponse {
 	@Schema(description = "Machine-readable code for the gate that drove the suggestion",
 		examples = "EXISTING_CASE",
 		allowableValues = {
-			"NO_EXISTING_CASE", "CIVILSTAND_CHANGED", "EXISTING_CASE", "ALL_TYPES_TEST"
+			"NO_EXISTING_CASE", "MARITAL_STATUS_CHANGED", "EXISTING_CASE", "ALL_TYPES_TEST"
 		})
 	private String reasonCode;
 
-	@Schema(description = "Human-readable Swedish explanation of the suggestion", examples = "Öppet ärende utan beslut för innevarande månad. Föreslår återansökan.")
+	@Schema(description = "Human-readable Swedish explanation of the suggestion", examples = "Open errand without a decision for the current month. Suggesting a renewal.")
 	private String message;
 
 	@Schema(description = "True when the applicant already has an EB errand in caremanagement", examples = "true")
 	private boolean existsInCm;
 
-	@Schema(description = "True when the applicant has an EB footprint in Lifecare (aktualisering/beslut/normberäkning)", examples = "true")
+	@Schema(description = "True when the applicant has an EB footprint in Lifecare (actualisation/decision/calculation)", examples = "true")
 	private boolean existsInLc;
 
-	@Schema(description = "Whether the requested civilstånd (alone vs with a partner) matches the previous application. Null when not evaluated (no existing case).", examples = "true")
-	private Boolean civilstandMatches;
+	@Schema(description = "Whether the requested marital status (alone vs with a partner) matches the previous application. Null when not evaluated (no existing case).", examples = "true")
+	private Boolean maritalStatusMatches;
 
 	@Schema(description = "The duplicate-application window in days that was applied to the per-month check", examples = "90")
 	private int windowDays;
@@ -52,13 +53,13 @@ public class EligibilityResponse {
 	@Schema(description = "Year of the most recent Lifecare decision, when one exists", examples = "2026")
 	private Integer latestDecisionPeriodYear;
 
-	@Schema(description = "True when Lifecare shows a previous normberäkning", examples = "true")
+	@Schema(description = "True when Lifecare shows a previous calculation", examples = "true")
 	private boolean hasPreviousCalculation;
 
 	@Schema(description = "True when the Lifecare lookup succeeded. False means the answer is degraded (CM-only).", examples = "true")
 	private boolean lifecareChecked;
 
-	@Schema(description = "True when the request included a co-applicant (medsökande)", examples = "false")
+	@Schema(description = "True when the request included a co-applicant (co-applicant)", examples = "false")
 	private boolean hasCoApplicant;
 
 	public static EligibilityResponse create() {
@@ -130,16 +131,16 @@ public class EligibilityResponse {
 		return this;
 	}
 
-	public Boolean getCivilstandMatches() {
-		return civilstandMatches;
+	public Boolean getMaritalStatusMatches() {
+		return maritalStatusMatches;
 	}
 
-	public void setCivilstandMatches(final Boolean civilstandMatches) {
-		this.civilstandMatches = civilstandMatches;
+	public void setMaritalStatusMatches(final Boolean maritalStatusMatches) {
+		this.maritalStatusMatches = maritalStatusMatches;
 	}
 
-	public EligibilityResponse withCivilstandMatches(final Boolean civilstandMatches) {
-		this.civilstandMatches = civilstandMatches;
+	public EligibilityResponse withMaritalStatusMatches(final Boolean maritalStatusMatches) {
+		this.maritalStatusMatches = maritalStatusMatches;
 		return this;
 	}
 
@@ -271,14 +272,14 @@ public class EligibilityResponse {
 			&& hasPreviousCalculation == that.hasPreviousCalculation && lifecareChecked == that.lifecareChecked
 			&& hasCoApplicant == that.hasCoApplicant && Objects.equals(suggestions, that.suggestions)
 			&& Objects.equals(reasonCode, that.reasonCode) && Objects.equals(message, that.message)
-			&& Objects.equals(civilstandMatches, that.civilstandMatches)
+			&& Objects.equals(maritalStatusMatches, that.maritalStatusMatches)
 			&& Objects.equals(latestDecisionPeriodMonth, that.latestDecisionPeriodMonth)
 			&& Objects.equals(latestDecisionPeriodYear, that.latestDecisionPeriodYear);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(suggestions, reasonCode, message, existsInCm, existsInLc, civilstandMatches, windowDays,
+		return Objects.hash(suggestions, reasonCode, message, existsInCm, existsInLc, maritalStatusMatches, windowDays,
 			applicationExistsThisMonth, applicationExistsNextMonth, currentMonthDecided, latestDecisionPeriodMonth,
 			latestDecisionPeriodYear, hasPreviousCalculation, lifecareChecked, hasCoApplicant);
 	}
@@ -286,7 +287,7 @@ public class EligibilityResponse {
 	@Override
 	public String toString() {
 		return "EligibilityResponse{suggestions=" + suggestions + ", reasonCode='" + reasonCode + "', message='" + message
-			+ "', existsInCm=" + existsInCm + ", existsInLc=" + existsInLc + ", civilstandMatches=" + civilstandMatches
+			+ "', existsInCm=" + existsInCm + ", existsInLc=" + existsInLc + ", maritalStatusMatches=" + maritalStatusMatches
 			+ ", windowDays=" + windowDays + ", applicationExistsThisMonth=" + applicationExistsThisMonth
 			+ ", applicationExistsNextMonth=" + applicationExistsNextMonth + ", currentMonthDecided=" + currentMonthDecided
 			+ ", latestDecisionPeriodMonth=" + latestDecisionPeriodMonth + ", latestDecisionPeriodYear="

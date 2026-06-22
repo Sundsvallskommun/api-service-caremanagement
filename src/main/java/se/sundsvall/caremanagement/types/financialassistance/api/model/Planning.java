@@ -31,7 +31,7 @@ public class Planning {
 	}, nullable = true)
 	private String workExtent;
 
-	@Schema(description = "Description of the work", examples = "Tillsvidareanställning som undersköterska")
+	@Schema(description = "Description of the work", examples = "Permanent employment as an assistant nurse")
 	private String workDescription;
 
 	@Schema(description = "Level of sick leave (percent)", examples = "100", allowableValues = {
@@ -58,7 +58,7 @@ public class Planning {
 	}, nullable = true)
 	private String sfiCourse;
 
-	@Schema(description = "Description of other planning", examples = "Praktik via arbetsförmedlingen")
+	@Schema(description = "Description of other planning", examples = "Internship via the employment agency")
 	private String otherDescription;
 
 	public static Planning create() {

@@ -42,10 +42,10 @@ class FaNormIncomeEntityTest {
 		final var typeId = 20;
 		final var typeName = "Bostadsbidrag";
 		final var applicantProcessAmount = BigDecimal.valueOf(1850.00);
-		final var applicantHandlaggareAmount = BigDecimal.valueOf(1900.00);
+		final var applicantCaseworkerAmount = BigDecimal.valueOf(1900.00);
 		final var applicantAmountDate = now();
 		final var coapplicantProcessAmount = BigDecimal.valueOf(950.00);
-		final var coapplicantHandlaggareAmount = BigDecimal.valueOf(975.00);
+		final var coapplicantCaseworkerAmount = BigDecimal.valueOf(975.00);
 		final var coapplicantAmountDate = now();
 		final var deleted = true;
 		final var note = "note";
@@ -59,10 +59,10 @@ class FaNormIncomeEntityTest {
 			.withTypeId(typeId)
 			.withTypeName(typeName)
 			.withApplicantProcessAmount(applicantProcessAmount)
-			.withApplicantHandlaggareAmount(applicantHandlaggareAmount)
+			.withApplicantCaseworkerAmount(applicantCaseworkerAmount)
 			.withApplicantAmountDate(applicantAmountDate)
 			.withCoapplicantProcessAmount(coapplicantProcessAmount)
-			.withCoapplicantHandlaggareAmount(coapplicantHandlaggareAmount)
+			.withCoapplicantCaseworkerAmount(coapplicantCaseworkerAmount)
 			.withCoapplicantAmountDate(coapplicantAmountDate)
 			.withDeleted(deleted)
 			.withNote(note)
@@ -76,10 +76,10 @@ class FaNormIncomeEntityTest {
 		assertThat(entity.getTypeId()).isEqualTo(typeId);
 		assertThat(entity.getTypeName()).isEqualTo(typeName);
 		assertThat(entity.getApplicantProcessAmount()).isEqualTo(applicantProcessAmount);
-		assertThat(entity.getApplicantHandlaggareAmount()).isEqualTo(applicantHandlaggareAmount);
+		assertThat(entity.getApplicantCaseworkerAmount()).isEqualTo(applicantCaseworkerAmount);
 		assertThat(entity.getApplicantAmountDate()).isEqualTo(applicantAmountDate);
 		assertThat(entity.getCoapplicantProcessAmount()).isEqualTo(coapplicantProcessAmount);
-		assertThat(entity.getCoapplicantHandlaggareAmount()).isEqualTo(coapplicantHandlaggareAmount);
+		assertThat(entity.getCoapplicantCaseworkerAmount()).isEqualTo(coapplicantCaseworkerAmount);
 		assertThat(entity.getCoapplicantAmountDate()).isEqualTo(coapplicantAmountDate);
 		assertThat(entity.isDeleted()).isEqualTo(deleted);
 		assertThat(entity.getNote()).isEqualTo(note);

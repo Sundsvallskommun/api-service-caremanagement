@@ -4,16 +4,16 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * Result of reading the Lifecare utbetalning status for an application month: whether it has been effectuated and, when
+ * Result of reading the Lifecare payment status for an application month: whether it has been effectuated and, when
  * it has, the payment date.
  */
-@Schema(description = "Whether the Lifecare utbetalning for the application month has been effectuated.")
+@Schema(description = "Whether the Lifecare payment for the application month has been effectuated.")
 public class PaymentStatusResponse {
 
-	@Schema(description = "True when a Lifecare utbetalning concerning the application month has been registered", examples = "true")
+	@Schema(description = "True when a Lifecare payment concerning the application month has been registered", examples = "true")
 	private Boolean effectuated;
 
-	@Schema(description = "The date the utbetalning was made (Lifecare PayDate), when effectuated", examples = "2026-05-27")
+	@Schema(description = "The date the payment was made (Lifecare PayDate), when effectuated", examples = "2026-05-27")
 	private String paymentDate;
 
 	public static PaymentStatusResponse create() {

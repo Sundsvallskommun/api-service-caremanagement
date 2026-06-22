@@ -55,45 +55,45 @@ public class LifecareFcIntegration {
 	}
 
 	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching aktualiseringar", () -> lifecareFcClient.getActualisations(personId, startDate, endDate, pageSize, pageNr, ascending));
+		return call("fetching actualisations", () -> lifecareFcClient.getActualisations(personId, startDate, endDate, pageSize, pageNr, ascending));
 	}
 
 	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching normberäkningar", () -> lifecareFcClient.getCalculations(personId, startDate, endDate, pageSize, pageNr, ascending));
+		return call("fetching calculationar", () -> lifecareFcClient.getCalculations(personId, startDate, endDate, pageSize, pageNr, ascending));
 	}
 
 	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching beslut", () -> lifecareFcClient.getDecisions(personId, startDate, endDate, pageSize, pageNr, ascending));
+		return call("fetching decision", () -> lifecareFcClient.getDecisions(personId, startDate, endDate, pageSize, pageNr, ascending));
 	}
 
 	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching utbetalningar", () -> lifecareFcClient.getPayments(personId, startDate, endDate, pageSize, pageNr, ascending));
+		return call("fetching payments", () -> lifecareFcClient.getPayments(personId, startDate, endDate, pageSize, pageNr, ascending));
 	}
 
 	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching utredningar", () -> lifecareFcClient.getInvestigations(personId, startDate, endDate, pageSize, pageNr, ascending));
+		return call("fetching investigations", () -> lifecareFcClient.getInvestigations(personId, startDate, endDate, pageSize, pageNr, ascending));
 	}
 
 	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching insatser", () -> lifecareFcClient.getServices(personId, startDate, endDate, pageSize, pageNr, ascending));
+		return call("fetching services", () -> lifecareFcClient.getServices(personId, startDate, endDate, pageSize, pageNr, ascending));
 	}
 
 	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching verkställigheter", () -> lifecareFcClient.getExecutions(personId, startDate, endDate, pageSize, pageNr, ascending));
+		return call("fetching executions", () -> lifecareFcClient.getExecutions(personId, startDate, endDate, pageSize, pageNr, ascending));
 	}
 
 	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching resursfördelning", () -> lifecareFcClient.getResourceAllocations(personId, startDate, endDate, pageSize, pageNr, ascending));
+		return call("fetching resource allocations", () -> lifecareFcClient.getResourceAllocations(personId, startDate, endDate, pageSize, pageNr, ascending));
 	}
 
-	// ---- Write-back (aktualisering + normberäkning) and the proposals that drive it ----------------------------------
+	// ---- Write-back (actualisation + calculation) and the proposals that drive it ----------------------------------
 
 	public PersonBasedAktualiseringProposalDTO getActualisationProposal(final String personId) {
-		return call("fetching aktualisering proposal", () -> lifecareFcClient.getActualisationProposal(personId));
+		return call("fetching actualisation proposal", () -> lifecareFcClient.getActualisationProposal(personId));
 	}
 
 	public Integer createActualisation(final PostAktualiseringsBodyRequest body) {
-		return call("creating aktualisering", () -> lifecareFcClient.createActualisation(body));
+		return call("creating actualisation", () -> lifecareFcClient.createActualisation(body));
 	}
 
 	public PersonBasedCalculationProposalDTO getCalculationProposal(final String personId) {
@@ -101,12 +101,12 @@ public class LifecareFcIntegration {
 	}
 
 	public Integer createCalculation(final PostCalculationBodyRequest body) {
-		return call("creating normberäkning", () -> lifecareFcClient.createCalculation(body));
+		return call("creating calculation", () -> lifecareFcClient.createCalculation(body));
 	}
 
 	/**
 	 * Runs an FC call, translating any failure into a {@code BAD_GATEWAY} problem. The {@code action} is a short verb
-	 * phrase ("creating aktualisering") used only for the log/problem detail — never a personId or payload.
+	 * phrase ("creating actualisation") used only for the log/problem detail — never a personId or payload.
 	 */
 	private <T> T call(final String action, final Supplier<T> operation) {
 		try {

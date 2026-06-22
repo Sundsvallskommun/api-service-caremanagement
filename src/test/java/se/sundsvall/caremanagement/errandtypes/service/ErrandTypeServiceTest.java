@@ -64,7 +64,7 @@ class ErrandTypeServiceTest {
 		assertThat(schema.getTypeSlug()).isEqualTo(SLUG_NEW);
 		assertThat(schema.getDisplayName()).isEqualTo("New");
 		assertThat(schema.getApplicationType()).isEqualTo("NEW");
-		assertThat(schema.getStatuses()).containsExactly("AVSLAGEN", "INKOMMEN", "UNDER_BEREDNING");
+		assertThat(schema.getStatuses()).containsExactly("RECEIVED", "REJECTED", "UNDER_REVIEW");
 		assertThat(schema.getRoles()).extracting(RoleDefinition::code).containsExactly("APPLICANT", "CO_APPLICANT");
 		assertThat(schema.getFields()).containsExactly(FIELD);
 		assertThat(schema.getDecisionOptions()).isEmpty();
@@ -110,7 +110,7 @@ class ErrandTypeServiceTest {
 	private static ErrandTypeContribution type(final String slug, final String displayName) {
 		return ErrandTypeContribution.builder(slug)
 			.displayName(displayName)
-			.allowedStatuses("INKOMMEN", "UNDER_BEREDNING", "AVSLAGEN")
+			.allowedStatuses("RECEIVED", "UNDER_REVIEW", "REJECTED")
 			.build();
 	}
 

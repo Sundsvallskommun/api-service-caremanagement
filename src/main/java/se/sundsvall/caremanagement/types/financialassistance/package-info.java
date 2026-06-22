@@ -1,9 +1,10 @@
 /**
- * Financial assistance (ekonomiskt bistånd) type module.
+ * Financial assistance (financial assistance) type module.
  *
  * <p>
  * The EB errand type. One {@code financial-assistance} errand carries a citizen's monthly application for financial aid
- * (nyansökan / återansökan / tilläggsansökan, discriminated by {@code applicationType}). The strongly-typed application
+ * (new application / renewal / supplementary application, discriminated by {@code applicationType}). The strongly-typed
+ * application
  * data — household children, costs, incomes, pending benefits, assets, per-person planning and payment — lives on this
  * module's own {@code errand_financial_assistance*} tables, sharing the primary key with {@code errand.id}. No
  * parameters blob.

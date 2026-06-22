@@ -22,8 +22,8 @@ class ClassifiedIncomeToFcMapperTest {
 			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(30).name("Dagersättning"));
 	}
 
-	private static ClassifiedIncome classified(final String forman, final String normberakning, final String atgard, final String amount, final ApplicantRole role) {
-		return new ClassifiedIncome(new SsbtekIncome(forman, null, "Månad", new BigDecimal(amount), LocalDate.of(2026, 5, 15), role), atgard, normberakning, false, "note");
+	private static ClassifiedIncome classified(final String benefit, final String calculation, final String atgard, final String amount, final ApplicantRole role) {
+		return new ClassifiedIncome(new SsbtekIncome(benefit, null, "Månad", new BigDecimal(amount), LocalDate.of(2026, 5, 15), role), atgard, calculation, false, "note");
 	}
 
 	@Test

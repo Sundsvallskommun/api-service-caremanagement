@@ -29,7 +29,7 @@ class MessageMapperTest {
 			.withAuthor("author")
 			.withInReplyToId("r1")
 			.withCreated(FIXED_TIMESTAMP);
-		final var attachment = MessageAttachmentEntity.create().withId("a1").withMessageId("m1").withFileName("f.pdf").withMimeType("application/pdf").withFileSize(4).withSenderRole("HANDLAGGARE");
+		final var attachment = MessageAttachmentEntity.create().withId("a1").withMessageId("m1").withFileName("f.pdf").withMimeType("application/pdf").withFileSize(4).withSenderRole("CASEWORKER");
 
 		final var message = MessageMapper.toMessage(entity, List.of(attachment));
 
@@ -44,7 +44,7 @@ class MessageMapperTest {
 		assertThat(message.getAttachments()).hasSize(1);
 		assertThat(message.getAttachments().getFirst().getId()).isEqualTo("a1");
 		assertThat(message.getAttachments().getFirst().getFileName()).isEqualTo("f.pdf");
-		assertThat(message.getAttachments().getFirst().getSenderRole()).isEqualTo("HANDLAGGARE");
+		assertThat(message.getAttachments().getFirst().getSenderRole()).isEqualTo("CASEWORKER");
 	}
 
 	@Test
@@ -115,7 +115,7 @@ class MessageMapperTest {
 		final var entity = MessageMapper.toMessageAttachmentEntity("m1", "OUTBOUND", file);
 
 		assertThat(entity).isNotNull();
-		assertThat(entity.getSenderRole()).isEqualTo("HANDLAGGARE");
+		assertThat(entity.getSenderRole()).isEqualTo("CASEWORKER");
 	}
 
 	@Test

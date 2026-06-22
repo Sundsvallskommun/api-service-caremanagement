@@ -9,20 +9,20 @@ import org.springframework.format.annotation.DateTimeFormat;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
- * One expense row of the normberäkning draft, as returned to Draken — a single applied cost. {@code appliedAmount} is
- * what the citizen asked for and {@code processAmount} what the regelverk allowed (both read-only); the handläggare's
- * override ({@code handlaggareAmount}) and the note are editable. {@code effectiveAmount} is what is posted to Lifecare
+ * One expense row of the calculation draft, as returned to Draken — a single applied cost. {@code appliedAmount} is
+ * what the citizen asked for and {@code processAmount} what the rules allowed (both read-only); the caseworker's
+ * override ({@code caseworkerAmount}) and the note are editable. {@code effectiveAmount} is what is posted to Lifecare
  * =
- * the handläggare amount when set, otherwise the process amount. Added to the norm.
+ * the caseworker amount when set, otherwise the process amount. Added to the norm.
  */
-@Schema(description = "One expense row of the normberäkning draft (applied cost, process vs handläggare amount).")
+@Schema(description = "One expense row of the calculation draft (applied cost, process vs caseworker amount).")
 public class NormExpenseRow {
 
 	@Schema(description = "The row id", accessMode = Schema.AccessMode.READ_ONLY)
 	private String id;
 
-	@Schema(description = "Who created the row: the process or a handläggare", allowableValues = {
-		"SYSTEM", "HANDLAGGARE"
+	@Schema(description = "Who created the row: the process or a caseworker", allowableValues = {
+		"SYSTEM", "CASEWORKER"
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String origin;
 
@@ -43,13 +43,13 @@ public class NormExpenseRow {
 	@Schema(description = "The amount the citizen applied for", examples = "1200.00", accessMode = Schema.AccessMode.READ_ONLY)
 	private BigDecimal appliedAmount;
 
-	@Schema(description = "The amount the regelverk allowed (the process amount)", examples = "1000.00", accessMode = Schema.AccessMode.READ_ONLY)
+	@Schema(description = "The amount the rules allowed (the process amount)", examples = "1000.00", accessMode = Schema.AccessMode.READ_ONLY)
 	private BigDecimal processAmount;
 
-	@Schema(description = "The amount a handläggare decided; overrides the process amount when set", examples = "1100.00")
-	private BigDecimal handlaggareAmount;
+	@Schema(description = "The amount a caseworker decided; overrides the process amount when set", examples = "1100.00")
+	private BigDecimal caseworkerAmount;
 
-	@Schema(description = "The amount actually used (handläggare amount when set, otherwise process amount)", accessMode = Schema.AccessMode.READ_ONLY)
+	@Schema(description = "The amount actually used (caseworker amount when set, otherwise process amount)", accessMode = Schema.AccessMode.READ_ONLY)
 	private BigDecimal effectiveAmount;
 
 	@Schema(description = "Whether the row is soft-deleted (excluded from the calculation, not resurrected by the daily refresh)", accessMode = Schema.AccessMode.READ_ONLY)
@@ -174,16 +174,16 @@ public class NormExpenseRow {
 		return this;
 	}
 
-	public BigDecimal getHandlaggareAmount() {
-		return handlaggareAmount;
+	public BigDecimal getCaseworkerAmount() {
+		return caseworkerAmount;
 	}
 
-	public void setHandlaggareAmount(final BigDecimal handlaggareAmount) {
-		this.handlaggareAmount = handlaggareAmount;
+	public void setCaseworkerAmount(final BigDecimal caseworkerAmount) {
+		this.caseworkerAmount = caseworkerAmount;
 	}
 
-	public NormExpenseRow withHandlaggareAmount(final BigDecimal handlaggareAmount) {
-		this.handlaggareAmount = handlaggareAmount;
+	public NormExpenseRow withCaseworkerAmount(final BigDecimal caseworkerAmount) {
+		this.caseworkerAmount = caseworkerAmount;
 		return this;
 	}
 
@@ -260,14 +260,14 @@ public class NormExpenseRow {
 		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(origin, that.origin) && Objects.equals(bucket, that.bucket)
 			&& Objects.equals(costType, that.costType) && Objects.equals(otherSubType, that.otherSubType) && Objects.equals(specification, that.specification)
 			&& Objects.equals(appliedAmount, that.appliedAmount)
-			&& Objects.equals(processAmount, that.processAmount) && Objects.equals(handlaggareAmount, that.handlaggareAmount)
+			&& Objects.equals(processAmount, that.processAmount) && Objects.equals(caseworkerAmount, that.caseworkerAmount)
 			&& Objects.equals(effectiveAmount, that.effectiveAmount) && Objects.equals(note, that.note) && Objects.equals(created, that.created)
 			&& Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, bucket, costType, otherSubType, specification, appliedAmount, processAmount, handlaggareAmount, effectiveAmount, deleted, note,
+		return Objects.hash(id, origin, bucket, costType, otherSubType, specification, appliedAmount, processAmount, caseworkerAmount, effectiveAmount, deleted, note,
 			created, updated);
 	}
 
@@ -282,7 +282,7 @@ public class NormExpenseRow {
 			", specification='" + specification + '\'' +
 			", appliedAmount=" + appliedAmount +
 			", processAmount=" + processAmount +
-			", handlaggareAmount=" + handlaggareAmount +
+			", caseworkerAmount=" + caseworkerAmount +
 			", effectiveAmount=" + effectiveAmount +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +

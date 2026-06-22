@@ -4,12 +4,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * One allowed decision outcome (beslutsalternativ) for an errand type — the options a handläggare may pick from when
+ * One allowed decision outcome (decision alternatives) for an errand type — the options a caseworker may pick from when
  * recording a {@code Decision} on the case. {@code carriesAmount} tells the frontend whether the option expects a
  * belopp
  * (e.g. a granted amount) or implies a zero amount (e.g. a rejection), so the Beslut form can react.
  */
-@Schema(description = "An allowed decision outcome (beslutsalternativ) for an errand type.")
+@Schema(description = "An allowed decision outcome (decision alternatives) for an errand type.")
 public class DecisionOption {
 
 	@Schema(description = "The decision outcome code, stored on the Decision row's value", examples = "BIFALL")

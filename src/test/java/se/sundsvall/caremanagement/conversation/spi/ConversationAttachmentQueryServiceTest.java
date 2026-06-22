@@ -44,7 +44,7 @@ class ConversationAttachmentQueryServiceTest {
 	void listForErrandMapsAllAttachments() {
 		when(attachmentRepositoryMock.findByErrandIdOrderByCreatedAsc(ERRAND_ID)).thenReturn(List.of(
 			MessageAttachmentEntity.create().withId("a1").withMessageId("m1").withFileName("intyg.pdf").withMimeType("application/pdf").withFileSize(4).withSenderRole("CLIENT").withCreated(FIXED_TIMESTAMP),
-			MessageAttachmentEntity.create().withId("a2").withMessageId("m2").withFileName("beslut.pdf").withMimeType("application/pdf").withFileSize(8).withSenderRole("HANDLAGGARE").withCreated(FIXED_TIMESTAMP)));
+			MessageAttachmentEntity.create().withId("a2").withMessageId("m2").withFileName("beslut.pdf").withMimeType("application/pdf").withFileSize(8).withSenderRole("CASEWORKER").withCreated(FIXED_TIMESTAMP)));
 
 		final var result = service.listForErrand(ERRAND_ID);
 
@@ -56,14 +56,14 @@ class ConversationAttachmentQueryServiceTest {
 		assertThat(result.getFirst().fileSize()).isEqualTo(4);
 		assertThat(result.getFirst().senderRole()).isEqualTo("CLIENT");
 		assertThat(result.getFirst().created()).isEqualTo(FIXED_TIMESTAMP);
-		assertThat(result.getLast().senderRole()).isEqualTo("HANDLAGGARE");
+		assertThat(result.getLast().senderRole()).isEqualTo("CASEWORKER");
 	}
 
 	@Test
 	void clientAttachmentContentsForErrandReturnsClientBytesOnly() {
 		when(attachmentRepositoryMock.findByErrandIdOrderByCreatedAsc(ERRAND_ID)).thenReturn(List.of(
 			MessageAttachmentEntity.create().withId("a1").withFileName("intyg.pdf").withMimeType("application/pdf").withSenderRole("CLIENT"),
-			MessageAttachmentEntity.create().withId("a2").withFileName("beslut.pdf").withMimeType("application/pdf").withSenderRole("HANDLAGGARE")));
+			MessageAttachmentEntity.create().withId("a2").withFileName("beslut.pdf").withMimeType("application/pdf").withSenderRole("CASEWORKER")));
 		when(attachmentDataRepositoryMock.findByMessageAttachmentId("a1")).thenReturn(Optional.of(
 			MessageAttachmentDataEntity.create().withFile(new MariaDbBlob("hello".getBytes()))));
 
@@ -73,7 +73,7 @@ class ConversationAttachmentQueryServiceTest {
 		assertThat(result.getFirst().fileName()).isEqualTo("intyg.pdf");
 		assertThat(result.getFirst().mimeType()).isEqualTo("application/pdf");
 		assertThat(new String(result.getFirst().content(), UTF_8)).isEqualTo("hello");
-		// The handläggare attachment's blob is never loaded.
+		// The caseworker attachment's blob is never loaded.
 		verify(attachmentDataRepositoryMock, never()).findByMessageAttachmentId("a2");
 	}
 

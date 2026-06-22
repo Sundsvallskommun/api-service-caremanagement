@@ -52,7 +52,7 @@ class ProcessMessageResource {
 
 	@PostMapping(consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Send a BPMN message to the running process for an errand",
-		description = "Correlates a BPMN message (e.g. a handläggare's APPROVE/REJECT decision, an external event) to the process instance whose business key equals this errand id. The matching receive task or message catch event resumes with the supplied process variables.",
+		description = "Correlates a BPMN message (e.g. a caseworker's APPROVE/REJECT decision, an external event) to the process instance whose business key equals this errand id. The matching receive task or message catch event resumes with the supplied process variables.",
 		responses = {
 			@ApiResponse(responseCode = "204", description = "Message correlated", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "No process instance is waiting for this message on this errand", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))

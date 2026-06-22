@@ -31,13 +31,13 @@ class ApplicationSuggestionTest {
 			.withPeriodMonth(7)
 			.withPeriodYear(2026)
 			.withRecommended(true)
-			.withLabel("Återansökan för juli 2026");
+			.withLabel("Renewal for July 2026");
 
 		assertThat(suggestion.getTypeSlug()).isEqualTo("financial-assistance-renewal");
 		assertThat(suggestion.getApplicationType()).isEqualTo("RENEWAL");
 		assertThat(suggestion.getPeriodMonth()).isEqualTo(7);
 		assertThat(suggestion.getPeriodYear()).isEqualTo(2026);
 		assertThat(suggestion.isRecommended()).isTrue();
-		assertThat(suggestion.getLabel()).isEqualTo("Återansökan för juli 2026");
+		assertThat(suggestion.getLabel()).isEqualTo("Renewal for July 2026");
 	}
 }

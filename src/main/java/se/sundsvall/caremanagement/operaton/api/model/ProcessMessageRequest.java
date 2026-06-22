@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @Schema(
-	description = "Request body for correlating a BPMN message to the process instance currently running for an errand. The errand id is used as the process business key, so the message is delivered to that specific process. Use this whenever something outside the process (a handläggare action, an external event, an admin override) needs to resume or interact with a running process instance.")
+	description = "Request body for correlating a BPMN message to the process instance currently running for an errand. The errand id is used as the process business key, so the message is delivered to that specific process. Use this whenever something outside the process (a caseworker action, an external event, an admin override) needs to resume or interact with a running process instance.")
 public class ProcessMessageRequest {
 
 	@Schema(description = "BPMN message name, matching the `name` attribute on the `<bpmn:message>` element the receive task references", examples = "PaymentDecisionReceived")

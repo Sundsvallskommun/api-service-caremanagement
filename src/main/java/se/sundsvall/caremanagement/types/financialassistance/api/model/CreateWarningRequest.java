@@ -7,7 +7,7 @@ import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
 /**
  * Request to create an EB income warning directly on an errand — the careM "temp stage", with no Lifecare round-trip.
- * The warning is created {@code OPEN}; a handläggare acknowledges or closes it via the warning PATCH endpoint.
+ * The warning is created {@code OPEN}; a caseworker acknowledges or closes it via the warning PATCH endpoint.
  */
 @Schema(description = "Request to create an EB income warning on an errand (no Lifecare round-trip).")
 public class CreateWarningRequest {
@@ -21,11 +21,11 @@ public class CreateWarningRequest {
 	})
 	private String type;
 
-	@Schema(description = "Human-readable warning text", examples = "Swish-insättningar: 2 400 kr – ej överförd, kräver manuell bedömning", requiredMode = Schema.RequiredMode.REQUIRED)
+	@Schema(description = "Human-readable warning text", examples = "Swish deposits: 2 400 kr - not transferred, requires manual assessment", requiredMode = Schema.RequiredMode.REQUIRED)
 	@NotBlank
 	private String message;
 
-	@Schema(description = "A stable key for the income the warning concerns (förmån/inkomsttyp) — the dedup key. Derived from the message when omitted.", examples = "Swish-insättningar")
+	@Schema(description = "A stable key for the income the warning concerns (benefit/incomeType) — the dedup key. Derived from the message when omitted.", examples = "Swish deposits")
 	private String sourceKey;
 
 	public static CreateWarningRequest create() {

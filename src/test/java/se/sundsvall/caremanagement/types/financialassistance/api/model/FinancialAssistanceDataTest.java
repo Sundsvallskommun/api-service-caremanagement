@@ -37,8 +37,8 @@ class FinancialAssistanceDataTest {
 			.withPeriodMonth(6)
 			.withPeriodYear(2026)
 			.withPeriodChoice("CURRENT_MONTH")
-			.withNormType("RIKSNORM")
-			.withOtherBenefitDescription("Etableringsersättning")
+			.withNormType("NATIONAL_NORM")
+			.withOtherBenefitDescription("Establishment benefit")
 			.withLivelihoodDescription("Söker arbete")
 			.withHasChildrenUnder21(true)
 			.withChildrenResidenceChanged(false)
@@ -53,7 +53,7 @@ class FinancialAssistanceDataTest {
 			.withHasPendingBenefits(false)
 			.withHasAssets(false)
 			.withStaysInMunicipality(true)
-			.withStayDescription("Bor på folkbokföringsadressen")
+			.withStayDescription("Lives at the registered address")
 			.withAttestation(true)
 			.withAttestedAt(ATTESTED_AT)
 			.withChildren(CHILDREN)
@@ -71,8 +71,8 @@ class FinancialAssistanceDataTest {
 		assertThat(data.getPeriodMonth()).isEqualTo(6);
 		assertThat(data.getPeriodYear()).isEqualTo(2026);
 		assertThat(data.getPeriodChoice()).isEqualTo("CURRENT_MONTH");
-		assertThat(data.getNormType()).isEqualTo("RIKSNORM");
-		assertThat(data.getOtherBenefitDescription()).isEqualTo("Etableringsersättning");
+		assertThat(data.getNormType()).isEqualTo("NATIONAL_NORM");
+		assertThat(data.getOtherBenefitDescription()).isEqualTo("Establishment benefit");
 		assertThat(data.getLivelihoodDescription()).isEqualTo("Söker arbete");
 		assertThat(data.getHasChildrenUnder21()).isTrue();
 		assertThat(data.getChildrenResidenceChanged()).isFalse();
@@ -87,7 +87,7 @@ class FinancialAssistanceDataTest {
 		assertThat(data.getHasPendingBenefits()).isFalse();
 		assertThat(data.getHasAssets()).isFalse();
 		assertThat(data.getStaysInMunicipality()).isTrue();
-		assertThat(data.getStayDescription()).isEqualTo("Bor på folkbokföringsadressen");
+		assertThat(data.getStayDescription()).isEqualTo("Lives at the registered address");
 		assertThat(data.getAttestation()).isTrue();
 		assertThat(data.getAttestedAt()).isEqualTo(ATTESTED_AT);
 		assertThat(data.getChildren()).isEqualTo(CHILDREN);

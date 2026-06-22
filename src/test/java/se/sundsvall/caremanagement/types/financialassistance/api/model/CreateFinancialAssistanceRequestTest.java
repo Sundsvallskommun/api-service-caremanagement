@@ -11,15 +11,15 @@ class CreateFinancialAssistanceRequestTest {
 	@Test
 	void builderMethods() {
 		final var request = CreateFinancialAssistanceRequest.create()
-			.withTitle("Ansökan om ekonomiskt bistånd")
-			.withDescription("Återansökan om hyra")
+			.withTitle("Application for financial assistance")
+			.withDescription("Renewal om rent")
 			.withPriority("HIGH")
 			.withReporterUserId("joe01doe")
 			.withAssignedUserId("jane02doe")
 			.withData(DATA);
 
-		assertThat(request.getTitle()).isEqualTo("Ansökan om ekonomiskt bistånd");
-		assertThat(request.getDescription()).isEqualTo("Återansökan om hyra");
+		assertThat(request.getTitle()).isEqualTo("Application for financial assistance");
+		assertThat(request.getDescription()).isEqualTo("Renewal om rent");
 		assertThat(request.getPriority()).isEqualTo("HIGH");
 		assertThat(request.getReporterUserId()).isEqualTo("joe01doe");
 		assertThat(request.getAssignedUserId()).isEqualTo("jane02doe");

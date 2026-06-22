@@ -7,7 +7,7 @@ import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 /**
  * Request for the financial-assistance application-eligibility check. The applicant is mandatory; a co-applicant
  * present
- * here means the citizen is applying together with a partner (medsökande), which is matched against the constellation
+ * here means the citizen is applying together with a partner (co-applicant), which is matched against the constellation
  * of
  * any earlier application/decision.
  */
@@ -18,7 +18,7 @@ public class EligibilityRequest {
 	@ValidUuid
 	private String applicant;
 
-	@Schema(description = "The co-applicant's (medsökande) partyId (personId GUID), when applying together with a partner", examples = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+	@Schema(description = "The co-applicant's (co-applicant) partyId (personId GUID), when applying together with a partner", examples = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 	@ValidUuid(nullable = true)
 	private String coApplicant;
 

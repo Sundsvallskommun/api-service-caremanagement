@@ -19,7 +19,7 @@ public class ErrandTypeSchema {
 	@Schema(description = "The application-type variant the slug maps to, when the type exposes one; null otherwise", examples = "RENEWAL")
 	private String applicationType;
 
-	@Schema(description = "Human-readable display name of the type", examples = "Ekonomiskt bistånd – återansökan")
+	@Schema(description = "Human-readable display name of the type", examples = "Financial assistance – återansökan")
 	private String displayName;
 
 	@Schema(description = "Allowed status codes for the type, sorted", examples = "[\"AVSLAGEN\",\"BEVILJAD\",\"INKOMMEN\"]")
@@ -31,7 +31,7 @@ public class ErrandTypeSchema {
 	@Schema(description = "The fields the type's data payload should carry, as form guidance")
 	private List<FieldDescriptor> fields;
 
-	@Schema(description = "The allowed decision outcomes (beslutsalternativ) a handläggare may record on the type; empty when the type defines none")
+	@Schema(description = "The allowed decision outcomes (decision alternatives) a caseworker may record on the type; empty when the type defines none")
 	private List<DecisionOption> decisionOptions;
 
 	public static ErrandTypeSchema create() {

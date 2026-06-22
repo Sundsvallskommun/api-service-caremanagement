@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.lifecare.service;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefc.CommonCalculationExpenseDTO;
 import generated.se.sundsvall.lifecarefc.CommonCalculationIncomeDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationDTO;
@@ -224,7 +225,7 @@ class LifecareEbCaseServiceTest {
 	}
 
 	@Test
-	void previousNormberakningIncomeTypesFromLatestCalcBeforeApplicationMonth() {
+	void previousCalculationIncomeTypesFromLatestCalcBeforeApplicationMonth() {
 		final var older = new PersonBasedCalculationDTO().toDate("2026-03-31")
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Aktivitetsstöd"));
 		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
@@ -236,16 +237,52 @@ class LifecareEbCaseServiceTest {
 		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, thisMonth)));
 
-		final var types = service().previousNormberakningIncomeTypes(APPLICANT, YearMonth.of(2026, 6));
+		final var types = service().previousCalculationIncomeTypes(APPLICANT, YearMonth.of(2026, 6));
 
 		assertThat(types).containsExactlyInAnyOrder("Bostadsbidrag", "Dagersättning");
 	}
 
 	@Test
-	void previousNormberakningIncomeTypesEmptyWhenNoPriorCalc() {
+	void previousCalculationIncomeTypesEmptyWhenNoPriorCalc() {
 		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
 
-		assertThat(service().previousNormberakningIncomeTypes(APPLICANT, YearMonth.of(2026, 6))).isEmpty();
+		assertThat(service().previousCalculationIncomeTypes(APPLICANT, YearMonth.of(2026, 6))).isEmpty();
+	}
+
+	@Test
+	void previousHouseholdFromLatestCalcBeforeApplicationMonthWithHousingCostAndNormSum() {
+		final var older = new PersonBasedCalculationDTO().toDate("2026-03-31")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("198001019999"));
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.normSum(12345.0)
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("201801012380"))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("  ")) // blank filtered out
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Hyra/Rent").approvedAmount(6000.0))
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Housing").appliedAmount(1500.0)) // approved null -> applied
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Electricity").approvedAmount(900.0)); // not housing
+		final var current = new PersonBasedCalculationDTO().toDate("2026-06-30"); // not strictly before June -> excluded
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, current)));
+
+		final var household = service().previousHousehold(APPLICANT, YearMonth.of(2026, 6));
+
+		assertThat(household.personIds()).containsExactlyInAnyOrder(APPLICANT, "201801012380");
+		assertThat(household.memberCount()).isEqualTo(2);
+		assertThat(household.normSum()).isEqualTo(12345.0);
+		assertThat(household.housingCost()).isEqualTo(7500.0); // 6000 (approved) + 1500 (applied fallback)
+	}
+
+	@Test
+	void previousHouseholdEmptyWhenNoPriorCalculation() {
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
+
+		final var household = service().previousHousehold(APPLICANT, YearMonth.of(2026, 6));
+
+		assertThat(household.personIds()).isEmpty();
+		assertThat(household.memberCount()).isZero();
+		assertThat(household.normSum()).isNull();
+		assertThat(household.housingCost()).isNull();
 	}
 
 	@Test

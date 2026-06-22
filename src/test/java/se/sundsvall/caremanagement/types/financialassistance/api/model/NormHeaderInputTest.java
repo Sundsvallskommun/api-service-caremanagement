@@ -27,7 +27,7 @@ class NormHeaderInputTest {
 	@Test
 	void testBuilderMethods() {
 		final var normId = 5;
-		final var normType = "RIKSNORM";
+		final var normType = "NATIONAL_NORM";
 		final var calculationFromDate = LocalDate.of(2026, 6, 1);
 		final var calculationToDate = LocalDate.of(2026, 6, 30);
 		final var calculationDate = LocalDate.of(2026, 6, 15);

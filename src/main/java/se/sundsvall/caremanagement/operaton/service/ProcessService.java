@@ -53,7 +53,7 @@ public class ProcessService {
 
 	/**
 	 * Correlates a BPMN message to the process instance identified by {@code businessKey}. Used to resume a
-	 * process waiting on a receive task or message catch event, e.g. when a handläggare clicks Approve/Reject.
+	 * process waiting on a receive task or message catch event, e.g. when a caseworker clicks Approve/Reject.
 	 * The {@code variables} map (if non-null) is set on the process instance as part of the correlation.
 	 */
 	public void correlateMessage(final String municipalityId, final String messageName, final String businessKey, final Map<String, Object> variables) {
@@ -65,7 +65,7 @@ public class ProcessService {
 
 	/**
 	 * Evaluate a deployed DMN decision in the engine and return its result rows (one map of output name → value per
-	 * matched rule). Used by type modules to run modeler-editable regelverk — e.g. the normberäkning expense cap — without
+	 * matched rule). Used by type modules to run modeler-editable rules — e.g. the calculation expense cap — without
 	 * reaching into the Operaton REST client directly. Returns an empty list when the decision produces no rows.
 	 */
 	public List<Map<String, Object>> evaluateDecision(final String municipalityId, final String decisionKey, final Map<String, Object> variables) {

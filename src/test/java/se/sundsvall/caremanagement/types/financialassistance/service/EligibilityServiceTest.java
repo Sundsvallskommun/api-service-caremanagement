@@ -33,8 +33,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
-import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_CIVILSTAND_CHANGED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_EXISTING_CASE;
+import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_MARITAL_STATUS_CHANGED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_NO_EXISTING_CASE;
 
 @ExtendWith(MockitoExtension.class)
@@ -110,7 +110,7 @@ class EligibilityServiceTest {
 		lenient().when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(CO_APPLICANT)).thenReturn(List.of());
 	}
 
-	// ---- 0) Skyddad identitet gate -----------------------------------------------------------------------------------
+	// ---- 0) Protected identity gate -----------------------------------------------------------------------------------
 
 	@Test
 	void protectedApplicantViaCitizenYieldsEmptySuggestions() {
@@ -137,7 +137,7 @@ class EligibilityServiceTest {
 
 	@Test
 	void protectedCoApplicantYieldsEmptySuggestions() {
-		// Applicant is fine, but the medsökande has skyddad identitet → the joint application is blocked too.
+		// Applicant is fine, but the co-applicant has protected identity → the joint application is blocked too.
 		when(citizenServiceMock.hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT)).thenReturn(false);
 		when(citizenServiceMock.hasProtectedIdentity(MUNICIPALITY_ID, CO_APPLICANT)).thenReturn(true);
 
@@ -211,11 +211,12 @@ class EligibilityServiceTest {
 		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_EXISTING_CASE);
 	}
 
-	// ---- 2) Civilstånd gate ------------------------------------------------------------------------------------------
+	// ---- 2) Marital status gate
+	// ------------------------------------------------------------------------------------------
 
 	@Test
 	void civilstandChangedSuggestsNew() {
-		// Previous CM application was solo; now applying together → civilstånd changed → NY.
+		// Previous CM application was solo; now applying together → marital status changed → NY.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
 		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareEbCaseSummary.none());
 		when(lifecareEbCaseServiceMock.summarize(eq(CO_APPLICANT_PNR), any()))
@@ -223,22 +224,22 @@ class EligibilityServiceTest {
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
 
-		assertThat(response.getReasonCode()).isEqualTo(REASON_CIVILSTAND_CHANGED);
-		assertThat(response.getCivilstandMatches()).isFalse();
+		assertThat(response.getReasonCode()).isEqualTo(REASON_MARITAL_STATUS_CHANGED);
+		assertThat(response.getMaritalStatusMatches()).isFalse();
 		assertThat(response.isHasCoApplicant()).isTrue();
 		assertThat(response.getSuggestions()).singleElement().satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_NEW));
 	}
 
 	@Test
 	void sameCivilstandTogetherPasses() {
-		// Previous CM application also had a co-applicant → same civilstånd → continue to month logic.
+		// Previous CM application also had a co-applicant → same marital status → continue to month logic.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT), person(ROLE_CO_APPLICANT, CO_APPLICANT));
 		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareEbCaseSummary.none());
 		when(lifecareEbCaseServiceMock.summarize(eq(CO_APPLICANT_PNR), any())).thenReturn(LifecareEbCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
 
-		assertThat(response.getCivilstandMatches()).isTrue();
+		assertThat(response.getMaritalStatusMatches()).isTrue();
 		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
 	}
 
@@ -276,7 +277,7 @@ class EligibilityServiceTest {
 		final var primary = recommended(response.getSuggestions());
 		assertThat(primary.getTypeSlug()).isEqualTo(SLUG_RENEWAL);
 		assertThat(primary.getPeriodMonth()).isEqualTo(NEXT.getMonthValue());
-		// the non-recommended option is a tilläggsansökan for the current month
+		// the non-recommended option is a supplementary application for the current month
 		assertThat(response.getSuggestions()).anySatisfy(s -> {
 			assertThat(s.getTypeSlug()).isEqualTo(SLUG_SUPPLEMENTARY);
 			assertThat(s.getPeriodMonth()).isEqualTo(CURRENT.getMonthValue());
@@ -285,7 +286,7 @@ class EligibilityServiceTest {
 
 	@Test
 	void cmApplicationForThisMonthYieldsSupplement() {
-		// A CM application already exists for the current month within the window → tilläggsansökan this month.
+		// A CM application already exists for the current month within the window → supplementary application this month.
 		cmErrandWithPeriod(CURRENT, OffsetDateTime.now(), person(ROLE_APPLICANT, APPLICANT));
 		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
 			.thenReturn(new LifecareEbCaseSummary(true, Set.of(), null, false, false));
@@ -300,7 +301,7 @@ class EligibilityServiceTest {
 
 	@Test
 	void cmApplicationOutsideWindowDoesNotCount() {
-		// Same-month CM application but created long ago → outside 90-day window → still återansökan.
+		// Same-month CM application but created long ago → outside 90-day window → still renewal.
 		cmErrandWithPeriod(CURRENT, OffsetDateTime.now().minusDays(200), person(ROLE_APPLICANT, APPLICANT));
 		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
 			.thenReturn(new LifecareEbCaseSummary(true, Set.of(), null, false, false));

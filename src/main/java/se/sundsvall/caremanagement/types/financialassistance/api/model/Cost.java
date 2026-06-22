@@ -27,7 +27,7 @@ public class Cost {
 	}, nullable = true)
 	private String otherSubType;
 
-	@Schema(description = "Free text specification of the cost", examples = "Tandvård hos folktandvården")
+	@Schema(description = "Free text specification of the cost", examples = "Dental care at the public dental service")
 	private String specification;
 
 	@Schema(description = "Recipient of the cost or the period it covers", examples = "Mitt Bostads AB, juni 2026")

@@ -1,0 +1,133 @@
+package se.sundsvall.caremanagement.lifecare.service.mapper;
+
+import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringProposalDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsFromWhoDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInfoDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInvestigationDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsOrganizationDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsReasonDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsServiceDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsSpecifyTypeDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsWorkingStatusDTO;
+import generated.se.sundsvall.lifecarefc.PostAktualiseringsBodyRequest;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
+import static java.util.Optional.ofNullable;
+
+/**
+ * Assembles the FC {@link PostAktualiseringsBodyRequest} for an financial-assistance intake (actualisation) by
+ * resolving
+ * the integer codes the POST body requires from the person's FC actualisation proposal. The proposal's
+ * {@code FromWho}/{@code Reason} code lists — and the {@code SpecifyType}/{@code WorkingStatus} requirement flags —
+ * live
+ * inside the chosen actualisation <em>type</em>; the organisation, service and investigation links are top-level.
+ *
+ * <p>
+ * Sprint defaults where the proposal offers a choice: the first offered actualisation type is taken, then its first
+ * reason and first fromWho; the first organisation (id + unit), the first service and the first investigation. A
+ * specify-type is only set when the chosen type marks it mandatory, and a working-status only when the chosen type asks
+ * for it — then the first offered value is used. {@code CaseworkerId} is deliberately left unset: the caseworker is
+ * assigned later. These selections are intentionally simple and isolated here so they are easy to refine once real FC
+ * proposals are available, mirroring {@link CalculationAssembler}.
+ */
+public final class ActualisationAssembler {
+
+	private ActualisationAssembler() {}
+
+	/**
+	 * Build the FC actualisation body for one applicant and intake date.
+	 *
+	 * @param  applicantPersonId the applicant's personnummer (the FC actualisation owner)
+	 * @param  proposal          the FC actualisation proposal supplying the code lists; may be {@code null}
+	 * @param  date              the intake date
+	 * @return                   the assembled {@link PostAktualiseringsBodyRequest}
+	 */
+	public static PostAktualiseringsBodyRequest assemble(final String applicantPersonId, final PersonBasedAktualiseringProposalDTO proposal, final LocalDate date) {
+		final var body = new PostAktualiseringsBodyRequest()
+			.personId(applicantPersonId)
+			.date(date.format(ISO_LOCAL_DATE));
+
+		ofNullable(proposal).ifPresent(p -> {
+			firstActualisationType(p).ifPresent(type -> {
+				body.type(type.getId());
+				firstReasonId(type).ifPresent(body::reason);
+				firstFromWhoId(type).ifPresent(body::fromWho);
+				if (Boolean.TRUE.equals(type.getSpecifyTypeMandatory())) {
+					firstSpecifyTypeId(p).ifPresent(body::specifies);
+				}
+				if (Boolean.TRUE.equals(type.getWorkingStatus())) {
+					firstWorkingStatusId(p).ifPresent(body::workingStatus);
+				}
+			});
+			firstOrganization(p).ifPresent(org -> {
+				body.organisationId(org.getId());
+				body.organisationUnitId(org.getUnitId());
+			});
+			firstServiceId(p).ifPresent(body::serviceId);
+			firstInvestigationId(p).ifPresent(body::investigationId);
+		});
+
+		return body;
+	}
+
+	/** The first offered actualisation type — it carries the reason/fromWho code lists and the requirement flags. */
+	private static Optional<PersonBasedAktualiseringsInfoDTO> firstActualisationType(final PersonBasedAktualiseringProposalDTO proposal) {
+		return ofNullable(proposal.getActualisationTypes()).orElseGet(List::of).stream()
+			.filter(Objects::nonNull)
+			.filter(type -> type.getId() != null)
+			.findFirst();
+	}
+
+	private static Optional<Integer> firstReasonId(final PersonBasedAktualiseringsInfoDTO type) {
+		return ofNullable(type.getReasons()).orElseGet(List::of).stream()
+			.map(PersonBasedAktualiseringsReasonDTO::getId)
+			.filter(Objects::nonNull)
+			.findFirst();
+	}
+
+	private static Optional<Integer> firstFromWhoId(final PersonBasedAktualiseringsInfoDTO type) {
+		return ofNullable(type.getFromWho()).orElseGet(List::of).stream()
+			.map(PersonBasedAktualiseringsFromWhoDTO::getId)
+			.filter(Objects::nonNull)
+			.findFirst();
+	}
+
+	private static Optional<Integer> firstSpecifyTypeId(final PersonBasedAktualiseringProposalDTO proposal) {
+		return ofNullable(proposal.getSpecifyTypes()).orElseGet(List::of).stream()
+			.map(PersonBasedAktualiseringsSpecifyTypeDTO::getId)
+			.filter(Objects::nonNull)
+			.findFirst();
+	}
+
+	private static Optional<Integer> firstWorkingStatusId(final PersonBasedAktualiseringProposalDTO proposal) {
+		return ofNullable(proposal.getWorkingStatus()).orElseGet(List::of).stream()
+			.map(PersonBasedAktualiseringsWorkingStatusDTO::getId)
+			.filter(Objects::nonNull)
+			.findFirst();
+	}
+
+	private static Optional<PersonBasedAktualiseringsOrganizationDTO> firstOrganization(final PersonBasedAktualiseringProposalDTO proposal) {
+		return ofNullable(proposal.getOrganizations()).orElseGet(List::of).stream()
+			.filter(Objects::nonNull)
+			.filter(org -> org.getId() != null)
+			.findFirst();
+	}
+
+	private static Optional<Integer> firstServiceId(final PersonBasedAktualiseringProposalDTO proposal) {
+		return ofNullable(proposal.getServices()).orElseGet(List::of).stream()
+			.map(PersonBasedAktualiseringsServiceDTO::getId)
+			.filter(Objects::nonNull)
+			.findFirst();
+	}
+
+	private static Optional<Integer> firstInvestigationId(final PersonBasedAktualiseringProposalDTO proposal) {
+		return ofNullable(proposal.getInvestigations()).orElseGet(List::of).stream()
+			.map(PersonBasedAktualiseringsInvestigationDTO::getId)
+			.filter(Objects::nonNull)
+			.findFirst();
+	}
+}

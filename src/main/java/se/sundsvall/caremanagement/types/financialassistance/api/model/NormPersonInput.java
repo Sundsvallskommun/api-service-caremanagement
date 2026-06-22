@@ -9,10 +9,10 @@ import org.springframework.format.annotation.DateTimeFormat;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 
 /**
- * What a handläggare sends to add a new person row (origin HANDLAGGARE) or patch an existing one — only the handläggare
+ * What a caseworker sends to add a new person row (origin CASEWORKER) or patch an existing one — only the caseworker
  * days + note are honoured on a patch.
  */
-@Schema(description = "What a handläggare sends to add or patch a person row (identity + handläggare-writable fields only).")
+@Schema(description = "What a caseworker sends to add or patch a person row (identity + caseworker-writable fields only).")
 public class NormPersonInput {
 
 	@Schema(description = "The party id of the household member")
@@ -26,8 +26,8 @@ public class NormPersonInput {
 	@Schema(description = "The name of the household member")
 	private String name;
 
-	@Schema(description = "The number of days the handläggare decided", examples = "15")
-	private Integer handlaggareDays;
+	@Schema(description = "The number of days the caseworker decided", examples = "15")
+	private Integer caseworkerDays;
 
 	@Schema(description = "Whether the household member is included in the norm")
 	private Boolean included;
@@ -43,8 +43,8 @@ public class NormPersonInput {
 	@Schema(description = "The norm interval applied to the member")
 	private String normInterval;
 
-	@Schema(description = "The jobbstimulans amount applied to the member", examples = "1000.00")
-	private BigDecimal jobbstimulansAmount;
+	@Schema(description = "The job stimulus amount applied to the member", examples = "1000.00")
+	private BigDecimal jobStimulusAmount;
 
 	@Schema(description = "Free-text note")
 	private String note;
@@ -92,16 +92,16 @@ public class NormPersonInput {
 		return this;
 	}
 
-	public Integer getHandlaggareDays() {
-		return handlaggareDays;
+	public Integer getCaseworkerDays() {
+		return caseworkerDays;
 	}
 
-	public void setHandlaggareDays(final Integer handlaggareDays) {
-		this.handlaggareDays = handlaggareDays;
+	public void setCaseworkerDays(final Integer caseworkerDays) {
+		this.caseworkerDays = caseworkerDays;
 	}
 
-	public NormPersonInput withHandlaggareDays(final Integer handlaggareDays) {
-		this.handlaggareDays = handlaggareDays;
+	public NormPersonInput withCaseworkerDays(final Integer caseworkerDays) {
+		this.caseworkerDays = caseworkerDays;
 		return this;
 	}
 
@@ -157,16 +157,16 @@ public class NormPersonInput {
 		return this;
 	}
 
-	public BigDecimal getJobbstimulansAmount() {
-		return jobbstimulansAmount;
+	public BigDecimal getJobStimulusAmount() {
+		return jobStimulusAmount;
 	}
 
-	public void setJobbstimulansAmount(final BigDecimal jobbstimulansAmount) {
-		this.jobbstimulansAmount = jobbstimulansAmount;
+	public void setJobStimulusAmount(final BigDecimal jobStimulusAmount) {
+		this.jobStimulusAmount = jobStimulusAmount;
 	}
 
-	public NormPersonInput withJobbstimulansAmount(final BigDecimal jobbstimulansAmount) {
-		this.jobbstimulansAmount = jobbstimulansAmount;
+	public NormPersonInput withJobStimulusAmount(final BigDecimal jobStimulusAmount) {
+		this.jobStimulusAmount = jobStimulusAmount;
 		return this;
 	}
 
@@ -189,14 +189,14 @@ public class NormPersonInput {
 			return false;
 		final NormPersonInput that = (NormPersonInput) o;
 		return Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
-			&& Objects.equals(handlaggareDays, that.handlaggareDays) && Objects.equals(included, that.included) && Objects.equals(deviationFromDate, that.deviationFromDate)
+			&& Objects.equals(caseworkerDays, that.caseworkerDays) && Objects.equals(included, that.included) && Objects.equals(deviationFromDate, that.deviationFromDate)
 			&& Objects.equals(deviationToDate, that.deviationToDate) && Objects.equals(normInterval, that.normInterval)
-			&& Objects.equals(jobbstimulansAmount, that.jobbstimulansAmount) && Objects.equals(note, that.note);
+			&& Objects.equals(jobStimulusAmount, that.jobStimulusAmount) && Objects.equals(note, that.note);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(partyId, role, name, handlaggareDays, included, deviationFromDate, deviationToDate, normInterval, jobbstimulansAmount, note);
+		return Objects.hash(partyId, role, name, caseworkerDays, included, deviationFromDate, deviationToDate, normInterval, jobStimulusAmount, note);
 	}
 
 	@Override
@@ -205,12 +205,12 @@ public class NormPersonInput {
 			"partyId='" + partyId + '\'' +
 			", role='" + role + '\'' +
 			", name='" + name + '\'' +
-			", handlaggareDays=" + handlaggareDays +
+			", caseworkerDays=" + caseworkerDays +
 			", included=" + included +
 			", deviationFromDate=" + deviationFromDate +
 			", deviationToDate=" + deviationToDate +
 			", normInterval='" + normInterval + '\'' +
-			", jobbstimulansAmount=" + jobbstimulansAmount +
+			", jobStimulusAmount=" + jobStimulusAmount +
 			", note='" + note + '\'' +
 			'}';
 	}

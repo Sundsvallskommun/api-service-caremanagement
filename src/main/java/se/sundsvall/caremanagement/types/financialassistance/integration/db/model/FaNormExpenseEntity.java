@@ -17,10 +17,10 @@ import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * One expense row of the normberäkning draft — a single applied cost. {@code appliedAmount} is what the citizen asked
- * for (immutable, from the application); {@code processAmount} is what the regelverk allowed (the
- * {@code Decision_utgiftRegelverk} cap, written only by the daily prepare); {@code handlaggareAmount} is the override a
- * handläggare decided (written only from Draken). The effective amount posted to Lifecare is the handläggare amount
+ * One expense row of the calculation draft — a single applied cost. {@code appliedAmount} is what the citizen asked
+ * for (immutable, from the application); {@code processAmount} is what the rules allowed (the
+ * {@code Decision_expenseRegelverk} cap, written only by the daily prepare); {@code caseworkerAmount} is the override a
+ * caseworker decided (written only from Draken). The effective amount posted to Lifecare is the caseworker amount
  * when
  * set, otherwise the process amount. A row can be soft-deleted ({@code deleted}) and is then excluded from the
  * calculation but never resurrected by the daily refresh. Added to the norm.
@@ -60,8 +60,8 @@ public class FaNormExpenseEntity {
 	@Column(name = "process_amount", precision = 12, scale = 2)
 	private BigDecimal processAmount;
 
-	@Column(name = "handlaggare_amount", precision = 12, scale = 2)
-	private BigDecimal handlaggareAmount;
+	@Column(name = "caseworker_amount", precision = 12, scale = 2)
+	private BigDecimal caseworkerAmount;
 
 	@Column(name = "deleted")
 	private boolean deleted;
@@ -210,16 +210,16 @@ public class FaNormExpenseEntity {
 		return this;
 	}
 
-	public BigDecimal getHandlaggareAmount() {
-		return handlaggareAmount;
+	public BigDecimal getCaseworkerAmount() {
+		return caseworkerAmount;
 	}
 
-	public void setHandlaggareAmount(final BigDecimal handlaggareAmount) {
-		this.handlaggareAmount = handlaggareAmount;
+	public void setCaseworkerAmount(final BigDecimal caseworkerAmount) {
+		this.caseworkerAmount = caseworkerAmount;
 	}
 
-	public FaNormExpenseEntity withHandlaggareAmount(final BigDecimal handlaggareAmount) {
-		this.handlaggareAmount = handlaggareAmount;
+	public FaNormExpenseEntity withCaseworkerAmount(final BigDecimal caseworkerAmount) {
+		this.caseworkerAmount = caseworkerAmount;
 		return this;
 	}
 
@@ -284,13 +284,13 @@ public class FaNormExpenseEntity {
 			&& Objects.equals(bucket, that.bucket) && Objects.equals(costType, that.costType) && Objects.equals(otherSubType, that.otherSubType)
 			&& Objects.equals(specification, that.specification)
 			&& Objects.equals(appliedAmount, that.appliedAmount) && Objects.equals(processAmount, that.processAmount)
-			&& Objects.equals(handlaggareAmount, that.handlaggareAmount) && Objects.equals(note, that.note) && Objects.equals(created, that.created)
+			&& Objects.equals(caseworkerAmount, that.caseworkerAmount) && Objects.equals(note, that.note) && Objects.equals(created, that.created)
 			&& Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, origin, bucket, costType, otherSubType, specification, appliedAmount, processAmount, handlaggareAmount, deleted, note, created,
+		return Objects.hash(id, errandId, origin, bucket, costType, otherSubType, specification, appliedAmount, processAmount, caseworkerAmount, deleted, note, created,
 			updated);
 	}
 
@@ -306,7 +306,7 @@ public class FaNormExpenseEntity {
 			", specification='" + specification + '\'' +
 			", appliedAmount=" + appliedAmount +
 			", processAmount=" + processAmount +
-			", handlaggareAmount=" + handlaggareAmount +
+			", caseworkerAmount=" + caseworkerAmount +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +
 			", created=" + created +

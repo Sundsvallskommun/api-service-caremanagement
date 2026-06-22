@@ -8,37 +8,37 @@ import org.springframework.format.annotation.DateTimeFormat;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 
 /**
- * What a handläggare sends to edit the normberäkning header — the chosen norm (Norm), the calculation date window
- * (Från/Till/Beräkningsdatum) and the custom household size (Gemensamma kostnader → Annan hushållsstorlek). Only the
+ * What a caseworker sends to edit the calculation header — the chosen norm (Norm), the calculation date window
+ * (from/to/calculation date) and the custom household size (common costs → custom household size). Only the
  * fields present are applied.
  */
-@Schema(description = "Handläggare edit of the normberäkning header — norm, calculation dates and custom household size.")
+@Schema(description = "Caseworker edit of the calculation header — norm, calculation dates and custom household size.")
 public class NormHeaderInput {
 
 	@Schema(description = "The selected FC norm id (Norm)", examples = "5")
 	private Integer normId;
 
 	@Schema(description = "The norm type", allowableValues = {
-		"RIKSNORM", "OTHER_NORM"
+		"NATIONAL_NORM", "OTHER_NORM"
 	})
 	private String normType;
 
-	@Schema(description = "Calculation period start (Från)")
+	@Schema(description = "Calculation period start (from)")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate calculationFromDate;
 
-	@Schema(description = "Calculation period end (Till)")
+	@Schema(description = "Calculation period end (to)")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate calculationToDate;
 
-	@Schema(description = "Calculation date (Beräkningsdatum)")
+	@Schema(description = "Calculation date (calculation date)")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate calculationDate;
 
-	@Schema(description = "Whether a custom household size is used (Annan hushållsstorlek)", examples = "true")
+	@Schema(description = "Whether a custom household size is used", examples = "true")
 	private Boolean hasCustomHouseholdSize;
 
-	@Schema(description = "The custom household size (Hushållsstorlek)", examples = "1")
+	@Schema(description = "The custom household size", examples = "1")
 	private Integer householdSize;
 
 	public static NormHeaderInput create() {

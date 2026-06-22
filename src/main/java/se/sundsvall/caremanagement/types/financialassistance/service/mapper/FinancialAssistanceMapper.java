@@ -342,7 +342,8 @@ public final class FinancialAssistanceMapper {
 	// ---- Person → core Stakeholder ------------------------------------------------------------------------------------
 
 	/**
-	 * Promote the application's persons to core {@link Stakeholder} rows so the errand carries its sökande/medsökande in
+	 * Promote the application's persons to core {@link Stakeholder} rows so the errand carries its applicant/co-applicant
+	 * in
 	 * the shared stakeholders collection. Each {@link Person} with a role maps to a stakeholder holding that role, the
 	 * partyId as a {@code PRIVATE} externalId, and the supplied email/phone as contact channels. Identity (name, address)
 	 * is deliberately not denormalised here — it is resolved from the partyId on demand and is subject to

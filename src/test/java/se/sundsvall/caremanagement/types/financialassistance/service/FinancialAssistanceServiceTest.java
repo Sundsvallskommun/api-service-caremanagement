@@ -21,33 +21,33 @@ import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
-import se.sundsvall.caremanagement.lifecare.service.NormberakningService;
+import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
-import se.sundsvall.caremanagement.lifecare.service.model.NormberakningHeader;
 import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningDraft;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Person;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCalculationDraftEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormberakningDraftEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -66,7 +66,7 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_INKOMMEN;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_RECEIVED;
 
 @ExtendWith(MockitoExtension.class)
 class FinancialAssistanceServiceTest {
@@ -82,7 +82,7 @@ class FinancialAssistanceServiceTest {
 	private FinancialAssistanceRepository repositoryMock;
 
 	@Mock
-	private NormberakningService normberakningServiceMock;
+	private CalculationService calculationServiceMock;
 
 	@Mock
 	private ActualisationService actualisationServiceMock;
@@ -112,7 +112,7 @@ class FinancialAssistanceServiceTest {
 	private DraftService draftServiceMock;
 
 	@Mock
-	private NormberakningFeeder normberakningFeederMock;
+	private CalculationFeeder calculationFeederMock;
 
 	@InjectMocks
 	private FinancialAssistanceService service;
@@ -126,7 +126,7 @@ class FinancialAssistanceServiceTest {
 
 		// Client sends a mismatched applicationType — the slug must win.
 		final var request = CreateFinancialAssistanceRequest.create()
-			.withTitle("Min ansökan")
+			.withTitle("Min application")
 			.withData(FinancialAssistanceData.create().withApplicationType("SUPPLEMENTARY"));
 
 		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, null);
@@ -136,8 +136,8 @@ class FinancialAssistanceServiceTest {
 		final ArgumentCaptor<Errand> errandCaptor = ArgumentCaptor.forClass(Errand.class);
 		verify(errandServiceMock).createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
 		assertThat(errandCaptor.getValue().getTypeSlug()).isEqualTo(SLUG_NEW);
-		assertThat(errandCaptor.getValue().getStatus()).isEqualTo(STATUS_INKOMMEN);
-		assertThat(errandCaptor.getValue().getTitle()).isEqualTo("Min ansökan");
+		assertThat(errandCaptor.getValue().getStatus()).isEqualTo(STATUS_RECEIVED);
+		assertThat(errandCaptor.getValue().getTitle()).isEqualTo("Min application");
 
 		final ArgumentCaptor<FinancialAssistanceEntity> entityCaptor = ArgumentCaptor.forClass(FinancialAssistanceEntity.class);
 		verify(repositoryMock).save(entityCaptor.capture());
@@ -153,7 +153,7 @@ class FinancialAssistanceServiceTest {
 		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
 
 		final var request = CreateFinancialAssistanceRequest.create()
-			.withTitle("Återansökan")
+			.withTitle("Renewal")
 			.withData(FinancialAssistanceData.create().withPersons(List.of(
 				Person.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID).withEmail("anna@example.com").withPhone("+46701234567"),
 				Person.create().withRole("CO_APPLICANT").withPartyId(CO_APPLICANT_PARTY_ID),
@@ -182,7 +182,7 @@ class FinancialAssistanceServiceTest {
 	void createDerivesApplicationTypeFromSlug() {
 		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
 
-		final var request = CreateFinancialAssistanceRequest.create().withTitle("Återansökan").withData(FinancialAssistanceData.create());
+		final var request = CreateFinancialAssistanceRequest.create().withTitle("Renewal").withData(FinancialAssistanceData.create());
 
 		// Empty attachment list must be treated the same as none — no combine.
 		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_RENEWAL, request, List.of());
@@ -209,7 +209,7 @@ class FinancialAssistanceServiceTest {
 
 		final ArgumentCaptor<Errand> errandCaptor = ArgumentCaptor.forClass(Errand.class);
 		verify(errandServiceMock).createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
-		assertThat(errandCaptor.getValue().getTitle()).isEqualTo("Ekonomiskt bistånd");
+		assertThat(errandCaptor.getValue().getTitle()).isEqualTo("Financial assistance");
 	}
 
 	@Test
@@ -233,7 +233,7 @@ class FinancialAssistanceServiceTest {
 	@Test
 	void readAssemblesView() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
-			.thenReturn(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_NEW).withStatus("INKOMMEN"));
+			.thenReturn(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_NEW).withStatus("RECEIVED"));
 		when(repositoryMock.findByErrandId(ERRAND_ID))
 			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withApplicationType("NEW")));
 		final var approvals = SectionApprovals.create().withCalculation(SectionApproval.create().withSection("CALCULATION").withApproved(true));
@@ -251,7 +251,7 @@ class FinancialAssistanceServiceTest {
 	void readPopulatesRecommendationFromLatestRecommendationDecision() {
 		final var recommendation = Decision.create().withDecisionType("RECOMMENDATION").withValue("OK");
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
-			.thenReturn(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_NEW).withStatus("INKOMMEN"));
+			.thenReturn(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_NEW).withStatus("RECEIVED"));
 		when(repositoryMock.findByErrandId(ERRAND_ID))
 			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withApplicationType("NEW")));
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
@@ -303,28 +303,28 @@ class FinancialAssistanceServiceTest {
 	void commitPostsEffectiveRowsAndReturnsId() {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.of(FaNormberakningDraftEntity.create().withErrandId(ERRAND_ID).withNormId(7)));
+		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(7)));
 		when(draftServiceMock.liveIncomes(ERRAND_ID)).thenReturn(List.of(
-			FaNormIncomeEntity.create().withTypeId(20).withApplicantProcessAmount(new BigDecimal("1000")).withApplicantHandlaggareAmount(new BigDecimal("1100"))));
+			FaNormIncomeEntity.create().withTypeId(20).withApplicantProcessAmount(new BigDecimal("1000")).withApplicantCaseworkerAmount(new BigDecimal("1100"))));
 		when(draftServiceMock.liveExpenses(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
 		when(draftServiceMock.livePersons(ERRAND_ID)).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
-		when(normberakningServiceMock.commitEffective(eq("199001011234"), eq(month), any(NormberakningHeader.class), any(), any(), any())).thenReturn(4712);
+		when(calculationServiceMock.commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(4712);
 
-		final var request = NormberakningRequest.create()
+		final var request = CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID)
 			.withUnhandledIncomes(List.of("Något (EJ_PA_LISTAN)")).withChangeWarnings(List.of("Bostadsbidrag: -23%"));
 
-		final var response = service.commitNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+		final var response = service.commitCalculation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		assertThat(response.getCalculationId()).isEqualTo(4712);
 		assertThat(response.getUnhandledIncomes()).containsExactly("Något (EJ_PA_LISTAN)");
 		assertThat(response.getChangeWarnings()).containsExactly("Bostadsbidrag: -23%");
 
 		final ArgumentCaptor<List<EffectiveIncome>> incomeCaptor = ArgumentCaptor.captor();
-		verify(normberakningServiceMock).commitEffective(eq("199001011234"), eq(month), any(NormberakningHeader.class), incomeCaptor.capture(), any(), any());
+		verify(calculationServiceMock).commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), incomeCaptor.capture(), any(), any());
 		assertThat(incomeCaptor.getValue()).singleElement().satisfies(income -> {
 			assertThat(income.typeId()).isEqualTo(20);
-			assertThat(income.applicantAmount()).isEqualTo(1100.0); // handläggare value wins over the process value
+			assertThat(income.applicantAmount()).isEqualTo(1100.0); // caseworker value wins over the process value
 		});
 		// commit does not touch the errand status/recommendation — that is prepare's job
 		verifyNoInteractions(decisionServiceMock);
@@ -332,9 +332,9 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void commitRequiresErrandId() {
-		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
+		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
 
-		assertThatThrownBy(() -> service.commitNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
+		assertThatThrownBy(() -> service.commitCalculation(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 	}
 
@@ -342,35 +342,35 @@ class FinancialAssistanceServiceTest {
 	void commitYields404WhenNoDraftHeader() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.empty());
-		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
+		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
 
-		assertThatThrownBy(() -> service.commitNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
+		assertThatThrownBy(() -> service.commitCalculation(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", NOT_FOUND);
 	}
 
 	@Test
 	void prepareRequiresErrandId() {
-		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withClassifiedIncomes("[]");
+		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withClassifiedIncomes("[]");
 
-		assertThatThrownBy(() -> service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
+		assertThatThrownBy(() -> service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 	}
 
 	@Test
 	void prepareUnresolvedPartyIdYields404() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.empty());
-		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
+		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
 
-		assertThatThrownBy(() -> service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
+		assertThatThrownBy(() -> service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", NOT_FOUND);
 	}
 
 	@Test
 	void prepareRequiresClassifiedIncomes() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
+		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
 
-		assertThatThrownBy(() -> service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
+		assertThatThrownBy(() -> service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 	}
 
@@ -378,9 +378,9 @@ class FinancialAssistanceServiceTest {
 	void prepareMissingErrandYields404() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
-		final var request = NormberakningRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
+		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
 
-		assertThatThrownBy(() -> service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request))
+		assertThatThrownBy(() -> service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", NOT_FOUND);
 	}
 
@@ -388,16 +388,16 @@ class FinancialAssistanceServiceTest {
 	void prepareRecordsReviewRequiredRecommendationAndKompletteringWhenIncomplete() {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType("RIKSNORM")));
-		when(normberakningServiceMock.completeness("199001011234", month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("UNDER_BEREDNING"));
-		when(normberakningFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new NormberakningFeeder.ExpenseFeed(List.of(), List.of()));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType("NATIONAL_NORM")));
+		when(calculationServiceMock.completeness("199001011234", month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("UNDER_REVIEW"));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
 
-		final var request = NormberakningRequest.create()
+		final var request = CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[json]")
 			.withUnhandledIncomes(List.of("Bostadstillägg (NOT_ON_WHITELIST)")).withChangeWarnings(List.of("Bostadsbidrag: -23%"));
 
-		final var response = service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		assertThat(response.getCalculationId()).isNull();
 		assertThat(response.isInformationComplete()).isFalse();
@@ -410,13 +410,13 @@ class FinancialAssistanceServiceTest {
 		assertThat(decision.getValue()).isEqualTo("REVIEW_REQUIRED");
 		assertThat(decision.getCreatedBy()).isEqualTo("drakel");
 		assertThat(decision.getDescription())
-			.contains("Ej överförd inkomst: Bostadstillägg (NOT_ON_WHITELIST)")
-			.contains("Saknas ännu i SSBTEK: Dagersättning");
+			.contains("Not transferred income: Bostadstillägg (NOT_ON_WHITELIST)")
+			.contains("Still missing in SSBTEK: Dagersättning");
 
 		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
-		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("KOMPLETTERING");
-		verify(warningServiceMock).reconcileNormberakningWarnings(eq(ERRAND_ID),
+		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("SUPPLEMENT_REQUESTED");
+		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID),
 			eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")), eq(List.of("Dagersättning")), any(), any());
 	}
 
@@ -425,23 +425,23 @@ class FinancialAssistanceServiceTest {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
-		when(normberakningServiceMock.completeness("199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("KOMPLETTERING"));
-		when(normberakningFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new NormberakningFeeder.ExpenseFeed(List.of(), List.of()));
+		when(calculationServiceMock.completeness("199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("SUPPLEMENT_REQUESTED"));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
 
-		final var request = NormberakningRequest.create()
+		final var request = CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
 
-		service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
 		assertThat(decisionCaptor.getValue().getValue()).isEqualTo("OK");
-		assertThat(decisionCaptor.getValue().getDescription()).contains("Inga varningar");
+		assertThat(decisionCaptor.getValue().getDescription()).contains("No warnings");
 
 		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
-		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("VANTAR_PA_BESLUT");
+		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("AWAITING_DECISION");
 	}
 
 	@Test
@@ -449,17 +449,17 @@ class FinancialAssistanceServiceTest {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
-		when(normberakningServiceMock.completeness("199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
+		when(calculationServiceMock.completeness("199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
 		// a recommendation already exists, and the errand is already in the target status
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(List.of(Decision.create().withDecisionType("RECOMMENDATION")));
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("VANTAR_PA_BESLUT"));
-		when(normberakningFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new NormberakningFeeder.ExpenseFeed(List.of(), List.of()));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("AWAITING_DECISION"));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
 
-		final var request = NormberakningRequest.create()
+		final var request = CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
 
-		service.prepareNormberakning(MUNICIPALITY_ID, NAMESPACE, request);
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
@@ -468,7 +468,7 @@ class FinancialAssistanceServiceTest {
 	@Test
 	void getDraftReturnsDraftAfterScopeCheck() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
-		final var draft = NormberakningDraft.create().withApplicationMonth("2026-06");
+		final var draft = CalculationDraft.create().withApplicationMonth("2026-06");
 		when(draftServiceMock.get(ERRAND_ID)).thenReturn(draft);
 
 		assertThat(service.getDraft(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isSameAs(draft);
@@ -478,7 +478,7 @@ class FinancialAssistanceServiceTest {
 	@Test
 	void patchDraftHeaderScopeChecksThenDelegates() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
-		final var draft = NormberakningDraft.create().withNormId(5);
+		final var draft = CalculationDraft.create().withNormId(5);
 		when(draftServiceMock.patchHeader(eq(ERRAND_ID), any(NormHeaderInput.class))).thenReturn(draft);
 
 		assertThat(service.patchDraftHeader(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new NormHeaderInput().withHouseholdSize(1))).isSameAs(draft);

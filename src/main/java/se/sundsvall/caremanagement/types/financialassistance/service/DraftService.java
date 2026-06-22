@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
@@ -19,42 +20,41 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncom
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormberakningDraft;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaCalculationDraftRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormExpenseRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormIncomeRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormPersonRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormberakningDraftRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCalculationDraftEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormberakningDraftEntity;
 import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.BUCKET_EXPENSE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.BUCKET_SPECIAL_EXPENSE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.ORIGIN_HANDLAGGARE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NormberakningConstants.ORIGIN_SYSTEM;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_EXPENSE;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_SPECIAL_EXPENSE;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 
 /**
- * The editable draft normberäkning across its sections — personer, inkomster, utgifter and levnadskostnader i övrigt
- * (the expense bucket {@code SPECIAL_EXPENSE}) — mirroring the Lifecare Beräkning tabs. The daily prepare
- * {@link #refresh refreshes} the process columns from the freshly computed rows; the per-row handläggare operations
- * touch only the handläggare columns and the soft-delete flag, and {@link #patchHeader} sets the norm, the calculation
- * dates and the custom household size (Gemensamma kostnader). The merge invariant lives in {@link SectionReconciler};
- * effective value = handläggare value when set, otherwise process value.
+ * The editable draft calculation across its sections — persons, incomes, expenses and other living costs
+ * (the expense bucket {@code SPECIAL_EXPENSE}) — mirroring the Lifecare Calculation tabs. The daily prepare
+ * {@link #refresh refreshes} the process columns from the freshly computed rows; the per-row caseworker operations
+ * touch only the caseworker columns and the soft-delete flag, and {@link #patchHeader} sets the norm, the calculation
+ * dates and the custom household size (common costs). The merge invariant lives in {@link SectionReconciler};
+ * effective value = caseworker value when set, otherwise process value.
  */
 @Service
 public class DraftService {
 
-	private final FaNormberakningDraftRepository headerRepository;
+	private final FaCalculationDraftRepository headerRepository;
 	private final FaNormIncomeRepository incomeRepository;
 	private final FaNormExpenseRepository expenseRepository;
 	private final FaNormPersonRepository personRepository;
 
-	DraftService(final FaNormberakningDraftRepository headerRepository, final FaNormIncomeRepository incomeRepository,
+	DraftService(final FaCalculationDraftRepository headerRepository, final FaNormIncomeRepository incomeRepository,
 		final FaNormExpenseRepository expenseRepository, final FaNormPersonRepository personRepository) {
 		this.headerRepository = headerRepository;
 		this.incomeRepository = incomeRepository;
@@ -63,7 +63,7 @@ public class DraftService {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
-	// Process path — the daily refresh. Touches process columns + inserts only; handläggare columns and soft-deletes
+	// Process path — the daily refresh. Touches process columns + inserts only; caseworker columns and soft-deletes
 	// survive.
 	// ------------------------------------------------------------------------------------------------------------------
 
@@ -91,7 +91,7 @@ public class DraftService {
 	}
 
 	private void upsertHeader(final String errandId, final String applicationMonth, final Integer normId, final String normType) {
-		final var header = headerRepository.findById(errandId).orElseGet(() -> FaNormberakningDraftEntity.create().withErrandId(errandId));
+		final var header = headerRepository.findById(errandId).orElseGet(() -> FaCalculationDraftEntity.create().withErrandId(errandId));
 		ofNullable(applicationMonth).filter(StringUtils::hasText).ifPresent(month -> {
 			header.setApplicationMonth(month);
 			final var parsed = YearMonth.parse(month);
@@ -104,11 +104,11 @@ public class DraftService {
 		headerRepository.save(header);
 	}
 
-	/** Handläggare edit of the header — the norm, the calculation date window and the custom household size. */
+	/** Caseworker edit of the header — the norm, the calculation date window and the custom household size. */
 	@Transactional
-	public NormberakningDraft patchHeader(final String errandId, final NormHeaderInput input) {
+	public CalculationDraft patchHeader(final String errandId, final NormHeaderInput input) {
 		final var header = headerRepository.findById(errandId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft normberäkning for errand"));
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft calculation for errand"));
 		ofNullable(input.getNormId()).ifPresent(header::setNormId);
 		ofNullable(input.getNormType()).filter(StringUtils::hasText).ifPresent(header::setNormType);
 		ofNullable(input.getCalculationFromDate()).ifPresent(header::setCalculationFromDate);
@@ -121,13 +121,13 @@ public class DraftService {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
-	// Read — the full draft view a handläggare sees in Draken.
+	// Read — the full draft view a caseworker sees in Draken.
 	// ------------------------------------------------------------------------------------------------------------------
 
 	@Transactional(readOnly = true)
-	public NormberakningDraft get(final String errandId) {
+	public CalculationDraft get(final String errandId) {
 		final var header = headerRepository.findById(errandId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft normberäkning for errand"));
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft calculation for errand"));
 
 		final var incomes = incomeRepository.findByErrandId(errandId).stream().map(DraftService::toIncomeRow).toList();
 		final var allExpenses = expenseRepository.findByErrandId(errandId).stream().map(DraftService::toExpenseRow).toList();
@@ -135,7 +135,7 @@ public class DraftService {
 		final var specialExpenses = allExpenses.stream().filter(row -> BUCKET_SPECIAL_EXPENSE.equals(row.getBucket())).toList();
 		final var persons = personRepository.findByErrandId(errandId).stream().map(DraftService::toPersonRow).toList();
 
-		return NormberakningDraft.create()
+		return CalculationDraft.create()
 			.withErrandId(header.getErrandId())
 			.withApplicationMonth(header.getApplicationMonth())
 			.withNormId(header.getNormId())
@@ -157,17 +157,17 @@ public class DraftService {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
-	// Handläggare path — per-row edits. Touch only handläggare columns / soft-delete; never the process columns.
+	// Caseworker path — per-row edits. Touch only caseworker columns / soft-delete; never the process columns.
 	// ------------------------------------------------------------------------------------------------------------------
 
 	@Transactional
 	public NormIncomeRow addIncome(final String errandId, final NormIncomeInput input) {
 		requireHeader(errandId);
 		final var entity = incomeRepository.save(FaNormIncomeEntity.create()
-			.withErrandId(errandId).withOrigin(ORIGIN_HANDLAGGARE)
+			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER)
 			.withTypeId(input.getTypeId()).withTypeName(input.getTypeName())
-			.withApplicantHandlaggareAmount(input.getApplicantHandlaggareAmount()).withApplicantAmountDate(input.getApplicantAmountDate())
-			.withCoapplicantHandlaggareAmount(input.getCoapplicantHandlaggareAmount()).withCoapplicantAmountDate(input.getCoapplicantAmountDate())
+			.withApplicantCaseworkerAmount(input.getApplicantCaseworkerAmount()).withApplicantAmountDate(input.getApplicantAmountDate())
+			.withCoapplicantCaseworkerAmount(input.getCoapplicantCaseworkerAmount()).withCoapplicantAmountDate(input.getCoapplicantAmountDate())
 			.withNote(input.getNote()));
 		return toIncomeRow(entity);
 	}
@@ -175,8 +175,8 @@ public class DraftService {
 	@Transactional
 	public NormIncomeRow patchIncome(final String errandId, final String rowId, final NormIncomeInput input) {
 		final var entity = requireIncome(errandId, rowId);
-		entity.setApplicantHandlaggareAmount(input.getApplicantHandlaggareAmount());
-		entity.setCoapplicantHandlaggareAmount(input.getCoapplicantHandlaggareAmount());
+		entity.setApplicantCaseworkerAmount(input.getApplicantCaseworkerAmount());
+		entity.setCoapplicantCaseworkerAmount(input.getCoapplicantCaseworkerAmount());
 		entity.setNote(input.getNote());
 		return toIncomeRow(incomeRepository.save(entity));
 	}
@@ -192,16 +192,16 @@ public class DraftService {
 	public NormExpenseRow addExpense(final String errandId, final NormExpenseInput input) {
 		requireHeader(errandId);
 		final var entity = expenseRepository.save(FaNormExpenseEntity.create()
-			.withErrandId(errandId).withOrigin(ORIGIN_HANDLAGGARE).withBucket(bucketOrDefault(input.getBucket()))
+			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER).withBucket(bucketOrDefault(input.getBucket()))
 			.withCostType(input.getCostType()).withOtherSubType(input.getOtherSubType()).withSpecification(input.getSpecification())
-			.withHandlaggareAmount(input.getHandlaggareAmount()).withNote(input.getNote()));
+			.withCaseworkerAmount(input.getCaseworkerAmount()).withNote(input.getNote()));
 		return toExpenseRow(entity);
 	}
 
 	@Transactional
 	public NormExpenseRow patchExpense(final String errandId, final String rowId, final NormExpenseInput input) {
 		final var entity = requireExpense(errandId, rowId);
-		entity.setHandlaggareAmount(input.getHandlaggareAmount());
+		entity.setCaseworkerAmount(input.getCaseworkerAmount());
 		entity.setNote(input.getNote());
 		return toExpenseRow(expenseRepository.save(entity));
 	}
@@ -217,23 +217,23 @@ public class DraftService {
 	public NormPersonRow addPerson(final String errandId, final NormPersonInput input) {
 		requireHeader(errandId);
 		final var entity = personRepository.save(FaNormPersonEntity.create()
-			.withErrandId(errandId).withOrigin(ORIGIN_HANDLAGGARE)
+			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER)
 			.withPartyId(input.getPartyId()).withRole(input.getRole()).withName(input.getName())
-			.withHandlaggareDays(input.getHandlaggareDays()).withIncluded(input.getIncluded() == null || input.getIncluded())
+			.withCaseworkerDays(input.getCaseworkerDays()).withIncluded(input.getIncluded() == null || input.getIncluded())
 			.withDeviationFromDate(input.getDeviationFromDate()).withDeviationToDate(input.getDeviationToDate())
-			.withNormInterval(input.getNormInterval()).withJobbstimulansAmount(input.getJobbstimulansAmount()).withNote(input.getNote()));
+			.withNormInterval(input.getNormInterval()).withJobStimulusAmount(input.getJobStimulusAmount()).withNote(input.getNote()));
 		return toPersonRow(entity);
 	}
 
 	@Transactional
 	public NormPersonRow patchPerson(final String errandId, final String rowId, final NormPersonInput input) {
 		final var entity = requirePerson(errandId, rowId);
-		entity.setHandlaggareDays(input.getHandlaggareDays());
+		entity.setCaseworkerDays(input.getCaseworkerDays());
 		ofNullable(input.getIncluded()).ifPresent(entity::setIncluded);
 		entity.setDeviationFromDate(input.getDeviationFromDate());
 		entity.setDeviationToDate(input.getDeviationToDate());
 		entity.setNormInterval(input.getNormInterval());
-		entity.setJobbstimulansAmount(input.getJobbstimulansAmount());
+		entity.setJobStimulusAmount(input.getJobStimulusAmount());
 		entity.setNote(input.getNote());
 		return toPersonRow(personRepository.save(entity));
 	}
@@ -246,11 +246,11 @@ public class DraftService {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
-	// Commit path — the effective (live, non-deleted) rows posted to Lifecare on a beslut.
+	// Commit path — the effective (live, non-deleted) rows posted to Lifecare on a decision.
 	// ------------------------------------------------------------------------------------------------------------------
 
 	@Transactional(readOnly = true)
-	public Optional<FaNormberakningDraftEntity> header(final String errandId) {
+	public Optional<FaCalculationDraftEntity> header(final String errandId) {
 		return headerRepository.findById(errandId);
 	}
 
@@ -273,12 +273,12 @@ public class DraftService {
 	// Effective-value helpers
 	// ------------------------------------------------------------------------------------------------------------------
 
-	public static BigDecimal effectiveAmount(final BigDecimal handlaggareAmount, final BigDecimal processAmount) {
-		return handlaggareAmount != null ? handlaggareAmount : processAmount;
+	public static BigDecimal effectiveAmount(final BigDecimal caseworkerAmount, final BigDecimal processAmount) {
+		return caseworkerAmount != null ? caseworkerAmount : processAmount;
 	}
 
-	public static Integer effectiveDays(final Integer handlaggareDays, final Integer processDays) {
-		return handlaggareDays != null ? handlaggareDays : processDays;
+	public static Integer effectiveDays(final Integer caseworkerDays, final Integer processDays) {
+		return caseworkerDays != null ? caseworkerDays : processDays;
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -287,7 +287,7 @@ public class DraftService {
 
 	private void requireHeader(final String errandId) {
 		if (!headerRepository.existsById(errandId)) {
-			throw Problem.valueOf(NOT_FOUND, "No draft normberäkning for errand");
+			throw Problem.valueOf(NOT_FOUND, "No draft calculation for errand");
 		}
 	}
 
@@ -361,11 +361,11 @@ public class DraftService {
 	// --- warning labels ---
 
 	private static String incomeLabel(final FaNormIncomeEntity e) {
-		return ofNullable(e.getTypeName()).orElse("Inkomst");
+		return ofNullable(e.getTypeName()).orElse("Income");
 	}
 
 	private static String expenseLabel(final FaNormExpenseEntity e) {
-		return ofNullable(e.getCostType()).orElse("Utgift") + ofNullable(e.getSpecification()).map(spec -> " – " + spec).orElse("");
+		return ofNullable(e.getCostType()).orElse("Expense") + ofNullable(e.getSpecification()).map(spec -> " – " + spec).orElse("");
 	}
 
 	private static String personLabel(final FaNormPersonEntity e) {
@@ -377,30 +377,30 @@ public class DraftService {
 	private static NormIncomeRow toIncomeRow(final FaNormIncomeEntity e) {
 		return NormIncomeRow.create()
 			.withId(e.getId()).withOrigin(e.getOrigin()).withTypeId(e.getTypeId()).withTypeName(e.getTypeName())
-			.withApplicantProcessAmount(e.getApplicantProcessAmount()).withApplicantHandlaggareAmount(e.getApplicantHandlaggareAmount())
-			.withApplicantEffectiveAmount(effectiveAmount(e.getApplicantHandlaggareAmount(), e.getApplicantProcessAmount())).withApplicantAmountDate(e.getApplicantAmountDate())
-			.withCoapplicantProcessAmount(e.getCoapplicantProcessAmount()).withCoapplicantHandlaggareAmount(e.getCoapplicantHandlaggareAmount())
-			.withCoapplicantEffectiveAmount(effectiveAmount(e.getCoapplicantHandlaggareAmount(), e.getCoapplicantProcessAmount())).withCoapplicantAmountDate(e.getCoapplicantAmountDate())
+			.withApplicantProcessAmount(e.getApplicantProcessAmount()).withApplicantCaseworkerAmount(e.getApplicantCaseworkerAmount())
+			.withApplicantEffectiveAmount(effectiveAmount(e.getApplicantCaseworkerAmount(), e.getApplicantProcessAmount())).withApplicantAmountDate(e.getApplicantAmountDate())
+			.withCoapplicantProcessAmount(e.getCoapplicantProcessAmount()).withCoapplicantCaseworkerAmount(e.getCoapplicantCaseworkerAmount())
+			.withCoapplicantEffectiveAmount(effectiveAmount(e.getCoapplicantCaseworkerAmount(), e.getCoapplicantProcessAmount())).withCoapplicantAmountDate(e.getCoapplicantAmountDate())
 			.withDeleted(e.isDeleted()).withNote(e.getNote()).withCreated(e.getCreated()).withUpdated(e.getUpdated());
 	}
 
 	private static NormExpenseRow toExpenseRow(final FaNormExpenseEntity e) {
-		final var effective = effectiveAmount(e.getHandlaggareAmount(), e.getProcessAmount());
+		final var effective = effectiveAmount(e.getCaseworkerAmount(), e.getProcessAmount());
 		return NormExpenseRow.create()
 			.withId(e.getId()).withOrigin(e.getOrigin()).withBucket(e.getBucket()).withCostType(e.getCostType()).withOtherSubType(e.getOtherSubType())
 			.withSpecification(e.getSpecification())
-			.withAppliedAmount(e.getAppliedAmount()).withProcessAmount(e.getProcessAmount()).withHandlaggareAmount(e.getHandlaggareAmount())
+			.withAppliedAmount(e.getAppliedAmount()).withProcessAmount(e.getProcessAmount()).withCaseworkerAmount(e.getCaseworkerAmount())
 			.withEffectiveAmount(effective).withDeleted(e.isDeleted()).withNote(e.getNote())
 			.withCreated(e.getCreated()).withUpdated(e.getUpdated());
 	}
 
 	private static NormPersonRow toPersonRow(final FaNormPersonEntity e) {
-		final var effective = effectiveDays(e.getHandlaggareDays(), e.getProcessDays());
+		final var effective = effectiveDays(e.getCaseworkerDays(), e.getProcessDays());
 		return NormPersonRow.create()
 			.withId(e.getId()).withOrigin(e.getOrigin()).withPartyId(e.getPartyId()).withRole(e.getRole()).withName(e.getName())
-			.withProcessDays(e.getProcessDays()).withHandlaggareDays(e.getHandlaggareDays()).withEffectiveDays(effective)
+			.withProcessDays(e.getProcessDays()).withCaseworkerDays(e.getCaseworkerDays()).withEffectiveDays(effective)
 			.withIncluded(e.isIncluded()).withDeviationFromDate(e.getDeviationFromDate()).withDeviationToDate(e.getDeviationToDate())
-			.withNormInterval(e.getNormInterval()).withJobbstimulansAmount(e.getJobbstimulansAmount())
+			.withNormInterval(e.getNormInterval()).withJobStimulusAmount(e.getJobStimulusAmount())
 			.withDeleted(e.isDeleted()).withNote(e.getNote()).withCreated(e.getCreated()).withUpdated(e.getUpdated());
 	}
 }

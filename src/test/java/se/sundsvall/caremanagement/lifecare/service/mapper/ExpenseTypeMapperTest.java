@@ -18,7 +18,7 @@ class ExpenseTypeMapperTest {
 	@Test
 	void resolvesKnownCostTypeToMatchingExpenseTypeId() {
 		final var proposal = proposalWith(
-			new PersonBasedCalculationExpenseTypeDTO().id(42).name("Hyra"),
+			new PersonBasedCalculationExpenseTypeDTO().id(42).name("Rent"),
 			new PersonBasedCalculationExpenseTypeDTO().id(7).name("El"));
 
 		final var result = ExpenseTypeMapper.resolveExpenseTypeId("RENT", proposal);
@@ -37,7 +37,7 @@ class ExpenseTypeMapperTest {
 
 	@Test
 	void returnsEmptyForUnmappedCostType() {
-		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Hyra"));
+		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Rent"));
 
 		final var result = ExpenseTypeMapper.resolveExpenseTypeId("NONSENSE", proposal);
 

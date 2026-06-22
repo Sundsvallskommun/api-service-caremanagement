@@ -18,14 +18,14 @@ import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * One person row of the normberäkning draft — a household member (applicant, co-applicant or child).
+ * One person row of the calculation draft — a household member (applicant, co-applicant or child).
  * {@code processDays}
  * is the number of days in the home the process derived from the application (written only by the daily prepare);
- * {@code handlaggareDays} is the override a handläggare decided (written only from Draken). The effective number of
+ * {@code caseworkerDays} is the override a caseworker decided (written only from Draken). The effective number of
  * days
- * sent to Lifecare is the handläggare value when set, otherwise the process value. A row can be soft-deleted
+ * sent to Lifecare is the caseworker value when set, otherwise the process value. A row can be soft-deleted
  * ({@code deleted}) and is then excluded from the calculation but never resurrected by the daily refresh. Drives the
- * norm base, and is compared against the previous normberäkning in Lifecare to warn on household drift.
+ * norm base, and is compared against the previous calculation in Lifecare to warn on household drift.
  */
 @Entity
 @Table(name = "errand_fa_norm_person", indexes = {
@@ -56,8 +56,8 @@ public class FaNormPersonEntity {
 	@Column(name = "process_days")
 	private Integer processDays;
 
-	@Column(name = "handlaggare_days")
-	private Integer handlaggareDays;
+	@Column(name = "caseworker_days")
+	private Integer caseworkerDays;
 
 	@Column(name = "included")
 	private boolean included;
@@ -71,8 +71,8 @@ public class FaNormPersonEntity {
 	@Column(name = "norm_interval")
 	private String normInterval;
 
-	@Column(name = "jobbstimulans_amount", precision = 12, scale = 2)
-	private BigDecimal jobbstimulansAmount;
+	@Column(name = "job_stimulus_amount", precision = 12, scale = 2)
+	private BigDecimal jobStimulusAmount;
 
 	@Column(name = "deleted")
 	private boolean deleted;
@@ -195,16 +195,16 @@ public class FaNormPersonEntity {
 		return this;
 	}
 
-	public Integer getHandlaggareDays() {
-		return handlaggareDays;
+	public Integer getCaseworkerDays() {
+		return caseworkerDays;
 	}
 
-	public void setHandlaggareDays(final Integer handlaggareDays) {
-		this.handlaggareDays = handlaggareDays;
+	public void setCaseworkerDays(final Integer caseworkerDays) {
+		this.caseworkerDays = caseworkerDays;
 	}
 
-	public FaNormPersonEntity withHandlaggareDays(final Integer handlaggareDays) {
-		this.handlaggareDays = handlaggareDays;
+	public FaNormPersonEntity withCaseworkerDays(final Integer caseworkerDays) {
+		this.caseworkerDays = caseworkerDays;
 		return this;
 	}
 
@@ -260,16 +260,16 @@ public class FaNormPersonEntity {
 		return this;
 	}
 
-	public BigDecimal getJobbstimulansAmount() {
-		return jobbstimulansAmount;
+	public BigDecimal getJobStimulusAmount() {
+		return jobStimulusAmount;
 	}
 
-	public void setJobbstimulansAmount(final BigDecimal jobbstimulansAmount) {
-		this.jobbstimulansAmount = jobbstimulansAmount;
+	public void setJobStimulusAmount(final BigDecimal jobStimulusAmount) {
+		this.jobStimulusAmount = jobStimulusAmount;
 	}
 
-	public FaNormPersonEntity withJobbstimulansAmount(final BigDecimal jobbstimulansAmount) {
-		this.jobbstimulansAmount = jobbstimulansAmount;
+	public FaNormPersonEntity withJobStimulusAmount(final BigDecimal jobStimulusAmount) {
+		this.jobStimulusAmount = jobStimulusAmount;
 		return this;
 	}
 
@@ -332,16 +332,16 @@ public class FaNormPersonEntity {
 		final FaNormPersonEntity that = (FaNormPersonEntity) o;
 		return deleted == that.deleted && included == that.included && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
 			&& Objects.equals(origin, that.origin) && Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
-			&& Objects.equals(processDays, that.processDays) && Objects.equals(handlaggareDays, that.handlaggareDays)
+			&& Objects.equals(processDays, that.processDays) && Objects.equals(caseworkerDays, that.caseworkerDays)
 			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
-			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobbstimulansAmount, that.jobbstimulansAmount) && Objects.equals(note, that.note)
+			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount) && Objects.equals(note, that.note)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, origin, partyId, role, name, processDays, handlaggareDays, included, deviationFromDate, deviationToDate, normInterval,
-			jobbstimulansAmount, deleted, note, created, updated);
+		return Objects.hash(id, errandId, origin, partyId, role, name, processDays, caseworkerDays, included, deviationFromDate, deviationToDate, normInterval,
+			jobStimulusAmount, deleted, note, created, updated);
 	}
 
 	@Override
@@ -354,12 +354,12 @@ public class FaNormPersonEntity {
 			", role='" + role + '\'' +
 			", name='" + name + '\'' +
 			", processDays=" + processDays +
-			", handlaggareDays=" + handlaggareDays +
+			", caseworkerDays=" + caseworkerDays +
 			", included=" + included +
 			", deviationFromDate=" + deviationFromDate +
 			", deviationToDate=" + deviationToDate +
 			", normInterval='" + normInterval + '\'' +
-			", jobbstimulansAmount=" + jobbstimulansAmount +
+			", jobStimulusAmount=" + jobStimulusAmount +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +
 			", created=" + created +

@@ -33,9 +33,9 @@ public class Attachment {
 	}, examples = "CONVERSATION", accessMode = READ_ONLY)
 	private String origin;
 
-	@Schema(description = "Who the file came from: CLIENT (applicant) or HANDLAGGARE (caseworker). May be null for "
+	@Schema(description = "Who the file came from: CLIENT (applicant) or CASEWORKER (caseworker). May be null for "
 		+ "files predating the distinction or with no clear sender.", allowableValues = {
-			"CLIENT", "HANDLAGGARE"
+			"CLIENT", "CASEWORKER"
 	}, examples = "CLIENT", accessMode = READ_ONLY)
 	private String senderRole;
 

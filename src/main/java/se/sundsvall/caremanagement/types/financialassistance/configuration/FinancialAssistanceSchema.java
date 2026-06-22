@@ -31,7 +31,8 @@ final class FinancialAssistanceSchema {
 	private static final List<String> R = List.of(APPLICATION_TYPE_RENEWAL);
 
 	/**
-	 * The allowed beslutsalternativ for every EB type (the Beslut-form outcome dropdown). {@code carriesAmount} is false
+	 * The allowed decision alternatives for every EB type (the Decision-form outcome dropdown). {@code carriesAmount} is
+	 * false
 	 * for the outcomes that imply a 0 belopp (avslag/avvisning), which the frontend uses to zero the amount.
 	 */
 	private static final List<DecisionOption> DECISION_OPTIONS = List.of(
@@ -47,7 +48,7 @@ final class FinancialAssistanceSchema {
 		scalar("periodYear", "INTEGER", true, NRS, null, "Year the application period concerns"),
 		enumField("periodChoice", List.of("CURRENT_MONTH", "NEXT_MONTH", "OTHER_BENEFIT"), true, N, null, "Which period the new application concerns"),
 		scalar("otherBenefitDescription", "STRING", false, N, "periodChoice == OTHER_BENEFIT", "Free-text description of the other benefit applied for"),
-		enumField("normType", List.of("RIKSNORM", "OTHER_NORM"), true, NRS, null, "The norm used for the calculation"),
+		enumField("normType", List.of("NATIONAL_NORM", "OTHER_NORM"), true, NRS, null, "The norm used for the calculation"),
 		scalar("livelihoodDescription", "STRING", true, N, null, "How the applicant has supported themselves"),
 		scalar("hasChildrenUnder21", "BOOLEAN", true, NR, null, "Whether the household has children under 21 (gates children)"),
 		array("children", "Child", NR, "hasChildrenUnder21 == true", "Children in the household"),

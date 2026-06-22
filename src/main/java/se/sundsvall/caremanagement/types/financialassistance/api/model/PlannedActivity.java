@@ -10,7 +10,7 @@ public class PlannedActivity {
 	@Schema(description = "Which person the activity concerns", examples = "APPLICANT")
 	private String person;
 
-	@Schema(description = "Description of the activity", examples = "Arbetsträning på Återbruket")
+	@Schema(description = "Description of the activity", examples = "Work training placement")
 	private String activity;
 
 	@Schema(description = "Period from date", examples = "2026-06-01")

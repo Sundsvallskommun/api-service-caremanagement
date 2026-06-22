@@ -20,12 +20,12 @@ import static java.util.stream.Collectors.toMap;
  */
 public final class ExpenseTypeMapper {
 
-	/** The FC bucket that posts to the special-expense (levnadskostnader i övrigt) array. */
+	/** The FC bucket that posts to the special-expense (living costs i övrigt) array. */
 	public static final String BUCKET_SPECIAL_EXPENSE = "SPECIAL_EXPENSE";
 
 	/** EB cost type → the FC expense-type name it is matched against in the proposal. Confirm with the verksamhet. */
 	private static final Map<String, String> FC_NAME_BY_COST_TYPE = Map.ofEntries(
-		Map.entry("RENT", "Hyra"),
+		Map.entry("RENT", "Rent"),
 		Map.entry("ELECTRICITY", "El"),
 		Map.entry("HOME_INSURANCE", "Hemförsäkring"),
 		Map.entry("INTERNET", "Bredband"),

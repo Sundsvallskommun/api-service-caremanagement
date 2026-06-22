@@ -7,11 +7,11 @@ import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
- * Request to read whether the manual Lifecare utbetalning for one applicant and one application month has been
- * effectuated. The process polls this after a bifall to detect when the handläggare's manual payment is registered in
+ * Request to read whether the manual Lifecare payment for one applicant and one application month has been
+ * effectuated. The process polls this after a bifall to detect when the caseworker's manual payment is registered in
  * Lifecare — caremanagement makes no payment.
  */
-@Schema(description = "Request to read whether the Lifecare utbetalning for an application month has been effectuated.")
+@Schema(description = "Request to read whether the Lifecare payment for an application month has been effectuated.")
 public class PaymentStatusRequest {
 
 	@Schema(description = "The applicant's partyId (personId GUID)", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", requiredMode = Schema.RequiredMode.REQUIRED)

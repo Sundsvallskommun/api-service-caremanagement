@@ -44,12 +44,12 @@ class FaNormPersonEntityTest {
 		final var role = "APPLICANT";
 		final var name = "name";
 		final var processDays = 30;
-		final var handlaggareDays = 15;
+		final var caseworkerDays = 15;
 		final var included = true;
 		final var deviationFromDate = LocalDate.of(2026, 6, 1);
 		final var deviationToDate = LocalDate.of(2026, 6, 15);
 		final var normInterval = "MONTH";
-		final var jobbstimulansAmount = BigDecimal.valueOf(1000.00);
+		final var jobStimulusAmount = BigDecimal.valueOf(1000.00);
 		final var deleted = true;
 		final var note = "note";
 		final var created = now();
@@ -63,12 +63,12 @@ class FaNormPersonEntityTest {
 			.withRole(role)
 			.withName(name)
 			.withProcessDays(processDays)
-			.withHandlaggareDays(handlaggareDays)
+			.withCaseworkerDays(caseworkerDays)
 			.withIncluded(included)
 			.withDeviationFromDate(deviationFromDate)
 			.withDeviationToDate(deviationToDate)
 			.withNormInterval(normInterval)
-			.withJobbstimulansAmount(jobbstimulansAmount)
+			.withJobStimulusAmount(jobStimulusAmount)
 			.withDeleted(deleted)
 			.withNote(note)
 			.withCreated(created)
@@ -82,12 +82,12 @@ class FaNormPersonEntityTest {
 		assertThat(entity.getRole()).isEqualTo(role);
 		assertThat(entity.getName()).isEqualTo(name);
 		assertThat(entity.getProcessDays()).isEqualTo(processDays);
-		assertThat(entity.getHandlaggareDays()).isEqualTo(handlaggareDays);
+		assertThat(entity.getCaseworkerDays()).isEqualTo(caseworkerDays);
 		assertThat(entity.isIncluded()).isEqualTo(included);
 		assertThat(entity.getDeviationFromDate()).isEqualTo(deviationFromDate);
 		assertThat(entity.getDeviationToDate()).isEqualTo(deviationToDate);
 		assertThat(entity.getNormInterval()).isEqualTo(normInterval);
-		assertThat(entity.getJobbstimulansAmount()).isEqualTo(jobbstimulansAmount);
+		assertThat(entity.getJobStimulusAmount()).isEqualTo(jobStimulusAmount);
 		assertThat(entity.isDeleted()).isEqualTo(deleted);
 		assertThat(entity.getNote()).isEqualTo(note);
 		assertThat(entity.getCreated()).isEqualTo(created);

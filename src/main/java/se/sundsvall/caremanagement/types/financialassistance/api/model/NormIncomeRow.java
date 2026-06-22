@@ -9,21 +9,21 @@ import org.springframework.format.annotation.DateTimeFormat;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
- * One income row of the normberäkning draft, as returned to Draken — one FC income type with a sökande (applicant, "S")
- * side and a medsökande (co-applicant, "M") side, mirroring the Lifecare INKOMSTER tab and FC
+ * One income row of the calculation draft, as returned to Draken — one FC income type with a applicant (applicant, "S")
+ * side and a co-applicant (co-applicant, "M") side, mirroring the Lifecare INCOMES tab and FC
  * {@code CalculationIncomes}. Per side the amount the process decided ({@code *ProcessAmount}, from the classified
- * SSBTEK income) is read-only; the handläggare's override ({@code *HandlaggareAmount}) and the note are editable. The
- * effective amount per side ({@code *EffectiveAmount}) is what is posted to Lifecare = the handläggare amount when set,
+ * SSBTEK income) is read-only; the caseworker's override ({@code *CaseworkerAmount}) and the note are editable. The
+ * effective amount per side ({@code *EffectiveAmount}) is what is posted to Lifecare = the caseworker amount when set,
  * otherwise the process amount. Subtracted from the norm.
  */
-@Schema(description = "One income row of the normberäkning draft (FC income type with applicant/co-applicant sides, process vs handläggare amounts).")
+@Schema(description = "One income row of the calculation draft (FC income type with applicant/co-applicant sides, process vs caseworker amounts).")
 public class NormIncomeRow {
 
 	@Schema(description = "The row id", accessMode = Schema.AccessMode.READ_ONLY)
 	private String id;
 
-	@Schema(description = "Who created the row: the process or a handläggare", allowableValues = {
-		"SYSTEM", "HANDLAGGARE"
+	@Schema(description = "Who created the row: the process or a caseworker", allowableValues = {
+		"SYSTEM", "CASEWORKER"
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String origin;
 
@@ -36,10 +36,10 @@ public class NormIncomeRow {
 	@Schema(description = "The amount the process decided for the applicant (from the classified SSBTEK income)", examples = "1850.00", accessMode = Schema.AccessMode.READ_ONLY)
 	private BigDecimal applicantProcessAmount;
 
-	@Schema(description = "The amount a handläggare decided for the applicant; overrides the process amount when set", examples = "1900.00")
-	private BigDecimal applicantHandlaggareAmount;
+	@Schema(description = "The amount a caseworker decided for the applicant; overrides the process amount when set", examples = "1900.00")
+	private BigDecimal applicantCaseworkerAmount;
 
-	@Schema(description = "The amount actually used for the applicant (handläggare amount when set, otherwise process amount)", accessMode = Schema.AccessMode.READ_ONLY)
+	@Schema(description = "The amount actually used for the applicant (caseworker amount when set, otherwise process amount)", accessMode = Schema.AccessMode.READ_ONLY)
 	private BigDecimal applicantEffectiveAmount;
 
 	@Schema(description = "The date the applicant amount is attributed to")
@@ -49,10 +49,10 @@ public class NormIncomeRow {
 	@Schema(description = "The amount the process decided for the co-applicant (from the classified SSBTEK income)", examples = "1850.00", accessMode = Schema.AccessMode.READ_ONLY)
 	private BigDecimal coapplicantProcessAmount;
 
-	@Schema(description = "The amount a handläggare decided for the co-applicant; overrides the process amount when set", examples = "1900.00")
-	private BigDecimal coapplicantHandlaggareAmount;
+	@Schema(description = "The amount a caseworker decided for the co-applicant; overrides the process amount when set", examples = "1900.00")
+	private BigDecimal coapplicantCaseworkerAmount;
 
-	@Schema(description = "The amount actually used for the co-applicant (handläggare amount when set, otherwise process amount)", accessMode = Schema.AccessMode.READ_ONLY)
+	@Schema(description = "The amount actually used for the co-applicant (caseworker amount when set, otherwise process amount)", accessMode = Schema.AccessMode.READ_ONLY)
 	private BigDecimal coapplicantEffectiveAmount;
 
 	@Schema(description = "The date the co-applicant amount is attributed to")
@@ -142,16 +142,16 @@ public class NormIncomeRow {
 		return this;
 	}
 
-	public BigDecimal getApplicantHandlaggareAmount() {
-		return applicantHandlaggareAmount;
+	public BigDecimal getApplicantCaseworkerAmount() {
+		return applicantCaseworkerAmount;
 	}
 
-	public void setApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
-		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
+	public void setApplicantCaseworkerAmount(final BigDecimal applicantCaseworkerAmount) {
+		this.applicantCaseworkerAmount = applicantCaseworkerAmount;
 	}
 
-	public NormIncomeRow withApplicantHandlaggareAmount(final BigDecimal applicantHandlaggareAmount) {
-		this.applicantHandlaggareAmount = applicantHandlaggareAmount;
+	public NormIncomeRow withApplicantCaseworkerAmount(final BigDecimal applicantCaseworkerAmount) {
+		this.applicantCaseworkerAmount = applicantCaseworkerAmount;
 		return this;
 	}
 
@@ -194,16 +194,16 @@ public class NormIncomeRow {
 		return this;
 	}
 
-	public BigDecimal getCoapplicantHandlaggareAmount() {
-		return coapplicantHandlaggareAmount;
+	public BigDecimal getCoapplicantCaseworkerAmount() {
+		return coapplicantCaseworkerAmount;
 	}
 
-	public void setCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
-		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
+	public void setCoapplicantCaseworkerAmount(final BigDecimal coapplicantCaseworkerAmount) {
+		this.coapplicantCaseworkerAmount = coapplicantCaseworkerAmount;
 	}
 
-	public NormIncomeRow withCoapplicantHandlaggareAmount(final BigDecimal coapplicantHandlaggareAmount) {
-		this.coapplicantHandlaggareAmount = coapplicantHandlaggareAmount;
+	public NormIncomeRow withCoapplicantCaseworkerAmount(final BigDecimal coapplicantCaseworkerAmount) {
+		this.coapplicantCaseworkerAmount = coapplicantCaseworkerAmount;
 		return this;
 	}
 
@@ -292,17 +292,17 @@ public class NormIncomeRow {
 		final NormIncomeRow that = (NormIncomeRow) o;
 		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(origin, that.origin) && Objects.equals(typeId, that.typeId)
 			&& Objects.equals(typeName, that.typeName) && Objects.equals(applicantProcessAmount, that.applicantProcessAmount)
-			&& Objects.equals(applicantHandlaggareAmount, that.applicantHandlaggareAmount) && Objects.equals(applicantEffectiveAmount, that.applicantEffectiveAmount)
+			&& Objects.equals(applicantCaseworkerAmount, that.applicantCaseworkerAmount) && Objects.equals(applicantEffectiveAmount, that.applicantEffectiveAmount)
 			&& Objects.equals(applicantAmountDate, that.applicantAmountDate) && Objects.equals(coapplicantProcessAmount, that.coapplicantProcessAmount)
-			&& Objects.equals(coapplicantHandlaggareAmount, that.coapplicantHandlaggareAmount)
+			&& Objects.equals(coapplicantCaseworkerAmount, that.coapplicantCaseworkerAmount)
 			&& Objects.equals(coapplicantEffectiveAmount, that.coapplicantEffectiveAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate)
 			&& Objects.equals(note, that.note) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, typeId, typeName, applicantProcessAmount, applicantHandlaggareAmount, applicantEffectiveAmount, applicantAmountDate,
-			coapplicantProcessAmount, coapplicantHandlaggareAmount, coapplicantEffectiveAmount, coapplicantAmountDate, deleted, note, created, updated);
+		return Objects.hash(id, origin, typeId, typeName, applicantProcessAmount, applicantCaseworkerAmount, applicantEffectiveAmount, applicantAmountDate,
+			coapplicantProcessAmount, coapplicantCaseworkerAmount, coapplicantEffectiveAmount, coapplicantAmountDate, deleted, note, created, updated);
 	}
 
 	@Override
@@ -313,11 +313,11 @@ public class NormIncomeRow {
 			", typeId=" + typeId +
 			", typeName='" + typeName + '\'' +
 			", applicantProcessAmount=" + applicantProcessAmount +
-			", applicantHandlaggareAmount=" + applicantHandlaggareAmount +
+			", applicantCaseworkerAmount=" + applicantCaseworkerAmount +
 			", applicantEffectiveAmount=" + applicantEffectiveAmount +
 			", applicantAmountDate=" + applicantAmountDate +
 			", coapplicantProcessAmount=" + coapplicantProcessAmount +
-			", coapplicantHandlaggareAmount=" + coapplicantHandlaggareAmount +
+			", coapplicantCaseworkerAmount=" + coapplicantCaseworkerAmount +
 			", coapplicantEffectiveAmount=" + coapplicantEffectiveAmount +
 			", coapplicantAmountDate=" + coapplicantAmountDate +
 			", deleted=" + deleted +

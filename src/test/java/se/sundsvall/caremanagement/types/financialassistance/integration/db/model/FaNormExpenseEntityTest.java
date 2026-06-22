@@ -45,7 +45,7 @@ class FaNormExpenseEntityTest {
 		final var specification = "specification";
 		final var appliedAmount = BigDecimal.valueOf(1200.00);
 		final var processAmount = BigDecimal.valueOf(1000.00);
-		final var handlaggareAmount = BigDecimal.valueOf(1100.00);
+		final var caseworkerAmount = BigDecimal.valueOf(1100.00);
 		final var deleted = true;
 		final var note = "note";
 		final var created = now();
@@ -61,7 +61,7 @@ class FaNormExpenseEntityTest {
 			.withSpecification(specification)
 			.withAppliedAmount(appliedAmount)
 			.withProcessAmount(processAmount)
-			.withHandlaggareAmount(handlaggareAmount)
+			.withCaseworkerAmount(caseworkerAmount)
 			.withDeleted(deleted)
 			.withNote(note)
 			.withCreated(created)
@@ -77,7 +77,7 @@ class FaNormExpenseEntityTest {
 		assertThat(entity.getSpecification()).isEqualTo(specification);
 		assertThat(entity.getAppliedAmount()).isEqualTo(appliedAmount);
 		assertThat(entity.getProcessAmount()).isEqualTo(processAmount);
-		assertThat(entity.getHandlaggareAmount()).isEqualTo(handlaggareAmount);
+		assertThat(entity.getCaseworkerAmount()).isEqualTo(caseworkerAmount);
 		assertThat(entity.isDeleted()).isEqualTo(deleted);
 		assertThat(entity.getNote()).isEqualTo(note);
 		assertThat(entity.getCreated()).isEqualTo(created);
