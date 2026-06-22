@@ -15,8 +15,8 @@ class FinancialAssistanceDataTest {
 
 	private static final OffsetDateTime ATTESTED_AT = OffsetDateTime.parse("2026-06-01T09:30:00Z");
 	private static final List<Child> CHILDREN = List.of(Child.create().withFirstName("Astrid"));
-	private static final List<Cost> COSTS = List.of(Cost.create().withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("5400.00")));
-	private static final List<Income> INCOMES = List.of(Income.create().withIncomeType("SALARY_AFTER_TAX").withAmount(new BigDecimal("18500.00")));
+	private static final List<Cost> COSTS = List.of(Cost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("5400.00")));
+	private static final List<Income> INCOMES = List.of(Income.create().withIncomeType("SALARY").withAmount(new BigDecimal("18500.00")));
 	private static final List<PendingBenefit> PENDING_BENEFITS = List.of(PendingBenefit.create().withBenefitName("Bostadsbidrag"));
 	private static final List<Asset> ASSETS = List.of(Asset.create().withAssetCategory("VEHICLE").withValue(new BigDecimal("120000.00")));
 	private static final List<Person> PERSONS = List.of(Person.create().withRole("APPLICANT"));

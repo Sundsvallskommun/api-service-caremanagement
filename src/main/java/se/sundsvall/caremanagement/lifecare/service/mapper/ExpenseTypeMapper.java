@@ -23,29 +23,19 @@ public final class ExpenseTypeMapper {
 	/** The FC bucket that posts to the special-expense (living costs i övrigt) array. */
 	public static final String BUCKET_SPECIAL_EXPENSE = "SPECIAL_EXPENSE";
 
-	/**
-	 * EB cost type → the FC expense-type name it is matched against in the proposal — the Lifecare labels of the dropdown
-	 * catalogue. The boendekostnader resolve against the regular catalogue, the levnadskostnader i övrigt against the
-	 * special catalogue (selected by the bucket). Confirm the exact names with the verksamhet.
-	 */
+	/** EB cost type → the FC expense-type name it is matched against in the proposal. Confirm with the verksamhet. */
 	private static final Map<String, String> FC_NAME_BY_COST_TYPE = Map.ofEntries(
-		// Boendekostnader (EXPENSE bucket)
-		Map.entry("UNEMPLOYMENT_FUND_FEE", "A-kasseavgift"),
-		Map.entry("WORK_TRAVEL", "Arbetsresor"),
-		Map.entry("HOUSING_COST", "Boendekostnad"),
-		Map.entry("ELECTRICITY_1", "El 1"),
-		Map.entry("ELECTRICITY_2", "El 2"),
-		Map.entry("UNION_FEE", "Fackavgift"),
+		Map.entry("RENT", "Rent"),
+		Map.entry("ELECTRICITY", "El"),
 		Map.entry("HOME_INSURANCE", "Hemförsäkring"),
-		// Levnadskostnader i övrigt (SPECIAL_EXPENSE bucket)
-		Map.entry("CHILDCARE_FEE", "Barnomsorgsavgift"),
-		Map.entry("BROADBAND_INTERNET", "Bredband/Internet"),
-		Map.entry("GLASSES", "Glasögon"),
-		Map.entry("VISITATION_COST", "Kostnad i samband med umgänge"),
+		Map.entry("INTERNET", "Bredband"),
+		Map.entry("UNEMPLOYMENT_FUND", "A-kassa"),
+		Map.entry("UNION_FEE", "Fackavgift"),
+		Map.entry("TRAVEL_APPROVED", "Resor"),
+		Map.entry("TRAVEL_MEDICAL_TRANSPORT", "Sjukresor"),
 		Map.entry("MEDICAL_CARE", "Läkarvård"),
 		Map.entry("MEDICINE", "Medicin"),
-		Map.entry("DENTAL_CARE", "Tandvård"),
-		Map.entry("OTHER_EXPENSE", "Övriga utgifter"));
+		Map.entry("OTHER", "Övrigt"));
 
 	private ExpenseTypeMapper() {}
 

@@ -8,11 +8,11 @@ import se.sundsvall.dept44.common.validators.annotation.OneOf;
 @Schema(description = "A cost the applicant is applying for assistance with.")
 public class Cost {
 
-	@Schema(description = "The type of cost — boendekostnader (EXPENSE) and levnadskostnader i övrigt (SPECIAL_EXPENSE); see GET .../errands/financial-assistance/metadata for the labelled catalogue", examples = "HOUSING_COST", allowableValues = {
-		"UNEMPLOYMENT_FUND_FEE", "WORK_TRAVEL", "HOUSING_COST", "ELECTRICITY_1", "ELECTRICITY_2", "UNION_FEE", "HOME_INSURANCE", "CHILDCARE_FEE", "BROADBAND_INTERNET", "GLASSES", "VISITATION_COST", "MEDICAL_CARE", "MEDICINE", "DENTAL_CARE", "OTHER_EXPENSE"
+	@Schema(description = "The type of cost", examples = "RENT", allowableValues = {
+		"RENT", "ELECTRICITY", "HOME_INSURANCE", "INTERNET", "UNEMPLOYMENT_FUND", "UNION_FEE", "TRAVEL_APPROVED", "TRAVEL_MEDICAL_TRANSPORT", "MEDICAL_CARE", "MEDICINE", "OTHER"
 	})
 	@OneOf(value = {
-		"UNEMPLOYMENT_FUND_FEE", "WORK_TRAVEL", "HOUSING_COST", "ELECTRICITY_1", "ELECTRICITY_2", "UNION_FEE", "HOME_INSURANCE", "CHILDCARE_FEE", "BROADBAND_INTERNET", "GLASSES", "VISITATION_COST", "MEDICAL_CARE", "MEDICINE", "DENTAL_CARE", "OTHER_EXPENSE"
+		"RENT", "ELECTRICITY", "HOME_INSURANCE", "INTERNET", "UNEMPLOYMENT_FUND", "UNION_FEE", "TRAVEL_APPROVED", "TRAVEL_MEDICAL_TRANSPORT", "MEDICAL_CARE", "MEDICINE", "OTHER"
 	}, nullable = true)
 	private String costType;
 

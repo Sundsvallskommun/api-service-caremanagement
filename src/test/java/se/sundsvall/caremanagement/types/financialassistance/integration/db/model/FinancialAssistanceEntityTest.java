@@ -16,8 +16,8 @@ class FinancialAssistanceEntityTest {
 	@Test
 	void builderMethods() {
 		final var children = List.of(FaChild.create().withPartyId("20180101-1234").withFirstName("Kid"));
-		final var costs = List.of(FaCost.create().withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("5000.00")));
-		final var incomes = List.of(FaIncome.create().withIncomeType("SALARY_AFTER_TAX").withAmount(new BigDecimal("12000.00")));
+		final var costs = List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("5000.00")));
+		final var incomes = List.of(FaIncome.create().withIncomeType("SALARY").withAmount(new BigDecimal("12000.00")));
 		final var pendingBenefits = List.of(FaPendingBenefit.create().withBenefitName("BOSTADSBIDRAG").withApplicantName("Anna"));
 		final var assets = List.of(FaAsset.create().withAssetCategory("VEHICLE").withValue(new BigDecimal("80000.00")));
 		final var persons = List.of(FaPerson.create().withRole("APPLICANT").withPartyId("19900101-1234"));
@@ -104,8 +104,8 @@ class FinancialAssistanceEntityTest {
 	@Test
 	void settersWork() {
 		final var children = List.of(FaChild.create().withFirstName("Kid"));
-		final var costs = List.of(FaCost.create().withCostType("HOUSING_COST"));
-		final var incomes = List.of(FaIncome.create().withIncomeType("SALARY_AFTER_TAX"));
+		final var costs = List.of(FaCost.create().withCostType("RENT"));
+		final var incomes = List.of(FaIncome.create().withIncomeType("SALARY"));
 		final var pendingBenefits = List.of(FaPendingBenefit.create().withBenefitName("BOSTADSBIDRAG"));
 		final var assets = List.of(FaAsset.create().withAssetCategory("VEHICLE"));
 		final var persons = List.of(FaPerson.create().withRole("APPLICANT"));

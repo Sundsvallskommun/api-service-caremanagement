@@ -36,7 +36,6 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateWar
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceMetadata;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
@@ -52,7 +51,6 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionAp
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovalRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
-import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceTypes;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
@@ -482,19 +480,6 @@ class FinancialAssistanceResource {
 		@Valid @NotNull @RequestBody final PaymentStatusRequest request) {
 
 		return ok(service.checkPaymentStatus(municipalityId, request));
-	}
-
-	@GetMapping(path = "/financial-assistance/metadata", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Read EB type metadata (income / cost / living-cost dropdowns)",
-		description = "The labelled type catalogues the frontend feeds its EB dropdowns from: income types (inkomster), cost types (boendekostnader) and living-cost types (levnadskostnader i övrigt), each a code + Swedish display name + citizenReportable flag. The complete set is the handläggare/normberäkning catalogue (= the allowable values of Income.incomeType / Cost.costType); Mina sidor shows only the citizenReportable types, since SSBTEK-sourced incomes are handläggare-only. Static.",
-		responses = {
-			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
-		})
-	ResponseEntity<FinancialAssistanceMetadata> getMetadata(
-		@ValidMunicipalityId @PathVariable final String municipalityId,
-		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace) {
-
-		return ok(FinancialAssistanceTypes.metadata());
 	}
 
 	@GetMapping(path = "/financial-assistance/prefill", produces = APPLICATION_JSON_VALUE)

@@ -37,7 +37,7 @@ public class CalculationFeeder {
 
 	private static final int FULL_MONTH_DAYS = 30;
 	private static final String RESIDENCE_FULL_TIME = "FULL_TIME";
-	private static final String COST_TYPE_HOUSING = "HOUSING_COST";
+	private static final String COST_TYPE_RENT = "RENT";
 	private static final String CHANGE_HOUSEHOLD_SIZE = "HOUSEHOLD_SIZE";
 	private static final String CHANGE_HOUSING_COST = "HOUSING_COST";
 	private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
@@ -235,10 +235,10 @@ public class CalculationFeeder {
 		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "housing-kostnad", withRegel(detail, verdict.regel())));
 	}
 
-	/** Sum of the application's reported housing costs (0 when none). */
+	/** Sum of the application's reported RENT costs (0 when none). */
 	private static BigDecimal currentRent(final FinancialAssistanceEntity errand) {
 		return ofNullable(errand.getCosts()).orElseGet(List::of).stream()
-			.filter(cost -> COST_TYPE_HOUSING.equals(cost.getCostType()))
+			.filter(cost -> COST_TYPE_RENT.equals(cost.getCostType()))
 			.map(FaCost::getAppliedAmount)
 			.filter(amount -> amount != null)
 			.reduce(BigDecimal.ZERO, BigDecimal::add);
