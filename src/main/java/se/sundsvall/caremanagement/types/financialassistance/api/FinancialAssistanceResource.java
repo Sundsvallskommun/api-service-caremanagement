@@ -486,7 +486,7 @@ class FinancialAssistanceResource {
 
 	@GetMapping(path = "/financial-assistance/metadata", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read EB type metadata (income / cost / living-cost dropdowns)",
-		description = "The labelled type catalogues the frontend feeds its EB dropdowns from: income types (inkomster), cost types (boendekostnader) and living-cost types (levnadskostnader i övrigt), each a code + Swedish display name. Static — the codes are exactly the allowable values of Income.incomeType and Cost.costType.",
+		description = "The labelled type catalogues the frontend feeds its EB dropdowns from: income types (inkomster), cost types (boendekostnader) and living-cost types (levnadskostnader i övrigt), each a code + Swedish display name + citizenReportable flag. The complete set is the handläggare/normberäkning catalogue (= the allowable values of Income.incomeType / Cost.costType); Mina sidor shows only the citizenReportable types, since SSBTEK-sourced incomes are handläggare-only. Static.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 		})

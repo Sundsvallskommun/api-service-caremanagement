@@ -13,7 +13,7 @@ class FinancialAssistanceTypesTest {
 
 	@Test
 	void cataloguesHaveExpectedSizes() {
-		assertThat(FinancialAssistanceTypes.INCOME_TYPES).hasSize(29);
+		assertThat(FinancialAssistanceTypes.INCOME_TYPES).hasSize(33);
 		assertThat(FinancialAssistanceTypes.COST_TYPES).hasSize(7);
 		assertThat(FinancialAssistanceTypes.LIVING_COST_TYPES).hasSize(8);
 	}
@@ -40,6 +40,25 @@ class FinancialAssistanceTypesTest {
 		assertThat(metadata.getIncomeTypes()).isEqualTo(FinancialAssistanceTypes.INCOME_TYPES);
 		assertThat(metadata.getCostTypes()).isEqualTo(FinancialAssistanceTypes.COST_TYPES);
 		assertThat(metadata.getLivingCostTypes()).isEqualTo(FinancialAssistanceTypes.LIVING_COST_TYPES);
+	}
+
+	@Test
+	void citizenReportableIncomeTypesAreTheNonSsbtekSet() {
+		final var reportable = FinancialAssistanceTypes.INCOME_TYPES.stream()
+			.filter(TypeOption::isCitizenReportable)
+			.map(TypeOption::getCode)
+			.toList();
+
+		// the Mina-sidor set: incomes that do NOT arrive via SSBTEK (FK / Pension / CSN / A-kassa / SKV)
+		assertThat(reportable).containsExactlyInAnyOrder(
+			"FINANCIAL_AID_OTHER_MUNICIPALITY", "RENT_SHARE_FROM_CHILD", "SALARY_AFTER_TAX",
+			"SWISH_DEPOSITS_TRANSFERS", "OCCUPATIONAL_PENSION_INSURANCE", "CHILD_SUPPORT", "OTHER_INCOME");
+	}
+
+	@Test
+	void allCostTypesAreCitizenReportable() {
+		assertThat(FinancialAssistanceTypes.COST_TYPES).allMatch(TypeOption::isCitizenReportable);
+		assertThat(FinancialAssistanceTypes.LIVING_COST_TYPES).allMatch(TypeOption::isCitizenReportable);
 	}
 
 	@Test

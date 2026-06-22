@@ -26,15 +26,17 @@ class TypeOptionTest {
 	void builderMethods() {
 		final var option = TypeOption.create()
 			.withCode("HOUSING_COST")
-			.withDisplayName("Boendekostnad");
+			.withDisplayName("Boendekostnad")
+			.withCitizenReportable(true);
 
 		org.assertj.core.api.Assertions.assertThat(option.getCode()).isEqualTo("HOUSING_COST");
 		org.assertj.core.api.Assertions.assertThat(option.getDisplayName()).isEqualTo("Boendekostnad");
+		org.assertj.core.api.Assertions.assertThat(option.isCitizenReportable()).isTrue();
 		org.assertj.core.api.Assertions.assertThat(option).hasNoNullFieldsOrProperties();
 	}
 
 	@Test
 	void createReturnsEmptyInstance() {
-		org.assertj.core.api.Assertions.assertThat(TypeOption.create()).hasAllNullFieldsOrProperties();
+		org.assertj.core.api.Assertions.assertThat(TypeOption.create()).hasAllNullFieldsOrPropertiesExcept("citizenReportable");
 	}
 }

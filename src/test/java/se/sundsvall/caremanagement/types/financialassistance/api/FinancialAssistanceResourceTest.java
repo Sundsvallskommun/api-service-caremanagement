@@ -143,13 +143,16 @@ class FinancialAssistanceResourceTest {
 			.getResponseBody();
 
 		assertThat(metadata).isNotNull();
-		assertThat(metadata.getIncomeTypes()).hasSize(29);
+		assertThat(metadata.getIncomeTypes()).hasSize(33);
 		assertThat(metadata.getCostTypes()).hasSize(7);
 		assertThat(metadata.getLivingCostTypes()).hasSize(8);
 		assertThat(metadata.getCostTypes()).anySatisfy(option -> {
 			assertThat(option.getCode()).isEqualTo("HOUSING_COST");
 			assertThat(option.getDisplayName()).isEqualTo("Boendekostnad");
+			assertThat(option.isCitizenReportable()).isTrue();
 		});
+		// SSBTEK-sourced incomes are handläggare-only; the citizen-reportable subset is smaller
+		assertThat(metadata.getIncomeTypes()).filteredOn(option -> option.isCitizenReportable()).hasSize(7);
 	}
 
 	@Test
