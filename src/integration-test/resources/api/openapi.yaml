@@ -6521,6 +6521,12 @@ components:
         specification:
           type: string
           description: The cost specification
+        appliedAmount:
+          type: number
+          description: The amount applied for (ansökt). Honoured only when creating
+            a new row; ignored on a patch.
+          examples:
+          - 1100.0
         caseworkerAmount:
           type: number
           description: The amount the caseworker decided

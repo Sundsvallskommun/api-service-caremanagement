@@ -194,7 +194,7 @@ public class DraftService {
 		final var entity = expenseRepository.save(FaNormExpenseEntity.create()
 			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER).withBucket(bucketOrDefault(input.getBucket()))
 			.withCostType(input.getCostType()).withOtherSubType(input.getOtherSubType()).withSpecification(input.getSpecification())
-			.withCaseworkerAmount(input.getCaseworkerAmount()).withNote(input.getNote()));
+			.withAppliedAmount(input.getAppliedAmount()).withCaseworkerAmount(input.getCaseworkerAmount()).withNote(input.getNote()));
 		return toExpenseRow(entity);
 	}
 

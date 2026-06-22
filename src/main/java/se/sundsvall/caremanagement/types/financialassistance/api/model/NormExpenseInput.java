@@ -7,7 +7,7 @@ import java.util.Objects;
 /**
  * What a caseworker sends to add a new expense row (origin CASEWORKER) or patch an existing one — only the
  * caseworker
- * amount + note are honoured on a patch.
+ * amount + note are honoured on a patch; the applied amount is honoured only when creating a new row.
  */
 @Schema(description = "What a caseworker sends to add or patch an expense row (identity + caseworker-writable fields only).")
 public class NormExpenseInput {
@@ -25,6 +25,9 @@ public class NormExpenseInput {
 
 	@Schema(description = "The cost specification")
 	private String specification;
+
+	@Schema(description = "The amount applied for (ansökt). Honoured only when creating a new row; ignored on a patch.", examples = "1100.00")
+	private BigDecimal appliedAmount;
 
 	@Schema(description = "The amount the caseworker decided", examples = "1100.00")
 	private BigDecimal caseworkerAmount;
@@ -88,6 +91,19 @@ public class NormExpenseInput {
 		return this;
 	}
 
+	public BigDecimal getAppliedAmount() {
+		return appliedAmount;
+	}
+
+	public void setAppliedAmount(final BigDecimal appliedAmount) {
+		this.appliedAmount = appliedAmount;
+	}
+
+	public NormExpenseInput withAppliedAmount(final BigDecimal appliedAmount) {
+		this.appliedAmount = appliedAmount;
+		return this;
+	}
+
 	public BigDecimal getCaseworkerAmount() {
 		return caseworkerAmount;
 	}
@@ -120,12 +136,13 @@ public class NormExpenseInput {
 			return false;
 		final NormExpenseInput that = (NormExpenseInput) o;
 		return Objects.equals(costType, that.costType) && Objects.equals(bucket, that.bucket) && Objects.equals(otherSubType, that.otherSubType)
-			&& Objects.equals(specification, that.specification) && Objects.equals(caseworkerAmount, that.caseworkerAmount) && Objects.equals(note, that.note);
+			&& Objects.equals(specification, that.specification) && Objects.equals(appliedAmount, that.appliedAmount) && Objects.equals(caseworkerAmount, that.caseworkerAmount)
+			&& Objects.equals(note, that.note);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(costType, bucket, otherSubType, specification, caseworkerAmount, note);
+		return Objects.hash(costType, bucket, otherSubType, specification, appliedAmount, caseworkerAmount, note);
 	}
 
 	@Override
@@ -135,6 +152,7 @@ public class NormExpenseInput {
 			", bucket='" + bucket + '\'' +
 			", otherSubType='" + otherSubType + '\'' +
 			", specification='" + specification + '\'' +
+			", appliedAmount=" + appliedAmount +
 			", caseworkerAmount=" + caseworkerAmount +
 			", note='" + note + '\'' +
 			'}';

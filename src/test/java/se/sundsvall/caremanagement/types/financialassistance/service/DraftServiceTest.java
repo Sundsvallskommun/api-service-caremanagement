@@ -174,8 +174,12 @@ class DraftServiceTest {
 		when(expenseRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withProcessAmount(new BigDecimal("8000"))));
 		when(personRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withProcessDays(30)));
 
-		assertThat(service.addExpense(ERRAND_ID, new NormExpenseInput().withCostType("HOUSING_COST").withCaseworkerAmount(new BigDecimal("7500"))).getEffectiveAmount()).isEqualByComparingTo("7500");
-		assertThat(service.patchExpense(ERRAND_ID, ROW_ID, new NormExpenseInput().withCaseworkerAmount(new BigDecimal("7000"))).getCaseworkerAmount()).isEqualByComparingTo("7000");
+		final var added = service.addExpense(ERRAND_ID, new NormExpenseInput().withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000")).withCaseworkerAmount(new BigDecimal("7500")));
+		assertThat(added.getEffectiveAmount()).isEqualByComparingTo("7500");
+		assertThat(added.getAppliedAmount()).isEqualByComparingTo("9000"); // applied amount honoured on create
+		final var patched = service.patchExpense(ERRAND_ID, ROW_ID, new NormExpenseInput().withAppliedAmount(new BigDecimal("9999")).withCaseworkerAmount(new BigDecimal("7000")));
+		assertThat(patched.getCaseworkerAmount()).isEqualByComparingTo("7000");
+		assertThat(patched.getAppliedAmount()).isNull(); // applied amount ignored on patch
 		assertThat(service.setExpenseDeleted(ERRAND_ID, ROW_ID, true).isDeleted()).isTrue();
 
 		assertThat(service.addPerson(ERRAND_ID, new NormPersonInput().withPartyId("p1").withRole(ROLE_CHILD).withCaseworkerDays(10)).getEffectiveDays()).isEqualTo(10);

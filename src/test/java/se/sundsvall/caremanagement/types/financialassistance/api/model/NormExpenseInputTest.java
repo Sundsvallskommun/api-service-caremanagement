@@ -30,6 +30,7 @@ class NormExpenseInputTest {
 		final var bucket = "EXPENSE";
 		final var otherSubType = "other";
 		final var specification = "specification";
+		final var appliedAmount = BigDecimal.valueOf(1200.00);
 		final var caseworkerAmount = BigDecimal.valueOf(1100.00);
 		final var note = "note";
 
@@ -38,6 +39,7 @@ class NormExpenseInputTest {
 			.withBucket(bucket)
 			.withOtherSubType(otherSubType)
 			.withSpecification(specification)
+			.withAppliedAmount(appliedAmount)
 			.withCaseworkerAmount(caseworkerAmount)
 			.withNote(note);
 
@@ -46,6 +48,7 @@ class NormExpenseInputTest {
 		assertThat(result.getBucket()).isEqualTo(bucket);
 		assertThat(result.getOtherSubType()).isEqualTo(otherSubType);
 		assertThat(result.getSpecification()).isEqualTo(specification);
+		assertThat(result.getAppliedAmount()).isEqualTo(appliedAmount);
 		assertThat(result.getCaseworkerAmount()).isEqualTo(caseworkerAmount);
 		assertThat(result.getNote()).isEqualTo(note);
 	}
