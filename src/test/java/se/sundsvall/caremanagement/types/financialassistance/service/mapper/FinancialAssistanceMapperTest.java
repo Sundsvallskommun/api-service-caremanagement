@@ -81,14 +81,14 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getChildren().getFirst().getDaysInHome()).isEqualTo(30);
 
 		assertThat(entity.getCosts()).hasSize(1);
-		assertThat(entity.getCosts().getFirst().getCostType()).isEqualTo("RENT");
+		assertThat(entity.getCosts().getFirst().getCostType()).isEqualTo("HOUSING_COST");
 		assertThat(entity.getCosts().getFirst().getAppliedAmount()).isEqualByComparingTo("5000.00");
 		assertThat(entity.getCosts().getFirst().getOtherSubType()).isEqualTo("OTHER_SUB");
 		assertThat(entity.getCosts().getFirst().getSpecification()).isEqualTo("Spec");
 		assertThat(entity.getCosts().getFirst().getRecipientOrPeriod()).isEqualTo("Juni");
 
 		assertThat(entity.getIncomes()).hasSize(1);
-		assertThat(entity.getIncomes().getFirst().getIncomeType()).isEqualTo("SALARY");
+		assertThat(entity.getIncomes().getFirst().getIncomeType()).isEqualTo("SALARY_AFTER_TAX");
 		assertThat(entity.getIncomes().getFirst().getAmount()).isEqualByComparingTo("12000.00");
 		assertThat(entity.getIncomes().getFirst().getIncomeDate()).isEqualTo(DATE);
 		assertThat(entity.getIncomes().getFirst().getRecipient()).isEqualTo("Anna");
@@ -328,13 +328,13 @@ class FinancialAssistanceMapperTest {
 				.withResidenceExtent("FULL")
 				.withDaysInHome(30)))
 			.withCosts(List.of(Cost.create()
-				.withCostType("RENT")
+				.withCostType("HOUSING_COST")
 				.withAppliedAmount(new BigDecimal("5000.00"))
 				.withOtherSubType("OTHER_SUB")
 				.withSpecification("Spec")
 				.withRecipientOrPeriod("Juni")))
 			.withIncomes(List.of(Income.create()
-				.withIncomeType("SALARY")
+				.withIncomeType("SALARY_AFTER_TAX")
 				.withAmount(new BigDecimal("12000.00"))
 				.withIncomeDate(DATE)
 				.withRecipient("Anna")))
@@ -425,13 +425,13 @@ class FinancialAssistanceMapperTest {
 				.withResidenceExtent("FULL")
 				.withDaysInHome(30)))
 			.withCosts(List.of(FaCost.create()
-				.withCostType("RENT")
+				.withCostType("HOUSING_COST")
 				.withAppliedAmount(new BigDecimal("5000.00"))
 				.withOtherSubType("OTHER_SUB")
 				.withSpecification("Spec")
 				.withRecipientOrPeriod("Juni")))
 			.withIncomes(List.of(FaIncome.create()
-				.withIncomeType("SALARY")
+				.withIncomeType("SALARY_AFTER_TAX")
 				.withAmount(new BigDecimal("12000.00"))
 				.withIncomeDate(DATE)
 				.withRecipient("Anna")))

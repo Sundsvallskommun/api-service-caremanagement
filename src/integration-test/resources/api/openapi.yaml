@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:63933
+- url: http://localhost:51965
   description: Generated server url
 tags:
 - name: Notes
@@ -4281,6 +4281,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RenewalPrefill"
+  /{municipalityId}/{namespace}/errands/financial-assistance/metadata:
+    get:
+      tags:
+      - Financial Assistance
+      summary: Read EB type metadata (income / cost / living-cost dropdowns)
+      description: "The labelled type catalogues the frontend feeds its EB dropdowns\
+        \ from: income types (inkomster), cost types (boendekostnader) and living-cost\
+        \ types (levnadskostnader i övrigt), each a code + Swedish display name. Static\
+        \ — the codes are exactly the allowable values of Income.incomeType and Cost.costType."
+      operationId: getMetadata
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialAssistanceMetadata"
   /{municipalityId}/{namespace}/errand-types:
     get:
       tags:
@@ -4424,10 +4453,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -4663,21 +4692,27 @@ components:
       properties:
         costType:
           type: string
-          description: The type of cost
+          description: The type of cost — boendekostnader (EXPENSE) and levnadskostnader
+            i övrigt (SPECIAL_EXPENSE); see GET .../errands/financial-assistance/metadata
+            for the labelled catalogue
           enum:
-          - RENT
-          - ELECTRICITY
-          - HOME_INSURANCE
-          - INTERNET
-          - UNEMPLOYMENT_FUND
+          - UNEMPLOYMENT_FUND_FEE
+          - WORK_TRAVEL
+          - HOUSING_COST
+          - ELECTRICITY_1
+          - ELECTRICITY_2
           - UNION_FEE
-          - TRAVEL_APPROVED
-          - TRAVEL_MEDICAL_TRANSPORT
+          - HOME_INSURANCE
+          - CHILDCARE_FEE
+          - BROADBAND_INTERNET
+          - GLASSES
+          - VISITATION_COST
           - MEDICAL_CARE
           - MEDICINE
-          - OTHER
+          - DENTAL_CARE
+          - OTHER_EXPENSE
           examples:
-          - RENT
+          - HOUSING_COST
         appliedAmount:
           type: number
           description: The amount applied for
@@ -4906,17 +4941,40 @@ components:
       properties:
         incomeType:
           type: string
-          description: The type of income
+          description: The type of income (see GET .../errands/financial-assistance/metadata
+            for the labelled catalogue)
           enum:
+          - UNEMPLOYMENT_BENEFIT
+          - UNEMPLOYMENT_OR_ALPHA_BENEFIT
+          - ACTIVITY_COMPENSATION
+          - ACTIVITY_SUPPORT
+          - ALPHA_BENEFIT
+          - CHILD_ALLOWANCE
+          - CHILD_PENSION
+          - HOUSING_ALLOWANCE
+          - HOUSING_SUPPLEMENT
+          - CSN_GRANT
+          - CSN_LOAN
+          - DAILY_ALLOWANCE_FK
+          - SURVIVOR_SUPPORT
+          - ESTABLISHMENT_BENEFIT
+          - PARENTAL_BENEFIT
+          - LODGING_ALLOWANCE
+          - CAPITAL_INCOME
+          - SALARY_AFTER_TAX
+          - PENSION
+          - PENSION_ANNUITY_CARE
+          - SICKNESS_COMPENSATION
+          - SICKNESS_BENEFIT
+          - TAX_REFUND
+          - SWISH_DEPOSITS_TRANSFERS
+          - MAINTENANCE_SUPPORT
+          - CARE_ALLOWANCE
+          - ELDERLY_SUPPORT
+          - SURPLUS_FROM_PREVIOUS_MONTH
           - OTHER_INCOME
-          - FINANCIAL_AID_OTHER_MUNICIPALITY
-          - SALARY
-          - SWISH_DEPOSITS
-          - OCCUPATIONAL_PENSION_INSURANCE
-          - CHILD_SUPPORT
-          - RENT_SHARE_FROM_CHILD
           examples:
-          - SALARY
+          - SALARY_AFTER_TAX
         amount:
           type: number
           description: The income amount
@@ -7256,6 +7314,43 @@ components:
             is degraded (empty children).
           examples:
           - "true"
+    FinancialAssistanceMetadata:
+      type: object
+      description: "EB type catalogues for the frontend dropdowns: income, cost and\
+        \ living-cost types."
+      properties:
+        incomeTypes:
+          type: array
+          description: The income types (inkomster)
+          items:
+            $ref: "#/components/schemas/TypeOption"
+        costTypes:
+          type: array
+          description: "The cost types (kostnader — boendekostnader), shown as the\
+            \ first cost dropdown"
+          items:
+            $ref: "#/components/schemas/TypeOption"
+        livingCostTypes:
+          type: array
+          description: "The living-cost types (levnadskostnader i övrigt), shown as\
+            \ the second cost dropdown"
+          items:
+            $ref: "#/components/schemas/TypeOption"
+    TypeOption:
+      type: object
+      description: A selectable EB type — the code stored on the payload plus its
+        Swedish display label.
+      properties:
+        code:
+          type: string
+          description: "The type code, stored on the payload (incomeType / costType)"
+          examples:
+          - HOUSING_COST
+        displayName:
+          type: string
+          description: Human-readable Swedish label for the type
+          examples:
+          - Boendekostnad
     DecisionOption:
       type: object
       description: An allowed decision outcome (decision alternatives) for an errand

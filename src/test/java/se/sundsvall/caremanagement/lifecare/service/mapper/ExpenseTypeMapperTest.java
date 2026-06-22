@@ -18,26 +18,26 @@ class ExpenseTypeMapperTest {
 	@Test
 	void resolvesKnownCostTypeToMatchingExpenseTypeId() {
 		final var proposal = proposalWith(
-			new PersonBasedCalculationExpenseTypeDTO().id(42).name("Rent"),
-			new PersonBasedCalculationExpenseTypeDTO().id(7).name("El"));
+			new PersonBasedCalculationExpenseTypeDTO().id(42).name("Boendekostnad"),
+			new PersonBasedCalculationExpenseTypeDTO().id(7).name("El 1"));
 
-		final var result = ExpenseTypeMapper.resolveExpenseTypeId("RENT", proposal);
+		final var result = ExpenseTypeMapper.resolveExpenseTypeId("HOUSING_COST", proposal);
 
 		assertThat(result).contains(42);
 	}
 
 	@Test
 	void resolvesCaseInsensitively() {
-		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(7).name("  el  "));
+		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(7).name("  el 1  "));
 
-		final var result = ExpenseTypeMapper.resolveExpenseTypeId("ELECTRICITY", proposal);
+		final var result = ExpenseTypeMapper.resolveExpenseTypeId("ELECTRICITY_1", proposal);
 
 		assertThat(result).contains(7);
 	}
 
 	@Test
 	void returnsEmptyForUnmappedCostType() {
-		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Rent"));
+		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Boendekostnad"));
 
 		final var result = ExpenseTypeMapper.resolveExpenseTypeId("NONSENSE", proposal);
 
@@ -46,9 +46,9 @@ class ExpenseTypeMapperTest {
 
 	@Test
 	void returnsEmptyWhenMappedNameAbsentFromCatalogue() {
-		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(7).name("El"));
+		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(7).name("El 1"));
 
-		final var result = ExpenseTypeMapper.resolveExpenseTypeId("RENT", proposal);
+		final var result = ExpenseTypeMapper.resolveExpenseTypeId("HOUSING_COST", proposal);
 
 		assertThat(result).isEmpty();
 	}
@@ -57,14 +57,14 @@ class ExpenseTypeMapperTest {
 	void returnsEmptyWhenProposalExpenseTypesEmpty() {
 		final var proposal = new PersonBasedCalculationProposalDTO().calculationExpenseTypes(List.of());
 
-		final var result = ExpenseTypeMapper.resolveExpenseTypeId("RENT", proposal);
+		final var result = ExpenseTypeMapper.resolveExpenseTypeId("HOUSING_COST", proposal);
 
 		assertThat(result).isEmpty();
 	}
 
 	@Test
 	void returnsEmptyWhenProposalExpenseTypesNull() {
-		final var result = ExpenseTypeMapper.resolveExpenseTypeId("RENT", new PersonBasedCalculationProposalDTO());
+		final var result = ExpenseTypeMapper.resolveExpenseTypeId("HOUSING_COST", new PersonBasedCalculationProposalDTO());
 
 		assertThat(result).isEmpty();
 	}
@@ -72,7 +72,7 @@ class ExpenseTypeMapperTest {
 	@Test
 	void specialExpenseBucketResolvesAgainstSpecialCatalogue() {
 		final var proposal = new PersonBasedCalculationProposalDTO()
-			.calculationExpenseTypes(List.of(new PersonBasedCalculationExpenseTypeDTO().id(7).name("El"))) // wrong catalogue
+			.calculationExpenseTypes(List.of(new PersonBasedCalculationExpenseTypeDTO().id(7).name("El 1"))) // wrong catalogue
 			.calculationSpecialExpenseTypes(List.of(new PersonBasedCalculationSpecialExpenseTypeDTO().id(88).name("Läkarvård")));
 
 		assertThat(ExpenseTypeMapper.resolveExpenseTypeId("MEDICAL_CARE", proposal, BUCKET_SPECIAL_EXPENSE)).contains(88);

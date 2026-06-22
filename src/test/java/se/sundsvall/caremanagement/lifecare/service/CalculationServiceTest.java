@@ -202,12 +202,12 @@ class CalculationServiceTest {
 	@Test
 	void commitEffectiveAssemblesIncomesExpensesAndPersonsAndPosts() {
 		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal()
-			.addCalculationExpenseTypesItem(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Rent")));
+			.addCalculationExpenseTypesItem(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Boendekostnad")));
 		when(lifecareFcIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(5000);
 
 		final var incomes = List.of(new EffectiveIncome(20, 1850.0, null, null, null, "SSBTEK"));
 		final var expenses = List.of(
-			new EffectiveExpense("RENT", "EXPENSE", 9000.0, 8000.0, null), // resolves to FC id 42
+			new EffectiveExpense("HOUSING_COST", "EXPENSE", 9000.0, 8000.0, null), // resolves to FC id 42
 			new EffectiveExpense("UNMAPPED_NONSENSE", "EXPENSE", 100.0, 100.0, null)); // skipped (no FC id)
 		final var persons = List.of(new EffectivePerson("p1", 30, null, null));
 

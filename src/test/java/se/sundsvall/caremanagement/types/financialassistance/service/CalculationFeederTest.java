@@ -64,13 +64,13 @@ class CalculationFeederTest {
 
 	@Test
 	void expenseFeedCapsEachCostAndRaisesCapWarning() {
-		final var rent = FaCost.create().withCostType("RENT").withOtherSubType(null).withSpecification("spec")
+		final var rent = FaCost.create().withCostType("HOUSING_COST").withOtherSubType(null).withSpecification("spec")
 			.withAppliedAmount(new BigDecimal("9000"));
 		final var errand = FinancialAssistanceEntity.create()
 			.withHousingForm("RENTAL").withHousingPersonCount(2).withNormType("NATIONAL_NORM")
 			.withCosts(List.of(rent));
 
-		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("RENT"), any(), eq("RENTAL"), eq(2), eq("NATIONAL_NORM"), eq(new BigDecimal("9000"))))
+		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("HOUSING_COST"), any(), eq("RENTAL"), eq(2), eq("NATIONAL_NORM"), eq(new BigDecimal("9000"))))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("8500"), "SPECIAL_EXPENSE", false, null));
 
 		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
@@ -79,7 +79,7 @@ class CalculationFeederTest {
 		final var row = feed.rows().getFirst();
 		assertThat(row.getErrandId()).isEqualTo(ERRAND_ID);
 		assertThat(row.getOrigin()).isEqualTo(ORIGIN_SYSTEM);
-		assertThat(row.getCostType()).isEqualTo("RENT");
+		assertThat(row.getCostType()).isEqualTo("HOUSING_COST");
 		assertThat(row.getSpecification()).isEqualTo("spec");
 		assertThat(row.getAppliedAmount()).isEqualByComparingTo(new BigDecimal("9000"));
 		assertThat(row.getProcessAmount()).isEqualByComparingTo(new BigDecimal("8500"));
@@ -88,16 +88,16 @@ class CalculationFeederTest {
 		// 8500 < 9000 → a cap warning, no review flag
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_CAPPED);
 		final var warning = feed.warnings().getFirst();
-		assertThat(warning.sourceKey()).isEqualTo("RENT");
-		assertThat(warning.message()).contains("Capped cost: RENT").contains("9000").contains("8500");
+		assertThat(warning.sourceKey()).isEqualTo("HOUSING_COST");
+		assertThat(warning.message()).contains("Capped cost: HOUSING_COST").contains("9000").contains("8500");
 	}
 
 	@Test
 	void expenseFeedRaisesReviewWarningWhenFlagged() {
-		final var other = FaCost.create().withCostType("OTHER").withOtherSubType("BEGRAVNING").withAppliedAmount(new BigDecimal("5000"));
+		final var other = FaCost.create().withCostType("OTHER_EXPENSE").withOtherSubType("BEGRAVNING").withAppliedAmount(new BigDecimal("5000"));
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(other));
 
-		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("OTHER"), eq("BEGRAVNING"), any(), any(), any(), eq(new BigDecimal("5000"))))
+		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("OTHER_EXPENSE"), eq("BEGRAVNING"), any(), any(), any(), eq(new BigDecimal("5000"))))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("5000"), "SPECIAL_EXPENSE", true, "Other bistånd – reasonableness bedöms manuellt"));
 
 		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
@@ -105,16 +105,16 @@ class CalculationFeederTest {
 		// applied == process (no cap), but flagged → a single review warning, sourceKey carries the sub-type
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
 		final var warning = feed.warnings().getFirst();
-		assertThat(warning.sourceKey()).isEqualTo("OTHER:BEGRAVNING");
-		assertThat(warning.message()).isEqualTo("OTHER (BEGRAVNING): Other bistånd – reasonableness bedöms manuellt");
+		assertThat(warning.sourceKey()).isEqualTo("OTHER_EXPENSE:BEGRAVNING");
+		assertThat(warning.message()).isEqualTo("OTHER_EXPENSE (BEGRAVNING): Other bistånd – reasonableness bedöms manuellt");
 	}
 
 	@Test
 	void expenseFeedFlaggedAndCappedRaisesBothWarnings() {
-		final var cost = FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000"));
+		final var cost = FaCost.create().withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000"));
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
 
-		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("RENT"), any(), any(), any(), any(), eq(new BigDecimal("9000"))))
+		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("HOUSING_COST"), any(), any(), any(), any(), eq(new BigDecimal("9000"))))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("7500"), "EXPENSE", true, "Rent över schablon"));
 
 		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
@@ -139,10 +139,10 @@ class CalculationFeederTest {
 
 	@Test
 	void expenseFeedToleratesNullAppliedAmount() {
-		final var cost = FaCost.create().withCostType("OTHER").withAppliedAmount(null);
+		final var cost = FaCost.create().withCostType("OTHER_EXPENSE").withAppliedAmount(null);
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
 
-		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("OTHER"), any(), any(), any(), any(), any()))
+		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("OTHER_EXPENSE"), any(), any(), any(), any(), any()))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(null, "EXPENSE", false, null));
 
 		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
@@ -154,10 +154,10 @@ class CalculationFeederTest {
 
 	@Test
 	void expenseFeedFallbackVerdictRaisesNoWarning() {
-		final var cost = FaCost.create().withCostType("ELECTRICITY").withAppliedAmount(new BigDecimal("1200"));
+		final var cost = FaCost.create().withCostType("ELECTRICITY_1").withAppliedAmount(new BigDecimal("1200"));
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
 
-		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("ELECTRICITY"), any(), any(), any(), any(), eq(new BigDecimal("1200"))))
+		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("ELECTRICITY_1"), any(), any(), any(), any(), eq(new BigDecimal("1200"))))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("1200"), "EXPENSE", false, null));
 
 		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
@@ -259,7 +259,7 @@ class CalculationFeederTest {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
 		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, 5000.0);
 		final var errand = FinancialAssistanceEntity.create()
-			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6600"))));
+			.withCosts(List.of(FaCost.create().withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("6600"))));
 
 		// same household → only the housing delta is consulted; (6600-5000)/5000 = +32%
 		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSING_COST"), eq(0), eq(new BigDecimal("32"))))
@@ -281,7 +281,7 @@ class CalculationFeederTest {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
 		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, 5000.0);
 		final var errand = FinancialAssistanceEntity.create()
-			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("2500"))));
+			.withCosts(List.of(FaCost.create().withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("2500"))));
 
 		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSEHOLD_SIZE"), eq(-1), any()))
 			.thenReturn(new RenewalDeltaService.DeltaVerdict(true, "Kontrollera"));
@@ -299,7 +299,7 @@ class CalculationFeederTest {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
 		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, null);
 		final var errand = FinancialAssistanceEntity.create()
-			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6000"))));
+			.withCosts(List.of(FaCost.create().withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("6000"))));
 
 		// no size change and no previous housing cost → the delta DMN is never consulted
 		assertThat(feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous)).isEmpty();

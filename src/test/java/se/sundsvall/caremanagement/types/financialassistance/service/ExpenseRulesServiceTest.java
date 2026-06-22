@@ -32,7 +32,7 @@ class ExpenseRulesServiceTest {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY), anyMap()))
 			.thenReturn(List.of(Map.of("approvedAmount", "8500", "bucket", "SPECIAL_EXPENSE")));
 
-		final var result = service.verdict(MUNICIPALITY_ID, "RENT", null, "RENTAL", 2, "NATIONAL_NORM", new BigDecimal("9000"));
+		final var result = service.verdict(MUNICIPALITY_ID, "HOUSING_COST", null, "RENTAL", 2, "NATIONAL_NORM", new BigDecimal("9000"));
 
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("8500"));
 		assertThat(result.bucket()).isEqualTo("SPECIAL_EXPENSE");
@@ -45,7 +45,7 @@ class ExpenseRulesServiceTest {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY), anyMap()))
 			.thenReturn(List.of(Map.of("approvedAmount", "7500", "bucket", "EXPENSE", "varning", true, "regel", "Rent över schablon")));
 
-		final var result = service.verdict(MUNICIPALITY_ID, "RENT", null, "RENTAL", 2, "NATIONAL_NORM", new BigDecimal("9000"));
+		final var result = service.verdict(MUNICIPALITY_ID, "HOUSING_COST", null, "RENTAL", 2, "NATIONAL_NORM", new BigDecimal("9000"));
 
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("7500"));
 		assertThat(result.bucket()).isEqualTo("EXPENSE");
@@ -57,7 +57,7 @@ class ExpenseRulesServiceTest {
 	void verdictFallsBackToAppliedWhenResultsEmpty() {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY), anyMap())).thenReturn(List.of());
 
-		final var result = service.verdict(MUNICIPALITY_ID, "RENT", null, "RENTAL", 2, "NATIONAL_NORM", new BigDecimal("9000"));
+		final var result = service.verdict(MUNICIPALITY_ID, "HOUSING_COST", null, "RENTAL", 2, "NATIONAL_NORM", new BigDecimal("9000"));
 
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("9000"));
 		assertThat(result.bucket()).isEqualTo("EXPENSE");
@@ -68,7 +68,7 @@ class ExpenseRulesServiceTest {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY), anyMap()))
 			.thenReturn(List.of(Map.of("somethingElse", "1")));
 
-		final var result = service.verdict(MUNICIPALITY_ID, "RENT", null, "RENTAL", 2, "NATIONAL_NORM", new BigDecimal("9000"));
+		final var result = service.verdict(MUNICIPALITY_ID, "HOUSING_COST", null, "RENTAL", 2, "NATIONAL_NORM", new BigDecimal("9000"));
 
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("9000"));
 		assertThat(result.bucket()).isEqualTo("EXPENSE");
@@ -80,7 +80,7 @@ class ExpenseRulesServiceTest {
 			.thenThrow(new RuntimeException("operaton down"));
 
 		// nulls in the context exercise the nz()/null-coalescing variable building before the failure
-		final var result = service.verdict(MUNICIPALITY_ID, "ELECTRICITY", null, null, null, null, new BigDecimal("1200"));
+		final var result = service.verdict(MUNICIPALITY_ID, "ELECTRICITY_1", null, null, null, null, new BigDecimal("1200"));
 
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("1200"));
 		assertThat(result.bucket()).isEqualTo("EXPENSE");

@@ -306,7 +306,7 @@ class FinancialAssistanceServiceTest {
 		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(7)));
 		when(draftServiceMock.liveIncomes(ERRAND_ID)).thenReturn(List.of(
 			FaNormIncomeEntity.create().withTypeId(20).withApplicantProcessAmount(new BigDecimal("1000")).withApplicantCaseworkerAmount(new BigDecimal("1100"))));
-		when(draftServiceMock.liveExpenses(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
+		when(draftServiceMock.liveExpenses(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
 		when(draftServiceMock.livePersons(ERRAND_ID)).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
 		when(calculationServiceMock.commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(4712);
 

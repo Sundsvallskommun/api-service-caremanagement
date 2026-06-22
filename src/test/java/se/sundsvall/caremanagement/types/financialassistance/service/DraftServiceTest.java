@@ -98,7 +98,7 @@ class DraftServiceTest {
 			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withApplicantProcessAmount(new BigDecimal("1000")).withApplicantCaseworkerAmount(new BigDecimal("1200")),
 			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(21).withApplicantProcessAmount(new BigDecimal("500")).withDeleted(true)));
 		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
-			FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
+			FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
 		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withProcessDays(15).withCaseworkerDays(20)));
 
@@ -174,7 +174,7 @@ class DraftServiceTest {
 		when(expenseRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withProcessAmount(new BigDecimal("8000"))));
 		when(personRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withProcessDays(30)));
 
-		assertThat(service.addExpense(ERRAND_ID, new NormExpenseInput().withCostType("RENT").withCaseworkerAmount(new BigDecimal("7500"))).getEffectiveAmount()).isEqualByComparingTo("7500");
+		assertThat(service.addExpense(ERRAND_ID, new NormExpenseInput().withCostType("HOUSING_COST").withCaseworkerAmount(new BigDecimal("7500"))).getEffectiveAmount()).isEqualByComparingTo("7500");
 		assertThat(service.patchExpense(ERRAND_ID, ROW_ID, new NormExpenseInput().withCaseworkerAmount(new BigDecimal("7000"))).getCaseworkerAmount()).isEqualByComparingTo("7000");
 		assertThat(service.setExpenseDeleted(ERRAND_ID, ROW_ID, true).isDeleted()).isTrue();
 
@@ -187,7 +187,7 @@ class DraftServiceTest {
 	void liveReadersFilterOutSoftDeletedRows() {
 		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			FaNormIncomeEntity.create().withTypeId(20), FaNormIncomeEntity.create().withTypeId(21).withDeleted(true)));
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("RENT")));
+		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("HOUSING_COST")));
 		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			FaNormPersonEntity.create().withPartyId("p1").withIncluded(true), FaNormPersonEntity.create().withPartyId("p2").withIncluded(false)));
 

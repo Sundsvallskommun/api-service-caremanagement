@@ -21,6 +21,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFin
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceMetadata;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
@@ -129,6 +130,26 @@ class FinancialAssistanceResourceTest {
 		assertThat(view).isNotNull();
 		assertThat(view.getId()).isEqualTo(ERRAND_ID);
 		verify(serviceMock).read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	@Test
+	void getMetadata() {
+		final var metadata = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/metadata").build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(FinancialAssistanceMetadata.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(metadata).isNotNull();
+		assertThat(metadata.getIncomeTypes()).hasSize(29);
+		assertThat(metadata.getCostTypes()).hasSize(7);
+		assertThat(metadata.getLivingCostTypes()).hasSize(8);
+		assertThat(metadata.getCostTypes()).anySatisfy(option -> {
+			assertThat(option.getCode()).isEqualTo("HOUSING_COST");
+			assertThat(option.getDisplayName()).isEqualTo("Boendekostnad");
+		});
 	}
 
 	@Test
@@ -367,7 +388,7 @@ class FinancialAssistanceResourceTest {
 		when(serviceMock.setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "e1", false)).thenReturn(NormExpenseRow.create().withId("e1"));
 
 		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/expenses").build(base()))
-			.bodyValue(new NormExpenseInput().withCostType("RENT")).exchange().expectStatus().isOk();
+			.bodyValue(new NormExpenseInput().withCostType("HOUSING_COST")).exchange().expectStatus().isOk();
 		webTestClient.patch().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/expenses/e1").build(base()))
 			.bodyValue(new NormExpenseInput().withCaseworkerAmount(new BigDecimal("8000"))).exchange().expectStatus().isOk();
 		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/expenses/e1/restore").build(base())).exchange().expectStatus().isOk();

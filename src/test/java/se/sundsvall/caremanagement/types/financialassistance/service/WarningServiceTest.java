@@ -143,7 +143,7 @@ class WarningServiceTest {
 
 		final var changes = new se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges(
 			List.of("Lön (APPLICANT)"), List.of("Pension (APPLICANT)"),
-			List.of("RENT"), List.of(),
+			List.of("HOUSING_COST"), List.of(),
 			List.of("Barn (CHILD)"), List.of());
 
 		service.reconcileCalculationWarnings(ERRAND_ID,
@@ -154,8 +154,8 @@ class WarningServiceTest {
 			List.of(
 				new WarningService.WarningInput(WarningService.TYPE_HOUSEHOLD_CHANGE, "hushall-storlek", "Antal household members ändrat"),
 				new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "housing-kostnad", "Housing cost changed +32%"),
-				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, "OTHER", "OTHER: reasonableness bedöms manuellt"),
-				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, "RENT", "Capped cost: RENT")));
+				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, "OTHER_EXPENSE", "OTHER_EXPENSE: reasonableness bedöms manuellt"),
+				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, "HOUSING_COST", "Capped cost: HOUSING_COST")));
 
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
 		// 3 income/change/missing + NEW_INCOME + NEW_EXPENSE + NEW_PERSON + INCOME_DROPPED (draft) + 4 section warnings
