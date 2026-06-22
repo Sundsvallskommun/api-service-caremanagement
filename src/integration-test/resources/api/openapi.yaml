@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:54440
+- url: http://localhost:57858
   description: Generated server url
 tags:
 - name: Notes
@@ -38,6 +38,10 @@ tags:
 - name: Notifications
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen; expired ones are purged by a daily background job.
+- name: Financial Assistance Bevakningar
+  description: "Ekonomiskt bistånd (EB) bevakningar — date-bound watch/reminder objects\
+    \ on an errand, with full CRUD. Unlike the income warnings they carry no acknowledge\
+    \ lifecycle."
 - name: Status History
   description: Status transition log for an errand
 - name: Metadata
@@ -131,6 +135,135 @@ paths:
             schema:
               $ref: "#/components/schemas/FinancialAssistanceData"
         required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/bevakningar/{bevakningId}:
+    get:
+      tags:
+      - Financial Assistance Bevakningar
+      summary: Read a bevakning on an errand
+      operationId: getBevakning
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: bevakningId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bevakning"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+      - Financial Assistance Bevakningar
+      summary: Replace a bevakning on an errand
+      operationId: updateBevakning
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: bevakningId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BevakningRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bevakning"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+      - Financial Assistance Bevakningar
+      summary: Delete a bevakning on an errand
+      operationId: deleteBevakning
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: bevakningId
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
         "204":
           description: Successful operation
@@ -1836,6 +1969,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NormExpenseRow"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/bevakningar:
+    get:
+      tags:
+      - Financial Assistance Bevakningar
+      summary: List the bevakningar on an errand
+      operationId: listBevakningar
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bevakning"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+      - Financial Assistance Bevakningar
+      summary: Create a bevakning on an errand
+      description: Creates a date-bound bevakning on the errand. Returns the created
+        bevakning and its Location.
+      operationId: createBevakning
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BevakningRequest"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bevakning"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "404":
           description: Not Found
           content:
@@ -4200,10 +4425,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -4853,6 +5078,89 @@ components:
           description: Description of other planning
           examples:
           - Praktik via arbetsförmedlingen
+    BevakningRequest:
+      type: object
+      description: Request to create or replace an EB bevakning on an errand.
+      properties:
+        title:
+          type: string
+          description: Short headline for the bevakning
+          examples:
+          - Följ upp inkomstuppgifter från CSN
+          minLength: 1
+        description:
+          type: string
+          description: Free-text details of what to watch for
+          examples:
+          - Inväntar kompletterande underlag innan beslut kan fattas.
+        startDate:
+          type: string
+          format: date
+          description: When the watch becomes relevant (bevakningsdatum)
+          examples:
+          - 2026-07-01
+        endDate:
+          type: string
+          format: date
+          description: When the watch ends — open-ended when omitted. Must not be
+            before the start date.
+          examples:
+          - 2026-07-31
+        createdBy:
+          type: string
+          description: The handläggare who created the bevakning
+          examples:
+          - joe01doe
+      required:
+      - startDate
+      - title
+    Bevakning:
+      type: object
+      description: An EB bevakning (date-bound watch/reminder) on an errand.
+      properties:
+        id:
+          type: string
+          description: The bevakning id
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+          readOnly: true
+        title:
+          type: string
+          description: Short headline for the bevakning
+          examples:
+          - Följ upp inkomstuppgifter från CSN
+        description:
+          type: string
+          description: Free-text details of what to watch for
+          examples:
+          - Inväntar kompletterande underlag innan beslut kan fattas.
+        startDate:
+          type: string
+          format: date
+          description: When the watch becomes relevant (bevakningsdatum)
+          examples:
+          - 2026-07-01
+        endDate:
+          type: string
+          format: date
+          description: When the watch ends — open-ended when omitted
+          examples:
+          - 2026-07-31
+        createdBy:
+          type: string
+          description: The handläggare who created the bevakning
+          examples:
+          - joe01doe
+        created:
+          type: string
+          format: date-time
+          description: When the bevakning was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the bevakning was last updated
+          readOnly: true
     NamespaceConfig:
       type: object
       description: NamespaceConfig model
