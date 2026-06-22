@@ -33,6 +33,9 @@ class NormberakningFeederTest {
 	@Mock
 	private ExpenseRegelverkService expenseRegelverkServiceMock;
 
+	@Mock
+	private AteransokanDeltaService ateransokanDeltaServiceMock;
+
 	@InjectMocks
 	private NormberakningFeeder feeder;
 
@@ -209,32 +212,96 @@ class NormberakningFeederTest {
 	}
 
 	@Test
-	void householdWarningsReturnsEmptyForEmptyPrevious() {
+	void householdDeltaWarningsReturnsEmptyForEmptyPrevious() {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
+		final var errand = FinancialAssistanceEntity.create();
 
-		assertThat(feeder.householdWarnings(current, PreviousHousehold.empty())).isEmpty();
-		assertThat(feeder.householdWarnings(current, null)).isEmpty();
+		assertThat(feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, PreviousHousehold.empty())).isEmpty();
+		assertThat(feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, null)).isEmpty();
 	}
 
 	@Test
-	void householdWarningsFlagsMissingMember() {
+	void householdDeltaWarningsFlagsSizeChangeWhenDmnFlags() {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 1, null);
+		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, null);
+		final var errand = FinancialAssistanceEntity.create();
 
-		final var warnings = feeder.householdWarnings(current, previous);
+		when(ateransokanDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSEHOLD_SIZE"), eq(-1), any()))
+			.thenReturn(new AteransokanDeltaService.DeltaVerdict(true, "Kontrollera hushållets sammansättning"));
 
-		assertThat(warnings).contains("Hushållsmedlem från föregående normberäkning saknas nu: p-2");
+		final var warnings = feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous);
+
+		assertThat(warnings).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_HOUSEHOLD_CHANGE);
+		final var warning = warnings.getFirst();
+		assertThat(warning.sourceKey()).isEqualTo("hushall-storlek");
+		assertThat(warning.message())
+			.contains("föregående 2, nu 1")
+			.contains("saknas nu: p-2")
+			.contains("Kontrollera hushållets sammansättning");
 	}
 
 	@Test
-	void householdWarningsFlagsCountChange() {
+	void householdDeltaWarningsSkipsSizeChangeWhenDmnDoesNotFlag() {
 		final var current = List.of(
 			FaNormPersonEntity.create().withPartyId("p-1"),
 			FaNormPersonEntity.create().withPartyId("p-2"));
-		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 3, null);
+		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, null);
+		final var errand = FinancialAssistanceEntity.create();
 
-		final var warnings = feeder.householdWarnings(current, previous);
+		when(ateransokanDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSEHOLD_SIZE"), eq(1), any()))
+			.thenReturn(new AteransokanDeltaService.DeltaVerdict(false, "Oförändrat"));
 
-		assertThat(warnings).contains("Antal hushållsmedlemmar har ändrats sedan föregående normberäkning (föregående 3, nu 2)");
+		assertThat(feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous)).isEmpty();
+	}
+
+	@Test
+	void householdDeltaWarningsFlagsBoendeCostChange() {
+		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
+		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, 5000.0);
+		final var errand = FinancialAssistanceEntity.create()
+			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6600"))));
+
+		// same household → only the boende delta is consulted; (6600-5000)/5000 = +32%
+		when(ateransokanDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSING_COST"), eq(0), eq(new BigDecimal("32"))))
+			.thenReturn(new AteransokanDeltaService.DeltaVerdict(true, "Väsentlig ökning – kontrollera hyresunderlag"));
+
+		final var warnings = feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous);
+
+		assertThat(warnings).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_HOUSING_COST_CHANGE);
+		final var warning = warnings.getFirst();
+		assertThat(warning.sourceKey()).isEqualTo("boende-kostnad");
+		assertThat(warning.message())
+			.contains("Boendekostnad ändrad +32%")
+			.contains("föregående 5000 kr → nu 6600 kr")
+			.contains("Väsentlig ökning");
+	}
+
+	@Test
+	void householdDeltaWarningsFlagsBothSizeAndBoende() {
+		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
+		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, 5000.0);
+		final var errand = FinancialAssistanceEntity.create()
+			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("2500"))));
+
+		when(ateransokanDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSEHOLD_SIZE"), eq(-1), any()))
+			.thenReturn(new AteransokanDeltaService.DeltaVerdict(true, "Kontrollera"));
+		when(ateransokanDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSING_COST"), eq(0), eq(new BigDecimal("-50"))))
+			.thenReturn(new AteransokanDeltaService.DeltaVerdict(true, "Väsentlig minskning"));
+
+		final var warnings = feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous);
+
+		assertThat(warnings).extracting(WarningService.WarningInput::type)
+			.containsExactly(WarningService.TYPE_HOUSEHOLD_CHANGE, WarningService.TYPE_HOUSING_COST_CHANGE);
+	}
+
+	@Test
+	void householdDeltaWarningsSkipsBoendeWhenNoPreviousCost() {
+		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
+		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, null);
+		final var errand = FinancialAssistanceEntity.create()
+			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6000"))));
+
+		// no size change and no previous boende cost → the delta DMN is never consulted
+		assertThat(feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous)).isEmpty();
 	}
 }

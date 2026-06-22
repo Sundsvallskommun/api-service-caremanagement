@@ -35,6 +35,7 @@ public class WarningService {
 	public static final String TYPE_NEW_PERSON = "NEW_PERSON";
 	public static final String TYPE_INCOME_DROPPED = "INCOME_DROPPED";
 	public static final String TYPE_HOUSEHOLD_CHANGE = "HOUSEHOLD_CHANGE";
+	public static final String TYPE_HOUSING_COST_CHANGE = "HOUSING_COST_CHANGE";
 	public static final String TYPE_EXPENSE_REVIEW = "EXPENSE_REVIEW";
 	public static final String TYPE_EXPENSE_CAPPED = "EXPENSE_CAPPED";
 
@@ -70,11 +71,12 @@ public class WarningService {
 	/**
 	 * Reconcile the full normberäkning warnings into the errand's warning objects: the regelverk income warnings
 	 * (unhandled / changed / still-missing), the rows the daily refresh newly added (NEW_*) or saw disappear, and the
-	 * household drift detected against the previous normberäkning, and the expense regelverk warnings (skälighet review +
-	 * cap) the feeder pre-typed. Supersedes {@link #reconcileIncomeWarnings} once the three-section draft is in play.
+	 * section warnings the feeder pre-typed and DMN-classified — the expense regelverk (skälighet review + cap) and the
+	 * återansökan delta (household-size + boende drift). Supersedes {@link #reconcileIncomeWarnings} once the three-section
+	 * draft is in play.
 	 */
 	public void reconcileNormberakningWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
-		final List<String> missing, final DraftChanges draftChanges, final List<String> householdWarnings, final List<WarningInput> expenseWarnings) {
+		final List<String> missing, final DraftChanges draftChanges, final List<WarningInput> sectionWarnings) {
 
 		final List<WarningInput> inputs = new ArrayList<>();
 		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
@@ -88,8 +90,7 @@ public class WarningService {
 			ofList(draftChanges.droppedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_DROPPED, sourceKey(text), "Inkomst ej längre i SSBTEK: " + text)));
 		}
 
-		ofList(householdWarnings).forEach(text -> inputs.add(new WarningInput(TYPE_HOUSEHOLD_CHANGE, text, text)));
-		ofNullable(expenseWarnings).ifPresent(inputs::addAll);
+		ofNullable(sectionWarnings).ifPresent(inputs::addAll);
 		reconcile(errandId, inputs);
 	}
 

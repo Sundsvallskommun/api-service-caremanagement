@@ -1,9 +1,11 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
@@ -35,11 +37,17 @@ public class NormberakningFeeder {
 
 	private static final int FULL_MONTH_DAYS = 30;
 	private static final String RESIDENCE_FULL_TIME = "FULL_TIME";
+	private static final String COST_TYPE_RENT = "RENT";
+	private static final String CHANGE_HOUSEHOLD_SIZE = "HOUSEHOLD_SIZE";
+	private static final String CHANGE_HOUSING_COST = "HOUSING_COST";
+	private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
 	private final ExpenseRegelverkService expenseRegelverkService;
+	private final AteransokanDeltaService ateransokanDeltaService;
 
-	NormberakningFeeder(final ExpenseRegelverkService expenseRegelverkService) {
+	NormberakningFeeder(final ExpenseRegelverkService expenseRegelverkService, final AteransokanDeltaService ateransokanDeltaService) {
 		this.expenseRegelverkService = expenseRegelverkService;
+		this.ateransokanDeltaService = ateransokanDeltaService;
 	}
 
 	/** The fresh expense process rows plus the expense warnings the regelverk raised for them. */
@@ -128,7 +136,7 @@ public class NormberakningFeeder {
 		return ((sub == null) || sub.isBlank()) ? nz(cost.getCostType()) : nz(cost.getCostType()) + " (" + sub + ")";
 	}
 
-	/** Only called from the cap branch, where {@link #isCapped} has already guaranteed both amounts are non-null. */
+	/** Plain (no scientific notation, no trailing zeros) rendering of a non-null amount for warning messages. */
 	private static String plain(final BigDecimal amount) {
 		return amount.stripTrailingZeros().toPlainString();
 	}
@@ -157,27 +165,84 @@ public class NormberakningFeeder {
 	}
 
 	/**
-	 * Household-drift warnings against the previous normberäkning in Lifecare — members that were present then but not now,
-	 * and a changed member count. New members are surfaced separately as NEW_PERSON warnings from the merge.
+	 * Återansökan delta warnings against the previous normberäkning in Lifecare — household-size drift (members
+	 * added/removed, count changed) and boende-cost drift. Each candidate delta is classified by the
+	 * {@code Decision_ateransokanDelta} DMN, which decides — by what changed and how much — whether it is worth flagging
+	 * and the notering to show; a small change passes silently. New members are surfaced separately as NEW_PERSON warnings
+	 * from the merge.
 	 */
-	public List<String> householdWarnings(final List<FaNormPersonEntity> currentPersons, final PreviousHousehold previous) {
+	public List<WarningService.WarningInput> householdDeltaWarnings(final String municipalityId, final FinancialAssistanceEntity errand,
+		final List<FaNormPersonEntity> currentPersons, final PreviousHousehold previous) {
+
 		if ((previous == null) || (previous.memberCount() == 0)) {
 			return List.of();
 		}
 
+		final var warnings = new ArrayList<WarningService.WarningInput>();
+		householdSizeWarning(municipalityId, currentPersons, previous).ifPresent(warnings::add);
+		housingCostWarning(municipalityId, errand, previous).ifPresent(warnings::add);
+		return List.copyOf(warnings);
+	}
+
+	/** The household-size delta (count change + members no longer present), classified by the DMN. */
+	private Optional<WarningService.WarningInput> householdSizeWarning(final String municipalityId,
+		final List<FaNormPersonEntity> currentPersons, final PreviousHousehold previous) {
+
 		final var currentIds = ofNullable(currentPersons).orElseGet(List::of).stream()
 			.map(FaNormPersonEntity::getPartyId).filter(id -> (id != null) && !id.isBlank()).collect(Collectors.toSet());
+		final var missing = previous.personIds().stream().filter(id -> !currentIds.contains(id)).toList();
+		final var sizeDelta = currentIds.size() - previous.memberCount();
 
-		final var warnings = new ArrayList<String>();
-		previous.personIds().stream()
-			.filter(id -> !currentIds.contains(id))
-			.forEach(id -> warnings.add("Hushållsmedlem från föregående normberäkning saknas nu: " + id));
-
-		if (previous.memberCount() != currentIds.size()) {
-			warnings.add("Antal hushållsmedlemmar har ändrats sedan föregående normberäkning (föregående "
-				+ previous.memberCount() + ", nu " + currentIds.size() + ")");
+		if ((sizeDelta == 0) && missing.isEmpty()) {
+			return Optional.empty();
 		}
-		return List.copyOf(warnings);
+
+		final var verdict = ateransokanDeltaService.classify(municipalityId, CHANGE_HOUSEHOLD_SIZE, sizeDelta, BigDecimal.ZERO);
+		if (!verdict.varning()) {
+			return Optional.empty();
+		}
+
+		var detail = "Antal hushållsmedlemmar ändrat sedan föregående normberäkning (föregående " + previous.memberCount() + ", nu " + currentIds.size() + ")";
+		if (!missing.isEmpty()) {
+			detail += " — saknas nu: " + String.join(", ", missing);
+		}
+		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSEHOLD_CHANGE, "hushall-storlek", withRegel(detail, verdict.regel())));
+	}
+
+	/** The boende-cost delta (previous Hyra vs current applied RENT, as a signed percent), classified by the DMN. */
+	private Optional<WarningService.WarningInput> housingCostWarning(final String municipalityId, final FinancialAssistanceEntity errand,
+		final PreviousHousehold previous) {
+
+		final var previousCost = previous.housingCost();
+		if ((previousCost == null) || (previousCost <= 0)) {
+			return Optional.empty();
+		}
+
+		final var currentRent = currentRent(errand);
+		final var previousBd = BigDecimal.valueOf(previousCost);
+		final var percent = currentRent.subtract(previousBd).multiply(HUNDRED).divide(previousBd, 0, RoundingMode.HALF_UP);
+
+		final var verdict = ateransokanDeltaService.classify(municipalityId, CHANGE_HOUSING_COST, 0, percent);
+		if (!verdict.varning()) {
+			return Optional.empty();
+		}
+
+		final var sign = (percent.signum() >= 0) ? "+" : "";
+		final var detail = "Boendekostnad ändrad " + sign + percent + "% (föregående " + plain(previousBd) + " kr → nu " + plain(currentRent) + " kr)";
+		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "boende-kostnad", withRegel(detail, verdict.regel())));
+	}
+
+	/** Sum of the application's reported RENT costs (0 when none). */
+	private static BigDecimal currentRent(final FinancialAssistanceEntity errand) {
+		return ofNullable(errand.getCosts()).orElseGet(List::of).stream()
+			.filter(cost -> COST_TYPE_RENT.equals(cost.getCostType()))
+			.map(FaCost::getAppliedAmount)
+			.filter(amount -> amount != null)
+			.reduce(BigDecimal.ZERO, BigDecimal::add);
+	}
+
+	private static String withRegel(final String detail, final String regel) {
+		return ((regel == null) || regel.isBlank()) ? detail : detail + " — " + regel;
 	}
 
 	/** A full-time child is a CHILD; a part-time / övrigt child is an umgängesbarn. */

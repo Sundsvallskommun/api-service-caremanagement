@@ -208,7 +208,7 @@ public class FinancialAssistanceService {
 		final var draftChanges = draftService.refresh(errandId, request.getApplicationMonth(), normId, errand.getNormType(), personRows, incomeRows, expenseFeed.rows());
 
 		final var completeness = normberakningService.completeness(applicant, applicationMonth, classifiedIncomes);
-		final var householdWarnings = normberakningFeeder.householdWarnings(personRows, previousHousehold(applicant, applicationMonth));
+		final var deltaWarnings = normberakningFeeder.householdDeltaWarnings(municipalityId, errand, personRows, previousHousehold(applicant, applicationMonth));
 
 		final var response = NormberakningResponse.create()
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
@@ -217,8 +217,9 @@ public class FinancialAssistanceService {
 			.withMissingIncomeTypes(completeness.missingIncomeTypes());
 
 		recordRecommendationOnce(municipalityId, namespace, errandId, response);
+		final var sectionWarnings = Stream.concat(expenseFeed.warnings().stream(), deltaWarnings.stream()).toList();
 		warningService.reconcileNormberakningWarnings(errandId, response.getUnhandledIncomes(), response.getChangeWarnings(),
-			response.getMissingIncomeTypes(), draftChanges, householdWarnings, expenseFeed.warnings());
+			response.getMissingIncomeTypes(), draftChanges, sectionWarnings);
 		applyCompletenessStatus(municipalityId, namespace, errandId, completeness.informationComplete());
 		return response;
 	}

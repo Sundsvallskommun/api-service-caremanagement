@@ -193,7 +193,7 @@ class NormberakningServiceTest {
 
 	@Test
 	void previousHouseholdDelegatesToLifecare() {
-		final var household = new PreviousHousehold(Set.of("p1", "p2"), 2, 9000.0);
+		final var household = new PreviousHousehold(Set.of("p1", "p2"), 2, 9000.0, 4500.0);
 		when(lifecareEbCaseServiceMock.previousHousehold(APPLICANT, MONTH)).thenReturn(household);
 
 		assertThat(service.previousHousehold(APPLICANT, MONTH)).isSameAs(household);

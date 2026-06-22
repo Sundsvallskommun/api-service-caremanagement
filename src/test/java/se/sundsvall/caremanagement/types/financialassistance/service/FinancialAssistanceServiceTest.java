@@ -417,7 +417,7 @@ class FinancialAssistanceServiceTest {
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
 		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("KOMPLETTERING");
 		verify(warningServiceMock).reconcileNormberakningWarnings(eq(ERRAND_ID),
-			eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")), eq(List.of("Dagersättning")), any(), any(), any());
+			eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")), eq(List.of("Dagersättning")), any(), any());
 	}
 
 	@Test

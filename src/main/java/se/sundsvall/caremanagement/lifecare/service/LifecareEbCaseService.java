@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.lifecare.service;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefc.CommonCalculationExpenseDTO;
 import generated.se.sundsvall.lifecarefc.CommonCalculationIncomeDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonDTO;
@@ -202,8 +203,30 @@ public class LifecareEbCaseService {
 			.filter(StringUtils::hasText)
 			.collect(toSet());
 		final var normSum = latest.map(PersonBasedCalculationDTO::getNormSum).orElse(null);
+		final var housingCost = latest
+			.map(PersonBasedCalculationDTO::getCalculationExpensesDTOs)
+			.orElseGet(List::of).stream()
+			.filter(expense -> isBoende(expense.getType()))
+			.map(LifecareEbCaseService::expenseAmount)
+			.filter(amount -> amount != null)
+			.reduce(Double::sum)
+			.orElse(null);
 
-		return new PreviousHousehold(personIds, personIds.size(), normSum);
+		return new PreviousHousehold(personIds, personIds.size(), normSum, housingCost);
+	}
+
+	/** The previous boende cost — Hyra/boende expense rows, matched on the FC type name (best-effort). */
+	private static boolean isBoende(final String type) {
+		if (type == null) {
+			return false;
+		}
+		final var lower = type.toLowerCase();
+		return lower.contains("hyra") || lower.contains("boende");
+	}
+
+	/** The decided (approved) amount of an expense, falling back to the applied amount. */
+	private static Double expenseAmount(final CommonCalculationExpenseDTO expense) {
+		return ofNullable(expense.getApprovedAmount()).orElseGet(expense::getAppliedAmount);
 	}
 
 	/** The decision with the most recent period (to/from), used to read the current household constellation. */
