@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.journal.api.model.JournalEntryMetadata;
-import se.sundsvall.caremanagement.journal.service.JournalEntryTypes;
+import se.sundsvall.caremanagement.journal.service.JournalMetadataService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -24,12 +24,18 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Tag(name = "Journal", description = "Journalanteckningar (case-journal entries) attached to an errand")
 class JournalEntryMetadataResource {
 
+	private final JournalMetadataService service;
+
+	JournalEntryMetadataResource(final JournalMetadataService service) {
+		this.service = service;
+	}
+
 	@GetMapping(path = "/metadata", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Read the journal metadata — the provisional catalogue of selectable journal entry types")
+	@Operation(summary = "Read the journal metadata — the catalogue of selectable journal entry types (seeded JOURNAL_ENTRY_TYPE lookups for the namespace, or a built-in provisional set as fallback)")
 	ResponseEntity<JournalEntryMetadata> metadata(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace) {
 
-		return ok(JournalEntryTypes.metadata());
+		return ok(service.metadata(municipalityId, namespace));
 	}
 }

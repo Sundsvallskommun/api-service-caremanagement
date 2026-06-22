@@ -9,5 +9,6 @@ public enum LookupKind {
 	STATUS,
 	TYPE,
 	ROLE,
-	CONTACT_REASON
+	CONTACT_REASON,
+	JOURNAL_ENTRY_TYPE
 }

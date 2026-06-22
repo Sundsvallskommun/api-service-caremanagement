@@ -45,6 +45,22 @@ public class MetadataService {
 		return toLookupList(repository.findAllByKindAndNamespaceAndMunicipalityId(kind, namespace, municipalityId));
 	}
 
+	/**
+	 * Cross-module read of a lookup catalogue by its {@link LookupKind} name — lets other modules back their own type
+	 * catalogue with seeded, namespace-scoped lookups without depending on the internal kind enum. An unrecognised kind
+	 * name yields an empty list (rather than throwing) so callers can fall back to a built-in default.
+	 */
+	@Transactional(readOnly = true)
+	public List<Lookup> readAll(final String municipalityId, final String namespace, final String kind) {
+		final LookupKind parsedKind;
+		try {
+			parsedKind = LookupKind.valueOf(kind);
+		} catch (final IllegalArgumentException e) {
+			return List.of();
+		}
+		return readAll(municipalityId, namespace, parsedKind);
+	}
+
 	public void update(final String municipalityId, final String namespace, final LookupKind kind, final String name, final Lookup lookup) {
 		final var entity = findEntity(municipalityId, namespace, kind, name);
 		updateLookupEntity(entity, lookup);

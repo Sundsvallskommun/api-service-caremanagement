@@ -110,6 +110,25 @@ class MetadataServiceTest {
 	}
 
 	@Test
+	void readAllByKindName() {
+		when(repositoryMock.findAllByKindAndNamespaceAndMunicipalityId(LookupKind.JOURNAL_ENTRY_TYPE, NAMESPACE, MUNICIPALITY_ID)).thenReturn(List.of(
+			LookupEntity.create().withName("A"),
+			LookupEntity.create().withName("B")));
+
+		final var result = service.readAll(MUNICIPALITY_ID, NAMESPACE, "JOURNAL_ENTRY_TYPE");
+
+		assertThat(result).hasSize(2);
+	}
+
+	@Test
+	void readAllByUnknownKindNameReturnsEmpty() {
+		final var result = service.readAll(MUNICIPALITY_ID, NAMESPACE, "NOT_A_KIND");
+
+		assertThat(result).isEmpty();
+		verify(repositoryMock, never()).findAllByKindAndNamespaceAndMunicipalityId(any(), any(), any());
+	}
+
+	@Test
 	void update() {
 		final var entity = LookupEntity.create().withKind(STATUS).withName(NAME).withDisplayName("old");
 		when(repositoryMock.findByKindAndNamespaceAndMunicipalityIdAndName(STATUS, NAMESPACE, MUNICIPALITY_ID, NAME)).thenReturn(Optional.of(entity));

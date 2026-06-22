@@ -489,6 +489,7 @@ paths:
           - TYPE
           - ROLE
           - CONTACT_REASON
+          - JOURNAL_ENTRY_TYPE
       responses:
         "200":
           description: Successful Operation
@@ -541,6 +542,7 @@ paths:
           - TYPE
           - ROLE
           - CONTACT_REASON
+          - JOURNAL_ENTRY_TYPE
       requestBody:
         content:
           application/json:
@@ -2409,6 +2411,7 @@ paths:
           - TYPE
           - ROLE
           - CONTACT_REASON
+          - JOURNAL_ENTRY_TYPE
       responses:
         "200":
           description: Successful Operation
@@ -2471,6 +2474,7 @@ paths:
           - TYPE
           - ROLE
           - CONTACT_REASON
+          - JOURNAL_ENTRY_TYPE
       responses:
         "204":
           description: Successful operation
@@ -2529,6 +2533,7 @@ paths:
           - TYPE
           - ROLE
           - CONTACT_REASON
+          - JOURNAL_ENTRY_TYPE
       requestBody:
         content:
           application/json:
@@ -4347,8 +4352,9 @@ paths:
     get:
       tags:
       - Journal
-      summary: Read the journal metadata — the provisional catalogue of selectable
-        journal entry types
+      summary: "Read the journal metadata — the catalogue of selectable journal entry\
+        \ types (seeded JOURNAL_ENTRY_TYPE lookups for the namespace, or a built-in\
+        \ provisional set as fallback)"
       operationId: metadata
       parameters:
       - name: municipalityId
