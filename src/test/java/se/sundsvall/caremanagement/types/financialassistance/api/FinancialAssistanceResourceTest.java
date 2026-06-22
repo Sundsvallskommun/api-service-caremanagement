@@ -143,14 +143,22 @@ class FinancialAssistanceResourceTest {
 			.getResponseBody();
 
 		assertThat(metadata).isNotNull();
-		assertThat(metadata.getIncomeTypes()).hasSize(7);
-		assertThat(metadata.getCostTypes()).hasSize(11);
+		assertThat(metadata.getIncomeTypes()).hasSize(33);
+		assertThat(metadata.getCostTypes()).hasSize(16);
+		// a citizen Mina-sidor type — external label + group
 		assertThat(metadata.getCostTypes()).anySatisfy(option -> {
 			assertThat(option.getCode()).isEqualTo("RENT");
 			assertThat(option.getExternalDisplayName()).isEqualTo("Hyra (inte parkering/garage)");
 			assertThat(option.getInternalDisplayName()).isEqualTo("Boendekostnad");
 			assertThat(option.getGroup()).isEqualTo("HOUSING");
 			assertThat(option.isCitizenReportable()).isTrue();
+		});
+		// a handläggare-only Lifecare type — internal label only, no external, not citizen-reportable
+		assertThat(metadata.getCostTypes()).anySatisfy(option -> {
+			assertThat(option.getCode()).isEqualTo("GLASSES");
+			assertThat(option.getExternalDisplayName()).isNull();
+			assertThat(option.getInternalDisplayName()).isEqualTo("Glasögon");
+			assertThat(option.isCitizenReportable()).isFalse();
 		});
 	}
 
