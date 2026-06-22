@@ -35,6 +35,8 @@ public class WarningService {
 	public static final String TYPE_NEW_PERSON = "NEW_PERSON";
 	public static final String TYPE_INCOME_DROPPED = "INCOME_DROPPED";
 	public static final String TYPE_HOUSEHOLD_CHANGE = "HOUSEHOLD_CHANGE";
+	public static final String TYPE_EXPENSE_REVIEW = "EXPENSE_REVIEW";
+	public static final String TYPE_EXPENSE_CAPPED = "EXPENSE_CAPPED";
 
 	public static final String STATUS_OPEN = "OPEN";
 	public static final String STATUS_ACKNOWLEDGED = "ACKNOWLEDGED";
@@ -68,11 +70,11 @@ public class WarningService {
 	/**
 	 * Reconcile the full normberäkning warnings into the errand's warning objects: the regelverk income warnings
 	 * (unhandled / changed / still-missing), the rows the daily refresh newly added (NEW_*) or saw disappear, and the
-	 * household drift detected against the previous normberäkning. Supersedes {@link #reconcileIncomeWarnings} once the
-	 * three-section draft is in play.
+	 * household drift detected against the previous normberäkning, and the expense regelverk warnings (skälighet review +
+	 * cap) the feeder pre-typed. Supersedes {@link #reconcileIncomeWarnings} once the three-section draft is in play.
 	 */
 	public void reconcileNormberakningWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
-		final List<String> missing, final DraftChanges draftChanges, final List<String> householdWarnings) {
+		final List<String> missing, final DraftChanges draftChanges, final List<String> householdWarnings, final List<WarningInput> expenseWarnings) {
 
 		final List<WarningInput> inputs = new ArrayList<>();
 		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
@@ -87,6 +89,7 @@ public class WarningService {
 		}
 
 		ofList(householdWarnings).forEach(text -> inputs.add(new WarningInput(TYPE_HOUSEHOLD_CHANGE, text, text)));
+		ofNullable(expenseWarnings).ifPresent(inputs::addAll);
 		reconcile(errandId, inputs);
 	}
 

@@ -391,6 +391,7 @@ class FinancialAssistanceServiceTest {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType("RIKSNORM")));
 		when(normberakningServiceMock.completeness("199001011234", month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("UNDER_BEREDNING"));
+		when(normberakningFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new NormberakningFeeder.ExpenseFeed(List.of(), List.of()));
 
 		final var request = NormberakningRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[json]")
@@ -416,7 +417,7 @@ class FinancialAssistanceServiceTest {
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
 		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("KOMPLETTERING");
 		verify(warningServiceMock).reconcileNormberakningWarnings(eq(ERRAND_ID),
-			eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")), eq(List.of("Dagersättning")), any(), any());
+			eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")), eq(List.of("Dagersättning")), any(), any(), any());
 	}
 
 	@Test
@@ -426,6 +427,7 @@ class FinancialAssistanceServiceTest {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
 		when(normberakningServiceMock.completeness("199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("KOMPLETTERING"));
+		when(normberakningFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new NormberakningFeeder.ExpenseFeed(List.of(), List.of()));
 
 		final var request = NormberakningRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
@@ -452,6 +454,7 @@ class FinancialAssistanceServiceTest {
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(List.of(Decision.create().withDecisionType("RECOMMENDATION")));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("VANTAR_PA_BESLUT"));
+		when(normberakningFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new NormberakningFeeder.ExpenseFeed(List.of(), List.of()));
 
 		final var request = NormberakningRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");

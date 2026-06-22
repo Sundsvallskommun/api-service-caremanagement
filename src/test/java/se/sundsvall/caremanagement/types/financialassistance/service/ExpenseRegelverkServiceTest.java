@@ -36,6 +36,21 @@ class ExpenseRegelverkServiceTest {
 
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("8500"));
 		assertThat(result.bucket()).isEqualTo("SPECIAL_EXPENSE");
+		assertThat(result.varning()).isFalse();
+		assertThat(result.regel()).isNull();
+	}
+
+	@Test
+	void verdictReadsVarningAndRegelFromRow() {
+		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY), anyMap()))
+			.thenReturn(List.of(Map.of("approvedAmount", "7500", "bucket", "EXPENSE", "varning", true, "regel", "Hyra över schablon")));
+
+		final var result = service.verdict(MUNICIPALITY_ID, "RENT", null, "RENTAL", 2, "RIKSNORM", new BigDecimal("9000"));
+
+		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("7500"));
+		assertThat(result.bucket()).isEqualTo("EXPENSE");
+		assertThat(result.varning()).isTrue();
+		assertThat(result.regel()).isEqualTo("Hyra över schablon");
 	}
 
 	@Test

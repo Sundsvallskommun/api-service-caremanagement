@@ -60,7 +60,7 @@ class NormberakningFeederTest {
 	}
 
 	@Test
-	void expenseRowsCapsEachCost() {
+	void expenseFeedCapsEachCostAndRaisesCapWarning() {
 		final var rent = FaCost.create().withCostType("RENT").withOtherSubType(null).withSpecification("spec")
 			.withAppliedAmount(new BigDecimal("9000"));
 		final var errand = FinancialAssistanceEntity.create()
@@ -68,12 +68,12 @@ class NormberakningFeederTest {
 			.withCosts(List.of(rent));
 
 		when(expenseRegelverkServiceMock.verdict(eq(MUNICIPALITY_ID), eq("RENT"), any(), eq("RENTAL"), eq(2), eq("RIKSNORM"), eq(new BigDecimal("9000"))))
-			.thenReturn(new ExpenseRegelverkService.ExpenseVerdict(new BigDecimal("8500"), "SPECIAL_EXPENSE"));
+			.thenReturn(new ExpenseRegelverkService.ExpenseVerdict(new BigDecimal("8500"), "SPECIAL_EXPENSE", false, null));
 
-		final var rows = feeder.expenseRows(MUNICIPALITY_ID, ERRAND_ID, errand);
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
 
-		assertThat(rows).hasSize(1);
-		final var row = rows.getFirst();
+		assertThat(feed.rows()).hasSize(1);
+		final var row = feed.rows().getFirst();
 		assertThat(row.getErrandId()).isEqualTo(ERRAND_ID);
 		assertThat(row.getOrigin()).isEqualTo(ORIGIN_SYSTEM);
 		assertThat(row.getCostType()).isEqualTo("RENT");
@@ -81,13 +81,96 @@ class NormberakningFeederTest {
 		assertThat(row.getAppliedAmount()).isEqualByComparingTo(new BigDecimal("9000"));
 		assertThat(row.getProcessAmount()).isEqualByComparingTo(new BigDecimal("8500"));
 		assertThat(row.getBucket()).isEqualTo("SPECIAL_EXPENSE");
+
+		// 8500 < 9000 → a cap warning, no review flag
+		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_CAPPED);
+		final var warning = feed.warnings().getFirst();
+		assertThat(warning.sourceKey()).isEqualTo("RENT");
+		assertThat(warning.message()).contains("Kapad kostnad: RENT").contains("9000").contains("8500");
 	}
 
 	@Test
-	void expenseRowsHandlesNullCosts() {
+	void expenseFeedRaisesReviewWarningWhenFlagged() {
+		final var other = FaCost.create().withCostType("OTHER").withOtherSubType("BEGRAVNING").withAppliedAmount(new BigDecimal("5000"));
+		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(other));
+
+		when(expenseRegelverkServiceMock.verdict(eq(MUNICIPALITY_ID), eq("OTHER"), eq("BEGRAVNING"), any(), any(), any(), eq(new BigDecimal("5000"))))
+			.thenReturn(new ExpenseRegelverkService.ExpenseVerdict(new BigDecimal("5000"), "SPECIAL_EXPENSE", true, "Övrigt bistånd – skälighet bedöms manuellt"));
+
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+
+		// applied == process (no cap), but flagged → a single review warning, sourceKey carries the sub-type
+		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
+		final var warning = feed.warnings().getFirst();
+		assertThat(warning.sourceKey()).isEqualTo("OTHER:BEGRAVNING");
+		assertThat(warning.message()).isEqualTo("OTHER (BEGRAVNING): Övrigt bistånd – skälighet bedöms manuellt");
+	}
+
+	@Test
+	void expenseFeedFlaggedAndCappedRaisesBothWarnings() {
+		final var cost = FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000"));
+		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
+
+		when(expenseRegelverkServiceMock.verdict(eq(MUNICIPALITY_ID), eq("RENT"), any(), any(), any(), any(), eq(new BigDecimal("9000"))))
+			.thenReturn(new ExpenseRegelverkService.ExpenseVerdict(new BigDecimal("7500"), "EXPENSE", true, "Hyra över schablon"));
+
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+
+		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type)
+			.containsExactly(WarningService.TYPE_EXPENSE_REVIEW, WarningService.TYPE_EXPENSE_CAPPED);
+	}
+
+	@Test
+	void expenseFeedReviewWarningUsesDefaultMessageWhenRegelMissing() {
+		final var cost = FaCost.create().withCostType("MEDICINE").withAppliedAmount(new BigDecimal("800"));
+		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
+
+		when(expenseRegelverkServiceMock.verdict(eq(MUNICIPALITY_ID), eq("MEDICINE"), any(), any(), any(), any(), eq(new BigDecimal("800"))))
+			.thenReturn(new ExpenseRegelverkService.ExpenseVerdict(new BigDecimal("800"), "EXPENSE", true, null));
+
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+
+		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
+		assertThat(feed.warnings().getFirst().message()).isEqualTo("MEDICINE: Utgiften kräver manuell skälighetsbedömning");
+	}
+
+	@Test
+	void expenseFeedToleratesNullAppliedAmount() {
+		final var cost = FaCost.create().withCostType("OTHER").withAppliedAmount(null);
+		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
+
+		when(expenseRegelverkServiceMock.verdict(eq(MUNICIPALITY_ID), eq("OTHER"), any(), any(), any(), any(), any()))
+			.thenReturn(new ExpenseRegelverkService.ExpenseVerdict(null, "EXPENSE", false, null));
+
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+
+		// null applied → no cap; not flagged → no warning, but the row is still produced
+		assertThat(feed.rows()).hasSize(1);
+		assertThat(feed.warnings()).isEmpty();
+	}
+
+	@Test
+	void expenseFeedFallbackVerdictRaisesNoWarning() {
+		final var cost = FaCost.create().withCostType("ELECTRICITY").withAppliedAmount(new BigDecimal("1200"));
+		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
+
+		when(expenseRegelverkServiceMock.verdict(eq(MUNICIPALITY_ID), eq("ELECTRICITY"), any(), any(), any(), any(), eq(new BigDecimal("1200"))))
+			.thenReturn(new ExpenseRegelverkService.ExpenseVerdict(new BigDecimal("1200"), "EXPENSE", false, null));
+
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+
+		assertThat(feed.rows()).hasSize(1);
+		assertThat(feed.warnings()).isEmpty();
+	}
+
+	@Test
+	void expenseFeedHandlesNullCosts() {
 		final var errand = FinancialAssistanceEntity.create();
 
-		assertThat(feeder.expenseRows(MUNICIPALITY_ID, ERRAND_ID, errand)).isEmpty();
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+
+		assertThat(feed.rows()).isEmpty();
+		assertThat(feed.warnings()).isEmpty();
 	}
 
 	@Test

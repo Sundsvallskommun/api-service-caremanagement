@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCost;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
@@ -40,6 +42,9 @@ public class NormberakningFeeder {
 		this.expenseRegelverkService = expenseRegelverkService;
 	}
 
+	/** The fresh expense process rows plus the expense warnings the regelverk raised for them. */
+	public record ExpenseFeed(List<FaNormExpenseEntity> rows, List<WarningService.WarningInput> warnings) {}
+
 	/**
 	 * The fresh income process rows — one per FC income type, the classified lines folded into a sökande + medsökande side.
 	 */
@@ -64,22 +69,72 @@ public class NormberakningFeeder {
 		}).toList();
 	}
 
-	/** The fresh expense process rows — one per applied cost, the process amount + bucket coming from the regelverk. */
-	public List<FaNormExpenseEntity> expenseRows(final String municipalityId, final String errandId, final FinancialAssistanceEntity errand) {
+	/**
+	 * The fresh expense process rows — one per applied cost, the process amount + bucket coming from the regelverk — plus
+	 * the expense warnings the regelverk raised: a manual skälighetsbedömning ({@code EXPENSE_REVIEW}) for a flagged cost,
+	 * and a cap ({@code EXPENSE_CAPPED}) when the process amount lands below what the citizen applied for. The decision is
+	 * evaluated once per cost; the verdict feeds both the row and its warnings.
+	 */
+	public ExpenseFeed expenseFeed(final String municipalityId, final String errandId, final FinancialAssistanceEntity errand) {
 		final var housingForm = errand.getHousingForm();
 		final var housingPersonCount = errand.getHousingPersonCount();
 		final var normType = errand.getNormType();
 
-		return ofNullable(errand.getCosts()).orElseGet(List::of).stream()
-			.map(cost -> {
-				final var verdict = expenseRegelverkService.verdict(municipalityId, cost.getCostType(), cost.getOtherSubType(),
-					housingForm, housingPersonCount, normType, cost.getAppliedAmount());
-				return FaNormExpenseEntity.create()
-					.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
-					.withCostType(cost.getCostType()).withOtherSubType(cost.getOtherSubType()).withSpecification(cost.getSpecification())
-					.withAppliedAmount(cost.getAppliedAmount()).withProcessAmount(verdict.processAmount()).withBucket(verdict.bucket());
-			})
-			.toList();
+		final var rows = new ArrayList<FaNormExpenseEntity>();
+		final var warnings = new ArrayList<WarningService.WarningInput>();
+
+		ofNullable(errand.getCosts()).orElseGet(List::of).forEach(cost -> {
+			final var verdict = expenseRegelverkService.verdict(municipalityId, cost.getCostType(), cost.getOtherSubType(),
+				housingForm, housingPersonCount, normType, cost.getAppliedAmount());
+			rows.add(FaNormExpenseEntity.create()
+				.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
+				.withCostType(cost.getCostType()).withOtherSubType(cost.getOtherSubType()).withSpecification(cost.getSpecification())
+				.withAppliedAmount(cost.getAppliedAmount()).withProcessAmount(verdict.processAmount()).withBucket(verdict.bucket()));
+			warnings.addAll(expenseWarnings(cost, verdict));
+		});
+
+		return new ExpenseFeed(List.copyOf(rows), List.copyOf(warnings));
+	}
+
+	/** The warnings a single cost's verdict raises — a manual review flag and/or a cap below the applied amount. */
+	private static List<WarningService.WarningInput> expenseWarnings(final FaCost cost, final ExpenseRegelverkService.ExpenseVerdict verdict) {
+		final var warnings = new ArrayList<WarningService.WarningInput>();
+		final var sourceKey = expenseSourceKey(cost);
+		final var label = expenseLabel(cost);
+
+		if (verdict.varning()) {
+			final var reason = ofNullable(verdict.regel()).filter(text -> !text.isBlank()).orElse("Utgiften kräver manuell skälighetsbedömning");
+			warnings.add(new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, sourceKey, label + ": " + reason));
+		}
+		if (isCapped(cost.getAppliedAmount(), verdict.processAmount())) {
+			warnings.add(new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, sourceKey,
+				"Kapad kostnad: " + label + " – ansökt " + plain(cost.getAppliedAmount()) + " kr, beviljas " + plain(verdict.processAmount()) + " kr"));
+		}
+		return warnings;
+	}
+
+	private static boolean isCapped(final BigDecimal applied, final BigDecimal process) {
+		return (applied != null) && (process != null) && (process.compareTo(applied) < 0);
+	}
+
+	/** Stable dedup key for the cost a warning concerns — cost type, plus the övrigt sub-type when present. */
+	private static String expenseSourceKey(final FaCost cost) {
+		final var sub = cost.getOtherSubType();
+		return ((sub == null) || sub.isBlank()) ? nz(cost.getCostType()) : nz(cost.getCostType()) + ":" + sub;
+	}
+
+	private static String expenseLabel(final FaCost cost) {
+		final var sub = cost.getOtherSubType();
+		return ((sub == null) || sub.isBlank()) ? nz(cost.getCostType()) : nz(cost.getCostType()) + " (" + sub + ")";
+	}
+
+	/** Only called from the cap branch, where {@link #isCapped} has already guaranteed both amounts are non-null. */
+	private static String plain(final BigDecimal amount) {
+		return amount.stripTrailingZeros().toPlainString();
+	}
+
+	private static String nz(final String value) {
+		return (value == null) ? "" : value;
 	}
 
 	/**

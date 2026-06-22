@@ -151,21 +151,25 @@ class WarningServiceTest {
 			List.of("Bostadsbidrag: -23%"),
 			List.of("Dagersättning"),
 			changes,
-			List.of("Antal hushållsmedlemmar har ändrats"));
+			List.of("Antal hushållsmedlemmar har ändrats"),
+			List.of(
+				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, "OTHER", "OTHER: skälighet bedöms manuellt"),
+				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, "RENT", "Kapad kostnad: RENT")));
 
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
-		// 3 income/change/missing + NEW_INCOME + NEW_EXPENSE + NEW_PERSON + INCOME_DROPPED + HOUSEHOLD_CHANGE = 8
-		verify(repositoryMock, org.mockito.Mockito.times(8)).save(captor.capture());
+		// 3 income/change/missing + NEW_INCOME + NEW_EXPENSE + NEW_PERSON + INCOME_DROPPED + HOUSEHOLD_CHANGE + EXPENSE_REVIEW
+		// + EXPENSE_CAPPED = 10
+		verify(repositoryMock, org.mockito.Mockito.times(10)).save(captor.capture());
 		assertThat(captor.getAllValues()).extracting(FaWarningEntity::getType)
 			.containsExactlyInAnyOrder("UNHANDLED_INCOME", "INCOME_CHANGE", "MISSING_SSBTEK",
-				"NEW_INCOME", "NEW_EXPENSE", "NEW_PERSON", "INCOME_DROPPED", "HOUSEHOLD_CHANGE");
+				"NEW_INCOME", "NEW_EXPENSE", "NEW_PERSON", "INCOME_DROPPED", "HOUSEHOLD_CHANGE", "EXPENSE_REVIEW", "EXPENSE_CAPPED");
 	}
 
 	@Test
 	void reconcileNormberakningWarningsToleratesNullDraftChanges() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
-		service.reconcileNormberakningWarnings(ERRAND_ID, List.of("X (Y)"), List.of(), List.of(), null, null);
+		service.reconcileNormberakningWarnings(ERRAND_ID, List.of("X (Y)"), List.of(), List.of(), null, null, null);
 
 		verify(repositoryMock).save(any()); // only the single unhandled-income warning
 	}

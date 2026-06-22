@@ -202,10 +202,10 @@ public class FinancialAssistanceService {
 		// Compute the fresh process rows for the three sections, then merge them into the editable draft (the merge keeps
 		// the handläggare's values + soft-deletes; only the process columns are refreshed).
 		final var incomeRows = normberakningFeeder.incomeRows(errandId, normberakningService.incomeLines(applicant, classifiedIncomes));
-		final var expenseRows = normberakningFeeder.expenseRows(municipalityId, errandId, errand);
+		final var expenseFeed = normberakningFeeder.expenseFeed(municipalityId, errandId, errand);
 		final var personRows = normberakningFeeder.personRows(errandId, errand);
 		final var normId = normberakningService.selectNormId(applicant, applicationMonth);
-		final var draftChanges = draftService.refresh(errandId, request.getApplicationMonth(), normId, errand.getNormType(), personRows, incomeRows, expenseRows);
+		final var draftChanges = draftService.refresh(errandId, request.getApplicationMonth(), normId, errand.getNormType(), personRows, incomeRows, expenseFeed.rows());
 
 		final var completeness = normberakningService.completeness(applicant, applicationMonth, classifiedIncomes);
 		final var householdWarnings = normberakningFeeder.householdWarnings(personRows, previousHousehold(applicant, applicationMonth));
@@ -218,7 +218,7 @@ public class FinancialAssistanceService {
 
 		recordRecommendationOnce(municipalityId, namespace, errandId, response);
 		warningService.reconcileNormberakningWarnings(errandId, response.getUnhandledIncomes(), response.getChangeWarnings(),
-			response.getMissingIncomeTypes(), draftChanges, householdWarnings);
+			response.getMissingIncomeTypes(), draftChanges, householdWarnings, expenseFeed.warnings());
 		applyCompletenessStatus(municipalityId, namespace, errandId, completeness.informationComplete());
 		return response;
 	}
