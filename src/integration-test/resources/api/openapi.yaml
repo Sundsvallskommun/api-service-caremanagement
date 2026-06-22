@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:55059
+- url: http://localhost:58575
   description: Generated server url
 tags:
 - name: Notes
@@ -27,6 +27,8 @@ tags:
     \ free-text response and status (SENT → RESPONDED)."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
+- name: Journal
+  description: Journalanteckningar (case-journal entries) attached to an errand
 - name: Errand decisions
   description: "Decision audit trail on an errand. Stores both system-generated decisions\
     \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
@@ -1400,6 +1402,110 @@ paths:
               style: simple
               schema:
                 type: string
+  /{municipalityId}/{namespace}/errands/{errandId}/journal-entries:
+    get:
+      tags:
+      - Journal
+      summary: List journal entries for an errand (most recent first)
+      operationId: list_2
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JournalEntry"
+    post:
+      tags:
+      - Journal
+      summary: Add a journal entry to an errand
+      operationId: add_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJournalEntry"
+        required: true
+      responses:
+        "200":
+          description: OK
+  /{municipalityId}/{namespace}/errands/{errandId}/journal-entries/{journalEntryId}/lock:
+    post:
+      tags:
+      - Journal
+      summary: Lock a journal entry (skrivskydd) — it becomes an immutable upprättad
+        handling
+      operationId: lock
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: journalEntryId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LockJournalEntry"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
   /{municipalityId}/{namespace}/errands/{errandId}/decisions:
     get:
       tags:
@@ -3057,6 +3163,113 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Note"
+  /{municipalityId}/{namespace}/errands/{errandId}/journal-entries/{journalEntryId}:
+    get:
+      tags:
+      - Journal
+      summary: Read a journal entry
+      operationId: read_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: journalEntryId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
+    delete:
+      tags:
+      - Journal
+      summary: Delete a journal entry (only while WORKING; a LOCKED entry returns
+        409)
+      operationId: delete_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: journalEntryId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+    patch:
+      tags:
+      - Journal
+      summary: Update a journal entry (only while WORKING; a LOCKED entry returns
+        409)
+      operationId: update_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: journalEntryId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateJournalEntry"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/warnings/{warningId}:
     patch:
       tags:
@@ -3596,7 +3809,7 @@ paths:
       tags:
       - Status History
       summary: List status transitions for errand
-      operationId: list_2
+      operationId: list_3
       parameters:
       - name: municipalityId
         in: path
@@ -3770,7 +3983,7 @@ paths:
       tags:
       - Conversation
       summary: Read a message
-      operationId: read_1
+      operationId: read_2
       parameters:
       - name: municipalityId
         in: path
@@ -4130,6 +4343,32 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/journal-entries/metadata:
+    get:
+      tags:
+      - Journal
+      summary: Read the journal metadata — the provisional catalogue of selectable
+        journal entry types
+      operationId: metadata
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntryMetadata"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}:
     get:
       tags:
@@ -4456,10 +4695,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -5772,6 +6011,122 @@ components:
       required:
       - body
       - direction
+    CreateJournalEntry:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Journal entry type (Lifecare 'Typ'/Journaltyp)
+          example: Journalfört meddelande
+          maxLength: 255
+          minLength: 0
+        heading:
+          type: string
+          description: Heading (Lifecare 'Rubrik')
+          example: "Journalfört meddelande: 2025-05-30 Info"
+          maxLength: 255
+          minLength: 0
+        text:
+          type: string
+          description: Free-text body of the journal entry; optional
+          example: Hej! Vill bara informera att jag fått jobb på Mejeriet.
+          maxLength: 1048576
+          minLength: 0
+        entryDate:
+          type: string
+          format: date
+          description: Documented date (Lifecare 'Datum')
+          example: 2025-05-30
+        entryTime:
+          type: string
+          description: Documented time (Lifecare 'Tid'); optional
+          example: 14:30
+        createdBy:
+          type: string
+          description: User id of the author (Lifecare 'Upprättad av'); optional
+          example: carola01winberg
+          maxLength: 64
+          minLength: 0
+      required:
+      - entryDate
+      - heading
+      - type
+    LockJournalEntry:
+      type: object
+      properties:
+        lockedBy:
+          type: string
+          description: User id of whoever locks the entry; optional
+          example: carola01winberg
+          maxLength: 64
+          minLength: 0
+    JournalEntry:
+      type: object
+      description: A journalanteckning (case-journal entry) attached to an errand
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+        errandId:
+          type: string
+          description: Errand id this journal entry belongs to
+        type:
+          type: string
+          description: Journal entry type (Lifecare 'Typ'/Journaltyp). A municipality-configured
+            value; see the metadata catalogue for a provisional set.
+          example: Journalfört meddelande
+        heading:
+          type: string
+          description: Heading (Lifecare 'Rubrik')
+          example: "Journalfört meddelande: 2025-05-30 Info"
+        text:
+          type: string
+          description: Free-text body of the journal entry
+          example: Hej! Vill bara informera att jag fått jobb på Mejeriet.
+        entryDate:
+          type: string
+          format: date
+          description: "Documented date (Lifecare 'Datum'), distinct from the system\
+            \ created timestamp"
+          example: 2025-05-30
+        entryTime:
+          type: string
+          description: Documented time (Lifecare 'Tid'); optional
+          example: 14:30
+        status:
+          type: string
+          description: "Skrivskydd status — WORKING is an editable arbetsanteckning,\
+            \ LOCKED is an upprättad handling"
+          enum:
+          - WORKING
+          - LOCKED
+          example: WORKING
+        createdBy:
+          type: string
+          description: User id of the author (Lifecare 'Upprättad av'/'Ägare')
+          example: carola01winberg
+        created:
+          type: string
+          format: date-time
+          description: Created timestamp
+        modifiedBy:
+          type: string
+          description: User id of the last editor (Lifecare 'Ändrat av'); null until
+            the entry has been edited
+          example: ebb14eri
+        modified:
+          type: string
+          format: date-time
+          description: Last modified timestamp; null until the entry has been edited
+        lockedBy:
+          type: string
+          description: User id of whoever locked the entry; null while WORKING
+          example: carola01winberg
+        locked:
+          type: string
+          format: date-time
+          description: Timestamp when the entry was locked (became an upprättad handling);
+            null while WORKING
     Decision:
       type: object
       description: "Decision recorded against an errand. Both system-generated decisions\
@@ -6714,6 +7069,46 @@ components:
           type: string
           format: date-time
           description: Last modified timestamp; null until the note has been edited
+    UpdateJournalEntry:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Journal entry type (Lifecare 'Typ'/Journaltyp)
+          example: Journalfört meddelande
+          maxLength: 255
+          minLength: 0
+        heading:
+          type: string
+          description: Heading (Lifecare 'Rubrik')
+          example: "Journalfört meddelande: 2025-05-30 Info"
+          maxLength: 255
+          minLength: 0
+        text:
+          type: string
+          description: Free-text body of the journal entry; optional
+          example: Hej! Vill bara informera att jag fått jobb på Mejeriet.
+          maxLength: 1048576
+          minLength: 0
+        entryDate:
+          type: string
+          format: date
+          description: Documented date (Lifecare 'Datum')
+          example: 2025-05-30
+        entryTime:
+          type: string
+          description: Documented time (Lifecare 'Tid'); optional
+          example: 14:30
+        modifiedBy:
+          type: string
+          description: User id of the editor (Lifecare 'Ändrat av'); optional
+          example: ebb14eri
+          maxLength: 64
+          minLength: 0
+      required:
+      - entryDate
+      - heading
+      - type
     SectionApprovalRequest:
       type: object
       description: Set the approval state of an EB view section.
@@ -7180,6 +7575,29 @@ components:
           format: date-time
           description: Modified timestamp
           readOnly: true
+    JournalEntryMetadata:
+      type: object
+      description: Journal metadata — the provisional catalogue of selectable journal
+        entry types.
+      properties:
+        types:
+          type: array
+          description: Selectable journal entry types
+          items:
+            $ref: "#/components/schemas/JournalEntryType"
+    JournalEntryType:
+      type: object
+      description: A selectable journal entry type — the code and the Swedish Lifecare
+        label.
+      properties:
+        code:
+          type: string
+          description: The type code
+          example: JOURNALED_MESSAGE
+        displayName:
+          type: string
+          description: Human-readable Swedish label (the Lifecare 'Typ' value)
+          example: Journalfört meddelande
     FinancialAssistanceView:
       type: object
       description: A financial assistance errand with its typed application payload.
