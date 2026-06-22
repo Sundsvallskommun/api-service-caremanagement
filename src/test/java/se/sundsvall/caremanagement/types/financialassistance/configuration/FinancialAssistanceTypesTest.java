@@ -36,7 +36,7 @@ class FinancialAssistanceTypesTest {
 	void costTypesAreGroupedIntoTheMinaSidorSections() {
 		assertThat(FinancialAssistanceTypes.COST_TYPES).allSatisfy(option -> assertThat(option.getGroup()).isNotBlank());
 		assertThat(FinancialAssistanceTypes.COST_TYPES).extracting(TypeOption::getGroup).containsOnly(
-			"Boende", "Arbete och studier", "Hälsa", "Övrigt");
+			"HOUSING", "WORK_AND_STUDIES", "HEALTH", "OTHER");
 	}
 
 	@Test

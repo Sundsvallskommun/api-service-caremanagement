@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:49457
+- url: http://localhost:50484
   description: Generated server url
 tags:
 - name: Notes
@@ -4535,9 +4535,9 @@ paths:
         \ from. Each type carries its payload code (the Income.incomeType / Cost.costType\
         \ value), the citizen Mina-sidor label (externalDisplayName), the matching\
         \ Lifecare handläggare-dropdown label (internalDisplayName, may be null),\
-        \ the Mina-sidor form group (e.g. Boende / Arbete och studier / Hälsa / Ö\
-        vrigt — null for income) and citizenReportable. Static; a label/grouping layer\
-        \ that never changes the payload codes."
+        \ the Mina-sidor form group as a stable code (HOUSING / WORK_AND_STUDIES /\
+        \ HEALTH / OTHER — null for income) and citizenReportable. Static; a label/grouping\
+        \ layer that never changes the payload codes."
       operationId: getMetadata
       parameters:
       - name: municipalityId
@@ -4673,16 +4673,16 @@ components:
     Problem:
       type: object
       properties:
+        title:
+          type: string
+        detail:
+          type: string
         instance:
           type: string
           format: uri
         type:
           type: string
           format: uri
-        title:
-          type: string
-        detail:
-          type: string
         status:
           type: integer
           format: int32
@@ -4701,13 +4701,13 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
+        detail:
+          type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
-        detail:
-          type: string
     ThrowableProblem:
       type: object
       properties:
@@ -7757,10 +7757,15 @@ components:
           - Boendekostnad
         group:
           type: string
-          description: The Mina-sidor form section the type is shown under; null for
-            income
+          description: Stable code for the Mina-sidor form section the type is shown
+            under; null for income
+          enum:
+          - HOUSING
+          - WORK_AND_STUDIES
+          - HEALTH
+          - OTHER
           examples:
-          - Boende
+          - HOUSING
         citizenReportable:
           type: boolean
           description: Whether the type is offered on the citizen Mina-sidor form

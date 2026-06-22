@@ -149,7 +149,7 @@ class FinancialAssistanceResourceTest {
 			assertThat(option.getCode()).isEqualTo("RENT");
 			assertThat(option.getExternalDisplayName()).isEqualTo("Hyra (inte parkering/garage)");
 			assertThat(option.getInternalDisplayName()).isEqualTo("Boendekostnad");
-			assertThat(option.getGroup()).isEqualTo("Boende");
+			assertThat(option.getGroup()).isEqualTo("HOUSING");
 			assertThat(option.isCitizenReportable()).isTrue();
 		});
 	}

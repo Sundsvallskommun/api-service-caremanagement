@@ -10,8 +10,8 @@ import java.util.Objects;
  * <li>{@code externalDisplayName} — the citizen Mina-sidor label (e.g. "Hyra (inte parkering/garage)").</li>
  * <li>{@code internalDisplayName} — the matching Lifecare handläggare-dropdown label (e.g. "Boendekostnad"); null when
  * the type has no Lifecare counterpart.</li>
- * <li>{@code group} — the Mina-sidor form section the type is shown under (e.g. "Boende", "Arbete och studier",
- * "Hälsa", "Övrigt"); null for income (a flat list).</li>
+ * <li>{@code group} — a stable code for the Mina-sidor form section the type is shown under ({@code HOUSING},
+ * {@code WORK_AND_STUDIES}, {@code HEALTH}, {@code OTHER}); null for income (a flat list).</li>
  * <li>{@code citizenReportable} — whether the type is offered on the citizen form.</li>
  * </ul>
  *
@@ -32,7 +32,9 @@ public class TypeOption {
 	@Schema(description = "The matching Lifecare handläggare-dropdown label, or null when there is no Lifecare counterpart", examples = "Boendekostnad")
 	private String internalDisplayName;
 
-	@Schema(description = "The Mina-sidor form section the type is shown under; null for income", examples = "Boende")
+	@Schema(description = "Stable code for the Mina-sidor form section the type is shown under; null for income", examples = "HOUSING", allowableValues = {
+		"HOUSING", "WORK_AND_STUDIES", "HEALTH", "OTHER"
+	})
 	private String group;
 
 	@Schema(description = "Whether the type is offered on the citizen Mina-sidor form", examples = "true")

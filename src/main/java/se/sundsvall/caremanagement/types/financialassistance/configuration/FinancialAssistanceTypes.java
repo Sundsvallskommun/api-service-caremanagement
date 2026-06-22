@@ -11,20 +11,21 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.TypeOptio
  * ({@code internalDisplayName}), the Mina-sidor form group and the {@code citizenReportable} flag.
  *
  * <p>
- * Purely additive — this never changes {@code Income}/{@code Cost} (the citizen payload contract). The cost groups
- * mirror the Mina-sidor "Vilka kostnader söker du bistånd för?" sections (Boende / Arbete och studier / Hälsa /
- * Övrigt); income is a flat list (no group).
+ * Purely additive — this never changes {@code Income}/{@code Cost} (the citizen payload contract). The cost groups are
+ * stable codes for the Mina-sidor "Vilka kostnader söker du bistånd för?" sections — {@code HOUSING} (Boende),
+ * {@code WORK_AND_STUDIES} (Arbete och studier), {@code HEALTH} (Hälsa), {@code OTHER} (Övrigt) — which the frontend
+ * maps to the Swedish headings; income is a flat list (no group).
  * </p>
  */
 public final class FinancialAssistanceTypes {
 
 	private FinancialAssistanceTypes() {}
 
-	// Mina-sidor cost-form sections
-	private static final String GROUP_HOUSING = "Boende";
-	private static final String GROUP_WORK_AND_STUDIES = "Arbete och studier";
-	private static final String GROUP_HEALTH = "Hälsa";
-	private static final String GROUP_OTHER = "Övrigt";
+	// Mina-sidor cost-form section codes (frontend maps to the Swedish headings)
+	private static final String GROUP_HOUSING = "HOUSING";
+	private static final String GROUP_WORK_AND_STUDIES = "WORK_AND_STUDIES";
+	private static final String GROUP_HEALTH = "HEALTH";
+	private static final String GROUP_OTHER = "OTHER";
 
 	/** Income types (inkomster) — a flat Mina-sidor list (no group); all citizen-reportable. */
 	public static final List<TypeOption> INCOME_TYPES = List.of(

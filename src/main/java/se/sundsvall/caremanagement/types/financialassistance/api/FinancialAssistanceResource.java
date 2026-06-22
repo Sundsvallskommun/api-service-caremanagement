@@ -486,7 +486,7 @@ class FinancialAssistanceResource {
 
 	@GetMapping(path = "/financial-assistance/metadata", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read EB type metadata (income / cost dropdowns)",
-		description = "The income and cost type catalogue the frontend feeds its EB dropdowns from. Each type carries its payload code (the Income.incomeType / Cost.costType value), the citizen Mina-sidor label (externalDisplayName), the matching Lifecare handläggare-dropdown label (internalDisplayName, may be null), the Mina-sidor form group (e.g. Boende / Arbete och studier / Hälsa / Övrigt — null for income) and citizenReportable. Static; a label/grouping layer that never changes the payload codes.",
+		description = "The income and cost type catalogue the frontend feeds its EB dropdowns from. Each type carries its payload code (the Income.incomeType / Cost.costType value), the citizen Mina-sidor label (externalDisplayName), the matching Lifecare handläggare-dropdown label (internalDisplayName, may be null), the Mina-sidor form group as a stable code (HOUSING / WORK_AND_STUDIES / HEALTH / OTHER — null for income) and citizenReportable. Static; a label/grouping layer that never changes the payload codes.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 		})
