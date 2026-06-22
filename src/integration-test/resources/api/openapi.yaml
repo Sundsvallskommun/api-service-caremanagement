@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:62670
+- url: http://localhost:49457
   description: Generated server url
 tags:
 - name: Notes
@@ -4526,6 +4526,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RenewalPrefill"
+  /{municipalityId}/{namespace}/errands/financial-assistance/metadata:
+    get:
+      tags:
+      - Financial Assistance
+      summary: Read EB type metadata (income / cost dropdowns)
+      description: "The income and cost type catalogue the frontend feeds its EB dropdowns\
+        \ from. Each type carries its payload code (the Income.incomeType / Cost.costType\
+        \ value), the citizen Mina-sidor label (externalDisplayName), the matching\
+        \ Lifecare handläggare-dropdown label (internalDisplayName, may be null),\
+        \ the Mina-sidor form group (e.g. Boende / Arbete och studier / Hälsa / Ö\
+        vrigt — null for income) and citizenReportable. Static; a label/grouping layer\
+        \ that never changes the payload codes."
+      operationId: getMetadata
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialAssistanceMetadata"
   /{municipalityId}/{namespace}/errand-types:
     get:
       tags:
@@ -4641,16 +4673,16 @@ components:
     Problem:
       type: object
       properties:
-        title:
-          type: string
-        detail:
-          type: string
         instance:
           type: string
           format: uri
         type:
           type: string
           format: uri
+        title:
+          type: string
+        detail:
+          type: string
         status:
           type: integer
           format: int32
@@ -4669,13 +4701,13 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
+        instance:
+          type: string
+          format: uri
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
-        instance:
-          type: string
-          format: uri
     ThrowableProblem:
       type: object
       properties:
@@ -7684,6 +7716,54 @@ components:
           type: boolean
           description: True when the Lifecare lookup succeeded. False means the answer
             is degraded (empty children).
+          examples:
+          - "true"
+    FinancialAssistanceMetadata:
+      type: object
+      description: "EB type catalogue for the frontend dropdowns: income and cost\
+        \ types with labels, groups and the citizen flag."
+      properties:
+        incomeTypes:
+          type: array
+          description: The income types (inkomster)
+          items:
+            $ref: "#/components/schemas/TypeOption"
+        costTypes:
+          type: array
+          description: "The cost types (kostnader), grouped by their Mina-sidor form\
+            \ section"
+          items:
+            $ref: "#/components/schemas/TypeOption"
+    TypeOption:
+      type: object
+      description: "A selectable EB income/cost type — the payload code plus its Mina-sidor\
+        \ + Lifecare labels, form group and citizen flag."
+      properties:
+        code:
+          type: string
+          description: "The type code, as stored on the payload (incomeType / costType)"
+          examples:
+          - RENT
+        externalDisplayName:
+          type: string
+          description: The citizen Mina-sidor label
+          examples:
+          - Hyra (inte parkering/garage)
+        internalDisplayName:
+          type: string
+          description: "The matching Lifecare handläggare-dropdown label, or null\
+            \ when there is no Lifecare counterpart"
+          examples:
+          - Boendekostnad
+        group:
+          type: string
+          description: The Mina-sidor form section the type is shown under; null for
+            income
+          examples:
+          - Boende
+        citizenReportable:
+          type: boolean
+          description: Whether the type is offered on the citizen Mina-sidor form
           examples:
           - "true"
     DecisionOption:

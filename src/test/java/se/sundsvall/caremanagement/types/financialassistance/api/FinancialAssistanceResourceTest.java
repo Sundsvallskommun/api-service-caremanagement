@@ -21,6 +21,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFin
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceMetadata;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
@@ -129,6 +130,28 @@ class FinancialAssistanceResourceTest {
 		assertThat(view).isNotNull();
 		assertThat(view.getId()).isEqualTo(ERRAND_ID);
 		verify(serviceMock).read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	@Test
+	void getMetadata() {
+		final var metadata = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/metadata").build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(FinancialAssistanceMetadata.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(metadata).isNotNull();
+		assertThat(metadata.getIncomeTypes()).hasSize(7);
+		assertThat(metadata.getCostTypes()).hasSize(11);
+		assertThat(metadata.getCostTypes()).anySatisfy(option -> {
+			assertThat(option.getCode()).isEqualTo("RENT");
+			assertThat(option.getExternalDisplayName()).isEqualTo("Hyra (inte parkering/garage)");
+			assertThat(option.getInternalDisplayName()).isEqualTo("Boendekostnad");
+			assertThat(option.getGroup()).isEqualTo("Boende");
+			assertThat(option.isCitizenReportable()).isTrue();
+		});
 	}
 
 	@Test
