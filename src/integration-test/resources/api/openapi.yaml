@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:64551
+- url: http://localhost:51143
   description: Generated server url
 tags:
 - name: Statistics
@@ -4313,6 +4313,38 @@ paths:
       responses:
         "200":
           description: OK
+  /{municipalityId}/{namespace}/errands/{errandId}/notes/count:
+    get:
+      tags:
+      - Notes
+      summary: Count the notes on an errand
+      description: How many notes are attached to the errand. Not recorded in the
+        event log.
+      operationId: count
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteCount"
   /{municipalityId}/{namespace}/errands/{errandId}/messages/{messageId}:
     get:
       tags:
@@ -4483,6 +4515,60 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ErrandEvent"
+  /{municipalityId}/{namespace}/errands/{errandId}/events/count:
+    get:
+      tags:
+      - Event Log
+      summary: Count activity events for an errand
+      description: Honours the same filters as the list. With the defaults this is
+        the total event count; set includeReads=false for the 'what changed' count
+        without the read noise. Not recorded in the event log.
+      operationId: count_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: action
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: actor
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: source
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: includeReads
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrandEventCount"
   /{municipalityId}/{namespace}/errands/{errandId}/decisions/{decisionId}:
     get:
       tags:
@@ -4832,6 +4918,44 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/warnings/count:
+    get:
+      tags:
+      - Financial Assistance · Warnings
+      summary: Count the active EB income warnings on an errand
+      description: How many warnings are still active (OPEN or ACKNOWLEDGED) — closed
+        ones are not counted. Not recorded in the event log.
+      operationId: countWarnings
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarningCount"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/sections/approvals:
     get:
       tags:
@@ -4866,6 +4990,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SectionApprovals"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/monitorings/count:
+    get:
+      tags:
+      - Financial Assistance · Monitorings
+      summary: Count the monitorings on an errand
+      description: How many monitorings are on the errand. Not recorded in the event
+        log.
+      operationId: countMonitorings
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonitoringCount"
         "404":
           description: Not Found
           content:
@@ -8082,6 +8244,16 @@ components:
         changedAt:
           type: string
           format: date-time
+    NoteCount:
+      type: object
+      description: The number of notes on the errand
+      properties:
+        count:
+          type: integer
+          format: int64
+          description: Number of notes attached to the errand
+          examples:
+          - 4
     Message:
       type: object
       description: A message in the errand's conversation
@@ -8216,6 +8388,17 @@ components:
         created:
           type: string
           format: date-time
+    ErrandEventCount:
+      type: object
+      description: The number of activity events on the errand matching the given
+        filters
+      properties:
+        count:
+          type: integer
+          format: int64
+          description: Number of matching events
+          examples:
+          - 12
     Attachment:
       type: object
       description: Attachment model
@@ -8421,6 +8604,27 @@ components:
         decision:
           $ref: "#/components/schemas/SectionApproval"
           description: Approval of the decision (decision) section
+    WarningCount:
+      type: object
+      description: The number of active (OPEN/ACKNOWLEDGED) income warnings on the
+        errand
+      properties:
+        count:
+          type: integer
+          format: int64
+          description: Number of active warnings — closed ones are not counted
+          examples:
+          - 3
+    MonitoringCount:
+      type: object
+      description: The number of monitorings on the errand
+      properties:
+        count:
+          type: integer
+          format: int64
+          description: Number of monitorings on the errand
+          examples:
+          - 2
     PrefilledChild:
       type: object
       description: "A child pre-filled from Lifecare for a financial assistance renewal.\

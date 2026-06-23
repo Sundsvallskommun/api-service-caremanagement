@@ -57,6 +57,13 @@ public class MonitoringService {
 			.toList();
 	}
 
+	/** How many monitorings are on an errand. Scoped: throws {@code 404} when the errand is missing here. */
+	@Transactional(readOnly = true)
+	public long count(final String municipalityId, final String namespace, final String errandId) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		return repository.countByErrandId(errandId);
+	}
+
 	/** A single monitoring on an errand. Scoped: throws {@code 404} when the errand or monitoring is missing here. */
 	@Transactional(readOnly = true)
 	public Monitoring get(final String municipalityId, final String namespace, final String errandId, final String monitoringId) {

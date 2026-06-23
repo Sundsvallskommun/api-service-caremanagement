@@ -49,9 +49,14 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 	/**
 	 * Targets that must never produce an access-log row: reads of the event log itself, and the conversation read-state
 	 * machinery (the polled unread-count and the mark-as-read call) — recording those would drown the who/what/when log
-	 * in noise and is explicitly not wanted.
+	 * in noise and is explicitly not wanted. Any {@code .../count} target (the per-resource badge counts) is likewise
+	 * skipped via {@link #isNonAudited(String)}.
 	 */
 	private static final Set<String> NON_AUDITED_TARGETS = Set.of("events", "messages/unread-count", "messages/read");
+
+	private static boolean isNonAudited(final String target) {
+		return NON_AUDITED_TARGETS.contains(target) || target.endsWith("/count");
+	}
 
 	private final ErrandEventService service;
 
@@ -87,8 +92,8 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 		}
 
 		final var target = deriveTarget(parts, errandIdIndex);
-		if (NON_AUDITED_TARGETS.contains(target)) {
-			return; // event-log reads and conversation read-state calls are never audited
+		if (isNonAudited(target)) {
+			return; // event-log reads, conversation read-state calls, and badge counts are never audited
 		}
 
 		final var identifier = Optional.ofNullable(Identifier.get());

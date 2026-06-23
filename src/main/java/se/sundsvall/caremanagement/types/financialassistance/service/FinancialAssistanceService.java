@@ -326,6 +326,16 @@ public class FinancialAssistanceService {
 	}
 
 	/**
+	 * How many active (OPEN/ACKNOWLEDGED, not CLOSED) income warnings are on an errand — the badge count. Scoped: throws
+	 * {@code 404} when the errand is missing in this namespace/municipality.
+	 */
+	@Transactional(readOnly = true)
+	public long countActiveWarnings(final String municipalityId, final String namespace, final String errandId) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		return warningService.countActive(errandId);
+	}
+
+	/**
 	 * Acknowledge or close a warning on an errand. Scoped: throws {@code 404} when the errand or warning is missing,
 	 * {@code 400} when the target status is not {@code ACKNOWLEDGED}/{@code CLOSED}.
 	 */

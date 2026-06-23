@@ -134,4 +134,12 @@ class NoteServiceTest {
 		service.delete("n1");
 		verify(repositoryMock).deleteById("n1");
 	}
+
+	@Test
+	void countForErrandDelegatesToRepository() {
+		when(repositoryMock.countByErrandId("errand-1")).thenReturn(4L);
+
+		assertThat(service.countForErrand("errand-1")).isEqualTo(4L);
+		verify(repositoryMock).countByErrandId("errand-1");
+	}
 }

@@ -204,6 +204,24 @@ class ErrandEventInterceptorTest {
 	}
 
 	@Test
+	void skipsBadgeCountReads() {
+		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/notes/count");
+
+		interceptor().afterCompletion(request, response, new Object(), null);
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void skipsFinancialAssistanceCountReads() {
+		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/" + ERRAND_ID + "/warnings/count");
+
+		interceptor().afterCompletion(request, response, new Object(), null);
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
 	void skipsNonCrudMethod() {
 		when(request.getMethod()).thenReturn("OPTIONS");
 

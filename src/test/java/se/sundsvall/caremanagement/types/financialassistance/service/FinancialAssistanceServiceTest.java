@@ -530,6 +530,16 @@ class FinancialAssistanceServiceTest {
 	}
 
 	@Test
+	void countActiveWarningsDelegatesAfterScopeCheck() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
+		when(warningServiceMock.countActive(ERRAND_ID)).thenReturn(3L);
+
+		assertThat(service.countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(3L);
+		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(warningServiceMock).countActive(ERRAND_ID);
+	}
+
+	@Test
 	void updateWarningDelegatesAfterScopeCheck() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
 		final var warning = Warning.create().withId("w-1").withStatus("ACKNOWLEDGED");

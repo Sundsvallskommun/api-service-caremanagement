@@ -49,6 +49,11 @@ public class NoteService {
 	}
 
 	@Transactional(readOnly = true)
+	public long countForErrand(final String errandId) {
+		return repository.countByErrandId(errandId);
+	}
+
+	@Transactional(readOnly = true)
 	public Note read(final String noteId) {
 		return toNote(findNote(noteId));
 	}

@@ -12,6 +12,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.eventlog.api.model.ErrandEvent;
+import se.sundsvall.caremanagement.eventlog.api.model.ErrandEventCount;
 import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
 
 import static java.util.UUID.randomUUID;
@@ -70,6 +71,36 @@ class ErrandEventResourceTest {
 			.expectBodyList(ErrandEvent.class);
 
 		verify(serviceMock).listForErrand(ERRAND_ID, "UPDATE", "joe001doe", "EVENT", false);
+	}
+
+	@Test
+	void count() {
+		when(serviceMock.countForErrand(eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(7L);
+
+		final var body = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(ErrandEventCount.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(body).isNotNull();
+		assertThat(body.count()).isEqualTo(7L);
+		verify(serviceMock).countForErrand(ERRAND_ID, null, null, null, true);
+	}
+
+	@Test
+	void countWithFilters() {
+		when(serviceMock.countForErrand(eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(false))).thenReturn(3L);
+
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/count").queryParam("includeReads", "false")
+				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isOk();
+
+		verify(serviceMock).countForErrand(ERRAND_ID, null, null, null, false);
 	}
 
 	@Test

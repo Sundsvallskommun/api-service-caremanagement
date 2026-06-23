@@ -12,6 +12,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Monitoring;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.MonitoringCount;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.MonitoringRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.MonitoringService;
 
@@ -88,6 +89,23 @@ class MonitoringResourceTest {
 		assertThat(response).hasSize(1);
 		assertThat(response.getFirst().getTitle()).isEqualTo("Följ upp");
 		verify(serviceMock).list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	@Test
+	void countMonitorings() {
+		when(serviceMock.count(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(2L);
+
+		final var body = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/count").build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(MonitoringCount.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(body).isNotNull();
+		assertThat(body.count()).isEqualTo(2L);
+		verify(serviceMock).count(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test

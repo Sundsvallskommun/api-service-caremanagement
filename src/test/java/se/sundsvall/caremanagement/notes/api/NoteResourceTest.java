@@ -12,6 +12,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.notes.api.model.CreateNote;
 import se.sundsvall.caremanagement.notes.api.model.Note;
+import se.sundsvall.caremanagement.notes.api.model.NoteCount;
 import se.sundsvall.caremanagement.notes.api.model.UpdateNote;
 import se.sundsvall.caremanagement.notes.service.NoteService;
 
@@ -65,6 +66,23 @@ class NoteResourceTest {
 
 		assertThat(response).hasSize(1);
 		verify(serviceMock).listForErrand(ERRAND_ID);
+	}
+
+	@Test
+	void count() {
+		when(serviceMock.countForErrand(ERRAND_ID)).thenReturn(4L);
+
+		final var body = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(NoteCount.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(body).isNotNull();
+		assertThat(body.count()).isEqualTo(4L);
+		verify(serviceMock).countForErrand(ERRAND_ID);
 	}
 
 	@Test

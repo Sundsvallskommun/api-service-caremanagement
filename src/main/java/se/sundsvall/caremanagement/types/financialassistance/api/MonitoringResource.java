@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Monitoring;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.MonitoringCount;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.MonitoringRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.MonitoringService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
@@ -81,6 +82,21 @@ class MonitoringResource {
 		@ValidUuid @PathVariable final String errandId) {
 
 		return ok(service.list(municipalityId, namespace, errandId));
+	}
+
+	@GetMapping(path = "/count", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Count the monitorings on an errand",
+		description = "How many monitorings are on the errand. Not recorded in the event log.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<MonitoringCount> countMonitorings(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@ValidUuid @PathVariable final String errandId) {
+
+		return ok(new MonitoringCount(service.count(municipalityId, namespace, errandId)));
 	}
 
 	@GetMapping(path = "/{monitoringId}", produces = APPLICATION_JSON_VALUE)

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.notes.api.model.CreateNote;
 import se.sundsvall.caremanagement.notes.api.model.Note;
+import se.sundsvall.caremanagement.notes.api.model.NoteCount;
 import se.sundsvall.caremanagement.notes.api.model.UpdateNote;
 import se.sundsvall.caremanagement.notes.service.NoteService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
@@ -68,6 +69,16 @@ class NoteResource {
 		@ValidUuid @PathVariable final String errandId) {
 
 		return ok(service.listForErrand(errandId));
+	}
+
+	@GetMapping(path = "/count", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Count the notes on an errand", description = "How many notes are attached to the errand. Not recorded in the event log.")
+	ResponseEntity<NoteCount> count(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@ValidUuid @PathVariable final String errandId) {
+
+		return ok(new NoteCount(service.countForErrand(errandId)));
 	}
 
 	@GetMapping(path = "/{noteId}", produces = APPLICATION_JSON_VALUE)

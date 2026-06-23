@@ -64,6 +64,15 @@ class MonitoringServiceTest {
 	}
 
 	@Test
+	void countDelegatesAfterScopeCheck() {
+		when(repositoryMock.countByErrandId(ERRAND_ID)).thenReturn(2L);
+
+		assertThat(service.count(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(2L);
+		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(repositoryMock).countByErrandId(ERRAND_ID);
+	}
+
+	@Test
 	void getReturnsMonitoring() {
 		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null)));
 

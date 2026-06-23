@@ -112,6 +112,24 @@ class ErrandEventServiceTest {
 		assertThat(service.listForErrand("e2", null, null, null, true)).isEmpty();
 	}
 
+	@Test
+	void countForErrandCountsAllWhenNoFilters() {
+		when(repositoryMock.findByErrandIdOrderByCreatedDesc("e1")).thenReturn(List.of(
+			event("ev2", "READ", "joe001doe", FIXED_TIMESTAMP),
+			event("ev1", "UPDATE", "edwmol", FIXED_TIMESTAMP.minusHours(1))));
+
+		assertThat(service.countForErrand("e1", null, null, null, true)).isEqualTo(2);
+	}
+
+	@Test
+	void countForErrandExcludesReadsWhenAsked() {
+		when(repositoryMock.findByErrandIdOrderByCreatedDesc("e1")).thenReturn(List.of(
+			event("ev2", "READ", "joe001doe", FIXED_TIMESTAMP),
+			event("ev1", "UPDATE", "edwmol", FIXED_TIMESTAMP.minusHours(1))));
+
+		assertThat(service.countForErrand("e1", null, null, null, false)).isEqualTo(1);
+	}
+
 	private static ErrandEventEntity sourced(final String id, final String source, final OffsetDateTime created) {
 		return event(id, "READ", "joe001doe", created).withSource(source);
 	}

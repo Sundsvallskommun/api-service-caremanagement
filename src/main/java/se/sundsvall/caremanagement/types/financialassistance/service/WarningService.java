@@ -136,6 +136,12 @@ public class WarningService {
 			.toList();
 	}
 
+	/** How many warnings on the errand are still active (OPEN or ACKNOWLEDGED — i.e. not CLOSED). */
+	@Transactional(readOnly = true)
+	public long countActive(final String errandId) {
+		return repository.countByErrandIdAndStatusNot(errandId, STATUS_CLOSED);
+	}
+
 	/**
 	 * Create a warning directly on an errand — the careM temp stage, with no Lifecare round-trip. The warning is born
 	 * {@code OPEN}; the {@code sourceKey} is derived from the message when not supplied (the same rule reconcile uses).

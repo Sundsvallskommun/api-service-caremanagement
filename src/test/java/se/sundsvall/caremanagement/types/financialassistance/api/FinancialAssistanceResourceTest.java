@@ -37,6 +37,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionAp
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovalRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.WarningCount;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
@@ -235,6 +236,23 @@ class FinancialAssistanceResourceTest {
 		assertThat(response).hasSize(1);
 		assertThat(response.getFirst().getType()).isEqualTo("MISSING_SSBTEK");
 		verify(serviceMock).listWarnings(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"));
+	}
+
+	@Test
+	void countWarnings() {
+		when(serviceMock.countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1")).thenReturn(3L);
+
+		final var body = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/errand-1/warnings/count").build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(WarningCount.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(body).isNotNull();
+		assertThat(body.count()).isEqualTo(3L);
+		verify(serviceMock).countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1");
 	}
 
 	@Test

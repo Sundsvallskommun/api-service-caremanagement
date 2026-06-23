@@ -52,6 +52,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionAp
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovalRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.WarningCount;
 import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceTypes;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
@@ -214,6 +215,22 @@ class FinancialAssistanceResource {
 		@PathVariable final String errandId) {
 
 		return ok(service.listWarnings(municipalityId, namespace, errandId));
+	}
+
+	@Tag(name = TAG_WARNINGS, description = TAG_WARNINGS_DESC)
+	@GetMapping(path = "/financial-assistance/{errandId}/warnings/count", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Count the active EB income warnings on an errand",
+		description = "How many warnings are still active (OPEN or ACKNOWLEDGED) — closed ones are not counted. Not recorded in the event log.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<WarningCount> countWarnings(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@PathVariable final String errandId) {
+
+		return ok(new WarningCount(service.countActiveWarnings(municipalityId, namespace, errandId)));
 	}
 
 	@Tag(name = TAG_WARNINGS, description = TAG_WARNINGS_DESC)

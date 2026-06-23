@@ -129,6 +129,14 @@ class WarningServiceTest {
 	}
 
 	@Test
+	void countActiveCountsNonClosedWarnings() {
+		when(repositoryMock.countByErrandIdAndStatusNot(ERRAND_ID, WarningService.STATUS_CLOSED)).thenReturn(3L);
+
+		assertThat(service.countActive(ERRAND_ID)).isEqualTo(3L);
+		verify(repositoryMock).countByErrandIdAndStatusNot(ERRAND_ID, WarningService.STATUS_CLOSED);
+	}
+
+	@Test
 	void updateStatusInvalidTargetYields400() {
 		assertThatThrownBy(() -> service.updateStatus(ERRAND_ID, "w-1", "BOGUS"))
 			.isInstanceOf(ThrowableProblem.class)

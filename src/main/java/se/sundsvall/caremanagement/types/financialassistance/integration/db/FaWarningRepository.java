@@ -11,5 +11,7 @@ public interface FaWarningRepository extends JpaRepository<FaWarningEntity, Stri
 
 	List<FaWarningEntity> findByErrandId(String errandId);
 
+	long countByErrandIdAndStatusNot(String errandId, String status);
+
 	Optional<FaWarningEntity> findByIdAndErrandId(String id, String errandId);
 }

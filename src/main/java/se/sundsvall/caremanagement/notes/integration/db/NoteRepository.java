@@ -7,4 +7,6 @@ import se.sundsvall.caremanagement.notes.integration.db.model.NoteEntity;
 public interface NoteRepository extends JpaRepository<NoteEntity, String> {
 
 	List<NoteEntity> findByErrandIdOrderByCreatedDesc(String errandId);
+
+	long countByErrandId(String errandId);
 }
