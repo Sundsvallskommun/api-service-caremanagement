@@ -42,7 +42,7 @@ public final class FinancialAssistanceTypes {
 		income("FINANCIAL_AID_OTHER_MUNICIPALITY", "Ekonomiskt bistånd från annan kommun", null),
 		income("SALARY", "Lön", "Lön efter skatt"),
 		income("SWISH_DEPOSITS", "Swish/kontoinsättningar", "Swish/Insättningar/Överföringar"),
-		income("OCCUPATIONAL_PENSION_INSURANCE", "Tjänstepension/försäkringar (AFA, AMF, KPA, SPV etc)", null),
+		income("OCCUPATIONAL_PENSION_INSURANCE", "Tjänstepension/försäkringar", null),
 		income("CHILD_SUPPORT", "Underhållsbidrag från den andra föräldern", null),
 		income("RENT_SHARE_FROM_CHILD", "Hyresdel från barn", null),
 		// Handläggare-only Lifecare incomes (no Mina-sidor counterpart — SSBTEK delivers these)
