@@ -105,6 +105,19 @@ public class LifecareFcIntegration {
 	}
 
 	/**
+	 * Upload a document and bind it to a Lifecare actualisation. The raw bytes are wrapped in an in-memory multipart
+	 * {@code Content} part named {@code fileName} with the given MIME type. No payload is logged.
+	 */
+	public void postActualisationAttachment(final Integer actualisationId, final String documentType, final String documentSenderType,
+		final String title, final String senderName, final String fileName, final String mimeType, final byte[] content) {
+		final var file = new ByteArrayMultipartFile("Content", fileName, mimeType, content);
+		call("uploading actualisation attachment", () -> {
+			lifecareFcClient.postActualisationAttachment(actualisationId, documentType, documentSenderType, title, senderName, file);
+			return null;
+		});
+	}
+
+	/**
 	 * Runs an FC call, translating any failure into a {@code BAD_GATEWAY} problem. The {@code action} is a short verb
 	 * phrase ("creating actualisation") used only for the log/problem detail — never a personId or payload.
 	 */

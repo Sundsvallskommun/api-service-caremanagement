@@ -18,12 +18,16 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.List;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.lifecare.integration.configuration.LifecareFcConfiguration;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 import static se.sundsvall.caremanagement.lifecare.integration.configuration.LifecareFcConfiguration.CLIENT_ID;
 
 /**
@@ -201,4 +205,24 @@ public interface LifecareFcClient {
 	@PostMapping(path = "/apifc/v1/Calculations", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	Integer createCalculation(
 		@RequestBody final PostCalculationBodyRequest body);
+
+	/**
+	 * Upload a document and bind it to an actualisation. Multipart {@code form-data} (the {@code domain}/{@code key}
+	 * query auth is added globally by {@link LifecareFcConfiguration}); FC answers {@code 204 No Content} on success.
+	 *
+	 * @param id                 the Lifecare actualisation id the document is bound to
+	 * @param documentType       the {@code InsertDocumentType} code for the document
+	 * @param documentSenderType the {@code InsertDocumentSenderType} code for the document
+	 * @param title              the document title (optional)
+	 * @param senderName         the sender name (optional)
+	 * @param content            the file to attach
+	 */
+	@PostMapping(path = "/apifc/v1/Actualisations/{id}/Attachments", consumes = MULTIPART_FORM_DATA_VALUE)
+	void postActualisationAttachment(
+		@PathVariable final Integer id,
+		@RequestPart("InsertDocumentType") final String documentType,
+		@RequestPart("InsertDocumentSenderType") final String documentSenderType,
+		@RequestPart(value = "Title", required = false) final String title,
+		@RequestPart(value = "SenderName", required = false) final String senderName,
+		@RequestPart("Content") final MultipartFile content);
 }

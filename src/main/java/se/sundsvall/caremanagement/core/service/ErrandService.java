@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.core.service;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +29,7 @@ import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.core.integration.db.specification.ErrandSpecification.withNamespaceAndMunicipalityId;
 import static se.sundsvall.caremanagement.core.service.mapper.ErrandMapper.toErrand;
 import static se.sundsvall.caremanagement.core.service.mapper.ErrandMapper.toErrandEntity;
+import static se.sundsvall.caremanagement.core.service.mapper.ErrandMapper.toErrandList;
 import static se.sundsvall.caremanagement.core.service.mapper.ErrandMapper.toFindErrandsResponse;
 import static se.sundsvall.caremanagement.core.service.mapper.PatchMapper.patchErrand;
 
@@ -82,6 +84,15 @@ public class ErrandService {
 		final var baseSpec = withNamespaceAndMunicipalityId(namespace, municipalityId);
 		final var combined = ofNullable(filter).map(baseSpec::and).orElse(baseSpec);
 		return toFindErrandsResponse(errandRepository.findAll(combined, pageable));
+	}
+
+	/**
+	 * Errands in the given status that have been untouched since on or before the cutoff — the "in status S since before
+	 * T" query the conversation-archiving job runs to find long-closed errands.
+	 */
+	@Transactional(readOnly = true)
+	public List<Errand> findByStatusTouchedBefore(final String municipalityId, final String namespace, final String status, final OffsetDateTime cutoff) {
+		return toErrandList(errandRepository.findByMunicipalityIdAndNamespaceAndStatusAndTouchedLessThanEqual(municipalityId, namespace, status, cutoff));
 	}
 
 	public void updateErrand(final String municipalityId, final String namespace, final String errandId, final PatchErrand patch) {

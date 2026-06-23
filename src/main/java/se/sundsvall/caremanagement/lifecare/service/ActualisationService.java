@@ -19,6 +19,8 @@ import se.sundsvall.caremanagement.lifecare.service.mapper.ActualisationAssemble
 @Service
 public class ActualisationService {
 
+	private static final String PDF_MIME_TYPE = "application/pdf";
+
 	private final LifecareFcIntegration lifecareFcIntegration;
 
 	public ActualisationService(final LifecareFcIntegration lifecareFcIntegration) {
@@ -36,5 +38,22 @@ public class ActualisationService {
 		final var proposal = lifecareFcIntegration.getActualisationProposal(applicantPersonId);
 		final var body = ActualisationAssembler.assemble(applicantPersonId, proposal, date);
 		return lifecareFcIntegration.createActualisation(body);
+	}
+
+	/**
+	 * Upload a generated PDF and bind it to an existing Lifecare actualisation (the "API instead of RPA" document
+	 * write-back used by the conversation-archiving job). The file is sent as {@code application/pdf}.
+	 *
+	 * @param actualisationId    the Lifecare actualisation the document is bound to
+	 * @param fileName           the file name shown in Lifecare
+	 * @param content            the PDF bytes
+	 * @param documentType       the Lifecare {@code InsertDocumentType} code
+	 * @param documentSenderType the Lifecare {@code InsertDocumentSenderType} code
+	 * @param title              the document title
+	 * @param senderName         the sender name
+	 */
+	public void uploadAttachment(final Integer actualisationId, final String fileName, final byte[] content,
+		final String documentType, final String documentSenderType, final String title, final String senderName) {
+		lifecareFcIntegration.postActualisationAttachment(actualisationId, documentType, documentSenderType, title, senderName, fileName, PDF_MIME_TYPE, content);
 	}
 }

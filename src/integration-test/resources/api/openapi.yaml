@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:64884
+- url: http://localhost:51569
   description: Generated server url
 tags:
 - name: Statistics
@@ -54,6 +54,9 @@ tags:
 - name: Referrals
   description: "Referrals/consultations on an errand: receiving authority, due date,\
     \ free-text response and status (SENT → RESPONDED)."
+- name: Event Log
+  description: "Who/what/when activity log for an errand — every read and write, with\
+    \ the acting user"
 - name: Journal
   description: Journalanteckningar (case-journal entries) attached to an errand
 - name: Errand decisions
@@ -4319,6 +4322,50 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/events:
+    get:
+      tags:
+      - Event Log
+      summary: List activity events for an errand (newest first)
+      description: "Optionally filter by action (READ/CREATE/UPDATE/DELETE) and/or\
+        \ actor (the X-Sent-By value, e.g. an AD account)."
+      operationId: list_5
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: action
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: actor
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ErrandEvent"
   /{municipalityId}/{namespace}/errands/{errandId}/decisions/{decisionId}:
     get:
       tags:
@@ -7929,6 +7976,39 @@ components:
           format: date-time
           description: Created timestamp
           readOnly: true
+    ErrandEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        errandId:
+          type: string
+        municipalityId:
+          type: string
+        namespace:
+          type: string
+        action:
+          type: string
+        target:
+          type: string
+        description:
+          type: string
+        httpMethod:
+          type: string
+        requestPath:
+          type: string
+        actor:
+          type: string
+        actorType:
+          type: string
+        requestId:
+          type: string
+        statusCode:
+          type: integer
+          format: int32
+        created:
+          type: string
+          format: date-time
     Attachment:
       type: object
       description: Attachment model
@@ -7960,14 +8040,17 @@ components:
           type: string
           description: "Where the file came from: APPLICATION (citizen's application\
             \ files), CONVERSATION (sent in a message thread), GENERATED (a consolidated\
-            \ PDF produced by the platform), ERRAND (uploaded directly to the errand)\
-            \ or CASE_DATA (ärendeuppgifter — a case-data document for the errand)"
+            \ PDF produced by the platform), ERRAND (uploaded directly to the errand),\
+            \ CASE_DATA (ärendeuppgifter — a case-data document for the errand) or\
+            \ MESSAGE_HISTORY (meddelandehistorik — the archived conversation PDF\
+            \ for a closed errand)"
           enum:
           - APPLICATION
           - CONVERSATION
           - GENERATED
           - ERRAND
           - CASE_DATA
+          - MESSAGE_HISTORY
           examples:
           - CONVERSATION
           readOnly: true

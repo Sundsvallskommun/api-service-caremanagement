@@ -138,6 +138,22 @@ class ErrandServiceTest {
 	}
 
 	@Test
+	void findByStatusTouchedBeforeMapsEntities() {
+		final var cutoff = java.time.OffsetDateTime.parse("2026-05-01T00:00:00Z");
+		final var entity = ErrandEntity.create().withId(ERRAND_ID).withErrandNumber(ERRAND_NUMBER).withStatus("CLOSED")
+			.withMunicipalityId(MUNICIPALITY_ID).withNamespace(NAMESPACE);
+		when(repositoryMock.findByMunicipalityIdAndNamespaceAndStatusAndTouchedLessThanEqual(MUNICIPALITY_ID, NAMESPACE, "CLOSED", cutoff))
+			.thenReturn(of(entity));
+
+		final var result = service.findByStatusTouchedBefore(MUNICIPALITY_ID, NAMESPACE, "CLOSED", cutoff);
+
+		assertThat(result).hasSize(1);
+		assertThat(result.getFirst().getId()).isEqualTo(ERRAND_ID);
+		assertThat(result.getFirst().getErrandNumber()).isEqualTo(ERRAND_NUMBER);
+		verify(repositoryMock).findByMunicipalityIdAndNamespaceAndStatusAndTouchedLessThanEqual(MUNICIPALITY_ID, NAMESPACE, "CLOSED", cutoff);
+	}
+
+	@Test
 	void updateEmitsStatusChangedAndAssignedAndNotificationWhenChanged() {
 		final var entity = ErrandEntity.create().withId(ERRAND_ID).withTypeSlug("t").withStatus("OPEN").withAssignedUserId("old").withReporterUserId("reporter");
 		when(repositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))

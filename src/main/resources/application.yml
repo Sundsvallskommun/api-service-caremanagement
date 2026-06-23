@@ -135,6 +135,26 @@ scheduler:
     name: database-cleanup
     shedlock-lock-at-most-for: PT5M
     maximum-execution-time: PT10M
+  message-archive:
+    cron: '0 30 3 * * *'
+    name: message-archive
+    shedlock-lock-at-most-for: PT30M
+    maximum-execution-time: PT30M
+#========================================
+# Conversation archiving settings
+#========================================
+# Nightly job: snapshots the conversation of every closed EB errand into {errandNumber}_meddelandehistorik.pdf once it
+# has been closed (and untouched) for days-after-close days, then uploads it to the errand's Lifecare actualisation.
+# The Lifecare document-type / sender-type codes are tenant-specific (mocked in Drakel) — override per environment.
+archive:
+  message:
+    municipality-id: 2281
+    namespace: FINANCIAL_ASSISTANCE
+    days-after-close: 30
+    lifecare-document-type: ${ARCHIVE_MESSAGE_LIFECARE_DOCUMENT_TYPE:MEDDELANDEHISTORIK}
+    lifecare-document-sender-type: ${ARCHIVE_MESSAGE_LIFECARE_SENDER_TYPE:MYNDIGHET}
+    lifecare-title: Meddelandehistorik
+    lifecare-sender-name: Sundsvalls kommun
 #========================================
 # Maintenance settings
 #========================================

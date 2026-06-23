@@ -17,6 +17,11 @@ scheduler:
     name: notification-cleanup
     shedlock-lock-at-most-for: PT5M
     maximum-execution-time: PT5M
+  message-archive:
+    cron: '-'
+    name: message-archive
+    shedlock-lock-at-most-for: PT5M
+    maximum-execution-time: PT5M
 spring:
   cache:
     type: none

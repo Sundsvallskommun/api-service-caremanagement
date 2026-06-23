@@ -47,4 +47,16 @@ class ActualisationServiceTest {
 		assertThat(captor.getValue().getDate()).isEqualTo("2026-06-01");
 		assertThat(captor.getValue().getType()).isEqualTo(3);
 	}
+
+	@Test
+	void uploadAttachmentSendsPdfToTheActualisation() {
+		final var content = new byte[] {
+			1, 2, 3
+		};
+
+		service.uploadAttachment(5012, "EB-26060001_meddelandehistorik.pdf", content, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun");
+
+		verify(lifecareFcIntegrationMock).postActualisationAttachment(5012, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik",
+			"Sundsvalls kommun", "EB-26060001_meddelandehistorik.pdf", "application/pdf", content);
+	}
 }

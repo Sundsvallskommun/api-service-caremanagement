@@ -132,6 +132,47 @@ class AttachmentServiceTest {
 	}
 
 	@Test
+	void messageHistoryExistsDelegatesToRepository() {
+		when(attachmentRepositoryMock.existsByErrandIdAndOrigin(ERRAND_ID, "MESSAGE_HISTORY")).thenReturn(true);
+
+		assertThat(service.messageHistoryExists(ERRAND_ID)).isTrue();
+		verify(attachmentRepositoryMock).existsByErrandIdAndOrigin(ERRAND_ID, "MESSAGE_HISTORY");
+	}
+
+	@Test
+	void createMessageHistoryAttachmentStoresRenamedPdf() {
+		final var errand = mock(ErrandEntity.class);
+		when(errand.getErrandNumber()).thenReturn("EB-2024-000777");
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(errand));
+		when(attachmentRepositoryMock.existsByErrandIdAndOrigin(ERRAND_ID, "MESSAGE_HISTORY")).thenReturn(false);
+		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
+			.thenReturn(AttachmentEntity.create().withId(ATTACHMENT_ID));
+
+		final var id = service.createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "%PDF".getBytes());
+
+		assertThat(id).isEqualTo(ATTACHMENT_ID);
+		final ArgumentCaptor<AttachmentEntity> captor = ArgumentCaptor.forClass(AttachmentEntity.class);
+		verify(attachmentRepositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getOrigin()).isEqualTo("MESSAGE_HISTORY");
+		assertThat(captor.getValue().getFileName()).isEqualTo("EB-2024-000777_meddelandehistorik.pdf");
+		assertThat(captor.getValue().getMimeType()).isEqualTo("application/pdf");
+	}
+
+	@Test
+	void createMessageHistoryAttachmentThrowsBadRequestWhenOneAlreadyExists() {
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(attachmentRepositoryMock.existsByErrandIdAndOrigin(ERRAND_ID, "MESSAGE_HISTORY")).thenReturn(true);
+
+		assertThatThrownBy(() -> service.createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "%PDF".getBytes()))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+
+		verify(attachmentRepositoryMock, never()).save(any(AttachmentEntity.class));
+	}
+
+	@Test
 	void storeAndCombinePersistsEachSourceAndACombinedPdf() {
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
 			.thenReturn(Optional.of(mock(ErrandEntity.class)));

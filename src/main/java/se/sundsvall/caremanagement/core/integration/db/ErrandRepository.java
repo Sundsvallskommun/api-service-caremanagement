@@ -2,6 +2,8 @@ package se.sundsvall.caremanagement.core.integration.db;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.LockModeType;
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -20,4 +22,11 @@ public interface ErrandRepository extends JpaRepository<ErrandEntity, String>, J
 	Optional<ErrandEntity> findWithLockingById(String id);
 
 	Optional<ErrandEntity> findByIdAndNamespaceAndMunicipalityId(String id, String namespace, String municipalityId);
+
+	/**
+	 * Errands in the given status whose last envelope change ({@code touched}) is at or before the cutoff — i.e. that
+	 * have been in that status, untouched, since before the cutoff. Backed by the
+	 * {@code (municipality_id, namespace, status, touched)} index.
+	 */
+	List<ErrandEntity> findByMunicipalityIdAndNamespaceAndStatusAndTouchedLessThanEqual(String municipalityId, String namespace, String status, OffsetDateTime cutoff);
 }

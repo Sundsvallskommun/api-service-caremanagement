@@ -54,8 +54,12 @@ public class AttachmentService {
 	private static final String ORIGIN_GENERATED = "GENERATED";
 	private static final String ORIGIN_ERRAND = "ERRAND";
 	private static final String ORIGIN_CASE_DATA = "CASE_DATA";
+	private static final String ORIGIN_MESSAGE_HISTORY = "MESSAGE_HISTORY";
 	/** Extension forced on the case-data (ärendeuppgifter) attachment, whose file is renamed to {errandNumber}.pdf. */
 	private static final String CASE_DATA_FILE_EXTENSION = ".pdf";
+	/** Suffix forced on the message-history attachment, whose file is renamed to {errandNumber}_meddelandehistorik.pdf. */
+	private static final String MESSAGE_HISTORY_FILE_SUFFIX = "_meddelandehistorik.pdf";
+	private static final String MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE = "A message-history (meddelandehistorik) attachment already exists on errand '%s' in namespace '%s' for municipality id '%s'";
 	/** Sender-role facet — the application files and the consolidated client PDF are the applicant's. */
 	private static final String SENDER_CLIENT = "CLIENT";
 
@@ -94,6 +98,34 @@ public class AttachmentService {
 	 */
 	public String createCaseDataAttachment(final String municipalityId, final String namespace, final String errandId, final MultipartFile file) {
 		return createAttachment(municipalityId, namespace, errandId, ORIGIN_CASE_DATA, file);
+	}
+
+	/**
+	 * Whether the errand already carries its message-history (meddelandehistorik) archive. Used by the archiving job as
+	 * its idempotency guard — an errand whose conversation has already been archived is skipped.
+	 */
+	@Transactional(readOnly = true)
+	public boolean messageHistoryExists(final String errandId) {
+		return attachmentRepository.existsByErrandIdAndOrigin(errandId, ORIGIN_MESSAGE_HISTORY);
+	}
+
+	/**
+	 * Store the platform-generated message-history (meddelandehistorik) PDF for the errand as a {@code MESSAGE_HISTORY}
+	 * attachment, named {@code {errandNumber}_meddelandehistorik.pdf}. Unique per errand — a second one is rejected — so
+	 * the row doubles as the archived-marker for the archiving job.
+	 *
+	 * @param  content the rendered PDF bytes
+	 * @return         the id of the created attachment
+	 */
+	public String createMessageHistoryAttachment(final String municipalityId, final String namespace, final String errandId, final byte[] content) {
+		final var errand = getErrand(municipalityId, namespace, errandId);
+		if (attachmentRepository.existsByErrandIdAndOrigin(errandId, ORIGIN_MESSAGE_HISTORY)) {
+			throw Problem.valueOf(BAD_REQUEST, MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE.formatted(errandId, namespace, municipalityId));
+		}
+
+		final var fileName = errand.getErrandNumber() + MESSAGE_HISTORY_FILE_SUFFIX;
+		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_MESSAGE_HISTORY, null, fileName, PDF_MIME_TYPE, content);
+		return attachmentRepository.save(entity).getId();
 	}
 
 	/**

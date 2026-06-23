@@ -17,14 +17,19 @@ import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -235,5 +240,34 @@ class LifecareFcIntegrationTest {
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
 
 		verify(clientMock).createCalculation(body);
+	}
+
+	@Test
+	void postActualisationAttachmentWrapsBytesAsTheContentPart() throws Exception {
+		final var content = new byte[] {
+			9, 8, 7
+		};
+
+		integration.postActualisationAttachment(4711, "DOC", "SENDER", "Title", "Sender", "EB-1_meddelandehistorik.pdf", "application/pdf", content);
+
+		final ArgumentCaptor<MultipartFile> fileCaptor = ArgumentCaptor.forClass(MultipartFile.class);
+		verify(clientMock).postActualisationAttachment(eq(4711), eq("DOC"), eq("SENDER"), eq("Title"), eq("Sender"), fileCaptor.capture());
+		final var file = fileCaptor.getValue();
+		assertThat(file.getName()).isEqualTo("Content");
+		assertThat(file.getOriginalFilename()).isEqualTo("EB-1_meddelandehistorik.pdf");
+		assertThat(file.getContentType()).isEqualTo("application/pdf");
+		assertThat(file.getBytes()).isEqualTo(content);
+	}
+
+	@Test
+	void postActualisationAttachmentFailure() {
+		doThrow(new RuntimeException("connection reset")).when(clientMock)
+			.postActualisationAttachment(eq(4711), any(), any(), any(), any(), any());
+
+		assertThatThrownBy(() -> integration.postActualisationAttachment(4711, "DOC", "SENDER", "Title", "Sender", "f.pdf", "application/pdf", new byte[] {
+			1
+		}))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
 	}
 }

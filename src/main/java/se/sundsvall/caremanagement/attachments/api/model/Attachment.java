@@ -28,8 +28,9 @@ public class Attachment {
 
 	@Schema(description = "Where the file came from: APPLICATION (citizen's application files), CONVERSATION (sent in a "
 		+ "message thread), GENERATED (a consolidated PDF produced by the platform), ERRAND (uploaded directly to the "
-		+ "errand) or CASE_DATA (ärendeuppgifter — a case-data document for the errand)", allowableValues = {
-			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA"
+		+ "errand), CASE_DATA (ärendeuppgifter — a case-data document for the errand) or MESSAGE_HISTORY "
+		+ "(meddelandehistorik — the archived conversation PDF for a closed errand)", allowableValues = {
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "MESSAGE_HISTORY"
 	}, examples = "CONVERSATION", accessMode = READ_ONLY)
 	private String origin;
 
