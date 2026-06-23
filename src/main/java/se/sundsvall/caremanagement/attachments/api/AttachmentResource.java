@@ -64,8 +64,9 @@ class AttachmentResource {
 
 	@PostMapping(consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Create attachment",
-		description = "Uploads a new attachment for the errand. The optional origin tags what the "
-			+ "file is: ERRAND (a plain manual upload, the default) or CASE_DATA (ärendeuppgifter — a case-data document).",
+		description = "Uploads a new attachment for the errand. The optional origin tags what the file is: ERRAND (a plain "
+			+ "manual upload, the default) or CASE_DATA (ärendeuppgifter — a case-data document). A CASE_DATA attachment is "
+			+ "renamed to {errandNumber}.pdf and only one is allowed per errand — uploading a second returns 400.",
 		responses = {
 			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
 		})

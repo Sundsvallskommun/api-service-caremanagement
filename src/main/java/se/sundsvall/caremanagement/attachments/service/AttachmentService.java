@@ -17,6 +17,7 @@ import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEn
 import se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentQueryService;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
+import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Comparator.nullsLast;
@@ -36,6 +37,7 @@ public class AttachmentService {
 
 	private static final String ERRAND_NOT_FOUND_MESSAGE = "No errand with id '%s' found in namespace '%s' for municipality id '%s'";
 	private static final String ATTACHMENT_NOT_FOUND_MESSAGE = "No attachment with id '%s' found on errand '%s' in namespace '%s' for municipality id '%s'";
+	private static final String CASE_DATA_ALREADY_EXISTS_MESSAGE = "A case-data (ärendeuppgifter) attachment already exists on errand '%s' in namespace '%s' for municipality id '%s'";
 	private static final String STREAM_ERROR_MESSAGE = "%s occurred when copying file with attachment id '%s' to response: %s";
 	private static final String READ_ERROR_MESSAGE = "Could not read input stream: %s";
 
@@ -51,6 +53,9 @@ public class AttachmentService {
 	private static final String ORIGIN_CONVERSATION = "CONVERSATION";
 	private static final String ORIGIN_GENERATED = "GENERATED";
 	private static final String ORIGIN_ERRAND = "ERRAND";
+	private static final String ORIGIN_CASE_DATA = "CASE_DATA";
+	/** Extension forced on the case-data (ärendeuppgifter) attachment, whose file is renamed to {errandNumber}.pdf. */
+	private static final String CASE_DATA_FILE_EXTENSION = ".pdf";
 	/** Sender-role facet — the application files and the consolidated client PDF are the applicant's. */
 	private static final String SENDER_CLIENT = "CLIENT";
 
@@ -66,9 +71,20 @@ public class AttachmentService {
 	}
 
 	public String createAttachment(final String municipalityId, final String namespace, final String errandId, final String origin, final MultipartFile file) {
-		ensureErrandExists(municipalityId, namespace, errandId);
-		final var saved = attachmentRepository.save(toAttachmentEntity(errandId, namespace, municipalityId, ofNullable(origin).orElse(ORIGIN_ERRAND), null, file));
-		return saved.getId();
+		final var errand = getErrand(municipalityId, namespace, errandId);
+		final var resolvedOrigin = ofNullable(origin).orElse(ORIGIN_ERRAND);
+
+		// A case-data (ärendeuppgifter) attachment is unique per errand and is renamed to {errandNumber}.pdf.
+		if (ORIGIN_CASE_DATA.equals(resolvedOrigin) && attachmentRepository.existsByErrandIdAndOrigin(errandId, ORIGIN_CASE_DATA)) {
+			throw Problem.valueOf(BAD_REQUEST, CASE_DATA_ALREADY_EXISTS_MESSAGE.formatted(errandId, namespace, municipalityId));
+		}
+
+		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, resolvedOrigin, null, file);
+		if (ORIGIN_CASE_DATA.equals(resolvedOrigin)) {
+			entity.setFileName(errand.getErrandNumber() + CASE_DATA_FILE_EXTENSION);
+		}
+
+		return attachmentRepository.save(entity).getId();
 	}
 
 	/**
@@ -180,7 +196,11 @@ public class AttachmentService {
 	}
 
 	private void ensureErrandExists(final String municipalityId, final String namespace, final String errandId) {
-		errandRepository.findByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)
+		getErrand(municipalityId, namespace, errandId);
+	}
+
+	private ErrandEntity getErrand(final String municipalityId, final String namespace, final String errandId) {
+		return errandRepository.findByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERRAND_NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId)));
 	}
 

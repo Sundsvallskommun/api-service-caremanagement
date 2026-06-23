@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -76,18 +77,38 @@ class AttachmentServiceTest {
 	}
 
 	@Test
-	void createAttachmentHonorsProvidedOrigin() {
+	void createAttachmentWithCaseDataRenamesFileToErrandNumberPdf() {
+		final var errand = mock(ErrandEntity.class);
+		when(errand.getErrandNumber()).thenReturn("EB-2024-000123");
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+			.thenReturn(Optional.of(errand));
+		when(attachmentRepositoryMock.existsByErrandIdAndOrigin(ERRAND_ID, "CASE_DATA")).thenReturn(false);
 		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
 			.thenReturn(AttachmentEntity.create().withId(ATTACHMENT_ID));
-		final var file = new MockMultipartFile("file", "arendeuppgifter.pdf", "application/pdf", "x".getBytes());
+		// A non-pdf source name proves the file is renamed to {errandNumber}.pdf regardless of what was uploaded.
+		final var file = new MockMultipartFile("file", "whatever.png", "image/png", "x".getBytes());
 
-		service.createAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CASE_DATA", file);
+		final var id = service.createAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CASE_DATA", file);
 
+		assertThat(id).isEqualTo(ATTACHMENT_ID);
 		final ArgumentCaptor<AttachmentEntity> captor = ArgumentCaptor.forClass(AttachmentEntity.class);
 		verify(attachmentRepositoryMock).save(captor.capture());
 		assertThat(captor.getValue().getOrigin()).isEqualTo("CASE_DATA");
+		assertThat(captor.getValue().getFileName()).isEqualTo("EB-2024-000123.pdf");
+	}
+
+	@Test
+	void createAttachmentWithCaseDataThrowsBadRequestWhenOneAlreadyExists() {
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(attachmentRepositoryMock.existsByErrandIdAndOrigin(ERRAND_ID, "CASE_DATA")).thenReturn(true);
+		final var file = new MockMultipartFile("file", "arendeuppgifter.pdf", "application/pdf", "x".getBytes());
+
+		assertThatThrownBy(() -> service.createAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CASE_DATA", file))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+
+		verify(attachmentRepositoryMock, never()).save(any(AttachmentEntity.class));
 	}
 
 	@Test

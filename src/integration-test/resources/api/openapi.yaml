@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:61871
+- url: http://localhost:63536
   description: Generated server url
 tags:
 - name: Statistics
@@ -1817,7 +1817,9 @@ paths:
       summary: Create attachment
       description: "Uploads a new attachment for the errand. The optional origin tags\
         \ what the file is: ERRAND (a plain manual upload, the default) or CASE_DATA\
-        \ (ärendeuppgifter — a case-data document)."
+        \ (ärendeuppgifter — a case-data document). A CASE_DATA attachment is renamed\
+        \ to {errandNumber}.pdf and only one is allowed per errand — uploading a second\
+        \ returns 400."
       operationId: createAttachment
       parameters:
       - name: municipalityId
@@ -4981,10 +4983,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri

@@ -18,5 +18,8 @@ public interface AttachmentRepository extends JpaRepository<AttachmentEntity, St
 	/** Upsert lookup for a generated, in-place-regenerated attachment (e.g. the consolidated client-attachment PDF). */
 	Optional<AttachmentEntity> findFirstByErrandIdAndFileNameAndOrigin(String errandId, String fileName, String origin);
 
+	/** Guards the at-most-one-per-errand rule for the case-data (ärendeuppgifter) attachment. */
+	boolean existsByErrandIdAndOrigin(String errandId, String origin);
+
 	long deleteByErrandId(String errandId);
 }
