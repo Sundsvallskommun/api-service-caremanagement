@@ -93,6 +93,11 @@ public class MessageArchiveService {
 				return;
 			}
 
+			if (!ThreadAttachments.hasApplicantMessage(thread)) {
+				LOG.info("No applicant message in the conversation for errand {} - nothing to archive", errand.getErrandNumber());
+				return;
+			}
+
 			final var actualisationId = resolveActualisationId(errand);
 			if (actualisationId.isEmpty()) {
 				LOG.warn("Skipping errand {} - no Lifecare actualisation id recorded, cannot upload the meddelandehistorik", errand.getErrandNumber());

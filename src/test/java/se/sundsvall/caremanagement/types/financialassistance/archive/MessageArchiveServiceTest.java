@@ -121,6 +121,20 @@ class MessageArchiveServiceTest {
 	}
 
 	@Test
+	void skipsErrandWhenOnlyCaseworkerHasMessaged() {
+		when(errandServiceMock.findByStatusTouchedBefore(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(CLOSED), any())).thenReturn(List.of(errand()));
+		when(attachmentServiceMock.messageHistoryExists(ERRAND_ID)).thenReturn(false);
+		when(conversationThreadQueryServiceMock.threadForErrand(ERRAND_ID)).thenReturn(List.of(
+			new ConversationMessageView("OUTBOUND", "Vänligen komplettera.", "agent", OffsetDateTime.parse("2026-05-12T09:00:00+02:00"), emptyList())));
+
+		service.archiveClosedErrands();
+
+		verifyNoInteractions(decisionServiceMock, actualisationServiceMock);
+		verify(attachmentServiceMock, never()).combineToPdf(any());
+		verify(attachmentServiceMock, never()).createMessageHistoryAttachment(any(), any(), any(), any(), any());
+	}
+
+	@Test
 	void skipsErrandWithoutActualisationId() {
 		when(errandServiceMock.findByStatusTouchedBefore(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(CLOSED), any())).thenReturn(List.of(errand()));
 		when(attachmentServiceMock.messageHistoryExists(ERRAND_ID)).thenReturn(false);

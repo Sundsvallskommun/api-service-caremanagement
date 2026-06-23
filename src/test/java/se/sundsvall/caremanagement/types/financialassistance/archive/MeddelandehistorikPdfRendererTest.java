@@ -42,11 +42,28 @@ class MeddelandehistorikPdfRendererTest {
 		final var text = textOf(pdf);
 		assertThat(text).contains("Meddelandehistorik");
 		assertThat(text).contains(ERRAND_NUMBER);
+		assertThat(text).contains("Period: 2026-06-01");
 		assertThat(text).contains("Antal meddelanden: 2");
 		assertThat(text).contains("Antal bilagor: 2");
 		assertThat(text).contains("Sökande");
 		assertThat(text).contains("Handläggare");
 		assertThat(text).contains("Bilagor: [1] intyg.pdf, [2] kvitto.pdf");
+	}
+
+	@Test
+	void listsHandlaggareAttachmentsAsInLifecareWithoutAppendingThem() throws IOException {
+		final var thread = List.of(
+			new ConversationMessageView("INBOUND", "Här kommer mitt underlag.", "k.andersson", OffsetDateTime.parse("2026-06-01T09:00:00+02:00"), List.of(attachment("underlag.pdf"))),
+			new ConversationMessageView("OUTBOUND", "Beslut bifogas.", "anna.lindqvist", OffsetDateTime.parse("2026-06-03T09:00:00+02:00"), List.of(attachment("beslut.pdf"))));
+
+		final var attachments = ThreadAttachments.flatten(thread);
+		// Only the applicant's attachment is numbered / appended.
+		assertThat(attachments).hasSize(1);
+
+		final var text = textOf(MeddelandehistorikPdfRenderer.renderMessages(ERRAND_NUMBER, thread, attachments));
+		assertThat(text).contains("Antal bilagor: 1");
+		assertThat(text).contains("Bilagor: [1] underlag.pdf");
+		assertThat(text).contains("Bilagor (finns i Lifecare): beslut.pdf");
 	}
 
 	@Test

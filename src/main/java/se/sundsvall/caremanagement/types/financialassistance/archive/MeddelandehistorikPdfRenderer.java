@@ -2,11 +2,13 @@ package se.sundsvall.caremanagement.types.financialassistance.archive;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -14,12 +16,14 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts.FontName;
+import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentView;
 import se.sundsvall.caremanagement.conversation.spi.ConversationMessageView;
 import se.sundsvall.caremanagement.types.financialassistance.archive.ThreadAttachments.NumberedAttachment;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.joining;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 /**
@@ -73,6 +77,9 @@ final class MeddelandehistorikPdfRenderer {
 		final var lines = new ArrayList<Line>();
 		add(lines, "Meddelandehistorik", BOLD, TITLE_SIZE);
 		add(lines, "Ärende: " + errandNumber, REGULAR, BODY_SIZE);
+		if (!thread.isEmpty()) {
+			add(lines, "Period: %s – %s".formatted(date(thread.getFirst().created()), date(thread.getLast().created())), REGULAR, BODY_SIZE);
+		}
 		add(lines, "Antal meddelanden: " + thread.size(), REGULAR, BODY_SIZE);
 		add(lines, "Antal bilagor: " + attachments.size(), REGULAR, BODY_SIZE);
 		lines.add(blank());
@@ -81,11 +88,7 @@ final class MeddelandehistorikPdfRenderer {
 			final var message = thread.get(messageIndex);
 			add(lines, header(message), BOLD, HEADING_SIZE);
 			add(lines, ofNullable(message.body()).orElse(""), REGULAR, BODY_SIZE);
-			final var messageAttachments = byMessage.getOrDefault(messageIndex, List.of());
-			if (!messageAttachments.isEmpty()) {
-				final var labels = messageAttachments.stream().map(a -> "[%d] %s".formatted(a.number(), a.fileName())).toList();
-				add(lines, "Bilagor: " + String.join(", ", labels), REGULAR, BODY_SIZE);
-			}
+			attachmentLine(message, byMessage.getOrDefault(messageIndex, List.of())).ifPresent(line -> add(lines, line, REGULAR, BODY_SIZE));
 			lines.add(blank());
 		}
 		return renderLines(lines);
@@ -148,6 +151,25 @@ final class MeddelandehistorikPdfRenderer {
 			}
 			wordWrap(clean, font, size).forEach(line -> lines.add(new Line(line, font, size)));
 		}
+	}
+
+	/**
+	 * The {@code Bilagor:} line for a message, if any. Applicant attachments are listed by their {@code Bilaga {n}}
+	 * number (they are appended); handläggare attachments are listed by file name and flagged as already in Lifecare (they
+	 * are not appended).
+	 */
+	private static Optional<String> attachmentLine(final ConversationMessageView message, final List<NumberedAttachment> numbered) {
+		if (ThreadAttachments.INBOUND.equals(message.direction())) {
+			return numbered.isEmpty() ? Optional.empty()
+				: Optional.of("Bilagor: " + numbered.stream().map(a -> "[%d] %s".formatted(a.number(), a.fileName())).collect(joining(", ")));
+		}
+		final var files = message.attachments();
+		return files.isEmpty() ? Optional.empty()
+			: Optional.of("Bilagor (finns i Lifecare): " + files.stream().map(ConversationAttachmentView::fileName).collect(joining(", ")));
+	}
+
+	private static String date(final OffsetDateTime timestamp) {
+		return ofNullable(timestamp).map(value -> value.atZoneSameInstant(ZoneId.systemDefault()).format(DATE)).orElse("");
 	}
 
 	private static String header(final ConversationMessageView message) {
