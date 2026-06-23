@@ -14,6 +14,7 @@ import generated.se.sundsvall.lifecarefc.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefc.PostAktualiseringsBodyRequest;
 import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
+import generated.se.sundsvall.lifecarefc.User;
 import java.util.List;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -84,6 +85,10 @@ public class LifecareFcIntegration {
 
 	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
 		return call("fetching resource allocations", () -> lifecareFcClient.getResourceAllocations(personId, startDate, endDate, pageSize, pageNr, ascending));
+	}
+
+	public List<User> getUsers(final Integer limit, final Integer offset, final String modifiedAfter, final String modifiedBefore) {
+		return call("fetching users", () -> lifecareFcClient.getUsers(limit, offset, modifiedAfter, modifiedBefore));
 	}
 
 	// ---- Write-back (actualisation + calculation) and the proposals that drive it ----------------------------------

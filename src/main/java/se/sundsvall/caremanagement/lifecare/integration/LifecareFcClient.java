@@ -14,6 +14,7 @@ import generated.se.sundsvall.lifecarefc.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefc.PostAktualiseringsBodyRequest;
 import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
+import generated.se.sundsvall.lifecarefc.User;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.List;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -161,6 +162,23 @@ public interface LifecareFcClient {
 		@RequestParam(value = "pageSize", required = false) final Integer pageSize,
 		@RequestParam(value = "pageNr", required = false) final Integer pageNr,
 		@RequestParam(value = "ascending", required = false) final Boolean ascending);
+
+	/**
+	 * List FC users (caseworkers). Used to resolve a Service's caseworker display name to the user's FC {@code Id}
+	 * (the actualisation {@code CaseworkerId}) and {@code NetworkUserId} (the careM errand {@code assignedUserId}).
+	 *
+	 * @param  limit          the maximum number of users to return (required by FC)
+	 * @param  offset         the starting point within the result set (optional)
+	 * @param  modifiedAfter  only users modified after this UTC time (optional)
+	 * @param  modifiedBefore only users modified before this UTC time (optional)
+	 * @return                the matching users
+	 */
+	@GetMapping(path = "/apifc/v1/Users/GetUsers", produces = APPLICATION_JSON_VALUE)
+	List<User> getUsers(
+		@RequestParam("limit") final Integer limit,
+		@RequestParam(value = "offset", required = false) final Integer offset,
+		@RequestParam(value = "modifiedAfter", required = false) final String modifiedAfter,
+		@RequestParam(value = "modifiedBefore", required = false) final String modifiedBefore);
 
 	// ---- Write-back (actualisation + calculation) and the proposals that drive it ----------------------------------
 

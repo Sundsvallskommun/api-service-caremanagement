@@ -21,7 +21,7 @@ class ActualisationAssemblerTest {
 
 	@Test
 	void assemblesPersonAndDateWithoutProposal() {
-		final var body = ActualisationAssembler.assemble(PERSON_ID, null, DATE);
+		final var body = ActualisationAssembler.assemble(PERSON_ID, null, DATE, null);
 
 		assertThat(body.getPersonId()).isEqualTo(PERSON_ID);
 		assertThat(body.getDate()).isEqualTo("2026-06-01");
@@ -35,6 +35,21 @@ class ActualisationAssemblerTest {
 		assertThat(body.getInvestigationId()).isNull();
 		assertThat(body.getSpecifies()).isNull();
 		assertThat(body.getWorkingStatus()).isNull();
+		assertThat(body.getCaseworkerId()).isNull();
+	}
+
+	@Test
+	void setsCaseworkerIdWhenProvided() {
+		final var body = ActualisationAssembler.assemble(PERSON_ID, null, DATE, "9001");
+
+		assertThat(body.getCaseworkerId()).isEqualTo("9001");
+	}
+
+	@Test
+	void leavesCaseworkerIdUnsetWhenBlank() {
+		final var body = ActualisationAssembler.assemble(PERSON_ID, null, DATE, "   ");
+
+		assertThat(body.getCaseworkerId()).isNull();
 	}
 
 	@Test
@@ -51,7 +66,7 @@ class ActualisationAssemblerTest {
 			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(42))
 			.addInvestigationsItem(new PersonBasedAktualiseringsInvestigationDTO().id(51));
 
-		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE);
+		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE, null);
 
 		assertThat(body.getType()).isEqualTo(1);
 		assertThat(body.getReason()).isEqualTo(11);
@@ -75,7 +90,7 @@ class ActualisationAssemblerTest {
 			.addSpecifyTypesItem(new PersonBasedAktualiseringsSpecifyTypeDTO().id(61))
 			.addWorkingStatusItem(new PersonBasedAktualiseringsWorkingStatusDTO().id(71));
 
-		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE);
+		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE, null);
 
 		assertThat(body.getSpecifies()).isEqualTo(61);
 		assertThat(body.getWorkingStatus()).isEqualTo(71);
@@ -91,7 +106,7 @@ class ActualisationAssemblerTest {
 			.addSpecifyTypesItem(new PersonBasedAktualiseringsSpecifyTypeDTO().id(61))
 			.addWorkingStatusItem(new PersonBasedAktualiseringsWorkingStatusDTO().id(71));
 
-		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE);
+		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE, null);
 
 		assertThat(body.getSpecifies()).isNull();
 		assertThat(body.getWorkingStatus()).isNull();

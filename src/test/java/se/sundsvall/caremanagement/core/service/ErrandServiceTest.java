@@ -29,6 +29,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -49,6 +50,9 @@ class ErrandServiceTest {
 
 	@Mock
 	private ApplicationEventPublisher eventPublisherMock;
+
+	@Mock
+	private ErrandNotificationFilter errandNotificationFilterMock;
 
 	@InjectMocks
 	private ErrandService service;
@@ -122,10 +126,11 @@ class ErrandServiceTest {
 			.thenReturn(new PageImpl<>(of(ErrandEntity.create().withId(ERRAND_ID))));
 
 		final Specification<ErrandEntity> extra = (root, _, cb) -> cb.equal(root.get("status"), "OPEN");
-		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, extra, PageRequest.of(0, 10));
+		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, extra, false, null, PageRequest.of(0, 10));
 
 		assertThat(page.getErrands()).hasSize(1);
 		assertThat(specCaptor.getValue()).isNotNull();
+		verifyNoInteractions(errandNotificationFilterMock);
 	}
 
 	@Test
@@ -133,8 +138,21 @@ class ErrandServiceTest {
 		when(repositoryMock.findAll(any(Specification.class), any(PageRequest.class)))
 			.thenReturn(new PageImpl<>(of()));
 
-		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, null, PageRequest.of(0, 10));
+		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, null, false, null, PageRequest.of(0, 10));
 		assertThat(page.getErrands()).isEmpty();
+	}
+
+	@Test
+	void findErrandsAppliesUnacknowledgedNotificationFilter() {
+		when(repositoryMock.findAll(any(Specification.class), any(PageRequest.class)))
+			.thenReturn(new PageImpl<>(of(ErrandEntity.create().withId(ERRAND_ID))));
+		when(errandNotificationFilterMock.hasUnacknowledgedNotifications(MUNICIPALITY_ID, NAMESPACE, "jane01doe"))
+			.thenReturn((root, _, cb) -> cb.conjunction());
+
+		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, null, true, "jane01doe", PageRequest.of(0, 10));
+
+		assertThat(page.getErrands()).hasSize(1);
+		verify(errandNotificationFilterMock).hasUnacknowledgedNotifications(MUNICIPALITY_ID, NAMESPACE, "jane01doe");
 	}
 
 	@Test

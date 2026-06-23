@@ -994,6 +994,61 @@
 					}
 				}
 			}
+		},
+		"/apifc/v1/Users/GetUsers": {
+			"get": {
+				"tags": [
+					"Users"
+				],
+				"summary": "List FC users (caseworkers). Used to resolve a Service's caseworker display name to the user's FC Id and network (AD) user id.",
+				"operationId": "Users_GetUsers",
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "limit",
+						"in": "query",
+						"description": "Maximum number of users to return.",
+						"required": true,
+						"type": "integer",
+						"format": "int32"
+					},
+					{
+						"name": "offset",
+						"in": "query",
+						"description": "Starting point within the returned resources.",
+						"required": false,
+						"type": "integer",
+						"format": "int32"
+					},
+					{
+						"name": "modifiedAfter",
+						"in": "query",
+						"description": "Only users modified after this UTC time.",
+						"required": false,
+						"type": "string"
+					},
+					{
+						"name": "modifiedBefore",
+						"in": "query",
+						"description": "Only users modified before this UTC time.",
+						"required": false,
+						"type": "string"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The matching users.",
+						"schema": {
+							"type": "array",
+							"items": {
+								"$ref": "#/definitions/User"
+							}
+						}
+					}
+				}
+			}
 		}
 	},
 	"definitions": {
@@ -2800,6 +2855,52 @@
 					"items": {
 						"$ref": "#/definitions/PersonBasedCalculationIncomePostDTO"
 					}
+				}
+			}
+		},
+		"User": {
+			"description": "FC user (caseworker/handläggare). The Id is the FC user id used as CaseworkerId on an actualisation; NetworkUserId is the AD username used as the careM errand assignedUserId; FullName is what the person-based Service reads expose as Caseworker.",
+			"type": "object",
+			"properties": {
+				"Id": {
+					"type": "string",
+					"description": "FC user id (max length 10). Used as the actualisation CaseworkerId.",
+					"maxLength": 10
+				},
+				"PersonId": {
+					"type": "string"
+				},
+				"HsaId": {
+					"type": "string"
+				},
+				"NetworkUserId": {
+					"type": "string",
+					"description": "Network (AD) user id — used as the careM errand assignedUserId."
+				},
+				"VrkId": {
+					"type": "string"
+				},
+				"FirstName": {
+					"type": "string"
+				},
+				"LastName": {
+					"type": "string"
+				},
+				"FullName": {
+					"type": "string",
+					"description": "Full display name — matched against the Service's Caseworker."
+				},
+				"Description": {
+					"type": "string"
+				},
+				"ValidFrom": {
+					"type": "string"
+				},
+				"ValidTo": {
+					"type": "string"
+				},
+				"Disabled": {
+					"type": "boolean"
 				}
 			}
 		}

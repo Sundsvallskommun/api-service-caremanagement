@@ -14,6 +14,7 @@ import generated.se.sundsvall.lifecarefc.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefc.PostAktualiseringsBodyRequest;
 import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
+import generated.se.sundsvall.lifecarefc.User;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -142,6 +143,25 @@ class LifecareFcIntegrationTest {
 		assertThat(integration.getExecutions(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).isSameAs(response);
 		verify(clientMock).getExecutions(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING);
 		verifyNoMoreInteractions(clientMock);
+	}
+
+	@Test
+	void getUsers() {
+		final var response = List.of(new User().id("9001").fullName("Anna Andersson").networkUserId("anna01ker"));
+		when(clientMock.getUsers(1000, null, null, null)).thenReturn(response);
+
+		assertThat(integration.getUsers(1000, null, null, null)).isSameAs(response);
+		verify(clientMock).getUsers(1000, null, null, null);
+		verifyNoMoreInteractions(clientMock);
+	}
+
+	@Test
+	void getUsersFailureBecomesBadGateway() {
+		when(clientMock.getUsers(1000, null, null, null)).thenThrow(Problem.valueOf(NOT_FOUND, "boom"));
+
+		assertThatThrownBy(() -> integration.getUsers(1000, null, null, null))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
 	}
 
 	@Test

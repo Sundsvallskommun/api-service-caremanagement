@@ -45,7 +45,7 @@ public class Notification {
 	private String type;
 
 	@Schema(description = "Notification sub-type", examples = "ERRAND", allowableValues = {
-		"ERRAND", "DECISION", "ATTACHMENT", "STAKEHOLDER", "PARAMETER", "SYSTEM"
+		"ERRAND", "DECISION", "ATTACHMENT", "STAKEHOLDER", "PARAMETER", "MESSAGE", "SYSTEM"
 	})
 	@MemberOf(value = NotificationSubType.class, groups = {
 		OnCreate.class, OnUpdate.class

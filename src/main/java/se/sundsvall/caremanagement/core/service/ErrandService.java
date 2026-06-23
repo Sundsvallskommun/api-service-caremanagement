@@ -50,11 +50,14 @@ public class ErrandService {
 	private final ErrandRepository errandRepository;
 	private final ErrandNumberGenerator errandNumberGenerator;
 	private final ApplicationEventPublisher eventPublisher;
+	private final ErrandNotificationFilter errandNotificationFilter;
 
-	ErrandService(final ErrandRepository errandRepository, final ErrandNumberGenerator errandNumberGenerator, final ApplicationEventPublisher eventPublisher) {
+	ErrandService(final ErrandRepository errandRepository, final ErrandNumberGenerator errandNumberGenerator, final ApplicationEventPublisher eventPublisher,
+		final ErrandNotificationFilter errandNotificationFilter) {
 		this.errandRepository = errandRepository;
 		this.errandNumberGenerator = errandNumberGenerator;
 		this.eventPublisher = eventPublisher;
+		this.errandNotificationFilter = errandNotificationFilter;
 	}
 
 	public String createErrand(final String municipalityId, final String namespace, final Errand errand) {
@@ -80,9 +83,14 @@ public class ErrandService {
 	}
 
 	@Transactional(readOnly = true)
-	public FindErrandsResponse findErrands(final String municipalityId, final String namespace, final Specification<ErrandEntity> filter, final Pageable pageable) {
-		final var baseSpec = withNamespaceAndMunicipalityId(namespace, municipalityId);
-		final var combined = ofNullable(filter).map(baseSpec::and).orElse(baseSpec);
+	public FindErrandsResponse findErrands(final String municipalityId, final String namespace, final Specification<ErrandEntity> filter,
+		final boolean hasUnacknowledgedNotifications, final String notificationOwnerId, final Pageable pageable) {
+
+		var combined = withNamespaceAndMunicipalityId(namespace, municipalityId);
+		combined = ofNullable(filter).map(combined::and).orElse(combined);
+		if (hasUnacknowledgedNotifications) {
+			combined = combined.and(errandNotificationFilter.hasUnacknowledgedNotifications(municipalityId, namespace, notificationOwnerId));
+		}
 		return toFindErrandsResponse(errandRepository.findAll(combined, pageable));
 	}
 

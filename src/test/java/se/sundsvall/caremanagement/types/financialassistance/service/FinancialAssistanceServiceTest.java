@@ -20,6 +20,7 @@ import se.sundsvall.caremanagement.core.api.model.PatchErrand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
+import se.sundsvall.caremanagement.lifecare.service.ActualisationResult;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
@@ -572,7 +573,7 @@ class FinancialAssistanceServiceTest {
 	@Test
 	void createActualisationResolvesPartyDelegatesAndMaps() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, 6, 1))).thenReturn(5012);
+		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, 6, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -582,14 +583,15 @@ class FinancialAssistanceServiceTest {
 
 		assertThat(response.getActualisationId()).isEqualTo(5012);
 		verify(actualisationServiceMock).create("199001011234", LocalDate.of(2026, 6, 1));
-		// No errandId on the request → nothing recorded on an errand.
+		// No errandId on the request → nothing recorded on an errand and no assignment.
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
 	}
 
 	@Test
-	void createActualisationWithErrandIdRecordsActualisationDecision() {
+	void createActualisationWithErrandIdRecordsActualisationDecisionAndAssignsCaseworker() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, 6, 1))).thenReturn(5012);
+		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, 6, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -607,6 +609,27 @@ class FinancialAssistanceServiceTest {
 		assertThat(decision.getValue()).isEqualTo("5012");
 		assertThat(decision.getCreatedBy()).isEqualTo("drakel");
 		assertThat(decision.getDescription()).contains("id 5012");
+
+		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
+		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
+		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("anna01ker");
+	}
+
+	@Test
+	void createActualisationWithErrandIdButNoResolvedCaseworkerRecordsDecisionWithoutAssigning() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, 6, 1))).thenReturn(new ActualisationResult(5012, null));
+
+		final var request = ActualisationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06")
+			.withErrandId(ERRAND_ID);
+
+		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request);
+
+		assertThat(response.getActualisationId()).isEqualTo(5012);
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Decision.class));
+		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
 	}
 
 	@Test

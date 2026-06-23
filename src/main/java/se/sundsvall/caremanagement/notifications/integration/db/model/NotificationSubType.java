@@ -6,5 +6,6 @@ public enum NotificationSubType {
 	ATTACHMENT,
 	STAKEHOLDER,
 	PARAMETER,
+	MESSAGE,
 	SYSTEM
 }

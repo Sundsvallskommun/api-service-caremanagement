@@ -19,6 +19,7 @@ import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -72,14 +73,14 @@ class ErrandResourceTest {
 
 	@Test
 	void findErrands() {
-		when(serviceMock.findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(), any())).thenReturn(FindErrandsResponse.create().withErrands(java.util.List.of(Errand.create())));
+		when(serviceMock.findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(), eq(false), isNull(), any())).thenReturn(FindErrandsResponse.create().withErrands(java.util.List.of(Errand.create())));
 
 		webTestClient.get()
 			.uri(builder -> builder.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(serviceMock).findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Specification.class), any());
+		verify(serviceMock).findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Specification.class), eq(false), isNull(), any());
 	}
 
 	@Test

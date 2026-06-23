@@ -17,6 +17,7 @@ import se.sundsvall.caremanagement.core.api.model.PatchErrand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
+import se.sundsvall.caremanagement.lifecare.service.ActualisationResult;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
@@ -493,12 +494,12 @@ public class FinancialAssistanceService {
 	public ActualisationResponse createActualisation(final String municipalityId, final String namespace, final ActualisationRequest request) {
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var intakeDate = YearMonth.parse(request.getApplicationMonth()).atDay(1);
-		final var actualisationId = actualisationService.create(applicant, intakeDate);
+		final var result = actualisationService.create(applicant, intakeDate);
 
 		ofNullable(request.getErrandId()).filter(StringUtils::hasText)
-			.ifPresent(errandId -> recordActualisation(municipalityId, namespace, errandId, actualisationId));
+			.ifPresent(errandId -> recordActualisation(municipalityId, namespace, errandId, result));
 
-		return ActualisationResponse.create().withActualisationId(actualisationId);
+		return ActualisationResponse.create().withActualisationId(result.actualisationId());
 	}
 
 	/**
@@ -516,14 +517,20 @@ public class FinancialAssistanceService {
 
 	/**
 	 * Record the created actualisation on the errand as a {@code Decision(ACTUALISATION)} — the canonical audit-trail
-	 * vehicle on the case — carrying the Lifecare actualisation id as the value.
+	 * vehicle on the case — carrying the Lifecare actualisation id as the value, and assign the errand to the resolved
+	 * handläggare when one was found (the same caseworker set on the Lifecare actualisation).
 	 */
-	private void recordActualisation(final String municipalityId, final String namespace, final String errandId, final Integer actualisationId) {
+	private void recordActualisation(final String municipalityId, final String namespace, final String errandId, final ActualisationResult result) {
+		final var actualisationId = result.actualisationId();
 		decisionService.create(municipalityId, namespace, errandId, Decision.create()
 			.withDecisionType(ACTUALISATION_TYPE)
 			.withValue(String.valueOf(actualisationId))
 			.withDescription("Actualisation created in Lifecare (id %d).".formatted(actualisationId))
 			.withCreatedBy(CREATED_BY));
+
+		ofNullable(result.assignedUserId()).filter(StringUtils::hasText)
+			.ifPresent(assignedUserId -> errandService.updateErrand(municipalityId, namespace, errandId,
+				PatchErrand.create().withAssignedUserId(assignedUserId)));
 	}
 
 	/** Resolve a partyId to the personnummer the Lifecare/SSBTEK pipeline needs, or 404 when the citizen is unknown. */

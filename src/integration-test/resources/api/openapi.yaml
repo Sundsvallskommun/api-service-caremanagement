@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:51143
+- url: http://localhost:54470
   description: Generated server url
 tags:
 - name: Statistics
@@ -632,6 +632,26 @@ paths:
         schema:
           type: string
         example: status:'NEW' and created>'2024-01-01T00:00:00.000+01:00'
+      - name: hasUnacknowledgedNotifications
+        in: query
+        description: "When true, only errands that have at least one unacknowledged\
+          \ notification are returned. Combine with notificationOwnerId to scope to\
+          \ a single recipient."
+        required: false
+        schema:
+          type: boolean
+          default: false
+        example: true
+      - name: notificationOwnerId
+        in: query
+        description: Scopes the unacknowledged-notification filter to notifications
+          addressed to this recipient (caseworker). Only applied when hasUnacknowledgedNotifications=true.
+        required: false
+        schema:
+          type:
+          - string
+          - "null"
+        example: jane01doe
       - name: page
         in: query
         description: Zero-based page index (0..N)
@@ -6571,6 +6591,7 @@ components:
           - ATTACHMENT
           - STAKEHOLDER
           - PARAMETER
+          - MESSAGE
           - SYSTEM
           examples:
           - ERRAND

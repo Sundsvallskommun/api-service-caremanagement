@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.api.model.FindErrandsResponse;
@@ -109,9 +110,15 @@ class ErrandResource {
 		@Parameter(description = "Syntax description: [spring-filter](https://github.com/turkraft/spring-filter/blob/85730f950a5f8623159cc0eb4d737555f9382bb7/README.md#syntax)",
 			example = "status:'NEW' and created>'2024-01-01T00:00:00.000+01:00'",
 			schema = @Schema(implementation = String.class)) @Nullable @Filter final Specification<ErrandEntity> filter,
+		@Parameter(name = "hasUnacknowledgedNotifications",
+			description = "When true, only errands that have at least one unacknowledged notification are returned. Combine with notificationOwnerId to scope to a single recipient.",
+			example = "true") @RequestParam(defaultValue = "false") final boolean hasUnacknowledgedNotifications,
+		@Parameter(name = "notificationOwnerId",
+			description = "Scopes the unacknowledged-notification filter to notifications addressed to this recipient (caseworker). Only applied when hasUnacknowledgedNotifications=true.",
+			example = "jane01doe") @Nullable @RequestParam(required = false) final String notificationOwnerId,
 		@ParameterObject @PageableDefault(sort = "touched", direction = Sort.Direction.DESC) final Pageable pageable) {
 
-		return ok(service.findErrands(municipalityId, namespace, filter, pageable));
+		return ok(service.findErrands(municipalityId, namespace, filter, hasUnacknowledgedNotifications, notificationOwnerId, pageable));
 	}
 
 	@PatchMapping(path = "/{errandId}", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)

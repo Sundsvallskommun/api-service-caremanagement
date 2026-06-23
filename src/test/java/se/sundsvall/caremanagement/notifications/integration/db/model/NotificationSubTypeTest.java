@@ -14,6 +14,7 @@ class NotificationSubTypeTest {
 			NotificationSubType.ATTACHMENT,
 			NotificationSubType.STAKEHOLDER,
 			NotificationSubType.PARAMETER,
+			NotificationSubType.MESSAGE,
 			NotificationSubType.SYSTEM);
 	}
 

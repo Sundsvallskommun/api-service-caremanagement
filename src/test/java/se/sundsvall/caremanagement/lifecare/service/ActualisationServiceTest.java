@@ -4,6 +4,7 @@ import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringProposalDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInfoDTO;
 import generated.se.sundsvall.lifecarefc.PostAktualiseringsBodyRequest;
 import java.time.LocalDate;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -26,26 +27,70 @@ class ActualisationServiceTest {
 	@Mock
 	private LifecareFcIntegration lifecareFcIntegrationMock;
 
+	@Mock
+	private CaseworkerResolver caseworkerResolverMock;
+
 	@InjectMocks
 	private ActualisationService service;
 
 	@Test
-	void createFetchesProposalAssemblesAndPosts() {
+	void createResolvesCaseworkerAssemblesAndPosts() {
 		final var proposal = new PersonBasedAktualiseringProposalDTO()
 			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(3));
 
+		when(caseworkerResolverMock.resolve(APPLICANT, DATE)).thenReturn(Optional.of(new ResolvedCaseworker("9001", "anna01ker", "Anna Andersson")));
 		when(lifecareFcIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
 		when(lifecareFcIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
-		final var actualisationId = service.create(APPLICANT, DATE);
+		final var result = service.create(APPLICANT, DATE);
 
-		assertThat(actualisationId).isEqualTo(5012);
+		assertThat(result.actualisationId()).isEqualTo(5012);
+		assertThat(result.assignedUserId()).isEqualTo("anna01ker");
 
 		final ArgumentCaptor<PostAktualiseringsBodyRequest> captor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
 		verify(lifecareFcIntegrationMock).createActualisation(captor.capture());
 		assertThat(captor.getValue().getPersonId()).isEqualTo(APPLICANT);
 		assertThat(captor.getValue().getDate()).isEqualTo("2026-06-01");
 		assertThat(captor.getValue().getType()).isEqualTo(3);
+		assertThat(captor.getValue().getCaseworkerId()).isEqualTo("9001");
+	}
+
+	@Test
+	void createWithoutResolvableCaseworkerStillPostsWithoutCaseworkerOrAssignee() {
+		final var proposal = new PersonBasedAktualiseringProposalDTO()
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(3));
+
+		when(caseworkerResolverMock.resolve(APPLICANT, DATE)).thenReturn(Optional.empty());
+		when(lifecareFcIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
+		when(lifecareFcIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
+
+		final var result = service.create(APPLICANT, DATE);
+
+		assertThat(result.actualisationId()).isEqualTo(5012);
+		assertThat(result.assignedUserId()).isNull();
+
+		final ArgumentCaptor<PostAktualiseringsBodyRequest> captor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
+		verify(lifecareFcIntegrationMock).createActualisation(captor.capture());
+		assertThat(captor.getValue().getCaseworkerId()).isNull();
+	}
+
+	@Test
+	void createTreatsCaseworkerResolutionFailureAsBestEffort() {
+		final var proposal = new PersonBasedAktualiseringProposalDTO()
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(3));
+
+		when(caseworkerResolverMock.resolve(APPLICANT, DATE)).thenThrow(new RuntimeException("FC down"));
+		when(lifecareFcIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
+		when(lifecareFcIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
+
+		final var result = service.create(APPLICANT, DATE);
+
+		assertThat(result.actualisationId()).isEqualTo(5012);
+		assertThat(result.assignedUserId()).isNull();
+
+		final ArgumentCaptor<PostAktualiseringsBodyRequest> captor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
+		verify(lifecareFcIntegrationMock).createActualisation(captor.capture());
+		assertThat(captor.getValue().getCaseworkerId()).isNull();
 	}
 
 	@Test

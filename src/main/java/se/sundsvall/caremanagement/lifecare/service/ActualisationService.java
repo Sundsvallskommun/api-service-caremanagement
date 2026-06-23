@@ -1,6 +1,9 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
 import java.time.LocalDate;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ActualisationAssembler;
@@ -21,23 +24,46 @@ public class ActualisationService {
 
 	private static final String PDF_MIME_TYPE = "application/pdf";
 
-	private final LifecareFcIntegration lifecareFcIntegration;
+	private static final Logger LOG = LoggerFactory.getLogger(ActualisationService.class);
 
-	public ActualisationService(final LifecareFcIntegration lifecareFcIntegration) {
+	private final LifecareFcIntegration lifecareFcIntegration;
+	private final CaseworkerResolver caseworkerResolver;
+
+	public ActualisationService(final LifecareFcIntegration lifecareFcIntegration, final CaseworkerResolver caseworkerResolver) {
 		this.lifecareFcIntegration = lifecareFcIntegration;
+		this.caseworkerResolver = caseworkerResolver;
 	}
 
 	/**
-	 * Build and post the actualisation for the applicant and intake date.
+	 * Build and post the actualisation for the applicant and intake date. The handläggare is resolved off the applicant's
+	 * most recent Lifecare Service and, when found, set as the actualisation {@code CaseworkerId}; the same user's network
+	 * id is returned so the caller can assign the careM errand. Caseworker resolution is best-effort — a lookup failure is
+	 * logged and the intake is still created without a caseworker.
 	 *
 	 * @param  applicantPersonId the applicant's personnummer (the FC actualisation owner)
 	 * @param  date              the intake date
-	 * @return                   the id of the actualisation created in Lifecare FC
+	 * @return                   the created actualisation id and the resolved errand assignee (assignee {@code null} when
+	 *                           no caseworker was resolved)
 	 */
-	public Integer create(final String applicantPersonId, final LocalDate date) {
+	public ActualisationResult create(final String applicantPersonId, final LocalDate date) {
+		final var caseworker = resolveCaseworker(applicantPersonId, date);
+
 		final var proposal = lifecareFcIntegration.getActualisationProposal(applicantPersonId);
-		final var body = ActualisationAssembler.assemble(applicantPersonId, proposal, date);
-		return lifecareFcIntegration.createActualisation(body);
+		final var body = ActualisationAssembler.assemble(applicantPersonId, proposal, date,
+			caseworker.map(ResolvedCaseworker::caseworkerId).orElse(null));
+		final var actualisationId = lifecareFcIntegration.createActualisation(body);
+
+		return new ActualisationResult(actualisationId, caseworker.map(ResolvedCaseworker::assignedUserId).orElse(null));
+	}
+
+	/** Best-effort caseworker resolution — never blocks intake creation; a lookup failure resolves to no caseworker. */
+	private Optional<ResolvedCaseworker> resolveCaseworker(final String applicantPersonId, final LocalDate date) {
+		try {
+			return caseworkerResolver.resolve(applicantPersonId, date);
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not resolve caseworker for actualisation; creating intake without one: {}", e.getMessage());
+			return Optional.empty();
+		}
 	}
 
 	/**
