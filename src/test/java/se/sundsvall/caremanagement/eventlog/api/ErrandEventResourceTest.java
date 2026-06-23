@@ -41,9 +41,9 @@ class ErrandEventResourceTest {
 
 	@Test
 	void list() {
-		final var event = new ErrandEvent("ev1", ERRAND_ID, MUNICIPALITY_ID, NAMESPACE, "HTTP", "READ", "errand", "READ errand",
+		final var event = new ErrandEvent("ev1", ERRAND_ID, MUNICIPALITY_ID, NAMESPACE, "HTTP", "READ", "errand", "Opened errand",
 			"GET", "/path", "joe001doe", "adAccount", "req-1", 200, FIXED_TIMESTAMP);
-		when(serviceMock.listForErrand(eq(ERRAND_ID), isNull(), isNull())).thenReturn(List.of(event));
+		when(serviceMock.listForErrand(eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(List.of(event));
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -54,26 +54,27 @@ class ErrandEventResourceTest {
 			.getResponseBody();
 
 		assertThat(response).hasSize(1);
-		verify(serviceMock).listForErrand(ERRAND_ID, null, null);
+		verify(serviceMock).listForErrand(ERRAND_ID, null, null, null, true);
 	}
 
 	@Test
 	void listWithFilters() {
-		when(serviceMock.listForErrand(eq(ERRAND_ID), eq("READ"), eq("joe001doe"))).thenReturn(List.of());
+		when(serviceMock.listForErrand(eq(ERRAND_ID), eq("UPDATE"), eq("joe001doe"), eq("EVENT"), eq(false))).thenReturn(List.of());
 
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH).queryParam("action", "READ").queryParam("actor", "joe001doe")
+			.uri(uri -> uri.path(PATH)
+				.queryParam("action", "UPDATE").queryParam("actor", "joe001doe").queryParam("source", "EVENT").queryParam("includeReads", "false")
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBodyList(ErrandEvent.class);
 
-		verify(serviceMock).listForErrand(ERRAND_ID, "READ", "joe001doe");
+		verify(serviceMock).listForErrand(ERRAND_ID, "UPDATE", "joe001doe", "EVENT", false);
 	}
 
 	@Test
 	void listEmpty() {
-		when(serviceMock.listForErrand(eq(ERRAND_ID), isNull(), isNull())).thenReturn(List.of());
+		when(serviceMock.listForErrand(eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(List.of());
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))

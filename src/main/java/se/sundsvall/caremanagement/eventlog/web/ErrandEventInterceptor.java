@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.eventlog.web;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -84,6 +85,7 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 		}
 
 		final var identifier = Optional.ofNullable(Identifier.get());
+		final var description = ErrandEventDescriber.describe(request.getMethod(), tailSegments(parts, errandIdIndex), hasItemId(parts, errandIdIndex));
 
 		service.record(ErrandEventEntity.create()
 			.withErrandId(parts[errandIdIndex])
@@ -92,7 +94,7 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 			.withSource("HTTP")
 			.withAction(action)
 			.withTarget(target)
-			.withDescription(action + " " + target)
+			.withDescription(description)
 			.withHttpMethod(request.getMethod())
 			.withRequestPath(request.getRequestURI())
 			.withActor(identifier.map(Identifier::getValue).orElse(null))
@@ -131,6 +133,27 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 
 	private static boolean isIdLike(final String segment) {
 		return UUID_SEGMENT.matcher(segment).matches() || NUMERIC_SEGMENT.matcher(segment).matches();
+	}
+
+	/** The non-id, non-blank path segments after the errand id — the sub-resource the request acted on. */
+	private static List<String> tailSegments(final String[] parts, final int errandIdIndex) {
+		final var tail = new ArrayList<String>();
+		for (var i = errandIdIndex + 1; i < parts.length; i++) {
+			if (!parts[i].isBlank() && !isIdLike(parts[i])) {
+				tail.add(parts[i]);
+			}
+		}
+		return tail;
+	}
+
+	/** True when the request targeted a specific sub-item (an id segment appeared after the errand id). */
+	private static boolean hasItemId(final String[] parts, final int errandIdIndex) {
+		for (var i = errandIdIndex + 1; i < parts.length; i++) {
+			if (isIdLike(parts[i])) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Nullable

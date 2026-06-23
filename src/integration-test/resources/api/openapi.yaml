@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:57013
+- url: http://localhost:60420
   description: Generated server url
 tags:
 - name: Statistics
@@ -29,6 +29,9 @@ tags:
     \ read and replace the typed data via the shared financial-assistance path."
 - name: Status History
   description: Status transition log for an errand
+- name: RPA
+  description: Enqueue UiPath RPA tasks (Lifecare write-backs / supplement fetches)
+    for an errand
 - name: Financial Assistance · Warnings
   description: "Acknowledgeable EB income warnings on an errand — create, list and\
     \ set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare step reconciles\
@@ -885,6 +888,38 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/rpa-tasks:
+    post:
+      tags:
+      - RPA
+      summary: Enqueue an RPA task for an errand
+      operationId: enqueue
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RpaTaskRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
   /{municipalityId}/{namespace}/errands/{errandId}/referrals:
     get:
       tags:
@@ -4327,8 +4362,10 @@ paths:
       tags:
       - Event Log
       summary: List activity events for an errand (newest first)
-      description: "Optionally filter by action (READ/CREATE/UPDATE/DELETE) and/or\
-        \ actor (the X-Sent-By value, e.g. an AD account)."
+      description: "Optionally filter by action (READ/CREATE/UPDATE/DELETE), actor\
+        \ (the X-Sent-By value, e.g. an AD account) and source (HTTP access log or\
+        \ EVENT change log). Set includeReads=false for a clean 'what changed' timeline\
+        \ without the read noise."
       operationId: list_5
       parameters:
       - name: municipalityId
@@ -4357,6 +4394,17 @@ paths:
         required: false
         schema:
           type: string
+      - name: source
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: includeReads
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
       responses:
         "200":
           description: OK
@@ -6068,6 +6116,32 @@ components:
           description: Contact channels for the stakeholder
           items:
             $ref: "#/components/schemas/ContactChannel"
+    RpaTaskRequest:
+      type: object
+      description: Request to enqueue a UiPath RPA task on an errand.
+      properties:
+        action:
+          type: string
+          description: The RPA action — selects the Lifecare flow the robot runs
+          enum:
+          - FETCH_SUPPLEMENTS
+          - WRITE_NORMBERAKNING
+          - WRITE_DECISION
+          - WRITE_JOURNAL
+          - WRITE_DOCUMENT
+          - WRITE_MONITORING
+          - REGISTER_PAYMENT
+          examples:
+          - FETCH_SUPPLEMENTS
+          minLength: 1
+        parameters:
+          type: object
+          additionalProperties:
+            type: string
+          description: "Optional extra hints for the robot, merged into the queue\
+            \ item SpecificContent"
+      required:
+      - action
     Referral:
       type: object
       description: "A referral/consultation on an errand, with the receiving authority,\

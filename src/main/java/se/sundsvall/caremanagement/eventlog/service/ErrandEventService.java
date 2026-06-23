@@ -36,17 +36,21 @@ public class ErrandEventService {
 	}
 
 	/**
-	 * Lists the activity for an errand, newest first, optionally filtered by action and/or actor.
+	 * Lists the activity for an errand, newest first, with optional filters.
 	 *
-	 * @param errandId the errand to list activity for
-	 * @param action   optional action filter (case-insensitive), e.g. {@code READ}; {@code null} for all
-	 * @param actor    optional actor filter (case-insensitive), e.g. an AD account; {@code null} for all
+	 * @param errandId     the errand to list activity for
+	 * @param action       optional action filter (case-insensitive), e.g. {@code READ}; {@code null} for all
+	 * @param actor        optional actor filter (case-insensitive), e.g. an AD account; {@code null} for all
+	 * @param source       optional source filter (case-insensitive): {@code HTTP} or {@code EVENT}; {@code null} for all
+	 * @param includeReads when {@code false}, drops READ rows — a clean "what changed" timeline without the read noise
 	 */
 	@Transactional(readOnly = true)
-	public List<ErrandEvent> listForErrand(final String errandId, final String action, final String actor) {
+	public List<ErrandEvent> listForErrand(final String errandId, final String action, final String actor, final String source, final boolean includeReads) {
 		return repository.findByErrandIdOrderByCreatedDesc(errandId).stream()
 			.filter(e -> action == null || action.equalsIgnoreCase(e.getAction()))
 			.filter(e -> actor == null || actor.equalsIgnoreCase(e.getActor()))
+			.filter(e -> source == null || source.equalsIgnoreCase(e.getSource()))
+			.filter(e -> includeReads || !"READ".equalsIgnoreCase(e.getAction()))
 			.map(ErrandEventService::toEvent)
 			.toList();
 	}

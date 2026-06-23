@@ -34,14 +34,18 @@ class ErrandEventResource {
 	}
 
 	@GetMapping(produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "List activity events for an errand (newest first)", description = "Optionally filter by action (READ/CREATE/UPDATE/DELETE) and/or actor (the X-Sent-By value, e.g. an AD account).")
+	@Operation(summary = "List activity events for an errand (newest first)",
+		description = "Optionally filter by action (READ/CREATE/UPDATE/DELETE), actor (the X-Sent-By value, e.g. an AD account) "
+			+ "and source (HTTP access log or EVENT change log). Set includeReads=false for a clean 'what changed' timeline without the read noise.")
 	ResponseEntity<List<ErrandEvent>> list(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId,
 		@RequestParam(required = false) final String action,
-		@RequestParam(required = false) final String actor) {
+		@RequestParam(required = false) final String actor,
+		@RequestParam(required = false) final String source,
+		@RequestParam(defaultValue = "true") final boolean includeReads) {
 
-		return ok(service.listForErrand(errandId, action, actor));
+		return ok(service.listForErrand(errandId, action, actor, source, includeReads));
 	}
 }

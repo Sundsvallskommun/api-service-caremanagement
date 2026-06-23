@@ -51,7 +51,7 @@ class ErrandEventServiceTest {
 			event("ev2", "READ", "joe001doe", FIXED_TIMESTAMP),
 			event("ev1", "UPDATE", "edwmol", FIXED_TIMESTAMP.minusHours(1))));
 
-		final var result = service.listForErrand("e1", null, null);
+		final var result = service.listForErrand("e1", null, null, null, true);
 
 		assertThat(result).extracting("id", "action", "actor")
 			.containsExactly(
@@ -66,7 +66,7 @@ class ErrandEventServiceTest {
 			event("ev2", "READ", "joe001doe", FIXED_TIMESTAMP),
 			event("ev1", "UPDATE", "edwmol", FIXED_TIMESTAMP.minusHours(1))));
 
-		final var result = service.listForErrand("e1", "read", null);
+		final var result = service.listForErrand("e1", "read", null, null, true);
 
 		assertThat(result).extracting("id").containsExactly("ev2");
 	}
@@ -78,16 +78,42 @@ class ErrandEventServiceTest {
 			event("ev1", "UPDATE", "edwmol", FIXED_TIMESTAMP.minusHours(1)),
 			event("ev0", "READ", null, FIXED_TIMESTAMP.minusHours(2))));
 
-		final var result = service.listForErrand("e1", null, "edwmol");
+		final var result = service.listForErrand("e1", null, "edwmol", null, true);
 
 		assertThat(result).extracting("id").containsExactly("ev1");
+	}
+
+	@Test
+	void listForErrandExcludesReadsWhenAsked() {
+		when(repositoryMock.findByErrandIdOrderByCreatedDesc("e1")).thenReturn(List.of(
+			event("ev2", "READ", "joe001doe", FIXED_TIMESTAMP),
+			event("ev1", "UPDATE", "edwmol", FIXED_TIMESTAMP.minusHours(1))));
+
+		final var result = service.listForErrand("e1", null, null, null, false);
+
+		assertThat(result).extracting("id").containsExactly("ev1");
+	}
+
+	@Test
+	void listForErrandFiltersBySource() {
+		when(repositoryMock.findByErrandIdOrderByCreatedDesc("e1")).thenReturn(List.of(
+			sourced("ev2", "EVENT", FIXED_TIMESTAMP),
+			sourced("ev1", "HTTP", FIXED_TIMESTAMP.minusHours(1))));
+
+		final var result = service.listForErrand("e1", null, null, "event", true);
+
+		assertThat(result).extracting("id").containsExactly("ev2");
 	}
 
 	@Test
 	void listForErrandReturnsEmptyWhenNone() {
 		when(repositoryMock.findByErrandIdOrderByCreatedDesc("e2")).thenReturn(List.of());
 
-		assertThat(service.listForErrand("e2", null, null)).isEmpty();
+		assertThat(service.listForErrand("e2", null, null, null, true)).isEmpty();
+	}
+
+	private static ErrandEventEntity sourced(final String id, final String source, final OffsetDateTime created) {
+		return event(id, "READ", "joe001doe", created).withSource(source);
 	}
 
 	private static ErrandEventEntity event(final String id, final String action, final String actor, final OffsetDateTime created) {
