@@ -60,6 +60,37 @@ class AttachmentServiceTest {
 	private AttachmentService service;
 
 	@Test
+	void createAttachmentDefaultsOriginToErrand() {
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
+			.thenReturn(AttachmentEntity.create().withId(ATTACHMENT_ID));
+		final var file = new MockMultipartFile("file", "f.pdf", "application/pdf", "x".getBytes());
+
+		final var id = service.createAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, file);
+
+		assertThat(id).isEqualTo(ATTACHMENT_ID);
+		final ArgumentCaptor<AttachmentEntity> captor = ArgumentCaptor.forClass(AttachmentEntity.class);
+		verify(attachmentRepositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getOrigin()).isEqualTo("ERRAND");
+	}
+
+	@Test
+	void createAttachmentHonorsProvidedOrigin() {
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
+			.thenReturn(AttachmentEntity.create().withId(ATTACHMENT_ID));
+		final var file = new MockMultipartFile("file", "arendeuppgifter.pdf", "application/pdf", "x".getBytes());
+
+		service.createAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CASE_DATA", file);
+
+		final ArgumentCaptor<AttachmentEntity> captor = ArgumentCaptor.forClass(AttachmentEntity.class);
+		verify(attachmentRepositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getOrigin()).isEqualTo("CASE_DATA");
+	}
+
+	@Test
 	void storeAndCombinePersistsEachSourceAndACombinedPdf() {
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
 			.thenReturn(Optional.of(mock(ErrandEntity.class)));

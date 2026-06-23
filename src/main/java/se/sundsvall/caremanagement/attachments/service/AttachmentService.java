@@ -65,9 +65,9 @@ public class AttachmentService {
 		this.conversationAttachmentQueryService = conversationAttachmentQueryService;
 	}
 
-	public String createAttachment(final String municipalityId, final String namespace, final String errandId, final MultipartFile file) {
+	public String createAttachment(final String municipalityId, final String namespace, final String errandId, final String origin, final MultipartFile file) {
 		ensureErrandExists(municipalityId, namespace, errandId);
-		final var saved = attachmentRepository.save(toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_ERRAND, null, file));
+		final var saved = attachmentRepository.save(toAttachmentEntity(errandId, namespace, municipalityId, ofNullable(origin).orElse(ORIGIN_ERRAND), null, file));
 		return saved.getId();
 	}
 

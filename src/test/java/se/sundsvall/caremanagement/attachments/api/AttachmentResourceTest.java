@@ -46,7 +46,7 @@ class AttachmentResourceTest {
 
 	@Test
 	void createAttachment() {
-		when(serviceMock.createAttachment(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(MultipartFile.class))).thenReturn(ATTACHMENT_ID);
+		when(serviceMock.createAttachment(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), any(MultipartFile.class))).thenReturn(ATTACHMENT_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("file", "hello".getBytes()).filename("hello.txt");
@@ -59,7 +59,41 @@ class AttachmentResourceTest {
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).createAttachment(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(MultipartFile.class));
+		verify(serviceMock).createAttachment(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), any(MultipartFile.class));
+	}
+
+	@Test
+	void createAttachmentWithCaseDataOrigin() {
+		when(serviceMock.createAttachment(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CASE_DATA"), any(MultipartFile.class))).thenReturn(ATTACHMENT_ID);
+
+		final var builder = new MultipartBodyBuilder();
+		builder.part("file", "hello".getBytes()).filename("arendeuppgifter.pdf");
+		final MultiValueMap<String, org.springframework.http.HttpEntity<?>> body = builder.build();
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH).queryParam("origin", "CASE_DATA").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(body)
+			.exchange()
+			.expectStatus().isCreated();
+
+		verify(serviceMock).createAttachment(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CASE_DATA"), any(MultipartFile.class));
+	}
+
+	@Test
+	void createAttachmentInvalidOriginIsBadRequest() {
+		final var builder = new MultipartBodyBuilder();
+		builder.part("file", "hello".getBytes()).filename("hello.txt");
+		final MultiValueMap<String, org.springframework.http.HttpEntity<?>> body = builder.build();
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH).queryParam("origin", "BOGUS").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(body)
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
 	}
 
 	@Test
@@ -88,6 +122,18 @@ class AttachmentResourceTest {
 			.expectStatus().isOk();
 
 		verify(serviceMock).readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CONVERSATION"), isNull());
+	}
+
+	@Test
+	void readAttachmentsFilteredByCaseDataOrigin() {
+		when(serviceMock.readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CASE_DATA"), isNull())).thenReturn(List.of(Attachment.create()));
+
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH).queryParam("origin", "CASE_DATA").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isOk();
+
+		verify(serviceMock).readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CASE_DATA"), isNull());
 	}
 
 	@Test

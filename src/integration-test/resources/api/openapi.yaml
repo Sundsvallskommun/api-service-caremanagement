@@ -7,35 +7,19 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:59940
+- url: http://localhost:61871
   description: Generated server url
 tags:
-- name: Notes
-  description: Notes attached to an errand
-- name: Errand stakeholders
-  description: Errand stakeholder operations
 - name: Statistics
   description: Read-only errand statistics for the caseworker interface
 - name: Permits
   description: "Permits issued on an errand: validity period, conditions and status.\
     \ Revoking sets the status to REVOKED."
-- name: Errand Types
-  description: "Describes the errand types: their statuses, stakeholder roles and\
-    \ the fields a type's data payload should carry, as form guidance for clients."
-- name: Referrals
-  description: "Referrals/consultations on an errand: receiving authority, due date,\
-    \ free-text response and status (SENT → RESPONDED)."
 - name: Financial Assistance · Approvals
   description: "Caseworker approval state of the three EB view sections (CALCULATION\
     \ / PAYMENT / DECISION) — read all three, or set/withdraw one."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
-- name: Journal
-  description: Journalanteckningar (case-journal entries) attached to an errand
-- name: Errand decisions
-  description: "Decision audit trail on an errand. Stores both system-generated decisions\
-    \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
-    \ (e.g. caseworker APPROVE/REJECT), distinguished by `decisionType`."
 - name: Notifications
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen; expired ones are purged by a daily background job.
@@ -53,11 +37,6 @@ tags:
   description: Metadata (lookup) operations
 - name: Namespace config
   description: Namespace configuration operations
-- name: Errands
-  description: Errand operations
-- name: Financial Assistance · Payment
-  description: Read whether the manual Lifecare payment for the applicant and application
-    month has been effectuated. caremanagement makes no payment itself.
 - name: Process messages
   description: Send BPMN message correlation events to the process instance currently
     running for an errand
@@ -65,6 +44,29 @@ tags:
   description: "Pre-application and case-intake calls: eligibility routing (common\
     \ entry point), renewal pre-fill from Lifecare, the income/cost type metadata\
     \ catalogue, and Lifecare actualisation (case intake)."
+- name: Notes
+  description: Notes attached to an errand
+- name: Errand stakeholders
+  description: Errand stakeholder operations
+- name: Errand Types
+  description: "Describes the errand types: their statuses, stakeholder roles and\
+    \ the fields a type's data payload should carry, as form guidance for clients."
+- name: Referrals
+  description: "Referrals/consultations on an errand: receiving authority, due date,\
+    \ free-text response and status (SENT → RESPONDED)."
+- name: Journal
+  description: Journalanteckningar (case-journal entries) attached to an errand
+- name: Errand decisions
+  description: "Decision audit trail on an errand. Stores both system-generated decisions\
+    \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
+    \ (e.g. caseworker APPROVE/REJECT), distinguished by `decisionType`."
+- name: Documents
+  description: Dokument (formal case documents) attached to an errand
+- name: Errands
+  description: Errand operations
+- name: Financial Assistance · Payment
+  description: Read whether the manual Lifecare payment for the applicant and application
+    month has been effectuated. caremanagement makes no payment itself.
 - name: Financial Assistance · Calculation
   description: "The normberäkning: prepare the calculation each daily loop (no Lifecare\
     \ write), commit it to Lifecare after a decision, and read or edit the draft header."
@@ -511,6 +513,7 @@ paths:
           - ROLE
           - CONTACT_REASON
           - JOURNAL_ENTRY_TYPE
+          - DOCUMENT_TYPE
       responses:
         "200":
           description: Successful Operation
@@ -564,6 +567,7 @@ paths:
           - ROLE
           - CONTACT_REASON
           - JOURNAL_ENTRY_TYPE
+          - DOCUMENT_TYPE
       requestBody:
         content:
           application/json:
@@ -1529,6 +1533,109 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/JournalEntry"
+  /{municipalityId}/{namespace}/errands/{errandId}/documents:
+    get:
+      tags:
+      - Documents
+      summary: List documents for an errand (most recent first)
+      operationId: list_3
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+    post:
+      tags:
+      - Documents
+      summary: Add a document to an errand
+      operationId: add_2
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDocument"
+        required: true
+      responses:
+        "200":
+          description: OK
+  /{municipalityId}/{namespace}/errands/{errandId}/documents/{documentId}/lock:
+    post:
+      tags:
+      - Documents
+      summary: Lock a document (skrivskydd) — it becomes an immutable upprättad handling
+      operationId: lock_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LockDocument"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
   /{municipalityId}/{namespace}/errands/{errandId}/decisions:
     get:
       tags:
@@ -1708,7 +1815,9 @@ paths:
       tags:
       - Errand attachments
       summary: Create attachment
-      description: Uploads a new attachment for the errand
+      description: "Uploads a new attachment for the errand. The optional origin tags\
+        \ what the file is: ERRAND (a plain manual upload, the default) or CASE_DATA\
+        \ (ärendeuppgifter — a case-data document)."
       operationId: createAttachment
       parameters:
       - name: municipalityId
@@ -1732,6 +1841,17 @@ paths:
         required: true
         schema:
           type: string
+      - name: origin
+        in: query
+        description: "What the uploaded file is: ERRAND (a plain manual upload, the\
+          \ default) or CASE_DATA (ärendeuppgifter — a case-data document). Defaults\
+          \ to ERRAND when omitted."
+        required: false
+        schema:
+          type: string
+          enum:
+          - ERRAND
+          - CASE_DATA
       requestBody:
         content:
           multipart/form-data:
@@ -2434,6 +2554,7 @@ paths:
           - ROLE
           - CONTACT_REASON
           - JOURNAL_ENTRY_TYPE
+          - DOCUMENT_TYPE
       responses:
         "200":
           description: Successful Operation
@@ -2497,6 +2618,7 @@ paths:
           - ROLE
           - CONTACT_REASON
           - JOURNAL_ENTRY_TYPE
+          - DOCUMENT_TYPE
       responses:
         "204":
           description: Successful operation
@@ -2556,6 +2678,7 @@ paths:
           - ROLE
           - CONTACT_REASON
           - JOURNAL_ENTRY_TYPE
+          - DOCUMENT_TYPE
       requestBody:
         content:
           application/json:
@@ -3297,6 +3420,111 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/JournalEntry"
+  /{municipalityId}/{namespace}/errands/{errandId}/documents/{documentId}:
+    get:
+      tags:
+      - Documents
+      summary: Read a document
+      operationId: read_2
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+    delete:
+      tags:
+      - Documents
+      summary: Delete a document (only while WORKING; a LOCKED document returns 409)
+      operationId: delete_2
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+    patch:
+      tags:
+      - Documents
+      summary: Update a document (only while WORKING; a LOCKED document returns 409)
+      operationId: update_2
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDocument"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/warnings/{warningId}:
     patch:
       tags:
@@ -3836,7 +4064,7 @@ paths:
       tags:
       - Status History
       summary: List status transitions for errand
-      operationId: list_3
+      operationId: list_4
       parameters:
       - name: municipalityId
         in: path
@@ -4010,7 +4238,7 @@ paths:
       tags:
       - Conversation
       summary: Read a message
-      operationId: read_2
+      operationId: read_3
       parameters:
       - name: municipalityId
         in: path
@@ -4583,6 +4811,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FinancialAssistanceMetadata"
+  /{municipalityId}/{namespace}/errands/documents/metadata:
+    get:
+      tags:
+      - Documents
+      summary: "Read the document metadata — the catalogue of selectable document\
+        \ types (seeded DOCUMENT_TYPE lookups for the namespace, or a built-in provisional\
+        \ set as fallback)"
+      operationId: metadata_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentMetadata"
   /{municipalityId}/{namespace}/errand-types:
     get:
       tags:
@@ -6123,6 +6378,122 @@ components:
           format: date-time
           description: Timestamp when the entry was locked (became an upprättad handling);
             null while WORKING
+    CreateDocument:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Document type (Lifecare 'Typ'/Dokumenttyp)
+          example: Brev
+          maxLength: 255
+          minLength: 0
+        heading:
+          type: string
+          description: Heading (Lifecare 'Rubrik')
+          example: Beslut om ekonomiskt bistånd 2025-05
+          maxLength: 255
+          minLength: 0
+        text:
+          type: string
+          description: Free-text body of the document; optional
+          example: Beslut har fattats enligt nedan ...
+          maxLength: 1048576
+          minLength: 0
+        documentDate:
+          type: string
+          format: date
+          description: Documented date (Lifecare 'Datum')
+          example: 2025-05-30
+        documentTime:
+          type: string
+          description: Documented time (Lifecare 'Tid'); optional
+          example: 14:30
+        createdBy:
+          type: string
+          description: User id of the author (Lifecare 'Upprättad av'); optional
+          example: carola01winberg
+          maxLength: 64
+          minLength: 0
+      required:
+      - documentDate
+      - heading
+      - type
+    LockDocument:
+      type: object
+      properties:
+        lockedBy:
+          type: string
+          description: User id of whoever locks the document; optional
+          example: carola01winberg
+          maxLength: 64
+          minLength: 0
+    Document:
+      type: object
+      description: A Dokument (formal case document) attached to an errand
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+        errandId:
+          type: string
+          description: Errand id this document belongs to
+        type:
+          type: string
+          description: Document type (Lifecare 'Typ'/Dokumenttyp). A municipality-configured
+            value; see the metadata catalogue for a provisional set.
+          example: Brev
+        heading:
+          type: string
+          description: Heading (Lifecare 'Rubrik')
+          example: Beslut om ekonomiskt bistånd 2025-05
+        text:
+          type: string
+          description: Free-text body of the document
+          example: Beslut har fattats enligt nedan ...
+        documentDate:
+          type: string
+          format: date
+          description: "Documented date (Lifecare 'Datum'), distinct from the system\
+            \ created timestamp"
+          example: 2025-05-30
+        documentTime:
+          type: string
+          description: Documented time (Lifecare 'Tid'); optional
+          example: 14:30
+        status:
+          type: string
+          description: "Skrivskydd status — WORKING is an editable draft, LOCKED is\
+            \ an upprättad handling"
+          enum:
+          - WORKING
+          - LOCKED
+          example: WORKING
+        createdBy:
+          type: string
+          description: User id of the author (Lifecare 'Upprättad av'/'Ägare')
+          example: carola01winberg
+        created:
+          type: string
+          format: date-time
+          description: Created timestamp
+        modifiedBy:
+          type: string
+          description: User id of the last editor (Lifecare 'Ändrat av'); null until
+            the document has been edited
+          example: ebb14eri
+        modified:
+          type: string
+          format: date-time
+          description: Last modified timestamp; null until the document has been edited
+        lockedBy:
+          type: string
+          description: User id of whoever locked the document; null while WORKING
+          example: carola01winberg
+        locked:
+          type: string
+          format: date-time
+          description: Timestamp when the document was locked (became an upprättad
+            handling); null while WORKING
     Decision:
       type: object
       description: "Decision recorded against an errand. Both system-generated decisions\
@@ -7111,6 +7482,46 @@ components:
       - entryDate
       - heading
       - type
+    UpdateDocument:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Document type (Lifecare 'Typ'/Dokumenttyp)
+          example: Brev
+          maxLength: 255
+          minLength: 0
+        heading:
+          type: string
+          description: Heading (Lifecare 'Rubrik')
+          example: Beslut om ekonomiskt bistånd 2025-05
+          maxLength: 255
+          minLength: 0
+        text:
+          type: string
+          description: Free-text body of the document; optional
+          example: Beslut har fattats enligt nedan ...
+          maxLength: 1048576
+          minLength: 0
+        documentDate:
+          type: string
+          format: date
+          description: Documented date (Lifecare 'Datum')
+          example: 2025-05-30
+        documentTime:
+          type: string
+          description: Documented time (Lifecare 'Tid'); optional
+          example: 14:30
+        modifiedBy:
+          type: string
+          description: User id of the editor (Lifecare 'Ändrat av'); optional
+          example: ebb14eri
+          maxLength: 64
+          minLength: 0
+      required:
+      - documentDate
+      - heading
+      - type
     SectionApprovalRequest:
       type: object
       description: Set the approval state of an EB view section.
@@ -7799,6 +8210,28 @@ components:
           description: Whether the type is offered on the citizen Mina-sidor form
           examples:
           - "true"
+    DocumentMetadata:
+      type: object
+      description: Document metadata — the catalogue of selectable document types.
+      properties:
+        types:
+          type: array
+          description: Selectable document types
+          items:
+            $ref: "#/components/schemas/DocumentType"
+    DocumentType:
+      type: object
+      description: A selectable document type — the code and the Swedish Lifecare
+        label.
+      properties:
+        code:
+          type: string
+          description: The type code
+          example: LETTER
+        displayName:
+          type: string
+          description: Human-readable Swedish label (the Lifecare 'Typ' value)
+          example: Brev
     DecisionOption:
       type: object
       description: An allowed decision outcome (decision alternatives) for an errand

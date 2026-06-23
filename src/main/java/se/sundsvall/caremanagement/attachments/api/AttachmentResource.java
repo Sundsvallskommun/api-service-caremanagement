@@ -63,16 +63,27 @@ class AttachmentResource {
 	}
 
 	@PostMapping(consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
-	@Operation(summary = "Create attachment", description = "Uploads a new attachment for the errand", responses = {
-		@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
-	})
+	@Operation(summary = "Create attachment",
+		description = "Uploads a new attachment for the errand. The optional origin tags what the "
+			+ "file is: ERRAND (a plain manual upload, the default) or CASE_DATA (ärendeuppgifter — a case-data document).",
+		responses = {
+			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
+		})
 	ResponseEntity<Void> createAttachment(
 		@Parameter(name = "municipalityId", description = "Municipality id", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,
 		@Parameter(name = "namespace", description = "Namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Parameter(name = "errandId", description = "Errand id") @ValidUuid @PathVariable final String errandId,
+		@Parameter(name = "origin",
+			description = "What the uploaded file is: ERRAND (a plain manual upload, the default) or CASE_DATA "
+				+ "(ärendeuppgifter — a case-data document). Defaults to ERRAND when omitted.",
+			schema = @Schema(allowableValues = {
+				"ERRAND", "CASE_DATA"
+			})) @OneOf(value = {
+				"ERRAND", "CASE_DATA"
+		}, nullable = true) @RequestParam(required = false) final String origin,
 		@NotNull @RequestPart("file") final MultipartFile file) {
 
-		final var attachmentId = service.createAttachment(municipalityId, namespace, errandId, file);
+		final var attachmentId = service.createAttachment(municipalityId, namespace, errandId, origin, file);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/{errandId}/attachments/{attachmentId}")
 			.buildAndExpand(municipalityId, namespace, errandId, attachmentId).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)
@@ -90,9 +101,9 @@ class AttachmentResource {
 		@Parameter(name = "namespace", description = "Namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Parameter(name = "errandId", description = "Errand id") @ValidUuid @PathVariable final String errandId,
 		@Parameter(name = "origin", description = "Only return attachments with this origin", schema = @Schema(allowableValues = {
-			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND"
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA"
 		})) @OneOf(value = {
-			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND"
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA"
 		}, nullable = true) @RequestParam(required = false) final String origin,
 		@Parameter(name = "senderRole", description = "Only return attachments from this sender", schema = @Schema(allowableValues = {
 			"CLIENT", "CASEWORKER"
