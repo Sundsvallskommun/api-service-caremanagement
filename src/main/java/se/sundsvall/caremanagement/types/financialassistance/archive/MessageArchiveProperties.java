@@ -18,7 +18,8 @@ import org.springframework.validation.annotation.Validated;
  *                                   next run after it closes
  * @param lifecareDocumentType       the Lifecare {@code InsertDocumentType} code for the uploaded document
  * @param lifecareDocumentSenderType the Lifecare {@code InsertDocumentSenderType} code for the uploaded document
- * @param lifecareTitle              the document title shown in Lifecare
+ * @param documentLabel              the leading label of the document file name (and the Lifecare title), e.g.
+ *                                   {@code Meddelanden och bilagor från Draken}
  * @param lifecareSenderName         the sender name shown in Lifecare
  */
 @Validated
@@ -35,7 +36,7 @@ public record MessageArchiveProperties(
 
 	@NotBlank @DefaultValue("MYNDIGHET") String lifecareDocumentSenderType,
 
-	@NotBlank @DefaultValue("Meddelandehistorik") String lifecareTitle,
+	@NotBlank @DefaultValue("Meddelanden och bilagor från Draken") String documentLabel,
 
 	@NotBlank @DefaultValue("Sundsvalls kommun") String lifecareSenderName) {
 }

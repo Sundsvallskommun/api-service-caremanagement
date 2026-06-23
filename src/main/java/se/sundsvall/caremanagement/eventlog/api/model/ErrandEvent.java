@@ -9,6 +9,8 @@ import java.time.OffsetDateTime;
  * @param errandId       the errand the activity targeted
  * @param municipalityId the municipality id
  * @param namespace      the namespace
+ * @param source         where the row came from: {@code HTTP} (an inbound request) or {@code EVENT} (a published domain
+ *                       event)
  * @param action         READ / CREATE / UPDATE / DELETE (derived from the HTTP method)
  * @param target         what was acted on, e.g. {@code errand}, {@code decisions},
  *                       {@code financial-assistance/calculation/draft/incomes}
@@ -27,6 +29,7 @@ public record ErrandEvent(
 	String errandId,
 	String municipalityId,
 	String namespace,
+	String source,
 	String action,
 	String target,
 	String description,

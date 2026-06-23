@@ -65,6 +65,7 @@ class ErrandEventInterceptorTest {
 		assertThat(entity.getErrandId()).isEqualTo(ERRAND_ID);
 		assertThat(entity.getMunicipalityId()).isEqualTo("2281");
 		assertThat(entity.getNamespace()).isEqualTo("FINANCIAL_ASSISTANCE");
+		assertThat(entity.getSource()).isEqualTo("HTTP");
 		assertThat(entity.getAction()).isEqualTo("READ");
 		assertThat(entity.getTarget()).isEqualTo("errand");
 		assertThat(entity.getDescription()).isEqualTo("READ errand");

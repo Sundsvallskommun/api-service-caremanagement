@@ -15,6 +15,7 @@ class ErrandEventEntityTest {
 			.withErrandId("errand-1")
 			.withMunicipalityId("2281")
 			.withNamespace("FINANCIAL_ASSISTANCE")
+			.withSource("HTTP")
 			.withAction("READ")
 			.withTarget("errand")
 			.withDescription("READ errand")
@@ -30,6 +31,7 @@ class ErrandEventEntityTest {
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
 		assertThat(entity.getMunicipalityId()).isEqualTo("2281");
 		assertThat(entity.getNamespace()).isEqualTo("FINANCIAL_ASSISTANCE");
+		assertThat(entity.getSource()).isEqualTo("HTTP");
 		assertThat(entity.getAction()).isEqualTo("READ");
 		assertThat(entity.getTarget()).isEqualTo("errand");
 		assertThat(entity.getDescription()).isEqualTo("READ errand");

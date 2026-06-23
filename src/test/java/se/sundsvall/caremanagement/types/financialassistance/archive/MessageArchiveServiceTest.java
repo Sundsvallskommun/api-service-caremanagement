@@ -8,6 +8,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
+import se.sundsvall.caremanagement.attachments.service.CombineSource;
+import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentView;
 import se.sundsvall.caremanagement.conversation.spi.ConversationMessageView;
 import se.sundsvall.caremanagement.conversation.spi.ConversationThreadQueryService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
@@ -18,6 +20,7 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 
 import static java.util.Collections.emptyList;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -34,9 +37,14 @@ class MessageArchiveServiceTest {
 	private static final String CLOSED = "CLOSED";
 	private static final String ERRAND_ID = "11111111-1111-1111-1111-111111111111";
 	private static final String ERRAND_NUMBER = "EB-26060001";
+	private static final String LABEL = "Meddelanden och bilagor från Draken";
+	private static final byte[] MERGED = "merged-pdf".getBytes();
+
+	private static final String EXPECTED_FILE_NAME = LABEL + "_" + ERRAND_NUMBER + "_2026-05-12--2026-05-13.pdf";
+	private static final String EXPECTED_TITLE = LABEL + "_" + ERRAND_NUMBER + "_2026-05-12--2026-05-13";
 
 	private static final MessageArchiveProperties PROPERTIES = new MessageArchiveProperties(
-		MUNICIPALITY_ID, NAMESPACE, 30, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun");
+		MUNICIPALITY_ID, NAMESPACE, 30, "MEDDELANDEHISTORIK", "MYNDIGHET", LABEL, "Sundsvalls kommun");
 
 	@Mock
 	private ErrandService errandServiceMock;
@@ -62,7 +70,10 @@ class MessageArchiveServiceTest {
 	}
 
 	private static List<ConversationMessageView> thread() {
-		return List.of(new ConversationMessageView("INBOUND", "Hej, jag bifogar mitt intyg.", "joe01doe", OffsetDateTime.now(), List.of("intyg.pdf")));
+		return List.of(
+			new ConversationMessageView("INBOUND", "Hej, jag bifogar mitt intyg.", "joe01doe", OffsetDateTime.parse("2026-05-12T09:00:00+02:00"),
+				List.of(new ConversationAttachmentView("intyg.pdf", "application/pdf", "x".getBytes()))),
+			new ConversationMessageView("OUTBOUND", "Tack, mottaget.", "agent", OffsetDateTime.parse("2026-05-13T18:00:00+02:00"), emptyList()));
 	}
 
 	private static Decision actualisationDecision(final String value) {
@@ -75,12 +86,14 @@ class MessageArchiveServiceTest {
 		when(attachmentServiceMock.messageHistoryExists(ERRAND_ID)).thenReturn(false);
 		when(conversationThreadQueryServiceMock.threadForErrand(ERRAND_ID)).thenReturn(thread());
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(actualisationDecision("5012")));
+		when(attachmentServiceMock.combineToPdf(any())).thenReturn(MERGED);
 
 		service.archiveClosedErrands();
 
-		verify(actualisationServiceMock).uploadAttachment(eq(5012), eq(ERRAND_NUMBER + "_meddelandehistorik.pdf"), any(byte[].class),
-			eq("MEDDELANDEHISTORIK"), eq("MYNDIGHET"), eq("Meddelandehistorik"), eq("Sundsvalls kommun"));
-		verify(attachmentServiceMock).createMessageHistoryAttachment(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(byte[].class));
+		// messages page + 1 separator + 1 attachment = 3 combine sources
+		verify(attachmentServiceMock).combineToPdf(argThatHasSize(3));
+		verify(actualisationServiceMock).uploadAttachment(5012, EXPECTED_FILE_NAME, MERGED, "MEDDELANDEHISTORIK", "MYNDIGHET", EXPECTED_TITLE, "Sundsvalls kommun");
+		verify(attachmentServiceMock).createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, EXPECTED_FILE_NAME, MERGED);
 	}
 
 	@Test
@@ -91,7 +104,8 @@ class MessageArchiveServiceTest {
 		service.archiveClosedErrands();
 
 		verifyNoInteractions(conversationThreadQueryServiceMock, decisionServiceMock, actualisationServiceMock);
-		verify(attachmentServiceMock, never()).createMessageHistoryAttachment(any(), any(), any(), any());
+		verify(attachmentServiceMock, never()).combineToPdf(any());
+		verify(attachmentServiceMock, never()).createMessageHistoryAttachment(any(), any(), any(), any(), any());
 	}
 
 	@Test
@@ -103,7 +117,7 @@ class MessageArchiveServiceTest {
 		service.archiveClosedErrands();
 
 		verifyNoInteractions(decisionServiceMock, actualisationServiceMock);
-		verify(attachmentServiceMock, never()).createMessageHistoryAttachment(any(), any(), any(), any());
+		verify(attachmentServiceMock, never()).combineToPdf(any());
 	}
 
 	@Test
@@ -118,7 +132,7 @@ class MessageArchiveServiceTest {
 		service.archiveClosedErrands();
 
 		verifyNoInteractions(actualisationServiceMock);
-		verify(attachmentServiceMock, never()).createMessageHistoryAttachment(any(), any(), any(), any());
+		verify(attachmentServiceMock, never()).combineToPdf(any());
 	}
 
 	@Test
@@ -130,13 +144,15 @@ class MessageArchiveServiceTest {
 		when(attachmentServiceMock.messageHistoryExists(any())).thenReturn(false);
 		when(conversationThreadQueryServiceMock.threadForErrand(any())).thenReturn(thread());
 		when(decisionServiceMock.readAll(eq(MUNICIPALITY_ID), eq(NAMESPACE), any())).thenReturn(List.of(actualisationDecision("5012")));
+		when(attachmentServiceMock.combineToPdf(any())).thenReturn(MERGED);
+		final var failingFileName = LABEL + "_EB-26060002_2026-05-12--2026-05-13.pdf";
 		doThrow(new RuntimeException("Lifecare down")).when(actualisationServiceMock)
-			.uploadAttachment(any(), eq("EB-26060002_meddelandehistorik.pdf"), any(), any(), any(), any(), any());
+			.uploadAttachment(any(), eq(failingFileName), any(), any(), any(), any(), any());
 
 		service.archiveClosedErrands();
 
 		// The second (healthy) errand is still archived despite the first throwing.
-		verify(attachmentServiceMock).createMessageHistoryAttachment(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(byte[].class));
+		verify(attachmentServiceMock).createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, EXPECTED_FILE_NAME, MERGED);
 		verify(actualisationServiceMock, times(2)).uploadAttachment(any(), any(), any(), any(), any(), any(), any());
 	}
 
@@ -147,5 +163,9 @@ class MessageArchiveServiceTest {
 		service.archiveClosedErrands();
 
 		verifyNoInteractions(conversationThreadQueryServiceMock, decisionServiceMock, actualisationServiceMock, attachmentServiceMock);
+	}
+
+	private static List<CombineSource> argThatHasSize(final int size) {
+		return argThat(list -> list != null && list.size() == size);
 	}
 }

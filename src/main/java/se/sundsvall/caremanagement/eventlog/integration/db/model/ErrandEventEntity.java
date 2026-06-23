@@ -34,6 +34,9 @@ public class ErrandEventEntity {
 	@Column(name = "namespace", nullable = false, length = 64)
 	private String namespace;
 
+	@Column(name = "source", nullable = false, length = 16)
+	private String source;
+
 	@Column(name = "action", nullable = false, length = 16)
 	private String action;
 
@@ -43,10 +46,10 @@ public class ErrandEventEntity {
 	@Column(name = "description", length = 512)
 	private String description;
 
-	@Column(name = "http_method", nullable = false, length = 8)
+	@Column(name = "http_method", length = 8)
 	private String httpMethod;
 
-	@Column(name = "request_path", nullable = false, length = 1024)
+	@Column(name = "request_path", length = 1024)
 	private String requestPath;
 
 	@Column(name = "actor", length = 255)
@@ -58,7 +61,7 @@ public class ErrandEventEntity {
 	@Column(name = "request_id", length = 64)
 	private String requestId;
 
-	@Column(name = "status_code", nullable = false)
+	@Column(name = "status_code")
 	private Integer statusCode;
 
 	@Column(name = "created", nullable = false)
@@ -83,6 +86,10 @@ public class ErrandEventEntity {
 
 	public String getNamespace() {
 		return namespace;
+	}
+
+	public String getSource() {
+		return source;
 	}
 
 	public String getAction() {
@@ -142,6 +149,11 @@ public class ErrandEventEntity {
 
 	public ErrandEventEntity withNamespace(final String v) {
 		this.namespace = v;
+		return this;
+	}
+
+	public ErrandEventEntity withSource(final String v) {
+		this.source = v;
 		return this;
 	}
 

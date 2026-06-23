@@ -6,6 +6,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -14,20 +15,28 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts.FontName;
 import se.sundsvall.caremanagement.conversation.spi.ConversationMessageView;
+import se.sundsvall.caremanagement.types.financialassistance.archive.ThreadAttachments.NumberedAttachment;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.groupingBy;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 /**
- * Renders an errand's conversation thread into a single, readable PDF (the meddelandehistorik). The document opens with
- * a title and a short summary, then lays out every message oldest-first as a bold header line
- * ({@code timestamp · role · author}) followed by the body and, when present, a {@code Bilagor:} line listing the
- * attachment file names. Text is word-wrapped to the page width by measuring it in the Standard-14 Helvetica font and
- * is
- * sanitised to the glyphs that font can actually render (so Swedish letters, en-dashes and smart quotes survive while a
- * stray emoji becomes {@code ?}), so an odd character never breaks the render and the content flows across as many A4
- * pages as it takes.
+ * Renders the text pages of the meddelandehistorik. {@link #renderMessages} produces the conversation section — a
+ * title,
+ * a short summary and every message oldest-first as a bold header ({@code timestamp · role · author}), the body and,
+ * when present, a {@code Bilagor:} line listing the message's attachments by their global {@code Bilaga {n}} number.
+ * {@link #renderSeparator} produces the one-page divider that precedes each appended attachment, naming it and its
+ * origin so the reader can tell two identically-named files apart. The archiving job stitches these PDFs together with
+ * the actual attachment files.
+ *
+ * <p>
+ * Text is word-wrapped to the page width by measuring it in the Standard-14 Helvetica font and sanitised to the glyphs
+ * that font can render (Swedish letters, en-dashes and smart quotes survive; a stray emoji becomes {@code ?}), so an
+ * odd
+ * character never breaks the render and content flows across as many A4 pages as it takes.
+ * </p>
  */
 final class MeddelandehistorikPdfRenderer {
 
@@ -43,9 +52,7 @@ final class MeddelandehistorikPdfRenderer {
 	private static final PDFont BOLD = new PDType1Font(FontName.HELVETICA_BOLD);
 
 	private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-	private static final String INBOUND = "INBOUND";
-	private static final String ROLE_APPLICANT = "Sökande";
-	private static final String ROLE_CASEWORKER = "Handläggare";
+	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
 	private MeddelandehistorikPdfRenderer() {}
 
@@ -53,15 +60,53 @@ final class MeddelandehistorikPdfRenderer {
 	private record Line(String text, PDFont font, float size) {}
 
 	/**
-	 * Render the thread into a PDF.
+	 * Render the conversation (messages) section.
 	 *
 	 * @param  errandNumber the errand number, shown in the title block
 	 * @param  thread       the conversation messages, oldest first
-	 * @return              the PDF as bytes
+	 * @param  attachments  the thread's globally-numbered attachments (for the per-message {@code Bilagor:} listing)
+	 * @return              the section as PDF bytes
 	 */
-	static byte[] render(final String errandNumber, final List<ConversationMessageView> thread) {
-		final var lines = layout(errandNumber, thread);
+	static byte[] renderMessages(final String errandNumber, final List<ConversationMessageView> thread, final List<NumberedAttachment> attachments) {
+		final Map<Integer, List<NumberedAttachment>> byMessage = attachments.stream().collect(groupingBy(NumberedAttachment::messageIndex));
 
+		final var lines = new ArrayList<Line>();
+		add(lines, "Meddelandehistorik", BOLD, TITLE_SIZE);
+		add(lines, "Ärende: " + errandNumber, REGULAR, BODY_SIZE);
+		add(lines, "Antal meddelanden: " + thread.size(), REGULAR, BODY_SIZE);
+		add(lines, "Antal bilagor: " + attachments.size(), REGULAR, BODY_SIZE);
+		lines.add(blank());
+
+		for (var messageIndex = 0; messageIndex < thread.size(); messageIndex++) {
+			final var message = thread.get(messageIndex);
+			add(lines, header(message), BOLD, HEADING_SIZE);
+			add(lines, ofNullable(message.body()).orElse(""), REGULAR, BODY_SIZE);
+			final var messageAttachments = byMessage.getOrDefault(messageIndex, List.of());
+			if (!messageAttachments.isEmpty()) {
+				final var labels = messageAttachments.stream().map(a -> "[%d] %s".formatted(a.number(), a.fileName())).toList();
+				add(lines, "Bilagor: " + String.join(", ", labels), REGULAR, BODY_SIZE);
+			}
+			lines.add(blank());
+		}
+		return renderLines(lines);
+	}
+
+	/**
+	 * Render the one-page divider shown before an appended attachment.
+	 *
+	 * @param  attachment the attachment to introduce
+	 * @return            the divider as PDF bytes
+	 */
+	static byte[] renderSeparator(final NumberedAttachment attachment) {
+		final var date = ofNullable(attachment.created()).map(created -> created.atZoneSameInstant(ZoneId.systemDefault()).format(DATE)).orElse("");
+		final var lines = new ArrayList<Line>();
+		add(lines, "Bilaga " + attachment.number(), BOLD, TITLE_SIZE);
+		add(lines, attachment.fileName(), REGULAR, BODY_SIZE);
+		add(lines, "Bifogad av %s · %s".formatted(attachment.role(), date), REGULAR, BODY_SIZE);
+		return renderLines(lines);
+	}
+
+	private static byte[] renderLines(final List<Line> lines) {
 		try (final var document = new PDDocument(); final var output = new ByteArrayOutputStream()) {
 			var index = 0;
 			do {
@@ -91,24 +136,6 @@ final class MeddelandehistorikPdfRenderer {
 		}
 	}
 
-	private static List<Line> layout(final String errandNumber, final List<ConversationMessageView> thread) {
-		final var lines = new ArrayList<Line>();
-		add(lines, "Meddelandehistorik", BOLD, TITLE_SIZE);
-		add(lines, "Ärende: " + errandNumber, REGULAR, BODY_SIZE);
-		add(lines, "Antal meddelanden: " + thread.size(), REGULAR, BODY_SIZE);
-		lines.add(blank());
-
-		for (final var message : thread) {
-			add(lines, header(message), BOLD, HEADING_SIZE);
-			add(lines, ofNullable(message.body()).orElse(""), REGULAR, BODY_SIZE);
-			if (!message.attachmentFileNames().isEmpty()) {
-				add(lines, "Bilagor: " + String.join(", ", message.attachmentFileNames()), REGULAR, BODY_SIZE);
-			}
-			lines.add(blank());
-		}
-		return lines;
-	}
-
 	/**
 	 * Sanitise the text, split it on its own line breaks, word-wrap each paragraph to the page width, and add the lines.
 	 */
@@ -127,9 +154,8 @@ final class MeddelandehistorikPdfRenderer {
 		final var timestamp = ofNullable(message.created())
 			.map(created -> created.atZoneSameInstant(ZoneId.systemDefault()).format(TIMESTAMP))
 			.orElse("");
-		final var role = INBOUND.equals(message.direction()) ? ROLE_APPLICANT : ROLE_CASEWORKER;
 		final var author = ofNullable(message.author()).filter(value -> !value.isBlank()).map(" · "::concat).orElse("");
-		return "%s · %s%s".formatted(timestamp, role, author);
+		return "%s · %s%s".formatted(timestamp, ThreadAttachments.role(message.direction()), author);
 	}
 
 	private static Line blank() {

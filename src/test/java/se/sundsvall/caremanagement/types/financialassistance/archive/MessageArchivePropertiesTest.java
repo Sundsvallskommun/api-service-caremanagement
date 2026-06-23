@@ -17,7 +17,7 @@ class MessageArchivePropertiesTest {
 			"archive.message.days-after-close", "7",
 			"archive.message.lifecare-document-type", "DOC",
 			"archive.message.lifecare-document-sender-type", "SENDER",
-			"archive.message.lifecare-title", "Title",
+			"archive.message.document-label", "Label",
 			"archive.message.lifecare-sender-name", "Sender"));
 
 		final var properties = new Binder(source).bind("archive.message", MessageArchiveProperties.class).get();
@@ -27,7 +27,7 @@ class MessageArchivePropertiesTest {
 		assertThat(properties.daysAfterClose()).isEqualTo(7);
 		assertThat(properties.lifecareDocumentType()).isEqualTo("DOC");
 		assertThat(properties.lifecareDocumentSenderType()).isEqualTo("SENDER");
-		assertThat(properties.lifecareTitle()).isEqualTo("Title");
+		assertThat(properties.documentLabel()).isEqualTo("Label");
 		assertThat(properties.lifecareSenderName()).isEqualTo("Sender");
 	}
 
@@ -41,7 +41,7 @@ class MessageArchivePropertiesTest {
 		assertThat(properties.daysAfterClose()).isEqualTo(30);
 		assertThat(properties.lifecareDocumentType()).isEqualTo("MEDDELANDEHISTORIK");
 		assertThat(properties.lifecareDocumentSenderType()).isEqualTo("MYNDIGHET");
-		assertThat(properties.lifecareTitle()).isEqualTo("Meddelandehistorik");
+		assertThat(properties.documentLabel()).isEqualTo("Meddelanden och bilagor från Draken");
 		assertThat(properties.lifecareSenderName()).isEqualTo("Sundsvalls kommun");
 	}
 }

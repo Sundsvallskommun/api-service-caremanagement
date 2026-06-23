@@ -11,7 +11,7 @@ class ErrandEventTest {
 	@Test
 	void componentsAreExposed() {
 		final var event = new ErrandEvent(
-			"id", "errand-1", "2281", "FINANCIAL_ASSISTANCE",
+			"id", "errand-1", "2281", "FINANCIAL_ASSISTANCE", "HTTP",
 			"UPDATE", "financial-assistance/calculation/draft/incomes",
 			"UPDATE financial-assistance/calculation/draft/incomes",
 			"PATCH", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/errand-1/calculation/draft/incomes/row-1",
@@ -21,6 +21,7 @@ class ErrandEventTest {
 		assertThat(event.errandId()).isEqualTo("errand-1");
 		assertThat(event.municipalityId()).isEqualTo("2281");
 		assertThat(event.namespace()).isEqualTo("FINANCIAL_ASSISTANCE");
+		assertThat(event.source()).isEqualTo("HTTP");
 		assertThat(event.action()).isEqualTo("UPDATE");
 		assertThat(event.target()).isEqualTo("financial-assistance/calculation/draft/incomes");
 		assertThat(event.description()).isEqualTo("UPDATE financial-assistance/calculation/draft/incomes");

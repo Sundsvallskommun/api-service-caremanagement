@@ -20,11 +20,19 @@ public class ErrandEventService {
 	}
 
 	/**
-	 * Stamps the entity with the current time and persists it. The single source of truth for the {@code created}
-	 * timestamp, so callers (the interceptor) need not carry a clock.
+	 * Records an HTTP-sourced event (from the interceptor): stamps the current time and persists. The single source of
+	 * truth for the {@code created} timestamp, so the interceptor need not carry a clock.
 	 */
 	public void record(final ErrandEventEntity entity) {
 		repository.save(entity.withCreated(now()));
+	}
+
+	/**
+	 * Records a domain-event-sourced row (from the listener): persisted as-is, since {@code created} already carries the
+	 * event's own timestamp.
+	 */
+	public void recordDomainEvent(final ErrandEventEntity entity) {
+		repository.save(entity);
 	}
 
 	/**
@@ -49,6 +57,7 @@ public class ErrandEventService {
 			e.getErrandId(),
 			e.getMunicipalityId(),
 			e.getNamespace(),
+			e.getSource(),
 			e.getAction(),
 			e.getTarget(),
 			e.getDescription(),

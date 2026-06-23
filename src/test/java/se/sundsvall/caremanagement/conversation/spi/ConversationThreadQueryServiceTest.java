@@ -1,20 +1,31 @@
 package se.sundsvall.caremanagement.conversation.spi;
 
+import java.sql.Blob;
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mariadb.jdbc.MariaDbBlob;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachmentDataRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachmentRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository;
+import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentDataEntity;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentEntity;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
+import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 @ExtendWith(MockitoExtension.class)
 class ConversationThreadQueryServiceTest {
@@ -27,30 +38,67 @@ class ConversationThreadQueryServiceTest {
 	@Mock
 	private MessageAttachmentRepository attachmentRepositoryMock;
 
+	@Mock
+	private MessageAttachmentDataRepository attachmentDataRepositoryMock;
+
 	@InjectMocks
 	private ConversationThreadQueryService service;
 
 	@Test
-	void mapsThreadOldestFirstWithAttachmentFileNames() {
+	void mapsThreadOldestFirstWithAttachmentContent() {
 		final var first = MessageEntity.create().withId("m1").withErrandId(ERRAND_ID).withDirection("INBOUND")
 			.withBody("Hej").withAuthor("joe01doe").withCreated(OffsetDateTime.parse("2026-06-01T09:00:00+02:00"));
 		final var second = MessageEntity.create().withId("m2").withErrandId(ERRAND_ID).withDirection("OUTBOUND")
 			.withBody("Svar").withAuthor("agent").withCreated(OffsetDateTime.parse("2026-06-02T09:00:00+02:00"));
 
-		final var attachment = MessageAttachmentEntity.create().withId("a1").withMessageId("m1").withFileName("intyg.pdf")
-			.withMimeType("application/pdf").withSenderRole("CLIENT").withCreated(OffsetDateTime.now());
+		final var attachment = MessageAttachmentEntity.create().withId("a1").withMessageId("m1").withFileName("intyg.pdf").withMimeType("application/pdf");
 
 		when(messageRepositoryMock.findByErrandIdOrderByCreatedAsc(ERRAND_ID)).thenReturn(List.of(first, second));
 		when(attachmentRepositoryMock.findByMessageIdIn(List.of("m1", "m2"))).thenReturn(List.of(attachment));
+		when(attachmentDataRepositoryMock.findByMessageAttachmentId("a1")).thenReturn(Optional.of(
+			MessageAttachmentDataEntity.create().withFile(new MariaDbBlob("hello".getBytes()))));
 
 		final var thread = service.threadForErrand(ERRAND_ID);
 
 		assertThat(thread).hasSize(2);
-		assertThat(thread.get(0).direction()).isEqualTo("INBOUND");
-		assertThat(thread.get(0).body()).isEqualTo("Hej");
-		assertThat(thread.get(0).author()).isEqualTo("joe01doe");
-		assertThat(thread.get(0).attachmentFileNames()).containsExactly("intyg.pdf");
-		assertThat(thread.get(1).attachmentFileNames()).isEmpty();
+		assertThat(thread.getFirst().direction()).isEqualTo("INBOUND");
+		assertThat(thread.getFirst().body()).isEqualTo("Hej");
+		assertThat(thread.getFirst().author()).isEqualTo("joe01doe");
+		assertThat(thread.getFirst().attachments()).hasSize(1);
+		assertThat(thread.getFirst().attachments().getFirst().fileName()).isEqualTo("intyg.pdf");
+		assertThat(thread.getFirst().attachments().getFirst().mimeType()).isEqualTo("application/pdf");
+		assertThat(new String(thread.getFirst().attachments().getFirst().content(), UTF_8)).isEqualTo("hello");
+		assertThat(thread.getLast().attachments()).isEmpty();
+	}
+
+	@Test
+	void omitsAttachmentsWithoutData() {
+		final var message = MessageEntity.create().withId("m1").withErrandId(ERRAND_ID).withDirection("INBOUND").withBody("Hej");
+		when(messageRepositoryMock.findByErrandIdOrderByCreatedAsc(ERRAND_ID)).thenReturn(List.of(message));
+		when(attachmentRepositoryMock.findByMessageIdIn(List.of("m1"))).thenReturn(List.of(
+			MessageAttachmentEntity.create().withId("a1").withMessageId("m1").withFileName("intyg.pdf")));
+		when(attachmentDataRepositoryMock.findByMessageAttachmentId("a1")).thenReturn(Optional.empty());
+
+		final var thread = service.threadForErrand(ERRAND_ID);
+
+		assertThat(thread).hasSize(1);
+		assertThat(thread.getFirst().attachments()).isEmpty();
+	}
+
+	@Test
+	void wrapsSqlExceptionAsProblem() throws SQLException {
+		final var blob = mock(Blob.class);
+		when(blob.getBinaryStream()).thenThrow(new SQLException("boom"));
+		final var message = MessageEntity.create().withId("m1").withErrandId(ERRAND_ID).withDirection("INBOUND").withBody("Hej");
+		when(messageRepositoryMock.findByErrandIdOrderByCreatedAsc(ERRAND_ID)).thenReturn(List.of(message));
+		when(attachmentRepositoryMock.findByMessageIdIn(List.of("m1"))).thenReturn(List.of(
+			MessageAttachmentEntity.create().withId("a1").withMessageId("m1").withFileName("intyg.pdf")));
+		when(attachmentDataRepositoryMock.findByMessageAttachmentId("a1")).thenReturn(Optional.of(
+			MessageAttachmentDataEntity.create().withFile(blob)));
+
+		assertThatThrownBy(() -> service.threadForErrand(ERRAND_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", INTERNAL_SERVER_ERROR);
 	}
 
 	@Test

@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:51569
+- url: http://localhost:54019
   description: Generated server url
 tags:
 - name: Statistics
@@ -5035,10 +5035,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -7986,6 +7986,8 @@ components:
         municipalityId:
           type: string
         namespace:
+          type: string
+        source:
           type: string
         action:
           type: string

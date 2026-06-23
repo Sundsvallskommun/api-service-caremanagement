@@ -1,10 +1,17 @@
 package se.sundsvall.caremanagement.types.financialassistance.archive;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
+import se.sundsvall.caremanagement.attachments.service.CombineSource;
+import se.sundsvall.caremanagement.conversation.spi.ConversationMessageView;
 import se.sundsvall.caremanagement.conversation.spi.ConversationThreadQueryService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
@@ -18,12 +25,13 @@ import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_CLOSED;
 
 /**
- * Archives the conversation of every closed EB errand. For each errand that has been in {@code CLOSED} (and otherwise
- * untouched) for at least {@code daysAfterClose} days, the thread is rendered into a
- * {@code {errandNumber}_meddelandehistorik.pdf}, uploaded to the errand's Lifecare actualisation, and stored back on
- * the
- * errand as a {@code MESSAGE_HISTORY} attachment — which doubles as the archived-marker, so the job is idempotent: an
- * already-archived errand is skipped on the next run.
+ * Archives the conversation of every closed EB errand into a single PDF — the rendered message pages first, then each
+ * conversation attachment appended in full, introduced by a numbered {@code Bilaga {n}} divider so two
+ * identically-named
+ * files can be told apart. The PDF is named
+ * {@code {label}_{errandNumber}_{firstMessageDate}--{lastMessageDate}.pdf}, uploaded to the errand's Lifecare
+ * actualisation, and stored back on the errand as a {@code MESSAGE_HISTORY} attachment — which doubles as the
+ * archived-marker, so the job is idempotent: an already-archived errand is skipped on the next run.
  *
  * <p>
  * Each errand is processed in isolation: a failure on one (e.g. a Lifecare hiccup) is logged and the batch continues.
@@ -39,7 +47,9 @@ public class MessageArchiveService {
 
 	/** {@code Decision} type carrying the Lifecare actualisation id, written when the actualisation is created. */
 	private static final String ACTUALISATION_DECISION_TYPE = "ACTUALISATION";
-	private static final String PDF_FILE_SUFFIX = "_meddelandehistorik.pdf";
+	private static final String PDF_MIME_TYPE = "application/pdf";
+	private static final String PDF_EXTENSION = ".pdf";
+	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
 	private final ErrandService errandService;
 	private final ConversationThreadQueryService conversationThreadQueryService;
@@ -89,16 +99,44 @@ public class MessageArchiveService {
 				return;
 			}
 
-			final var pdf = MeddelandehistorikPdfRenderer.render(errand.getErrandNumber(), thread);
-			actualisationService.uploadAttachment(actualisationId.get(), errand.getErrandNumber() + PDF_FILE_SUFFIX, pdf,
-				properties.lifecareDocumentType(), properties.lifecareDocumentSenderType(), properties.lifecareTitle(), properties.lifecareSenderName());
+			final var pdf = assemble(errand.getErrandNumber(), thread);
+			final var fileName = fileName(errand.getErrandNumber(), thread);
+			final var title = fileName.substring(0, fileName.length() - PDF_EXTENSION.length());
 
-			attachmentService.createMessageHistoryAttachment(errand.getMunicipalityId(), errand.getNamespace(), errand.getId(), pdf);
+			actualisationService.uploadAttachment(actualisationId.get(), fileName, pdf,
+				properties.lifecareDocumentType(), properties.lifecareDocumentSenderType(), title, properties.lifecareSenderName());
+
+			attachmentService.createMessageHistoryAttachment(errand.getMunicipalityId(), errand.getNamespace(), errand.getId(), fileName, pdf);
 
 			LOG.info("Archived meddelandehistorik for errand {} ({} message(s)) to Lifecare actualisation {}", errand.getErrandNumber(), thread.size(), actualisationId.get());
 		} catch (final Exception e) {
 			LOG.error("Failed to archive meddelandehistorik for errand {}: {}", errand.getErrandNumber(), e.getMessage(), e);
 		}
+	}
+
+	/** Render the messages section, then append each numbered attachment behind a divider, into a single PDF. */
+	private byte[] assemble(final String errandNumber, final List<ConversationMessageView> thread) {
+		final var attachments = ThreadAttachments.flatten(thread);
+
+		final var sources = new ArrayList<CombineSource>();
+		sources.add(new CombineSource("meddelanden.pdf", PDF_MIME_TYPE, MeddelandehistorikPdfRenderer.renderMessages(errandNumber, thread, attachments)));
+		attachments.forEach(attachment -> {
+			sources.add(new CombineSource("bilaga-%d-rubrik.pdf".formatted(attachment.number()), PDF_MIME_TYPE, MeddelandehistorikPdfRenderer.renderSeparator(attachment)));
+			sources.add(new CombineSource(attachment.fileName(), attachment.mimeType(), attachment.content()));
+		});
+
+		return attachmentService.combineToPdf(sources);
+	}
+
+	/** {@code {label}_{errandNumber}_{firstMessageDate}--{lastMessageDate}.pdf}. */
+	private String fileName(final String errandNumber, final List<ConversationMessageView> thread) {
+		final var first = date(thread.getFirst().created());
+		final var last = date(thread.getLast().created());
+		return "%s_%s_%s--%s%s".formatted(properties.documentLabel(), errandNumber, first, last, PDF_EXTENSION);
+	}
+
+	private static String date(final OffsetDateTime timestamp) {
+		return Optional.ofNullable(timestamp).map(value -> value.atZoneSameInstant(ZoneId.systemDefault()).format(DATE)).orElse("");
 	}
 
 	/** The Lifecare actualisation id recorded on the errand, parsed from the most recent {@code ACTUALISATION} decision. */

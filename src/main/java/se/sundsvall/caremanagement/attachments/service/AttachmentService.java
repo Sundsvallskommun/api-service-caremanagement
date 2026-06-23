@@ -57,8 +57,6 @@ public class AttachmentService {
 	private static final String ORIGIN_MESSAGE_HISTORY = "MESSAGE_HISTORY";
 	/** Extension forced on the case-data (ärendeuppgifter) attachment, whose file is renamed to {errandNumber}.pdf. */
 	private static final String CASE_DATA_FILE_EXTENSION = ".pdf";
-	/** Suffix forced on the message-history attachment, whose file is renamed to {errandNumber}_meddelandehistorik.pdf. */
-	private static final String MESSAGE_HISTORY_FILE_SUFFIX = "_meddelandehistorik.pdf";
 	private static final String MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE = "A message-history (meddelandehistorik) attachment already exists on errand '%s' in namespace '%s' for municipality id '%s'";
 	/** Sender-role facet — the application files and the consolidated client PDF are the applicant's. */
 	private static final String SENDER_CLIENT = "CLIENT";
@@ -111,21 +109,35 @@ public class AttachmentService {
 
 	/**
 	 * Store the platform-generated message-history (meddelandehistorik) PDF for the errand as a {@code MESSAGE_HISTORY}
-	 * attachment, named {@code {errandNumber}_meddelandehistorik.pdf}. Unique per errand — a second one is rejected — so
-	 * the row doubles as the archived-marker for the archiving job.
+	 * attachment under the given file name. Unique per errand — a second one is rejected — so the row doubles as the
+	 * archived-marker for the archiving job.
 	 *
-	 * @param  content the rendered PDF bytes
-	 * @return         the id of the created attachment
+	 * @param  fileName the file name to store the PDF under
+	 * @param  content  the rendered PDF bytes
+	 * @return          the id of the created attachment
 	 */
-	public String createMessageHistoryAttachment(final String municipalityId, final String namespace, final String errandId, final byte[] content) {
-		final var errand = getErrand(municipalityId, namespace, errandId);
+	public String createMessageHistoryAttachment(final String municipalityId, final String namespace, final String errandId, final String fileName, final byte[] content) {
+		ensureErrandExists(municipalityId, namespace, errandId);
 		if (attachmentRepository.existsByErrandIdAndOrigin(errandId, ORIGIN_MESSAGE_HISTORY)) {
 			throw Problem.valueOf(BAD_REQUEST, MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE.formatted(errandId, namespace, municipalityId));
 		}
 
-		final var fileName = errand.getErrandNumber() + MESSAGE_HISTORY_FILE_SUFFIX;
 		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_MESSAGE_HISTORY, null, fileName, PDF_MIME_TYPE, content);
 		return attachmentRepository.save(entity).getId();
+	}
+
+	/**
+	 * Combine a list of heterogeneous files into a single PDF (PDFs inlined, images rasterised, {@code .docx} rendered,
+	 * anything else a placeholder page), in order. Exposed for the conversation-archiving job, which merges the rendered
+	 * message pages with the errand's conversation attachments.
+	 *
+	 * @param  sources the files to combine, in order (must contain at least one element)
+	 * @return         the combined PDF as bytes
+	 */
+	public byte[] combineToPdf(final List<CombineSource> sources) {
+		return PdfCombiner.combine(sources.stream()
+			.map(source -> new SourceFile(source.fileName(), source.mimeType(), source.content()))
+			.toList());
 	}
 
 	/**

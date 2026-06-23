@@ -140,22 +140,21 @@ class AttachmentServiceTest {
 	}
 
 	@Test
-	void createMessageHistoryAttachmentStoresRenamedPdf() {
-		final var errand = mock(ErrandEntity.class);
-		when(errand.getErrandNumber()).thenReturn("EB-2024-000777");
+	void createMessageHistoryAttachmentStoresUnderGivenFileName() {
+		final var fileName = "Meddelanden och bilagor från Draken_EB-2024-000777_2026-05-12--2026-05-20.pdf";
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(errand));
+			.thenReturn(Optional.of(mock(ErrandEntity.class)));
 		when(attachmentRepositoryMock.existsByErrandIdAndOrigin(ERRAND_ID, "MESSAGE_HISTORY")).thenReturn(false);
 		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
 			.thenReturn(AttachmentEntity.create().withId(ATTACHMENT_ID));
 
-		final var id = service.createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "%PDF".getBytes());
+		final var id = service.createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, fileName, "%PDF".getBytes());
 
 		assertThat(id).isEqualTo(ATTACHMENT_ID);
 		final ArgumentCaptor<AttachmentEntity> captor = ArgumentCaptor.forClass(AttachmentEntity.class);
 		verify(attachmentRepositoryMock).save(captor.capture());
 		assertThat(captor.getValue().getOrigin()).isEqualTo("MESSAGE_HISTORY");
-		assertThat(captor.getValue().getFileName()).isEqualTo("EB-2024-000777_meddelandehistorik.pdf");
+		assertThat(captor.getValue().getFileName()).isEqualTo(fileName);
 		assertThat(captor.getValue().getMimeType()).isEqualTo("application/pdf");
 	}
 
@@ -165,11 +164,21 @@ class AttachmentServiceTest {
 			.thenReturn(Optional.of(mock(ErrandEntity.class)));
 		when(attachmentRepositoryMock.existsByErrandIdAndOrigin(ERRAND_ID, "MESSAGE_HISTORY")).thenReturn(true);
 
-		assertThatThrownBy(() -> service.createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "%PDF".getBytes()))
+		assertThatThrownBy(() -> service.createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "name.pdf", "%PDF".getBytes()))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 
 		verify(attachmentRepositoryMock, never()).save(any(AttachmentEntity.class));
+	}
+
+	@Test
+	void combineToPdfMergesSourcesIntoAPdf() {
+		final var result = service.combineToPdf(List.of(
+			new CombineSource("meddelanden.pdf", "application/pdf", "%PDF-1.4 minimal".getBytes()),
+			new CombineSource("note.txt", "text/plain", "en anteckning".getBytes())));
+
+		assertThat(result).isNotEmpty();
+		assertThat(new String(result, 0, 4)).isEqualTo("%PDF");
 	}
 
 	@Test

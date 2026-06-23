@@ -36,6 +36,16 @@ class ErrandEventServiceTest {
 	}
 
 	@Test
+	void recordDomainEventSavesAsIsWithoutStampingCreated() {
+		final var entity = ErrandEventEntity.create().withErrandId("e1").withAction("CREATE").withTarget("errand").withCreated(FIXED_TIMESTAMP);
+
+		service.recordDomainEvent(entity);
+
+		verify(repositoryMock).save(entity);
+		assertThat(entity.getCreated()).isEqualTo(FIXED_TIMESTAMP);
+	}
+
+	@Test
 	void listForErrandMapsAllWhenNoFilters() {
 		when(repositoryMock.findByErrandIdOrderByCreatedDesc("e1")).thenReturn(List.of(
 			event("ev2", "READ", "joe001doe", FIXED_TIMESTAMP),
@@ -86,6 +96,7 @@ class ErrandEventServiceTest {
 			.withErrandId("e1")
 			.withMunicipalityId("2281")
 			.withNamespace("FINANCIAL_ASSISTANCE")
+			.withSource("HTTP")
 			.withAction(action)
 			.withTarget("errand")
 			.withDescription(action + " errand")

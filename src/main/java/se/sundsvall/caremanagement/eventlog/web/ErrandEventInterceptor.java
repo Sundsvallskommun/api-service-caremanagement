@@ -89,6 +89,7 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 			.withErrandId(parts[errandIdIndex])
 			.withMunicipalityId(parts[1])
 			.withNamespace(parts[2])
+			.withSource("HTTP")
 			.withAction(action)
 			.withTarget(target)
 			.withDescription(action + " " + target)
