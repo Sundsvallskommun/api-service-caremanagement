@@ -76,12 +76,28 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @RestController
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands")
-@Tag(name = "Financial Assistance",
-	description = "Financial assistance (EB) errands. Create against one of the three application-type slugs (financial-assistance-new / -renewal / -supplementary); read and replace the typed data via the shared financial-assistance path.")
 class FinancialAssistanceResource {
 
 	/** Constrains the create path variable to the three EB slugs so it never shadows other errand types. */
 	private static final String SLUG_REGEXP = "financial-assistance-new|financial-assistance-renewal|financial-assistance-supplementary";
+
+	// Swagger tag groups. The EB surface is large (~29 operations), so each phase of the workflow is its own
+	// navigable sub-section. They share the "Financial Assistance ·" prefix, so springdoc's alpha tagsSorter
+	// keeps them clustered together while still splitting the flat list.
+	private static final String TAG_ERRANDS = "Financial Assistance · Errands";
+	private static final String TAG_ERRANDS_DESC = "Create, read and replace EB errands. Create against one of the three application-type slugs (financial-assistance-new / -renewal / -supplementary); read and replace the typed data via the shared financial-assistance path.";
+	private static final String TAG_INTAKE = "Financial Assistance · Intake";
+	private static final String TAG_INTAKE_DESC = "Pre-application and case-intake calls: eligibility routing (common entry point), renewal pre-fill from Lifecare, the income/cost type metadata catalogue, and Lifecare actualisation (case intake).";
+	private static final String TAG_CALCULATION = "Financial Assistance · Calculation";
+	private static final String TAG_CALCULATION_DESC = "The normberäkning: prepare the calculation each daily loop (no Lifecare write), commit it to Lifecare after a decision, and read or edit the draft header.";
+	private static final String TAG_DRAFT_ROWS = "Financial Assistance · Draft rows";
+	private static final String TAG_DRAFT_ROWS_DESC = "Caseworker edits to the draft calculation rows — add, edit, soft-delete and restore income, expense and person rows. Each touches only the caseworker value / note / soft-delete; the process columns are owned by the daily prepare.";
+	private static final String TAG_WARNINGS = "Financial Assistance · Warnings";
+	private static final String TAG_WARNINGS_DESC = "Acknowledgeable EB income warnings on an errand — create, list and set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare step reconciles them.";
+	private static final String TAG_APPROVALS = "Financial Assistance · Approvals";
+	private static final String TAG_APPROVALS_DESC = "Caseworker approval state of the three EB view sections (CALCULATION / PAYMENT / DECISION) — read all three, or set/withdraw one.";
+	private static final String TAG_PAYMENT = "Financial Assistance · Payment";
+	private static final String TAG_PAYMENT_DESC = "Read whether the manual Lifecare payment for the applicant and application month has been effectuated. caremanagement makes no payment itself.";
 
 	private final FinancialAssistanceService service;
 	private final EligibilityService eligibilityService;
@@ -94,6 +110,7 @@ class FinancialAssistanceResource {
 		this.renewalPrefillService = renewalPrefillService;
 	}
 
+	@Tag(name = TAG_ERRANDS, description = TAG_ERRANDS_DESC)
 	@PostMapping(path = "/{typeSlug:" + SLUG_REGEXP + "}", consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Create financial assistance errand",
 		description = "Multipart request. The 'request' part carries the application (JSON); the optional 'attachments' part carries the citizen's supporting files (any type). typeSlug is one of financial-assistance-new, financial-assistance-renewal, financial-assistance-supplementary. Each attachment is stored on the errand, and a single combined PDF merging them all is generated and stored alongside.",
@@ -115,6 +132,7 @@ class FinancialAssistanceResource {
 			.build();
 	}
 
+	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)
 	@PostMapping(path = "/financial-assistance/eligibility", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Check application eligibility (common entry point)",
 		description = "Given an applicant (and an optional co-applicant) suggests which application — new application / renewal / supplementary application — to offer, checking this system and Lifecare (best-effort).",
@@ -129,6 +147,7 @@ class FinancialAssistanceResource {
 		return ok(eligibilityService.evaluate(municipalityId, namespace, request));
 	}
 
+	@Tag(name = TAG_CALCULATION, description = TAG_CALCULATION_DESC)
 	@PostMapping(path = "/financial-assistance/calculation/prepare", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Prepare the calculation (no Lifecare write)",
 		description = "Reports whether this month's classified incomes cover every income type the previous calculation had (informationComplete + missingIncomeTypes), records the income warnings on the errand as a single Decision(RECOMMENDATION), and reflects completeness in the errand status (SUPPLEMENT_REQUESTED ⇄ AWAITING_DECISION). Does NOT create a calculation in Lifecare — the EB process calls this each daily loop. Use /commit after a decision to create it in Lifecare.",
@@ -144,6 +163,7 @@ class FinancialAssistanceResource {
 		return ok(service.prepareCalculation(municipalityId, namespace, request));
 	}
 
+	@Tag(name = TAG_CALCULATION, description = TAG_CALCULATION_DESC)
 	@PostMapping(path = "/financial-assistance/calculation/commit", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Create the calculation in Lifecare (after decision)",
 		description = "Builds the calculation from the classified incomes and creates it in Lifecare FC, returning the created calculation id. Called once a decision is taken — never during the daily SSBTEK loop.",
@@ -159,6 +179,7 @@ class FinancialAssistanceResource {
 		return ok(service.commitCalculation(municipalityId, namespace, request));
 	}
 
+	@Tag(name = TAG_WARNINGS, description = TAG_WARNINGS_DESC)
 	@PostMapping(path = "/financial-assistance/{errandId}/warnings", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Create an EB income warning on an errand",
 		description = "Creates an acknowledgeable income warning directly on the errand — the careM temp stage, with no Lifecare round-trip. The warning is created OPEN; use the PATCH endpoint to acknowledge or close it.",
@@ -178,6 +199,7 @@ class FinancialAssistanceResource {
 			.body(warning);
 	}
 
+	@Tag(name = TAG_WARNINGS, description = TAG_WARNINGS_DESC)
 	@GetMapping(path = "/financial-assistance/{errandId}/warnings", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "List the EB income warnings on an errand",
 		description = "The acknowledgeable income warnings the caseworker reviews — unhandled incomes, significant changes, and income types still missing from SSBTEK. The daily prepare step reconciles them.",
@@ -193,6 +215,7 @@ class FinancialAssistanceResource {
 		return ok(service.listWarnings(municipalityId, namespace, errandId));
 	}
 
+	@Tag(name = TAG_WARNINGS, description = TAG_WARNINGS_DESC)
 	@PatchMapping(path = "/financial-assistance/{errandId}/warnings/{warningId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Set the status of an EB income warning",
 		description = "A caseworker acknowledges (seen, kept on record), closes (dismisses), or re-opens a warning to OPEN (undoing an earlier acknowledge/close).",
@@ -213,6 +236,7 @@ class FinancialAssistanceResource {
 		return ok(service.updateWarning(municipalityId, namespace, errandId, warningId, status));
 	}
 
+	@Tag(name = TAG_APPROVALS, description = TAG_APPROVALS_DESC)
 	@GetMapping(path = "/financial-assistance/{errandId}/sections/approvals", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read the section approvals on an errand",
 		description = "The caseworker approval state of the three EB view sections (CALCULATION = calculation, PAYMENT = payment, DECISION = decision). Always returns all three — a section never approved is present with approved=false. The same object is embedded in the errand view.",
@@ -228,6 +252,7 @@ class FinancialAssistanceResource {
 		return ok(service.getSectionApprovals(municipalityId, namespace, errandId));
 	}
 
+	@Tag(name = TAG_APPROVALS, description = TAG_APPROVALS_DESC)
 	@PatchMapping(path = "/financial-assistance/{errandId}/sections/{section}/approval", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Set a section's approval (caseworker)",
 		description = "A caseworker verifies one of the EB view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them.",
@@ -248,6 +273,7 @@ class FinancialAssistanceResource {
 		return ok(service.setSectionApproval(municipalityId, namespace, errandId, section, request.getApproved(), request.getApprovedBy()));
 	}
 
+	@Tag(name = TAG_CALCULATION, description = TAG_CALCULATION_DESC)
 	@GetMapping(path = "/financial-assistance/{errandId}/calculation/draft", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read the draft calculation",
 		description = "The FC income rows the EB process prepared (not yet created in Lifecare) for the caseworker to review and edit before a decision. 404 when no draft exists yet.",
@@ -263,6 +289,7 @@ class FinancialAssistanceResource {
 		return ok(service.getDraft(municipalityId, namespace, errandId));
 	}
 
+	@Tag(name = TAG_CALCULATION, description = TAG_CALCULATION_DESC)
 	@PatchMapping(path = "/financial-assistance/{errandId}/calculation/draft/header", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Edit the draft header (caseworker)",
 		description = "Set the norm, the calculation date window (from/to/date) and the custom household size (common costs). 404 when no draft exists.",
@@ -283,6 +310,7 @@ class FinancialAssistanceResource {
 	// process columns are owned by the daily prepare. 404 when the errand or row is missing in this namespace/municipality.
 	// ---
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/incomes", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Add an income row to the draft (caseworker)", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -297,6 +325,7 @@ class FinancialAssistanceResource {
 		return ok(service.addDraftIncome(municipalityId, namespace, errandId, input));
 	}
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@PatchMapping(path = "/financial-assistance/{errandId}/calculation/draft/incomes/{rowId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Set the caseworker value / note on an income row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -312,6 +341,7 @@ class FinancialAssistanceResource {
 		return ok(service.patchDraftIncome(municipalityId, namespace, errandId, rowId, input));
 	}
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@DeleteMapping(path = "/financial-assistance/{errandId}/calculation/draft/incomes/{rowId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Soft-delete an income row (excluded from the calculation, survives the daily refresh)", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -326,6 +356,7 @@ class FinancialAssistanceResource {
 		return ok(service.setDraftIncomeDeleted(municipalityId, namespace, errandId, rowId, true));
 	}
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/incomes/{rowId}/restore", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Restore a soft-deleted income row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -340,6 +371,7 @@ class FinancialAssistanceResource {
 		return ok(service.setDraftIncomeDeleted(municipalityId, namespace, errandId, rowId, false));
 	}
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/expenses", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Add an expense row to the draft (caseworker)", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -354,6 +386,7 @@ class FinancialAssistanceResource {
 		return ok(service.addDraftExpense(municipalityId, namespace, errandId, input));
 	}
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@PatchMapping(path = "/financial-assistance/{errandId}/calculation/draft/expenses/{rowId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Set the caseworker value / note on an expense row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -369,6 +402,7 @@ class FinancialAssistanceResource {
 		return ok(service.patchDraftExpense(municipalityId, namespace, errandId, rowId, input));
 	}
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@DeleteMapping(path = "/financial-assistance/{errandId}/calculation/draft/expenses/{rowId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Soft-delete an expense row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -383,6 +417,7 @@ class FinancialAssistanceResource {
 		return ok(service.setDraftExpenseDeleted(municipalityId, namespace, errandId, rowId, true));
 	}
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/expenses/{rowId}/restore", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Restore a soft-deleted expense row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -397,6 +432,7 @@ class FinancialAssistanceResource {
 		return ok(service.setDraftExpenseDeleted(municipalityId, namespace, errandId, rowId, false));
 	}
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/persons", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Add a person row to the draft (caseworker)", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -411,6 +447,7 @@ class FinancialAssistanceResource {
 		return ok(service.addDraftPerson(municipalityId, namespace, errandId, input));
 	}
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@PatchMapping(path = "/financial-assistance/{errandId}/calculation/draft/persons/{rowId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Set the caseworker days / note on a person row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -426,6 +463,7 @@ class FinancialAssistanceResource {
 		return ok(service.patchDraftPerson(municipalityId, namespace, errandId, rowId, input));
 	}
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@DeleteMapping(path = "/financial-assistance/{errandId}/calculation/draft/persons/{rowId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Soft-delete a person row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -440,6 +478,7 @@ class FinancialAssistanceResource {
 		return ok(service.setDraftPersonDeleted(municipalityId, namespace, errandId, rowId, true));
 	}
 
+	@Tag(name = TAG_DRAFT_ROWS, description = TAG_DRAFT_ROWS_DESC)
 	@PostMapping(path = "/financial-assistance/{errandId}/calculation/draft/persons/{rowId}/restore", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Restore a soft-deleted person row", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -454,6 +493,7 @@ class FinancialAssistanceResource {
 		return ok(service.setDraftPersonDeleted(municipalityId, namespace, errandId, rowId, false));
 	}
 
+	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)
 	@PostMapping(path = "/financial-assistance/actualisation", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Create the Lifecare actualisation (case intake)",
 		description = "Builds the actualisation against the applicant's Lifecare FC actualisation proposal and creates it in Lifecare, returning the created actualisation id. When the request carries an errandId, the creation is recorded on the errand as a Decision(ACTUALISATION) for the audit trail.",
@@ -469,6 +509,7 @@ class FinancialAssistanceResource {
 		return ok(service.createActualisation(municipalityId, namespace, request));
 	}
 
+	@Tag(name = TAG_PAYMENT, description = TAG_PAYMENT_DESC)
 	@PostMapping(path = "/financial-assistance/payment-status", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read whether the Lifecare payment has been effectuated",
 		description = "Reads whether the manual Lifecare payment for the applicant and application month has been registered, returning the effectuated flag and (when effectuated) the payment date. caremanagement makes no payment — payment is a manual caseworker step in Lifecare; the process polls this to detect when it is done.",
@@ -484,6 +525,7 @@ class FinancialAssistanceResource {
 		return ok(service.checkPaymentStatus(municipalityId, request));
 	}
 
+	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)
 	@GetMapping(path = "/financial-assistance/metadata", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read EB type metadata (income / cost dropdowns)",
 		description = "The complete income and cost type catalogue the frontend feeds its EB dropdowns from. Each type carries a code, the citizen Mina-sidor label (externalDisplayName), the matching Lifecare handläggare-dropdown label (internalDisplayName), the Mina-sidor form group as a stable code (HOUSING / WORK_AND_STUDIES / HEALTH / OTHER — null for income) and citizenReportable. citizenReportable=true types are the Mina-sidor form (code = the Income.incomeType / Cost.costType value, externalDisplayName set); citizenReportable=false types are handläggare-only Lifecare dropdowns (internalDisplayName only, externalDisplayName null, their codes are NOT citizen payload values). Static; a label/grouping layer that never changes the payload codes.",
@@ -497,6 +539,7 @@ class FinancialAssistanceResource {
 		return ok(FinancialAssistanceTypes.metadata());
 	}
 
+	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)
 	@GetMapping(path = "/financial-assistance/prefill", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Renewal pre-fill from Lifecare",
 		description = "Returns the household children from the applicant's most recent Lifecare calculation to pre-fill an EB renewal. The applicant is identified by partyId (resolved to a personnummer via the citizen service). Only children are pre-filled — the applicant is the logged-in citizen and the co-applicant comes from the portal. Best-effort — degrades to an empty result (lifecareChecked=false) when the partyId cannot be resolved or Lifecare is unreachable.",
@@ -511,6 +554,7 @@ class FinancialAssistanceResource {
 		return ok(renewalPrefillService.prefill(municipalityId, partyId));
 	}
 
+	@Tag(name = TAG_ERRANDS, description = TAG_ERRANDS_DESC)
 	@GetMapping(path = "/financial-assistance/{errandId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read financial assistance errand", responses = {
 		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -524,6 +568,7 @@ class FinancialAssistanceResource {
 		return ok(service.read(municipalityId, namespace, errandId));
 	}
 
+	@Tag(name = TAG_ERRANDS, description = TAG_ERRANDS_DESC)
 	@PutMapping(path = "/financial-assistance/{errandId}/data", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Replace financial assistance data", responses = {
 		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
