@@ -114,6 +114,9 @@ class FinancialAssistanceServiceTest {
 	@Mock
 	private CalculationFeeder calculationFeederMock;
 
+	@Mock
+	private se.sundsvall.caremanagement.rpa.service.RpaService rpaServiceMock;
+
 	@InjectMocks
 	private FinancialAssistanceService service;
 

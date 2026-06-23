@@ -26,6 +26,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
+import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
@@ -59,6 +60,7 @@ import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_NORMBERAKNING;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_AWAITING_DECISION;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_RECEIVED;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_SUPPLEMENT_REQUESTED;
@@ -104,11 +106,12 @@ public class FinancialAssistanceService {
 	private final SectionApprovalService sectionApprovalService;
 	private final DraftService draftService;
 	private final CalculationFeeder calculationFeeder;
+	private final RpaService rpaService;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final CalculationService calculationService,
 		final ActualisationService actualisationService, final PaymentStatusService paymentStatusService, final CitizenService citizenService, final DecisionService decisionService,
 		final AttachmentService attachmentService, final StakeholderService stakeholderService, final WarningService warningService, final SectionApprovalService sectionApprovalService,
-		final DraftService draftService, final CalculationFeeder calculationFeeder) {
+		final DraftService draftService, final CalculationFeeder calculationFeeder, final RpaService rpaService) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.calculationService = calculationService;
@@ -122,6 +125,7 @@ public class FinancialAssistanceService {
 		this.sectionApprovalService = sectionApprovalService;
 		this.draftService = draftService;
 		this.calculationFeeder = calculationFeeder;
+		this.rpaService = rpaService;
 	}
 
 	/**
@@ -371,10 +375,23 @@ public class FinancialAssistanceService {
 			header.getCalculationDate(), header.getHasCustomHouseholdSize(), header.getHouseholdSize());
 		final var calculationId = calculationService.commitEffective(applicant, applicationMonth, calculationHeader, incomes, expenses, persons);
 
+		// The normberäkning is now in Lifecare via the FC API; ask RPA to mirror the rest of the beslut surface that has no
+		// FC endpoint. Best-effort — the Lifecare write already succeeded, so a queue hiccup must not fail the commit.
+		triggerRpaWrite(municipalityId, errandId, WRITE_NORMBERAKNING);
+
 		return CalculationResponse.create()
 			.withCalculationId(calculationId)
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
 			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of));
+	}
+
+	/** Enqueue an RPA write, swallowing any failure — RPA mirroring must never roll back a successful Lifecare write. */
+	private void triggerRpaWrite(final String municipalityId, final String errandId, final String action) {
+		try {
+			rpaService.enqueue(municipalityId, errandId, action);
+		} catch (final Exception e) {
+			LOG.warn("RPA enqueue {} failed for errand {} — Lifecare write already committed, continuing", action, errandId, e);
+		}
 	}
 
 	/** One live income row → its effective FC income (applicant + co-applicant effective amounts), ready to post. */

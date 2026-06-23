@@ -65,6 +65,12 @@ spring:
             client-secret: ${INTEGRATION_FINANCIAL_AID_CLIENT_SECRET:override}
             authorization-grant-type: client_credentials
             provider: financial-aid
+          rpa:
+            client-id: ${INTEGRATION_RPA_CLIENT_ID:override}
+            client-secret: ${INTEGRATION_RPA_CLIENT_SECRET:override}
+            authorization-grant-type: client_credentials
+            provider: rpa
+            scope: OR.Queues, OR.Queues.Read, OR.Queues.Write
         provider:
           messaging:
             token-uri: ${INTEGRATION_MESSAGING_TOKEN_URI:http://localhost/token}
@@ -74,6 +80,8 @@ spring:
             token-uri: ${INTEGRATION_CITIZEN_TOKEN_URI:http://localhost/token}
           financial-aid:
             token-uri: ${INTEGRATION_FINANCIAL_AID_TOKEN_URI:http://localhost/token}
+          rpa:
+            token-uri: ${INTEGRATION_RPA_TOKEN_URI:http://localhost/token}
 #========================================
 # Integration settings
 #========================================
@@ -119,6 +127,20 @@ integration:
     read-timeout: 30
     # Lookback (months, ending at the reference date) for the EB eligibility reads — actualisations, decisions, calculations.
     eb-lookback-months: 13
+  # UiPath Orchestrator RPA — enqueues EB Lifecare write/fetch jobs as queue items (AddQueueItem). url is the
+  # Orchestrator base; queue is the single EB queue (the action travels in the item SpecificContent); folderIds map
+  # municipalityId → Orchestrator folder (X-UIPATH-OrganizationUnitId). OAuth2 via the rpa registration above. Set
+  # enabled=false to make every enqueue a logged no-op (environments without an Orchestrator).
+    # enabled defaults false so an unconfigured deploy is a logged no-op (no errors); set INTEGRATION_RPA_ENABLED=true
+    # plus INTEGRATION_RPA_URL/_TOKEN_URI to actually enqueue (in Drakel: the internal WireMock host + its /token stub).
+  rpa:
+    url: ${INTEGRATION_RPA_URL:http://localhost}
+    enabled: ${INTEGRATION_RPA_ENABLED:false}
+    queue: ${INTEGRATION_RPA_QUEUE:RakelEkonomisktBistand}
+    folder-ids:
+      2281: ${INTEGRATION_RPA_FOLDER_ID_2281:1}
+    connect-timeout: 5
+    read-timeout: 30
 #========================================
 # Notification settings
 #========================================
