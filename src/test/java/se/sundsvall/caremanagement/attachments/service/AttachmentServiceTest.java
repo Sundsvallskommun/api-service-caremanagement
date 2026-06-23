@@ -98,6 +98,26 @@ class AttachmentServiceTest {
 	}
 
 	@Test
+	void createCaseDataAttachmentStoresAsCaseDataRenamedToErrandNumberPdf() {
+		final var errand = mock(ErrandEntity.class);
+		when(errand.getErrandNumber()).thenReturn("EB-2024-000999");
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(errand));
+		when(attachmentRepositoryMock.existsByErrandIdAndOrigin(ERRAND_ID, "CASE_DATA")).thenReturn(false);
+		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
+			.thenReturn(AttachmentEntity.create().withId(ATTACHMENT_ID));
+		final var file = new MockMultipartFile("caseData", "snapshot.pdf", "application/pdf", "x".getBytes());
+
+		final var id = service.createCaseDataAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, file);
+
+		assertThat(id).isEqualTo(ATTACHMENT_ID);
+		final ArgumentCaptor<AttachmentEntity> captor = ArgumentCaptor.forClass(AttachmentEntity.class);
+		verify(attachmentRepositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getOrigin()).isEqualTo("CASE_DATA");
+		assertThat(captor.getValue().getFileName()).isEqualTo("EB-2024-000999.pdf");
+	}
+
+	@Test
 	void createAttachmentWithCaseDataThrowsBadRequestWhenOneAlreadyExists() {
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
 			.thenReturn(Optional.of(mock(ErrandEntity.class)));

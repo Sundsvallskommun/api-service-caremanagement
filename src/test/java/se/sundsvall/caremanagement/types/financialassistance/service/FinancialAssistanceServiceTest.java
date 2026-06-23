@@ -129,7 +129,7 @@ class FinancialAssistanceServiceTest {
 			.withTitle("Min application")
 			.withData(FinancialAssistanceData.create().withApplicationType("SUPPLEMENTARY"));
 
-		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, null);
+		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, null, null);
 
 		assertThat(result).isEqualTo(ERRAND_ID);
 
@@ -159,7 +159,7 @@ class FinancialAssistanceServiceTest {
 				Person.create().withRole("CO_APPLICANT").withPartyId(CO_APPLICANT_PARTY_ID),
 				Person.create().withEmail("noone@example.com")))); // no role → skipped
 
-		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_RENEWAL, request, null);
+		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_RENEWAL, request, null, null);
 
 		final ArgumentCaptor<Stakeholder> stakeholderCaptor = ArgumentCaptor.forClass(Stakeholder.class);
 		verify(stakeholderServiceMock, times(2)).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), stakeholderCaptor.capture());
@@ -185,7 +185,7 @@ class FinancialAssistanceServiceTest {
 		final var request = CreateFinancialAssistanceRequest.create().withTitle("Renewal").withData(FinancialAssistanceData.create());
 
 		// Empty attachment list must be treated the same as none — no combine.
-		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_RENEWAL, request, List.of());
+		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_RENEWAL, request, List.of(), null);
 
 		final ArgumentCaptor<Errand> errandCaptor = ArgumentCaptor.forClass(Errand.class);
 		verify(errandServiceMock).createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
@@ -205,7 +205,7 @@ class FinancialAssistanceServiceTest {
 		final var request = CreateFinancialAssistanceRequest.create()
 			.withData(FinancialAssistanceData.create().withApplicationType("NEW"));
 
-		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, null);
+		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, null, null);
 
 		final ArgumentCaptor<Errand> errandCaptor = ArgumentCaptor.forClass(Errand.class);
 		verify(errandServiceMock).createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
@@ -223,11 +223,25 @@ class FinancialAssistanceServiceTest {
 				1, 2, 3
 			}));
 
-		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, attachments);
+		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, attachments, null);
 
 		assertThat(result).isEqualTo(ERRAND_ID);
 		verify(repositoryMock).save(any(FinancialAssistanceEntity.class));
 		verify(attachmentServiceMock).storeAndCombine(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, attachments);
+	}
+
+	@Test
+	void createWithCaseDataStoresSnapshot() {
+		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
+
+		final var request = CreateFinancialAssistanceRequest.create().withTitle("Med ärendeuppgifter").withData(FinancialAssistanceData.create());
+		final var caseData = new MockMultipartFile("caseData", "snapshot.pdf", "application/pdf", "%PDF-1.4".getBytes());
+
+		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, null, caseData);
+
+		assertThat(result).isEqualTo(ERRAND_ID);
+		verify(attachmentServiceMock).createCaseDataAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, caseData);
+		verify(attachmentServiceMock, never()).storeAndCombine(any(), any(), any(), any()); // no supporting files supplied
 	}
 
 	@Test

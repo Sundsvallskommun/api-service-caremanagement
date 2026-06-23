@@ -81,7 +81,7 @@ class FinancialAssistanceResourceTest {
 
 	@Test
 	void createErrand() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any())).thenReturn(ERRAND_ID);
+		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any())).thenReturn(ERRAND_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Min application").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
@@ -93,12 +93,30 @@ class FinancialAssistanceResourceTest {
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any());
+		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any());
+	}
+
+	@Test
+	void createErrandWithCaseDataSnapshot() {
+		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any())).thenReturn(ERRAND_ID);
+
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Med ärendeuppgifter").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
+		builder.part("caseData", "%PDF-1.4".getBytes()).filename("snapshot.pdf");
+
+		webTestClient.post()
+			.uri(uri -> uri.path(CREATE_PATH).build(base()))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isCreated();
+
+		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any());
 	}
 
 	@Test
 	void createErrandWithAttachments() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any())).thenReturn(ERRAND_ID);
+		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any())).thenReturn(ERRAND_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Med bilagor").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
@@ -112,7 +130,7 @@ class FinancialAssistanceResourceTest {
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any());
+		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any());
 	}
 
 	@Test

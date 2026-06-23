@@ -88,6 +88,15 @@ public class AttachmentService {
 	}
 
 	/**
+	 * Store the case-data (ärendeuppgifter) snapshot for the errand — a convenience over {@link #createAttachment} that
+	 * pins origin {@code CASE_DATA}, so the file is renamed to {@code {errandNumber}.pdf} and the one-per-errand rule
+	 * applies. Used by the EB create bundle so the whole errand is created in a single call.
+	 */
+	public String createCaseDataAttachment(final String municipalityId, final String namespace, final String errandId, final MultipartFile file) {
+		return createAttachment(municipalityId, namespace, errandId, ORIGIN_CASE_DATA, file);
+	}
+
+	/**
 	 * Persist each uploaded file as its own attachment and, in addition, a single combined PDF that merges them all (in
 	 * order). The combined PDF is stored as a further attachment named {@value #COMBINED_PDF_FILE_NAME}. The file list is
 	 * type-agnostic — PDFs, images and {@code .docx} are inlined, anything else becomes a placeholder page — so an odd

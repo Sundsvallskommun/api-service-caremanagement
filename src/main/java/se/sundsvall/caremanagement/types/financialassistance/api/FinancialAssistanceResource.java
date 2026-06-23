@@ -113,7 +113,7 @@ class FinancialAssistanceResource {
 	@Tag(name = TAG_ERRANDS, description = TAG_ERRANDS_DESC)
 	@PostMapping(path = "/{typeSlug:" + SLUG_REGEXP + "}", consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Create financial assistance errand",
-		description = "Multipart request. The 'request' part carries the application (JSON); the optional 'attachments' part carries the citizen's supporting files (any type). typeSlug is one of financial-assistance-new, financial-assistance-renewal, financial-assistance-supplementary. Each attachment is stored on the errand, and a single combined PDF merging them all is generated and stored alongside.",
+		description = "Multipart request. The 'request' part carries the application (JSON); the optional 'attachments' part carries the citizen's supporting files (any type); the optional 'caseData' part carries the application snapshot (ärendeuppgifter), stored as a single CASE_DATA attachment renamed to {errandNumber}.pdf. typeSlug is one of financial-assistance-new, financial-assistance-renewal, financial-assistance-supplementary. Each attachment is stored on the errand, and a single combined PDF merging them all is generated and stored alongside.",
 		responses = {
 			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
 		})
@@ -123,9 +123,10 @@ class FinancialAssistanceResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@PathVariable final String typeSlug,
 		@Valid @NotNull @RequestPart("request") final CreateFinancialAssistanceRequest request,
-		@RequestPart(value = "attachments", required = false) final List<MultipartFile> attachments) {
+		@RequestPart(value = "attachments", required = false) final List<MultipartFile> attachments,
+		@RequestPart(value = "caseData", required = false) final MultipartFile caseData) {
 
-		final var id = service.create(municipalityId, namespace, typeSlug, request, attachments);
+		final var id = service.create(municipalityId, namespace, typeSlug, request, attachments, caseData);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}")
 			.buildAndExpand(municipalityId, namespace, id).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)

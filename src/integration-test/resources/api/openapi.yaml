@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:63536
+- url: http://localhost:64884
   description: Generated server url
 tags:
 - name: Statistics
@@ -731,7 +731,9 @@ paths:
       summary: Create financial assistance errand
       description: "Multipart request. The 'request' part carries the application\
         \ (JSON); the optional 'attachments' part carries the citizen's supporting\
-        \ files (any type). typeSlug is one of financial-assistance-new, financial-assistance-renewal,\
+        \ files (any type); the optional 'caseData' part carries the application snapshot\
+        \ (ärendeuppgifter), stored as a single CASE_DATA attachment renamed to {errandNumber}.pdf.\
+        \ typeSlug is one of financial-assistance-new, financial-assistance-renewal,\
         \ financial-assistance-supplementary. Each attachment is stored on the errand,\
         \ and a single combined PDF merging them all is generated and stored alongside."
       operationId: createErrand_1
@@ -765,6 +767,9 @@ paths:
                   items:
                     type: string
                     format: binary
+                caseData:
+                  type: string
+                  format: binary
               required:
               - request
         required: true
@@ -4983,10 +4988,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri

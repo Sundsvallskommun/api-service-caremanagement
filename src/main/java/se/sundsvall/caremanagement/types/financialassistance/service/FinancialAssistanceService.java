@@ -128,10 +128,11 @@ public class FinancialAssistanceService {
 	 * Create the EB errand, persist its strongly-typed data, promote the application's persons (applicant/co-applicant) to
 	 * core stakeholder rows on the errand, and — when the citizen supplied supporting files — store each attachment plus a
 	 * single combined PDF merging them all. Attachments are type-agnostic: the list is handed to the attachments module
-	 * as-is.
+	 * as-is. The optional {@code caseData} file is the application snapshot (ärendeuppgifter): it is stored as a single
+	 * {@code CASE_DATA} attachment, renamed to {@code {errandNumber}.pdf}, so the whole errand is created in one call.
 	 */
 	public String create(final String municipalityId, final String namespace, final String typeSlug, final CreateFinancialAssistanceRequest request,
-		final List<MultipartFile> attachments) {
+		final List<MultipartFile> attachments, final MultipartFile caseData) {
 		final var envelope = Errand.create()
 			.withTypeSlug(typeSlug)
 			.withTitle(ofNullable(request.getTitle()).orElse(DEFAULT_TITLE))
@@ -156,6 +157,9 @@ public class FinancialAssistanceService {
 		ofNullable(attachments)
 			.filter(files -> !files.isEmpty())
 			.ifPresent(files -> attachmentService.storeAndCombine(municipalityId, namespace, errandId, files));
+
+		ofNullable(caseData)
+			.ifPresent(file -> attachmentService.createCaseDataAttachment(municipalityId, namespace, errandId, file));
 
 		return errandId;
 	}
