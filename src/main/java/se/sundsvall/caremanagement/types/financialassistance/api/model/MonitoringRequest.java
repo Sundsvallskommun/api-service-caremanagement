@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
+import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 
@@ -15,6 +16,19 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
  */
 @Schema(description = "Request to create or replace an EB monitoring on an errand.")
 public class MonitoringRequest {
+
+	@Schema(description = "Provenance, defaults to CASEWORKER when omitted. RPA POSTs LIFECARE (with lifecareId) to surface a "
+		+ "monitoring read out of Lifecare onto the errand.", examples = "CASEWORKER", allowableValues = {
+			"CASEWORKER", "LIFECARE"
+	})
+	@OneOf(value = {
+		"CASEWORKER", "LIFECARE"
+	}, nullable = true)
+	private String source;
+
+	@Schema(description = "The monitoring's id in Lifecare. Set by RPA when surfacing a LIFECARE-sourced monitoring (the idempotency "
+		+ "key) or when stamping back the id of a mirrored caseworker monitoring.", examples = "987654")
+	private String lifecareId;
 
 	@Schema(description = "Short headline for the monitoring", examples = "Follow up income details from CSN", requiredMode = Schema.RequiredMode.REQUIRED)
 	@NotBlank
@@ -37,6 +51,32 @@ public class MonitoringRequest {
 
 	public static MonitoringRequest create() {
 		return new MonitoringRequest();
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public void setSource(final String source) {
+		this.source = source;
+	}
+
+	public MonitoringRequest withSource(final String source) {
+		this.source = source;
+		return this;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
+	public MonitoringRequest withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+		return this;
 	}
 
 	public String getTitle() {
@@ -109,19 +149,22 @@ public class MonitoringRequest {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final MonitoringRequest that = (MonitoringRequest) o;
-		return Objects.equals(title, that.title) && Objects.equals(description, that.description) && Objects.equals(startDate, that.startDate)
+		return Objects.equals(source, that.source) && Objects.equals(lifecareId, that.lifecareId) && Objects.equals(title, that.title)
+			&& Objects.equals(description, that.description) && Objects.equals(startDate, that.startDate)
 			&& Objects.equals(endDate, that.endDate) && Objects.equals(createdBy, that.createdBy);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(title, description, startDate, endDate, createdBy);
+		return Objects.hash(source, lifecareId, title, description, startDate, endDate, createdBy);
 	}
 
 	@Override
 	public String toString() {
 		return "MonitoringRequest{" +
-			"title='" + title + '\'' +
+			"source='" + source + '\'' +
+			", lifecareId='" + lifecareId + '\'' +
+			", title='" + title + '\'' +
 			", description='" + description + '\'' +
 			", startDate=" + startDate +
 			", endDate=" + endDate +

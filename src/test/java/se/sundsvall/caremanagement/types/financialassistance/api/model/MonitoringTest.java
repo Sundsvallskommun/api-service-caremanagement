@@ -42,6 +42,8 @@ class MonitoringTest {
 		final var endDate = LocalDate.of(2026, 7, 31);
 		final var monitoring = Monitoring.create()
 			.withId("id")
+			.withSource("LIFECARE")
+			.withLifecareId("987654")
 			.withTitle("Följ upp")
 			.withDescription("Inväntar underlag")
 			.withStartDate(startDate)
@@ -51,6 +53,8 @@ class MonitoringTest {
 			.withUpdated(created);
 
 		org.assertj.core.api.Assertions.assertThat(monitoring.getId()).isEqualTo("id");
+		org.assertj.core.api.Assertions.assertThat(monitoring.getSource()).isEqualTo("LIFECARE");
+		org.assertj.core.api.Assertions.assertThat(monitoring.getLifecareId()).isEqualTo("987654");
 		org.assertj.core.api.Assertions.assertThat(monitoring.getTitle()).isEqualTo("Följ upp");
 		org.assertj.core.api.Assertions.assertThat(monitoring.getStartDate()).isEqualTo(startDate);
 		org.assertj.core.api.Assertions.assertThat(monitoring.getEndDate()).isEqualTo(endDate);

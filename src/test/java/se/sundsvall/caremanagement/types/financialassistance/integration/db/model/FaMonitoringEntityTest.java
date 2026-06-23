@@ -43,6 +43,8 @@ class FaMonitoringEntityTest {
 		final var entity = FaMonitoringEntity.create()
 			.withId("id")
 			.withErrandId("errand")
+			.withSource("LIFECARE")
+			.withLifecareId("987654")
 			.withTitle("Följ upp")
 			.withDescription("Inväntar underlag")
 			.withStartDate(startDate)
@@ -54,6 +56,8 @@ class FaMonitoringEntityTest {
 		org.assertj.core.api.Assertions.assertThat(entity).hasNoNullFieldsOrProperties();
 		org.assertj.core.api.Assertions.assertThat(entity.getId()).isEqualTo("id");
 		org.assertj.core.api.Assertions.assertThat(entity.getErrandId()).isEqualTo("errand");
+		org.assertj.core.api.Assertions.assertThat(entity.getSource()).isEqualTo("LIFECARE");
+		org.assertj.core.api.Assertions.assertThat(entity.getLifecareId()).isEqualTo("987654");
 		org.assertj.core.api.Assertions.assertThat(entity.getTitle()).isEqualTo("Följ upp");
 		org.assertj.core.api.Assertions.assertThat(entity.getStartDate()).isEqualTo(startDate);
 		org.assertj.core.api.Assertions.assertThat(entity.getEndDate()).isEqualTo(endDate);

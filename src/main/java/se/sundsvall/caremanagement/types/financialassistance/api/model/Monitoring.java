@@ -17,6 +17,16 @@ public class Monitoring {
 	@Schema(description = "The monitoring id", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", accessMode = Schema.AccessMode.READ_ONLY)
 	private String id;
 
+	@Schema(description = "Provenance: CASEWORKER for one authored in Draken (RPA mirrors it onto the person in Lifecare), "
+		+ "LIFECARE for one read out of Lifecare by RPA and surfaced here on the errand.", examples = "CASEWORKER", allowableValues = {
+			"CASEWORKER", "LIFECARE"
+	})
+	private String source;
+
+	@Schema(description = "The monitoring's id in Lifecare once it exists there — null until RPA has mirrored a caseworker-authored "
+		+ "monitoring; always set for a LIFECARE-sourced one.", examples = "987654")
+	private String lifecareId;
+
 	@Schema(description = "Short headline for the monitoring", examples = "Follow up income details from CSN")
 	private String title;
 
@@ -52,6 +62,32 @@ public class Monitoring {
 
 	public Monitoring withId(final String id) {
 		this.id = id;
+		return this;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public void setSource(final String source) {
+		this.source = source;
+	}
+
+	public Monitoring withSource(final String source) {
+		this.source = source;
+		return this;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
+	public Monitoring withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
 		return this;
 	}
 
@@ -151,20 +187,23 @@ public class Monitoring {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final Monitoring that = (Monitoring) o;
-		return Objects.equals(id, that.id) && Objects.equals(title, that.title) && Objects.equals(description, that.description)
+		return Objects.equals(id, that.id) && Objects.equals(source, that.source) && Objects.equals(lifecareId, that.lifecareId)
+			&& Objects.equals(title, that.title) && Objects.equals(description, that.description)
 			&& Objects.equals(startDate, that.startDate) && Objects.equals(endDate, that.endDate) && Objects.equals(createdBy, that.createdBy)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, title, description, startDate, endDate, createdBy, created, updated);
+		return Objects.hash(id, source, lifecareId, title, description, startDate, endDate, createdBy, created, updated);
 	}
 
 	@Override
 	public String toString() {
 		return "Monitoring{" +
 			"id='" + id + '\'' +
+			", source='" + source + '\'' +
+			", lifecareId='" + lifecareId + '\'' +
 			", title='" + title + '\'' +
 			", description='" + description + '\'' +
 			", startDate=" + startDate +

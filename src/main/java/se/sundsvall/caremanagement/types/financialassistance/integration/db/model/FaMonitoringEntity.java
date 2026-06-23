@@ -20,6 +20,14 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  * A single EB monitoring on an errand — a date-bound watch/reminder the caseworker manages in Draken. Unlike the income
  * warnings it carries no acknowledge lifecycle: it is created, edited and removed directly, and has a start date (when
  * the watch becomes relevant) plus an optional end date. Modelled after Lifecare IFO's "Monitorings".
+ *
+ * <p>
+ * {@code source} records provenance — {@code CASEWORKER} for one authored in Draken (RPA later mirrors it onto the
+ * person in Lifecare), {@code LIFECARE} for one read out of Lifecare by RPA and surfaced here on the errand. The FC API
+ * carries no bevakningar endpoint, so the sync is out-of-band: {@code lifecareId} is the monitoring's id in Lifecare
+ * once it exists there — null for a caseworker row not yet mirrored, the idempotency key RPA upserts LIFECARE rows on,
+ * and (by its presence) the "synced" marker.
+ * </p>
  */
 @Entity
 @Table(name = "errand_financial_assistance_monitoring", indexes = {
@@ -34,6 +42,12 @@ public class FaMonitoringEntity {
 
 	@Column(name = "errand_id")
 	private String errandId;
+
+	@Column(name = "source", length = 16)
+	private String source;
+
+	@Column(name = "lifecare_id", length = 64)
+	private String lifecareId;
 
 	@Column(name = "title")
 	private String title;
@@ -97,6 +111,32 @@ public class FaMonitoringEntity {
 
 	public FaMonitoringEntity withErrandId(final String errandId) {
 		this.errandId = errandId;
+		return this;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public void setSource(final String source) {
+		this.source = source;
+	}
+
+	public FaMonitoringEntity withSource(final String source) {
+		this.source = source;
+		return this;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
+	public FaMonitoringEntity withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
 		return this;
 	}
 
@@ -196,14 +236,15 @@ public class FaMonitoringEntity {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FaMonitoringEntity that = (FaMonitoringEntity) o;
-		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(title, that.title)
+		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(source, that.source)
+			&& Objects.equals(lifecareId, that.lifecareId) && Objects.equals(title, that.title)
 			&& Objects.equals(description, that.description) && Objects.equals(startDate, that.startDate) && Objects.equals(endDate, that.endDate)
 			&& Objects.equals(createdBy, that.createdBy) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, title, description, startDate, endDate, createdBy, created, updated);
+		return Objects.hash(id, errandId, source, lifecareId, title, description, startDate, endDate, createdBy, created, updated);
 	}
 
 	@Override
@@ -211,6 +252,8 @@ public class FaMonitoringEntity {
 		return "FaMonitoringEntity{" +
 			"id='" + id + '\'' +
 			", errandId='" + errandId + '\'' +
+			", source='" + source + '\'' +
+			", lifecareId='" + lifecareId + '\'' +
 			", title='" + title + '\'' +
 			", description='" + description + '\'' +
 			", startDate=" + startDate +

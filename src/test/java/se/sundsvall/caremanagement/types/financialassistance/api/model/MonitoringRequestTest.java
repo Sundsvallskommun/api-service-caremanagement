@@ -36,6 +36,8 @@ class MonitoringRequestTest {
 		final var startDate = LocalDate.of(2026, 7, 1);
 		final var endDate = LocalDate.of(2026, 7, 31);
 		final var request = MonitoringRequest.create()
+			.withSource("LIFECARE")
+			.withLifecareId("987654")
 			.withTitle("Följ upp")
 			.withDescription("Inväntar underlag")
 			.withStartDate(startDate)
@@ -43,6 +45,8 @@ class MonitoringRequestTest {
 			.withCreatedBy("joe01doe");
 
 		org.assertj.core.api.Assertions.assertThat(request).hasNoNullFieldsOrProperties();
+		org.assertj.core.api.Assertions.assertThat(request.getSource()).isEqualTo("LIFECARE");
+		org.assertj.core.api.Assertions.assertThat(request.getLifecareId()).isEqualTo("987654");
 		org.assertj.core.api.Assertions.assertThat(request.getTitle()).isEqualTo("Följ upp");
 		org.assertj.core.api.Assertions.assertThat(request.getStartDate()).isEqualTo(startDate);
 		org.assertj.core.api.Assertions.assertThat(request.getEndDate()).isEqualTo(endDate);

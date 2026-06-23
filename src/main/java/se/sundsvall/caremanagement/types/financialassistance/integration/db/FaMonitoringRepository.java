@@ -12,4 +12,6 @@ public interface FaMonitoringRepository extends JpaRepository<FaMonitoringEntity
 	List<FaMonitoringEntity> findByErrandId(String errandId);
 
 	Optional<FaMonitoringEntity> findByIdAndErrandId(String id, String errandId);
+
+	Optional<FaMonitoringEntity> findByErrandIdAndLifecareId(String errandId, String lifecareId);
 }

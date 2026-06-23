@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:54019
+- url: http://localhost:57013
   description: Generated server url
 tags:
 - name: Statistics
@@ -5070,6 +5070,23 @@ components:
       type: object
       description: Request to create or replace an EB monitoring on an errand.
       properties:
+        source:
+          type: string
+          description: "Provenance, defaults to CASEWORKER when omitted. RPA POSTs\
+            \ LIFECARE (with lifecareId) to surface a monitoring read out of Lifecare\
+            \ onto the errand."
+          enum:
+          - CASEWORKER
+          - LIFECARE
+          examples:
+          - CASEWORKER
+        lifecareId:
+          type: string
+          description: The monitoring's id in Lifecare. Set by RPA when surfacing
+            a LIFECARE-sourced monitoring (the idempotency key) or when stamping back
+            the id of a mirrored caseworker monitoring.
+          examples:
+          - "987654"
         title:
           type: string
           description: Short headline for the monitoring
@@ -5112,6 +5129,23 @@ components:
           examples:
           - f47ac10b-58cc-4372-a567-0e02b2c3d479
           readOnly: true
+        source:
+          type: string
+          description: "Provenance: CASEWORKER for one authored in Draken (RPA mirrors\
+            \ it onto the person in Lifecare), LIFECARE for one read out of Lifecare\
+            \ by RPA and surfaced here on the errand."
+          enum:
+          - CASEWORKER
+          - LIFECARE
+          examples:
+          - CASEWORKER
+        lifecareId:
+          type: string
+          description: The monitoring's id in Lifecare once it exists there — null
+            until RPA has mirrored a caseworker-authored monitoring; always set for
+            a LIFECARE-sourced one.
+          examples:
+          - "987654"
         title:
           type: string
           description: Short headline for the monitoring

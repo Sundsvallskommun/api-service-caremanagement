@@ -101,6 +101,77 @@ class MonitoringServiceTest {
 	}
 
 	@Test
+	void createDefaultsSourceToCaseworker() {
+		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request());
+
+		final var captor = ArgumentCaptor.forClass(FaMonitoringEntity.class);
+		verify(repositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getSource()).isEqualTo("CASEWORKER");
+		assertThat(captor.getValue().getLifecareId()).isNull();
+		assertThat(result.getSource()).isEqualTo("CASEWORKER");
+		verify(repositoryMock, never()).findByErrandIdAndLifecareId(any(), any());
+	}
+
+	@Test
+	void createLifecareSourcedInsertsWhenNoneExists() {
+		when(repositoryMock.findByErrandIdAndLifecareId(ERRAND_ID, "987654")).thenReturn(Optional.empty());
+		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			request().withSource("LIFECARE").withLifecareId("987654"));
+
+		final var captor = ArgumentCaptor.forClass(FaMonitoringEntity.class);
+		verify(repositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getId()).isNull(); // a fresh entity, id assigned on persist
+		assertThat(captor.getValue().getSource()).isEqualTo("LIFECARE");
+		assertThat(captor.getValue().getLifecareId()).isEqualTo("987654");
+		assertThat(result.getLifecareId()).isEqualTo("987654");
+	}
+
+	@Test
+	void createLifecareSourcedUpsertsOntoExisting() {
+		final var existing = entity("b1", OffsetDateTime.parse("2026-06-01T00:00:00Z")).withSource("LIFECARE").withLifecareId("987654").withTitle("old");
+		when(repositoryMock.findByErrandIdAndLifecareId(ERRAND_ID, "987654")).thenReturn(Optional.of(existing));
+		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			request().withSource("LIFECARE").withLifecareId("987654"));
+
+		final var captor = ArgumentCaptor.forClass(FaMonitoringEntity.class);
+		verify(repositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getId()).isEqualTo("b1"); // re-used the existing row, no duplicate
+		assertThat(captor.getValue().getTitle()).isEqualTo("Följ upp");
+		assertThat(result.getId()).isEqualTo("b1");
+	}
+
+	@Test
+	void updatePreservesProvenanceWhenNotSupplied() {
+		final var existing = entity("b1", OffsetDateTime.parse("2026-06-01T00:00:00Z")).withSource("LIFECARE").withLifecareId("987654");
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(existing));
+		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1", request());
+
+		assertThat(result.getSource()).isEqualTo("LIFECARE");
+		assertThat(result.getLifecareId()).isEqualTo("987654");
+	}
+
+	@Test
+	void updateStampsProvenanceWhenSupplied() {
+		final var existing = entity("b1", OffsetDateTime.parse("2026-06-01T00:00:00Z")); // source/lifecareId unset
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(existing));
+		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
+			request().withSource("CASEWORKER").withLifecareId("987654"));
+
+		assertThat(result.getSource()).isEqualTo("CASEWORKER");
+		assertThat(result.getLifecareId()).isEqualTo("987654");
+	}
+
+	@Test
 	void createWithoutEndDateIsAllowed() {
 		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 

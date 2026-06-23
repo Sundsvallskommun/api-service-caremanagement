@@ -61,6 +61,17 @@ class MonitoringResourceFailureTest {
 	}
 
 	@Test
+	void createMonitoring_invalidSource() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH).build(base()))
+			.bodyValue(MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, 7, 1)).withSource("SOMETHING_ELSE"))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
 	void createMonitoring_invalidErrandId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
