@@ -5,21 +5,31 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Registers the {@link ErrandEventInterceptor} on errand-scoped routes only, so the access log is built without
- * touching any resource or service.
+ * Wires the event-log interceptors:
+ * <ul>
+ * <li>{@link RequireIdentifierInterceptor} on the whole {@code /{municipalityId}/**} business surface — rejects
+ * requests
+ * without an {@code X-Sent-By} identity, so every logged action is attributable. Registered first so anonymous requests
+ * are turned away before the access log engages.</li>
+ * <li>{@link ErrandEventInterceptor} on errand-scoped routes — records the who/what/when access log.</li>
+ * </ul>
  */
 @Configuration
 class EventLogWebConfiguration implements WebMvcConfigurer {
 
-	private final ErrandEventInterceptor interceptor;
+	private final RequireIdentifierInterceptor requireIdentifierInterceptor;
+	private final ErrandEventInterceptor errandEventInterceptor;
 
-	EventLogWebConfiguration(final ErrandEventInterceptor interceptor) {
-		this.interceptor = interceptor;
+	EventLogWebConfiguration(final RequireIdentifierInterceptor requireIdentifierInterceptor, final ErrandEventInterceptor errandEventInterceptor) {
+		this.requireIdentifierInterceptor = requireIdentifierInterceptor;
+		this.errandEventInterceptor = errandEventInterceptor;
 	}
 
 	@Override
 	public void addInterceptors(final InterceptorRegistry registry) {
-		registry.addInterceptor(interceptor)
+		registry.addInterceptor(requireIdentifierInterceptor)
+			.addPathPatterns("/{municipalityId}/**");
+		registry.addInterceptor(errandEventInterceptor)
 			.addPathPatterns("/{municipalityId}/{namespace}/errands/**");
 	}
 }

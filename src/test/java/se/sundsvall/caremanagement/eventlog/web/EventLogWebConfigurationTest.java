@@ -12,14 +12,15 @@ import static org.mockito.Mockito.mock;
 class EventLogWebConfigurationTest {
 
 	@Test
-	void registersTheErrandEventInterceptor() {
-		final var interceptor = new ErrandEventInterceptor(mock(ErrandEventService.class));
-		final var configuration = new EventLogWebConfiguration(interceptor);
+	void registersBothInterceptors() {
+		final var configuration = new EventLogWebConfiguration(
+			new RequireIdentifierInterceptor(true),
+			new ErrandEventInterceptor(mock(ErrandEventService.class)));
 		final var registry = new InterceptorRegistry();
 
 		configuration.addInterceptors(registry);
 
 		final List<?> interceptors = ReflectionTestUtils.invokeMethod(registry, "getInterceptors");
-		assertThat(interceptors).hasSize(1);
+		assertThat(interceptors).hasSize(2);
 	}
 }

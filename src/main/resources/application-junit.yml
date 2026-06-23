@@ -22,6 +22,9 @@ scheduler:
     name: message-archive
     shedlock-lock-at-most-for: PT5M
     maximum-execution-time: PT5M
+caremanagement:
+  identifier:
+    required: false
 spring:
   cache:
     type: none

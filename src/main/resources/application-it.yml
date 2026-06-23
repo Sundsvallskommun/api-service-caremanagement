@@ -4,6 +4,9 @@
 logging:
   level:
     root: INFO
+caremanagement:
+  identifier:
+    required: false
 integration:
   operaton:
     url: http://localhost:${wiremock.server.port:}/api-operaton
