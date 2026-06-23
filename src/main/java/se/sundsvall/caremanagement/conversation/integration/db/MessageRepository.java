@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.conversation.integration.db;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,4 +13,6 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
 	List<MessageEntity> findByErrandIdOrderByCreatedAsc(String errandId);
 
 	Optional<MessageEntity> findByIdAndErrandId(String id, String errandId);
+
+	List<MessageEntity> findByErrandIdAndIdIn(String errandId, Collection<String> ids);
 }

@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:60420
+- url: http://localhost:64551
   description: Generated server url
 tags:
 - name: Statistics
@@ -1472,6 +1472,41 @@ paths:
               style: simple
               schema:
                 type: string
+  /{municipalityId}/{namespace}/errands/{errandId}/messages/read:
+    post:
+      tags:
+      - Conversation
+      summary: Mark messages as read for the calling side
+      description: "Marks the given messages as read for the caller's side (derived\
+        \ from the 'X-Sent-By' header). Idempotent, and not recorded in the event\
+        \ log."
+      operationId: markRead
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkMessagesRead"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
   /{municipalityId}/{namespace}/errands/{errandId}/journal-entries:
     get:
       tags:
@@ -4357,6 +4392,40 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/messages/unread-count:
+    get:
+      tags:
+      - Conversation
+      summary: Count unread messages for the calling side
+      description: "Returns how many messages addressed to the caller are unread.\
+        \ The caller's side is derived from the 'X-Sent-By' header (type=adAccount\
+        \ → caseworker, type=partyId → applicant). A read-only poll that is not recorded\
+        \ in the event log."
+      operationId: unreadCount
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCount"
   /{municipalityId}/{namespace}/errands/{errandId}/events:
     get:
       tags:
@@ -6424,6 +6493,22 @@ components:
       required:
       - body
       - direction
+    MarkMessagesRead:
+      type: object
+      description: "The messages the caller has read, to be marked as read for the\
+        \ calling side"
+      properties:
+        messageIds:
+          type: array
+          description: Ids of the read messages. Must reference messages on the same
+            errand.
+          examples:
+          - - f47ac10b-58cc-4372-a567-0e02b2c3d479
+          items:
+            type: string
+          minItems: 1
+      required:
+      - messageIds
     CreateJournalEntry:
       type: object
       properties:
@@ -8084,6 +8169,18 @@ components:
           format: date-time
           description: Created timestamp
           readOnly: true
+    UnreadCount:
+      type: object
+      description: The number of unread messages in the errand's conversation for
+        the calling side
+      properties:
+        unreadCount:
+          type: integer
+          format: int64
+          description: Number of messages addressed to the caller that the caller
+            has not yet marked as read
+          examples:
+          - 3
     ErrandEvent:
       type: object
       properties:

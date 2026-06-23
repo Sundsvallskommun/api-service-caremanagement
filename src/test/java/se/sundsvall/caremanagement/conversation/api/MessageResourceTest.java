@@ -13,8 +13,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.conversation.api.model.CreateMessage;
+import se.sundsvall.caremanagement.conversation.api.model.MarkMessagesRead;
 import se.sundsvall.caremanagement.conversation.api.model.Message;
+import se.sundsvall.caremanagement.conversation.api.model.UnreadCount;
+import se.sundsvall.caremanagement.conversation.service.MessageReadService;
 import se.sundsvall.caremanagement.conversation.service.MessageService;
+import se.sundsvall.dept44.support.Identifier;
 
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,6 +30,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
+import static se.sundsvall.caremanagement.conversation.service.ReaderSide.CASEWORKER;
+import static se.sundsvall.caremanagement.conversation.service.ReaderSide.CLIENT;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -41,6 +47,9 @@ class MessageResourceTest {
 
 	@MockitoBean
 	private MessageService serviceMock;
+
+	@MockitoBean
+	private MessageReadService readServiceMock;
 
 	@Autowired
 	private WebTestClient webTestClient;
@@ -95,6 +104,52 @@ class MessageResourceTest {
 
 		assertThat(response).hasSize(1);
 		verify(serviceMock).listForErrand(ERRAND_ID);
+	}
+
+	@Test
+	void unreadCountForCaseworker() {
+		when(readServiceMock.unreadCount(ERRAND_ID, CASEWORKER)).thenReturn(5L);
+
+		final var body = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "joe001doe; type=adAccount")
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(UnreadCount.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(body).isNotNull();
+		assertThat(body.unreadCount()).isEqualTo(5L);
+		verify(readServiceMock).unreadCount(ERRAND_ID, CASEWORKER);
+	}
+
+	@Test
+	void unreadCountForClient() {
+		when(readServiceMock.unreadCount(ERRAND_ID, CLIENT)).thenReturn(2L);
+
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "f47ac10b-58cc-4372-a567-0e02b2c3d479; type=partyId")
+			.exchange()
+			.expectStatus().isOk();
+
+		verify(readServiceMock).unreadCount(ERRAND_ID, CLIENT);
+	}
+
+	@Test
+	void markRead() {
+		final var messageIds = List.of(randomUUID().toString(), randomUUID().toString());
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/read").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "joe001doe; type=adAccount")
+			.contentType(APPLICATION_JSON)
+			.bodyValue(new MarkMessagesRead(messageIds))
+			.exchange()
+			.expectStatus().isNoContent();
+
+		verify(readServiceMock).markRead(ERRAND_ID, CASEWORKER, "joe001doe", messageIds);
 	}
 
 	@Test

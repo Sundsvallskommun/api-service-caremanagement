@@ -11,8 +11,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.conversation.api.model.CreateMessage;
+import se.sundsvall.caremanagement.conversation.api.model.MarkMessagesRead;
+import se.sundsvall.caremanagement.conversation.service.MessageReadService;
 import se.sundsvall.caremanagement.conversation.service.MessageService;
+import se.sundsvall.dept44.support.Identifier;
 
+import static java.util.List.of;
 import static java.util.UUID.randomUUID;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
@@ -31,6 +35,9 @@ class MessageResourceFailureTest {
 
 	@MockitoBean
 	private MessageService serviceMock;
+
+	@MockitoBean
+	private MessageReadService readServiceMock;
 
 	@Autowired
 	private WebTestClient webTestClient;
@@ -72,5 +79,64 @@ class MessageResourceFailureTest {
 	@Test
 	void post_invalidInReplyToId() {
 		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("OUTBOUND", "body", "author", "not-a-uuid"));
+	}
+
+	@Test
+	void unreadCount_missingIdentifier() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(readServiceMock);
+	}
+
+	@Test
+	void unreadCount_unsupportedIdentifierType() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "some-system; type=someCustomType")
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(readServiceMock);
+	}
+
+	@Test
+	void markRead_missingIdentifier() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/read").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.contentType(APPLICATION_JSON)
+			.bodyValue(new MarkMessagesRead(of(randomUUID().toString())))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(readServiceMock);
+	}
+
+	@Test
+	void markRead_emptyMessageIds() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/read").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "joe001doe; type=adAccount")
+			.contentType(APPLICATION_JSON)
+			.bodyValue(new MarkMessagesRead(of()))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(readServiceMock);
+	}
+
+	@Test
+	void markRead_invalidMessageId() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/read").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "joe001doe; type=adAccount")
+			.contentType(APPLICATION_JSON)
+			.bodyValue(new MarkMessagesRead(of("not-a-uuid")))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(readServiceMock);
 	}
 }

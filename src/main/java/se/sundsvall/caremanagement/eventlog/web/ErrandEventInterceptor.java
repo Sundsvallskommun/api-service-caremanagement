@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +44,14 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 	private static final Pattern NUMERIC_SEGMENT = Pattern.compile("^\\d+$");
 
 	private static final String ERRANDS_SEGMENT = "errands";
-	private static final String EVENTS_TARGET = "events";
 	private static final String DEFAULT_TARGET = "errand";
+
+	/**
+	 * Targets that must never produce an access-log row: reads of the event log itself, and the conversation read-state
+	 * machinery (the polled unread-count and the mark-as-read call) — recording those would drown the who/what/when log
+	 * in noise and is explicitly not wanted.
+	 */
+	private static final Set<String> NON_AUDITED_TARGETS = Set.of("events", "messages/unread-count", "messages/read");
 
 	private final ErrandEventService service;
 
@@ -80,8 +87,8 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 		}
 
 		final var target = deriveTarget(parts, errandIdIndex);
-		if (EVENTS_TARGET.equals(target)) {
-			return; // don't log reads of the event log itself
+		if (NON_AUDITED_TARGETS.contains(target)) {
+			return; // event-log reads and conversation read-state calls are never audited
 		}
 
 		final var identifier = Optional.ofNullable(Identifier.get());

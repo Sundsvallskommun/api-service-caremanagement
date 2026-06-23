@@ -177,6 +177,33 @@ class ErrandEventInterceptorTest {
 	}
 
 	@Test
+	void skipsUnreadCountPolls() {
+		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/unread-count");
+
+		interceptor().afterCompletion(request, response, new Object(), null);
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void skipsMarkAsReadCalls() {
+		stubMethodAndUri("POST", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/read");
+
+		interceptor().afterCompletion(request, response, new Object(), null);
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void stillRecordsRegularMessageRoutes() {
+		stub("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages", 200);
+
+		interceptor().afterCompletion(request, response, new Object(), null);
+
+		assertThat(capture().getTarget()).isEqualTo("messages");
+	}
+
+	@Test
 	void skipsNonCrudMethod() {
 		when(request.getMethod()).thenReturn("OPTIONS");
 
