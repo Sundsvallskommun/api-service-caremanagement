@@ -14,6 +14,7 @@ import se.sundsvall.caremanagement.notifications.service.mapper.NotificationMapp
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.util.StringUtils.hasText;
 
 @Service
 @Transactional
@@ -76,6 +77,18 @@ public class NotificationService {
 	public int acknowledgeAll(final String municipalityId, final String namespace, final String errandId) {
 		ensureErrandExists(municipalityId, namespace, errandId);
 		return notificationRepository.acknowledgeAllByErrand(namespace, municipalityId, errandId);
+	}
+
+	/**
+	 * Claims every ownerless notification on the errand for {@code ownerId} — used when a handläggare is assigned, so the
+	 * messages that arrived while the errand was unassigned land in the new owner's unread list. Acknowledgement state is
+	 * left untouched (the rows stay unread). A blank {@code ownerId} is a no-op.
+	 */
+	public int assignUnownedNotifications(final String municipalityId, final String namespace, final String errandId, final String ownerId) {
+		if (!hasText(ownerId)) {
+			return 0;
+		}
+		return notificationRepository.assignOwnerToUnowned(namespace, municipalityId, errandId, ownerId);
 	}
 
 	private void ensureErrandExists(final String municipalityId, final String namespace, final String errandId) {

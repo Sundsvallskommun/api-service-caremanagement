@@ -26,6 +26,10 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
 	int acknowledgeAllByErrand(String namespace, String municipalityId, String errandId);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("update NotificationEntity n set n.ownerId = ?4 where n.namespace = ?1 and n.municipalityId = ?2 and n.errandId = ?3 and (n.ownerId is null or n.ownerId = '')")
+	int assignOwnerToUnowned(String namespace, String municipalityId, String errandId, String ownerId);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	long deleteByExpiresBefore(OffsetDateTime cutoff);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)

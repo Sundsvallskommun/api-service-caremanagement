@@ -65,13 +65,30 @@ class MessageNotificationListenerTest {
 	}
 
 	@Test
-	void unassignedErrandRaisesNoNotification() {
+	void unassignedErrandRaisesOwnerlessNotification() {
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
 			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID)));
 
 		listener.on(inbound());
 
-		verify(notificationServiceMock, never()).create(any(), any(), any(), any());
+		final var captor = ArgumentCaptor.forClass(Notification.class);
+		verify(notificationServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), captor.capture());
+		final var notification = captor.getValue();
+		assertThat(notification.getOwnerId()).isNull();
+		assertThat(notification.getCreatedBy()).isEqualTo(APPLICANT);
+		assertThat(notification.getSubType()).isEqualTo("MESSAGE");
+	}
+
+	@Test
+	void blankAssigneeRaisesOwnerlessNotification() {
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID).withAssignedUserId(" ")));
+
+		listener.on(inbound());
+
+		final var captor = ArgumentCaptor.forClass(Notification.class);
+		verify(notificationServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), captor.capture());
+		assertThat(captor.getValue().getOwnerId()).isNull();
 	}
 
 	@Test

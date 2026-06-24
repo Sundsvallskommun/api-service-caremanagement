@@ -42,7 +42,7 @@ public class NotificationEntity implements Auditable {
 	@Column(name = "namespace", nullable = false, length = 32)
 	private String namespace;
 
-	@Column(name = "owner_id", nullable = false)
+	@Column(name = "owner_id")
 	private String ownerId;
 
 	@Column(name = "created_by")
