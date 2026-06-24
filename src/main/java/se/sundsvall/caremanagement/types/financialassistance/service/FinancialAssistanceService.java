@@ -17,6 +17,8 @@ import se.sundsvall.caremanagement.core.api.model.PatchErrand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
+import se.sundsvall.caremanagement.formsnapshot.api.model.FormSnapshot;
+import se.sundsvall.caremanagement.formsnapshot.service.FormSnapshotService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationResult;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
@@ -108,11 +110,12 @@ public class FinancialAssistanceService {
 	private final DraftService draftService;
 	private final CalculationFeeder calculationFeeder;
 	private final RpaService rpaService;
+	private final FormSnapshotService formSnapshotService;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final CalculationService calculationService,
 		final ActualisationService actualisationService, final PaymentStatusService paymentStatusService, final CitizenService citizenService, final DecisionService decisionService,
 		final AttachmentService attachmentService, final StakeholderService stakeholderService, final WarningService warningService, final SectionApprovalService sectionApprovalService,
-		final DraftService draftService, final CalculationFeeder calculationFeeder, final RpaService rpaService) {
+		final DraftService draftService, final CalculationFeeder calculationFeeder, final RpaService rpaService, final FormSnapshotService formSnapshotService) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.calculationService = calculationService;
@@ -127,6 +130,7 @@ public class FinancialAssistanceService {
 		this.draftService = draftService;
 		this.calculationFeeder = calculationFeeder;
 		this.rpaService = rpaService;
+		this.formSnapshotService = formSnapshotService;
 	}
 
 	/**
@@ -135,9 +139,11 @@ public class FinancialAssistanceService {
 	 * single combined PDF merging them all. Attachments are type-agnostic: the list is handed to the attachments module
 	 * as-is. The optional {@code caseData} file is the application snapshot (ärendeuppgifter): it is stored as a single
 	 * {@code CASE_DATA} attachment, renamed to {@code {errandNumber}.pdf}, so the whole errand is created in one call.
+	 * The optional {@code formSnapshot} is the self-describing JSON snapshot of the form as the applicant saw it (every
+	 * question, help/info/notice text, option label and answer): it is captured write-once for the legal record.
 	 */
 	public String create(final String municipalityId, final String namespace, final String typeSlug, final CreateFinancialAssistanceRequest request,
-		final List<MultipartFile> attachments, final MultipartFile caseData) {
+		final List<MultipartFile> attachments, final MultipartFile caseData, final String formSnapshot) {
 		final var envelope = Errand.create()
 			.withTypeSlug(typeSlug)
 			.withTitle(ofNullable(request.getTitle()).orElse(DEFAULT_TITLE))
@@ -166,7 +172,22 @@ public class FinancialAssistanceService {
 		ofNullable(caseData)
 			.ifPresent(file -> attachmentService.createCaseDataAttachment(municipalityId, namespace, errandId, file));
 
+		ofNullable(formSnapshot)
+			.filter(StringUtils::hasText)
+			.ifPresent(payload -> formSnapshotService.capture(municipalityId, namespace, errandId, typeSlug, payload));
+
 		return errandId;
+	}
+
+	/**
+	 * The immutable form snapshot of an errand — the citizen-facing application form as it was rendered and answered, for
+	 * re-display. Scoped: throws {@code 404} when the errand is missing in this namespace/municipality, or when no
+	 * snapshot was captured.
+	 */
+	@Transactional(readOnly = true)
+	public FormSnapshot readFormSnapshot(final String municipalityId, final String namespace, final String errandId) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		return formSnapshotService.read(errandId);
 	}
 
 	@Transactional(readOnly = true)

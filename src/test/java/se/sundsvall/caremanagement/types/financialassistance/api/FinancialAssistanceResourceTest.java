@@ -12,6 +12,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
+import se.sundsvall.caremanagement.formsnapshot.api.model.FormSnapshot;
+import se.sundsvall.caremanagement.formsnapshot.api.model.FormSnapshotSection;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
@@ -82,7 +84,7 @@ class FinancialAssistanceResourceTest {
 
 	@Test
 	void createErrand() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any())).thenReturn(ERRAND_ID);
+		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Min application").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
@@ -94,12 +96,12 @@ class FinancialAssistanceResourceTest {
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any());
+		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
 
 	@Test
 	void createErrandWithCaseDataSnapshot() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any())).thenReturn(ERRAND_ID);
+		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Med ärendeuppgifter").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
@@ -112,12 +114,12 @@ class FinancialAssistanceResourceTest {
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any());
+		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
 
 	@Test
 	void createErrandWithAttachments() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any())).thenReturn(ERRAND_ID);
+		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Med bilagor").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
@@ -131,7 +133,25 @@ class FinancialAssistanceResourceTest {
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any());
+		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
+	}
+
+	@Test
+	void createErrandWithFormSnapshot() {
+		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
+
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Med formulärsnapshot").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
+		builder.part("formSnapshot", "{\"schemaVersion\":\"form-snapshot/1\",\"sections\":[]}", APPLICATION_JSON);
+
+		webTestClient.post()
+			.uri(uri -> uri.path(CREATE_PATH).build(base()))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isCreated();
+
+		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
 
 	@Test
@@ -149,6 +169,26 @@ class FinancialAssistanceResourceTest {
 		assertThat(view).isNotNull();
 		assertThat(view.getId()).isEqualTo(ERRAND_ID);
 		verify(serviceMock).read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	@Test
+	void readFormSnapshot() {
+		when(serviceMock.readFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(FormSnapshot.create().withSchemaVersion("form-snapshot/1").withTitle("Ansökan")
+				.withSections(List.of(FormSnapshotSection.create().withId("household").withTitle("Hushåll"))));
+
+		final var snapshot = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/{errandId}/form-snapshot").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(FormSnapshot.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(snapshot).isNotNull();
+		assertThat(snapshot.getSchemaVersion()).isEqualTo("form-snapshot/1");
+		assertThat(snapshot.getSections()).hasSize(1);
+		verify(serviceMock).readFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test

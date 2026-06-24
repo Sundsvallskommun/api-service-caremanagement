@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:54470
+- url: http://localhost:53150
   description: Generated server url
 tags:
 - name: Statistics
@@ -758,10 +758,14 @@ paths:
       description: "Multipart request. The 'request' part carries the application\
         \ (JSON); the optional 'attachments' part carries the citizen's supporting\
         \ files (any type); the optional 'caseData' part carries the application snapshot\
-        \ (ärendeuppgifter), stored as a single CASE_DATA attachment renamed to {errandNumber}.pdf.\
-        \ typeSlug is one of financial-assistance-new, financial-assistance-renewal,\
-        \ financial-assistance-supplementary. Each attachment is stored on the errand,\
-        \ and a single combined PDF merging them all is generated and stored alongside."
+        \ (ärendeuppgifter), stored as a single CASE_DATA attachment renamed to {errandNumber}.pdf;\
+        \ the optional 'formSnapshot' part carries the self-describing JSON snapshot\
+        \ of the form exactly as the applicant saw it (every question, help/info/notice\
+        \ text, option label and answer), captured write-once for the legal record\
+        \ and readable back via GET .../form-snapshot. typeSlug is one of financial-assistance-new,\
+        \ financial-assistance-renewal, financial-assistance-supplementary. Each attachment\
+        \ is stored on the errand, and a single combined PDF merging them all is generated\
+        \ and stored alongside."
       operationId: createErrand_1
       parameters:
       - name: municipalityId
@@ -796,6 +800,8 @@ paths:
                 caseData:
                   type: string
                   format: binary
+                formSnapshot:
+                  type: string
               required:
               - request
         required: true
@@ -5054,6 +5060,48 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/form-snapshot:
+    get:
+      tags:
+      - Financial Assistance · Errands
+      summary: Read the application form snapshot
+      description: "The immutable, self-describing snapshot of the citizen-facing\
+        \ application form exactly as the applicant saw and answered it — every section,\
+        \ question label, help/info/notice text, option label and answer — captured\
+        \ at submission for the legal record. A generic renderer can walk it without\
+        \ the frontend that produced it. 404 when no snapshot was captured for the\
+        \ errand."
+      operationId: readFormSnapshot
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FormSnapshot"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft:
     get:
       tags:
@@ -5334,10 +5382,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -8646,6 +8694,231 @@ components:
           description: Number of monitorings on the errand
           examples:
           - 2
+    FormSnapshot:
+      type: object
+      description: Self-describing snapshot of the form as it was rendered and answered.
+      properties:
+        schemaVersion:
+          type: string
+          description: The snapshot envelope contract version (server-owned)
+          examples:
+          - form-snapshot/1
+          minLength: 1
+        formDefinitionVersion:
+          type: string
+          description: The frontend form / i18n bundle version that produced this
+            snapshot
+          examples:
+          - eb-2026.06-r3
+        typeSlug:
+          type: string
+          description: The errand type slug the form belongs to
+          examples:
+          - financial-assistance-new
+        locale:
+          type: string
+          description: The locale the form was rendered in
+          examples:
+          - sv-SE
+        capturedAt:
+          type: string
+          format: date-time
+          description: "When the form was rendered/submitted, per the client clock"
+          examples:
+          - 2026-06-24T10:15:30+02:00
+        title:
+          type: string
+          description: The form title the applicant saw
+          examples:
+          - Ansökan om ekonomiskt bistånd
+        sections:
+          type: array
+          description: "The sections of the form, in render order"
+          items:
+            $ref: "#/components/schemas/FormSnapshotSection"
+          minItems: 1
+        attestation:
+          $ref: "#/components/schemas/FormSnapshotAttestation"
+          description: "The attestation the applicant accepted, if any"
+      required:
+      - schemaVersion
+      - sections
+    FormSnapshotAnswer:
+      type: object
+      description: "The answer given to a field, as it was presented to the applicant."
+      properties:
+        code:
+          type: string
+          description: "The option code, when the answer is an enum/option value;\
+            \ null otherwise"
+          examples:
+          - SINGLE
+        value:
+          type: string
+          description: "The raw value, when the answer is free text / number / boolean;\
+            \ null otherwise"
+          examples:
+          - "12000"
+        display:
+          type: string
+          description: The human-readable answer text the applicant saw
+          examples:
+          - Ensamstående
+    FormSnapshotAttestation:
+      type: object
+      description: The attestation the applicant accepted at submission.
+      properties:
+        label:
+          type: string
+          description: The attestation text the applicant accepted
+          examples:
+          - Jag intygar på heder och samvete att uppgifterna är riktiga.
+        answer:
+          $ref: "#/components/schemas/FormSnapshotAnswer"
+          description: The answer given to the attestation
+    FormSnapshotField:
+      type: object
+      description: A single form field as it was rendered and answered.
+      properties:
+        name:
+          type: string
+          description: The field name (matches the typed application data field)
+          examples:
+          - maritalStatus
+        label:
+          type: string
+          description: The field label the applicant saw
+          examples:
+          - Civilstånd
+        inputType:
+          type: string
+          description: The input kind as rendered
+          enum:
+          - RADIO
+          - CHECKBOX
+          - SELECT
+          - TEXT
+          - TEXTAREA
+          - NUMBER
+          - DATE
+          - BOOLEAN_TOGGLE
+          - REPEATING_GROUP
+          - STATIC
+          examples:
+          - RADIO
+        helpText:
+          type: string
+          description: "The help text shown for the field, if any"
+          examples:
+          - Ange ditt civilstånd vid ansökningstillfället.
+        infoTexts:
+          type: array
+          description: "Info texts shown for the field, in order"
+          items:
+            type: string
+        notices:
+          type: array
+          description: "Info / warning / error notices rendered for the field, in\
+            \ order"
+          items:
+            $ref: "#/components/schemas/FormSnapshotNotice"
+        options:
+          type: array
+          description: "All options as presented (for RADIO/CHECKBOX/SELECT), in order"
+          items:
+            $ref: "#/components/schemas/FormSnapshotOption"
+        answer:
+          $ref: "#/components/schemas/FormSnapshotAnswer"
+          description: "The answer given, when the field has a single answer"
+        items:
+          type: array
+          description: "For REPEATING_GROUP fields, one entry per repeated instance;\
+            \ each is the list of nested fields"
+          items:
+            type: array
+            items:
+              $ref: "#/components/schemas/FormSnapshotField"
+        required:
+          type: boolean
+          description: Whether the field was required as rendered
+          examples:
+          - "true"
+        visible:
+          type: boolean
+          description: Whether the field was visible to the applicant
+          examples:
+          - "true"
+        condition:
+          type: string
+          description: "The visibility rule that was active, human-readable"
+          examples:
+          - always
+    FormSnapshotNotice:
+      type: object
+      description: An info / warning / error notice shown to the applicant.
+      properties:
+        level:
+          type: string
+          description: The notice level
+          enum:
+          - INFO
+          - WARNING
+          - ERROR
+          examples:
+          - WARNING
+        text:
+          type: string
+          description: The notice text the applicant saw
+          examples:
+          - Felaktiga uppgifter kan vara bidragsbrott.
+    FormSnapshotOption:
+      type: object
+      description: An option as presented to the applicant.
+      properties:
+        code:
+          type: string
+          description: The option code (machine value)
+          examples:
+          - SINGLE
+        label:
+          type: string
+          description: The option label the applicant saw
+          examples:
+          - Ensamstående
+        selected:
+          type: boolean
+          description: Whether the applicant selected this option
+          examples:
+          - "true"
+    FormSnapshotSection:
+      type: object
+      description: A section of the form as it was rendered.
+      properties:
+        id:
+          type: string
+          description: A stable section id
+          examples:
+          - household
+        title:
+          type: string
+          description: The section title the applicant saw
+          examples:
+          - Hushåll
+        description:
+          type: string
+          description: "The section-level description / info text, if any"
+          examples:
+          - Uppgifter om din familj
+        visible:
+          type: boolean
+          description: Whether the section was visible to the applicant
+          examples:
+          - "true"
+        fields:
+          type: array
+          description: "The fields in the section, in render order"
+          items:
+            $ref: "#/components/schemas/FormSnapshotField"
     PrefilledChild:
       type: object
       description: "A child pre-filled from Lifecare for a financial assistance renewal.\

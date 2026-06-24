@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
+import se.sundsvall.caremanagement.formsnapshot.api.model.FormSnapshot;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
@@ -114,7 +115,7 @@ class FinancialAssistanceResource {
 	@Tag(name = TAG_ERRANDS, description = TAG_ERRANDS_DESC)
 	@PostMapping(path = "/{typeSlug:" + SLUG_REGEXP + "}", consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Create financial assistance errand",
-		description = "Multipart request. The 'request' part carries the application (JSON); the optional 'attachments' part carries the citizen's supporting files (any type); the optional 'caseData' part carries the application snapshot (ärendeuppgifter), stored as a single CASE_DATA attachment renamed to {errandNumber}.pdf. typeSlug is one of financial-assistance-new, financial-assistance-renewal, financial-assistance-supplementary. Each attachment is stored on the errand, and a single combined PDF merging them all is generated and stored alongside.",
+		description = "Multipart request. The 'request' part carries the application (JSON); the optional 'attachments' part carries the citizen's supporting files (any type); the optional 'caseData' part carries the application snapshot (ärendeuppgifter), stored as a single CASE_DATA attachment renamed to {errandNumber}.pdf; the optional 'formSnapshot' part carries the self-describing JSON snapshot of the form exactly as the applicant saw it (every question, help/info/notice text, option label and answer), captured write-once for the legal record and readable back via GET .../form-snapshot. typeSlug is one of financial-assistance-new, financial-assistance-renewal, financial-assistance-supplementary. Each attachment is stored on the errand, and a single combined PDF merging them all is generated and stored alongside.",
 		responses = {
 			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
 		})
@@ -125,9 +126,10 @@ class FinancialAssistanceResource {
 		@PathVariable final String typeSlug,
 		@Valid @NotNull @RequestPart("request") final CreateFinancialAssistanceRequest request,
 		@RequestPart(value = "attachments", required = false) final List<MultipartFile> attachments,
-		@RequestPart(value = "caseData", required = false) final MultipartFile caseData) {
+		@RequestPart(value = "caseData", required = false) final MultipartFile caseData,
+		@RequestPart(value = "formSnapshot", required = false) final String formSnapshot) {
 
-		final var id = service.create(municipalityId, namespace, typeSlug, request, attachments, caseData);
+		final var id = service.create(municipalityId, namespace, typeSlug, request, attachments, caseData, formSnapshot);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}")
 			.buildAndExpand(municipalityId, namespace, id).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)
@@ -584,6 +586,22 @@ class FinancialAssistanceResource {
 		@ValidUuid @PathVariable final String errandId) {
 
 		return ok(service.read(municipalityId, namespace, errandId));
+	}
+
+	@Tag(name = TAG_ERRANDS, description = TAG_ERRANDS_DESC)
+	@GetMapping(path = "/financial-assistance/{errandId}/form-snapshot", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Read the application form snapshot",
+		description = "The immutable, self-describing snapshot of the citizen-facing application form exactly as the applicant saw and answered it — every section, question label, help/info/notice text, option label and answer — captured at submission for the legal record. A generic renderer can walk it without the frontend that produced it. 404 when no snapshot was captured for the errand.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<FormSnapshot> readFormSnapshot(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@ValidUuid @PathVariable final String errandId) {
+
+		return ok(service.readFormSnapshot(municipalityId, namespace, errandId));
 	}
 
 	@Tag(name = TAG_ERRANDS, description = TAG_ERRANDS_DESC)
