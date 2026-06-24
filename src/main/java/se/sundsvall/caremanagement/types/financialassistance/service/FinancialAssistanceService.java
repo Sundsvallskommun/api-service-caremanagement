@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -25,6 +26,8 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
@@ -54,6 +57,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionAp
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
@@ -420,6 +424,52 @@ public class FinancialAssistanceService {
 			.withCalculationId(calculationId)
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
 			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of));
+	}
+
+	/**
+	 * Create the calculation in Lifecare FC straight from the incomes, costs and household the citizen declared in the
+	 * application — the nyansökan path: no SSBTEK, no daily loop, no caseworker draft. Incomes come from the application's
+	 * own declared incomes (resolved to FC types by name), expenses and persons from the same feeder the renewal path uses
+	 * (both already application-sourced), and the norm from the proposal for the application month. Posts in one shot and
+	 * returns the created calculation id.
+	 */
+	public CalculationResponse commitFromApplication(final String municipalityId, final String namespace, final CalculationRequest request) {
+		final var errandId = requireErrandId(request);
+		final var applicant = personalNumber(municipalityId, request.getApplicant());
+		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
+		final var errand = repository.findByErrandId(errandId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No financial-assistance errand for id " + errandId));
+
+		// Incomes straight from the application, but folded + converted through the same pipeline as the SSBTEK path
+		// (CalculationFeeder.incomeRows → toEffectiveIncome); expenses + persons via the same feeder, already application-
+		// sourced. Nothing here is calculation logic of its own — only the application's data fed into the existing engine.
+		final var incomeLines = calculationService.applicationIncomeLines(applicant, toApplicationIncomes(errand.getIncomes()));
+		final var incomes = calculationFeeder.incomeRows(errandId, incomeLines).stream()
+			.map(FinancialAssistanceService::toEffectiveIncome).toList();
+		final var expenses = calculationFeeder.expenseFeed(municipalityId, errandId, errand).rows().stream()
+			.map(FinancialAssistanceService::toEffectiveExpense).toList();
+		final var persons = calculationFeeder.personRows(errandId, errand).stream()
+			.map(FinancialAssistanceService::toEffectivePerson).toList();
+
+		final var normId = calculationService.selectNormId(applicant, applicationMonth);
+		final var header = new CalculationHeader(normId, applicationMonth.atDay(1), applicationMonth.atEndOfMonth(), LocalDate.now(), false, null);
+
+		final var calculationId = calculationService.commitEffective(applicant, applicationMonth, header, incomes, expenses, persons);
+		triggerRpaWrite(municipalityId, errandId, WRITE_NORMBERAKNING);
+
+		return CalculationResponse.create().withCalculationId(calculationId);
+	}
+
+	/** The application's declared incomes as the neutral {@link ApplicationIncome} the FC mapper consumes. */
+	private static List<ApplicationIncome> toApplicationIncomes(final List<FaIncome> incomes) {
+		return ofNullable(incomes).orElseGet(List::of).stream()
+			.map(income -> new ApplicationIncome(income.getIncomeType(), income.getAmount(), income.getIncomeDate(), toRole(income.getRecipient())))
+			.toList();
+	}
+
+	/** Map the application recipient code to a role — anything but the explicit co-applicant code is the applicant. */
+	private static ApplicantRole toRole(final String recipient) {
+		return ApplicantRole.CO_APPLICANT.name().equals(recipient) ? ApplicantRole.CO_APPLICANT : ApplicantRole.APPLICANT;
 	}
 
 	/** Enqueue an RPA write, swallowing any failure — RPA mirroring must never roll back a successful Lifecare write. */

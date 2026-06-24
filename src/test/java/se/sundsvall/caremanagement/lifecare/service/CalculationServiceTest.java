@@ -170,6 +170,23 @@ class CalculationServiceTest {
 	}
 
 	@Test
+	void applicationIncomeLinesResolveAgainstProposal() {
+		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal()
+			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(11).name("Lön efter skatt")));
+
+		final var lines = service.applicationIncomeLines(APPLICANT, List.of(
+			new se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome("SALARY", new BigDecimal("18500"), LocalDate.of(2026, 5, 25), ApplicantRole.APPLICANT)));
+
+		assertThat(lines).singleElement().satisfies(line -> {
+			assertThat(line.typeId()).isEqualTo(11);
+			assertThat(line.typeName()).isEqualTo("Lön efter skatt");
+			assertThat(line.recipient()).isEqualTo("APPLICANT");
+			assertThat(line.amount()).isEqualByComparingTo("18500");
+			assertThat(line.note()).isEqualTo("Ansökan");
+		});
+	}
+
+	@Test
 	void completenessReportsMissingPreviousTypes() {
 		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
 			bostadsbidrag()

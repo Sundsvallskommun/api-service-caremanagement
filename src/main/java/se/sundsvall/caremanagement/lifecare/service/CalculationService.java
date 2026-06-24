@@ -19,9 +19,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
+import se.sundsvall.caremanagement.lifecare.service.mapper.ApplicationIncomeToFcMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.CalculationAssembler;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFcMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationDraftBuild;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationResult;
@@ -127,6 +129,19 @@ public class CalculationService {
 	public List<FcIncomeLine> incomeLines(final String applicantPersonId, final String classifiedIncomesJson) {
 		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
 		return ClassifiedIncomeToFcMapper.toIncomeLines(parse(classifiedIncomesJson), proposal);
+	}
+
+	/**
+	 * The process-derived income lines for a calculation built straight from the incomes the citizen declared in the
+	 * application — the nyansökan sibling of {@link #incomeLines}, no SSBTEK. Each application income code is translated to
+	 * its FC income type and resolved against the applicant's calculation proposal (via
+	 * {@link ApplicationIncomeToFcMapper});
+	 * incomes whose type does not resolve are skipped. Same {@link FcIncomeLine} shape as the SSBTEK path, so the
+	 * downstream fold + commit pipeline is shared. Writes nothing to Lifecare.
+	 */
+	public List<FcIncomeLine> applicationIncomeLines(final String applicantPersonId, final List<ApplicationIncome> incomes) {
+		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		return ApplicationIncomeToFcMapper.toIncomeLines(incomes, proposal);
 	}
 
 	/**

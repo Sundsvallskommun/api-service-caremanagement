@@ -520,6 +520,25 @@ class FinancialAssistanceResourceTest {
 	}
 
 	@Test
+	void commitFromApplication() {
+		when(serviceMock.commitFromApplication(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class)))
+			.thenReturn(CalculationResponse.create().withCalculationId(5001));
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/calculation/from-application").build(base()))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(CalculationResponse.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getCalculationId()).isEqualTo(5001);
+		verify(serviceMock).commitFromApplication(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class));
+	}
+
+	@Test
 	void createActualisation() {
 		when(serviceMock.createActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(ActualisationRequest.class)))
 			.thenReturn(ActualisationResponse.create().withActualisationId(5012));

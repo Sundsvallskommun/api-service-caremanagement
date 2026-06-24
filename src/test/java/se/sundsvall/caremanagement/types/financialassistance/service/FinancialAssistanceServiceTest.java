@@ -26,9 +26,11 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
 import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
@@ -47,6 +49,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionAp
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCalculationDraftEntity;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
@@ -408,6 +411,61 @@ class FinancialAssistanceServiceTest {
 		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
 
 		assertThatThrownBy(() -> service.commitCalculation(MUNICIPALITY_ID, NAMESPACE, request))
+			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", NOT_FOUND);
+	}
+
+	@Test
+	void commitFromApplicationFeedsApplicationDataThroughTheSamePipeline() {
+		final var month = YearMonth.of(2026, 6);
+		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withIncomes(List.of(
+			FaIncome.create().withIncomeType("SALARY").withAmount(new BigDecimal("18500")).withRecipient("APPLICANT"),
+			FaIncome.create().withIncomeType("SWISH_DEPOSITS").withAmount(new BigDecimal("300")).withRecipient("CO_APPLICANT")));
+
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
+		when(calculationServiceMock.applicationIncomeLines(eq("199001011234"), any()))
+			.thenReturn(List.of(new FcIncomeLine(11, "Lön efter skatt", "APPLICANT", new BigDecimal("18500"), null, "Ansökan")));
+		when(calculationFeederMock.incomeRows(eq(ERRAND_ID), any())).thenReturn(List.of(
+			FaNormIncomeEntity.create().withTypeId(11).withApplicantProcessAmount(new BigDecimal("18500"))));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new CalculationFeeder.ExpenseFeed(
+			List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))), List.of()));
+		when(calculationFeederMock.personRows(eq(ERRAND_ID), any())).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
+		when(calculationServiceMock.selectNormId("199001011234", month)).thenReturn(7);
+		when(calculationServiceMock.commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(5001);
+
+		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
+		final var response = service.commitFromApplication(MUNICIPALITY_ID, NAMESPACE, request);
+
+		assertThat(response.getCalculationId()).isEqualTo(5001);
+
+		// The application's declared incomes are mapped to the neutral ApplicationIncome (recipient → role) and handed to
+		// the existing income pipeline — not a parallel calculation engine.
+		final ArgumentCaptor<List<ApplicationIncome>> incomeCaptor = ArgumentCaptor.captor();
+		verify(calculationServiceMock).applicationIncomeLines(eq("199001011234"), incomeCaptor.capture());
+		assertThat(incomeCaptor.getValue()).extracting(ApplicationIncome::incomeType, income -> income.role().name())
+			.containsExactly(tuple("SALARY", "APPLICANT"), tuple("SWISH_DEPOSITS", "CO_APPLICANT"));
+
+		final ArgumentCaptor<List<EffectiveIncome>> effectiveCaptor = ArgumentCaptor.captor();
+		verify(calculationServiceMock).commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), effectiveCaptor.capture(), any(), any());
+		assertThat(effectiveCaptor.getValue()).singleElement().satisfies(income -> assertThat(income.typeId()).isEqualTo(11));
+		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any());
+	}
+
+	@Test
+	void commitFromApplicationRequiresErrandId() {
+		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
+
+		assertThatThrownBy(() -> service.commitFromApplication(MUNICIPALITY_ID, NAMESPACE, request))
+			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+	}
+
+	@Test
+	void commitFromApplicationYields404WhenErrandMissing() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
+		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
+
+		assertThatThrownBy(() -> service.commitFromApplication(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", NOT_FOUND);
 	}
 

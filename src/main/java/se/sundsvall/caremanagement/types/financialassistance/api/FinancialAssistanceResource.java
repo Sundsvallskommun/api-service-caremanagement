@@ -183,6 +183,22 @@ class FinancialAssistanceResource {
 		return ok(service.commitCalculation(municipalityId, namespace, request));
 	}
 
+	@Tag(name = TAG_CALCULATION, description = TAG_CALCULATION_DESC)
+	@PostMapping(path = "/financial-assistance/calculation/from-application", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Create the calculation in Lifecare straight from the application (nyansökan)",
+		description = "Builds the calculation from the data the citizen declared in the application — incomes resolved to FC types by name, expenses and household from the same feeder the renewal path uses — and creates it in Lifecare FC in one shot, returning the created calculation id. No SSBTEK, no daily loop, no caseworker draft. Used by the nyansökan process.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<CalculationResponse> commitFromApplication(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Valid @NotNull @RequestBody final CalculationRequest request) {
+
+		return ok(service.commitFromApplication(municipalityId, namespace, request));
+	}
+
 	@Tag(name = TAG_WARNINGS, description = TAG_WARNINGS_DESC)
 	@PostMapping(path = "/financial-assistance/{errandId}/warnings", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Create an EB income warning on an errand",

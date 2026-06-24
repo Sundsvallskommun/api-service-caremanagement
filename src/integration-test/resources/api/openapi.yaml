@@ -2582,6 +2582,48 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/calculation/from-application:
+    post:
+      tags:
+      - Financial Assistance · Calculation
+      summary: Create the calculation in Lifecare straight from the application (nyansökan)
+      description: "Builds the calculation from the data the citizen declared in the\
+        \ application — incomes resolved to FC types by name, expenses and household\
+        \ from the same feeder the renewal path uses — and creates it in Lifecare FC\
+        \ in one shot, returning the created calculation id. No SSBTEK, no daily loop,\
+        \ no caseworker draft. Used by the nyansökan process."
+      operationId: commitFromApplication
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculationRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalculationResponse"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/actualisation:
     post:
       tags:
