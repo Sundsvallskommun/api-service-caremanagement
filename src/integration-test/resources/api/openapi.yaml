@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:53150
+- url: http://localhost:50034
   description: Generated server url
 tags:
 - name: Statistics
@@ -7204,6 +7204,14 @@ components:
           - SYSTEM
           - CASEWORKER
           readOnly: true
+        position:
+          type: integer
+          format: int32
+          description: Stable 0-based position of the row within its section; assigned
+            on creation and kept across refreshes so the row stays in place
+          examples:
+          - 0
+          readOnly: true
         partyId:
           type: string
           description: The party id of the household member
@@ -7329,6 +7337,14 @@ components:
           enum:
           - SYSTEM
           - CASEWORKER
+          readOnly: true
+        position:
+          type: integer
+          format: int32
+          description: Stable 0-based position of the row within its section; assigned
+            on creation and kept across refreshes so the row stays in place
+          examples:
+          - 0
           readOnly: true
         typeId:
           type: integer
@@ -7457,6 +7473,14 @@ components:
           - SYSTEM
           - CASEWORKER
           readOnly: true
+        position:
+          type: integer
+          format: int32
+          description: Stable 0-based position of the row within its section; assigned
+            on creation and kept across refreshes so the row stays in place
+          examples:
+          - 0
+          readOnly: true
         bucket:
           type: string
           description: Which Lifecare bucket the expense posts to
@@ -7478,7 +7502,8 @@ components:
           readOnly: true
         appliedAmount:
           type: number
-          description: The amount the citizen applied for (ansökt); editable by a caseworker
+          description: The amount the citizen applied for (ansökt); editable by a
+            caseworker
           examples:
           - 1200.0
         processAmount:
@@ -8644,8 +8669,8 @@ components:
         lastDailyRunAt:
           type: string
           format: date-time
-          description: "When the EB process last ran its daily loop for this errand\
-            \ (the calculation /prepare step). Null until the first loop has run."
+          description: When the EB process last ran its daily loop for this errand
+            (the calculation /prepare step). Null until the first loop has run.
           readOnly: true
         data:
           $ref: "#/components/schemas/FinancialAssistanceData"

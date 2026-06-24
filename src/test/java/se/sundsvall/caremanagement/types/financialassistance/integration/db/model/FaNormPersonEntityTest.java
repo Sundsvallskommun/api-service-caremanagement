@@ -40,6 +40,7 @@ class FaNormPersonEntityTest {
 		final var id = "id";
 		final var errandId = "errand";
 		final var origin = "SYSTEM";
+		final var position = 3;
 		final var partyId = "partyId";
 		final var role = "APPLICANT";
 		final var name = "name";
@@ -59,6 +60,7 @@ class FaNormPersonEntityTest {
 			.withId(id)
 			.withErrandId(errandId)
 			.withOrigin(origin)
+			.withPosition(position)
 			.withPartyId(partyId)
 			.withRole(role)
 			.withName(name)
@@ -78,6 +80,7 @@ class FaNormPersonEntityTest {
 		assertThat(entity.getId()).isEqualTo(id);
 		assertThat(entity.getErrandId()).isEqualTo(errandId);
 		assertThat(entity.getOrigin()).isEqualTo(origin);
+		assertThat(entity.getPosition()).isEqualTo(position);
 		assertThat(entity.getPartyId()).isEqualTo(partyId);
 		assertThat(entity.getRole()).isEqualTo(role);
 		assertThat(entity.getName()).isEqualTo(name);

@@ -39,6 +39,7 @@ class NormPersonRowTest {
 	void testBuilderMethods() {
 		final var id = "id";
 		final var origin = "SYSTEM";
+		final var position = 3;
 		final var partyId = "partyId";
 		final var role = "APPLICANT";
 		final var name = "name";
@@ -58,6 +59,7 @@ class NormPersonRowTest {
 		final var result = NormPersonRow.create()
 			.withId(id)
 			.withOrigin(origin)
+			.withPosition(position)
 			.withPartyId(partyId)
 			.withRole(role)
 			.withName(name)
@@ -77,6 +79,7 @@ class NormPersonRowTest {
 		assertThat(result).hasNoNullFieldsOrProperties();
 		assertThat(result.getId()).isEqualTo(id);
 		assertThat(result.getOrigin()).isEqualTo(origin);
+		assertThat(result.getPosition()).isEqualTo(position);
 		assertThat(result.getPartyId()).isEqualTo(partyId);
 		assertThat(result.getRole()).isEqualTo(role);
 		assertThat(result.getName()).isEqualTo(name);

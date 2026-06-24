@@ -27,6 +27,9 @@ public class NormPersonRow {
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String origin;
 
+	@Schema(description = "Stable 0-based position of the row within its section; assigned on creation and kept across refreshes so the row stays in place", examples = "0", accessMode = Schema.AccessMode.READ_ONLY)
+	private Integer position;
+
 	@Schema(description = "The party id of the household member", accessMode = Schema.AccessMode.READ_ONLY)
 	private String partyId;
 
@@ -105,6 +108,19 @@ public class NormPersonRow {
 
 	public NormPersonRow withOrigin(final String origin) {
 		this.origin = origin;
+		return this;
+	}
+
+	public Integer getPosition() {
+		return position;
+	}
+
+	public void setPosition(final Integer position) {
+		this.position = position;
+	}
+
+	public NormPersonRow withPosition(final Integer position) {
+		this.position = position;
 		return this;
 	}
 
@@ -309,7 +325,7 @@ public class NormPersonRow {
 			return false;
 		final NormPersonRow that = (NormPersonRow) o;
 		return deleted == that.deleted && included == that.included && Objects.equals(id, that.id) && Objects.equals(origin, that.origin)
-			&& Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
+			&& Objects.equals(position, that.position) && Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
 			&& Objects.equals(processDays, that.processDays) && Objects.equals(caseworkerDays, that.caseworkerDays) && Objects.equals(effectiveDays, that.effectiveDays)
 			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
 			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount) && Objects.equals(note, that.note)
@@ -318,7 +334,7 @@ public class NormPersonRow {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, partyId, role, name, processDays, caseworkerDays, effectiveDays, included, deviationFromDate, deviationToDate, normInterval,
+		return Objects.hash(id, origin, position, partyId, role, name, processDays, caseworkerDays, effectiveDays, included, deviationFromDate, deviationToDate, normInterval,
 			jobStimulusAmount, deleted, note, created, updated);
 	}
 
@@ -327,6 +343,7 @@ public class NormPersonRow {
 		return "NormPersonRow{" +
 			"id='" + id + '\'' +
 			", origin='" + origin + '\'' +
+			", position=" + position +
 			", partyId='" + partyId + '\'' +
 			", role='" + role + '\'' +
 			", name='" + name + '\'' +

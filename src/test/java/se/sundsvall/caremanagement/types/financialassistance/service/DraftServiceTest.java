@@ -82,6 +82,25 @@ class DraftServiceTest {
 	}
 
 	@Test
+	void refreshKeepsExistingRowPositionAndAppendsNewRow() {
+		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
+		final var existing = FaNormIncomeEntity.create().withId("inc-0").withErrandId(ERRAND_ID).withOrigin(ORIGIN_SYSTEM).withPosition(0).withTypeId(20)
+			.withTypeName("Bostadsbidrag");
+		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(existing));
+		when(incomeRepository.nextPositionForErrand(ERRAND_ID)).thenReturn(1);
+		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+
+		final var refreshedFresh = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag");
+		final var newFresh = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(99).withTypeName("Underhållsstöd");
+
+		service.refresh(ERRAND_ID, "2026-06", 7, "NATIONAL_NORM", List.of(), List.of(refreshedFresh, newFresh), List.of());
+
+		assertThat(existing.getPosition()).isEqualTo(0);  // a refreshed row keeps the position it already had
+		assertThat(newFresh.getPosition()).isEqualTo(1);  // a genuinely new row is appended at the next free position
+	}
+
+	@Test
 	void getThrows404WhenNoHeader() {
 		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
 
@@ -122,6 +141,7 @@ class DraftServiceTest {
 		final var row = service.addIncome(ERRAND_ID, input);
 
 		assertThat(row.getOrigin()).isEqualTo(ORIGIN_CASEWORKER);
+		assertThat(row.getPosition()).isZero(); // first row in the section
 		assertThat(row.getApplicantCaseworkerAmount()).isEqualByComparingTo("3000");
 		assertThat(row.getApplicantEffectiveAmount()).isEqualByComparingTo("3000");
 	}

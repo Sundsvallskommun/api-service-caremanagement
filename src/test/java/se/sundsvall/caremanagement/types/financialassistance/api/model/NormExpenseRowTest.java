@@ -38,6 +38,7 @@ class NormExpenseRowTest {
 	void testBuilderMethods() {
 		final var id = "id";
 		final var origin = "SYSTEM";
+		final var position = 3;
 		final var bucket = "EXPENSE";
 		final var costType = "rent";
 		final var otherSubType = "other";
@@ -54,6 +55,7 @@ class NormExpenseRowTest {
 		final var result = NormExpenseRow.create()
 			.withId(id)
 			.withOrigin(origin)
+			.withPosition(position)
 			.withBucket(bucket)
 			.withCostType(costType)
 			.withOtherSubType(otherSubType)
@@ -70,6 +72,7 @@ class NormExpenseRowTest {
 		assertThat(result).hasNoNullFieldsOrProperties();
 		assertThat(result.getId()).isEqualTo(id);
 		assertThat(result.getOrigin()).isEqualTo(origin);
+		assertThat(result.getPosition()).isEqualTo(position);
 		assertThat(result.getBucket()).isEqualTo(bucket);
 		assertThat(result.getCostType()).isEqualTo(costType);
 		assertThat(result.getOtherSubType()).isEqualTo(otherSubType);

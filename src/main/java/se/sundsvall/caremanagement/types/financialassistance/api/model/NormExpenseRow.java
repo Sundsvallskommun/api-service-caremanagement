@@ -26,6 +26,9 @@ public class NormExpenseRow {
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String origin;
 
+	@Schema(description = "Stable 0-based position of the row within its section; assigned on creation and kept across refreshes so the row stays in place", examples = "0", accessMode = Schema.AccessMode.READ_ONLY)
+	private Integer position;
+
 	@Schema(description = "Which Lifecare bucket the expense posts to", allowableValues = {
 		"EXPENSE", "SPECIAL_EXPENSE"
 	}, accessMode = Schema.AccessMode.READ_ONLY)
@@ -93,6 +96,19 @@ public class NormExpenseRow {
 
 	public NormExpenseRow withOrigin(final String origin) {
 		this.origin = origin;
+		return this;
+	}
+
+	public Integer getPosition() {
+		return position;
+	}
+
+	public void setPosition(final Integer position) {
+		this.position = position;
+	}
+
+	public NormExpenseRow withPosition(final Integer position) {
+		this.position = position;
 		return this;
 	}
 
@@ -257,7 +273,8 @@ public class NormExpenseRow {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final NormExpenseRow that = (NormExpenseRow) o;
-		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(origin, that.origin) && Objects.equals(bucket, that.bucket)
+		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(origin, that.origin) && Objects.equals(position, that.position)
+			&& Objects.equals(bucket, that.bucket)
 			&& Objects.equals(costType, that.costType) && Objects.equals(otherSubType, that.otherSubType) && Objects.equals(specification, that.specification)
 			&& Objects.equals(appliedAmount, that.appliedAmount)
 			&& Objects.equals(processAmount, that.processAmount) && Objects.equals(caseworkerAmount, that.caseworkerAmount)
@@ -267,8 +284,8 @@ public class NormExpenseRow {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, bucket, costType, otherSubType, specification, appliedAmount, processAmount, caseworkerAmount, effectiveAmount, deleted, note,
-			created, updated);
+		return Objects.hash(id, origin, position, bucket, costType, otherSubType, specification, appliedAmount, processAmount, caseworkerAmount, effectiveAmount, deleted,
+			note, created, updated);
 	}
 
 	@Override
@@ -276,6 +293,7 @@ public class NormExpenseRow {
 		return "NormExpenseRow{" +
 			"id='" + id + '\'' +
 			", origin='" + origin + '\'' +
+			", position=" + position +
 			", bucket='" + bucket + '\'' +
 			", costType='" + costType + '\'' +
 			", otherSubType='" + otherSubType + '\'' +

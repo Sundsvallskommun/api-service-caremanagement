@@ -6,6 +6,9 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -31,6 +34,9 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
 import se.sundsvall.dept44.problem.Problem;
 
+import static java.util.Comparator.comparing;
+import static java.util.Comparator.naturalOrder;
+import static java.util.Comparator.nullsLast;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_EXPENSE;
@@ -78,14 +84,23 @@ public class DraftService {
 
 		upsertHeader(errandId, applicationMonth, normId, normType);
 
+		// New rows inserted by the reconcile get the next stable position appended after the existing rows; refreshed rows
+		// keep the position they already have.
+		final var personSaver = positioningSaver(personRepository.nextPositionForErrand(errandId), FaNormPersonEntity::getPosition, FaNormPersonEntity::setPosition,
+			personRepository::save);
+		final var incomeSaver = positioningSaver(incomeRepository.nextPositionForErrand(errandId), FaNormIncomeEntity::getPosition, FaNormIncomeEntity::setPosition,
+			incomeRepository::save);
+		final var expenseSaver = positioningSaver(expenseRepository.nextPositionForErrand(errandId), FaNormExpenseEntity::getPosition, FaNormExpenseEntity::setPosition,
+			expenseRepository::save);
+
 		final var persons = SectionReconciler.reconcile(personRepository.findByErrandId(errandId), nullSafe(freshPersons),
-			DraftService::personKey, isSystem(FaNormPersonEntity::getOrigin), DraftService::copyPersonProcess, DraftService::personLabel, personRepository::save);
+			DraftService::personKey, isSystem(FaNormPersonEntity::getOrigin), DraftService::copyPersonProcess, DraftService::personLabel, personSaver);
 
 		final var incomes = SectionReconciler.reconcile(incomeRepository.findByErrandId(errandId), nullSafe(freshIncomes),
-			DraftService::incomeKey, isSystem(FaNormIncomeEntity::getOrigin), DraftService::copyIncomeProcess, DraftService::incomeLabel, incomeRepository::save);
+			DraftService::incomeKey, isSystem(FaNormIncomeEntity::getOrigin), DraftService::copyIncomeProcess, DraftService::incomeLabel, incomeSaver);
 
 		final var expenses = SectionReconciler.reconcile(expenseRepository.findByErrandId(errandId), nullSafe(freshExpenses),
-			DraftService::expenseKey, isSystem(FaNormExpenseEntity::getOrigin), DraftService::copyExpenseProcess, DraftService::expenseLabel, expenseRepository::save);
+			DraftService::expenseKey, isSystem(FaNormExpenseEntity::getOrigin), DraftService::copyExpenseProcess, DraftService::expenseLabel, expenseSaver);
 
 		return new DraftChanges(incomes.added(), incomes.dropped(), expenses.added(), expenses.dropped(), persons.added(), persons.dropped());
 	}
@@ -129,11 +144,14 @@ public class DraftService {
 		final var header = headerRepository.findById(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft calculation for errand"));
 
-		final var incomes = incomeRepository.findByErrandId(errandId).stream().map(DraftService::toIncomeRow).toList();
-		final var allExpenses = expenseRepository.findByErrandId(errandId).stream().map(DraftService::toExpenseRow).toList();
+		final var incomes = incomeRepository.findByErrandId(errandId).stream()
+			.sorted(comparing(FaNormIncomeEntity::getPosition, nullsLast(naturalOrder()))).map(DraftService::toIncomeRow).toList();
+		final var allExpenses = expenseRepository.findByErrandId(errandId).stream()
+			.sorted(comparing(FaNormExpenseEntity::getPosition, nullsLast(naturalOrder()))).map(DraftService::toExpenseRow).toList();
 		final var expenses = allExpenses.stream().filter(row -> !BUCKET_SPECIAL_EXPENSE.equals(row.getBucket())).toList();
 		final var specialExpenses = allExpenses.stream().filter(row -> BUCKET_SPECIAL_EXPENSE.equals(row.getBucket())).toList();
-		final var persons = personRepository.findByErrandId(errandId).stream().map(DraftService::toPersonRow).toList();
+		final var persons = personRepository.findByErrandId(errandId).stream()
+			.sorted(comparing(FaNormPersonEntity::getPosition, nullsLast(naturalOrder()))).map(DraftService::toPersonRow).toList();
 
 		return CalculationDraft.create()
 			.withErrandId(header.getErrandId())
@@ -164,7 +182,7 @@ public class DraftService {
 	public NormIncomeRow addIncome(final String errandId, final NormIncomeInput input) {
 		requireHeader(errandId);
 		final var entity = incomeRepository.save(FaNormIncomeEntity.create()
-			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER)
+			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER).withPosition(incomeRepository.nextPositionForErrand(errandId))
 			.withTypeId(input.getTypeId()).withTypeName(input.getTypeName())
 			.withApplicantCaseworkerAmount(input.getApplicantCaseworkerAmount()).withApplicantAmountDate(input.getApplicantAmountDate())
 			.withCoapplicantCaseworkerAmount(input.getCoapplicantCaseworkerAmount()).withCoapplicantAmountDate(input.getCoapplicantAmountDate())
@@ -192,7 +210,7 @@ public class DraftService {
 	public NormExpenseRow addExpense(final String errandId, final NormExpenseInput input) {
 		requireHeader(errandId);
 		final var entity = expenseRepository.save(FaNormExpenseEntity.create()
-			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER).withBucket(bucketOrDefault(input.getBucket()))
+			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER).withPosition(expenseRepository.nextPositionForErrand(errandId)).withBucket(bucketOrDefault(input.getBucket()))
 			.withCostType(input.getCostType()).withOtherSubType(input.getOtherSubType()).withSpecification(input.getSpecification())
 			.withAppliedAmount(input.getAppliedAmount()).withCaseworkerAmount(input.getCaseworkerAmount()).withNote(input.getNote()));
 		return toExpenseRow(entity);
@@ -218,7 +236,7 @@ public class DraftService {
 	public NormPersonRow addPerson(final String errandId, final NormPersonInput input) {
 		requireHeader(errandId);
 		final var entity = personRepository.save(FaNormPersonEntity.create()
-			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER)
+			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER).withPosition(personRepository.nextPositionForErrand(errandId))
 			.withPartyId(input.getPartyId()).withRole(input.getRole()).withName(input.getName())
 			.withCaseworkerDays(input.getCaseworkerDays()).withIncluded(input.getIncluded() == null || input.getIncluded())
 			.withDeviationFromDate(input.getDeviationFromDate()).withDeviationToDate(input.getDeviationToDate())
@@ -280,6 +298,21 @@ public class DraftService {
 
 	public static Integer effectiveDays(final Integer caseworkerDays, final Integer processDays) {
 		return caseworkerDays != null ? caseworkerDays : processDays;
+	}
+
+	/**
+	 * A save consumer that stamps a stable position on any row that doesn't have one yet, handing out consecutive
+	 * positions from {@code start} (the next free position for the errand) so new rows append after the existing ones.
+	 */
+	private static <E> Consumer<E> positioningSaver(final int start, final Function<E, Integer> getPosition, final BiConsumer<E, Integer> setPosition,
+		final Consumer<E> save) {
+		final var next = new AtomicInteger(start);
+		return entity -> {
+			if (getPosition.apply(entity) == null) {
+				setPosition.accept(entity, next.getAndIncrement());
+			}
+			save.accept(entity);
+		};
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -377,7 +410,7 @@ public class DraftService {
 
 	private static NormIncomeRow toIncomeRow(final FaNormIncomeEntity e) {
 		return NormIncomeRow.create()
-			.withId(e.getId()).withOrigin(e.getOrigin()).withTypeId(e.getTypeId()).withTypeName(e.getTypeName())
+			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withTypeId(e.getTypeId()).withTypeName(e.getTypeName())
 			.withApplicantProcessAmount(e.getApplicantProcessAmount()).withApplicantCaseworkerAmount(e.getApplicantCaseworkerAmount())
 			.withApplicantEffectiveAmount(effectiveAmount(e.getApplicantCaseworkerAmount(), e.getApplicantProcessAmount())).withApplicantAmountDate(e.getApplicantAmountDate())
 			.withCoapplicantProcessAmount(e.getCoapplicantProcessAmount()).withCoapplicantCaseworkerAmount(e.getCoapplicantCaseworkerAmount())
@@ -388,7 +421,7 @@ public class DraftService {
 	private static NormExpenseRow toExpenseRow(final FaNormExpenseEntity e) {
 		final var effective = effectiveAmount(e.getCaseworkerAmount(), e.getProcessAmount());
 		return NormExpenseRow.create()
-			.withId(e.getId()).withOrigin(e.getOrigin()).withBucket(e.getBucket()).withCostType(e.getCostType()).withOtherSubType(e.getOtherSubType())
+			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withBucket(e.getBucket()).withCostType(e.getCostType()).withOtherSubType(e.getOtherSubType())
 			.withSpecification(e.getSpecification())
 			.withAppliedAmount(e.getAppliedAmount()).withProcessAmount(e.getProcessAmount()).withCaseworkerAmount(e.getCaseworkerAmount())
 			.withEffectiveAmount(effective).withDeleted(e.isDeleted()).withNote(e.getNote())
@@ -398,7 +431,7 @@ public class DraftService {
 	private static NormPersonRow toPersonRow(final FaNormPersonEntity e) {
 		final var effective = effectiveDays(e.getCaseworkerDays(), e.getProcessDays());
 		return NormPersonRow.create()
-			.withId(e.getId()).withOrigin(e.getOrigin()).withPartyId(e.getPartyId()).withRole(e.getRole()).withName(e.getName())
+			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withPartyId(e.getPartyId()).withRole(e.getRole()).withName(e.getName())
 			.withProcessDays(e.getProcessDays()).withCaseworkerDays(e.getCaseworkerDays()).withEffectiveDays(effective)
 			.withIncluded(e.isIncluded()).withDeviationFromDate(e.getDeviationFromDate()).withDeviationToDate(e.getDeviationToDate())
 			.withNormInterval(e.getNormInterval()).withJobStimulusAmount(e.getJobStimulusAmount())

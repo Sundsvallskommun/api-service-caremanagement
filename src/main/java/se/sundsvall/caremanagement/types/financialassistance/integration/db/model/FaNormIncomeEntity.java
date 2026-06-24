@@ -42,6 +42,9 @@ public class FaNormIncomeEntity {
 	@Column(name = "origin")
 	private String origin;
 
+	@Column(name = "position")
+	private Integer position;
+
 	@Column(name = "type_id")
 	private Integer typeId;
 
@@ -134,6 +137,19 @@ public class FaNormIncomeEntity {
 
 	public FaNormIncomeEntity withOrigin(final String origin) {
 		this.origin = origin;
+		return this;
+	}
+
+	public Integer getPosition() {
+		return position;
+	}
+
+	public void setPosition(final Integer position) {
+		this.position = position;
+	}
+
+	public FaNormIncomeEntity withPosition(final Integer position) {
+		this.position = position;
 		return this;
 	}
 
@@ -299,6 +315,7 @@ public class FaNormIncomeEntity {
 			return false;
 		final FaNormIncomeEntity that = (FaNormIncomeEntity) o;
 		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(origin, that.origin)
+			&& Objects.equals(position, that.position)
 			&& Objects.equals(typeId, that.typeId) && Objects.equals(typeName, that.typeName)
 			&& Objects.equals(applicantProcessAmount, that.applicantProcessAmount) && Objects.equals(applicantCaseworkerAmount, that.applicantCaseworkerAmount)
 			&& Objects.equals(applicantAmountDate, that.applicantAmountDate) && Objects.equals(coapplicantProcessAmount, that.coapplicantProcessAmount)
@@ -308,7 +325,7 @@ public class FaNormIncomeEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, origin, typeId, typeName, applicantProcessAmount, applicantCaseworkerAmount, applicantAmountDate,
+		return Objects.hash(id, errandId, origin, position, typeId, typeName, applicantProcessAmount, applicantCaseworkerAmount, applicantAmountDate,
 			coapplicantProcessAmount, coapplicantCaseworkerAmount, coapplicantAmountDate, deleted, note, created, updated);
 	}
 
@@ -318,6 +335,7 @@ public class FaNormIncomeEntity {
 			"id='" + id + '\'' +
 			", errandId='" + errandId + '\'' +
 			", origin='" + origin + '\'' +
+			", position=" + position +
 			", typeId=" + typeId +
 			", typeName='" + typeName + '\'' +
 			", applicantProcessAmount=" + applicantProcessAmount +

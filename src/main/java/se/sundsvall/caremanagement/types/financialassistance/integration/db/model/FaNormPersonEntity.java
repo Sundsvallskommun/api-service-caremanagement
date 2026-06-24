@@ -44,6 +44,9 @@ public class FaNormPersonEntity {
 	@Column(name = "origin")
 	private String origin;
 
+	@Column(name = "position")
+	private Integer position;
+
 	@Column(name = "party_id")
 	private String partyId;
 
@@ -140,6 +143,19 @@ public class FaNormPersonEntity {
 
 	public FaNormPersonEntity withOrigin(final String origin) {
 		this.origin = origin;
+		return this;
+	}
+
+	public Integer getPosition() {
+		return position;
+	}
+
+	public void setPosition(final Integer position) {
+		this.position = position;
+	}
+
+	public FaNormPersonEntity withPosition(final Integer position) {
+		this.position = position;
 		return this;
 	}
 
@@ -331,7 +347,8 @@ public class FaNormPersonEntity {
 			return false;
 		final FaNormPersonEntity that = (FaNormPersonEntity) o;
 		return deleted == that.deleted && included == that.included && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
-			&& Objects.equals(origin, that.origin) && Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
+			&& Objects.equals(origin, that.origin) && Objects.equals(position, that.position) && Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role)
+			&& Objects.equals(name, that.name)
 			&& Objects.equals(processDays, that.processDays) && Objects.equals(caseworkerDays, that.caseworkerDays)
 			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
 			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount) && Objects.equals(note, that.note)
@@ -340,7 +357,7 @@ public class FaNormPersonEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, origin, partyId, role, name, processDays, caseworkerDays, included, deviationFromDate, deviationToDate, normInterval,
+		return Objects.hash(id, errandId, origin, position, partyId, role, name, processDays, caseworkerDays, included, deviationFromDate, deviationToDate, normInterval,
 			jobStimulusAmount, deleted, note, created, updated);
 	}
 
@@ -350,6 +367,7 @@ public class FaNormPersonEntity {
 			"id='" + id + '\'' +
 			", errandId='" + errandId + '\'' +
 			", origin='" + origin + '\'' +
+			", position=" + position +
 			", partyId='" + partyId + '\'' +
 			", role='" + role + '\'' +
 			", name='" + name + '\'' +

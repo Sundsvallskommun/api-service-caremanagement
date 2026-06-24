@@ -38,6 +38,7 @@ class NormIncomeRowTest {
 	void testBuilderMethods() {
 		final var id = "id";
 		final var origin = "SYSTEM";
+		final var position = 3;
 		final var typeId = 20;
 		final var typeName = "Bostadsbidrag";
 		final var applicantProcessAmount = BigDecimal.valueOf(1850.00);
@@ -56,6 +57,7 @@ class NormIncomeRowTest {
 		final var result = NormIncomeRow.create()
 			.withId(id)
 			.withOrigin(origin)
+			.withPosition(position)
 			.withTypeId(typeId)
 			.withTypeName(typeName)
 			.withApplicantProcessAmount(applicantProcessAmount)
@@ -74,6 +76,7 @@ class NormIncomeRowTest {
 		assertThat(result).hasNoNullFieldsOrProperties();
 		assertThat(result.getId()).isEqualTo(id);
 		assertThat(result.getOrigin()).isEqualTo(origin);
+		assertThat(result.getPosition()).isEqualTo(position);
 		assertThat(result.getTypeId()).isEqualTo(typeId);
 		assertThat(result.getTypeName()).isEqualTo(typeName);
 		assertThat(result.getApplicantProcessAmount()).isEqualTo(applicantProcessAmount);

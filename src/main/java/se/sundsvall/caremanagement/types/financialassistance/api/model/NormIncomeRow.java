@@ -27,6 +27,9 @@ public class NormIncomeRow {
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String origin;
 
+	@Schema(description = "Stable 0-based position of the row within its section; assigned on creation and kept across refreshes so the row stays in place", examples = "0", accessMode = Schema.AccessMode.READ_ONLY)
+	private Integer position;
+
 	@Schema(description = "The FC income-type id", examples = "20", accessMode = Schema.AccessMode.READ_ONLY)
 	private Integer typeId;
 
@@ -100,6 +103,19 @@ public class NormIncomeRow {
 
 	public NormIncomeRow withOrigin(final String origin) {
 		this.origin = origin;
+		return this;
+	}
+
+	public Integer getPosition() {
+		return position;
+	}
+
+	public void setPosition(final Integer position) {
+		this.position = position;
+	}
+
+	public NormIncomeRow withPosition(final Integer position) {
+		this.position = position;
 		return this;
 	}
 
@@ -290,7 +306,8 @@ public class NormIncomeRow {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final NormIncomeRow that = (NormIncomeRow) o;
-		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(origin, that.origin) && Objects.equals(typeId, that.typeId)
+		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(origin, that.origin) && Objects.equals(position, that.position)
+			&& Objects.equals(typeId, that.typeId)
 			&& Objects.equals(typeName, that.typeName) && Objects.equals(applicantProcessAmount, that.applicantProcessAmount)
 			&& Objects.equals(applicantCaseworkerAmount, that.applicantCaseworkerAmount) && Objects.equals(applicantEffectiveAmount, that.applicantEffectiveAmount)
 			&& Objects.equals(applicantAmountDate, that.applicantAmountDate) && Objects.equals(coapplicantProcessAmount, that.coapplicantProcessAmount)
@@ -301,7 +318,7 @@ public class NormIncomeRow {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, typeId, typeName, applicantProcessAmount, applicantCaseworkerAmount, applicantEffectiveAmount, applicantAmountDate,
+		return Objects.hash(id, origin, position, typeId, typeName, applicantProcessAmount, applicantCaseworkerAmount, applicantEffectiveAmount, applicantAmountDate,
 			coapplicantProcessAmount, coapplicantCaseworkerAmount, coapplicantEffectiveAmount, coapplicantAmountDate, deleted, note, created, updated);
 	}
 
@@ -310,6 +327,7 @@ public class NormIncomeRow {
 		return "NormIncomeRow{" +
 			"id='" + id + '\'' +
 			", origin='" + origin + '\'' +
+			", position=" + position +
 			", typeId=" + typeId +
 			", typeName='" + typeName + '\'' +
 			", applicantProcessAmount=" + applicantProcessAmount +

@@ -39,6 +39,7 @@ class FaNormIncomeEntityTest {
 		final var id = "id";
 		final var errandId = "errand";
 		final var origin = "SYSTEM";
+		final var position = 3;
 		final var typeId = 20;
 		final var typeName = "Bostadsbidrag";
 		final var applicantProcessAmount = BigDecimal.valueOf(1850.00);
@@ -56,6 +57,7 @@ class FaNormIncomeEntityTest {
 			.withId(id)
 			.withErrandId(errandId)
 			.withOrigin(origin)
+			.withPosition(position)
 			.withTypeId(typeId)
 			.withTypeName(typeName)
 			.withApplicantProcessAmount(applicantProcessAmount)
@@ -73,6 +75,7 @@ class FaNormIncomeEntityTest {
 		assertThat(entity.getId()).isEqualTo(id);
 		assertThat(entity.getErrandId()).isEqualTo(errandId);
 		assertThat(entity.getOrigin()).isEqualTo(origin);
+		assertThat(entity.getPosition()).isEqualTo(position);
 		assertThat(entity.getTypeId()).isEqualTo(typeId);
 		assertThat(entity.getTypeName()).isEqualTo(typeName);
 		assertThat(entity.getApplicantProcessAmount()).isEqualTo(applicantProcessAmount);

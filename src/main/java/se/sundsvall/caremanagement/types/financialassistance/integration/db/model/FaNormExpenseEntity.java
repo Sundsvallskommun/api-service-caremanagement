@@ -42,6 +42,9 @@ public class FaNormExpenseEntity {
 	@Column(name = "origin")
 	private String origin;
 
+	@Column(name = "position")
+	private Integer position;
+
 	@Column(name = "bucket")
 	private String bucket;
 
@@ -129,6 +132,19 @@ public class FaNormExpenseEntity {
 
 	public FaNormExpenseEntity withOrigin(final String origin) {
 		this.origin = origin;
+		return this;
+	}
+
+	public Integer getPosition() {
+		return position;
+	}
+
+	public void setPosition(final Integer position) {
+		this.position = position;
+	}
+
+	public FaNormExpenseEntity withPosition(final Integer position) {
+		this.position = position;
 		return this;
 	}
 
@@ -281,6 +297,7 @@ public class FaNormExpenseEntity {
 			return false;
 		final FaNormExpenseEntity that = (FaNormExpenseEntity) o;
 		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(origin, that.origin)
+			&& Objects.equals(position, that.position)
 			&& Objects.equals(bucket, that.bucket) && Objects.equals(costType, that.costType) && Objects.equals(otherSubType, that.otherSubType)
 			&& Objects.equals(specification, that.specification)
 			&& Objects.equals(appliedAmount, that.appliedAmount) && Objects.equals(processAmount, that.processAmount)
@@ -290,8 +307,8 @@ public class FaNormExpenseEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, origin, bucket, costType, otherSubType, specification, appliedAmount, processAmount, caseworkerAmount, deleted, note, created,
-			updated);
+		return Objects.hash(id, errandId, origin, position, bucket, costType, otherSubType, specification, appliedAmount, processAmount, caseworkerAmount, deleted, note,
+			created, updated);
 	}
 
 	@Override
@@ -300,6 +317,7 @@ public class FaNormExpenseEntity {
 			"id='" + id + '\'' +
 			", errandId='" + errandId + '\'' +
 			", origin='" + origin + '\'' +
+			", position=" + position +
 			", bucket='" + bucket + '\'' +
 			", costType='" + costType + '\'' +
 			", otherSubType='" + otherSubType + '\'' +
