@@ -52,6 +52,9 @@ public class FinancialAssistanceView {
 	@Schema(description = "Touched", accessMode = READ_ONLY)
 	private OffsetDateTime touched;
 
+	@Schema(description = "When the EB process last ran its daily loop for this errand (the calculation /prepare step). Null until the first loop has run.", accessMode = READ_ONLY)
+	private OffsetDateTime lastDailyRunAt;
+
 	@Schema(description = "The typed financial assistance application payload")
 	private FinancialAssistanceData data;
 
@@ -251,6 +254,19 @@ public class FinancialAssistanceView {
 		return this;
 	}
 
+	public OffsetDateTime getLastDailyRunAt() {
+		return lastDailyRunAt;
+	}
+
+	public void setLastDailyRunAt(final OffsetDateTime lastDailyRunAt) {
+		this.lastDailyRunAt = lastDailyRunAt;
+	}
+
+	public FinancialAssistanceView withLastDailyRunAt(final OffsetDateTime lastDailyRunAt) {
+		this.lastDailyRunAt = lastDailyRunAt;
+		return this;
+	}
+
 	public FinancialAssistanceData getData() {
 		return data;
 	}
@@ -301,14 +317,15 @@ public class FinancialAssistanceView {
 			&& Objects.equals(status, that.status) && Objects.equals(priority, that.priority)
 			&& Objects.equals(reporterUserId, that.reporterUserId) && Objects.equals(assignedUserId, that.assignedUserId)
 			&& Objects.equals(processInstanceId, that.processInstanceId) && Objects.equals(created, that.created)
-			&& Objects.equals(modified, that.modified) && Objects.equals(touched, that.touched) && Objects.equals(data, that.data)
+			&& Objects.equals(modified, that.modified) && Objects.equals(touched, that.touched)
+			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt) && Objects.equals(data, that.data)
 			&& Objects.equals(recommendation, that.recommendation) && Objects.equals(sectionApprovals, that.sectionApprovals);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandNumber, municipalityId, namespace, typeSlug, title, status, priority, reporterUserId,
-			assignedUserId, processInstanceId, created, modified, touched, data, recommendation, sectionApprovals);
+			assignedUserId, processInstanceId, created, modified, touched, lastDailyRunAt, data, recommendation, sectionApprovals);
 	}
 
 	@Override
@@ -317,7 +334,7 @@ public class FinancialAssistanceView {
 			+ municipalityId + "', namespace='" + namespace + "', typeSlug='" + typeSlug + "', title='" + title
 			+ "', status='" + status + "', priority='" + priority + "', reporterUserId='" + reporterUserId
 			+ "', assignedUserId='" + assignedUserId + "', processInstanceId='" + processInstanceId + "', created=" + created
-			+ ", modified=" + modified + ", touched=" + touched + ", data=" + data + ", recommendation=" + recommendation
-			+ ", sectionApprovals=" + sectionApprovals + '}';
+			+ ", modified=" + modified + ", touched=" + touched + ", lastDailyRunAt=" + lastDailyRunAt + ", data=" + data
+			+ ", recommendation=" + recommendation + ", sectionApprovals=" + sectionApprovals + '}';
 	}
 }

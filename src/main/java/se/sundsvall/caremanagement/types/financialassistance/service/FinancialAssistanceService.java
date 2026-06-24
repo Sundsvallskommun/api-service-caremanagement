@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.stream.Stream;
@@ -252,6 +253,10 @@ public class FinancialAssistanceService {
 		warningService.reconcileCalculationWarnings(errandId, response.getUnhandledIncomes(), response.getChangeWarnings(),
 			response.getMissingIncomeTypes(), draftChanges, sectionWarnings);
 		applyCompletenessStatus(municipalityId, namespace, errandId, completeness.informationComplete());
+
+		// Stamp the errand with this daily-loop run so Draken can show "last checked" and ops can spot stale loops.
+		errand.setLastDailyRunAt(OffsetDateTime.now());
+		repository.save(errand);
 		return response;
 	}
 

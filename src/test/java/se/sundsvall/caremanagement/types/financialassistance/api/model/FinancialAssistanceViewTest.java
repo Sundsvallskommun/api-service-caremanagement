@@ -15,6 +15,7 @@ class FinancialAssistanceViewTest {
 	private static final OffsetDateTime CREATED = OffsetDateTime.parse("2026-06-03T10:00:00Z");
 	private static final OffsetDateTime MODIFIED = OffsetDateTime.parse("2026-06-04T10:00:00Z");
 	private static final OffsetDateTime TOUCHED = OffsetDateTime.parse("2026-06-05T10:00:00Z");
+	private static final OffsetDateTime LAST_DAILY_RUN_AT = OffsetDateTime.parse("2026-06-06T03:00:00Z");
 	private static final FinancialAssistanceData DATA = FinancialAssistanceData.create().withApplicationType("NEW");
 	private static final Decision RECOMMENDATION = Decision.create().withDecisionType("RECOMMENDATION").withValue("OK");
 	private static final SectionApprovals SECTION_APPROVALS = SectionApprovals.create()
@@ -44,6 +45,7 @@ class FinancialAssistanceViewTest {
 			.withCreated(CREATED)
 			.withModified(MODIFIED)
 			.withTouched(TOUCHED)
+			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
 			.withData(DATA)
 			.withRecommendation(RECOMMENDATION)
 			.withSectionApprovals(SECTION_APPROVALS);
@@ -62,6 +64,7 @@ class FinancialAssistanceViewTest {
 		assertThat(view.getCreated()).isEqualTo(CREATED);
 		assertThat(view.getModified()).isEqualTo(MODIFIED);
 		assertThat(view.getTouched()).isEqualTo(TOUCHED);
+		assertThat(view.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
 		assertThat(view.getData()).isEqualTo(DATA);
 		assertThat(view.getRecommendation()).isEqualTo(RECOMMENDATION);
 		assertThat(view.getSectionApprovals()).isEqualTo(SECTION_APPROVALS);

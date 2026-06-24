@@ -141,6 +141,7 @@ public final class FinancialAssistanceMapper {
 				.withCreated(env.getCreated())
 				.withModified(env.getModified())
 				.withTouched(env.getTouched())
+				.withLastDailyRunAt(ofNullable(entity).map(FinancialAssistanceEntity::getLastDailyRunAt).orElse(null))
 				.withData(toData(entity)))
 			.orElse(null);
 	}

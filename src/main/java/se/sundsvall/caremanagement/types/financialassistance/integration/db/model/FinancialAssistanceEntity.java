@@ -106,6 +106,10 @@ public class FinancialAssistanceEntity implements Auditable {
 	@TimeZoneStorage(TimeZoneStorageType.NORMALIZE)
 	private OffsetDateTime attestedAt;
 
+	@Column(name = "last_daily_run_at")
+	@TimeZoneStorage(TimeZoneStorageType.NORMALIZE)
+	private OffsetDateTime lastDailyRunAt;
+
 	@ElementCollection
 	@CollectionTable(name = "errand_fa_child", joinColumns = @JoinColumn(name = "errand_id"))
 	private List<FaChild> children;
@@ -354,6 +358,14 @@ public class FinancialAssistanceEntity implements Auditable {
 		this.attestedAt = attestedAt;
 	}
 
+	public OffsetDateTime getLastDailyRunAt() {
+		return lastDailyRunAt;
+	}
+
+	public void setLastDailyRunAt(final OffsetDateTime lastDailyRunAt) {
+		this.lastDailyRunAt = lastDailyRunAt;
+	}
+
 	public List<FaChild> getChildren() {
 		return children;
 	}
@@ -569,6 +581,11 @@ public class FinancialAssistanceEntity implements Auditable {
 		return this;
 	}
 
+	public FinancialAssistanceEntity withLastDailyRunAt(final OffsetDateTime v) {
+		this.lastDailyRunAt = v;
+		return this;
+	}
+
 	public FinancialAssistanceEntity withChildren(final List<FaChild> v) {
 		this.children = v;
 		return this;
@@ -643,6 +660,7 @@ public class FinancialAssistanceEntity implements Auditable {
 			&& Objects.equals(hasPendingBenefits, that.hasPendingBenefits) && Objects.equals(hasAssets, that.hasAssets)
 			&& Objects.equals(staysInMunicipality, that.staysInMunicipality) && Objects.equals(stayDescription, that.stayDescription)
 			&& Objects.equals(attestation, that.attestation) && Objects.equals(attestedAt, that.attestedAt)
+			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt)
 			&& Objects.equals(children, that.children) && Objects.equals(costs, that.costs) && Objects.equals(incomes, that.incomes)
 			&& Objects.equals(pendingBenefits, that.pendingBenefits) && Objects.equals(assets, that.assets)
 			&& Objects.equals(persons, that.persons) && Objects.equals(plannings, that.plannings)
@@ -656,7 +674,7 @@ public class FinancialAssistanceEntity implements Auditable {
 			otherBenefitDescription, livelihoodDescription, hasChildrenUnder21, childrenResidenceChanged, childrenResidenceChangeDescription,
 			housingForm, housingPersonCount, housingRoomsPlusKitchen, housingDescription, housingChanged,
 			housingChangeDescription, hasIncomes, hasPendingBenefits, hasAssets, staysInMunicipality, stayDescription, attestation,
-			attestedAt, children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
+			attestedAt, lastDailyRunAt, children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
 			created, modified);
 	}
 
@@ -665,6 +683,6 @@ public class FinancialAssistanceEntity implements Auditable {
 		return "FinancialAssistanceEntity{errandId='" + errandId + "', applicationType='" + applicationType
 			+ "', maritalStatus='" + maritalStatus + "', periodMonth=" + periodMonth + ", periodYear=" + periodYear
 			+ ", normType='" + normType + "', housingForm='" + housingForm + "', attestation=" + attestation
-			+ ", created=" + created + ", modified=" + modified + '}';
+			+ ", lastDailyRunAt=" + lastDailyRunAt + ", created=" + created + ", modified=" + modified + '}';
 	}
 }

@@ -8642,6 +8642,12 @@ components:
           format: date-time
           description: Touched
           readOnly: true
+        lastDailyRunAt:
+          type: string
+          format: date-time
+          description: "When the EB process last ran its daily loop for this errand\
+            \ (the calculation /prepare step). Null until the first loop has run."
+          readOnly: true
         data:
           $ref: "#/components/schemas/FinancialAssistanceData"
           description: The typed financial assistance application payload
