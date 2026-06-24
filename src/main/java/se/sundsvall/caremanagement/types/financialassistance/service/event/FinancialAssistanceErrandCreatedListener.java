@@ -11,12 +11,14 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
+import se.sundsvall.caremanagement.core.api.model.PatchErrand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.core.service.event.ErrandCreated;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.caremanagement.types.financialassistance.service.DefaultAssigneeService;
 
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_CO_APPLICANT;
@@ -24,12 +26,18 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 
 /**
  * Starts the EB decision-support process when a {@code financial-assistance-renewal} errand is created — the Mina sidor
- * renewal intake. Runs once the create transaction has committed ({@link ApplicationModuleListener} = after-commit,
- * async, new transaction) so the errand and its typed data are persisted and visible both to the re-read below and to
- * the Operaton workers that call back onto the errand the moment the flow starts.
+ * renewal intake — and routes every unassigned EB errand to the modeler-configured default handläggare. Runs once the
+ * create transaction has committed ({@link ApplicationModuleListener} = after-commit, async, new transaction) so the
+ * errand and its typed data are persisted and visible both to the re-read below and to the Operaton workers that call
+ * back onto the errand the moment the flow starts.
  *
  * <p>
- * Only renewals start a process; new/supplementary errands are a no-op here. The process is started with
+ * Every EB errand (one carrying typed FA data) that arrived without an assignee is routed to the default handläggare
+ * resolved from {@link DefaultAssigneeService} — the fallback for cases the Lifecare {@code CaseworkerResolver} can't
+ * place. Renewals/supplements that later resolve a real Lifecare caseworker overwrite this in the actualisation flow.
+ *
+ * <p>
+ * Only renewals start a process; new/supplementary errands skip the process start. The process is started with
  * {@code businessKey = errandId} and seeded with the household start variables the BPMN/DMN flow reads: the
  * municipalityId and namespace, the applicant and optional co-applicant partyIds (from the application's persons),
  * their
@@ -63,22 +71,40 @@ class FinancialAssistanceErrandCreatedListener {
 	private final ProcessService processService;
 	private final ErrandService errandService;
 	private final CitizenService citizenService;
+	private final DefaultAssigneeService defaultAssigneeService;
 
 	FinancialAssistanceErrandCreatedListener(final FinancialAssistanceRepository repository, final ProcessService processService,
-		final ErrandService errandService, final CitizenService citizenService) {
+		final ErrandService errandService, final CitizenService citizenService, final DefaultAssigneeService defaultAssigneeService) {
 		this.repository = repository;
 		this.processService = processService;
 		this.errandService = errandService;
 		this.citizenService = citizenService;
+		this.defaultAssigneeService = defaultAssigneeService;
 	}
 
 	@ApplicationModuleListener
 	void on(final ErrandCreated event) {
-		if (!SLUG_RENEWAL.equals(event.typeSlug())) {
-			return; // only the renewal intake starts the EB process
+		// Only EB errands (those carrying typed FA data) are handled here.
+		repository.findByErrandId(event.errandId()).ifPresent(entity -> {
+			assignDefaultHandlaggare(event);
+			if (SLUG_RENEWAL.equals(event.typeSlug())) {
+				startProcess(event, entity); // only the renewal intake starts the EB process
+			}
+		});
+	}
+
+	/**
+	 * Route an EB errand that arrived without an assignee to the modeler-configured default handläggare (best-effort).
+	 * Respects an assignee the application already carried; a renewal/supplement that later resolves a real Lifecare
+	 * caseworker overwrites this in the actualisation flow.
+	 */
+	private void assignDefaultHandlaggare(final ErrandCreated event) {
+		if (StringUtils.hasText(event.assignedUserId())) {
+			return; // the application carried an explicit assignee — respect it
 		}
-		repository.findByErrandId(event.errandId())
-			.ifPresent(entity -> startProcess(event, entity));
+		defaultAssigneeService.resolve(event.municipalityId())
+			.ifPresent(assignedUserId -> errandService.updateErrand(event.municipalityId(), event.namespace(), event.errandId(),
+				PatchErrand.create().withAssignedUserId(assignedUserId)));
 	}
 
 	private void startProcess(final ErrandCreated event, final FinancialAssistanceEntity entity) {

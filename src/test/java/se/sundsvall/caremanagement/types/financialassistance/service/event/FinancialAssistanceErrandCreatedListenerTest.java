@@ -11,12 +11,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
+import se.sundsvall.caremanagement.core.api.model.PatchErrand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.core.service.event.ErrandCreated;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.caremanagement.types.financialassistance.service.DefaultAssigneeService;
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,11 +68,18 @@ class FinancialAssistanceErrandCreatedListenerTest {
 	@Mock
 	private CitizenService citizenServiceMock;
 
+	@Mock
+	private DefaultAssigneeService defaultAssigneeServiceMock;
+
 	@InjectMocks
 	private FinancialAssistanceErrandCreatedListener listener;
 
 	private static ErrandCreated event(final String typeSlug) {
-		return new ErrandCreated(ERRAND_ID, typeSlug, MUNICIPALITY_ID, NAMESPACE, "reporter", "assignee",
+		return event(typeSlug, "assignee");
+	}
+
+	private static ErrandCreated event(final String typeSlug, final String assignedUserId) {
+		return new ErrandCreated(ERRAND_ID, typeSlug, MUNICIPALITY_ID, NAMESPACE, "reporter", assignedUserId,
 			OffsetDateTime.parse("2026-06-05T12:00:00Z"));
 	}
 
@@ -136,10 +145,69 @@ class FinancialAssistanceErrandCreatedListenerTest {
 	}
 
 	@Test
-	void ignoresNonRenewalSlug() {
-		listener.on(event(SLUG_NEW));
+	void ignoresNonEbErrand() {
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
 
-		verifyNoInteractions(repositoryMock, processServiceMock, errandServiceMock);
+		listener.on(event(SLUG_NEW, null));
+
+		verify(repositoryMock).findByErrandId(ERRAND_ID);
+		verifyNoMoreInteractions(repositoryMock);
+		verifyNoInteractions(processServiceMock, errandServiceMock, defaultAssigneeServiceMock);
+	}
+
+	@Test
+	void assignsDefaultHandlaggareForUnassignedNewApplication() {
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
+		when(defaultAssigneeServiceMock.resolve(MUNICIPALITY_ID)).thenReturn(Optional.of("joa01doe"));
+
+		listener.on(event(SLUG_NEW, null));
+
+		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
+		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
+		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("joa01doe");
+		verifyNoInteractions(processServiceMock); // new applications don't start a process
+	}
+
+	@Test
+	void skipsDefaultHandlaggareWhenAlreadyAssigned() {
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
+
+		listener.on(event(SLUG_NEW, "already-assigned"));
+
+		verifyNoInteractions(defaultAssigneeServiceMock, processServiceMock);
+		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
+	}
+
+	@Test
+	void leavesUnassignedWhenNoDefaultConfigured() {
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
+		when(defaultAssigneeServiceMock.resolve(MUNICIPALITY_ID)).thenReturn(Optional.empty());
+
+		listener.on(event(SLUG_NEW, " "));
+
+		verify(defaultAssigneeServiceMock).resolve(MUNICIPALITY_ID);
+		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
+		verifyNoInteractions(processServiceMock);
+	}
+
+	@Test
+	void assignsDefaultHandlaggareThenStartsProcessForUnassignedRenewal() {
+		final var entity = FinancialAssistanceEntity.create()
+			.withErrandId(ERRAND_ID)
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID)));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+		when(defaultAssigneeServiceMock.resolve(MUNICIPALITY_ID)).thenReturn(Optional.of("joa01doe"));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
+		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
+			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
+
+		listener.on(event(SLUG_RENEWAL, null));
+
+		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
+		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
+		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("joa01doe");
+		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any());
+		verify(errandServiceMock).linkProcessInstance(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PROCESS_INSTANCE_ID);
 	}
 
 	@Test
