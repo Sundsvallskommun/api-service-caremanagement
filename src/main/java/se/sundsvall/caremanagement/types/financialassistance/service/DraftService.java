@@ -201,6 +201,7 @@ public class DraftService {
 	@Transactional
 	public NormExpenseRow patchExpense(final String errandId, final String rowId, final NormExpenseInput input) {
 		final var entity = requireExpense(errandId, rowId);
+		entity.setAppliedAmount(input.getAppliedAmount());
 		entity.setCaseworkerAmount(input.getCaseworkerAmount());
 		entity.setNote(input.getNote());
 		return toExpenseRow(expenseRepository.save(entity));

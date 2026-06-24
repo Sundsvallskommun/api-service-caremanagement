@@ -7429,8 +7429,8 @@ components:
           description: The cost specification
         appliedAmount:
           type: number
-          description: The amount applied for (ansökt). Honoured only when creating
-            a new row; ignored on a patch.
+          description: The amount applied for (ansökt). Honoured on both create and
+            patch.
           examples:
           - 1100.0
         caseworkerAmount:
@@ -7478,10 +7478,9 @@ components:
           readOnly: true
         appliedAmount:
           type: number
-          description: The amount the citizen applied for
+          description: The amount the citizen applied for (ansökt); editable by a caseworker
           examples:
           - 1200.0
-          readOnly: true
         processAmount:
           type: number
           description: The amount the rules allowed (the process amount)

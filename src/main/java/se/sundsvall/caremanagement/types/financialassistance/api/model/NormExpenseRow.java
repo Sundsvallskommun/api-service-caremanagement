@@ -10,10 +10,10 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 
 /**
  * One expense row of the calculation draft, as returned to Draken — a single applied cost. {@code appliedAmount} is
- * what the citizen asked for and {@code processAmount} what the rules allowed (both read-only); the caseworker's
- * override ({@code caseworkerAmount}) and the note are editable. {@code effectiveAmount} is what is posted to Lifecare
- * =
- * the caseworker amount when set, otherwise the process amount. Added to the norm.
+ * what the citizen asked for and {@code processAmount} what the rules allowed; the applied amount, the caseworker's
+ * override ({@code caseworkerAmount}) and the note are editable, the process amount is read-only.
+ * {@code effectiveAmount} is what is posted to Lifecare = the caseworker amount when set, otherwise the process amount.
+ * Added to the norm.
  */
 @Schema(description = "One expense row of the calculation draft (applied cost, process vs caseworker amount).")
 public class NormExpenseRow {
@@ -40,7 +40,7 @@ public class NormExpenseRow {
 	@Schema(description = "The cost specification", accessMode = Schema.AccessMode.READ_ONLY)
 	private String specification;
 
-	@Schema(description = "The amount the citizen applied for", examples = "1200.00", accessMode = Schema.AccessMode.READ_ONLY)
+	@Schema(description = "The amount the citizen applied for (ansökt); editable by a caseworker", examples = "1200.00")
 	private BigDecimal appliedAmount;
 
 	@Schema(description = "The amount the rules allowed (the process amount)", examples = "1000.00", accessMode = Schema.AccessMode.READ_ONLY)

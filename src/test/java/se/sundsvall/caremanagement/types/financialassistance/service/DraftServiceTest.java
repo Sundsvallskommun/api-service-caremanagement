@@ -179,7 +179,7 @@ class DraftServiceTest {
 		assertThat(added.getAppliedAmount()).isEqualByComparingTo("9000"); // applied amount honoured on create
 		final var patched = service.patchExpense(ERRAND_ID, ROW_ID, new NormExpenseInput().withAppliedAmount(new BigDecimal("9999")).withCaseworkerAmount(new BigDecimal("7000")));
 		assertThat(patched.getCaseworkerAmount()).isEqualByComparingTo("7000");
-		assertThat(patched.getAppliedAmount()).isNull(); // applied amount ignored on patch
+		assertThat(patched.getAppliedAmount()).isEqualByComparingTo("9999"); // applied amount honoured on patch
 		assertThat(service.setExpenseDeleted(ERRAND_ID, ROW_ID, true).isDeleted()).isTrue();
 
 		assertThat(service.addPerson(ERRAND_ID, new NormPersonInput().withPartyId("p1").withRole(ROLE_CHILD).withCaseworkerDays(10)).getEffectiveDays()).isEqualTo(10);

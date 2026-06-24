@@ -5,9 +5,8 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
- * What a caseworker sends to add a new expense row (origin CASEWORKER) or patch an existing one — only the
- * caseworker
- * amount + note are honoured on a patch; the applied amount is honoured only when creating a new row.
+ * What a caseworker sends to add a new expense row (origin CASEWORKER) or patch an existing one — the applied
+ * amount, the caseworker amount and the note are all honoured on both create and patch.
  */
 @Schema(description = "What a caseworker sends to add or patch an expense row (identity + caseworker-writable fields only).")
 public class NormExpenseInput {
@@ -26,7 +25,7 @@ public class NormExpenseInput {
 	@Schema(description = "The cost specification")
 	private String specification;
 
-	@Schema(description = "The amount applied for (ansökt). Honoured only when creating a new row; ignored on a patch.", examples = "1100.00")
+	@Schema(description = "The amount applied for (ansökt). Honoured on both create and patch.", examples = "1100.00")
 	private BigDecimal appliedAmount;
 
 	@Schema(description = "The amount the caseworker decided", examples = "1100.00")
