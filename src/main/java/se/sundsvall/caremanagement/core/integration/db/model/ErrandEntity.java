@@ -40,7 +40,8 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 		@Index(name = "idx_errand_municipality_namespace_reporter_user_id", columnList = "municipality_id,namespace,reporter_user_id"),
 		@Index(name = "idx_errand_municipality_namespace_status_touched", columnList = "municipality_id,namespace,status,touched"),
 		@Index(name = "idx_errand_municipality_namespace_created", columnList = "municipality_id,namespace,created"),
-		@Index(name = "idx_errand_municipality_namespace_touched", columnList = "municipality_id,namespace,touched")
+		@Index(name = "idx_errand_municipality_namespace_touched", columnList = "municipality_id,namespace,touched"),
+		@Index(name = "idx_errand_municipality_namespace_applicant_name", columnList = "municipality_id,namespace,applicant_name")
 	},
 	uniqueConstraints = {
 		@UniqueConstraint(name = "uq_errand_errand_number", columnNames = "errand_number")
@@ -82,6 +83,15 @@ public class ErrandEntity implements Auditable {
 
 	@Column(name = "assigned_user_id")
 	private String assignedUserId;
+
+	/**
+	 * Denormalized display name of the errand's applicant, maintained from the APPLICANT stakeholder by the owning type
+	 * module (see the financial-assistance {@code ApplicantNameSyncListener}). Present purely so the errand list can be
+	 * sorted/searched by applicant without a cross-module join — the envelope keeps no JPA relation to stakeholders. Null
+	 * for errand types that declare no applicant.
+	 */
+	@Column(name = "applicant_name")
+	private String applicantName;
 
 	@Column(name = "process_definition_name")
 	private String processDefinitionName;
@@ -199,6 +209,14 @@ public class ErrandEntity implements Auditable {
 		this.assignedUserId = assignedUserId;
 	}
 
+	public String getApplicantName() {
+		return applicantName;
+	}
+
+	public void setApplicantName(final String applicantName) {
+		this.applicantName = applicantName;
+	}
+
 	public String getProcessDefinitionName() {
 		return processDefinitionName;
 	}
@@ -298,6 +316,11 @@ public class ErrandEntity implements Auditable {
 		return this;
 	}
 
+	public ErrandEntity withApplicantName(final String v) {
+		this.applicantName = v;
+		return this;
+	}
+
 	public ErrandEntity withProcessDefinitionName(final String v) {
 		this.processDefinitionName = v;
 		return this;
@@ -334,6 +357,7 @@ public class ErrandEntity implements Auditable {
 			&& Objects.equals(errandNumber, that.errandNumber) && Objects.equals(typeSlug, that.typeSlug) && Objects.equals(title, that.title)
 			&& Objects.equals(status, that.status) && Objects.equals(description, that.description) && Objects.equals(priority, that.priority)
 			&& Objects.equals(reporterUserId, that.reporterUserId) && Objects.equals(assignedUserId, that.assignedUserId)
+			&& Objects.equals(applicantName, that.applicantName)
 			&& Objects.equals(processDefinitionName, that.processDefinitionName) && Objects.equals(processInstanceId, that.processInstanceId)
 			&& Objects.equals(created, that.created) && Objects.equals(modified, that.modified) && Objects.equals(touched, that.touched);
 	}
@@ -341,7 +365,7 @@ public class ErrandEntity implements Auditable {
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, municipalityId, namespace, errandNumber, typeSlug, title, status, description, priority,
-			reporterUserId, assignedUserId, processDefinitionName, processInstanceId, created, modified, touched);
+			reporterUserId, assignedUserId, applicantName, processDefinitionName, processInstanceId, created, modified, touched);
 	}
 
 	@Override
@@ -358,6 +382,7 @@ public class ErrandEntity implements Auditable {
 			", priority='" + priority + '\'' +
 			", reporterUserId='" + reporterUserId + '\'' +
 			", assignedUserId='" + assignedUserId + '\'' +
+			", applicantName='" + applicantName + '\'' +
 			", processDefinitionName='" + processDefinitionName + '\'' +
 			", processInstanceId='" + processInstanceId + '\'' +
 			", created=" + created +

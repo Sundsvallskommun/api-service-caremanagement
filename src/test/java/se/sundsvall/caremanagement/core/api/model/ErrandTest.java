@@ -52,6 +52,7 @@ class ErrandTest {
 			.withPriority("HIGH")
 			.withReporterUserId("reporter")
 			.withAssignedUserId("assignee")
+			.withApplicantName("Anna Andersson")
 			.withProcessDefinitionName("BPMN")
 			.withProcessInstanceId("pi-1")
 			.withCreated(created)
@@ -70,6 +71,7 @@ class ErrandTest {
 		assertThat(errand.getPriority()).isEqualTo("HIGH");
 		assertThat(errand.getReporterUserId()).isEqualTo("reporter");
 		assertThat(errand.getAssignedUserId()).isEqualTo("assignee");
+		assertThat(errand.getApplicantName()).isEqualTo("Anna Andersson");
 		assertThat(errand.getProcessDefinitionName()).isEqualTo("BPMN");
 		assertThat(errand.getProcessInstanceId()).isEqualTo("pi-1");
 		assertThat(errand.getCreated()).isEqualTo(created);

@@ -56,6 +56,12 @@ public class Errand {
 	@Schema(description = "User id of the assignee", examples = "jane02doe")
 	private String assignedUserId;
 
+	@Schema(description = "Denormalized display name of the errand's applicant, maintained from the APPLICANT stakeholder. "
+		+ "Sortable and searchable on the errand list (e.g. ?sort=applicantName,asc). Null for errand types with no applicant.",
+		examples = "Anna Andersson",
+		accessMode = READ_ONLY)
+	private String applicantName;
+
 	@Schema(description = "Name of the Operaton process definition to start when the errand is created", examples = "Handläggning av ärende")
 	private String processDefinitionName;
 
@@ -123,6 +129,10 @@ public class Errand {
 		return assignedUserId;
 	}
 
+	public String getApplicantName() {
+		return applicantName;
+	}
+
 	public String getProcessDefinitionName() {
 		return processDefinitionName;
 	}
@@ -185,6 +195,10 @@ public class Errand {
 
 	public void setAssignedUserId(final String v) {
 		this.assignedUserId = v;
+	}
+
+	public void setApplicantName(final String v) {
+		this.applicantName = v;
 	}
 
 	public void setProcessDefinitionName(final String v) {
@@ -262,6 +276,11 @@ public class Errand {
 		return this;
 	}
 
+	public Errand withApplicantName(final String v) {
+		this.applicantName = v;
+		return this;
+	}
+
 	public Errand withProcessDefinitionName(final String v) {
 		this.processDefinitionName = v;
 		return this;
@@ -297,7 +316,7 @@ public class Errand {
 			&& Objects.equals(typeSlug, errand.typeSlug) && Objects.equals(title, errand.title)
 			&& Objects.equals(status, errand.status) && Objects.equals(description, errand.description)
 			&& Objects.equals(priority, errand.priority) && Objects.equals(reporterUserId, errand.reporterUserId)
-			&& Objects.equals(assignedUserId, errand.assignedUserId)
+			&& Objects.equals(assignedUserId, errand.assignedUserId) && Objects.equals(applicantName, errand.applicantName)
 			&& Objects.equals(processDefinitionName, errand.processDefinitionName)
 			&& Objects.equals(processInstanceId, errand.processInstanceId)
 			&& Objects.equals(created, errand.created) && Objects.equals(modified, errand.modified)
@@ -307,7 +326,7 @@ public class Errand {
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, municipalityId, namespace, errandNumber, typeSlug, title, status, description, priority,
-			reporterUserId, assignedUserId, processDefinitionName, processInstanceId, created, modified, touched);
+			reporterUserId, assignedUserId, applicantName, processDefinitionName, processInstanceId, created, modified, touched);
 	}
 
 	@Override
@@ -316,6 +335,7 @@ public class Errand {
 			+ "', errandNumber='" + errandNumber + "', typeSlug='" + typeSlug + "', status='" + status
 			+ "', title='" + title + "', description='" + description + "', priority='" + priority
 			+ "', reporterUserId='" + reporterUserId + "', assignedUserId='" + assignedUserId
+			+ "', applicantName='" + applicantName
 			+ "', processDefinitionName='" + processDefinitionName + "', processInstanceId='" + processInstanceId
 			+ "', created=" + created + ", modified=" + modified + ", touched=" + touched + '}';
 	}

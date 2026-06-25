@@ -6442,6 +6442,14 @@ components:
           description: User id of the assignee
           examples:
           - jane02doe
+        applicantName:
+          type: string
+          description: "Denormalized display name of the errand's applicant, maintained\
+            \ from the APPLICANT stakeholder. Sortable and searchable on the errand\
+            \ list (e.g. ?sort=applicantName,asc). Null for errand types with no applicant."
+          examples:
+          - Anna Andersson
+          readOnly: true
         processDefinitionName:
           type: string
           description: Name of the Operaton process definition to start when the errand

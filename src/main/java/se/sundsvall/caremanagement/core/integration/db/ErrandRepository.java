@@ -8,6 +8,9 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 
 @CircuitBreaker(name = "errandRepository")
@@ -29,4 +32,13 @@ public interface ErrandRepository extends JpaRepository<ErrandEntity, String>, J
 	 * {@code (municipality_id, namespace, status, touched)} index.
 	 */
 	List<ErrandEntity> findByMunicipalityIdAndNamespaceAndStatusAndTouchedLessThanEqual(String municipalityId, String namespace, String status, OffsetDateTime cutoff);
+
+	/**
+	 * Sets the denormalized {@code applicant_name} read-model field. A targeted bulk update on purpose: it bypasses the
+	 * {@code @PreUpdate} lifecycle callback so refreshing the applicant name does <b>not</b> bump {@code touched} (the
+	 * default errand-list sort) — a stakeholder edit must not resurface an errand as recently touched.
+	 */
+	@Modifying(clearAutomatically = true)
+	@Query("update ErrandEntity e set e.applicantName = :applicantName where e.id = :errandId")
+	int updateApplicantName(@Param("errandId") String errandId, @Param("applicantName") String applicantName);
 }
