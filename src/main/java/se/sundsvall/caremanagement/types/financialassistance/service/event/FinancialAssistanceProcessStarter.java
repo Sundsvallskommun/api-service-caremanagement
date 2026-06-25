@@ -19,9 +19,14 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_CO_APPLICANT;
 
 /**
- * Starts the EB decision-support process ({@code rakel-ekonomiskt-bistand}) on an errand and seeds the household start
- * variables the BPMN/DMN flow reads. Shared by the renewal intake ({@link FinancialAssistanceErrandCreatedListener})
- * and by the manual-review release ({@link FinancialAssistanceReleaseListener}) so both kick off an identical flow.
+ * Starts an EB process on an errand and seeds the household start variables the BPMN/DMN flow reads. The renewal intake
+ * ({@link FinancialAssistanceErrandCreatedListener}) and the manual-review release
+ * ({@link FinancialAssistanceReleaseListener}) start the full decision-support process
+ * ({@code rakel-ekonomiskt-bistand}); the supplementary intake starts the lighter tilläggsansökan process
+ * ({@code rakel-ekonomiskt-bistand-tillaggsansokan}) — same first steps (status + actualisation) but without
+ * SSBTEK/normberäkning. The actualisation step resolves the handläggare off the applicant's most recent Lifecare insats
+ * (for a tilläggsansökan: the ongoing återansökan's caseworker), so the errand ends up on that caseworker rather than
+ * the default assignee.
  *
  * <p>
  * The process is started with {@code businessKey = errandId} and seeded with the municipalityId and namespace, the
@@ -35,8 +40,11 @@ class FinancialAssistanceProcessStarter {
 
 	private static final Logger LOG = LoggerFactory.getLogger(FinancialAssistanceProcessStarter.class);
 
-	/** The EB BPMN process, deployed to Operaton via the modeler. Started with businessKey = errandId. */
+	/** The EB decision-support BPMN process (renewal), deployed to Operaton via the modeler. businessKey = errandId. */
 	static final String PROCESS_DEFINITION_NAME = "rakel-ekonomiskt-bistand";
+
+	/** The EB tilläggsansökan BPMN process — status + actualisation only, no SSBTEK/normberäkning. */
+	static final String PROCESS_DEFINITION_NAME_SUPPLEMENTARY = "rakel-ekonomiskt-bistand-tillaggsansokan";
 
 	// Start-variable keys the BPMN/DMN flow reads (scalars — Operaton receives a plain map, so no list indexing).
 	static final String VAR_MUNICIPALITY_ID = "municipalityId";
@@ -61,13 +69,23 @@ class FinancialAssistanceProcessStarter {
 		this.citizenService = citizenService;
 	}
 
-	/** Start the EB process on {@code errandId} and link the instance back onto the errand. Best-effort. */
+	/** Start the EB decision-support process (renewal) on {@code errandId} and link the instance back. Best-effort. */
 	void start(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity entity) {
+		start(PROCESS_DEFINITION_NAME, municipalityId, namespace, errandId, entity);
+	}
+
+	/** Start the EB tilläggsansökan process on {@code errandId} and link the instance back. Best-effort. */
+	void startSupplementary(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity entity) {
+		start(PROCESS_DEFINITION_NAME_SUPPLEMENTARY, municipalityId, namespace, errandId, entity);
+	}
+
+	private void start(final String processDefinitionName, final String municipalityId, final String namespace, final String errandId,
+		final FinancialAssistanceEntity entity) {
 		try {
-			processService.startProcess(municipalityId, PROCESS_DEFINITION_NAME, errandId, startVariables(municipalityId, namespace, entity))
+			processService.startProcess(municipalityId, processDefinitionName, errandId, startVariables(municipalityId, namespace, entity))
 				.ifPresent(processInstanceId -> errandService.linkProcessInstance(municipalityId, namespace, errandId, processInstanceId));
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not start '{}' for errand {}", PROCESS_DEFINITION_NAME, errandId, e);
+			LOG.warn("Could not start '{}' for errand {}", processDefinitionName, errandId, e);
 		}
 	}
 

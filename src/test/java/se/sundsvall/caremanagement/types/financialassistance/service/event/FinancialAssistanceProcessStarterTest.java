@@ -25,6 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.PROCESS_DEFINITION_NAME;
+import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.PROCESS_DEFINITION_NAME_SUPPLEMENTARY;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_APPLICATION_MONTH;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_CO_APPLICANT;
@@ -88,6 +89,31 @@ class FinancialAssistanceProcessStarterTest {
 			.containsEntry(VAR_CO_APPLICANT_PERSONAL_NUMBER, CO_APPLICANT_PERSONAL_NUMBER)
 			.containsEntry(VAR_FROM_DATE, "2026-04-01")
 			.containsEntry(VAR_TO_DATE, "2026-06-30");
+
+		verify(errandServiceMock).linkProcessInstance(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PROCESS_INSTANCE_ID);
+	}
+
+	@Test
+	void startSupplementaryStartsTillaggsansokanProcessWithSameVariablesAndLinksInstance() {
+		final var entity = FinancialAssistanceEntity.create()
+			.withErrandId(ERRAND_ID)
+			.withPeriodYear(2026)
+			.withPeriodMonth(6)
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID)));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
+		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME_SUPPLEMENTARY), eq(ERRAND_ID), any()))
+			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
+
+		starter.startSupplementary(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
+
+		@SuppressWarnings("unchecked")
+		final ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
+		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME_SUPPLEMENTARY), eq(ERRAND_ID), varsCaptor.capture());
+		assertThat(varsCaptor.getValue())
+			.containsEntry(VAR_MUNICIPALITY_ID, MUNICIPALITY_ID)
+			.containsEntry(VAR_NAMESPACE, NAMESPACE)
+			.containsEntry(VAR_APPLICANT, APPLICANT_PARTY_ID)
+			.containsEntry(VAR_APPLICATION_MONTH, "2026-06");
 
 		verify(errandServiceMock).linkProcessInstance(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PROCESS_INSTANCE_ID);
 	}

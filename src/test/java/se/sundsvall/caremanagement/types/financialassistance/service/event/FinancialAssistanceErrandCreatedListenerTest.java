@@ -29,6 +29,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_NEEDS_MANUAL_REVIEW;
 
 @ExtendWith(MockitoExtension.class)
@@ -117,6 +118,20 @@ class FinancialAssistanceErrandCreatedListenerTest {
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
 		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("joa01doe");
 		verify(processStarterMock).start(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
+	}
+
+	@Test
+	void assignsDefaultHandlaggareThenStartsSupplementaryProcessForUnassignedSupplementary() {
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity()));
+		when(defaultAssigneeServiceMock.resolve(MUNICIPALITY_ID)).thenReturn(Optional.of("joa01doe"));
+
+		listener.on(event(SLUG_SUPPLEMENTARY, null));
+
+		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
+		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
+		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("joa01doe"); // default is the fallback; actualisation later overwrites with the previous återansökan caseworker
+		verify(processStarterMock).startSupplementary(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
+		verify(processStarterMock, never()).start(any(), any(), any(), any());
 	}
 
 	@Test

@@ -15,6 +15,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.DefaultAssi
 import se.sundsvall.caremanagement.types.financialassistance.service.RecentlyClosedErrandService;
 
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_NEEDS_MANUAL_REVIEW;
 
 /**
@@ -33,7 +34,9 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * recently-closed window, this re-application is <em>frozen</em> as {@code NEEDS_MANUAL_REVIEW} — no aktualisering (the
  * process is not started), and being non-CLOSED it is never picked up by the archive job — so a caseworker reopens the
  * previous insats in Lifecare and releases it (see {@link FinancialAssistanceReleaseListener}). Otherwise the normal
- * path applies: only renewals start the EB process; new/supplementary errands just sit awaiting the caseworker.
+ * path applies: a renewal starts the full decision-support process and a supplementary application starts the lighter
+ * tilläggsansökan process (whose actualisation step attaches the previous återansökan's Lifecare caseworker); a new
+ * application has no prior insats and just sits awaiting the caseworker (default assignee).
  */
 @Component
 class FinancialAssistanceErrandCreatedListener {
@@ -67,7 +70,11 @@ class FinancialAssistanceErrandCreatedListener {
 			}
 
 			if (SLUG_RENEWAL.equals(event.typeSlug())) {
-				processStarter.start(event.municipalityId(), event.namespace(), event.errandId(), entity); // only the renewal intake starts the EB process
+				processStarter.start(event.municipalityId(), event.namespace(), event.errandId(), entity); // renewal starts the full decision-support process
+			} else if (SLUG_SUPPLEMENTARY.equals(event.typeSlug())) {
+				// A supplementary application supplements an ongoing bistånd: start the tilläggsansökan process so its
+				// actualisation step attaches the previous återansökan's Lifecare caseworker, not the default assignee.
+				processStarter.startSupplementary(event.municipalityId(), event.namespace(), event.errandId(), entity);
 			}
 		});
 	}
