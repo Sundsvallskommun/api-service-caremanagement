@@ -36,6 +36,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_EXISTING_CASE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_MARITAL_STATUS_CHANGED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_NO_EXISTING_CASE;
+import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_RECENTLY_CLOSED;
 
 @ExtendWith(MockitoExtension.class)
 class EligibilityServiceTest {
@@ -63,8 +64,12 @@ class EligibilityServiceTest {
 	@Mock
 	private CitizenService citizenServiceMock;
 
+	@Mock
+	private RecentlyClosedErrandService recentlyClosedErrandServiceMock;
+
 	private EligibilityService service() {
-		return new EligibilityService(errandRepositoryMock, financialAssistanceRepositoryMock, lifecareEbCaseServiceMock, citizenServiceMock, 90, false);
+		return new EligibilityService(errandRepositoryMock, financialAssistanceRepositoryMock, lifecareEbCaseServiceMock,
+			citizenServiceMock, recentlyClosedErrandServiceMock, 90, false);
 	}
 
 	@BeforeEach
@@ -241,6 +246,68 @@ class EligibilityServiceTest {
 
 		assertThat(response.getMaritalStatusMatches()).isTrue();
 		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
+	}
+
+	@Test
+	void differentCoApplicantSuggestsNew() {
+		final var otherCo = "b2c3d4e5-f6a7-8901-bcde-f12345678901";
+		final var otherCoPnr = "199003033394";
+		// Previous CM case: applicant + partner A (CO_APPLICANT). Now applying with a different partner (otherCo) who also
+		// exists (Lifecare footprint) → same household size, new person → new constellation → NY.
+		when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(APPLICANT)).thenReturn(List.of(ERRAND_ID));
+		when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(otherCo)).thenReturn(List.of());
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL).withCreated(OffsetDateTime.now())));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(
+			FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)
+				.withPersons(List.of(person(ROLE_APPLICANT, APPLICANT), person(ROLE_CO_APPLICANT, CO_APPLICANT)))));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, otherCo)).thenReturn(Optional.of(otherCoPnr));
+		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareEbCaseSummary.none());
+		when(lifecareEbCaseServiceMock.summarize(eq(otherCoPnr), any()))
+			.thenReturn(new LifecareEbCaseSummary(true, Set.of(), null, false, false));
+		final var request = EligibilityRequest.create().withApplicant(APPLICANT).withCoApplicant(otherCo);
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, request);
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_MARITAL_STATUS_CHANGED);
+		assertThat(response.getMaritalStatusMatches()).isFalse();
+		assertThat(response.getSuggestions()).singleElement().satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_NEW));
+	}
+
+	// ---- 2.5) Recently-closed gate -----------------------------------------------------------------------------------
+
+	@Test
+	void recentlyClosedSuggestsRenewalAndSurfacesErrand() {
+		final var closedAt = OffsetDateTime.now().minusDays(5);
+		cmErrand(person(ROLE_APPLICANT, APPLICANT)); // applicant exists → passes existence + marital (alone)
+		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
+			.thenReturn(new LifecareEbCaseSummary(true, Set.of(), null, false, false));
+		when(recentlyClosedErrandServiceMock.findRecentlyClosed(eq(MUNICIPALITY_ID), eq(NAMESPACE), any()))
+			.thenReturn(Optional.of(new RecentlyClosedErrandService.RecentlyClosed(ERRAND_ID, closedAt)));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_RECENTLY_CLOSED);
+		assertThat(response.getReopenableErrandId()).isEqualTo(ERRAND_ID);
+		assertThat(response.getClosedAt()).isEqualTo(closedAt);
+		assertThat(response.getSuggestions()).singleElement()
+			.satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_RENEWAL))
+			.satisfies(s -> assertThat(s.isRecommended()).isTrue())
+			.satisfies(s -> assertThat(s.getPeriodMonth()).isEqualTo(CURRENT.getMonthValue()));
+	}
+
+	@Test
+	void noRecentlyClosedFallsThroughToPerMonth() {
+		// Recently-closed service finds nothing → routing continues to the normal per-month logic.
+		cmErrand(person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareEbCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
+			.thenReturn(new LifecareEbCaseSummary(true, Set.of(), null, false, false));
+		when(recentlyClosedErrandServiceMock.findRecentlyClosed(eq(MUNICIPALITY_ID), eq(NAMESPACE), any())).thenReturn(Optional.empty());
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
+		assertThat(response.getReopenableErrandId()).isNull();
 	}
 
 	// ---- 3) Per-month logic ------------------------------------------------------------------------------------------

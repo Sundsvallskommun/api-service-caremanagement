@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -19,7 +20,7 @@ public class EligibilityResponse {
 	@Schema(description = "Machine-readable code for the gate that drove the suggestion",
 		examples = "EXISTING_CASE",
 		allowableValues = {
-			"NO_EXISTING_CASE", "MARITAL_STATUS_CHANGED", "EXISTING_CASE", "ALL_TYPES_TEST"
+			"NO_EXISTING_CASE", "MARITAL_STATUS_CHANGED", "RECENTLY_CLOSED", "EXISTING_CASE", "ALL_TYPES_TEST"
 		})
 	private String reasonCode;
 
@@ -61,6 +62,12 @@ public class EligibilityResponse {
 
 	@Schema(description = "True when the request included a co-applicant (co-applicant)", examples = "false")
 	private boolean hasCoApplicant;
+
+	@Schema(description = "When reasonCode is RECENTLY_CLOSED: the id of the recently closed errand a caseworker can reopen (in Lifecare) and release. Null otherwise.", examples = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+	private String reopenableErrandId;
+
+	@Schema(description = "When reasonCode is RECENTLY_CLOSED: when the reopenable errand was closed. Null otherwise.", examples = "2026-06-20T10:15:30Z")
+	private OffsetDateTime closedAt;
 
 	public static EligibilityResponse create() {
 		return new EligibilityResponse();
@@ -261,6 +268,32 @@ public class EligibilityResponse {
 		return this;
 	}
 
+	public String getReopenableErrandId() {
+		return reopenableErrandId;
+	}
+
+	public void setReopenableErrandId(final String reopenableErrandId) {
+		this.reopenableErrandId = reopenableErrandId;
+	}
+
+	public EligibilityResponse withReopenableErrandId(final String reopenableErrandId) {
+		this.reopenableErrandId = reopenableErrandId;
+		return this;
+	}
+
+	public OffsetDateTime getClosedAt() {
+		return closedAt;
+	}
+
+	public void setClosedAt(final OffsetDateTime closedAt) {
+		this.closedAt = closedAt;
+	}
+
+	public EligibilityResponse withClosedAt(final OffsetDateTime closedAt) {
+		this.closedAt = closedAt;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -274,14 +307,15 @@ public class EligibilityResponse {
 			&& Objects.equals(reasonCode, that.reasonCode) && Objects.equals(message, that.message)
 			&& Objects.equals(maritalStatusMatches, that.maritalStatusMatches)
 			&& Objects.equals(latestDecisionPeriodMonth, that.latestDecisionPeriodMonth)
-			&& Objects.equals(latestDecisionPeriodYear, that.latestDecisionPeriodYear);
+			&& Objects.equals(latestDecisionPeriodYear, that.latestDecisionPeriodYear)
+			&& Objects.equals(reopenableErrandId, that.reopenableErrandId) && Objects.equals(closedAt, that.closedAt);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(suggestions, reasonCode, message, existsInCm, existsInLc, maritalStatusMatches, windowDays,
 			applicationExistsThisMonth, applicationExistsNextMonth, currentMonthDecided, latestDecisionPeriodMonth,
-			latestDecisionPeriodYear, hasPreviousCalculation, lifecareChecked, hasCoApplicant);
+			latestDecisionPeriodYear, hasPreviousCalculation, lifecareChecked, hasCoApplicant, reopenableErrandId, closedAt);
 	}
 
 	@Override
@@ -292,6 +326,7 @@ public class EligibilityResponse {
 			+ ", applicationExistsNextMonth=" + applicationExistsNextMonth + ", currentMonthDecided=" + currentMonthDecided
 			+ ", latestDecisionPeriodMonth=" + latestDecisionPeriodMonth + ", latestDecisionPeriodYear="
 			+ latestDecisionPeriodYear + ", hasPreviousCalculation=" + hasPreviousCalculation + ", lifecareChecked="
-			+ lifecareChecked + ", hasCoApplicant=" + hasCoApplicant + '}';
+			+ lifecareChecked + ", hasCoApplicant=" + hasCoApplicant + ", reopenableErrandId='" + reopenableErrandId
+			+ "', closedAt=" + closedAt + '}';
 	}
 }

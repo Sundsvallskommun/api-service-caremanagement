@@ -25,11 +25,14 @@ class FinancialAssistanceModuleConfigTest {
 		assertThat(contribution.typeSlug()).isEqualTo(slug);
 		assertThat(contribution.displayName()).isEqualTo(displayName);
 		assertThat(contribution.allowedStatuses()).containsExactlyInAnyOrder(
-			"RECEIVED", "UNDER_REVIEW", "AWAITING_DECISION", "SUPPLEMENT_REQUESTED", "GRANTED",
+			"RECEIVED", "NEEDS_MANUAL_REVIEW", "UNDER_REVIEW", "AWAITING_DECISION", "SUPPLEMENT_REQUESTED", "GRANTED",
 			"REJECTED", "PAID", "CLOSED", "WITHDRAWN");
 		assertThat(contribution.isValidStatus("RECEIVED")).isTrue();
+		assertThat(contribution.isValidStatus("NEEDS_MANUAL_REVIEW")).isTrue();
 		assertThat(contribution.isValidStatus("BOGUS")).isFalse();
 		assertThat(contribution.isValidTransition("RECEIVED", "UNDER_REVIEW")).isTrue();
+		assertThat(contribution.isValidTransition("RECEIVED", "NEEDS_MANUAL_REVIEW")).isTrue();
+		assertThat(contribution.isValidTransition("NEEDS_MANUAL_REVIEW", "UNDER_REVIEW")).isTrue();
 		assertThat(contribution.isValidTransition("GRANTED", "PAID")).isTrue();
 		assertThat(contribution.isValidTransition("RECEIVED", "PAID")).isFalse();
 	}

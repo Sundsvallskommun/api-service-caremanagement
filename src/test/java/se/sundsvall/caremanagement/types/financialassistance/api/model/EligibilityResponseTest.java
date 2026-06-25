@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +28,9 @@ class EligibilityResponseTest {
 			.withLatestDecisionPeriodYear(2026)
 			.withHasPreviousCalculation(true)
 			.withLifecareChecked(true)
-			.withHasCoApplicant(true);
+			.withHasCoApplicant(true)
+			.withReopenableErrandId("errand-9")
+			.withClosedAt(OffsetDateTime.parse("2026-06-20T10:15:30Z"));
 
 		assertThat(response.getSuggestions()).isEqualTo(SUGGESTIONS);
 		assertThat(response.getReasonCode()).isEqualTo("EXISTING_CASE");
@@ -44,6 +47,8 @@ class EligibilityResponseTest {
 		assertThat(response.isHasPreviousCalculation()).isTrue();
 		assertThat(response.isLifecareChecked()).isTrue();
 		assertThat(response.isHasCoApplicant()).isTrue();
+		assertThat(response.getReopenableErrandId()).isEqualTo("errand-9");
+		assertThat(response.getClosedAt()).isEqualTo(OffsetDateTime.parse("2026-06-20T10:15:30Z"));
 		assertThat(response).hasNoNullFieldsOrProperties();
 	}
 

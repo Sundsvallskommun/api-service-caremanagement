@@ -192,6 +192,11 @@ financial-assistance:
   eligibility:
     # "Inom X dagar" duplicate-application guard for the common-entry-point eligibility check. A request may override it.
     duplicate-window-days: 90
+    # "Recently closed inom X dagar" guard. When an applicant's previous EB errand was closed this recently, the
+    # eligibility check recommends a renewal (reasonCode RECENTLY_CLOSED) and surfaces the closed errand, and a freshly
+    # created errand is frozen as NEEDS_MANUAL_REVIEW (no aktualisering, no arkivering) for a caseworker to reopen in
+    # Lifecare and release. Policy value — confirm the day count with legal/jurist.
+    recently-closed-window-days: 30
     # TEST OVERRIDE: when true the eligibility check short-circuits and returns all three application types
     # (new/renewal/supplementary application) regardless of any existing case, so the frontend can exercise all three
     # flows. Set to false to restore the real common-entry-point routing.

@@ -6,9 +6,11 @@ import java.time.YearMonth;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
@@ -18,6 +20,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Applicati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -65,6 +68,7 @@ public class EligibilityService {
 
 	static final String REASON_NO_EXISTING_CASE = "NO_EXISTING_CASE";
 	static final String REASON_MARITAL_STATUS_CHANGED = "MARITAL_STATUS_CHANGED";
+	static final String REASON_RECENTLY_CLOSED = "RECENTLY_CLOSED";
 	static final String REASON_EXISTING_CASE = "EXISTING_CASE";
 	static final String REASON_ALL_TYPES_TEST = "ALL_TYPES_TEST";
 
@@ -76,17 +80,20 @@ public class EligibilityService {
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final LifecareEbCaseService lifecareEbCaseService;
 	private final CitizenService citizenService;
+	private final RecentlyClosedErrandService recentlyClosedErrandService;
 	private final int windowDays;
 	private final boolean returnAllTypes;
 
 	EligibilityService(final ErrandRepository errandRepository, final FinancialAssistanceRepository financialAssistanceRepository,
 		final LifecareEbCaseService lifecareEbCaseService, final CitizenService citizenService,
+		final RecentlyClosedErrandService recentlyClosedErrandService,
 		@Value("${financial-assistance.eligibility.duplicate-window-days:90}") final int windowDays,
 		@Value("${financial-assistance.eligibility.return-all-types:false}") final boolean returnAllTypes) {
 		this.errandRepository = errandRepository;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.lifecareEbCaseService = lifecareEbCaseService;
 		this.citizenService = citizenService;
+		this.recentlyClosedErrandService = recentlyClosedErrandService;
 		this.windowDays = windowDays;
 		this.returnAllTypes = returnAllTypes;
 	}
@@ -157,13 +164,27 @@ public class EligibilityService {
 				"No existing errand found" + (lifecareChecked ? "" : " (Lifecare could not be reached)") + ". Suggesting a new application.");
 		}
 
-		// 2) Samma marital status? — constellation (alone vs partner) vs the most recent existing case.
+		// 2) Samma marital status? — constellation (alone vs partner, and which partner) vs the most recent existing case.
+		// A different co-applicant (a new person, same household size) is a new constellation too → new application.
 		final var previousHadCoApplicant = previousHadCoApplicant(cmRecords, applicantLc);
-		final var maritalStatusMatches = hasCoApplicant == previousHadCoApplicant;
+		final var maritalStatusMatches = hasCoApplicant == previousHadCoApplicant && sameCoApplicantIfKnown(cmRecords, request);
 		response.setMaritalStatusMatches(maritalStatusMatches);
 		if (!maritalStatusMatches) {
 			return newApplication(response, REASON_MARITAL_STATUS_CHANGED,
 				"The marital status differs from the previous application. Suggesting a new application.");
+		}
+
+		// 2.5) Recently closed — a prior EB errand for either party was closed within the recently-closed window. Recommend
+		// a renewal and surface the closed errand so a caseworker can reopen it (in Lifecare) and release it for processing.
+		final var recentlyClosed = recentlyClosedErrandService.findRecentlyClosed(municipalityId, namespace, parties(request));
+		if (recentlyClosed.isPresent()) {
+			response.setReopenableErrandId(recentlyClosed.get().errandId());
+			response.setClosedAt(recentlyClosed.get().closedAt());
+			response.setSuggestions(List.of(suggestion(SLUG_RENEWAL, currentMonth, true)));
+			response.setReasonCode(REASON_RECENTLY_CLOSED);
+			response.setMessage("A recently closed errand was found. Suggesting a renewal; a caseworker reopens the previous "
+				+ "errand and releases it for processing.");
+			return response;
 		}
 
 		// 3) Per-month — application/decision already present for this/next month?
@@ -270,6 +291,38 @@ public class EligibilityService {
 		return cmRecords.stream().findFirst()
 			.map(record -> hasCoApplicantPerson(record.fa()))
 			.orElseGet(applicantLc::hasCoApplicant);
+	}
+
+	/**
+	 * When applying together, does the requested co-applicant match the most recent existing case's co-applicant? A
+	 * different partner is a new constellation → new application. Returns true when applying alone, or when the previous
+	 * co-applicant's identity is unknown (inferred from Lifecare, no CM person to compare), so we never force a new
+	 * application on missing data.
+	 */
+	private static boolean sameCoApplicantIfKnown(final List<CmRecord> cmRecords, final EligibilityRequest request) {
+		if (!hasText(request.getCoApplicant())) {
+			return true;
+		}
+		return cmRecords.stream().findFirst()
+			.flatMap(record -> coApplicantPartyId(record.fa()))
+			.map(previous -> previous.equals(request.getCoApplicant()))
+			.orElse(true);
+	}
+
+	/** The CO_APPLICANT person's partyId on an application, when one is present. */
+	private static Optional<String> coApplicantPartyId(final FinancialAssistanceEntity fa) {
+		return ofNullable(fa.getPersons()).orElseGet(List::of).stream()
+			.filter(person -> ROLE_CO_APPLICANT.equals(person.getRole()))
+			.map(FaPerson::getPartyId)
+			.filter(StringUtils::hasText)
+			.findFirst();
+	}
+
+	/** The applicant and (optional) co-applicant partyIds of the request, blanks removed. */
+	private static List<String> parties(final EligibilityRequest request) {
+		return Stream.of(request.getApplicant(), request.getCoApplicant())
+			.filter(StringUtils::hasText)
+			.toList();
 	}
 
 	/** EB errands (newest first) for either applicant, scoped to the namespace/municipality and the EB type slugs. */

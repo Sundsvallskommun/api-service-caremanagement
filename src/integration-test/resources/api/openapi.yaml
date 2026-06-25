@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:50034
+- url: http://localhost:56517
   description: Generated server url
 tags:
 - name: Statistics
@@ -2542,15 +2542,17 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/calculation/commit:
+  /{municipalityId}/{namespace}/errands/financial-assistance/calculation/from-application:
     post:
       tags:
       - Financial Assistance · Calculation
-      summary: Create the calculation in Lifecare (after decision)
-      description: "Builds the calculation from the classified incomes and creates\
-        \ it in Lifecare FC, returning the created calculation id. Called once a decision\
-        \ is taken — never during the daily SSBTEK loop."
-      operationId: commitCalculation
+      summary: Create the calculation in Lifecare straight from the application (nyansökan)
+      description: "Builds the calculation from the data the citizen declared in the\
+        \ application — incomes resolved to FC types by name, expenses and household\
+        \ from the same feeder the renewal path uses — and creates it in Lifecare\
+        \ FC in one shot, returning the created calculation id. No SSBTEK, no daily\
+        \ loop, no caseworker draft. Used by the nyansökan process."
+      operationId: commitFromApplication
       parameters:
       - name: municipalityId
         in: path
@@ -2582,17 +2584,15 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/calculation/from-application:
+  /{municipalityId}/{namespace}/errands/financial-assistance/calculation/commit:
     post:
       tags:
       - Financial Assistance · Calculation
-      summary: Create the calculation in Lifecare straight from the application (nyansökan)
-      description: "Builds the calculation from the data the citizen declared in the\
-        \ application — incomes resolved to FC types by name, expenses and household\
-        \ from the same feeder the renewal path uses — and creates it in Lifecare FC\
-        \ in one shot, returning the created calculation id. No SSBTEK, no daily loop,\
-        \ no caseworker draft. Used by the nyansökan process."
-      operationId: commitFromApplication
+      summary: Create the calculation in Lifecare (after decision)
+      description: "Builds the calculation from the classified incomes and creates\
+        \ it in Lifecare FC, returning the created calculation id. Called once a decision\
+        \ is taken — never during the daily SSBTEK loop."
+      operationId: commitCalculation
       parameters:
       - name: municipalityId
         in: path
@@ -7701,6 +7701,7 @@ components:
           enum:
           - NO_EXISTING_CASE
           - MARITAL_STATUS_CHANGED
+          - RECENTLY_CLOSED
           - EXISTING_CASE
           - ALL_TYPES_TEST
           examples:
@@ -7780,6 +7781,20 @@ components:
           description: True when the request included a co-applicant (co-applicant)
           examples:
           - "false"
+        reopenableErrandId:
+          type: string
+          description: "When reasonCode is RECENTLY_CLOSED: the id of the recently\
+            \ closed errand a caseworker can reopen (in Lifecare) and release. Null\
+            \ otherwise."
+          examples:
+          - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        closedAt:
+          type: string
+          format: date-time
+          description: "When reasonCode is RECENTLY_CLOSED: when the reopenable errand\
+            \ was closed. Null otherwise."
+          examples:
+          - 2026-06-20T10:15:30Z
     CalculationRequest:
       type: object
       description: Request to build and post the SSBTEK-driven calculation for an

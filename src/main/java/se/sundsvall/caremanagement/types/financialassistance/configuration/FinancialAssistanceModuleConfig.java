@@ -56,6 +56,10 @@ public class FinancialAssistanceModuleConfig {
 
 	// Status codes
 	public static final String STATUS_RECEIVED = "RECEIVED";
+	/**
+	 * A freshly created re-application that hit the recently-closed guard — frozen for a caseworker to reopen + release.
+	 */
+	public static final String STATUS_NEEDS_MANUAL_REVIEW = "NEEDS_MANUAL_REVIEW";
 	public static final String STATUS_UNDER_REVIEW = "UNDER_REVIEW";
 	public static final String STATUS_AWAITING_DECISION = "AWAITING_DECISION";
 	public static final String STATUS_SUPPLEMENT_REQUESTED = "SUPPLEMENT_REQUESTED";
@@ -123,9 +127,10 @@ public class FinancialAssistanceModuleConfig {
 	private static ErrandTypeContribution typeContribution(final String slug, final String displayName) {
 		return ErrandTypeContribution.builder(slug)
 			.displayName(displayName)
-			.allowedStatuses(STATUS_RECEIVED, STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION, STATUS_SUPPLEMENT_REQUESTED,
-				STATUS_GRANTED, STATUS_REJECTED, STATUS_PAID, STATUS_CLOSED, STATUS_WITHDRAWN)
-			.allowedTransition(STATUS_RECEIVED, STATUS_UNDER_REVIEW, STATUS_WITHDRAWN)
+			.allowedStatuses(STATUS_RECEIVED, STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION,
+				STATUS_SUPPLEMENT_REQUESTED, STATUS_GRANTED, STATUS_REJECTED, STATUS_PAID, STATUS_CLOSED, STATUS_WITHDRAWN)
+			.allowedTransition(STATUS_RECEIVED, STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW, STATUS_WITHDRAWN)
+			.allowedTransition(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW, STATUS_WITHDRAWN)
 			.allowedTransition(STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION, STATUS_SUPPLEMENT_REQUESTED)
 			.allowedTransition(STATUS_SUPPLEMENT_REQUESTED, STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION, STATUS_WITHDRAWN)
 			.allowedTransition(STATUS_AWAITING_DECISION, STATUS_GRANTED, STATUS_REJECTED, STATUS_SUPPLEMENT_REQUESTED)
