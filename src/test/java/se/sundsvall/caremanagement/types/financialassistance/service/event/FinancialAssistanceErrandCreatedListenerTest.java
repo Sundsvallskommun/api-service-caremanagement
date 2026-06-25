@@ -85,7 +85,7 @@ class FinancialAssistanceErrandCreatedListenerTest {
 	}
 
 	@Test
-	void assignsDefaultHandlaggareForUnassignedNewApplication() {
+	void assignsDefaultHandlaggareThenStartsProcessForUnassignedNewApplication() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity()));
 		when(defaultAssigneeServiceMock.resolve(MUNICIPALITY_ID)).thenReturn(Optional.of("joa01doe"));
 
@@ -93,17 +93,19 @@ class FinancialAssistanceErrandCreatedListenerTest {
 
 		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
-		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("joa01doe");
-		verifyNoInteractions(processStarterMock); // new applications don't start a process
+		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("joa01doe"); // a nyansökan has no prior insats, so the default assignee stands
+		verify(processStarterMock).startNew(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
+		verify(processStarterMock, never()).start(any(), any(), any(), any());
 	}
 
 	@Test
-	void skipsDefaultHandlaggareWhenAlreadyAssigned() {
+	void skipsDefaultHandlaggareButStartsProcessWhenNewApplicationAlreadyAssigned() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity()));
 
 		listener.on(event(SLUG_NEW, "already-assigned"));
 
-		verifyNoInteractions(defaultAssigneeServiceMock, processStarterMock);
+		verifyNoInteractions(defaultAssigneeServiceMock);
+		verify(processStarterMock).startNew(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
 		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
 	}
 

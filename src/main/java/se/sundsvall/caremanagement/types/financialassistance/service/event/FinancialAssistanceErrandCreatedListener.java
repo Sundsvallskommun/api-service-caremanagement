@@ -14,6 +14,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.service.DefaultAssigneeService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RecentlyClosedErrandService;
 
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_NEEDS_MANUAL_REVIEW;
@@ -34,9 +35,10 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * recently-closed window, this re-application is <em>frozen</em> as {@code NEEDS_MANUAL_REVIEW} — no aktualisering (the
  * process is not started), and being non-CLOSED it is never picked up by the archive job — so a caseworker reopens the
  * previous insats in Lifecare and releases it (see {@link FinancialAssistanceReleaseListener}). Otherwise the normal
- * path applies: a renewal starts the full decision-support process and a supplementary application starts the lighter
- * tilläggsansökan process (whose actualisation step attaches the previous återansökan's Lifecare caseworker); a new
- * application has no prior insats and just sits awaiting the caseworker (default assignee).
+ * path applies: a renewal starts the full decision-support process, a supplementary application starts the lighter
+ * tilläggsansökan process (whose actualisation step attaches the previous återansökan's Lifecare caseworker), and a new
+ * application starts the nyansökan process (status + actualisation, then a normberäkning built straight from the
+ * application); having no prior insats, a new application keeps the default assignee.
  */
 @Component
 class FinancialAssistanceErrandCreatedListener {
@@ -75,6 +77,10 @@ class FinancialAssistanceErrandCreatedListener {
 				// A supplementary application supplements an ongoing bistånd: start the tilläggsansökan process so its
 				// actualisation step attaches the previous återansökan's Lifecare caseworker, not the default assignee.
 				processStarter.startSupplementary(event.municipalityId(), event.namespace(), event.errandId(), entity);
+			} else if (SLUG_NEW.equals(event.typeSlug())) {
+				// A new application starts the nyansökan process (status + actualisation, then a normberäkning built
+				// straight from what the citizen declared). It has no prior insats, so the default assignee above stands.
+				processStarter.startNew(event.municipalityId(), event.namespace(), event.errandId(), entity);
 			}
 		});
 	}
