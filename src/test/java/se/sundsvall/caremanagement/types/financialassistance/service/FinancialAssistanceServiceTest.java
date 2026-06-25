@@ -429,8 +429,8 @@ class FinancialAssistanceServiceTest {
 			.thenReturn(List.of(new FcIncomeLine(11, "Lön efter skatt", "APPLICANT", new BigDecimal("18500"), null, "Ansökan")));
 		when(calculationFeederMock.incomeRows(eq(ERRAND_ID), any())).thenReturn(List.of(
 			FaNormIncomeEntity.create().withTypeId(11).withApplicantProcessAmount(new BigDecimal("18500"))));
-		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new CalculationFeeder.ExpenseFeed(
-			List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))), List.of()));
+		when(calculationFeederMock.applicationExpenseRows(eq(ERRAND_ID), any())).thenReturn(
+			List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
 		when(calculationFeederMock.personRows(eq(ERRAND_ID), any())).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
 		when(calculationServiceMock.selectNormId("199001011234", month)).thenReturn(7);
 		when(calculationServiceMock.commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(5001);
@@ -511,10 +511,10 @@ class FinancialAssistanceServiceTest {
 	void prepareRecordsReviewRequiredRecommendationAndKompletteringWhenIncomplete() {
 		final var month = YearMonth.of(2026, 6);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType("NATIONAL_NORM")));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM"))));
 		when(calculationServiceMock.completeness("199001011234", month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("UNDER_REVIEW"));
-		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
 
 		final var request = CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[json]")
@@ -550,7 +550,7 @@ class FinancialAssistanceServiceTest {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
 		when(calculationServiceMock.completeness("199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("SUPPLEMENT_REQUESTED"));
-		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
 
 		final var request = CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
@@ -582,7 +582,7 @@ class FinancialAssistanceServiceTest {
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(List.of(Decision.create().withDecisionType("RECOMMENDATION")));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("AWAITING_DECISION"));
-		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
 
 		final var request = CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");

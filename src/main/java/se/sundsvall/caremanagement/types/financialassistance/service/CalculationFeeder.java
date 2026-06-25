@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -85,17 +86,20 @@ public class CalculationFeeder {
 	 * and a cap ({@code EXPENSE_CAPPED}) when the process amount lands below what the citizen applied for. The decision is
 	 * evaluated once per cost; the verdict feeds both the row and its warnings.
 	 */
-	public ExpenseFeed expenseFeed(final String municipalityId, final String errandId, final FinancialAssistanceEntity errand) {
-		final var housingForm = errand.getHousingForm();
-		final var housingPersonCount = errand.getHousingPersonCount();
-		final var normType = errand.getNormType();
+	public ExpenseFeed expenseFeed(final String municipalityId, final String errandId, final FinancialAssistanceEntity errand,
+		final Map<String, Double> previousAmounts, final Integer sokandeAlder) {
+
+		final var antalBarn = ofNullable(errand.getChildren()).orElseGet(List::of).size();
+		final var antalIHushallet = householdSize(errand);
+		final var previous = ofNullable(previousAmounts).orElseGet(Map::of);
 
 		final var rows = new ArrayList<FaNormExpenseEntity>();
 		final var warnings = new ArrayList<WarningService.WarningInput>();
 
 		ofNullable(errand.getCosts()).orElseGet(List::of).forEach(cost -> {
-			final var verdict = expenseRulesService.verdict(municipalityId, cost.getCostType(), cost.getOtherSubType(),
-				housingForm, housingPersonCount, normType, cost.getAppliedAmount());
+			final var godkandForra = ofNullable(previous.get(cost.getCostType())).map(BigDecimal::valueOf).orElse(null);
+			final var verdict = expenseRulesService.verdict(municipalityId, cost.getCostType(), cost.getAppliedAmount(),
+				godkandForra, sokandeAlder, antalBarn, antalIHushallet);
 			rows.add(FaNormExpenseEntity.create()
 				.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
 				.withCostType(cost.getCostType()).withOtherSubType(cost.getOtherSubType()).withSpecification(cost.getSpecification())
@@ -104,6 +108,32 @@ public class CalculationFeeder {
 		});
 
 		return new ExpenseFeed(List.copyOf(rows), List.copyOf(warnings));
+	}
+
+	/**
+	 * The application's expense rows for the direct nyansökan commit — applied amount + the cost type's static bucket,
+	 * with no historik-regelträd (a nyansökan has no previous month) and no warnings. The regelträd applies to the
+	 * daily-prepare draft ({@link #expenseFeed}) instead, where there is history and a caseworker review before commit.
+	 */
+	public List<FaNormExpenseEntity> applicationExpenseRows(final String errandId, final FinancialAssistanceEntity errand) {
+		return ofNullable(errand.getCosts()).orElseGet(List::of).stream()
+			.map(cost -> FaNormExpenseEntity.create()
+				.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
+				.withCostType(cost.getCostType()).withOtherSubType(cost.getOtherSubType()).withSpecification(cost.getSpecification())
+				.withAppliedAmount(cost.getAppliedAmount()).withProcessAmount(cost.getAppliedAmount())
+				.withBucket(ExpenseRulesService.bucketForCostType(cost.getCostType())))
+			.toList();
+	}
+
+	/** The number of persons in the household — the declared housingPersonCount, else persons + children. */
+	private static Integer householdSize(final FinancialAssistanceEntity errand) {
+		final var declared = errand.getHousingPersonCount();
+		if (declared != null) {
+			return declared;
+		}
+		final var persons = ofNullable(errand.getPersons()).orElseGet(List::of).size();
+		final var children = ofNullable(errand.getChildren()).orElseGet(List::of).size();
+		return persons + children;
 	}
 
 	/** The warnings a single cost's verdict raises — a manual review flag and/or a cap below the applied amount. */

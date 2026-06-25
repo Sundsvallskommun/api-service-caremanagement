@@ -4,8 +4,11 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.Period;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -249,7 +252,9 @@ public class FinancialAssistanceService {
 		// Compute the fresh process rows for the three sections, then merge them into the editable draft (the merge keeps
 		// the caseworker's values + soft-deletes; only the process columns are refreshed).
 		final var incomeRows = calculationFeeder.incomeRows(errandId, calculationService.incomeLines(applicant, classifiedIncomes));
-		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, errandId, errand);
+		final var sokandeAlder = ageFromPnr(applicant);
+		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, errandId, errand,
+			previousExpenseAmounts(applicant, applicationMonth), sokandeAlder);
 		final var personRows = calculationFeeder.personRows(errandId, errand);
 		final var normId = calculationService.selectNormId(applicant, applicationMonth);
 		final var draftChanges = draftService.refresh(errandId, request.getApplicationMonth(), normId, errand.getNormType(), personRows, incomeRows, expenseFeed.rows());
@@ -282,6 +287,30 @@ public class FinancialAssistanceService {
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation household — skipping the household drift check", e);
 			return PreviousHousehold.empty();
+		}
+	}
+
+	/** The previous calculation's per-cost-type approved amounts, best-effort — a failed Lifecare read degrades to none. */
+	private Map<String, Double> previousExpenseAmounts(final String applicant, final YearMonth applicationMonth) {
+		try {
+			return calculationService.previousExpenseAmounts(applicant, applicationMonth);
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not read the previous calculation expense amounts — expense history treated as missing", e);
+			return Map.of();
+		}
+	}
+
+	/** The applicant's age from a Swedish personnummer (YYYYMMDD…), or {@code null} when it cannot be parsed. */
+	private static Integer ageFromPnr(final String personalNumber) {
+		final var digits = ofNullable(personalNumber).orElse("").replaceAll("\\D", "");
+		if (digits.length() < 8) {
+			return null;
+		}
+		try {
+			final var birth = LocalDate.parse(digits.substring(0, 8), DateTimeFormatter.BASIC_ISO_DATE);
+			return Period.between(birth, LocalDate.now()).getYears();
+		} catch (final RuntimeException e) {
+			return null;
 		}
 	}
 
@@ -457,7 +486,7 @@ public class FinancialAssistanceService {
 		final var incomeLines = calculationService.applicationIncomeLines(applicant, toApplicationIncomes(errand.getIncomes()));
 		final var incomes = calculationFeeder.incomeRows(errandId, incomeLines).stream()
 			.map(FinancialAssistanceService::toEffectiveIncome).toList();
-		final var expenses = calculationFeeder.expenseFeed(municipalityId, errandId, errand).rows().stream()
+		final var expenses = calculationFeeder.applicationExpenseRows(errandId, errand).stream()
 			.map(FinancialAssistanceService::toEffectiveExpense).toList();
 		final var persons = calculationFeeder.personRows(errandId, errand).stream()
 			.map(FinancialAssistanceService::toEffectivePerson).toList();

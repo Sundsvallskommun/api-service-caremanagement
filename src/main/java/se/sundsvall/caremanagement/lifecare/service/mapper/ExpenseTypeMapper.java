@@ -37,7 +37,22 @@ public final class ExpenseTypeMapper {
 		Map.entry("MEDICINE", "Medicin"),
 		Map.entry("OTHER", "Övrigt"));
 
+	/**
+	 * FC expense-type name (normalized) → EB cost type — the reverse of {@link #FC_NAME_BY_COST_TYPE}, for reading a
+	 * previous calculation's amounts back per cost type.
+	 */
+	private static final Map<String, String> COST_TYPE_BY_FC_NAME = FC_NAME_BY_COST_TYPE.entrySet().stream()
+		.collect(toMap(entry -> normalize(entry.getValue()), Map.Entry::getKey, (first, second) -> first));
+
 	private ExpenseTypeMapper() {}
+
+	/**
+	 * The EB cost type for an FC expense-type name (e.g. "Rent" → {@code RENT}), or empty when the name is unmapped.
+	 * Best-effort, case/space-insensitive — used to read a previous Lifecare calculation's per-type approved amounts.
+	 */
+	public static Optional<String> costTypeForFcName(final String fcName) {
+		return ofNullable(fcName).map(ExpenseTypeMapper::normalize).map(COST_TYPE_BY_FC_NAME::get);
+	}
 
 	/** Resolve against the regular (UTGIFTER) expense-type catalogue. */
 	public static Optional<Integer> resolveExpenseTypeId(final String costType, final PersonBasedCalculationProposalDTO proposal) {

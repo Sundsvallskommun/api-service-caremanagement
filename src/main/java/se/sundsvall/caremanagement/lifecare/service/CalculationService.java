@@ -159,6 +159,11 @@ public class CalculationService {
 		return lifecareEbCaseService.previousHousehold(applicantPersonId, applicationMonth);
 	}
 
+	/** Approved amount per EB cost type on the applicant's previous calculation — the expense regelträd's history input. */
+	public Map<String, Double> previousExpenseAmounts(final String applicantPersonId, final YearMonth applicationMonth) {
+		return lifecareEbCaseService.previousExpenseAmounts(applicantPersonId, applicationMonth);
+	}
+
 	/** The norm id the FC proposal offers for the application month (covering window, else first), or {@code null}. */
 	public Integer selectNormId(final String applicantPersonId, final YearMonth applicationMonth) {
 		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);

@@ -3,9 +3,11 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,6 +22,8 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
@@ -67,13 +71,13 @@ class CalculationFeederTest {
 		final var rent = FaCost.create().withCostType("RENT").withOtherSubType(null).withSpecification("spec")
 			.withAppliedAmount(new BigDecimal("9000"));
 		final var errand = FinancialAssistanceEntity.create()
-			.withHousingForm("RENTAL").withHousingPersonCount(2).withNormType("NATIONAL_NORM")
+			.withHousingForm("RENTAL").withHousingPersonCount(2).withNormType(List.of("NATIONAL_NORM"))
 			.withCosts(List.of(rent));
 
-		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("RENT"), any(), eq("RENTAL"), eq(2), eq("NATIONAL_NORM"), eq(new BigDecimal("9000"))))
+		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("RENT"), any(), any(), any(), any(), any()))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("8500"), "SPECIAL_EXPENSE", false, null));
 
-		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
 		assertThat(feed.rows()).hasSize(1);
 		final var row = feed.rows().getFirst();
@@ -97,10 +101,10 @@ class CalculationFeederTest {
 		final var other = FaCost.create().withCostType("OTHER").withOtherSubType("BEGRAVNING").withAppliedAmount(new BigDecimal("5000"));
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(other));
 
-		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("OTHER"), eq("BEGRAVNING"), any(), any(), any(), eq(new BigDecimal("5000"))))
+		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("OTHER"), any(), any(), any(), any(), any()))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("5000"), "SPECIAL_EXPENSE", true, "Other bistånd – reasonableness bedöms manuellt"));
 
-		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
 		// applied == process (no cap), but flagged → a single review warning, sourceKey carries the sub-type
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
@@ -114,10 +118,10 @@ class CalculationFeederTest {
 		final var cost = FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000"));
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
 
-		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("RENT"), any(), any(), any(), any(), eq(new BigDecimal("9000"))))
+		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("RENT"), any(), any(), any(), any(), any()))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("7500"), "EXPENSE", true, "Rent över schablon"));
 
-		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type)
 			.containsExactly(WarningService.TYPE_EXPENSE_REVIEW, WarningService.TYPE_EXPENSE_CAPPED);
@@ -128,10 +132,10 @@ class CalculationFeederTest {
 		final var cost = FaCost.create().withCostType("MEDICINE").withAppliedAmount(new BigDecimal("800"));
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
 
-		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("MEDICINE"), any(), any(), any(), any(), eq(new BigDecimal("800"))))
-			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("800"), "EXPENSE", true, null));
+		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("MEDICINE"), any(), any(), any(), any(), any()))
+			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("800"), "SPECIAL_EXPENSE", true, null));
 
-		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
 		assertThat(feed.warnings().getFirst().message()).isEqualTo("MEDICINE: The expense requires a manual reasonableness assessment");
@@ -145,7 +149,7 @@ class CalculationFeederTest {
 		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("OTHER"), any(), any(), any(), any(), any()))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(null, "EXPENSE", false, null));
 
-		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
 		// null applied → no cap; not flagged → no warning, but the row is still produced
 		assertThat(feed.rows()).hasSize(1);
@@ -157,10 +161,10 @@ class CalculationFeederTest {
 		final var cost = FaCost.create().withCostType("ELECTRICITY").withAppliedAmount(new BigDecimal("1200"));
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
 
-		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("ELECTRICITY"), any(), any(), any(), any(), eq(new BigDecimal("1200"))))
+		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("ELECTRICITY"), any(), any(), any(), any(), any()))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("1200"), "EXPENSE", false, null));
 
-		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
 		assertThat(feed.rows()).hasSize(1);
 		assertThat(feed.warnings()).isEmpty();
@@ -170,10 +174,79 @@ class CalculationFeederTest {
 	void expenseFeedHandlesNullCosts() {
 		final var errand = FinancialAssistanceEntity.create();
 
-		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand);
+		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
 		assertThat(feed.rows()).isEmpty();
 		assertThat(feed.warnings()).isEmpty();
+	}
+
+	@Test
+	void expenseFeedThreadsHistoryAgeChildrenAndHouseholdSizeIntoTheVerdict() {
+		final var rent = FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000"));
+		final var errand = FinancialAssistanceEntity.create()
+			.withHousingPersonCount(3)
+			.withChildren(List.of(FaChild.create().withPartyId("c-1"), FaChild.create().withPartyId("c-2")))
+			.withCosts(List.of(rent));
+
+		when(expenseRulesServiceMock.verdict(any(), any(), any(), any(), any(), any(), any()))
+			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("9000"), "EXPENSE", false, null));
+
+		feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of("RENT", 7000.0), 35);
+
+		final var applied = ArgumentCaptor.forClass(BigDecimal.class);
+		final var previous = ArgumentCaptor.forClass(BigDecimal.class);
+		final var age = ArgumentCaptor.forClass(Integer.class);
+		final var children = ArgumentCaptor.forClass(Integer.class);
+		final var household = ArgumentCaptor.forClass(Integer.class);
+		verify(expenseRulesServiceMock).verdict(eq(MUNICIPALITY_ID), eq("RENT"), applied.capture(),
+			previous.capture(), age.capture(), children.capture(), household.capture());
+
+		assertThat(applied.getValue()).isEqualByComparingTo(new BigDecimal("9000"));
+		assertThat(previous.getValue()).isEqualByComparingTo(new BigDecimal("7000"));
+		assertThat(age.getValue()).isEqualTo(35);
+		assertThat(children.getValue()).isEqualTo(2);
+		assertThat(household.getValue()).isEqualTo(3);
+	}
+
+	@Test
+	void expenseFeedPassesNullHistoryWhenCostTypeAbsentFromPreviousAmounts() {
+		final var rent = FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000"));
+		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(rent));
+
+		when(expenseRulesServiceMock.verdict(any(), any(), any(), any(), any(), any(), any()))
+			.thenReturn(new ExpenseRulesService.ExpenseVerdict(BigDecimal.ZERO, "EXPENSE", true, "historik saknas"));
+
+		// only ELECTRICITY has history → RENT's godkandForra is null, and household falls back to persons + children (0)
+		feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of("ELECTRICITY", 1000.0), 40);
+
+		final var previous = ArgumentCaptor.forClass(BigDecimal.class);
+		final var household = ArgumentCaptor.forClass(Integer.class);
+		verify(expenseRulesServiceMock).verdict(any(), eq("RENT"), any(), previous.capture(), any(), any(), household.capture());
+		assertThat(previous.getValue()).isNull();
+		assertThat(household.getValue()).isZero();
+	}
+
+	@Test
+	void applicationExpenseRowsUseAppliedAmountAndStaticBucketWithoutRulesOrWarnings() {
+		final var rent = FaCost.create().withCostType("RENT").withSpecification("spec").withAppliedAmount(new BigDecimal("9000"));
+		final var medicine = FaCost.create().withCostType("MEDICINE").withAppliedAmount(new BigDecimal("400"));
+		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(rent, medicine));
+
+		final var rows = feeder.applicationExpenseRows(ERRAND_ID, errand);
+
+		assertThat(rows).hasSize(2);
+		final var rentRow = rows.getFirst();
+		assertThat(rentRow.getCostType()).isEqualTo("RENT");
+		assertThat(rentRow.getProcessAmount()).isEqualByComparingTo(new BigDecimal("9000"));
+		assertThat(rentRow.getAppliedAmount()).isEqualByComparingTo(new BigDecimal("9000"));
+		assertThat(rentRow.getBucket()).isEqualTo("EXPENSE");
+		assertThat(rows.get(1).getBucket()).isEqualTo("SPECIAL_EXPENSE");
+		verifyNoInteractions(expenseRulesServiceMock);
+	}
+
+	@Test
+	void applicationExpenseRowsHandlesNullCosts() {
+		assertThat(feeder.applicationExpenseRows(ERRAND_ID, FinancialAssistanceEntity.create())).isEmpty();
 	}
 
 	@Test

@@ -13,7 +13,9 @@ import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -21,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
+import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 
 import static java.lang.Boolean.TRUE;
@@ -214,6 +217,40 @@ public class LifecareEbCaseService {
 			.orElse(null);
 
 		return new PreviousHousehold(personIds, personIds.size(), normSum, housingCost);
+	}
+
+	/**
+	 * The approved amount per EB cost type on the person's most recent previous calculation — read from the regular
+	 * (UTGIFTER) expense array and mapped back from each FC type name via {@link ExpenseTypeMapper}. Empty when there is
+	 * no previous calculation. Feeds the expense regelträd's "godkänt belopp föregående månad" (best-effort: an FC name
+	 * with no EB cost type is skipped; the special-expense (LEVNADSKOSTNADER I ÖVRIGT) array is untyped in the FC spec
+	 * and not read, so those types start without history).
+	 *
+	 * @param  personId         the applicant's personnummer
+	 * @param  applicationMonth the month being applied for; only calculationar before it are considered
+	 * @return                  approved amount keyed by EB cost type (empty when none)
+	 */
+	public Map<String, Double> previousExpenseAmounts(final String personId, final YearMonth applicationMonth) {
+		final var referenceDate = applicationMonth.atDay(1);
+		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
+		final var end = referenceDate.format(ISO_LOCAL_DATE);
+
+		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end, null, null, false))
+			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
+			.orElseGet(List::of).stream()
+			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
+			.toList();
+
+		final var latest = latestCalculation(calculations);
+		final var amounts = new HashMap<String, Double>();
+		latest.map(PersonBasedCalculationDTO::getCalculationExpensesDTOs).orElseGet(List::of)
+			.forEach(expense -> ExpenseTypeMapper.costTypeForFcName(expense.getType()).ifPresent(costType -> {
+				final var amount = expenseAmount(expense);
+				if (amount != null) {
+					amounts.merge(costType, amount, Double::sum);
+				}
+			}));
+		return amounts;
 	}
 
 	/** The previous housing cost — Rent/housing expense rows, matched on the FC type name (best-effort). */
