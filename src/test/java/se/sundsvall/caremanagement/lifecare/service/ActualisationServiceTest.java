@@ -1,5 +1,7 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
+import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
+import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringProposalDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInfoDTO;
 import generated.se.sundsvall.lifecarefc.PostAktualiseringsBodyRequest;
@@ -91,6 +93,41 @@ class ActualisationServiceTest {
 		final ArgumentCaptor<PostAktualiseringsBodyRequest> captor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
 		verify(lifecareFcIntegrationMock).createActualisation(captor.capture());
 		assertThat(captor.getValue().getCaseworkerId()).isNull();
+	}
+
+	@Test
+	void listFormatsDatesMapsResultAndDropsPersonId() {
+		final var dto = new PersonBasedAktualiseringDTO()
+			.id(5012).type("Ansökan").personId(APPLICANT).name("Ekonomiskt bistånd").date("2026-06-01")
+			.reason("Nyansökan").regards("Försörjningsstöd").fromWho("Den enskilde").caseworker("Anna Andersson")
+			.organization("IFO").status("Pågående").investigationId(8801).serviceId(7700).decisionId(9900);
+		when(lifecareFcIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30", null, null, false))
+			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO().addResultItem(dto));
+
+		final var result = service.list(APPLICANT, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+
+		assertThat(result).singleElement().satisfies(summary -> {
+			assertThat(summary.id()).isEqualTo(5012);
+			assertThat(summary.type()).isEqualTo("Ansökan");
+			assertThat(summary.name()).isEqualTo("Ekonomiskt bistånd");
+			assertThat(summary.date()).isEqualTo("2026-06-01");
+			assertThat(summary.reason()).isEqualTo("Nyansökan");
+			assertThat(summary.regards()).isEqualTo("Försörjningsstöd");
+			assertThat(summary.fromWho()).isEqualTo("Den enskilde");
+			assertThat(summary.caseworker()).isEqualTo("Anna Andersson");
+			assertThat(summary.organization()).isEqualTo("IFO");
+			assertThat(summary.status()).isEqualTo("Pågående");
+			assertThat(summary.investigationId()).isEqualTo(8801);
+			assertThat(summary.serviceId()).isEqualTo(7700);
+			assertThat(summary.decisionId()).isEqualTo(9900);
+		});
+	}
+
+	@Test
+	void listReturnsEmptyWhenFcHasNoPage() {
+		when(lifecareFcIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30", null, null, false)).thenReturn(null);
+
+		assertThat(service.list(APPLICANT, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30))).isEmpty();
 	}
 
 	@Test

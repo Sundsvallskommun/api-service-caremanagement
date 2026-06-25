@@ -26,6 +26,7 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
+import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
@@ -752,6 +753,104 @@ class FinancialAssistanceServiceTest {
 
 		verify(actualisationServiceMock, never()).create(any(), any());
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+	}
+
+	@Test
+	void listActualisationsResolvesPartyDefaultsPeriodAndMaps() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		final var summary = new ActualisationSummary(5012, "Ansökan", "Ekonomiskt bistånd", "2026-06-01", "Nyansökan", "Försörjningsstöd",
+			"Den enskilde", "Anna Andersson", "IFO", "Pågående", 8801, 7700, 9900);
+		when(actualisationServiceMock.list(eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(summary));
+
+		final var result = service.listActualisations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null);
+
+		assertThat(result).singleElement().satisfies(actualisation -> {
+			assertThat(actualisation.getId()).isEqualTo(5012);
+			assertThat(actualisation.getType()).isEqualTo("Ansökan");
+			assertThat(actualisation.getName()).isEqualTo("Ekonomiskt bistånd");
+			assertThat(actualisation.getDate()).isEqualTo("2026-06-01");
+			assertThat(actualisation.getReason()).isEqualTo("Nyansökan");
+			assertThat(actualisation.getRegards()).isEqualTo("Försörjningsstöd");
+			assertThat(actualisation.getFromWho()).isEqualTo("Den enskilde");
+			assertThat(actualisation.getCaseworker()).isEqualTo("Anna Andersson");
+			assertThat(actualisation.getOrganization()).isEqualTo("IFO");
+			assertThat(actualisation.getStatus()).isEqualTo("Pågående");
+			assertThat(actualisation.getInvestigationId()).isEqualTo(8801);
+			assertThat(actualisation.getServiceId()).isEqualTo(7700);
+			assertThat(actualisation.getDecisionId()).isEqualTo(9900);
+		});
+
+		final var fromCaptor = ArgumentCaptor.forClass(LocalDate.class);
+		final var toCaptor = ArgumentCaptor.forClass(LocalDate.class);
+		verify(actualisationServiceMock).list(eq("199001011234"), fromCaptor.capture(), toCaptor.capture());
+		assertThat(toCaptor.getValue()).isEqualTo(LocalDate.now());
+		assertThat(fromCaptor.getValue()).isEqualTo(toCaptor.getValue().minusMonths(24));
+	}
+
+	@Test
+	void listActualisationsUsesExplicitPeriod() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(actualisationServiceMock.list("199001011234", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30))).thenReturn(List.of());
+
+		final var result = service.listActualisations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+
+		assertThat(result).isEmpty();
+		verify(actualisationServiceMock).list("199001011234", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+	}
+
+	@Test
+	void listActualisationsUnresolvedPartyIdYields404() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.listActualisations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verify(actualisationServiceMock, never()).list(any(), any(), any());
+	}
+
+	@Test
+	void archiveToActualisationForwardsFileWithDefaultsWhenNoMetadata() {
+		final var file = new MockMultipartFile("file", "tillaggsansokan.pdf", "application/pdf", new byte[] {
+			1, 2, 3
+		});
+
+		service.archiveToActualisation(5012, file, null);
+
+		verify(actualisationServiceMock).uploadAttachment(5012, "tillaggsansokan.pdf", new byte[] {
+			1, 2, 3
+		}, "ANSOKAN", "ENSKILD", "tillaggsansokan.pdf", "Draken");
+	}
+
+	@Test
+	void archiveToActualisationUsesRequestMetadataWhenProvided() {
+		final var file = new MockMultipartFile("file", "tillaggsansokan.pdf", "application/pdf", new byte[] {
+			9
+		});
+		final var request = se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest.create()
+			.withTitle("Tilläggsansökan juni")
+			.withDocumentType("KOMPLETTERING")
+			.withDocumentSenderType("MYNDIGHET")
+			.withSenderName("Sundsvalls kommun");
+
+		service.archiveToActualisation(5012, file, request);
+
+		verify(actualisationServiceMock).uploadAttachment(5012, "tillaggsansokan.pdf", new byte[] {
+			9
+		}, "KOMPLETTERING", "MYNDIGHET", "Tilläggsansökan juni", "Sundsvalls kommun");
+	}
+
+	@Test
+	void archiveToActualisationWrapsUnreadableFileAs400() throws java.io.IOException {
+		final var file = org.mockito.Mockito.mock(MultipartFile.class);
+		when(file.getOriginalFilename()).thenReturn("tillaggsansokan.pdf");
+		when(file.getBytes()).thenThrow(new java.io.IOException("stream closed"));
+
+		assertThatThrownBy(() -> service.archiveToActualisation(5012, file, null))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+
+		verify(actualisationServiceMock, never()).uploadAttachment(any(), any(), any(), any(), any(), any(), any());
 	}
 
 	@Test

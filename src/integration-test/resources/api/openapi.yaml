@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:56517
+- url: http://localhost:59526
   description: Generated server url
 tags:
 - name: Statistics
@@ -2618,6 +2618,65 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CalculationResponse"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/actualisations/{actualisationId}/archive:
+    post:
+      tags:
+      - Financial Assistance · Intake
+      summary: Archive a document to a Lifecare actualisation
+      description: "Binds an uploaded document (e.g. a supplementary application —\
+        \ tilläggsansökan) as an attachment to a specific Lifecare actualisation.\
+        \ Multipart request: the 'file' part carries the document; the optional 'request'\
+        \ part carries the metadata (title, documentType, documentSenderType, senderName)\
+        \ — each field falls back to a server default, and the title defaults to the\
+        \ uploaded file name. caremanagement only forwards the bytes to Lifecare."
+      operationId: archiveToActualisation
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: actualisationId
+        in: path
+        description: The target Lifecare actualisation id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                request:
+                  $ref: "#/components/schemas/ArchiveActualisationRequest"
+              required:
+              - file
+      responses:
+        "204":
+          description: Successful operation
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "502":
           description: Bad Gateway
           content:
@@ -5254,6 +5313,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FinancialAssistanceMetadata"
+  /{municipalityId}/{namespace}/errands/financial-assistance/actualisations:
+    get:
+      tags:
+      - Financial Assistance · Intake
+      summary: List the applicant's Lifecare actualisations
+      description: The Lifecare actualisations (case intakes) registered on the applicant
+        — what the frontend lists so a caseworker can pick which actualisation to
+        archive a supplementary application (tilläggsansökan) to. The applicant is
+        identified by partyId (resolved to a personnummer via the citizen service).
+        The period defaults to the last 24 months up to today when from/to are omitted.
+      operationId: listActualisations
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: partyId
+        in: query
+        description: The applicant's partyId (personId GUID)
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Inclusive start of the listing period (ISO date). Defaults to
+          24 months before 'to'.
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        description: Inclusive end of the listing period (ISO date). Defaults to today.
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Actualisation"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/documents/metadata:
     get:
       tags:
@@ -5424,10 +5548,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -7888,6 +8012,33 @@ components:
           - - Bostadsbidrag
           items:
             type: string
+    ArchiveActualisationRequest:
+      type: object
+      description: Optional metadata for archiving a document to a Lifecare actualisation.
+      properties:
+        title:
+          type: string
+          description: The document title shown in Lifecare. Defaults to the uploaded
+            file name when omitted.
+          examples:
+          - Tilläggsansökan
+        documentType:
+          type: string
+          description: The Lifecare InsertDocumentType code for the document. Server
+            default when omitted.
+          examples:
+          - ANSOKAN
+        documentSenderType:
+          type: string
+          description: The Lifecare InsertDocumentSenderType code for the document.
+            Server default when omitted.
+          examples:
+          - ENSKILD
+        senderName:
+          type: string
+          description: The sender name shown in Lifecare. Server default when omitted.
+          examples:
+          - Draken
     ActualisationRequest:
       type: object
       description: Request to create the Lifecare actualisation (case intake) for
@@ -9092,6 +9243,79 @@ components:
           description: Whether the type is offered on the citizen Mina-sidor form
           examples:
           - "true"
+    Actualisation:
+      type: object
+      description: A Lifecare actualisation (case intake) registered on a person.
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: The Lifecare actualisation id
+          examples:
+          - 5012
+        type:
+          type: string
+          description: The actualisation type
+          examples:
+          - Ansökan
+        name:
+          type: string
+          description: The actualisation name
+          examples:
+          - Ekonomiskt bistånd
+        date:
+          type: string
+          description: The actualisation date as Lifecare reports it
+          examples:
+          - 2026-06-01
+        reason:
+          type: string
+          description: The reason for the actualisation
+          examples:
+          - Nyansökan
+        regards:
+          type: string
+          description: What the actualisation regards
+          examples:
+          - Försörjningsstöd
+        fromWho:
+          type: string
+          description: Who the actualisation came from
+          examples:
+          - Den enskilde
+        caseworker:
+          type: string
+          description: The caseworker the actualisation is registered on
+          examples:
+          - Anna Andersson
+        organization:
+          type: string
+          description: The organization the actualisation belongs to
+          examples:
+          - IFO
+        status:
+          type: string
+          description: The actualisation status
+          examples:
+          - Pågående
+        investigationId:
+          type: integer
+          format: int32
+          description: "The linked investigation id, when any"
+          examples:
+          - 8801
+        serviceId:
+          type: integer
+          format: int32
+          description: "The linked service id, when any"
+          examples:
+          - 7700
+        decisionId:
+          type: integer
+          format: int32
+          description: "The linked decision id, when any"
+          examples:
+          - 9900
     DocumentMetadata:
       type: object
       description: Document metadata — the catalogue of selectable document types.

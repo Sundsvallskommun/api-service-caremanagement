@@ -182,6 +182,56 @@ class FinancialAssistanceResourceFailureTest {
 	}
 
 	@Test
+	void listActualisations_invalidPartyId() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/actualisations").queryParam("partyId", "not-a-uuid").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void listActualisations_invalidMunicipalityId() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/actualisations").queryParam("partyId", randomUUID().toString()).build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void archiveToActualisation_invalidMunicipalityId() {
+		final var builder = new MultipartBodyBuilder();
+		builder.part("file", "%PDF-1.4".getBytes()).filename("tillaggsansokan.pdf");
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").build(Map.of("municipalityId", "x", "namespace", NAMESPACE, "actualisationId", 5012)))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void archiveToActualisation_missingFile() {
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest.create().withTitle("x"), APPLICATION_JSON);
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
 	void setSectionApproval_missingApproved() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))

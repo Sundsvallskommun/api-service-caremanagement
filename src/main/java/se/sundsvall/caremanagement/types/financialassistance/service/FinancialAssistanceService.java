@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -26,6 +27,7 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
+import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
@@ -35,8 +37,10 @@ import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Actualisation;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
@@ -98,6 +102,13 @@ public class FinancialAssistanceService {
 	private static final String RECOMMENDATION_TYPE = "RECOMMENDATION";
 	private static final String ACTUALISATION_TYPE = "ACTUALISATION";
 	private static final String CREATED_BY = "drakel";
+
+	/** How far back the actualisation listing reaches when the caller gives no explicit {@code from} date. */
+	private static final int ACTUALISATION_LOOKBACK_MONTHS = 24;
+	/** Lifecare archive defaults — used when the archive request omits the matching field; all overridable per request. */
+	private static final String DEFAULT_ARCHIVE_DOCUMENT_TYPE = "ANSOKAN";
+	private static final String DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE = "ENSKILD";
+	private static final String DEFAULT_ARCHIVE_SENDER_NAME = "Draken";
 	private static final String VALUE_REVIEW_REQUIRED = "REVIEW_REQUIRED";
 	private static final String VALUE_OK = "OK";
 
@@ -607,6 +618,67 @@ public class FinancialAssistanceService {
 		ofNullable(result.assignedUserId()).filter(StringUtils::hasText)
 			.ifPresent(assignedUserId -> errandService.updateErrand(municipalityId, namespace, errandId,
 				PatchErrand.create().withAssignedUserId(assignedUserId)));
+	}
+
+	/**
+	 * List the Lifecare actualisations (case intakes) registered on the applicant, so a caseworker can pick which one a
+	 * supplementary application (tilläggsansökan) is archived to. The applicant is identified by partyId (resolved to a
+	 * personnummer via the citizen service — 404 when unknown). The period defaults to the last
+	 * {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when {@code from}/{@code to} are omitted.
+	 */
+	@Transactional(readOnly = true)
+	public List<Actualisation> listActualisations(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
+		final var applicant = personalNumber(municipalityId, partyId);
+		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
+		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
+
+		return actualisationService.list(applicant, fromDate, toDate).stream()
+			.map(FinancialAssistanceService::toActualisation)
+			.toList();
+	}
+
+	/**
+	 * Archive an uploaded document (e.g. a supplementary application — tilläggsansökan) to a specific Lifecare
+	 * actualisation by binding it as an attachment. caremanagement only forwards the bytes — the file is supplied by the
+	 * frontend. Document type / sender type / sender name fall back to server defaults when the request omits them; the
+	 * title defaults to the uploaded file name.
+	 */
+	public void archiveToActualisation(final Integer actualisationId, final MultipartFile file, final ArchiveActualisationRequest request) {
+		final var meta = ofNullable(request).orElseGet(ArchiveActualisationRequest::create);
+		final var fileName = ofNullable(file.getOriginalFilename()).filter(StringUtils::hasText).orElse("dokument.pdf");
+		final var title = ofNullable(meta.getTitle()).filter(StringUtils::hasText).orElse(fileName);
+		final var documentType = ofNullable(meta.getDocumentType()).filter(StringUtils::hasText).orElse(DEFAULT_ARCHIVE_DOCUMENT_TYPE);
+		final var documentSenderType = ofNullable(meta.getDocumentSenderType()).filter(StringUtils::hasText).orElse(DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE);
+		final var senderName = ofNullable(meta.getSenderName()).filter(StringUtils::hasText).orElse(DEFAULT_ARCHIVE_SENDER_NAME);
+
+		actualisationService.uploadAttachment(actualisationId, fileName, readBytes(file), documentType, documentSenderType, title, senderName);
+	}
+
+	/** Read the uploaded file's bytes, surfacing an unreadable upload as a 400 rather than an opaque 500. */
+	private static byte[] readBytes(final MultipartFile file) {
+		try {
+			return file.getBytes();
+		} catch (final IOException e) {
+			throw Problem.valueOf(BAD_REQUEST, "Could not read the uploaded file: " + e.getMessage());
+		}
+	}
+
+	/** Project the lifecare-module summary onto the API model. */
+	private static Actualisation toActualisation(final ActualisationSummary summary) {
+		return Actualisation.create()
+			.withId(summary.id())
+			.withType(summary.type())
+			.withName(summary.name())
+			.withDate(summary.date())
+			.withReason(summary.reason())
+			.withRegards(summary.regards())
+			.withFromWho(summary.fromWho())
+			.withCaseworker(summary.caseworker())
+			.withOrganization(summary.organization())
+			.withStatus(summary.status())
+			.withInvestigationId(summary.investigationId())
+			.withServiceId(summary.serviceId())
+			.withDecisionId(summary.decisionId());
 	}
 
 	/** Resolve a partyId to the personnummer the Lifecare/SSBTEK pipeline needs, or 404 when the citizen is unknown. */

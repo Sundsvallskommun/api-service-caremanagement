@@ -10,7 +10,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import java.time.LocalDate;
 import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,8 +29,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
 import se.sundsvall.caremanagement.formsnapshot.api.model.FormSnapshot;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Actualisation;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
@@ -543,6 +547,45 @@ class FinancialAssistanceResource {
 		@Valid @NotNull @RequestBody final ActualisationRequest request) {
 
 		return ok(service.createActualisation(municipalityId, namespace, request));
+	}
+
+	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)
+	@GetMapping(path = "/financial-assistance/actualisations", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "List the applicant's Lifecare actualisations",
+		description = "The Lifecare actualisations (case intakes) registered on the applicant — what the frontend lists so a caseworker can pick which actualisation to archive a supplementary application (tilläggsansökan) to. The applicant is identified by partyId (resolved to a personnummer via the citizen service). The period defaults to the last 24 months up to today when from/to are omitted.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
+			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<List<Actualisation>> listActualisations(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Parameter(description = "The applicant's partyId (personId GUID)") @ValidUuid @RequestParam final String partyId,
+		@Parameter(description = "Inclusive start of the listing period (ISO date). Defaults to 24 months before 'to'.") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
+		@Parameter(description = "Inclusive end of the listing period (ISO date). Defaults to today.") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to) {
+
+		return ok(service.listActualisations(municipalityId, partyId, from, to));
+	}
+
+	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)
+	@PostMapping(path = "/financial-assistance/actualisations/{actualisationId}/archive", consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
+	@Operation(summary = "Archive a document to a Lifecare actualisation",
+		description = "Binds an uploaded document (e.g. a supplementary application — tilläggsansökan) as an attachment to a specific Lifecare actualisation. Multipart request: the 'file' part carries the document; the optional 'request' part carries the metadata (title, documentType, documentSenderType, senderName) — each field falls back to a server default, and the title defaults to the uploaded file name. caremanagement only forwards the bytes to Lifecare.",
+		responses = {
+			@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "400", description = "Bad Request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
+			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<Void> archiveToActualisation(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Parameter(description = "The target Lifecare actualisation id") @PathVariable final Integer actualisationId,
+		@RequestPart("file") final MultipartFile file,
+		@Valid @RequestPart(value = "request", required = false) final ArchiveActualisationRequest request) {
+
+		service.archiveToActualisation(actualisationId, file, request);
+		return noContent().header(CONTENT_TYPE, ALL_VALUE).build();
 	}
 
 	@Tag(name = TAG_PAYMENT, description = TAG_PAYMENT_DESC)
