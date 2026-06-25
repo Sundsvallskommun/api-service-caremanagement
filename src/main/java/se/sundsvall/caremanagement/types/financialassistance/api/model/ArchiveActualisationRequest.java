@@ -2,16 +2,25 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
+import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
  * Optional metadata for archiving an uploaded document (e.g. a supplementary application — tilläggsansökan) to a
  * Lifecare actualisation. Sent as the JSON {@code request} part alongside the file in the multipart archive call. Every
  * field is optional; an omitted field falls back to a server default (and the title defaults to the uploaded file
  * name). {@code documentType} and {@code documentSenderType} are Lifecare {@code InsertDocumentType} /
- * {@code InsertDocumentSenderType} codes — set them when the default does not match the document being archived.
+ * {@code InsertDocumentSenderType} codes — set them when the default does not match the document being archived. When
+ * {@code errandId} is present, the target actualisation id is recorded on that errand as a
+ * {@code Decision(ACTUALISATION)} so the errand now points at the actualisation the document was archived to.
  */
 @Schema(description = "Optional metadata for archiving a document to a Lifecare actualisation.")
 public class ArchiveActualisationRequest {
+
+	@Schema(
+		description = "The id of the caremanagement errand the archive concerns. When present, the target actualisation id is recorded on the errand as a Decision(ACTUALISATION) — setting the errand's Lifecare actualisation to the one archived to.",
+		examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec")
+	@ValidUuid(nullable = true)
+	private String errandId;
 
 	@Schema(description = "The document title shown in Lifecare. Defaults to the uploaded file name when omitted.", examples = "Tilläggsansökan")
 	private String title;
@@ -27,6 +36,19 @@ public class ArchiveActualisationRequest {
 
 	public static ArchiveActualisationRequest create() {
 		return new ArchiveActualisationRequest();
+	}
+
+	public String getErrandId() {
+		return errandId;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public ArchiveActualisationRequest withErrandId(final String errandId) {
+		this.errandId = errandId;
+		return this;
 	}
 
 	public String getTitle() {
@@ -86,18 +108,18 @@ public class ArchiveActualisationRequest {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final ArchiveActualisationRequest that = (ArchiveActualisationRequest) o;
-		return Objects.equals(title, that.title) && Objects.equals(documentType, that.documentType)
+		return Objects.equals(errandId, that.errandId) && Objects.equals(title, that.title) && Objects.equals(documentType, that.documentType)
 			&& Objects.equals(documentSenderType, that.documentSenderType) && Objects.equals(senderName, that.senderName);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(title, documentType, documentSenderType, senderName);
+		return Objects.hash(errandId, title, documentType, documentSenderType, senderName);
 	}
 
 	@Override
 	public String toString() {
-		return "ArchiveActualisationRequest{title='" + title + "', documentType='" + documentType + "', documentSenderType='" + documentSenderType
-			+ "', senderName='" + senderName + "'}";
+		return "ArchiveActualisationRequest{errandId='" + errandId + "', title='" + title + "', documentType='" + documentType + "', documentSenderType='"
+			+ documentSenderType + "', senderName='" + senderName + "'}";
 	}
 }

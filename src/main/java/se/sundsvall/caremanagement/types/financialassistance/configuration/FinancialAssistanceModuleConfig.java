@@ -69,6 +69,18 @@ public class FinancialAssistanceModuleConfig {
 	public static final String STATUS_CLOSED = "CLOSED";
 	public static final String STATUS_WITHDRAWN = "WITHDRAWN";
 
+	// Status display names (Swedish — the labels Draken shows the handläggare)
+	private static final String DISPLAY_RECEIVED = "Inkommen";
+	private static final String DISPLAY_NEEDS_MANUAL_REVIEW = "Kräver manuell granskning";
+	private static final String DISPLAY_UNDER_REVIEW = "Under utredning";
+	private static final String DISPLAY_SUPPLEMENT_REQUESTED = "Komplettering begärd";
+	private static final String DISPLAY_AWAITING_DECISION = "Väntar på beslut";
+	private static final String DISPLAY_GRANTED = "Beviljad";
+	private static final String DISPLAY_REJECTED = "Avslagen";
+	private static final String DISPLAY_PAID = "Utbetald";
+	private static final String DISPLAY_WITHDRAWN = "Återtagen";
+	private static final String DISPLAY_CLOSED = "Avslutad";
+
 	// Stakeholder roles
 	public static final String ROLE_APPLICANT = "APPLICANT";
 	public static final String ROLE_CO_APPLICANT = "CO_APPLICANT";
@@ -127,8 +139,17 @@ public class FinancialAssistanceModuleConfig {
 	private static ErrandTypeContribution typeContribution(final String slug, final String displayName) {
 		return ErrandTypeContribution.builder(slug)
 			.displayName(displayName)
-			.allowedStatuses(STATUS_RECEIVED, STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION,
-				STATUS_SUPPLEMENT_REQUESTED, STATUS_GRANTED, STATUS_REJECTED, STATUS_PAID, STATUS_CLOSED, STATUS_WITHDRAWN)
+			// Declared in lifecycle order — the order the frontend renders them in
+			.status(STATUS_RECEIVED, DISPLAY_RECEIVED)
+			.status(STATUS_NEEDS_MANUAL_REVIEW, DISPLAY_NEEDS_MANUAL_REVIEW)
+			.status(STATUS_UNDER_REVIEW, DISPLAY_UNDER_REVIEW)
+			.status(STATUS_SUPPLEMENT_REQUESTED, DISPLAY_SUPPLEMENT_REQUESTED)
+			.status(STATUS_AWAITING_DECISION, DISPLAY_AWAITING_DECISION)
+			.status(STATUS_GRANTED, DISPLAY_GRANTED)
+			.status(STATUS_REJECTED, DISPLAY_REJECTED)
+			.status(STATUS_PAID, DISPLAY_PAID)
+			.status(STATUS_WITHDRAWN, DISPLAY_WITHDRAWN)
+			.status(STATUS_CLOSED, DISPLAY_CLOSED)
 			.allowedTransition(STATUS_RECEIVED, STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW, STATUS_WITHDRAWN)
 			.allowedTransition(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW, STATUS_WITHDRAWN)
 			.allowedTransition(STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION, STATUS_SUPPLEMENT_REQUESTED)

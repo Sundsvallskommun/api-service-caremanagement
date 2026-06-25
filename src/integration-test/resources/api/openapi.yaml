@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:59526
+- url: http://localhost:60676
   description: Generated server url
 tags:
 - name: Statistics
@@ -2632,9 +2632,12 @@ paths:
       description: "Binds an uploaded document (e.g. a supplementary application —\
         \ tilläggsansökan) as an attachment to a specific Lifecare actualisation.\
         \ Multipart request: the 'file' part carries the document; the optional 'request'\
-        \ part carries the metadata (title, documentType, documentSenderType, senderName)\
-        \ — each field falls back to a server default, and the title defaults to the\
-        \ uploaded file name. caremanagement only forwards the bytes to Lifecare."
+        \ part carries the metadata (errandId, title, documentType, documentSenderType,\
+        \ senderName) — title/documentType/documentSenderType/senderName each fall\
+        \ back to a server default, and the title defaults to the uploaded file name.\
+        \ caremanagement only forwards the bytes to Lifecare. When 'request.errandId'\
+        \ is set, the target actualisation id is recorded on that errand as a Decision(ACTUALISATION),\
+        \ setting the errand's Lifecare actualisation to the one archived to."
       operationId: archiveToActualisation
       parameters:
       - name: municipalityId
@@ -5548,10 +5551,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -8016,6 +8019,14 @@ components:
       type: object
       description: Optional metadata for archiving a document to a Lifecare actualisation.
       properties:
+        errandId:
+          type: string
+          description: "The id of the caremanagement errand the archive concerns.\
+            \ When present, the target actualisation id is recorded on the errand\
+            \ as a Decision(ACTUALISATION) — setting the errand's Lifecare actualisation\
+            \ to the one archived to."
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
         title:
           type: string
           description: The document title shown in Lifecare. Defaults to the uploaded

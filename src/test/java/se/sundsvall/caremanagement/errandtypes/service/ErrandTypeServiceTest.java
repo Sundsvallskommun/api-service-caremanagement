@@ -10,12 +10,14 @@ import se.sundsvall.caremanagement.core.service.registry.ErrandTypeContribution;
 import se.sundsvall.caremanagement.core.service.registry.ErrandTypeRegistry;
 import se.sundsvall.caremanagement.errandtypes.api.model.DecisionOption;
 import se.sundsvall.caremanagement.errandtypes.api.model.FieldDescriptor;
+import se.sundsvall.caremanagement.errandtypes.api.model.StatusDefinition;
 import se.sundsvall.caremanagement.stakeholders.api.model.RoleDefinition;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderRoleRegistry;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -64,7 +66,12 @@ class ErrandTypeServiceTest {
 		assertThat(schema.getTypeSlug()).isEqualTo(SLUG_NEW);
 		assertThat(schema.getDisplayName()).isEqualTo("New");
 		assertThat(schema.getApplicationType()).isEqualTo("NEW");
-		assertThat(schema.getStatuses()).containsExactly("RECEIVED", "REJECTED", "UNDER_REVIEW");
+		assertThat(schema.getStatuses())
+			.extracting(StatusDefinition::code, StatusDefinition::displayName)
+			.containsExactly(
+				tuple("RECEIVED", "Inkommen"),
+				tuple("UNDER_REVIEW", "Under utredning"),
+				tuple("REJECTED", "Avslagen"));
 		assertThat(schema.getRoles()).extracting(RoleDefinition::code).containsExactly("APPLICANT", "CO_APPLICANT");
 		assertThat(schema.getFields()).containsExactly(FIELD);
 		assertThat(schema.getDecisionOptions()).isEmpty();
@@ -110,7 +117,9 @@ class ErrandTypeServiceTest {
 	private static ErrandTypeContribution type(final String slug, final String displayName) {
 		return ErrandTypeContribution.builder(slug)
 			.displayName(displayName)
-			.allowedStatuses("RECEIVED", "UNDER_REVIEW", "REJECTED")
+			.status("RECEIVED", "Inkommen")
+			.status("UNDER_REVIEW", "Under utredning")
+			.status("REJECTED", "Avslagen")
 			.build();
 	}
 

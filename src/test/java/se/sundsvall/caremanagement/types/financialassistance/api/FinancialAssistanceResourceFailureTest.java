@@ -232,6 +232,22 @@ class FinancialAssistanceResourceFailureTest {
 	}
 
 	@Test
+	void archiveToActualisation_invalidErrandId() {
+		final var builder = new MultipartBodyBuilder();
+		builder.part("file", "%PDF-1.4".getBytes()).filename("tillaggsansokan.pdf");
+		builder.part("request", se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest.create().withErrandId("not-a-uuid"), APPLICATION_JSON);
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
 	void setSectionApproval_missingApproved() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))

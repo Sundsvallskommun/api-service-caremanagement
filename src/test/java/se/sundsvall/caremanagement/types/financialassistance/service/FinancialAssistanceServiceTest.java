@@ -36,6 +36,7 @@ import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
@@ -815,11 +816,13 @@ class FinancialAssistanceServiceTest {
 			1, 2, 3
 		});
 
-		service.archiveToActualisation(5012, file, null);
+		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, 5012, file, null);
 
 		verify(actualisationServiceMock).uploadAttachment(5012, "tillaggsansokan.pdf", new byte[] {
 			1, 2, 3
 		}, "ANSOKAN", "ENSKILD", "tillaggsansokan.pdf", "Draken");
+		// No errandId → nothing recorded on an errand.
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 	}
 
 	@Test
@@ -827,17 +830,38 @@ class FinancialAssistanceServiceTest {
 		final var file = new MockMultipartFile("file", "tillaggsansokan.pdf", "application/pdf", new byte[] {
 			9
 		});
-		final var request = se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest.create()
+		final var request = ArchiveActualisationRequest.create()
 			.withTitle("Tilläggsansökan juni")
 			.withDocumentType("KOMPLETTERING")
 			.withDocumentSenderType("MYNDIGHET")
 			.withSenderName("Sundsvalls kommun");
 
-		service.archiveToActualisation(5012, file, request);
+		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, 5012, file, request);
 
 		verify(actualisationServiceMock).uploadAttachment(5012, "tillaggsansokan.pdf", new byte[] {
 			9
 		}, "KOMPLETTERING", "MYNDIGHET", "Tilläggsansökan juni", "Sundsvalls kommun");
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+	}
+
+	@Test
+	void archiveToActualisationRecordsActualisationDecisionWhenErrandIdPresent() {
+		final var file = new MockMultipartFile("file", "tillaggsansokan.pdf", "application/pdf", new byte[] {
+			7
+		});
+		final var request = ArchiveActualisationRequest.create().withErrandId(ERRAND_ID);
+
+		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, 5012, file, request);
+
+		verify(actualisationServiceMock).uploadAttachment(eq(5012), eq("tillaggsansokan.pdf"), any(), eq("ANSOKAN"), eq("ENSKILD"), eq("tillaggsansokan.pdf"), eq("Draken"));
+
+		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
+		final var decision = decisionCaptor.getValue();
+		assertThat(decision.getDecisionType()).isEqualTo("ACTUALISATION");
+		assertThat(decision.getValue()).isEqualTo("5012");
+		assertThat(decision.getCreatedBy()).isEqualTo("drakel");
+		assertThat(decision.getDescription()).contains("id 5012");
 	}
 
 	@Test
@@ -846,7 +870,7 @@ class FinancialAssistanceServiceTest {
 		when(file.getOriginalFilename()).thenReturn("tillaggsansokan.pdf");
 		when(file.getBytes()).thenThrow(new java.io.IOException("stream closed"));
 
-		assertThatThrownBy(() -> service.archiveToActualisation(5012, file, null))
+		assertThatThrownBy(() -> service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, 5012, file, null))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 

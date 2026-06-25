@@ -571,7 +571,7 @@ class FinancialAssistanceResource {
 	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)
 	@PostMapping(path = "/financial-assistance/actualisations/{actualisationId}/archive", consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Archive a document to a Lifecare actualisation",
-		description = "Binds an uploaded document (e.g. a supplementary application — tilläggsansökan) as an attachment to a specific Lifecare actualisation. Multipart request: the 'file' part carries the document; the optional 'request' part carries the metadata (title, documentType, documentSenderType, senderName) — each field falls back to a server default, and the title defaults to the uploaded file name. caremanagement only forwards the bytes to Lifecare.",
+		description = "Binds an uploaded document (e.g. a supplementary application — tilläggsansökan) as an attachment to a specific Lifecare actualisation. Multipart request: the 'file' part carries the document; the optional 'request' part carries the metadata (errandId, title, documentType, documentSenderType, senderName) — title/documentType/documentSenderType/senderName each fall back to a server default, and the title defaults to the uploaded file name. caremanagement only forwards the bytes to Lifecare. When 'request.errandId' is set, the target actualisation id is recorded on that errand as a Decision(ACTUALISATION), setting the errand's Lifecare actualisation to the one archived to.",
 		responses = {
 			@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "400", description = "Bad Request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
@@ -584,7 +584,7 @@ class FinancialAssistanceResource {
 		@RequestPart("file") final MultipartFile file,
 		@Valid @RequestPart(value = "request", required = false) final ArchiveActualisationRequest request) {
 
-		service.archiveToActualisation(actualisationId, file, request);
+		service.archiveToActualisation(municipalityId, namespace, actualisationId, file, request);
 		return noContent().header(CONTENT_TYPE, ALL_VALUE).build();
 	}
 

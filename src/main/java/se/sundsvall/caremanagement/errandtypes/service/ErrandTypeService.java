@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.core.service.registry.ErrandTypeContribution;
 import se.sundsvall.caremanagement.core.service.registry.ErrandTypeRegistry;
 import se.sundsvall.caremanagement.errandtypes.api.model.ErrandTypeSchema;
+import se.sundsvall.caremanagement.errandtypes.api.model.StatusDefinition;
 import se.sundsvall.caremanagement.stakeholders.api.model.RoleDefinition;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderRoleRegistry;
 import se.sundsvall.dept44.problem.Problem;
@@ -60,7 +61,9 @@ public class ErrandTypeService {
 			.withTypeSlug(typeSlug)
 			.withDisplayName(type.displayName())
 			.withApplicationType(schema.map(ErrandTypeSchemaContribution::applicationType).orElse(null))
-			.withStatuses(type.allowedStatuses().stream().sorted().toList())
+			.withStatuses(type.statusDisplayNames().entrySet().stream()
+				.map(e -> new StatusDefinition(e.getKey(), e.getValue()))
+				.toList())
 			.withRoles(roleRegistry.rolesFor(typeSlug).stream()
 				.sorted(Comparator.comparing(RoleDefinition::code))
 				.toList())

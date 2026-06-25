@@ -608,16 +608,23 @@ public class FinancialAssistanceService {
 	 * handläggare when one was found (the same caseworker set on the Lifecare actualisation).
 	 */
 	private void recordActualisation(final String municipalityId, final String namespace, final String errandId, final ActualisationResult result) {
-		final var actualisationId = result.actualisationId();
-		decisionService.create(municipalityId, namespace, errandId, Decision.create()
-			.withDecisionType(ACTUALISATION_TYPE)
-			.withValue(String.valueOf(actualisationId))
-			.withDescription("Actualisation created in Lifecare (id %d).".formatted(actualisationId))
-			.withCreatedBy(CREATED_BY));
+		addActualisationDecision(municipalityId, namespace, errandId, result.actualisationId(),
+			"Actualisation created in Lifecare (id %d).".formatted(result.actualisationId()));
 
 		ofNullable(result.assignedUserId()).filter(StringUtils::hasText)
 			.ifPresent(assignedUserId -> errandService.updateErrand(municipalityId, namespace, errandId,
 				PatchErrand.create().withAssignedUserId(assignedUserId)));
+	}
+
+	/**
+	 * Set the errand's Lifecare actualisation to the given id by recording the canonical {@code Decision(ACTUALISATION)}.
+	 */
+	private void addActualisationDecision(final String municipalityId, final String namespace, final String errandId, final Integer actualisationId, final String description) {
+		decisionService.create(municipalityId, namespace, errandId, Decision.create()
+			.withDecisionType(ACTUALISATION_TYPE)
+			.withValue(String.valueOf(actualisationId))
+			.withDescription(description)
+			.withCreatedBy(CREATED_BY));
 	}
 
 	/**
@@ -641,9 +648,11 @@ public class FinancialAssistanceService {
 	 * Archive an uploaded document (e.g. a supplementary application — tilläggsansökan) to a specific Lifecare
 	 * actualisation by binding it as an attachment. caremanagement only forwards the bytes — the file is supplied by the
 	 * frontend. Document type / sender type / sender name fall back to server defaults when the request omits them; the
-	 * title defaults to the uploaded file name.
+	 * title defaults to the uploaded file name. When the request carries an {@code errandId}, the target actualisation id
+	 * is recorded on that errand as a {@code Decision(ACTUALISATION)} — setting the errand's Lifecare actualisation to the
+	 * one archived to.
 	 */
-	public void archiveToActualisation(final Integer actualisationId, final MultipartFile file, final ArchiveActualisationRequest request) {
+	public void archiveToActualisation(final String municipalityId, final String namespace, final Integer actualisationId, final MultipartFile file, final ArchiveActualisationRequest request) {
 		final var meta = ofNullable(request).orElseGet(ArchiveActualisationRequest::create);
 		final var fileName = ofNullable(file.getOriginalFilename()).filter(StringUtils::hasText).orElse("dokument.pdf");
 		final var title = ofNullable(meta.getTitle()).filter(StringUtils::hasText).orElse(fileName);
@@ -652,6 +661,10 @@ public class FinancialAssistanceService {
 		final var senderName = ofNullable(meta.getSenderName()).filter(StringUtils::hasText).orElse(DEFAULT_ARCHIVE_SENDER_NAME);
 
 		actualisationService.uploadAttachment(actualisationId, fileName, readBytes(file), documentType, documentSenderType, title, senderName);
+
+		ofNullable(meta.getErrandId()).filter(StringUtils::hasText)
+			.ifPresent(errandId -> addActualisationDecision(municipalityId, namespace, errandId, actualisationId,
+				"Actualisation set on errand from archive (id %d).".formatted(actualisationId)));
 	}
 
 	/** Read the uploaded file's bytes, surfacing an unreadable upload as a 400 rather than an opaque 500. */

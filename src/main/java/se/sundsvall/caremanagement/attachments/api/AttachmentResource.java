@@ -65,8 +65,9 @@ class AttachmentResource {
 	@PostMapping(consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Create attachment",
 		description = "Uploads a new attachment for the errand. The optional origin tags what the file is: ERRAND (a plain "
-			+ "manual upload, the default) or CASE_DATA (ärendeuppgifter — a case-data document). A CASE_DATA attachment is "
-			+ "renamed to {errandNumber}.pdf and only one is allowed per errand — uploading a second returns 400.",
+			+ "manual upload, the default), CASE_DATA (ärendeuppgifter — a case-data document) or DECISION (beslut — a "
+			+ "decision document). A CASE_DATA attachment is renamed to {errandNumber}.pdf and only one is allowed per "
+			+ "errand — uploading a second returns 400.",
 		responses = {
 			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
 		})
@@ -75,12 +76,13 @@ class AttachmentResource {
 		@Parameter(name = "namespace", description = "Namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Parameter(name = "errandId", description = "Errand id") @ValidUuid @PathVariable final String errandId,
 		@Parameter(name = "origin",
-			description = "What the uploaded file is: ERRAND (a plain manual upload, the default) or CASE_DATA "
-				+ "(ärendeuppgifter — a case-data document). Defaults to ERRAND when omitted.",
+			description = "What the uploaded file is: ERRAND (a plain manual upload, the default), CASE_DATA "
+				+ "(ärendeuppgifter — a case-data document) or DECISION (beslut — a decision document). Defaults to ERRAND "
+				+ "when omitted.",
 			schema = @Schema(allowableValues = {
-				"ERRAND", "CASE_DATA"
+				"ERRAND", "CASE_DATA", "DECISION"
 			})) @OneOf(value = {
-				"ERRAND", "CASE_DATA"
+				"ERRAND", "CASE_DATA", "DECISION"
 		}, nullable = true) @RequestParam(required = false) final String origin,
 		@NotNull @RequestPart("file") final MultipartFile file) {
 
@@ -102,9 +104,9 @@ class AttachmentResource {
 		@Parameter(name = "namespace", description = "Namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Parameter(name = "errandId", description = "Errand id") @ValidUuid @PathVariable final String errandId,
 		@Parameter(name = "origin", description = "Only return attachments with this origin", schema = @Schema(allowableValues = {
-			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA"
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION"
 		})) @OneOf(value = {
-			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA"
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION"
 		}, nullable = true) @RequestParam(required = false) final String origin,
 		@Parameter(name = "senderRole", description = "Only return attachments from this sender", schema = @Schema(allowableValues = {
 			"CLIENT", "CASEWORKER"

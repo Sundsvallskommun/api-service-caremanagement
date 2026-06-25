@@ -607,7 +607,7 @@ class FinancialAssistanceResourceTest {
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(serviceMock).archiveToActualisation(eq(5012), any(MultipartFile.class), any(ArchiveActualisationRequest.class));
+		verify(serviceMock).archiveToActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(5012), any(MultipartFile.class), any(ArchiveActualisationRequest.class));
 	}
 
 	@Test
@@ -622,7 +622,7 @@ class FinancialAssistanceResourceTest {
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(serviceMock).archiveToActualisation(eq(5012), any(MultipartFile.class), isNull());
+		verify(serviceMock).archiveToActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(5012), any(MultipartFile.class), isNull());
 	}
 
 	@Test

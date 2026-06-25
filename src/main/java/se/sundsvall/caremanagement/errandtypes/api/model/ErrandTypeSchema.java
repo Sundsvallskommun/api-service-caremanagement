@@ -22,8 +22,8 @@ public class ErrandTypeSchema {
 	@Schema(description = "Human-readable display name of the type", examples = "Financial assistance – återansökan")
 	private String displayName;
 
-	@Schema(description = "Allowed status codes for the type, sorted", examples = "[\"AVSLAGEN\",\"BEVILJAD\",\"INKOMMEN\"]")
-	private List<String> statuses;
+	@Schema(description = "Allowed statuses for the type — code plus human-readable display name, in lifecycle order")
+	private List<StatusDefinition> statuses;
 
 	@Schema(description = "Stakeholder roles valid for the type")
 	private List<RoleDefinition> roles;
@@ -77,15 +77,15 @@ public class ErrandTypeSchema {
 		return this;
 	}
 
-	public List<String> getStatuses() {
+	public List<StatusDefinition> getStatuses() {
 		return statuses;
 	}
 
-	public void setStatuses(final List<String> statuses) {
+	public void setStatuses(final List<StatusDefinition> statuses) {
 		this.statuses = statuses;
 	}
 
-	public ErrandTypeSchema withStatuses(final List<String> statuses) {
+	public ErrandTypeSchema withStatuses(final List<StatusDefinition> statuses) {
 		this.statuses = statuses;
 		return this;
 	}
