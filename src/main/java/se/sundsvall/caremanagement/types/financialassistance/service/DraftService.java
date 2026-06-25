@@ -382,7 +382,9 @@ public class DraftService {
 	}
 
 	private static void copyExpenseProcess(final FaNormExpenseEntity target, final FaNormExpenseEntity fresh) {
-		target.setAppliedAmount(fresh.getAppliedAmount());
+		// appliedAmount is write-once — it is what the citizen applied for, set when the row is first inserted and editable
+		// by a caseworker (patchExpense). The daily refresh must NOT overwrite it, or a caseworker correction on a system
+		// row is lost next loop. Only the genuine process columns (the rules cap + its bucket) refresh.
 		target.setProcessAmount(fresh.getProcessAmount());
 		target.setBucket(fresh.getBucket());
 	}

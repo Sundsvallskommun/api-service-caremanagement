@@ -101,6 +101,27 @@ class DraftServiceTest {
 	}
 
 	@Test
+	void refreshPreservesCaseworkerEditedAppliedAmountOnSystemExpenseRow() {
+		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
+		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+
+		// a system expense row whose appliedAmount a caseworker has corrected (9999) since the last loop
+		final var existing = FaNormExpenseEntity.create().withId("exp-0").withErrandId(ERRAND_ID).withOrigin(ORIGIN_SYSTEM).withPosition(0)
+			.withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9999")).withProcessAmount(new BigDecimal("8000"));
+		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(existing));
+
+		// the freshly computed row for the same expense carries the original applied amount (9000) and a new process cap
+		final var fresh = FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM)
+			.withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8500"));
+
+		service.refresh(ERRAND_ID, "2026-06", 7, "NATIONAL_NORM", List.of(), List.of(), List.of(fresh));
+
+		assertThat(existing.getAppliedAmount()).isEqualByComparingTo("9999"); // caseworker edit survives the daily refresh
+		assertThat(existing.getProcessAmount()).isEqualByComparingTo("8500"); // process column is still refreshed
+	}
+
+	@Test
 	void getThrows404WhenNoHeader() {
 		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
 
