@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:60676
+- url: http://localhost:62491
   description: Generated server url
 tags:
 - name: Statistics
@@ -1883,6 +1883,7 @@ paths:
           - GENERATED
           - ERRAND
           - CASE_DATA
+          - DECISION
       - name: senderRole
         in: query
         description: Only return attachments from this sender
@@ -1920,10 +1921,10 @@ paths:
       - Errand attachments
       summary: Create attachment
       description: "Uploads a new attachment for the errand. The optional origin tags\
-        \ what the file is: ERRAND (a plain manual upload, the default) or CASE_DATA\
-        \ (ärendeuppgifter — a case-data document). A CASE_DATA attachment is renamed\
-        \ to {errandNumber}.pdf and only one is allowed per errand — uploading a second\
-        \ returns 400."
+        \ what the file is: ERRAND (a plain manual upload, the default), CASE_DATA\
+        \ (ärendeuppgifter — a case-data document) or DECISION (beslut — a decision\
+        \ document). A CASE_DATA attachment is renamed to {errandNumber}.pdf and only\
+        \ one is allowed per errand — uploading a second returns 400."
       operationId: createAttachment
       parameters:
       - name: municipalityId
@@ -1950,14 +1951,15 @@ paths:
       - name: origin
         in: query
         description: "What the uploaded file is: ERRAND (a plain manual upload, the\
-          \ default) or CASE_DATA (ärendeuppgifter — a case-data document). Defaults\
-          \ to ERRAND when omitted."
+          \ default), CASE_DATA (ärendeuppgifter — a case-data document) or DECISION\
+          \ (beslut — a decision document). Defaults to ERRAND when omitted."
         required: false
         schema:
           type: string
           enum:
           - ERRAND
           - CASE_DATA
+          - DECISION
       requestBody:
         content:
           multipart/form-data:
@@ -5551,10 +5553,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -8743,15 +8745,16 @@ components:
           description: "Where the file came from: APPLICATION (citizen's application\
             \ files), CONVERSATION (sent in a message thread), GENERATED (a consolidated\
             \ PDF produced by the platform), ERRAND (uploaded directly to the errand),\
-            \ CASE_DATA (ärendeuppgifter — a case-data document for the errand) or\
-            \ MESSAGE_HISTORY (meddelandehistorik — the archived conversation PDF\
-            \ for a closed errand)"
+            \ CASE_DATA (ärendeuppgifter — a case-data document for the errand), DECISION\
+            \ (beslut — a decision document for the errand) or MESSAGE_HISTORY (meddelandehistorik\
+            \ — the archived conversation PDF for a closed errand)"
           enum:
           - APPLICATION
           - CONVERSATION
           - GENERATED
           - ERRAND
           - CASE_DATA
+          - DECISION
           - MESSAGE_HISTORY
           examples:
           - CONVERSATION
@@ -9393,13 +9396,10 @@ components:
           - Financial assistance – återansökan
         statuses:
           type: array
-          description: "Allowed status codes for the type, sorted"
-          examples:
-          - - AVSLAGEN
-            - BEVILJAD
-            - INKOMMEN
+          description: "Allowed statuses for the type — code plus human-readable display\
+            \ name, in lifecycle order"
           items:
-            type: string
+            $ref: "#/components/schemas/StatusDefinition"
         roles:
           type: array
           description: Stakeholder roles valid for the type
@@ -9489,4 +9489,19 @@ components:
           format: int32
         required:
           type: boolean
+    StatusDefinition:
+      type: object
+      description: An allowed status for an errand type — the stored code plus its
+        human-readable label.
+      properties:
+        code:
+          type: string
+          description: The status code stored on the errand
+          examples:
+          - UNDER_REVIEW
+        displayName:
+          type: string
+          description: Human-readable label for the status
+          examples:
+          - Under utredning
   securitySchemes: {}

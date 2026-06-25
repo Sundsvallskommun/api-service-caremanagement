@@ -6,6 +6,7 @@ import se.sundsvall.caremanagement.stakeholders.api.model.RoleDefinition;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderRoleContribution;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
@@ -27,6 +28,18 @@ class FinancialAssistanceModuleConfigTest {
 		assertThat(contribution.allowedStatuses()).containsExactlyInAnyOrder(
 			"RECEIVED", "NEEDS_MANUAL_REVIEW", "UNDER_REVIEW", "AWAITING_DECISION", "SUPPLEMENT_REQUESTED", "GRANTED",
 			"REJECTED", "PAID", "CLOSED", "WITHDRAWN");
+		assertThat(contribution.statusDisplayNames())
+			.containsExactly(
+				entry("RECEIVED", "Inkommen"),
+				entry("NEEDS_MANUAL_REVIEW", "Kräver manuell granskning"),
+				entry("UNDER_REVIEW", "Under utredning"),
+				entry("SUPPLEMENT_REQUESTED", "Komplettering begärd"),
+				entry("AWAITING_DECISION", "Väntar på beslut"),
+				entry("GRANTED", "Beviljad"),
+				entry("REJECTED", "Avslagen"),
+				entry("PAID", "Utbetald"),
+				entry("WITHDRAWN", "Återtagen"),
+				entry("CLOSED", "Avslutad"));
 		assertThat(contribution.isValidStatus("RECEIVED")).isTrue();
 		assertThat(contribution.isValidStatus("NEEDS_MANUAL_REVIEW")).isTrue();
 		assertThat(contribution.isValidStatus("BOGUS")).isFalse();

@@ -3,8 +3,28 @@ package se.sundsvall.caremanagement.core.service.registry;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 
 class ErrandTypeContributionTest {
+
+	@Test
+	void statusKeepsDisplayNameAndDeclarationOrder() {
+		final var contribution = ErrandTypeContribution.builder("eb")
+			.status("RECEIVED", "Inkommen")
+			.status("UNDER_REVIEW", "Under utredning")
+			.allowedStatuses("WITHDRAWN")
+			.allowedTransition("UNDER_REVIEW", "GRANTED")
+			.build();
+
+		assertThat(contribution.statusDisplayNames())
+			.containsExactly(
+				entry("RECEIVED", "Inkommen"),
+				entry("UNDER_REVIEW", "Under utredning"),
+				entry("WITHDRAWN", null),
+				entry("GRANTED", null));
+		assertThat(contribution.allowedStatuses())
+			.containsExactlyInAnyOrder("RECEIVED", "UNDER_REVIEW", "WITHDRAWN", "GRANTED");
+	}
 
 	@Test
 	void buildsWithAllowedStatusesAndTransitions() {
