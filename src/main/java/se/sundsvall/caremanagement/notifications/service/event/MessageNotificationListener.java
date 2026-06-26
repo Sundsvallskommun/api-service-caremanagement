@@ -28,7 +28,7 @@ class MessageNotificationListener {
 	private static final Logger LOG = LoggerFactory.getLogger(MessageNotificationListener.class);
 
 	private static final String INBOUND = "INBOUND";
-	private static final String DESCRIPTION = "New message from the applicant";
+	private static final String DESCRIPTION = "Nytt meddelande från sökanden";
 
 	private final ErrandRepository errandRepository;
 	private final NotificationService notificationService;
