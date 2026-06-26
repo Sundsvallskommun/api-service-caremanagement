@@ -7,9 +7,12 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Valid;
+import jakarta.validation.Validator;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.groups.Default;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -68,9 +71,12 @@ import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPref
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.HttpHeaders.LOCATION;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.MediaType.ALL_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
@@ -114,12 +120,16 @@ class FinancialAssistanceResource {
 	private final FinancialAssistanceService service;
 	private final EligibilityService eligibilityService;
 	private final RenewalPrefillService renewalPrefillService;
+	private final ObjectMapper objectMapper;
+	private final Validator validator;
 
 	FinancialAssistanceResource(final FinancialAssistanceService service, final EligibilityService eligibilityService,
-		final RenewalPrefillService renewalPrefillService) {
+		final RenewalPrefillService renewalPrefillService, final ObjectMapper objectMapper, final Validator validator) {
 		this.service = service;
 		this.eligibilityService = eligibilityService;
 		this.renewalPrefillService = renewalPrefillService;
+		this.objectMapper = objectMapper;
+		this.validator = validator;
 	}
 
 	@Tag(name = TAG_ERRANDS, description = TAG_ERRANDS_DESC)
@@ -134,16 +144,38 @@ class FinancialAssistanceResource {
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@PathVariable final String typeSlug,
-		@Valid @NotNull @RequestPart("request") final CreateFinancialAssistanceRequest request,
+		@Parameter(schema = @Schema(implementation = CreateFinancialAssistanceRequest.class)) @NotNull @RequestPart("request") final String requestJson,
 		@RequestPart(value = "attachments", required = false) final List<MultipartFile> attachments,
 		@RequestPart(value = "caseData", required = false) final MultipartFile caseData,
 		@RequestPart(value = "formSnapshot", required = false) final String formSnapshot) {
+
+		// The 'request' part is bound as a raw String rather than a typed POJO so the endpoint tolerates multipart
+		// clients (e.g. axios FormData) that send the JSON part without an explicit 'Content-Type: application/json'.
+		// We then deserialize and bean-validate it by hand, reproducing the @Valid + OnCreate-group behaviour.
+		final var request = readCreateRequest(requestJson);
 
 		final var id = service.create(municipalityId, namespace, typeSlug, request, attachments, caseData, formSnapshot);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}")
 			.buildAndExpand(municipalityId, namespace, id).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)
 			.build();
+	}
+
+	private CreateFinancialAssistanceRequest readCreateRequest(final String requestJson) {
+		final CreateFinancialAssistanceRequest request;
+		try {
+			request = objectMapper.readValue(requestJson, CreateFinancialAssistanceRequest.class);
+		} catch (final JacksonException e) {
+			throw Problem.valueOf(BAD_REQUEST, "The 'request' part is not valid JSON");
+		}
+
+		// Validate with both groups to mirror the framework method-validation this part used to get: OnCreate carries
+		// the create-only constraints (@NotBlank title, @NotNull data) and Default carries the nested @OneOf checks.
+		final var violations = validator.validate(request, OnCreate.class, Default.class);
+		if (!violations.isEmpty()) {
+			throw new ConstraintViolationException(violations);
+		}
+		return request;
 	}
 
 	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)

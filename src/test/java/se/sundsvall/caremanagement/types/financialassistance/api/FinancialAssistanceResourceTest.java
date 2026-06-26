@@ -62,6 +62,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.APPLICATION_PDF;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
+import static org.springframework.http.MediaType.TEXT_PLAIN;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -97,6 +98,26 @@ class FinancialAssistanceResourceTest {
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Min application").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
+
+		webTestClient.post()
+			.uri(uri -> uri.path(CREATE_PATH).build(base()))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isCreated();
+
+		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
+	}
+
+	@Test
+	void createErrandToleratesRequestPartWithoutJsonContentType() {
+		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
+
+		// Reproduces an axios FormData client that appends the JSON 'request' part without a 'Content-Type:
+		// application/json' (the part arrives as text/plain). The endpoint must still bind and create.
+		final var requestJson = "{\"title\":\"Utan content-type\",\"data\":{}}";
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", requestJson, TEXT_PLAIN);
 
 		webTestClient.post()
 			.uri(uri -> uri.path(CREATE_PATH).build(base()))

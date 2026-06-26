@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:51360
+- url: http://localhost:60428
   description: Generated server url
 tags:
 - name: Statistics
@@ -5848,10 +5848,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -7129,7 +7129,7 @@ components:
           type: string
           description: Swedish display name for the notification sub-type
           examples:
-          - "Ärende"
+          - Ärende
           readOnly: true
         description:
           type: string

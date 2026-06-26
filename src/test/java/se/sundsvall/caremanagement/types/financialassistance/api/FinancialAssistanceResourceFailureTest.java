@@ -80,6 +80,21 @@ class FinancialAssistanceResourceFailureTest {
 	}
 
 	@Test
+	void createErrand_malformedRequestJson() {
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", "{not valid json", APPLICATION_JSON);
+
+		webTestClient.post()
+			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
 	void createErrand_invalidApplicationType() {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("ok").withData(FinancialAssistanceData.create().withApplicationType("BOGUS")), APPLICATION_JSON);
