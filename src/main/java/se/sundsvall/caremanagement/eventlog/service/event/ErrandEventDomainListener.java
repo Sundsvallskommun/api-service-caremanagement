@@ -42,22 +42,22 @@ class ErrandEventDomainListener {
 			case final ErrandCreated created -> service.recordDomainEvent(entity
 				.withAction("CREATE")
 				.withTarget("errand")
-				.withDescription("Errand created")
+				.withDescription("Ärende skapat")
 				.withActor(actorOr(created.reporterUserId())));
 			case final ErrandStatusChanged changed -> service.recordDomainEvent(entity
 				.withAction("UPDATE")
 				.withTarget("status")
-				.withDescription("Status " + changed.fromStatus() + " -> " + changed.toStatus())
+				.withDescription("Status " + changed.fromStatus() + " → " + changed.toStatus())
 				.withActor(actorOr(changed.changedBy())));
 			case final ErrandAssigned assigned -> service.recordDomainEvent(entity
 				.withAction("UPDATE")
 				.withTarget("assignment")
-				.withDescription("Assigned " + assigned.previousAssignee() + " -> " + assigned.newAssignee())
+				.withDescription("Tilldelad " + assigned.previousAssignee() + " → " + assigned.newAssignee())
 				.withActor(actorOr(assigned.changedBy())));
 			case final ErrandDeleted deleted -> service.recordDomainEvent(entity
 				.withAction("DELETE")
 				.withTarget("errand")
-				.withDescription("Errand deleted")
+				.withDescription("Ärende borttaget")
 				.withActor(actorOr(deleted.deletedBy())));
 		}
 	}

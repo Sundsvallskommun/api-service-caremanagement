@@ -68,7 +68,7 @@ class ErrandEventInterceptorTest {
 		assertThat(entity.getSource()).isEqualTo("HTTP");
 		assertThat(entity.getAction()).isEqualTo("READ");
 		assertThat(entity.getTarget()).isEqualTo("errand");
-		assertThat(entity.getDescription()).isEqualTo("Opened errand");
+		assertThat(entity.getDescription()).isEqualTo("Öppnade ärendet");
 		assertThat(entity.getHttpMethod()).isEqualTo("GET");
 		assertThat(entity.getStatusCode()).isEqualTo(200);
 		assertThat(entity.getActor()).isNull();
@@ -100,7 +100,7 @@ class ErrandEventInterceptorTest {
 		assertThat(entity.getErrandId()).isEqualTo(ERRAND_ID);
 		assertThat(entity.getAction()).isEqualTo("UPDATE");
 		assertThat(entity.getTarget()).isEqualTo("financial-assistance/calculation/draft/incomes");
-		assertThat(entity.getDescription()).isEqualTo("Updated income in the draft calculation");
+		assertThat(entity.getDescription()).isEqualTo("Uppdaterade inkomst i utkastberäkningen");
 	}
 
 	@Test

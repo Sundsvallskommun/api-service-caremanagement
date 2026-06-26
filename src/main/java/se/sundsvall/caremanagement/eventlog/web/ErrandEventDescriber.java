@@ -4,10 +4,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Turns an errand-scoped request into a plain-language description of what happened — e.g. "Opened errand",
- * "Added income in the draft calculation", "Updated calculation header", "Viewed decisions". Derived generically from
- * the HTTP method and the path, so it reads well across every endpoint without per-endpoint wiring. The structured
- * {@code action}/{@code target} fields stay machine-friendly for filtering; this only shapes the human
+ * Turns an errand-scoped request into a plain-language (Swedish) description of what happened — e.g. "Öppnade ärendet",
+ * "Lade till inkomst i utkastberäkningen", "Uppdaterade beräkningshuvud", "Visade beslut". Derived generically from the
+ * HTTP method and the path, so it reads well across every endpoint without per-endpoint wiring. The structured
+ * {@code action}/{@code target} fields stay machine-friendly (English) for filtering; this only shapes the human
  * {@code description}.
  *
  * <p>
@@ -16,73 +16,73 @@ import java.util.Map;
  */
 final class ErrandEventDescriber {
 
-	// leaf path segment -> { singular, plural } human nouns
+	// leaf path segment -> { singular, plural } Swedish nouns
 	private static final Map<String, String[]> NOUNS = Map.ofEntries(
 		Map.entry("decisions", new String[] {
-			"decision", "decisions"
+			"beslut", "beslut"
 		}),
 		Map.entry("notes", new String[] {
-			"note", "notes"
+			"anteckning", "anteckningar"
 		}),
 		Map.entry("attachments", new String[] {
-			"attachment", "attachments"
+			"bilaga", "bilagor"
 		}),
 		Map.entry("stakeholders", new String[] {
-			"stakeholder", "stakeholders"
+			"intressent", "intressenter"
 		}),
 		Map.entry("documents", new String[] {
-			"document", "documents"
+			"dokument", "dokument"
 		}),
 		Map.entry("journal-entries", new String[] {
-			"journal entry", "journal entries"
+			"journalanteckning", "journalanteckningar"
 		}),
 		Map.entry("messages", new String[] {
-			"message", "messages"
+			"meddelande", "meddelanden"
 		}),
 		Map.entry("process-messages", new String[] {
-			"process message", "process messages"
+			"processmeddelande", "processmeddelanden"
 		}),
 		Map.entry("parameters", new String[] {
-			"parameter", "parameters"
+			"parameter", "parametrar"
 		}),
 		Map.entry("permits", new String[] {
-			"permit", "permits"
+			"tillstånd", "tillstånd"
 		}),
 		Map.entry("referrals", new String[] {
-			"referral", "referrals"
+			"remiss", "remisser"
 		}),
 		Map.entry("notifications", new String[] {
-			"notification", "notifications"
+			"notis", "notiser"
 		}),
 		Map.entry("incomes", new String[] {
-			"income", "incomes"
+			"inkomst", "inkomster"
 		}),
 		Map.entry("expenses", new String[] {
-			"expense", "expenses"
+			"utgift", "utgifter"
 		}),
 		Map.entry("persons", new String[] {
-			"person", "persons"
+			"person", "personer"
 		}),
 		Map.entry("warnings", new String[] {
-			"warning", "warnings"
+			"varning", "varningar"
 		}),
 		Map.entry("monitorings", new String[] {
-			"monitoring", "monitorings"
+			"bevakning", "bevakningar"
 		}),
 		Map.entry("sections", new String[] {
-			"section", "sections"
+			"sektion", "sektioner"
 		}),
 		Map.entry("status-history", new String[] {
-			"status history", "status history"
+			"statushistorik", "statushistorik"
 		}),
 		Map.entry("data", new String[] {
-			"case data", "case data"
+			"ärendeuppgifter", "ärendeuppgifter"
 		}),
 		Map.entry("header", new String[] {
-			"calculation header", "calculation header"
+			"beräkningshuvud", "beräkningshuvud"
 		}),
 		Map.entry("draft", new String[] {
-			"draft calculation", "draft calculation"
+			"utkastberäkning", "utkastberäkning"
 		}));
 
 	private ErrandEventDescriber() {}
@@ -90,25 +90,25 @@ final class ErrandEventDescriber {
 	static String describe(final String method, final List<String> tail, final boolean itemLevel) {
 		if (tail.isEmpty()) {
 			return switch (method) {
-				case "GET" -> "Opened errand";
-				case "POST" -> "Created errand";
-				case "PUT", "PATCH" -> "Updated errand";
-				case "DELETE" -> "Deleted errand";
-				default -> "Errand";
+				case "GET" -> "Öppnade ärendet";
+				case "POST" -> "Skapade ärendet";
+				case "PUT", "PATCH" -> "Uppdaterade ärendet";
+				case "DELETE" -> "Tog bort ärendet";
+				default -> "Ärende";
 			};
 		}
 
 		final var leaf = tail.get(tail.size() - 1);
 
 		if ("restore".equals(leaf)) {
-			final var resource = tail.size() >= 2 ? tail.get(tail.size() - 2) : "row";
-			return "Restored " + singular(resource) + calculationContext(tail, resource);
+			final var resource = tail.size() >= 2 ? tail.get(tail.size() - 2) : "rad";
+			return "Återställde " + singular(resource) + calculationContext(tail, resource);
 		}
 		if ("approval".equals(leaf) || "approvals".equals(leaf)) {
-			return "GET".equals(method) ? "Viewed section approvals" : "Approved a section";
+			return "GET".equals(method) ? "Visade sektionsgodkännanden" : "Godkände en sektion";
 		}
 		if ("acknowledged".equals(leaf)) {
-			return "Acknowledged notifications";
+			return "Kvitterade notiser";
 		}
 
 		final var noun = "GET".equals(method) && !itemLevel ? plural(leaf) : singular(leaf);
@@ -117,17 +117,17 @@ final class ErrandEventDescriber {
 
 	private static String verb(final String method) {
 		return switch (method) {
-			case "GET" -> "Viewed";
-			case "POST" -> "Added";
-			case "PUT", "PATCH" -> "Updated";
-			case "DELETE" -> "Deleted";
+			case "GET" -> "Visade";
+			case "POST" -> "Lade till";
+			case "PUT", "PATCH" -> "Uppdaterade";
+			case "DELETE" -> "Tog bort";
 			default -> method;
 		};
 	}
 
 	private static String calculationContext(final List<String> tail, final String resource) {
 		final var rowType = "incomes".equals(resource) || "expenses".equals(resource) || "persons".equals(resource);
-		return tail.contains("calculation") && rowType ? " in the draft calculation" : "";
+		return tail.contains("calculation") && rowType ? " i utkastberäkningen" : "";
 	}
 
 	private static String singular(final String leaf) {

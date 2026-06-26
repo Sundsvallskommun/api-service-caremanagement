@@ -56,7 +56,7 @@ class ErrandEventDomainListenerTest {
 		final var entity = capture();
 		assertThat(entity.getAction()).isEqualTo("UPDATE");
 		assertThat(entity.getTarget()).isEqualTo("status");
-		assertThat(entity.getDescription()).isEqualTo("Status OPEN -> DECIDED");
+		assertThat(entity.getDescription()).isEqualTo("Status OPEN → DECIDED");
 		assertThat(entity.getActor()).isEqualTo("edwmol");
 	}
 
@@ -67,7 +67,7 @@ class ErrandEventDomainListenerTest {
 		final var entity = capture();
 		assertThat(entity.getAction()).isEqualTo("UPDATE");
 		assertThat(entity.getTarget()).isEqualTo("assignment");
-		assertThat(entity.getDescription()).isEqualTo("Assigned joe001doe -> edwmol");
+		assertThat(entity.getDescription()).isEqualTo("Tilldelad joe001doe → edwmol");
 		assertThat(entity.getActor()).isEqualTo("boss001");
 	}
 
