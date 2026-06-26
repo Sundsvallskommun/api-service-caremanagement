@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.lifecare.integration;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDocumentDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedExecutionDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedInvestigationDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedPaymentDTO;
@@ -28,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.lifecare.integration.configuration.LifecareFcConfiguration;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 import static se.sundsvall.caremanagement.lifecare.integration.configuration.LifecareFcConfiguration.CLIENT_ID;
 
@@ -162,6 +164,30 @@ public interface LifecareFcClient {
 		@RequestParam(value = "pageSize", required = false) final Integer pageSize,
 		@RequestParam(value = "pageNr", required = false) final Integer pageNr,
 		@RequestParam(value = "ascending", required = false) final Boolean ascending);
+
+	/**
+	 * List the documents registered on a person in the given period — metadata only (id, title, date, type, owner). The
+	 * content of a single document is fetched separately via {@link #getDocumentContent(String)}.
+	 */
+	@GetMapping(path = "/apifc/v1/Documents", produces = APPLICATION_JSON_VALUE)
+	ApiPaginationCompositePersonBasedDocumentDTO getDocuments(
+		@RequestParam("personId") final String personId,
+		@RequestParam("startDate") final String startDate,
+		@RequestParam("endDate") final String endDate,
+		@RequestParam(value = "pageSize", required = false) final Integer pageSize,
+		@RequestParam(value = "pageNr", required = false) final Integer pageNr,
+		@RequestParam(value = "ascending", required = false) final Boolean ascending);
+
+	/**
+	 * Fetch a single document's content (the generated PDF) by its document id. FC answers {@code 404} when the document
+	 * has no generated PDF (content exists only for PDF-backed document types).
+	 *
+	 * @param  id the document id ({@code PersonBasedDocumentDTO.Id})
+	 * @return    the raw document bytes (PDF)
+	 */
+	@GetMapping(path = "/apifc/v1/DocumentContent", produces = APPLICATION_PDF_VALUE)
+	byte[] getDocumentContent(
+		@RequestParam("id") final String id);
 
 	/**
 	 * List FC users (caseworkers). Used to resolve a Service's caseworker display name to the user's FC {@code Id}

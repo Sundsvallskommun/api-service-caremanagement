@@ -28,8 +28,8 @@ public class CalculationDraft {
 	@Schema(description = "The selected norm id")
 	private Integer normId;
 
-	@Schema(description = "The selected norm type")
-	private String normType;
+	@Schema(description = "The selected norm types")
+	private List<String> normType;
 
 	@Schema(description = "The start date of the calculation period")
 	@DateTimeFormat(iso = DATE)
@@ -121,15 +121,15 @@ public class CalculationDraft {
 		return this;
 	}
 
-	public String getNormType() {
+	public List<String> getNormType() {
 		return normType;
 	}
 
-	public void setNormType(final String normType) {
+	public void setNormType(final List<String> normType) {
 		this.normType = normType;
 	}
 
-	public CalculationDraft withNormType(final String normType) {
+	public CalculationDraft withNormType(final List<String> normType) {
 		this.normType = normType;
 		return this;
 	}
@@ -342,7 +342,7 @@ public class CalculationDraft {
 			"errandId='" + errandId + '\'' +
 			", applicationMonth='" + applicationMonth + '\'' +
 			", normId=" + normId +
-			", normType='" + normType + '\'' +
+			", normType=" + normType +
 			", calculationFromDate=" + calculationFromDate +
 			", calculationToDate=" + calculationToDate +
 			", calculationDate=" + calculationDate +

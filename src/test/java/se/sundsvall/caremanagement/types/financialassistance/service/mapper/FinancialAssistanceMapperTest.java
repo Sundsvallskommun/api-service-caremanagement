@@ -53,7 +53,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getPeriodMonth()).isEqualTo(6);
 		assertThat(entity.getPeriodYear()).isEqualTo(2026);
 		assertThat(entity.getPeriodChoice()).isEqualTo("CURRENT_MONTH");
-		assertThat(entity.getNormType()).isEqualTo("NATIONAL_NORM");
+		assertThat(entity.getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
 		assertThat(entity.getOtherBenefitDescription()).isEqualTo("Establishment benefit");
 		assertThat(entity.getLivelihoodDescription()).isEqualTo("Söker arbete");
 		assertThat(entity.getHasChildrenUnder21()).isTrue();
@@ -163,7 +163,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(data.getPeriodMonth()).isEqualTo(7);
 		assertThat(data.getPeriodYear()).isEqualTo(2025);
 		assertThat(data.getPeriodChoice()).isEqualTo("NEXT_MONTH");
-		assertThat(data.getNormType()).isEqualTo("OTHER_NORM");
+		assertThat(data.getNormType()).isEqualTo(List.of("OTHER_NORM"));
 		assertThat(data.getOtherBenefitDescription()).isEqualTo("Annat bidrag");
 		assertThat(data.getLivelihoodDescription()).isEqualTo("Egen försörjning");
 		assertThat(data.getHasChildrenUnder21()).isFalse();
@@ -303,7 +303,7 @@ class FinancialAssistanceMapperTest {
 			.withPeriodMonth(6)
 			.withPeriodYear(2026)
 			.withPeriodChoice("CURRENT_MONTH")
-			.withNormType("NATIONAL_NORM")
+			.withNormType(List.of("NATIONAL_NORM"))
 			.withOtherBenefitDescription("Establishment benefit")
 			.withLivelihoodDescription("Söker arbete")
 			.withHasChildrenUnder21(true)
@@ -400,7 +400,7 @@ class FinancialAssistanceMapperTest {
 			.withPeriodMonth(7)
 			.withPeriodYear(2025)
 			.withPeriodChoice("NEXT_MONTH")
-			.withNormType("OTHER_NORM")
+			.withNormType(List.of("OTHER_NORM"))
 			.withOtherBenefitDescription("Annat bidrag")
 			.withLivelihoodDescription("Egen försörjning")
 			.withHasChildrenUnder21(false)

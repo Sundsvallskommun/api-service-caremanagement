@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.lifecare.integration;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDocumentDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedExecutionDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedInvestigationDTO;
 import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedPaymentDTO;
@@ -89,6 +90,14 @@ public class LifecareFcIntegration {
 
 	public List<User> getUsers(final Integer limit, final Integer offset, final String modifiedAfter, final String modifiedBefore) {
 		return call("fetching users", () -> lifecareFcClient.getUsers(limit, offset, modifiedAfter, modifiedBefore));
+	}
+
+	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
+		return call("fetching documents", () -> lifecareFcClient.getDocuments(personId, startDate, endDate, pageSize, pageNr, ascending));
+	}
+
+	public byte[] getDocumentContent(final String id) {
+		return call("fetching document content", () -> lifecareFcClient.getDocumentContent(id));
 	}
 
 	// ---- Write-back (actualisation + calculation) and the proposals that drive it ----------------------------------

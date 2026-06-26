@@ -156,6 +156,27 @@ class ErrandServiceTest {
 	}
 
 	@Test
+	void countErrandsCombinesProvidedFilter() {
+		final ArgumentCaptor<Specification<ErrandEntity>> specCaptor = ArgumentCaptor.captor();
+		when(repositoryMock.count(specCaptor.capture())).thenReturn(7L);
+
+		final Specification<ErrandEntity> extra = (root, _, cb) -> cb.equal(root.get("status"), "OPEN");
+		final var count = service.countErrands(MUNICIPALITY_ID, NAMESPACE, extra);
+
+		assertThat(count).isEqualTo(7L);
+		assertThat(specCaptor.getValue()).isNotNull();
+	}
+
+	@Test
+	void countErrandsWithNullFilterStillRuns() {
+		when(repositoryMock.count(any(Specification.class))).thenReturn(0L);
+
+		final var count = service.countErrands(MUNICIPALITY_ID, NAMESPACE, null);
+
+		assertThat(count).isZero();
+	}
+
+	@Test
 	void findByStatusTouchedBeforeMapsEntities() {
 		final var cutoff = java.time.OffsetDateTime.parse("2026-05-01T00:00:00Z");
 		final var entity = ErrandEntity.create().withId(ERRAND_ID).withErrandNumber(ERRAND_NUMBER).withStatus("CLOSED")

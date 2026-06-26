@@ -17,9 +17,9 @@ class FinancialAssistanceModuleConfigTest {
 
 	@Test
 	void registersThreeTypesWithSharedLifecycle() {
-		assertType(config.financialAssistanceNewType(), SLUG_NEW, "Financial assistance – new application");
-		assertType(config.financialAssistanceRenewalType(), SLUG_RENEWAL, "Financial assistance – renewal");
-		assertType(config.financialAssistanceSupplementaryType(), SLUG_SUPPLEMENTARY, "Financial assistance – supplementary application");
+		assertType(config.financialAssistanceNewType(), SLUG_NEW, "Nyansökan");
+		assertType(config.financialAssistanceRenewalType(), SLUG_RENEWAL, "Återansökan");
+		assertType(config.financialAssistanceSupplementaryType(), SLUG_SUPPLEMENTARY, "Tilläggsansökan");
 	}
 
 	private static void assertType(final ErrandTypeContribution contribution, final String slug, final String displayName) {

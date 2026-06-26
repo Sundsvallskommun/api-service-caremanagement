@@ -79,7 +79,7 @@ public class DraftService {
 	 * caller can raise warnings.
 	 */
 	@Transactional
-	public DraftChanges refresh(final String errandId, final String applicationMonth, final Integer normId, final String normType,
+	public DraftChanges refresh(final String errandId, final String applicationMonth, final Integer normId, final List<String> normType,
 		final List<FaNormPersonEntity> freshPersons, final List<FaNormIncomeEntity> freshIncomes, final List<FaNormExpenseEntity> freshExpenses) {
 
 		upsertHeader(errandId, applicationMonth, normId, normType);
@@ -105,7 +105,7 @@ public class DraftService {
 		return new DraftChanges(incomes.added(), incomes.dropped(), expenses.added(), expenses.dropped(), persons.added(), persons.dropped());
 	}
 
-	private void upsertHeader(final String errandId, final String applicationMonth, final Integer normId, final String normType) {
+	private void upsertHeader(final String errandId, final String applicationMonth, final Integer normId, final List<String> normType) {
 		final var header = headerRepository.findById(errandId).orElseGet(() -> FaCalculationDraftEntity.create().withErrandId(errandId));
 		ofNullable(applicationMonth).filter(StringUtils::hasText).ifPresent(month -> {
 			header.setApplicationMonth(month);
@@ -114,7 +114,7 @@ public class DraftService {
 			header.setCalculationToDate(parsed.atEndOfMonth());
 		});
 		ofNullable(normId).ifPresent(header::setNormId);
-		ofNullable(normType).filter(StringUtils::hasText).ifPresent(header::setNormType);
+		ofNullable(normType).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
 		header.setCalculationDate(LocalDate.now());
 		headerRepository.save(header);
 	}
@@ -125,7 +125,7 @@ public class DraftService {
 		final var header = headerRepository.findById(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft calculation for errand"));
 		ofNullable(input.getNormId()).ifPresent(header::setNormId);
-		ofNullable(input.getNormType()).filter(StringUtils::hasText).ifPresent(header::setNormType);
+		ofNullable(input.getNormType()).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
 		ofNullable(input.getCalculationFromDate()).ifPresent(header::setCalculationFromDate);
 		ofNullable(input.getCalculationToDate()).ifPresent(header::setCalculationToDate);
 		ofNullable(input.getCalculationDate()).ifPresent(header::setCalculationDate);

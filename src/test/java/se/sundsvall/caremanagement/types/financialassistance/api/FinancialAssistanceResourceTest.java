@@ -29,6 +29,9 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Eligibili
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceMetadata;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareCalculation;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDecision;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDocument;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
@@ -57,6 +60,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PDF;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
@@ -592,6 +596,93 @@ class FinancialAssistanceResourceTest {
 			.expectStatus().isOk();
 
 		verify(serviceMock).listActualisations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+	}
+
+	@Test
+	void listCalculations() {
+		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+		when(serviceMock.listCalculations(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
+			.thenReturn(List.of(LifecareCalculation.create().withId(7001).withNormSum(10500.0)));
+
+		final var result = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/calculations").queryParam("partyId", partyId).build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBodyList(LifecareCalculation.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(result).singleElement().satisfies(calculation -> assertThat(calculation.getId()).isEqualTo(7001));
+		verify(serviceMock).listCalculations(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull());
+	}
+
+	@Test
+	void listCalculationsWithExplicitPeriod() {
+		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+		when(serviceMock.listCalculations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30)))
+			.thenReturn(List.of());
+
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/calculations").queryParam("partyId", partyId).queryParam("from", "2026-01-01").queryParam("to", "2026-06-30").build(base()))
+			.exchange()
+			.expectStatus().isOk();
+
+		verify(serviceMock).listCalculations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+	}
+
+	@Test
+	void listDecisions() {
+		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+		when(serviceMock.listDecisions(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
+			.thenReturn(List.of(LifecareDecision.create().withId(9900).withType("Bifall")));
+
+		final var result = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/decisions").queryParam("partyId", partyId).build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBodyList(LifecareDecision.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(result).singleElement().satisfies(decision -> assertThat(decision.getId()).isEqualTo(9900));
+		verify(serviceMock).listDecisions(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull());
+	}
+
+	@Test
+	void listDocuments() {
+		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+		when(serviceMock.listDocuments(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
+			.thenReturn(List.of(LifecareDocument.create().withId("doc-1").withTitle("Beslut")));
+
+		final var result = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/documents").queryParam("partyId", partyId).build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBodyList(LifecareDocument.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(result).singleElement().satisfies(document -> assertThat(document.getId()).isEqualTo("doc-1"));
+		verify(serviceMock).listDocuments(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull());
+	}
+
+	@Test
+	void readDocumentContent() {
+		final var documentId = "a3f1c2d4-0000-1111-2222-333344445555";
+		when(serviceMock.readDocumentContent(documentId)).thenReturn("%PDF-1.4".getBytes());
+
+		final var body = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/documents/{documentId}/content").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "documentId", documentId)))
+			.accept(APPLICATION_PDF)
+			.exchange()
+			.expectStatus().isOk()
+			.expectHeader().contentType(APPLICATION_PDF)
+			.expectBody(byte[].class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(body).isEqualTo("%PDF-1.4".getBytes());
+		verify(serviceMock).readDocumentContent(documentId);
 	}
 
 	@Test

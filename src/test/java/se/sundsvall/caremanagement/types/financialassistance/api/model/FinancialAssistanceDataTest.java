@@ -37,7 +37,7 @@ class FinancialAssistanceDataTest {
 			.withPeriodMonth(6)
 			.withPeriodYear(2026)
 			.withPeriodChoice("CURRENT_MONTH")
-			.withNormType("NATIONAL_NORM")
+			.withNormType(List.of("NATIONAL_NORM"))
 			.withOtherBenefitDescription("Establishment benefit")
 			.withLivelihoodDescription("Söker arbete")
 			.withHasChildrenUnder21(true)
@@ -71,7 +71,7 @@ class FinancialAssistanceDataTest {
 		assertThat(data.getPeriodMonth()).isEqualTo(6);
 		assertThat(data.getPeriodYear()).isEqualTo(2026);
 		assertThat(data.getPeriodChoice()).isEqualTo("CURRENT_MONTH");
-		assertThat(data.getNormType()).isEqualTo("NATIONAL_NORM");
+		assertThat(data.getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
 		assertThat(data.getOtherBenefitDescription()).isEqualTo("Establishment benefit");
 		assertThat(data.getLivelihoodDescription()).isEqualTo("Söker arbete");
 		assertThat(data.getHasChildrenUnder21()).isTrue();
@@ -110,7 +110,7 @@ class FinancialAssistanceDataTest {
 		data.setPeriodMonth(7);
 		data.setPeriodYear(2027);
 		data.setPeriodChoice("NEXT_MONTH");
-		data.setNormType("OTHER_NORM");
+		data.setNormType(List.of("OTHER_NORM"));
 		data.setOtherBenefitDescription("desc");
 		data.setLivelihoodDescription("livelihood");
 		data.setHasChildrenUnder21(false);

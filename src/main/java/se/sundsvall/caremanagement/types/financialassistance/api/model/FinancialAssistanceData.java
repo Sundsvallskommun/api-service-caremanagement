@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import java.time.OffsetDateTime;
@@ -40,13 +41,12 @@ public class FinancialAssistanceData {
 	}, nullable = true)
 	private String periodChoice;
 
-	@Schema(description = "The norm type used for the calculation", examples = "NATIONAL_NORM", allowableValues = {
+	@ArraySchema(schema = @Schema(description = "The norm types used for the calculation", examples = "NATIONAL_NORM", allowableValues = {
 		"NATIONAL_NORM", "OTHER_NORM"
-	})
-	@OneOf(value = {
+	}))
+	private List<@OneOf({
 		"NATIONAL_NORM", "OTHER_NORM"
-	}, nullable = true)
-	private String normType;
+	}) String> normType;
 
 	@Schema(description = "Description of the other benefit", examples = "Establishment benefit")
 	private String otherBenefitDescription;
@@ -212,15 +212,15 @@ public class FinancialAssistanceData {
 		return this;
 	}
 
-	public String getNormType() {
+	public List<String> getNormType() {
 		return normType;
 	}
 
-	public void setNormType(final String normType) {
+	public void setNormType(final List<String> normType) {
 		this.normType = normType;
 	}
 
-	public FinancialAssistanceData withNormType(final String normType) {
+	public FinancialAssistanceData withNormType(final List<String> normType) {
 		this.normType = normType;
 		return this;
 	}
@@ -616,7 +616,7 @@ public class FinancialAssistanceData {
 	public String toString() {
 		return "FinancialAssistanceData{applicationType='" + applicationType + "', maritalStatus='" + maritalStatus
 			+ "', periodMonth=" + periodMonth + ", periodYear=" + periodYear + ", periodChoice='" + periodChoice
-			+ "', normType='" + normType + "', otherBenefitDescription='" + otherBenefitDescription
+			+ "', normType=" + normType + ", otherBenefitDescription='" + otherBenefitDescription
 			+ "', livelihoodDescription='" + livelihoodDescription + "', hasChildrenUnder21=" + hasChildrenUnder21
 			+ ", childrenResidenceChanged=" + childrenResidenceChanged + ", childrenResidenceChangeDescription='"
 			+ childrenResidenceChangeDescription + "', housingForm='" + housingForm + "', housingPersonCount="

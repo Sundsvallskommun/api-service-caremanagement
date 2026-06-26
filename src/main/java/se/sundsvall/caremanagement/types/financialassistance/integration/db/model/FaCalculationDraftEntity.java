@@ -1,13 +1,17 @@
 package se.sundsvall.caremanagement.types.financialassistance.integration.db.model;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 
@@ -35,8 +39,10 @@ public class FaCalculationDraftEntity {
 	@Column(name = "norm_id")
 	private Integer normId;
 
-	@Column(name = "norm_type")
-	private String normType;
+	@ElementCollection
+	@CollectionTable(name = "errand_fa_calculation_draft_norm_type", joinColumns = @JoinColumn(name = "errand_id"))
+	@Column(name = "norm_type", length = 32)
+	private List<String> normType;
 
 	@Column(name = "calculation_from_date")
 	private LocalDate calculationFromDate;
@@ -116,15 +122,15 @@ public class FaCalculationDraftEntity {
 		return this;
 	}
 
-	public String getNormType() {
+	public List<String> getNormType() {
 		return normType;
 	}
 
-	public void setNormType(final String normType) {
+	public void setNormType(final List<String> normType) {
 		this.normType = normType;
 	}
 
-	public FaCalculationDraftEntity withNormType(final String normType) {
+	public FaCalculationDraftEntity withNormType(final List<String> normType) {
 		this.normType = normType;
 		return this;
 	}
@@ -244,7 +250,7 @@ public class FaCalculationDraftEntity {
 			"errandId='" + errandId + '\'' +
 			", applicationMonth='" + applicationMonth + '\'' +
 			", normId=" + normId +
-			", normType='" + normType + '\'' +
+			", normType=" + normType +
 			", calculationFromDate=" + calculationFromDate +
 			", calculationToDate=" + calculationToDate +
 			", calculationDate=" + calculationDate +

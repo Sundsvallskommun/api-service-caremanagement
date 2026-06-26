@@ -32,7 +32,7 @@ class FinancialAssistanceEntityTest {
 			.withPeriodMonth(6)
 			.withPeriodYear(2026)
 			.withPeriodChoice("CURRENT_MONTH")
-			.withNormType("NATIONAL_NORM")
+			.withNormType(List.of("NATIONAL_NORM"))
 			.withOtherBenefitDescription("Establishment benefit")
 			.withLivelihoodDescription("Söker arbete")
 			.withHasChildrenUnder21(true)
@@ -69,7 +69,7 @@ class FinancialAssistanceEntityTest {
 		assertThat(entity.getPeriodMonth()).isEqualTo(6);
 		assertThat(entity.getPeriodYear()).isEqualTo(2026);
 		assertThat(entity.getPeriodChoice()).isEqualTo("CURRENT_MONTH");
-		assertThat(entity.getNormType()).isEqualTo("NATIONAL_NORM");
+		assertThat(entity.getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
 		assertThat(entity.getOtherBenefitDescription()).isEqualTo("Establishment benefit");
 		assertThat(entity.getLivelihoodDescription()).isEqualTo("Söker arbete");
 		assertThat(entity.getHasChildrenUnder21()).isTrue();
@@ -120,7 +120,7 @@ class FinancialAssistanceEntityTest {
 		entity.setPeriodMonth(5);
 		entity.setPeriodYear(2026);
 		entity.setPeriodChoice("NEXT_MONTH");
-		entity.setNormType("OTHER_NORM");
+		entity.setNormType(List.of("OTHER_NORM"));
 		entity.setOtherBenefitDescription("Skuld");
 		entity.setLivelihoodDescription("Arbetslös");
 		entity.setHasChildrenUnder21(false);
@@ -157,7 +157,7 @@ class FinancialAssistanceEntityTest {
 		assertThat(entity.getPeriodMonth()).isEqualTo(5);
 		assertThat(entity.getPeriodYear()).isEqualTo(2026);
 		assertThat(entity.getPeriodChoice()).isEqualTo("NEXT_MONTH");
-		assertThat(entity.getNormType()).isEqualTo("OTHER_NORM");
+		assertThat(entity.getNormType()).isEqualTo(List.of("OTHER_NORM"));
 		assertThat(entity.getOtherBenefitDescription()).isEqualTo("Skuld");
 		assertThat(entity.getLivelihoodDescription()).isEqualTo("Arbetslös");
 		assertThat(entity.getHasChildrenUnder21()).isFalse();

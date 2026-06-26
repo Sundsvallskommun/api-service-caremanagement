@@ -68,13 +68,13 @@ class DraftServiceTest {
 
 		final var income = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag");
 
-		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, "NATIONAL_NORM", List.of(), List.of(income), List.of());
+		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(income), List.of());
 
 		assertThat(changes.addedIncomes()).containsExactly("Bostadsbidrag");
 		final var header = ArgumentCaptor.forClass(FaCalculationDraftEntity.class);
 		verifySaved(header);
 		assertThat(header.getValue().getNormId()).isEqualTo(7);
-		assertThat(header.getValue().getNormType()).isEqualTo("NATIONAL_NORM");
+		assertThat(header.getValue().getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
 	}
 
 	private void verifySaved(final ArgumentCaptor<FaCalculationDraftEntity> captor) {
@@ -94,7 +94,7 @@ class DraftServiceTest {
 		final var refreshedFresh = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag");
 		final var newFresh = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(99).withTypeName("Underhållsstöd");
 
-		service.refresh(ERRAND_ID, "2026-06", 7, "NATIONAL_NORM", List.of(), List.of(refreshedFresh, newFresh), List.of());
+		service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(refreshedFresh, newFresh), List.of());
 
 		assertThat(existing.getPosition()).isEqualTo(0);  // a refreshed row keeps the position it already had
 		assertThat(newFresh.getPosition()).isEqualTo(1);  // a genuinely new row is appended at the next free position
@@ -115,7 +115,7 @@ class DraftServiceTest {
 		final var fresh = FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM)
 			.withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8500"));
 
-		service.refresh(ERRAND_ID, "2026-06", 7, "NATIONAL_NORM", List.of(), List.of(), List.of(fresh));
+		service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(), List.of(fresh));
 
 		assertThat(existing.getAppliedAmount()).isEqualByComparingTo("9999"); // caseworker edit survives the daily refresh
 		assertThat(existing.getProcessAmount()).isEqualByComparingTo("8500"); // process column is still refreshed
@@ -133,7 +133,7 @@ class DraftServiceTest {
 	@Test
 	void getBuildsViewWithEffectiveValuesAndSumsExcludingDeleted() {
 		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.of(
-			FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withApplicationMonth("2026-06").withNormId(7).withNormType("NATIONAL_NORM")));
+			FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withApplicationMonth("2026-06").withNormId(7).withNormType(List.of("NATIONAL_NORM"))));
 		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withApplicantProcessAmount(new BigDecimal("1000")).withApplicantCaseworkerAmount(new BigDecimal("1200")),
 			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(21).withApplicantProcessAmount(new BigDecimal("500")).withDeleted(true)));
@@ -258,7 +258,7 @@ class DraftServiceTest {
 		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
-		final var draft = service.patchHeader(ERRAND_ID, new NormHeaderInput().withNormId(9).withNormType("NATIONAL_NORM")
+		final var draft = service.patchHeader(ERRAND_ID, new NormHeaderInput().withNormId(9).withNormType(List.of("NATIONAL_NORM"))
 			.withCalculationFromDate(LocalDate.of(2026, 6, 1)).withCalculationToDate(LocalDate.of(2026, 6, 30)).withCalculationDate(LocalDate.of(2026, 6, 18))
 			.withHasCustomHouseholdSize(true).withHouseholdSize(1));
 

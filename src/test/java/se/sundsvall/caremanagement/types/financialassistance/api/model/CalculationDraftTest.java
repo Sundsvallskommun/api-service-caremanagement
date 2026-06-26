@@ -42,7 +42,7 @@ class CalculationDraftTest {
 		final var errandId = "errand";
 		final var applicationMonth = "2026-06";
 		final var normId = 1;
-		final var normType = "normType";
+		final var normType = List.of("NATIONAL_NORM");
 		final var calculationFromDate = LocalDate.of(2026, 6, 1);
 		final var calculationToDate = LocalDate.of(2026, 6, 30);
 		final var calculationDate = LocalDate.of(2026, 6, 15);

@@ -1,7 +1,9 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -18,10 +20,10 @@ public class NormHeaderInput {
 	@Schema(description = "The selected FC norm id (Norm)", examples = "5")
 	private Integer normId;
 
-	@Schema(description = "The norm type", allowableValues = {
+	@ArraySchema(schema = @Schema(description = "The norm type", allowableValues = {
 		"NATIONAL_NORM", "OTHER_NORM"
-	})
-	private String normType;
+	}))
+	private List<String> normType;
 
 	@Schema(description = "Calculation period start (from)")
 	@DateTimeFormat(iso = DATE)
@@ -58,15 +60,15 @@ public class NormHeaderInput {
 		return this;
 	}
 
-	public String getNormType() {
+	public List<String> getNormType() {
 		return normType;
 	}
 
-	public void setNormType(final String normType) {
+	public void setNormType(final List<String> normType) {
 		this.normType = normType;
 	}
 
-	public NormHeaderInput withNormType(final String normType) {
+	public NormHeaderInput withNormType(final List<String> normType) {
 		this.normType = normType;
 		return this;
 	}
@@ -155,7 +157,7 @@ public class NormHeaderInput {
 	public String toString() {
 		return "NormHeaderInput{" +
 			"normId=" + normId +
-			", normType='" + normType + '\'' +
+			", normType=" + normType +
 			", calculationFromDate=" + calculationFromDate +
 			", calculationToDate=" + calculationToDate +
 			", calculationDate=" + calculationDate +

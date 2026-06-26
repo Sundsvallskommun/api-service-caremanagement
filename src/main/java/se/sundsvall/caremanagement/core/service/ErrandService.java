@@ -94,6 +94,13 @@ public class ErrandService {
 		return toFindErrandsResponse(errandRepository.findAll(combined, pageable));
 	}
 
+	@Transactional(readOnly = true)
+	public long countErrands(final String municipalityId, final String namespace, final Specification<ErrandEntity> filter) {
+		final var baseFilter = withNamespaceAndMunicipalityId(namespace, municipalityId);
+		final var fullFilter = ofNullable(filter).map(baseFilter::and).orElse(baseFilter);
+		return errandRepository.count(fullFilter);
+	}
+
 	/**
 	 * Errands in the given status that have been untouched since on or before the cutoff — the "in status S since before
 	 * T" query the conversation-archiving job runs to find long-closed errands.

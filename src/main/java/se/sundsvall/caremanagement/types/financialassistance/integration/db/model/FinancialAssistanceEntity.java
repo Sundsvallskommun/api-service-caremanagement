@@ -48,8 +48,10 @@ public class FinancialAssistanceEntity implements Auditable {
 	@Column(name = "period_choice", length = 32)
 	private String periodChoice;
 
+	@ElementCollection
+	@CollectionTable(name = "errand_fa_norm_type", joinColumns = @JoinColumn(name = "errand_id"))
 	@Column(name = "norm_type", length = 32)
-	private String normType;
+	private List<String> normType;
 
 	@Column(name = "other_benefit_description", length = LONG32)
 	private String otherBenefitDescription;
@@ -206,11 +208,11 @@ public class FinancialAssistanceEntity implements Auditable {
 		this.periodChoice = periodChoice;
 	}
 
-	public String getNormType() {
+	public List<String> getNormType() {
 		return normType;
 	}
 
-	public void setNormType(final String normType) {
+	public void setNormType(final List<String> normType) {
 		this.normType = normType;
 	}
 
@@ -486,7 +488,7 @@ public class FinancialAssistanceEntity implements Auditable {
 		return this;
 	}
 
-	public FinancialAssistanceEntity withNormType(final String v) {
+	public FinancialAssistanceEntity withNormType(final List<String> v) {
 		this.normType = v;
 		return this;
 	}
@@ -682,7 +684,7 @@ public class FinancialAssistanceEntity implements Auditable {
 	public String toString() {
 		return "FinancialAssistanceEntity{errandId='" + errandId + "', applicationType='" + applicationType
 			+ "', maritalStatus='" + maritalStatus + "', periodMonth=" + periodMonth + ", periodYear=" + periodYear
-			+ ", normType='" + normType + "', housingForm='" + housingForm + "', attestation=" + attestation
+			+ ", normType=" + normType + ", housingForm='" + housingForm + "', attestation=" + attestation
 			+ ", lastDailyRunAt=" + lastDailyRunAt + ", created=" + created + ", modified=" + modified + '}';
 	}
 }

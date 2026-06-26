@@ -10,6 +10,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
+import se.sundsvall.caremanagement.core.api.model.CountResponse;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.api.model.FindErrandsResponse;
 import se.sundsvall.caremanagement.core.api.model.PatchErrand;
@@ -81,6 +82,23 @@ class ErrandResourceTest {
 			.expectStatus().isOk();
 
 		verify(serviceMock).findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Specification.class), eq(false), isNull(), any());
+	}
+
+	@Test
+	void countErrands() {
+		when(serviceMock.countErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any())).thenReturn(5L);
+
+		final var response = webTestClient.get()
+			.uri(builder -> builder.path(PATH + "/count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(CountResponse.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.count()).isEqualTo(5L);
+		verify(serviceMock).countErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any());
 	}
 
 	@Test

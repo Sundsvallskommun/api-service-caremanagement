@@ -28,8 +28,15 @@ import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationExpenseView;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationIncomeView;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationPersonView;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationView;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
+import se.sundsvall.caremanagement.lifecare.service.model.DecisionPersonView;
+import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
+import se.sundsvall.caremanagement.lifecare.service.model.DocumentView;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
 import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
@@ -128,6 +135,9 @@ class FinancialAssistanceServiceTest {
 
 	@Mock
 	private se.sundsvall.caremanagement.formsnapshot.service.FormSnapshotService formSnapshotServiceMock;
+
+	@Mock
+	private se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService lifecareCaseHistoryServiceMock;
 
 	@InjectMocks
 	private FinancialAssistanceService service;
@@ -808,6 +818,92 @@ class FinancialAssistanceServiceTest {
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
 		verify(actualisationServiceMock, never()).list(any(), any(), any());
+	}
+
+	@Test
+	void listCalculationsResolvesPartyDefaultsPeriodAndMaps() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		final var view = new CalculationView(7001, "Riksnorm 2026", "2026-06-01", "2026-06-30", 12000.0, 9500.0, 500.0, 10500.0,
+			1200.0, 800.0, -2000.0, 8500.0, Boolean.TRUE,
+			List.of(new CalculationPersonView("200001011234", "Barn Andersson", 4500.0, null, null)),
+			List.of(new CalculationIncomeView("Lön", 12000.0, "2026-05-15", 0.0, null)),
+			List.of(new CalculationExpenseView("Hyra", 7500.0, 7000.0)),
+			List.of(new CalculationExpenseView("Tandvård", 500.0, 500.0)));
+		when(lifecareCaseHistoryServiceMock.listCalculations(eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
+
+		final var result = service.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null);
+
+		assertThat(result).singleElement().satisfies(calculation -> {
+			assertThat(calculation.getId()).isEqualTo(7001);
+			assertThat(calculation.getNormSum()).isEqualTo(10500.0);
+			assertThat(calculation.getIsFinal()).isTrue();
+			assertThat(calculation.getPersons()).singleElement().satisfies(person -> assertThat(person.getPersonId()).isEqualTo("200001011234"));
+			assertThat(calculation.getIncomes()).singleElement().satisfies(income -> assertThat(income.getType()).isEqualTo("Lön"));
+			assertThat(calculation.getExpenses()).singleElement().satisfies(expense -> assertThat(expense.getApprovedAmount()).isEqualTo(7000.0));
+			assertThat(calculation.getSpecialExpenses()).singleElement().satisfies(expense -> assertThat(expense.getType()).isEqualTo("Tandvård"));
+		});
+
+		final var fromCaptor = ArgumentCaptor.forClass(LocalDate.class);
+		final var toCaptor = ArgumentCaptor.forClass(LocalDate.class);
+		verify(lifecareCaseHistoryServiceMock).listCalculations(eq("199001011234"), fromCaptor.capture(), toCaptor.capture());
+		assertThat(toCaptor.getValue()).isEqualTo(LocalDate.now());
+		assertThat(fromCaptor.getValue()).isEqualTo(toCaptor.getValue().minusMonths(24));
+	}
+
+	@Test
+	void listCalculationsUnresolvedPartyIdYields404() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verify(lifecareCaseHistoryServiceMock, never()).listCalculations(any(), any(), any());
+	}
+
+	@Test
+	void listDecisionsResolvesPartyDefaultsPeriodAndMaps() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		final var view = new DecisionView(9900, "2026-06-02", "Bifall", "2026-06-01", "2026-06-30", "Beviljas enligt norm",
+			"Anna Andersson", "IFO", 8500.0, "198001019999", "Sammanboende",
+			List.of(new DecisionPersonView("198001019999", "Sven Svensson", Boolean.TRUE)));
+		when(lifecareCaseHistoryServiceMock.listDecisions(eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
+
+		final var result = service.listDecisions(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+
+		assertThat(result).singleElement().satisfies(decision -> {
+			assertThat(decision.getId()).isEqualTo(9900);
+			assertThat(decision.getType()).isEqualTo("Bifall");
+			assertThat(decision.getAmount()).isEqualTo(8500.0);
+			assertThat(decision.getPersons()).singleElement().satisfies(person -> assertThat(person.getCoApplicant()).isTrue());
+		});
+		verify(lifecareCaseHistoryServiceMock).listDecisions("199001011234", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+	}
+
+	@Test
+	void listDocumentsResolvesPartyAndMaps() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		final var view = new DocumentView("doc-1", "Beslut försörjningsstöd", "2026-06-02", "Beslut", "9900", "Decision");
+		when(lifecareCaseHistoryServiceMock.listDocuments(eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
+
+		final var result = service.listDocuments(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null);
+
+		assertThat(result).singleElement().satisfies(document -> {
+			assertThat(document.getId()).isEqualTo("doc-1");
+			assertThat(document.getTitle()).isEqualTo("Beslut försörjningsstöd");
+			assertThat(document.getDocumentType()).isEqualTo("Beslut");
+		});
+		verify(lifecareCaseHistoryServiceMock).listDocuments(eq("199001011234"), any(LocalDate.class), any(LocalDate.class));
+	}
+
+	@Test
+	void readDocumentContentForwardsBytes() {
+		when(lifecareCaseHistoryServiceMock.documentContent("doc-1")).thenReturn("%PDF-1.4".getBytes());
+
+		final var content = service.readDocumentContent("doc-1");
+
+		assertThat(content).isEqualTo("%PDF-1.4".getBytes());
+		verify(lifecareCaseHistoryServiceMock).documentContent("doc-1");
 	}
 
 	@Test

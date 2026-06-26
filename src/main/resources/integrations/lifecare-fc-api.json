@@ -3,7 +3,7 @@
 	"info": {
 		"version": "v1",
 		"title": "Lifecare FamilyCare (FC) API — caremanagement subset",
-		"description": "Trimmed subset of Tieto/Lifecare FamilyCare API V1 used by api-service-caremanagement: EB write-back (aktualisering + normberäkning) + proposal lookups, and the person-based case-data reads (persons, contacts, actualisations, calculations, decisions, payments, investigations, services, executions, resource allocations). Full spec archived in vof-ekonomiskt-bistand/docs/source/lifecare-fc-swagger-v1.json. Auth (domain+key query params / X-API-Key header) is applied by LifecareFcConfiguration, not modelled here."
+		"description": "Trimmed subset of Tieto/Lifecare FamilyCare API V1 used by api-service-caremanagement: EB write-back (aktualisering + normberäkning) + proposal lookups, and the person-based case-data reads (persons, contacts, actualisations, calculations, decisions, payments, investigations, services, executions, resource allocations, documents) and document content. Full spec archived in vof-ekonomiskt-bistand/docs/source/lifecare-fc-swagger-v1.json. Auth (domain+key query params / X-API-Key header) is applied by LifecareFcConfiguration, not modelled here."
 	},
 	"host": "prod-lcsse.service.tieto.com",
 	"basePath": "/WESE.FC.Api.FC",
@@ -1045,6 +1045,139 @@
 							"items": {
 								"$ref": "#/definitions/User"
 							}
+						}
+					}
+				}
+			}
+		},
+		"/apifc/v1/Documents": {
+			"get": {
+				"tags": [
+					"Person based"
+				],
+				"summary": "List documents",
+				"operationId": "Documents_GetDocuments",
+				"consumes": [],
+				"produces": [
+					"application/json",
+					"text/json",
+					"text/html",
+					"application/xml",
+					"text/xml"
+				],
+				"parameters": [
+					{
+						"name": "personId",
+						"in": "query",
+						"description": "Full personId.",
+						"required": true,
+						"type": "string"
+					},
+					{
+						"name": "startDate",
+						"in": "query",
+						"description": "Return applications made this date or later.",
+						"required": true,
+						"type": "string"
+					},
+					{
+						"name": "endDate",
+						"in": "query",
+						"description": "Return applications made this date or later.",
+						"required": true,
+						"type": "string"
+					},
+					{
+						"name": "pageSize",
+						"in": "query",
+						"description": "Max number of records to return.\r\n0 or null gives all records.",
+						"required": false,
+						"type": "integer",
+						"format": "int32"
+					},
+					{
+						"name": "pageNr",
+						"in": "query",
+						"description": "The page number you want to retrieve\r\nDefault is 0 for the first page",
+						"required": false,
+						"type": "integer",
+						"format": "int32"
+					},
+					{
+						"name": "ascending",
+						"in": "query",
+						"description": "Indicates whether or not the order should be ascending \r\n(True) Ascending, (False) descending",
+						"required": false,
+						"type": "boolean"
+					},
+					{
+						"name": "domain",
+						"in": "query",
+						"description": "The domain ID.",
+						"required": true,
+						"type": "string"
+					},
+					{
+						"name": "key",
+						"in": "query",
+						"description": "The API key.",
+						"required": true,
+						"type": "string"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/ApiPaginationComposite[PersonBasedDocumentDTO]"
+						}
+					}
+				}
+			}
+		},
+		"/apifc/v1/DocumentContent": {
+			"get": {
+				"tags": [
+					"Person based"
+				],
+				"summary": "Get content of document",
+				"operationId": "DocumentContent_GetDocumentContent",
+				"consumes": [],
+				"produces": [
+					"application/json",
+					"text/json",
+					"text/html",
+					"application/xml",
+					"text/xml"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "query",
+						"description": "Document id",
+						"required": true,
+						"type": "string"
+					},
+					{
+						"name": "domain",
+						"in": "query",
+						"description": "The domain ID.",
+						"required": true,
+						"type": "string"
+					},
+					{
+						"name": "key",
+						"in": "query",
+						"description": "The API key.",
+						"required": true,
+						"type": "string"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "object"
 						}
 					}
 				}
@@ -2901,6 +3034,79 @@
 				},
 				"Disabled": {
 					"type": "boolean"
+				}
+			}
+		},
+		"PersonBasedDocumentDTO": {
+			"description": "Document documentation",
+			"type": "object",
+			"properties": {
+				"Id": {
+					"description": "Id",
+					"type": "string"
+				},
+				"Title": {
+					"description": "Title",
+					"type": "string"
+				},
+				"Date": {
+					"description": "Date",
+					"type": "string"
+				},
+				"DocumentType": {
+					"description": "DocumentType",
+					"type": "string"
+				},
+				"OwnerId": {
+					"description": "OwnerId",
+					"type": "string"
+				},
+				"OwnerType": {
+					"description": "OwnerType",
+					"type": "string"
+				}
+			}
+		},
+		"ApiPaginationComposite[PersonBasedDocumentDTO]": {
+			"description": "",
+			"type": "object",
+			"properties": {
+				"StartDate": {
+					"format": "date-time",
+					"description": "The start date.",
+					"type": "string"
+				},
+				"EndDate": {
+					"format": "date-time",
+					"description": "The end date.",
+					"type": "string"
+				},
+				"PageNumber": {
+					"format": "int32",
+					"description": "The page number this page represents.",
+					"type": "integer"
+				},
+				"TotalNumberOfPages": {
+					"format": "int32",
+					"description": "The total number of pages available.",
+					"type": "integer"
+				},
+				"PageSize": {
+					"format": "int32",
+					"description": "The size of this page.",
+					"type": "integer"
+				},
+				"TotalNumberOfRecords": {
+					"format": "int32",
+					"description": "The total number of records available.",
+					"type": "integer"
+				},
+				"Result": {
+					"description": "The records available.",
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/PersonBasedDocumentDTO"
+					}
 				}
 			}
 		}

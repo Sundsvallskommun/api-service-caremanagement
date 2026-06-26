@@ -50,9 +50,12 @@ public class FinancialAssistanceModuleConfig {
 
 	public static final Set<String> SLUGS = SLUG_TO_APPLICATION_TYPE.keySet();
 
-	private static final String DISPLAY_NEW = "Financial assistance – new application";
-	private static final String DISPLAY_RENEWAL = "Financial assistance – renewal";
-	private static final String DISPLAY_SUPPLEMENTARY = "Financial assistance – supplementary application";
+	// Application-type ("ansökningstyp") display names — the Swedish labels Draken shows the handläggare.
+	// Mirrored into the editable lookup store (kind=TYPE) for the Drakel tenant by
+	// V5_30__seed_financial_assistance_type_lookups.sql — keep the two in sync if you change a label.
+	private static final String DISPLAY_NEW = "Nyansökan";
+	private static final String DISPLAY_RENEWAL = "Återansökan";
+	private static final String DISPLAY_SUPPLEMENTARY = "Tilläggsansökan";
 
 	// Status codes
 	public static final String STATUS_RECEIVED = "RECEIVED";

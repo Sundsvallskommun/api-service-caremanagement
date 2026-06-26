@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.integration.db.mod
 import com.google.code.beanmatchers.BeanMatchers;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Random;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,7 @@ class FaCalculationDraftEntityTest {
 			.withErrandId("errand")
 			.withApplicationMonth("2026-06")
 			.withNormId(7)
-			.withNormType("NATIONAL_NORM")
+			.withNormType(List.of("NATIONAL_NORM"))
 			.withCalculationFromDate(calculationFromDate)
 			.withCalculationToDate(calculationToDate)
 			.withCalculationDate(calculationDate)

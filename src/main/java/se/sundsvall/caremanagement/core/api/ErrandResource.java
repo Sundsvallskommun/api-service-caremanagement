@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import se.sundsvall.caremanagement.core.api.model.CountResponse;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.api.model.FindErrandsResponse;
 import se.sundsvall.caremanagement.core.api.model.PatchErrand;
@@ -119,6 +120,20 @@ class ErrandResource {
 		@ParameterObject @PageableDefault(sort = "touched", direction = Sort.Direction.DESC) final Pageable pageable) {
 
 		return ok(service.findErrands(municipalityId, namespace, filter, hasUnacknowledgedNotifications, notificationOwnerId, pageable));
+	}
+
+	@GetMapping(path = "/count", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Count errands", description = "Counts errands matching the optional spring-filter expression", responses = {
+		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
+	})
+	ResponseEntity<CountResponse> countErrands(
+		@Parameter(name = "municipalityId", description = "Municipality id", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,
+		@Parameter(name = "namespace", description = "Namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Parameter(description = "Syntax description: [spring-filter](https://github.com/turkraft/spring-filter/blob/85730f950a5f8623159cc0eb4d737555f9382bb7/README.md#syntax)",
+			example = "status:'NEW' and created>'2024-01-01T00:00:00.000+01:00'",
+			schema = @Schema(implementation = String.class)) @Nullable @Filter final Specification<ErrandEntity> filter) {
+
+		return ok(new CountResponse(service.countErrands(municipalityId, namespace, filter)));
 	}
 
 	@PatchMapping(path = "/{errandId}", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)

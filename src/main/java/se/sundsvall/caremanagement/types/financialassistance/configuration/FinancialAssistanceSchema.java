@@ -48,7 +48,7 @@ final class FinancialAssistanceSchema {
 		scalar("periodYear", "INTEGER", true, NRS, null, "Year the application period concerns"),
 		enumField("periodChoice", List.of("CURRENT_MONTH", "NEXT_MONTH", "OTHER_BENEFIT"), true, N, null, "Which period the new application concerns"),
 		scalar("otherBenefitDescription", "STRING", false, N, "periodChoice == OTHER_BENEFIT", "Free-text description of the other benefit applied for"),
-		enumField("normType", List.of("NATIONAL_NORM", "OTHER_NORM"), true, NRS, null, "The norm used for the calculation"),
+		enumArray("normType", List.of("NATIONAL_NORM", "OTHER_NORM"), true, NRS, null, "The norms used for the calculation"),
 		scalar("livelihoodDescription", "STRING", true, N, null, "How the applicant has supported themselves"),
 		scalar("hasChildrenUnder21", "BOOLEAN", true, NR, null, "Whether the household has children under 21 (gates children)"),
 		array("children", "Child", NR, "hasChildrenUnder21 == true", "Children in the household"),
@@ -113,6 +113,16 @@ final class FinancialAssistanceSchema {
 	private static FieldDescriptor enumField(final String name, final List<String> options, final boolean required,
 		final List<String> appliesTo, final String condition, final String description) {
 		return scalar(name, "ENUM", required, appliesTo, condition, description)
+			.withOptions(options);
+	}
+
+	/**
+	 * A multi-select enum field — an {@code ARRAY} whose element values are drawn from {@code options} (no
+	 * {@code itemsRef}).
+	 */
+	private static FieldDescriptor enumArray(final String name, final List<String> options, final boolean required,
+		final List<String> appliesTo, final String condition, final String description) {
+		return scalar(name, "ARRAY", required, appliesTo, condition, description)
 			.withOptions(options);
 	}
 

@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:62491
+- url: http://localhost:51360
   description: Generated server url
 tags:
 - name: Statistics
@@ -57,6 +57,12 @@ tags:
 - name: Referrals
   description: "Referrals/consultations on an errand: receiving authority, due date,\
     \ free-text response and status (SENT → RESPONDED)."
+- name: Financial Assistance · Lifecare history
+  description: "Read the applicant's case history straight from Lifecare — the normberä\
+    kningar (calculations), beslut (decisions) and documents — plus a single document's\
+    \ PDF content. Keyed by partyId (resolved to a personnummer via the citizen service);\
+    \ the period defaults to the last 24 months. caremanagement only forwards the\
+    \ reads."
 - name: Event Log
   description: "Who/what/when activity log for an errand — every read and write, with\
     \ the acting user"
@@ -5318,6 +5324,244 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FinancialAssistanceMetadata"
+  /{municipalityId}/{namespace}/errands/financial-assistance/documents:
+    get:
+      tags:
+      - Financial Assistance · Lifecare history
+      summary: List the applicant's Lifecare documents (metadata)
+      description: "The applicant's Lifecare documents over the period — metadata\
+        \ only (id, title, date, type, owner). Fetch a single document's content via\
+        \ the /documents/{documentId}/content endpoint. The applicant is identified\
+        \ by partyId (resolved to a personnummer via the citizen service). The period\
+        \ defaults to the last 24 months up to today when from/to are omitted."
+      operationId: listDocuments
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: partyId
+        in: query
+        description: The applicant's partyId (personId GUID)
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Inclusive start of the listing period (ISO date). Defaults to
+          24 months before 'to'.
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        description: Inclusive end of the listing period (ISO date). Defaults to today.
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareDocument"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/documents/{documentId}/content:
+    get:
+      tags:
+      - Financial Assistance · Lifecare history
+      summary: Read a Lifecare document's content (PDF)
+      description: "Streams a single Lifecare document's content (the generated PDF)\
+        \ by its document id, straight from Lifecare. caremanagement only forwards\
+        \ the bytes. 502 when Lifecare is unreachable; Lifecare answers 404 when the\
+        \ document has no generated PDF (content exists only for PDF-backed document\
+        \ types)."
+      operationId: readDocumentContent
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: documentId
+        in: path
+        description: The Lifecare document id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/decisions:
+    get:
+      tags:
+      - Financial Assistance · Lifecare history
+      summary: List the applicant's Lifecare decisions (beslut)
+      description: The applicant's Lifecare beslut over the period — the decision
+        header plus the persons each concerned — served straight from Lifecare. The
+        applicant is identified by partyId (resolved to a personnummer via the citizen
+        service). The period defaults to the last 24 months up to today when from/to
+        are omitted.
+      operationId: listDecisions
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: partyId
+        in: query
+        description: The applicant's partyId (personId GUID)
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Inclusive start of the listing period (ISO date). Defaults to
+          24 months before 'to'.
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        description: Inclusive end of the listing period (ISO date). Defaults to today.
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareDecision"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/calculations:
+    get:
+      tags:
+      - Financial Assistance · Lifecare history
+      summary: List the applicant's Lifecare calculations (normberäkningar)
+      description: "The applicant's Lifecare normberäkningar over the period — the\
+        \ full breakdown (header sums plus income, expense, special-expense and household-member\
+        \ rows) the frontend renders straight from Lifecare. The applicant is identified\
+        \ by partyId (resolved to a personnummer via the citizen service). The period\
+        \ defaults to the last 24 months up to today when from/to are omitted."
+      operationId: listCalculations
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: partyId
+        in: query
+        description: The applicant's partyId (personId GUID)
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Inclusive start of the listing period (ISO date). Defaults to
+          24 months before 'to'.
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        description: Inclusive end of the listing period (ISO date). Defaults to today.
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareCalculation"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/actualisations:
     get:
       tags:
@@ -5410,6 +5654,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DocumentMetadata"
+  /{municipalityId}/{namespace}/errands/count:
+    get:
+      tags:
+      - Errands
+      summary: Count errands
+      description: Counts errands matching the optional spring-filter expression
+      operationId: countErrands
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        description: Namespace
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+        example: MY_NAMESPACE
+      - name: filter
+        in: query
+        description: "Syntax description: [spring-filter](https://github.com/turkraft/spring-filter/blob/85730f950a5f8623159cc0eb4d737555f9382bb7/README.md#syntax)"
+        required: false
+        schema:
+          type: string
+        example: status:'NEW' and created>'2024-01-01T00:00:00.000+01:00'
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountResponse"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errand-types:
     get:
       tags:
@@ -5553,10 +5848,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -5908,13 +6203,15 @@ components:
           examples:
           - CURRENT_MONTH
         normType:
-          type: string
-          description: The norm type used for the calculation
-          enum:
-          - NATIONAL_NORM
-          - OTHER_NORM
-          examples:
-          - NATIONAL_NORM
+          type: array
+          items:
+            type: string
+            description: The norm types used for the calculation
+            enum:
+            - NATIONAL_NORM
+            - OTHER_NORM
+            examples:
+            - NATIONAL_NORM
         otherBenefitDescription:
           type: string
           description: Description of the other benefit
@@ -7277,7 +7574,8 @@ components:
           readOnly: true
         type:
           type: string
-          description: The warning type (machine code; use typeDisplayName for the label)
+          description: The warning type (machine code; use typeDisplayName for the
+            label)
           enum:
           - UNHANDLED_INCOME
           - INCOME_CHANGE
@@ -7311,7 +7609,8 @@ components:
           - "Saknas fortfarande i SSBTEK: Dagersättning"
         status:
           type: string
-          description: The warning status (machine code; use statusDisplayName for the label)
+          description: The warning status (machine code; use statusDisplayName for
+            the label)
           enum:
           - OPEN
           - ACKNOWLEDGED
@@ -8332,11 +8631,13 @@ components:
           examples:
           - 5
         normType:
-          type: string
-          description: The norm type
-          enum:
-          - NATIONAL_NORM
-          - OTHER_NORM
+          type: array
+          items:
+            type: string
+            description: The norm type
+            enum:
+            - NATIONAL_NORM
+            - OTHER_NORM
         calculationFromDate:
           type: string
           format: date
@@ -8379,8 +8680,10 @@ components:
           format: int32
           description: The selected norm id
         normType:
-          type: string
-          description: The selected norm type
+          type: array
+          description: The selected norm types
+          items:
+            type: string
         calculationFromDate:
           type: string
           format: date
@@ -9284,6 +9587,300 @@ components:
           description: Whether the type is offered on the citizen Mina-sidor form
           examples:
           - "true"
+    LifecareDocument:
+      type: object
+      description: "A Lifecare document, metadata only."
+      properties:
+        id:
+          type: string
+          description: The Lifecare document id
+          examples:
+          - a3f1c2...
+        title:
+          type: string
+          description: The document title
+          examples:
+          - Beslut försörjningsstöd juni
+        date:
+          type: string
+          description: The document date as Lifecare reports it
+          examples:
+          - 2026-06-01
+        documentType:
+          type: string
+          description: The document type
+          examples:
+          - Beslut
+        ownerId:
+          type: string
+          description: The id of the entity the document belongs to
+          examples:
+          - "9900"
+        ownerType:
+          type: string
+          description: The type of the entity the document belongs to
+          examples:
+          - Decision
+    LifecareDecision:
+      type: object
+      description: "A Lifecare beslut, full breakdown."
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: The Lifecare decision id
+          examples:
+          - 9900
+        date:
+          type: string
+          description: The decision date as Lifecare reports it
+          examples:
+          - 2026-06-02
+        type:
+          type: string
+          description: The decision type
+          examples:
+          - Bifall
+        fromDate:
+          type: string
+          description: The start date of the decision period
+          examples:
+          - 2026-06-01
+        toDate:
+          type: string
+          description: The end date of the decision period
+          examples:
+          - 2026-06-30
+        reason:
+          type: string
+          description: The reason for the decision
+          examples:
+          - Beviljas enligt norm
+        decisionMaker:
+          type: string
+          description: The decision maker
+          examples:
+          - Anna Andersson
+        organization:
+          type: string
+          description: The organization the decision belongs to
+          examples:
+          - IFO
+        amount:
+          type: number
+          format: double
+          description: The decided amount
+          examples:
+          - 8500.0
+        coApplicant:
+          type: string
+          description: "The co-applicant the decision covers, when any"
+          examples:
+          - "198001019999"
+        reasonCoApplicant:
+          type: string
+          description: "The reason concerning the co-applicant, when any"
+          examples:
+          - Sammanboende
+        persons:
+          type: array
+          items:
+            $ref: "#/components/schemas/LifecareDecisionPerson"
+    LifecareDecisionPerson:
+      type: object
+      description: A person on a Lifecare decision.
+      properties:
+        personId:
+          type: string
+          description: The Lifecare person id
+          examples:
+          - "200001011234"
+        name:
+          type: string
+          description: The person name
+          examples:
+          - Anna Andersson
+        coApplicant:
+          type: boolean
+          description: Whether the person is the co-applicant
+          examples:
+          - "false"
+    LifecareCalculation:
+      type: object
+      description: "A Lifecare normberäkning, full breakdown."
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: The Lifecare calculation id
+          examples:
+          - 7001
+        norm:
+          type: string
+          description: The norm the calculation is based on
+          examples:
+          - Riksnorm 2026
+        fromDate:
+          type: string
+          description: The start date of the calculation period
+          examples:
+          - 2026-06-01
+        toDate:
+          type: string
+          description: The end date of the calculation period
+          examples:
+          - 2026-06-30
+        incomeSum:
+          type: number
+          format: double
+          description: The sum of all incomes
+          examples:
+          - 12000.0
+        expenseSum:
+          type: number
+          format: double
+          description: The sum of all regular expenses
+          examples:
+          - 9500.0
+        specialExpenseSum:
+          type: number
+          format: double
+          description: The sum of all special expenses
+          examples:
+          - 500.0
+        normSum:
+          type: number
+          format: double
+          description: The sum of the norm
+          examples:
+          - 10500.0
+        commonHouseholdCost:
+          type: number
+          format: double
+          description: The common household cost
+          examples:
+          - 1200.0
+        familyCost:
+          type: number
+          format: double
+          description: The family cost
+          examples:
+          - 800.0
+        balance:
+          type: number
+          format: double
+          description: The balance of the calculation
+          examples:
+          - -2000.0
+        totalSum:
+          type: number
+          format: double
+          description: The total sum of the calculation
+          examples:
+          - 8500.0
+        isFinal:
+          type: boolean
+          description: Whether the calculation is final
+          examples:
+          - "true"
+        persons:
+          type: array
+          items:
+            $ref: "#/components/schemas/LifecareCalculationPerson"
+        incomes:
+          type: array
+          items:
+            $ref: "#/components/schemas/LifecareCalculationIncome"
+        expenses:
+          type: array
+          items:
+            $ref: "#/components/schemas/LifecareCalculationExpense"
+        specialExpenses:
+          type: array
+          items:
+            $ref: "#/components/schemas/LifecareCalculationExpense"
+    LifecareCalculationExpense:
+      type: object
+      description: An expense row on a Lifecare calculation.
+      properties:
+        type:
+          type: string
+          description: The expense type
+          examples:
+          - Hyra
+        appliedAmount:
+          type: number
+          format: double
+          description: The applied amount
+          examples:
+          - 7500.0
+        approvedAmount:
+          type: number
+          format: double
+          description: The approved amount
+          examples:
+          - 7000.0
+    LifecareCalculationIncome:
+      type: object
+      description: An income row on a Lifecare calculation.
+      properties:
+        type:
+          type: string
+          description: The income type
+          examples:
+          - Lön
+        amountApplicant:
+          type: number
+          format: double
+          description: The income amount for the applicant
+          examples:
+          - 12000.0
+        applicantSearchDate:
+          type: string
+          description: The search date Lifecare used for the applicant
+          examples:
+          - 2026-05-15
+        amountCoApplicant:
+          type: number
+          format: double
+          description: The income amount for the co-applicant
+          examples:
+          - 0.0
+        coApplicantSearchDate:
+          type: string
+          description: The search date Lifecare used for the co-applicant
+          examples:
+          - 2026-05-15
+    LifecareCalculationPerson:
+      type: object
+      description: A household member on a Lifecare calculation.
+      properties:
+        personId:
+          type: string
+          description: The Lifecare person id
+          examples:
+          - "200001011234"
+        name:
+          type: string
+          description: The person name
+          examples:
+          - Anna Andersson
+        amount:
+          type: number
+          format: double
+          description: The amount the person contributes to the norm
+          examples:
+          - 4500.0
+        deviationFromDate:
+          type: string
+          description: "The start date of the deviation period, when any"
+          examples:
+          - 2026-06-01
+        deviationToDate:
+          type: string
+          description: "The end date of the deviation period, when any"
+          examples:
+          - 2026-06-30
     Actualisation:
       type: object
       description: A Lifecare actualisation (case intake) registered on a person.
@@ -9379,6 +9976,16 @@ components:
           type: string
           description: Human-readable Swedish label (the Lifecare 'Typ' value)
           example: Brev
+    CountResponse:
+      type: object
+      description: Count of errands matching the supplied filter
+      properties:
+        count:
+          type: integer
+          format: int64
+          description: Number of matching errands
+          examples:
+          - 42
     DecisionOption:
       type: object
       description: An allowed decision outcome (decision alternatives) for an errand
