@@ -93,7 +93,7 @@ class CalculationFeederTest {
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_CAPPED);
 		final var warning = feed.warnings().getFirst();
 		assertThat(warning.sourceKey()).isEqualTo("RENT");
-		assertThat(warning.message()).contains("Capped cost: RENT").contains("9000").contains("8500");
+		assertThat(warning.message()).contains("Kapad kostnad: Hyra").contains("9000").contains("8500");
 	}
 
 	@Test
@@ -110,7 +110,7 @@ class CalculationFeederTest {
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
 		final var warning = feed.warnings().getFirst();
 		assertThat(warning.sourceKey()).isEqualTo("OTHER:BEGRAVNING");
-		assertThat(warning.message()).isEqualTo("OTHER (BEGRAVNING): Other bistånd – reasonableness bedöms manuellt");
+		assertThat(warning.message()).isEqualTo("Övrigt bistånd (BEGRAVNING): Other bistånd – reasonableness bedöms manuellt");
 	}
 
 	@Test
@@ -138,7 +138,7 @@ class CalculationFeederTest {
 		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
-		assertThat(feed.warnings().getFirst().message()).isEqualTo("MEDICINE: The expense requires a manual reasonableness assessment");
+		assertThat(feed.warnings().getFirst().message()).isEqualTo("Medicin: Utgiften kräver en manuell skälighetsbedömning");
 	}
 
 	@Test
@@ -308,7 +308,7 @@ class CalculationFeederTest {
 		final var warning = warnings.getFirst();
 		assertThat(warning.sourceKey()).isEqualTo("hushall-storlek");
 		assertThat(warning.message())
-			.contains("previous 2, now 1")
+			.contains("tidigare 2, nu 1")
 			.contains("saknas nu: p-2")
 			.contains("Kontrollera hushållets sammansättning");
 	}
@@ -344,8 +344,8 @@ class CalculationFeederTest {
 		final var warning = warnings.getFirst();
 		assertThat(warning.sourceKey()).isEqualTo("housing-kostnad");
 		assertThat(warning.message())
-			.contains("Housing cost changed +32%")
-			.contains("previous 5000 kr -> now 6600 kr")
+			.contains("Boendekostnaden har ändrats +32%")
+			.contains("tidigare 5000 kr → nu 6600 kr")
 			.contains("Väsentlig ökning");
 	}
 

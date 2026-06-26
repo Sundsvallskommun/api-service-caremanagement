@@ -72,8 +72,8 @@ public class EligibilityService {
 	static final String REASON_EXISTING_CASE = "EXISTING_CASE";
 	static final String REASON_ALL_TYPES_TEST = "ALL_TYPES_TEST";
 
-	private static final String[] MONTHS_EN = {
-		"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"
+	private static final String[] MONTHS_SV = {
+		"januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"
 	};
 
 	private final ErrandRepository errandRepository;
@@ -161,7 +161,7 @@ public class EligibilityService {
 			|| (coApplicantLc != null && coApplicantLc.hasFootprint());
 		if (!(applicantExists && coApplicantExists)) {
 			return newApplication(response, REASON_NO_EXISTING_CASE,
-				"No existing errand found" + (lifecareChecked ? "" : " (Lifecare could not be reached)") + ". Suggesting a new application.");
+				"Inget befintligt ärende hittades" + (lifecareChecked ? "" : " (Lifecare kunde inte nås)") + ". Föreslår en nyansökan.");
 		}
 
 		// 2) Samma marital status? — constellation (alone vs partner, and which partner) vs the most recent existing case.
@@ -171,7 +171,7 @@ public class EligibilityService {
 		response.setMaritalStatusMatches(maritalStatusMatches);
 		if (!maritalStatusMatches) {
 			return newApplication(response, REASON_MARITAL_STATUS_CHANGED,
-				"The marital status differs from the previous application. Suggesting a new application.");
+				"Civilståndet skiljer sig från föregående ansökan. Föreslår en nyansökan.");
 		}
 
 		// 2.5) Recently closed — a prior EB errand for either party was closed within the recently-closed window. Recommend
@@ -182,8 +182,8 @@ public class EligibilityService {
 			response.setClosedAt(recentlyClosed.get().closedAt());
 			response.setSuggestions(List.of(suggestion(SLUG_RENEWAL, currentMonth, true)));
 			response.setReasonCode(REASON_RECENTLY_CLOSED);
-			response.setMessage("A recently closed errand was found. Suggesting a renewal; a caseworker reopens the previous "
-				+ "errand and releases it for processing.");
+			response.setMessage("Ett nyligen avslutat ärende hittades. Föreslår en återansökan; en handläggare återöppnar det "
+				+ "tidigare ärendet och släpper det för handläggning.");
 			return response;
 		}
 
@@ -203,8 +203,8 @@ public class EligibilityService {
 		response.setSuggestions(currentMonthDecided ? List.of(nextMonthSuggestion, thisMonth) : List.of(thisMonth, nextMonthSuggestion));
 		response.setReasonCode(REASON_EXISTING_CASE);
 		response.setMessage(currentMonthDecided
-			? "A decision exists for the current month. Suggesting a renewal for next month or a supplementary application."
-			: "Existing errand without a decision for the current month. Suggesting a renewal for the current month.");
+			? "Beslut finns för aktuell månad. Föreslår en återansökan för nästa månad eller en tilläggsansökan."
+			: "Befintligt ärende utan beslut för aktuell månad. Föreslår en återansökan för aktuell månad.");
 		return response;
 	}
 
@@ -216,7 +216,7 @@ public class EligibilityService {
 		return EligibilityResponse.create()
 			.withHasCoApplicant(hasCoApplicant)
 			.withReasonCode(REASON_ALL_TYPES_TEST)
-			.withMessage("Test mode: all application types are returned (the common entry point routing is bypassed).")
+			.withMessage("Testläge: alla ansökningstyper returneras (gemensam-ingång-routningen kringgås).")
 			.withSuggestions(List.of(
 				suggestion(SLUG_NEW, null, true),
 				suggestion(SLUG_RENEWAL, currentMonth, false),
@@ -388,11 +388,11 @@ public class EligibilityService {
 
 	private static String label(final String slug, final YearMonth period) {
 		final var base = switch (slug) {
-			case SLUG_NEW -> "New application";
-			case SLUG_RENEWAL -> "Renewal";
-			default -> "Supplementary application";
+			case SLUG_NEW -> "Nyansökan";
+			case SLUG_RENEWAL -> "Återansökan";
+			default -> "Tilläggsansökan";
 		};
-		return period == null ? base : base + " for " + MONTHS_EN[period.getMonthValue() - 1] + " " + period.getYear();
+		return period == null ? base : base + " för " + MONTHS_SV[period.getMonthValue() - 1] + " " + period.getYear();
 	}
 
 	/** An EB errand envelope paired with its typed financial-assistance row. */

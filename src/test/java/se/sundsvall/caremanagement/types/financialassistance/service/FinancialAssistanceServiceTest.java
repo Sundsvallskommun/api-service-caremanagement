@@ -533,8 +533,8 @@ class FinancialAssistanceServiceTest {
 		assertThat(decision.getValue()).isEqualTo("REVIEW_REQUIRED");
 		assertThat(decision.getCreatedBy()).isEqualTo("drakel");
 		assertThat(decision.getDescription())
-			.contains("Not transferred income: Bostadstillägg (NOT_ON_WHITELIST)")
-			.contains("Still missing in SSBTEK: Dagersättning");
+			.contains("Ej överförd inkomst: Bostadstillägg (NOT_ON_WHITELIST)")
+			.contains("Saknas fortfarande i SSBTEK: Dagersättning");
 
 		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
@@ -560,7 +560,7 @@ class FinancialAssistanceServiceTest {
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
 		assertThat(decisionCaptor.getValue().getValue()).isEqualTo("OK");
-		assertThat(decisionCaptor.getValue().getDescription()).contains("No warnings");
+		assertThat(decisionCaptor.getValue().getDescription()).contains("Inga varningar");
 
 		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());

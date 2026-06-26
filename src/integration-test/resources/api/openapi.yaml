@@ -7277,14 +7277,27 @@ components:
           readOnly: true
         type:
           type: string
-          description: The warning type
+          description: The warning type (machine code; use typeDisplayName for the label)
           enum:
           - UNHANDLED_INCOME
           - INCOME_CHANGE
           - MISSING_SSBTEK
           - NEW_INCOME
+          - NEW_EXPENSE
+          - NEW_PERSON
+          - INCOME_DROPPED
+          - HOUSEHOLD_CHANGE
+          - HOUSING_COST_CHANGE
+          - EXPENSE_REVIEW
+          - EXPENSE_CAPPED
           examples:
-          - MISSING_SSBTEK
+          - EXPENSE_CAPPED
+        typeDisplayName:
+          type: string
+          description: Swedish display name for the warning type
+          examples:
+          - Kapad kostnad
+          readOnly: true
         sourceKey:
           type: string
           description: A stable key for the income the warning concerns (benefit/incomeType)
@@ -7293,18 +7306,24 @@ components:
           - Bostadsbidrag
         message:
           type: string
-          description: Human-readable warning text
+          description: Human-readable warning text (Swedish)
           examples:
-          - "Still missing in SSBTEK: Dagersättning"
+          - "Saknas fortfarande i SSBTEK: Dagersättning"
         status:
           type: string
-          description: The warning status
+          description: The warning status (machine code; use statusDisplayName for the label)
           enum:
           - OPEN
           - ACKNOWLEDGED
           - CLOSED
           examples:
           - OPEN
+        statusDisplayName:
+          type: string
+          description: Swedish display name for the warning status
+          examples:
+          - Öppen
+          readOnly: true
         autoResolved:
           type: boolean
           description: Whether the warning was closed automatically (its cause resolved)

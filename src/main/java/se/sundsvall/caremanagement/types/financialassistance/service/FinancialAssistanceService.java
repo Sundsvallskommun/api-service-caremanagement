@@ -28,6 +28,7 @@ import se.sundsvall.caremanagement.formsnapshot.service.FormSnapshotService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationResult;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
+import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
@@ -51,6 +52,9 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFin
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateWarningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareCalculation;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDecision;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDocument;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
@@ -69,6 +73,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.caremanagement.types.financialassistance.service.mapper.LifecareHistoryMapper;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
@@ -130,11 +135,13 @@ public class FinancialAssistanceService {
 	private final CalculationFeeder calculationFeeder;
 	private final RpaService rpaService;
 	private final FormSnapshotService formSnapshotService;
+	private final LifecareCaseHistoryService lifecareCaseHistoryService;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final CalculationService calculationService,
 		final ActualisationService actualisationService, final PaymentStatusService paymentStatusService, final CitizenService citizenService, final DecisionService decisionService,
 		final AttachmentService attachmentService, final StakeholderService stakeholderService, final WarningService warningService, final SectionApprovalService sectionApprovalService,
-		final DraftService draftService, final CalculationFeeder calculationFeeder, final RpaService rpaService, final FormSnapshotService formSnapshotService) {
+		final DraftService draftService, final CalculationFeeder calculationFeeder, final RpaService rpaService, final FormSnapshotService formSnapshotService,
+		final LifecareCaseHistoryService lifecareCaseHistoryService) {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.calculationService = calculationService;
@@ -150,6 +157,7 @@ public class FinancialAssistanceService {
 		this.calculationFeeder = calculationFeeder;
 		this.rpaService = rpaService;
 		this.formSnapshotService = formSnapshotService;
+		this.lifecareCaseHistoryService = lifecareCaseHistoryService;
 	}
 
 	/**
@@ -570,14 +578,14 @@ public class FinancialAssistanceService {
 		}
 
 		final var warnings = Stream.of(
-			response.getUnhandledIncomes().stream().map("Not transferred income: "::concat),
-			response.getChangeWarnings().stream().map("Changed income: "::concat),
-			response.getMissingIncomeTypes().stream().map("Still missing in SSBTEK: "::concat))
+			response.getUnhandledIncomes().stream().map("Ej överförd inkomst: "::concat),
+			response.getChangeWarnings().stream().map("Ändrad inkomst: "::concat),
+			response.getMissingIncomeTypes().stream().map("Saknas fortfarande i SSBTEK: "::concat))
 			.flatMap(stream -> stream)
 			.toList();
-		final var header = "Income basis prepared (preliminary - the calculation is created in Lifecare after a decision). ";
+		final var header = "Inkomstunderlag förberett (preliminärt – normberäkningen skapas i Lifecare efter beslut). ";
 		final var description = warnings.isEmpty()
-			? header + "No warnings - the incomes could be transferred without remarks."
+			? header + "Inga varningar – inkomsterna kunde överföras utan anmärkning."
 			: header + warnings.size() + " varning(ar) att granska:\n" + String.join("\n", warnings);
 
 		decisionService.create(municipalityId, namespace, errandId, Decision.create()
@@ -671,6 +679,65 @@ public class FinancialAssistanceService {
 		return actualisationService.list(applicant, fromDate, toDate).stream()
 			.map(FinancialAssistanceService::toActualisation)
 			.toList();
+	}
+
+	/**
+	 * List the applicant's Lifecare normberäkningar (calculations) — the full case-history read the frontend renders
+	 * straight from Lifecare. The applicant is identified by partyId (resolved to a personnummer via the citizen service —
+	 * 404 when unknown). The period defaults to the last {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when
+	 * {@code from}/{@code to} are omitted.
+	 */
+	@Transactional(readOnly = true)
+	public List<LifecareCalculation> listCalculations(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
+		final var applicant = personalNumber(municipalityId, partyId);
+		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
+		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
+
+		return lifecareCaseHistoryService.listCalculations(applicant, fromDate, toDate).stream()
+			.map(LifecareHistoryMapper::toCalculation)
+			.toList();
+	}
+
+	/**
+	 * List the applicant's Lifecare beslut (decisions) — served straight from Lifecare. The applicant is identified by
+	 * partyId (resolved to a personnummer via the citizen service — 404 when unknown). The period defaults to the last
+	 * {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when {@code from}/{@code to} are omitted.
+	 */
+	@Transactional(readOnly = true)
+	public List<LifecareDecision> listDecisions(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
+		final var applicant = personalNumber(municipalityId, partyId);
+		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
+		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
+
+		return lifecareCaseHistoryService.listDecisions(applicant, fromDate, toDate).stream()
+			.map(LifecareHistoryMapper::toDecision)
+			.toList();
+	}
+
+	/**
+	 * List the applicant's Lifecare documents (metadata) — served straight from Lifecare. The applicant is identified by
+	 * partyId (resolved to a personnummer via the citizen service — 404 when unknown). The period defaults to the last
+	 * {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when {@code from}/{@code to} are omitted. The content of a
+	 * single document is fetched via {@link #readDocumentContent(String)}.
+	 */
+	@Transactional(readOnly = true)
+	public List<LifecareDocument> listDocuments(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
+		final var applicant = personalNumber(municipalityId, partyId);
+		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
+		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
+
+		return lifecareCaseHistoryService.listDocuments(applicant, fromDate, toDate).stream()
+			.map(LifecareHistoryMapper::toDocument)
+			.toList();
+	}
+
+	/**
+	 * Read a single Lifecare document's content (the generated PDF) by its document id — the bytes are streamed straight
+	 * from Lifecare. caremanagement only forwards them.
+	 */
+	@Transactional(readOnly = true)
+	public byte[] readDocumentContent(final String documentId) {
+		return lifecareCaseHistoryService.documentContent(documentId);
 	}
 
 	/**

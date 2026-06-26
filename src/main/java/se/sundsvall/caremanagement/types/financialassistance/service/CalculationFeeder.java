@@ -43,6 +43,20 @@ public class CalculationFeeder {
 	private static final String CHANGE_HOUSING_COST = "HOUSING_COST";
 	private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
+	/** EB cost type → Swedish label for handläggare-facing warning text. */
+	private static final Map<String, String> COST_LABEL = Map.ofEntries(
+		Map.entry("RENT", "Hyra"),
+		Map.entry("ELECTRICITY", "Hushållsel"),
+		Map.entry("HOME_INSURANCE", "Hemförsäkring"),
+		Map.entry("INTERNET", "Internet"),
+		Map.entry("UNEMPLOYMENT_FUND", "A-kasseavgift"),
+		Map.entry("UNION_FEE", "Fackavgift"),
+		Map.entry("TRAVEL_APPROVED", "Resor"),
+		Map.entry("TRAVEL_MEDICAL_TRANSPORT", "Sjukresor/färdtjänst"),
+		Map.entry("MEDICAL_CARE", "Hälso- och sjukvård"),
+		Map.entry("MEDICINE", "Medicin"),
+		Map.entry("OTHER", "Övrigt bistånd"));
+
 	private final ExpenseRulesService expenseRulesService;
 	private final RenewalDeltaService renewalDeltaService;
 
@@ -143,12 +157,12 @@ public class CalculationFeeder {
 		final var label = expenseLabel(cost);
 
 		if (verdict.varning()) {
-			final var reason = ofNullable(verdict.regel()).filter(text -> !text.isBlank()).orElse("The expense requires a manual reasonableness assessment");
+			final var reason = ofNullable(verdict.regel()).filter(text -> !text.isBlank()).orElse("Utgiften kräver en manuell skälighetsbedömning");
 			warnings.add(new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, sourceKey, label + ": " + reason));
 		}
 		if (isCapped(cost.getAppliedAmount(), verdict.processAmount())) {
 			warnings.add(new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, sourceKey,
-				"Capped cost: " + label + " - applied " + plain(cost.getAppliedAmount()) + " kr, granted " + plain(verdict.processAmount()) + " kr"));
+				"Kapad kostnad: " + label + " – ansökt " + plain(cost.getAppliedAmount()) + " kr, beviljat " + plain(verdict.processAmount()) + " kr"));
 		}
 		return warnings;
 	}
@@ -164,8 +178,9 @@ public class CalculationFeeder {
 	}
 
 	private static String expenseLabel(final FaCost cost) {
+		final var label = COST_LABEL.getOrDefault(cost.getCostType(), nz(cost.getCostType()));
 		final var sub = cost.getOtherSubType();
-		return ((sub == null) || sub.isBlank()) ? nz(cost.getCostType()) : nz(cost.getCostType()) + " (" + sub + ")";
+		return ((sub == null) || sub.isBlank()) ? label : label + " (" + sub + ")";
 	}
 
 	/** Plain (no scientific notation, no trailing zeros) rendering of a non-null amount for warning messages. */
@@ -235,7 +250,7 @@ public class CalculationFeeder {
 			return Optional.empty();
 		}
 
-		var detail = "Number of household members changed since the previous calculation (previous " + previous.memberCount() + ", now " + currentIds.size() + ")";
+		var detail = "Antal hushållsmedlemmar har ändrats sedan föregående beräkning (tidigare " + previous.memberCount() + ", nu " + currentIds.size() + ")";
 		if (!missing.isEmpty()) {
 			detail += " — saknas nu: " + String.join(", ", missing);
 		}
@@ -261,7 +276,7 @@ public class CalculationFeeder {
 		}
 
 		final var sign = (percent.signum() >= 0) ? "+" : "";
-		final var detail = "Housing cost changed " + sign + percent + "% (previous " + plain(previousBd) + " kr -> now " + plain(currentRent) + " kr)";
+		final var detail = "Boendekostnaden har ändrats " + sign + percent + "% (tidigare " + plain(previousBd) + " kr → nu " + plain(currentRent) + " kr)";
 		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "housing-kostnad", withRegel(detail, verdict.regel())));
 	}
 

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -43,6 +44,26 @@ public class WarningService {
 	public static final String STATUS_ACKNOWLEDGED = "ACKNOWLEDGED";
 	public static final String STATUS_CLOSED = "CLOSED";
 
+	/** Warning type → Swedish display name for the frontend (the machine {@code type} stays for logic). */
+	private static final Map<String, String> TYPE_DISPLAY_NAME = Map.ofEntries(
+		Map.entry(TYPE_UNHANDLED_INCOME, "Ej hanterad inkomst"),
+		Map.entry(TYPE_INCOME_CHANGE, "Inkomständring"),
+		Map.entry(TYPE_MISSING_SSBTEK, "Saknas i SSBTEK"),
+		Map.entry(TYPE_NEW_INCOME, "Ny inkomst"),
+		Map.entry(TYPE_NEW_EXPENSE, "Ny utgift"),
+		Map.entry(TYPE_NEW_PERSON, "Ny hushållsmedlem"),
+		Map.entry(TYPE_INCOME_DROPPED, "Inkomst borttagen"),
+		Map.entry(TYPE_HOUSEHOLD_CHANGE, "Förändrat hushåll"),
+		Map.entry(TYPE_HOUSING_COST_CHANGE, "Förändrad boendekostnad"),
+		Map.entry(TYPE_EXPENSE_REVIEW, "Manuell skälighetsbedömning"),
+		Map.entry(TYPE_EXPENSE_CAPPED, "Kapad kostnad"));
+
+	/** Warning status → Swedish display name. */
+	private static final Map<String, String> STATUS_DISPLAY_NAME = Map.ofEntries(
+		Map.entry(STATUS_OPEN, "Öppen"),
+		Map.entry(STATUS_ACKNOWLEDGED, "Kvitterad"),
+		Map.entry(STATUS_CLOSED, "Stängd"));
+
 	private final FaWarningRepository repository;
 
 	WarningService(final FaWarningRepository repository) {
@@ -63,8 +84,8 @@ public class WarningService {
 		final List<WarningInput> inputs = new ArrayList<>();
 		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
 		ofList(changes).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_CHANGE, sourceKey(text), text)));
-		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Still missing in SSBTEK: " + text)));
-		ofList(newIncome).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, text, "New income in SSBTEK, not entered in the calculation: " + text)));
+		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Saknas fortfarande i SSBTEK: " + text)));
+		ofList(newIncome).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, text, "Ny inkomst i SSBTEK, ej införd i beräkningen: " + text)));
 		reconcile(errandId, inputs);
 	}
 
@@ -81,13 +102,13 @@ public class WarningService {
 		final List<WarningInput> inputs = new ArrayList<>();
 		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
 		ofList(changes).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_CHANGE, sourceKey(text), text)));
-		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Still missing in SSBTEK: " + text)));
+		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Saknas fortfarande i SSBTEK: " + text)));
 
 		if (draftChanges != null) {
-			ofList(draftChanges.addedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, sourceKey(text), "New income in SSBTEK, not entered in the calculation: " + text)));
-			ofList(draftChanges.addedExpenses()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_EXPENSE, sourceKey(text), "Ny expense i application: " + text)));
-			ofList(draftChanges.addedPersons()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_PERSON, sourceKey(text), "New household member: " + text)));
-			ofList(draftChanges.droppedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_DROPPED, sourceKey(text), "Income no longer in SSBTEK: " + text)));
+			ofList(draftChanges.addedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, sourceKey(text), "Ny inkomst i SSBTEK, ej införd i beräkningen: " + text)));
+			ofList(draftChanges.addedExpenses()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_EXPENSE, sourceKey(text), "Ny utgift i ansökan: " + text)));
+			ofList(draftChanges.addedPersons()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_PERSON, sourceKey(text), "Ny hushållsmedlem: " + text)));
+			ofList(draftChanges.droppedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_DROPPED, sourceKey(text), "Inkomst inte längre i SSBTEK: " + text)));
 		}
 
 		ofNullable(sectionWarnings).ifPresent(inputs::addAll);
@@ -193,9 +214,11 @@ public class WarningService {
 		return Warning.create()
 			.withId(entity.getId())
 			.withType(entity.getType())
+			.withTypeDisplayName(TYPE_DISPLAY_NAME.get(entity.getType()))
 			.withSourceKey(entity.getSourceKey())
 			.withMessage(entity.getMessage())
 			.withStatus(entity.getStatus())
+			.withStatusDisplayName(STATUS_DISPLAY_NAME.get(entity.getStatus()))
 			.withAutoResolved(entity.isAutoResolved())
 			.withCreated(entity.getCreated())
 			.withUpdated(entity.getUpdated());

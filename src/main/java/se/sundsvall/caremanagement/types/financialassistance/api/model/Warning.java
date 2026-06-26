@@ -14,21 +14,28 @@ public class Warning {
 	@Schema(description = "The warning id", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", accessMode = Schema.AccessMode.READ_ONLY)
 	private String id;
 
-	@Schema(description = "The warning type", examples = "MISSING_SSBTEK", allowableValues = {
-		"UNHANDLED_INCOME", "INCOME_CHANGE", "MISSING_SSBTEK", "NEW_INCOME"
+	@Schema(description = "The warning type (machine code; use typeDisplayName for the label)", examples = "EXPENSE_CAPPED", allowableValues = {
+		"UNHANDLED_INCOME", "INCOME_CHANGE", "MISSING_SSBTEK", "NEW_INCOME", "NEW_EXPENSE", "NEW_PERSON",
+		"INCOME_DROPPED", "HOUSEHOLD_CHANGE", "HOUSING_COST_CHANGE", "EXPENSE_REVIEW", "EXPENSE_CAPPED"
 	})
 	private String type;
+
+	@Schema(description = "Swedish display name for the warning type", examples = "Kapad kostnad", accessMode = Schema.AccessMode.READ_ONLY)
+	private String typeDisplayName;
 
 	@Schema(description = "A stable key for the income the warning concerns (benefit/incomeType) — the dedup key", examples = "Bostadsbidrag")
 	private String sourceKey;
 
-	@Schema(description = "Human-readable warning text", examples = "Still missing in SSBTEK: Dagersättning")
+	@Schema(description = "Human-readable warning text (Swedish)", examples = "Saknas fortfarande i SSBTEK: Dagersättning")
 	private String message;
 
-	@Schema(description = "The warning status", examples = "OPEN", allowableValues = {
+	@Schema(description = "The warning status (machine code; use statusDisplayName for the label)", examples = "OPEN", allowableValues = {
 		"OPEN", "ACKNOWLEDGED", "CLOSED"
 	})
 	private String status;
+
+	@Schema(description = "Swedish display name for the warning status", examples = "Öppen", accessMode = Schema.AccessMode.READ_ONLY)
+	private String statusDisplayName;
 
 	@Schema(description = "Whether the warning was closed automatically (its cause resolved) rather than by a caseworker", examples = "false")
 	private boolean autoResolved;
@@ -69,6 +76,19 @@ public class Warning {
 		return this;
 	}
 
+	public String getTypeDisplayName() {
+		return typeDisplayName;
+	}
+
+	public void setTypeDisplayName(final String typeDisplayName) {
+		this.typeDisplayName = typeDisplayName;
+	}
+
+	public Warning withTypeDisplayName(final String typeDisplayName) {
+		this.typeDisplayName = typeDisplayName;
+		return this;
+	}
+
 	public String getSourceKey() {
 		return sourceKey;
 	}
@@ -105,6 +125,19 @@ public class Warning {
 
 	public Warning withStatus(final String status) {
 		this.status = status;
+		return this;
+	}
+
+	public String getStatusDisplayName() {
+		return statusDisplayName;
+	}
+
+	public void setStatusDisplayName(final String statusDisplayName) {
+		this.statusDisplayName = statusDisplayName;
+	}
+
+	public Warning withStatusDisplayName(final String statusDisplayName) {
+		this.statusDisplayName = statusDisplayName;
 		return this;
 	}
 
@@ -152,13 +185,14 @@ public class Warning {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final Warning warning = (Warning) o;
-		return autoResolved == warning.autoResolved && Objects.equals(id, warning.id) && Objects.equals(type, warning.type) && Objects.equals(sourceKey, warning.sourceKey)
-			&& Objects.equals(message, warning.message) && Objects.equals(status, warning.status) && Objects.equals(created, warning.created) && Objects.equals(updated, warning.updated);
+		return autoResolved == warning.autoResolved && Objects.equals(id, warning.id) && Objects.equals(type, warning.type) && Objects.equals(typeDisplayName, warning.typeDisplayName)
+			&& Objects.equals(sourceKey, warning.sourceKey) && Objects.equals(message, warning.message) && Objects.equals(status, warning.status)
+			&& Objects.equals(statusDisplayName, warning.statusDisplayName) && Objects.equals(created, warning.created) && Objects.equals(updated, warning.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, type, sourceKey, message, status, autoResolved, created, updated);
+		return Objects.hash(id, type, typeDisplayName, sourceKey, message, status, statusDisplayName, autoResolved, created, updated);
 	}
 
 	@Override
@@ -166,9 +200,11 @@ public class Warning {
 		return "Warning{" +
 			"id='" + id + '\'' +
 			", type='" + type + '\'' +
+			", typeDisplayName='" + typeDisplayName + '\'' +
 			", sourceKey='" + sourceKey + '\'' +
 			", message='" + message + '\'' +
 			", status='" + status + '\'' +
+			", statusDisplayName='" + statusDisplayName + '\'' +
 			", autoResolved=" + autoResolved +
 			", created=" + created +
 			", updated=" + updated +
