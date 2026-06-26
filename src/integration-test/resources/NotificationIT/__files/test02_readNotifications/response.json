@@ -9,7 +9,9 @@
 		"description": "New errand assigned to you",
 		"acknowledged": false,
 		"expires": "${json-unit.any-string}",
-		"created": "${json-unit.any-string}"
+		"created": "${json-unit.any-string}",
+		"typeDisplayName": "Skapad",
+		"subTypeDisplayName": "Ärende"
 	},
 	{
 		"id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeef",
@@ -21,6 +23,8 @@
 		"description": "Decision recorded: PAYMENT = APPROVED",
 		"acknowledged": false,
 		"expires": "${json-unit.any-string}",
-		"created": "${json-unit.any-string}"
+		"created": "${json-unit.any-string}",
+		"typeDisplayName": "Skapad",
+		"subTypeDisplayName": "Beslut"
 	}
 ]

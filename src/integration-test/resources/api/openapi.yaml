@@ -7106,6 +7106,12 @@ components:
           - DELETE
           examples:
           - CREATE
+        typeDisplayName:
+          type: string
+          description: Swedish display name for the notification type
+          examples:
+          - Skapad
+          readOnly: true
         subType:
           type: string
           description: Notification sub-type
@@ -7119,6 +7125,12 @@ components:
           - SYSTEM
           examples:
           - ERRAND
+        subTypeDisplayName:
+          type: string
+          description: Swedish display name for the notification sub-type
+          examples:
+          - "Ärende"
+          readOnly: true
         description:
           type: string
           description: Short human-readable description

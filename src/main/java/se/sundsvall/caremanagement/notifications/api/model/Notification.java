@@ -44,6 +44,9 @@ public class Notification {
 	}, nullable = true)
 	private String type;
 
+	@Schema(description = "Swedish display name for the notification type", examples = "Skapad", accessMode = READ_ONLY)
+	private String typeDisplayName;
+
 	@Schema(description = "Notification sub-type", examples = "ERRAND", allowableValues = {
 		"ERRAND", "DECISION", "ATTACHMENT", "STAKEHOLDER", "PARAMETER", "MESSAGE", "SYSTEM"
 	})
@@ -51,6 +54,9 @@ public class Notification {
 		OnCreate.class, OnUpdate.class
 	}, nullable = true)
 	private String subType;
+
+	@Schema(description = "Swedish display name for the notification sub-type", examples = "Ärende", accessMode = READ_ONLY)
+	private String subTypeDisplayName;
 
 	@Schema(description = "Short human-readable description", examples = "New errand assigned to you")
 	@NotBlank(groups = OnCreate.class)
@@ -152,6 +158,19 @@ public class Notification {
 		return this;
 	}
 
+	public String getTypeDisplayName() {
+		return typeDisplayName;
+	}
+
+	public void setTypeDisplayName(final String typeDisplayName) {
+		this.typeDisplayName = typeDisplayName;
+	}
+
+	public Notification withTypeDisplayName(final String typeDisplayName) {
+		this.typeDisplayName = typeDisplayName;
+		return this;
+	}
+
 	public String getSubType() {
 		return subType;
 	}
@@ -162,6 +181,19 @@ public class Notification {
 
 	public Notification withSubType(final String subType) {
 		this.subType = subType;
+		return this;
+	}
+
+	public String getSubTypeDisplayName() {
+		return subTypeDisplayName;
+	}
+
+	public void setSubTypeDisplayName(final String subTypeDisplayName) {
+		this.subTypeDisplayName = subTypeDisplayName;
+	}
+
+	public Notification withSubTypeDisplayName(final String subTypeDisplayName) {
+		this.subTypeDisplayName = subTypeDisplayName;
 		return this;
 	}
 
@@ -245,7 +277,7 @@ public class Notification {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, ownerId, createdBy, type, subType, description, content, acknowledged, expires, created, modified);
+		return Objects.hash(id, errandId, ownerId, createdBy, type, typeDisplayName, subType, subTypeDisplayName, description, content, acknowledged, expires, created, modified);
 	}
 
 	@Override
@@ -261,7 +293,9 @@ public class Notification {
 			&& Objects.equals(ownerId, other.ownerId)
 			&& Objects.equals(createdBy, other.createdBy)
 			&& Objects.equals(type, other.type)
+			&& Objects.equals(typeDisplayName, other.typeDisplayName)
 			&& Objects.equals(subType, other.subType)
+			&& Objects.equals(subTypeDisplayName, other.subTypeDisplayName)
 			&& Objects.equals(description, other.description)
 			&& Objects.equals(content, other.content)
 			&& Objects.equals(acknowledged, other.acknowledged)
@@ -278,7 +312,9 @@ public class Notification {
 			", ownerId='" + ownerId + '\'' +
 			", createdBy='" + createdBy + '\'' +
 			", type='" + type + '\'' +
+			", typeDisplayName='" + typeDisplayName + '\'' +
 			", subType='" + subType + '\'' +
+			", subTypeDisplayName='" + subTypeDisplayName + '\'' +
 			", description='" + description + '\'' +
 			", content='" + content + '\'' +
 			", acknowledged=" + acknowledged +

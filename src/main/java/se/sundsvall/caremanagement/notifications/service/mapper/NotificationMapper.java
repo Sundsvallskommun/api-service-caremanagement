@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.notifications.service.mapper;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 import se.sundsvall.caremanagement.notifications.api.model.Notification;
 import se.sundsvall.caremanagement.notifications.integration.db.model.NotificationEntity;
 import se.sundsvall.caremanagement.notifications.integration.db.model.NotificationSubType;
@@ -11,6 +12,22 @@ import static java.util.Optional.ofNullable;
 public final class NotificationMapper {
 
 	private NotificationMapper() {}
+
+	/** Notification type → Swedish display name for the frontend (the machine {@code type} stays for logic/filtering). */
+	private static final Map<NotificationType, String> TYPE_DISPLAY_NAME = Map.of(
+		NotificationType.CREATE, "Skapad",
+		NotificationType.UPDATE, "Uppdaterad",
+		NotificationType.DELETE, "Borttagen");
+
+	/** Notification sub-type → Swedish display name for the frontend. */
+	private static final Map<NotificationSubType, String> SUBTYPE_DISPLAY_NAME = Map.of(
+		NotificationSubType.ERRAND, "Ärende",
+		NotificationSubType.DECISION, "Beslut",
+		NotificationSubType.ATTACHMENT, "Bilaga",
+		NotificationSubType.STAKEHOLDER, "Intressent",
+		NotificationSubType.PARAMETER, "Parameter",
+		NotificationSubType.MESSAGE, "Meddelande",
+		NotificationSubType.SYSTEM, "System");
 
 	public static NotificationEntity toEntity(final Notification notification, final String municipalityId,
 		final String namespace, final String errandId, final OffsetDateTime expires) {
@@ -39,7 +56,9 @@ public final class NotificationMapper {
 				.withOwnerId(source.getOwnerId())
 				.withCreatedBy(source.getCreatedBy())
 				.withType(ofNullable(source.getType()).map(Enum::name).orElse(null))
+				.withTypeDisplayName(ofNullable(source.getType()).map(TYPE_DISPLAY_NAME::get).orElse(null))
 				.withSubType(ofNullable(source.getSubType()).map(Enum::name).orElse(null))
+				.withSubTypeDisplayName(ofNullable(source.getSubType()).map(SUBTYPE_DISPLAY_NAME::get).orElse(null))
 				.withDescription(source.getDescription())
 				.withContent(source.getContent())
 				.withAcknowledged(source.isAcknowledged())

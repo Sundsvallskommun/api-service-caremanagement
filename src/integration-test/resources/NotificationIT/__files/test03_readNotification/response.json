@@ -8,5 +8,7 @@
 	"description": "New errand assigned to you",
 	"acknowledged": false,
 	"expires": "${json-unit.any-string}",
-	"created": "${json-unit.any-string}"
+	"created": "${json-unit.any-string}",
+	"typeDisplayName": "Skapad",
+	"subTypeDisplayName": "Ärende"
 }

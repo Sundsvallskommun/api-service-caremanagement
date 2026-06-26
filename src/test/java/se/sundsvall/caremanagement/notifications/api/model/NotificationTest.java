@@ -41,6 +41,8 @@ class NotificationTest {
 		final var createdBy = "john02doe";
 		final var type = "CREATE";
 		final var subType = "ERRAND";
+		final var typeDisplayName = "Skapad";
+		final var subTypeDisplayName = "Ärende";
 		final var description = "desc";
 		final var content = "content";
 		final var acknowledged = Boolean.TRUE;
@@ -54,7 +56,9 @@ class NotificationTest {
 			.withOwnerId(ownerId)
 			.withCreatedBy(createdBy)
 			.withType(type)
+			.withTypeDisplayName(typeDisplayName)
 			.withSubType(subType)
+			.withSubTypeDisplayName(subTypeDisplayName)
 			.withDescription(description)
 			.withContent(content)
 			.withAcknowledged(acknowledged)
@@ -69,6 +73,8 @@ class NotificationTest {
 		assertThat(result.getCreatedBy()).isEqualTo(createdBy);
 		assertThat(result.getType()).isEqualTo(type);
 		assertThat(result.getSubType()).isEqualTo(subType);
+		assertThat(result.getTypeDisplayName()).isEqualTo(typeDisplayName);
+		assertThat(result.getSubTypeDisplayName()).isEqualTo(subTypeDisplayName);
 		assertThat(result.getDescription()).isEqualTo(description);
 		assertThat(result.getContent()).isEqualTo(content);
 		assertThat(result.getAcknowledged()).isEqualTo(acknowledged);
