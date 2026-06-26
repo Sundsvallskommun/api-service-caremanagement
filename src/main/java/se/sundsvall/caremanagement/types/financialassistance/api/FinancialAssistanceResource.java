@@ -88,6 +88,8 @@ import static org.springframework.http.ResponseEntity.ok;
 import static org.springframework.web.util.UriComponentsBuilder.fromPath;
 import static se.sundsvall.caremanagement.Constants.NAMESPACE_REGEXP;
 import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE;
+import static tools.jackson.databind.DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY;
+import static tools.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 
 @RestController
 @Validated
@@ -144,14 +146,15 @@ class FinancialAssistanceResource {
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@PathVariable final String typeSlug,
-		@Parameter(schema = @Schema(implementation = CreateFinancialAssistanceRequest.class)) @NotNull @RequestPart("request") final String requestJson,
+		@Parameter(schema = @Schema(implementation = CreateFinancialAssistanceRequest.class)) @NotNull @RequestPart("request") final byte[] requestJson,
 		@RequestPart(value = "attachments", required = false) final List<MultipartFile> attachments,
 		@RequestPart(value = "caseData", required = false) final MultipartFile caseData,
 		@RequestPart(value = "formSnapshot", required = false) final String formSnapshot) {
 
-		// The 'request' part is bound as a raw String rather than a typed POJO so the endpoint tolerates multipart
-		// clients (e.g. axios FormData) that send the JSON part without an explicit 'Content-Type: application/json'.
-		// We then deserialize and bean-validate it by hand, reproducing the @Valid + OnCreate-group behaviour.
+		// The 'request' part is bound as raw bytes rather than a typed POJO so the endpoint tolerates multipart clients
+		// (e.g. axios FormData) that send the JSON part without an explicit 'Content-Type: application/json'; reading
+		// bytes also lets Jackson detect the JSON encoding itself instead of relying on a part charset. We then
+		// deserialize and bean-validate it by hand, reproducing the @Valid + OnCreate-group behaviour.
 		final var request = readCreateRequest(requestJson);
 
 		final var id = service.create(municipalityId, namespace, typeSlug, request, attachments, caseData, formSnapshot);
@@ -161,12 +164,19 @@ class FinancialAssistanceResource {
 			.build();
 	}
 
-	private CreateFinancialAssistanceRequest readCreateRequest(final String requestJson) {
+	private CreateFinancialAssistanceRequest readCreateRequest(final byte[] requestJson) {
 		final CreateFinancialAssistanceRequest request;
 		try {
-			request = objectMapper.readValue(requestJson, CreateFinancialAssistanceRequest.class);
+			// Read leniently to match the typed @RequestPart binding this replaced: ignore unknown properties and accept a
+			// single scalar where the model declares a list (e.g. normType), the same coercions Spring's converters allow.
+			request = objectMapper.readerFor(CreateFinancialAssistanceRequest.class)
+				.without(FAIL_ON_UNKNOWN_PROPERTIES)
+				.with(ACCEPT_SINGLE_VALUE_AS_ARRAY)
+				.readValue(requestJson);
 		} catch (final JacksonException e) {
-			throw Problem.valueOf(BAD_REQUEST, "The 'request' part is not valid JSON");
+			// The JSON parsed but couldn't be mapped (wrong type/shape), or wasn't JSON at all — surface Jackson's reason
+			// so the caller can see exactly which field is wrong rather than a blanket "not valid JSON".
+			throw Problem.valueOf(BAD_REQUEST, "The 'request' part could not be read as an application: " + e.getOriginalMessage());
 		}
 
 		// Validate with both groups to mirror the framework method-validation this part used to get: OnCreate carries

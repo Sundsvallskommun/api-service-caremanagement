@@ -1,10 +1,12 @@
 package se.sundsvall.caremanagement.types.financialassistance.api;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
@@ -127,6 +129,27 @@ class FinancialAssistanceResourceTest {
 			.expectStatus().isCreated();
 
 		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
+	}
+
+	@Test
+	void createErrandAcceptsScalarWhereModelExpectsList() {
+		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
+
+		// Mirrors the Mina sidor client: normType is a List<String> in the model but is sent as a single scalar.
+		final var requestJson = "{\"title\":\"Återansökan\",\"data\":{\"normType\":\"NATIONAL_NORM\"}}";
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", requestJson.getBytes(StandardCharsets.UTF_8), APPLICATION_JSON);
+
+		webTestClient.post()
+			.uri(uri -> uri.path(CREATE_PATH).build(base()))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isCreated();
+
+		final var captor = ArgumentCaptor.forClass(CreateFinancialAssistanceRequest.class);
+		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), captor.capture(), any(), any(), any());
+		assertThat(captor.getValue().getData().getNormType()).containsExactly("NATIONAL_NORM"); // scalar coerced to a single-element list
 	}
 
 	@Test
