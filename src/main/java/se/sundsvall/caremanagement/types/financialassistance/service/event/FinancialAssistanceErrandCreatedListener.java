@@ -1,23 +1,14 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.event;
 
-import java.util.List;
-import java.util.Optional;
+import java.sql.SQLException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.core.api.model.PatchErrand;
-import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.core.service.event.ErrandCreated;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.caremanagement.types.financialassistance.service.DefaultAssigneeService;
-import se.sundsvall.caremanagement.types.financialassistance.service.RecentlyClosedErrandService;
-
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_NEEDS_MANUAL_REVIEW;
+import se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedProcessor.Outcome;
 
 /**
  * Reacts to a created EB errand. Runs once the create transaction has committed
@@ -39,77 +30,59 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * tilläggsansökan process (whose actualisation step attaches the previous återansökan's Lifecare caseworker), and a new
  * application starts the nyansökan process (status + actualisation, then a normberäkning built straight from the
  * application); having no prior insats, a new application keeps the default assignee.
+ *
+ * <p>
+ * The classification step writes the {@code errand} row and so races {@link ApplicantNameSyncListener}, which updates
+ * the same row from a sibling {@code StakeholderMutated} event. On MariaDB 11 (InnoDB snapshot isolation) the loser of
+ * that race fails with {@code 1020 "Record has changed since last read"}; the work runs in a fresh transaction
+ * ({@link FinancialAssistanceErrandCreatedProcessor}) so we simply retry it — the next attempt reads the row after the
+ * sibling write committed. Process start stays outside the retry so it can never run twice.
  */
 @Component
 class FinancialAssistanceErrandCreatedListener {
 
-	private final FinancialAssistanceRepository repository;
-	private final ErrandService errandService;
-	private final DefaultAssigneeService defaultAssigneeService;
-	private final RecentlyClosedErrandService recentlyClosedErrandService;
-	private final FinancialAssistanceProcessStarter processStarter;
+	private static final Logger LOG = LoggerFactory.getLogger(FinancialAssistanceErrandCreatedListener.class);
 
-	FinancialAssistanceErrandCreatedListener(final FinancialAssistanceRepository repository, final ErrandService errandService,
-		final DefaultAssigneeService defaultAssigneeService, final RecentlyClosedErrandService recentlyClosedErrandService,
-		final FinancialAssistanceProcessStarter processStarter) {
-		this.repository = repository;
-		this.errandService = errandService;
-		this.defaultAssigneeService = defaultAssigneeService;
-		this.recentlyClosedErrandService = recentlyClosedErrandService;
-		this.processStarter = processStarter;
+	/** MariaDB InnoDB snapshot-isolation conflict: ER_CHECKREAD, "Record has changed since last read". */
+	private static final int ER_CHECKREAD = 1020;
+	private static final int MAX_ATTEMPTS = 4;
+
+	private final FinancialAssistanceErrandCreatedProcessor processor;
+
+	FinancialAssistanceErrandCreatedListener(final FinancialAssistanceErrandCreatedProcessor processor) {
+		this.processor = processor;
 	}
 
 	@ApplicationModuleListener
 	void on(final ErrandCreated event) {
-		// Only EB errands (those carrying typed FA data) are handled here.
-		repository.findByErrandId(event.errandId()).ifPresent(entity -> {
-			assignDefaultHandlaggare(event);
-
-			// Recently closed → freeze for manual review instead of auto-actualising (skip the process start entirely).
-			if (recentlyClosedErrandService.findRecentlyClosed(event.municipalityId(), event.namespace(), parties(entity)).isPresent()) {
-				freezeForManualReview(event);
-				return;
-			}
-
-			if (SLUG_RENEWAL.equals(event.typeSlug())) {
-				processStarter.start(event.municipalityId(), event.namespace(), event.errandId(), entity); // renewal starts the full decision-support process
-			} else if (SLUG_SUPPLEMENTARY.equals(event.typeSlug())) {
-				// A supplementary application supplements an ongoing bistånd: start the tilläggsansökan process so its
-				// actualisation step attaches the previous återansökan's Lifecare caseworker, not the default assignee.
-				processStarter.startSupplementary(event.municipalityId(), event.namespace(), event.errandId(), entity);
-			} else if (SLUG_NEW.equals(event.typeSlug())) {
-				// A new application starts the nyansökan process (status + actualisation, then a normberäkning built
-				// straight from what the citizen declared). It has no prior insats, so the default assignee above stands.
-				processStarter.startNew(event.municipalityId(), event.namespace(), event.errandId(), entity);
-			}
-		});
-	}
-
-	/**
-	 * Route an EB errand that arrived without an assignee to the modeler-configured default handläggare (best-effort).
-	 * Respects an assignee the application already carried; a renewal/supplement that later resolves a real Lifecare
-	 * caseworker overwrites this in the actualisation flow.
-	 */
-	private void assignDefaultHandlaggare(final ErrandCreated event) {
-		if (StringUtils.hasText(event.assignedUserId())) {
-			return; // the application carried an explicit assignee — respect it
+		// The classification writes the errand row and can lose a snapshot-isolation race with ApplicantNameSyncListener;
+		// retry it in a fresh transaction until it lands. Only then (and only for a normal EB errand) start the process.
+		if (assignAndClassifyWithRetry(event) == Outcome.PROCEED) {
+			processor.startProcess(event);
 		}
-		defaultAssigneeService.resolve(event.municipalityId())
-			.ifPresent(assignedUserId -> errandService.updateErrand(event.municipalityId(), event.namespace(), event.errandId(),
-				PatchErrand.create().withAssignedUserId(assignedUserId)));
 	}
 
-	/** Freeze a recently-closed re-application: set NEEDS_MANUAL_REVIEW and let a caseworker reopen + release it. */
-	private void freezeForManualReview(final ErrandCreated event) {
-		errandService.updateErrand(event.municipalityId(), event.namespace(), event.errandId(),
-			PatchErrand.create().withStatus(STATUS_NEEDS_MANUAL_REVIEW));
+	private Outcome assignAndClassifyWithRetry(final ErrandCreated event) {
+		for (var attempt = 1;; attempt++) {
+			try {
+				return processor.assignAndClassify(event);
+			} catch (final DataAccessException e) {
+				if (attempt >= MAX_ATTEMPTS || !isSnapshotConflict(e)) {
+					throw e;
+				}
+				LOG.info("EB errand {} create classification hit a transient row conflict (attempt {}/{}); retrying",
+					event.errandId(), attempt, MAX_ATTEMPTS);
+			}
+		}
 	}
 
-	/** The applicant and co-applicant partyIds carried on the application, blanks removed. */
-	private static List<String> parties(final FinancialAssistanceEntity entity) {
-		return Optional.ofNullable(entity.getPersons()).orElseGet(List::of).stream()
-			.map(FaPerson::getPartyId)
-			.filter(StringUtils::hasText)
-			.toList();
+	/** True when the failure is the MariaDB snapshot-isolation conflict (errorCode 1020) — the one worth retrying. */
+	private static boolean isSnapshotConflict(final Throwable throwable) {
+		for (var cause = throwable; cause != null; cause = cause.getCause()) {
+			if (cause instanceof final SQLException sqlException && sqlException.getErrorCode() == ER_CHECKREAD) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

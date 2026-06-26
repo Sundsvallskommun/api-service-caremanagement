@@ -1,36 +1,23 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.event;
 
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.core.api.model.PatchErrand;
-import se.sundsvall.caremanagement.core.service.ErrandService;
+import org.springframework.orm.jpa.JpaSystemException;
 import se.sundsvall.caremanagement.core.service.event.ErrandCreated;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
-import se.sundsvall.caremanagement.types.financialassistance.service.DefaultAssigneeService;
-import se.sundsvall.caremanagement.types.financialassistance.service.RecentlyClosedErrandService;
-import se.sundsvall.caremanagement.types.financialassistance.service.RecentlyClosedErrandService.RecentlyClosed;
+import se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedProcessor.Outcome;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_NEEDS_MANUAL_REVIEW;
 
 @ExtendWith(MockitoExtension.class)
 class FinancialAssistanceErrandCreatedListenerTest {
@@ -38,142 +25,84 @@ class FinancialAssistanceErrandCreatedListenerTest {
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "FINANCIAL_ASSISTANCE";
 	private static final String ERRAND_ID = "errand-1";
-	private static final String APPLICANT_PARTY_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+	private static final int ER_CHECKREAD = 1020;
+	private static final int MAX_ATTEMPTS = 4;
 
 	@Mock
-	private FinancialAssistanceRepository repositoryMock;
-
-	@Mock
-	private ErrandService errandServiceMock;
-
-	@Mock
-	private DefaultAssigneeService defaultAssigneeServiceMock;
-
-	@Mock
-	private RecentlyClosedErrandService recentlyClosedErrandServiceMock;
-
-	@Mock
-	private FinancialAssistanceProcessStarter processStarterMock;
+	private FinancialAssistanceErrandCreatedProcessor processorMock;
 
 	@InjectMocks
 	private FinancialAssistanceErrandCreatedListener listener;
 
-	private static ErrandCreated event(final String typeSlug) {
-		return event(typeSlug, "assignee");
-	}
-
-	private static ErrandCreated event(final String typeSlug, final String assignedUserId) {
-		return new ErrandCreated(ERRAND_ID, typeSlug, MUNICIPALITY_ID, NAMESPACE, "reporter", assignedUserId,
+	private static ErrandCreated event() {
+		return new ErrandCreated(ERRAND_ID, SLUG_RENEWAL, MUNICIPALITY_ID, NAMESPACE, "reporter", null,
 			OffsetDateTime.parse("2026-06-05T12:00:00Z"));
 	}
 
-	private static FinancialAssistanceEntity entity() {
-		return FinancialAssistanceEntity.create()
-			.withErrandId(ERRAND_ID)
-			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID)));
+	/** A Spring DataAccessException carrying the MariaDB snapshot-isolation conflict (errorCode 1020) as a nested cause. */
+	private static JpaSystemException snapshotConflict() {
+		return new JpaSystemException(new RuntimeException(new SQLException("Record has changed since last read", "HY000", ER_CHECKREAD)));
 	}
 
 	@Test
-	void ignoresNonEbErrand() {
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
+	void startsProcessWhenClassificationProceeds() {
+		when(processorMock.assignAndClassify(any())).thenReturn(Outcome.PROCEED);
 
-		listener.on(event(SLUG_NEW, null));
+		listener.on(event());
 
-		verify(repositoryMock).findByErrandId(ERRAND_ID);
-		verifyNoMoreInteractions(repositoryMock);
-		verifyNoInteractions(processStarterMock, errandServiceMock, defaultAssigneeServiceMock, recentlyClosedErrandServiceMock);
+		verify(processorMock).assignAndClassify(any());
+		verify(processorMock).startProcess(any());
 	}
 
 	@Test
-	void assignsDefaultHandlaggareThenStartsProcessForUnassignedNewApplication() {
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity()));
-		when(defaultAssigneeServiceMock.resolve(MUNICIPALITY_ID)).thenReturn(Optional.of("joa01doe"));
+	void doesNotStartProcessWhenFrozen() {
+		when(processorMock.assignAndClassify(any())).thenReturn(Outcome.FROZEN);
 
-		listener.on(event(SLUG_NEW, null));
+		listener.on(event());
 
-		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
-		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
-		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("joa01doe"); // a nyansökan has no prior insats, so the default assignee stands
-		verify(processStarterMock).startNew(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
-		verify(processStarterMock, never()).start(any(), any(), any(), any());
+		verify(processorMock, never()).startProcess(any());
 	}
 
 	@Test
-	void skipsDefaultHandlaggareButStartsProcessWhenNewApplicationAlreadyAssigned() {
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity()));
+	void doesNotStartProcessForNonEbErrand() {
+		when(processorMock.assignAndClassify(any())).thenReturn(Outcome.NOT_EB);
 
-		listener.on(event(SLUG_NEW, "already-assigned"));
+		listener.on(event());
 
-		verifyNoInteractions(defaultAssigneeServiceMock);
-		verify(processStarterMock).startNew(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
-		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
+		verify(processorMock, never()).startProcess(any());
 	}
 
 	@Test
-	void assignsDefaultHandlaggareThenStartsProcessForUnassignedRenewal() {
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity()));
-		when(defaultAssigneeServiceMock.resolve(MUNICIPALITY_ID)).thenReturn(Optional.of("joa01doe"));
+	void retriesClassificationOnSnapshotConflictThenStartsProcess() {
+		when(processorMock.assignAndClassify(any()))
+			.thenThrow(snapshotConflict())
+			.thenThrow(snapshotConflict())
+			.thenReturn(Outcome.PROCEED);
 
-		listener.on(event(SLUG_RENEWAL, null));
+		listener.on(event());
 
-		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
-		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
-		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("joa01doe");
-		verify(processStarterMock).start(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
+		verify(processorMock, times(3)).assignAndClassify(any());
+		verify(processorMock).startProcess(any());
 	}
 
 	@Test
-	void assignsDefaultHandlaggareThenStartsSupplementaryProcessForUnassignedSupplementary() {
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity()));
-		when(defaultAssigneeServiceMock.resolve(MUNICIPALITY_ID)).thenReturn(Optional.of("joa01doe"));
+	void givesUpAfterMaxAttemptsAndRethrows() {
+		when(processorMock.assignAndClassify(any())).thenThrow(snapshotConflict());
 
-		listener.on(event(SLUG_SUPPLEMENTARY, null));
+		assertThatExceptionOfType(JpaSystemException.class).isThrownBy(() -> listener.on(event()));
 
-		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
-		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
-		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("joa01doe"); // default is the fallback; actualisation later overwrites with the previous återansökan caseworker
-		verify(processStarterMock).startSupplementary(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
-		verify(processStarterMock, never()).start(any(), any(), any(), any());
+		verify(processorMock, times(MAX_ATTEMPTS)).assignAndClassify(any());
+		verify(processorMock, never()).startProcess(any());
 	}
 
 	@Test
-	void renewalWithExplicitAssigneeStartsProcessWithoutAssigning() {
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity()));
+	void doesNotRetryNonSnapshotDataAccessException() {
+		final var unrelated = new JpaSystemException(new RuntimeException(new SQLException("deadlock", "40001", 1213)));
+		when(processorMock.assignAndClassify(any())).thenThrow(unrelated);
 
-		listener.on(event(SLUG_RENEWAL));
+		assertThatExceptionOfType(JpaSystemException.class).isThrownBy(() -> listener.on(event()));
 
-		verify(processStarterMock).start(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
-		verifyNoInteractions(defaultAssigneeServiceMock);
-		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
-	}
-
-	@Test
-	void freezesRecentlyClosedReapplicationInsteadOfStartingProcess() {
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity()));
-		when(recentlyClosedErrandServiceMock.findRecentlyClosed(eq(MUNICIPALITY_ID), eq(NAMESPACE), any()))
-			.thenReturn(Optional.of(new RecentlyClosed("old-errand", OffsetDateTime.parse("2026-06-20T10:15:30Z"))));
-
-		listener.on(event(SLUG_RENEWAL)); // even a renewal is frozen rather than started
-
-		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
-		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
-		assertThat(patchCaptor.getValue().getStatus()).isEqualTo(STATUS_NEEDS_MANUAL_REVIEW);
-		verifyNoInteractions(processStarterMock);
-	}
-
-	@Test
-	void freezeStillAssignsDefaultHandlaggare() {
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity()));
-		when(defaultAssigneeServiceMock.resolve(MUNICIPALITY_ID)).thenReturn(Optional.of("joa01doe"));
-		when(recentlyClosedErrandServiceMock.findRecentlyClosed(eq(MUNICIPALITY_ID), eq(NAMESPACE), any()))
-			.thenReturn(Optional.of(new RecentlyClosed("old-errand", OffsetDateTime.parse("2026-06-20T10:15:30Z"))));
-
-		listener.on(event(SLUG_RENEWAL, null));
-
-		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
-		verify(errandServiceMock, org.mockito.Mockito.times(2)).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
-		assertThat(patchCaptor.getAllValues()).anySatisfy(p -> assertThat(p.getAssignedUserId()).isEqualTo("joa01doe"));
-		assertThat(patchCaptor.getAllValues()).anySatisfy(p -> assertThat(p.getStatus()).isEqualTo(STATUS_NEEDS_MANUAL_REVIEW));
-		verifyNoInteractions(processStarterMock);
+		verify(processorMock, times(1)).assignAndClassify(any());
+		verify(processorMock, never()).startProcess(any());
 	}
 }
