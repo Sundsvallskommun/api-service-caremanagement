@@ -227,7 +227,7 @@ final class PdfCombiner {
 	 * uploaded file — before it goes into a log line, so a crafted name can't forge log entries (CWE-117).
 	 */
 	private static String forLog(final String value) {
-		return (value == null) ? null : value.replaceAll("\\p{Cntrl}", "_");
+		return (value == null) ? null : value.replace("\n", "_").replace("\r", "_").replace("\t", "_");
 	}
 
 	/** Split on line breaks, sanitise each line, and wrap it to the page width. */
