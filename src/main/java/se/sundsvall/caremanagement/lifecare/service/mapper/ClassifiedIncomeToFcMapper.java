@@ -83,6 +83,9 @@ public final class ClassifiedIncomeToFcMapper {
 			.filter(ClassifiedIncomeToFcMapper::isTransferable)
 			.map(income -> resolve(income, typeIdByName))
 			.filter(Objects::nonNull)
+			// A classified income with no role can't be folded per-recipient — drop it (consistent with the
+			// calculation-incomes path, which sums per role) rather than NPE on role().name() in the grouping key.
+			.filter(resolved -> resolved.income().role() != null)
 			.collect(groupingBy(resolved -> resolved.typeId() + "|" + resolved.income().role().name(), LinkedHashMap::new, toList()))
 			.values().stream()
 			.map(group -> toLine(group, nameById))

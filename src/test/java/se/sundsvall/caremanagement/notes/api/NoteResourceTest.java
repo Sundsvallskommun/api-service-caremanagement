@@ -41,7 +41,7 @@ class NoteResourceTest {
 
 	@Test
 	void add() {
-		when(serviceMock.add(ERRAND_ID, new CreateNote("body", "author"))).thenReturn(NOTE_ID);
+		when(serviceMock.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateNote("body", "author"))).thenReturn(NOTE_ID);
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -49,12 +49,12 @@ class NoteResourceTest {
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).add(ERRAND_ID, new CreateNote("body", "author"));
+		verify(serviceMock).add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateNote("body", "author"));
 	}
 
 	@Test
 	void list() {
-		when(serviceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(Note.create().withId("n1")));
+		when(serviceMock.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Note.create().withId("n1")));
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -65,12 +65,12 @@ class NoteResourceTest {
 			.getResponseBody();
 
 		assertThat(response).hasSize(1);
-		verify(serviceMock).listForErrand(ERRAND_ID);
+		verify(serviceMock).listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
 	void count() {
-		when(serviceMock.countForErrand(ERRAND_ID)).thenReturn(4L);
+		when(serviceMock.countForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(4L);
 
 		final var body = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -82,12 +82,12 @@ class NoteResourceTest {
 
 		assertThat(body).isNotNull();
 		assertThat(body.count()).isEqualTo(4L);
-		verify(serviceMock).countForErrand(ERRAND_ID);
+		verify(serviceMock).countForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
 	void read() {
-		when(serviceMock.read(NOTE_ID)).thenReturn(Note.create().withId(NOTE_ID).withBody("b"));
+		when(serviceMock.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID)).thenReturn(Note.create().withId(NOTE_ID).withBody("b"));
 
 		final var note = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{noteId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "noteId", NOTE_ID)))
@@ -99,13 +99,13 @@ class NoteResourceTest {
 
 		assertThat(note).isNotNull();
 		assertThat(note.getId()).isEqualTo(NOTE_ID);
-		verify(serviceMock).read(NOTE_ID);
+		verify(serviceMock).read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID);
 	}
 
 	@Test
 	void update() {
 		final var request = new UpdateNote("updated body", "editor");
-		when(serviceMock.update(NOTE_ID, request)).thenReturn(Note.create().withId(NOTE_ID).withBody("updated body").withModifiedBy("editor"));
+		when(serviceMock.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID, request)).thenReturn(Note.create().withId(NOTE_ID).withBody("updated body").withModifiedBy("editor"));
 
 		final var note = webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/{noteId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "noteId", NOTE_ID)))
@@ -119,7 +119,7 @@ class NoteResourceTest {
 		assertThat(note).isNotNull();
 		assertThat(note.getBody()).isEqualTo("updated body");
 		assertThat(note.getModifiedBy()).isEqualTo("editor");
-		verify(serviceMock).update(NOTE_ID, request);
+		verify(serviceMock).update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID, request);
 	}
 
 	@Test
@@ -129,6 +129,6 @@ class NoteResourceTest {
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(serviceMock).delete(NOTE_ID);
+		verify(serviceMock).delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID);
 	}
 }

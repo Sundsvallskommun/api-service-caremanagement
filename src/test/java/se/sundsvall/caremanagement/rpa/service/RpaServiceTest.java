@@ -43,13 +43,30 @@ class RpaServiceTest {
 
 		final var data = captor.getValue().itemData();
 		assertThat(data.name()).isEqualTo("RakelEkonomisktBistand");
-		assertThat(data.reference()).isEqualTo(ERRAND_ID);
+		assertThat(data.reference()).isEqualTo(ERRAND_ID + ":" + RpaAction.WRITE_NORMBERAKNING);
 		assertThat(data.priority()).isEqualTo("Normal");
 		assertThat(data.specificContent())
 			.containsEntry("action", RpaAction.WRITE_NORMBERAKNING)
 			.containsEntry("errandId", ERRAND_ID)
 			.containsEntry("municipalityId", MUNICIPALITY_ID)
 			.containsEntry("hint", "x");
+	}
+
+	@Test
+	void differentActionsOnSameErrandGetDistinctReferences() {
+		final var client = mock(RpaClient.class);
+		final var service = new RpaService(client, properties(true));
+
+		service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.FETCH_SUPPLEMENTS);
+		service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.WRITE_DECISION);
+
+		final var captor = ArgumentCaptor.forClass(AddQueueItemParameters.class);
+		verify(client, org.mockito.Mockito.times(2)).addQueueItem(org.mockito.ArgumentMatchers.eq(FOLDER_ID), captor.capture());
+
+		final var references = captor.getAllValues().stream().map(p -> p.itemData().reference()).toList();
+		assertThat(references).containsExactly(
+			ERRAND_ID + ":" + RpaAction.FETCH_SUPPLEMENTS,
+			ERRAND_ID + ":" + RpaAction.WRITE_DECISION);
 	}
 
 	@Test

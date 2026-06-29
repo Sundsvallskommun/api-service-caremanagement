@@ -54,7 +54,7 @@ class NoteResource {
 		@ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final CreateNote request) {
 
-		final var noteId = service.add(errandId, request);
+		final var noteId = service.add(municipalityId, namespace, errandId, request);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/{errandId}/notes/{noteId}")
 			.buildAndExpand(municipalityId, namespace, errandId, noteId).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)
@@ -68,7 +68,7 @@ class NoteResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId) {
 
-		return ok(service.listForErrand(errandId));
+		return ok(service.listForErrand(municipalityId, namespace, errandId));
 	}
 
 	@GetMapping(path = "/count", produces = APPLICATION_JSON_VALUE)
@@ -78,7 +78,7 @@ class NoteResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId) {
 
-		return ok(new NoteCount(service.countForErrand(errandId)));
+		return ok(new NoteCount(service.countForErrand(municipalityId, namespace, errandId)));
 	}
 
 	@GetMapping(path = "/{noteId}", produces = APPLICATION_JSON_VALUE)
@@ -89,7 +89,7 @@ class NoteResource {
 		@ValidUuid @PathVariable final String errandId,
 		@ValidUuid @PathVariable final String noteId) {
 
-		return ok(service.read(noteId));
+		return ok(service.read(municipalityId, namespace, errandId, noteId));
 	}
 
 	@PatchMapping(path = "/{noteId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
@@ -101,7 +101,7 @@ class NoteResource {
 		@ValidUuid @PathVariable final String noteId,
 		@Valid @NotNull @RequestBody final UpdateNote request) {
 
-		return ok(service.update(noteId, request));
+		return ok(service.update(municipalityId, namespace, errandId, noteId, request));
 	}
 
 	@DeleteMapping(path = "/{noteId}", produces = ALL_VALUE)
@@ -112,7 +112,7 @@ class NoteResource {
 		@ValidUuid @PathVariable final String errandId,
 		@ValidUuid @PathVariable final String noteId) {
 
-		service.delete(noteId);
+		service.delete(municipalityId, namespace, errandId, noteId);
 		return noContent().header(CONTENT_TYPE, ALL_VALUE).build();
 	}
 }

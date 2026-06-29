@@ -219,7 +219,10 @@ public class DraftService {
 	@Transactional
 	public NormExpenseRow patchExpense(final String errandId, final String rowId, final NormExpenseInput input) {
 		final var entity = requireExpense(errandId, rowId);
-		entity.setAppliedAmount(input.getAppliedAmount());
+		// appliedAmount is the citizen's declared (ansökt) figure and is write-once — preserved across the daily refresh
+		// (see copyExpenseProcess). Only overwrite it when the patch actually supplies a value, so a partial patch that
+		// omits it cannot silently erase it (which the refresh would then never restore).
+		ofNullable(input.getAppliedAmount()).ifPresent(entity::setAppliedAmount);
 		entity.setCaseworkerAmount(input.getCaseworkerAmount());
 		entity.setNote(input.getNote());
 		return toExpenseRow(expenseRepository.save(entity));

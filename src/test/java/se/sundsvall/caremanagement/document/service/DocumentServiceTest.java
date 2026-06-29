@@ -118,7 +118,7 @@ class DocumentServiceTest {
 	void updateUpdatesFieldsAndReturnsDocument() {
 		final var existing = DocumentEntity.create().withId("d1").withErrandId("e1").withType("old").withHeading("oldH")
 			.withDocumentDate(DOCUMENT_DATE).withStatus(WORKING).withCreated(FIXED_TIMESTAMP);
-		when(repositoryMock.findById("d1")).thenReturn(Optional.of(existing));
+		when(repositoryMock.findByIdForUpdate("d1")).thenReturn(Optional.of(existing));
 		when(repositoryMock.save(any(DocumentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		final var result = service.update("d1", new UpdateDocument("newT", "newH", "newText", DOCUMENT_DATE.plusDays(1), DOCUMENT_TIME, "editor"));
@@ -136,7 +136,7 @@ class DocumentServiceTest {
 
 	@Test
 	void updateNotFound() {
-		when(repositoryMock.findById("missing")).thenReturn(Optional.empty());
+		when(repositoryMock.findByIdForUpdate("missing")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.update("missing", new UpdateDocument("t", "h", null, DOCUMENT_DATE, null, "editor")))
 			.isInstanceOf(ThrowableProblem.class)
@@ -147,7 +147,7 @@ class DocumentServiceTest {
 
 	@Test
 	void updateLockedConflicts() {
-		when(repositoryMock.findById("d1")).thenReturn(Optional.of(
+		when(repositoryMock.findByIdForUpdate("d1")).thenReturn(Optional.of(
 			DocumentEntity.create().withId("d1").withStatus(LOCKED)));
 
 		assertThatThrownBy(() -> service.update("d1", new UpdateDocument("t", "h", null, DOCUMENT_DATE, null, "editor")))
@@ -160,7 +160,7 @@ class DocumentServiceTest {
 	@Test
 	void deleteRemovesWorkingDocument() {
 		final var existing = DocumentEntity.create().withId("d1").withStatus(WORKING);
-		when(repositoryMock.findById("d1")).thenReturn(Optional.of(existing));
+		when(repositoryMock.findByIdForUpdate("d1")).thenReturn(Optional.of(existing));
 
 		service.delete("d1");
 
@@ -169,7 +169,7 @@ class DocumentServiceTest {
 
 	@Test
 	void deleteNotFound() {
-		when(repositoryMock.findById("missing")).thenReturn(Optional.empty());
+		when(repositoryMock.findByIdForUpdate("missing")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.delete("missing"))
 			.isInstanceOf(ThrowableProblem.class)
@@ -180,7 +180,7 @@ class DocumentServiceTest {
 
 	@Test
 	void deleteLockedConflicts() {
-		when(repositoryMock.findById("d1")).thenReturn(Optional.of(
+		when(repositoryMock.findByIdForUpdate("d1")).thenReturn(Optional.of(
 			DocumentEntity.create().withId("d1").withStatus(LOCKED)));
 
 		assertThatThrownBy(() -> service.delete("d1"))
@@ -193,7 +193,7 @@ class DocumentServiceTest {
 	@Test
 	void lockSetsLockedStatus() {
 		final var existing = DocumentEntity.create().withId("d1").withStatus(WORKING).withCreated(FIXED_TIMESTAMP);
-		when(repositoryMock.findById("d1")).thenReturn(Optional.of(existing));
+		when(repositoryMock.findByIdForUpdate("d1")).thenReturn(Optional.of(existing));
 		when(repositoryMock.save(any(DocumentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		final var result = service.lock("d1", new LockDocument("carola"));
@@ -206,7 +206,7 @@ class DocumentServiceTest {
 	@Test
 	void lockWithoutBodyLeavesLockedByNull() {
 		final var existing = DocumentEntity.create().withId("d1").withStatus(WORKING);
-		when(repositoryMock.findById("d1")).thenReturn(Optional.of(existing));
+		when(repositoryMock.findByIdForUpdate("d1")).thenReturn(Optional.of(existing));
 		when(repositoryMock.save(any(DocumentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		final var result = service.lock("d1", null);
@@ -218,7 +218,7 @@ class DocumentServiceTest {
 
 	@Test
 	void lockNotFound() {
-		when(repositoryMock.findById("missing")).thenReturn(Optional.empty());
+		when(repositoryMock.findByIdForUpdate("missing")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.lock("missing", new LockDocument("carola")))
 			.isInstanceOf(ThrowableProblem.class)
@@ -229,7 +229,7 @@ class DocumentServiceTest {
 
 	@Test
 	void lockAlreadyLockedConflicts() {
-		when(repositoryMock.findById("d1")).thenReturn(Optional.of(
+		when(repositoryMock.findByIdForUpdate("d1")).thenReturn(Optional.of(
 			DocumentEntity.create().withId("d1").withStatus(LOCKED)));
 
 		assertThatThrownBy(() -> service.lock("d1", new LockDocument("carola")))

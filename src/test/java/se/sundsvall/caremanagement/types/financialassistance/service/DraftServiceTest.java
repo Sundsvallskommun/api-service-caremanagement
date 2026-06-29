@@ -229,6 +229,20 @@ class DraftServiceTest {
 	}
 
 	@Test
+	void patchExpenseWithoutAppliedAmountPreservesTheCitizensFigure() {
+		when(expenseRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(expenseRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(
+			FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000"))));
+
+		// A partial patch (no appliedAmount) must not erase the write-once citizen figure — the daily refresh never restores
+		// it.
+		final var patched = service.patchExpense(ERRAND_ID, ROW_ID, new NormExpenseInput().withCaseworkerAmount(new BigDecimal("7000")));
+
+		assertThat(patched.getAppliedAmount()).isEqualByComparingTo("9000");
+		assertThat(patched.getCaseworkerAmount()).isEqualByComparingTo("7000");
+	}
+
+	@Test
 	void liveReadersFilterOutSoftDeletedRows() {
 		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			FaNormIncomeEntity.create().withTypeId(20), FaNormIncomeEntity.create().withTypeId(21).withDeleted(true)));

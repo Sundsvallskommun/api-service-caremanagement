@@ -92,7 +92,9 @@ public class CaseworkerResolver {
 			.filter(StringUtils::hasText)
 			.map(date -> {
 				try {
-					return LocalDate.parse(date, ISO_LOCAL_DATE);
+					// FC may return a datetime (e.g. 2026-05-01T00:00:00); take the leading yyyy-MM-dd so a time
+					// component doesn't push every service to LocalDate.MIN and scramble the caseworker ordering.
+					return LocalDate.parse(date.length() >= 10 ? date.substring(0, 10) : date, ISO_LOCAL_DATE);
 				} catch (final RuntimeException e) {
 					return LocalDate.MIN;
 				}

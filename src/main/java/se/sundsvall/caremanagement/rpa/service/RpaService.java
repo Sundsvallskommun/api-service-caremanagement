@@ -17,14 +17,16 @@ import static org.springframework.http.HttpStatus.CONFLICT;
 
 /**
  * Enqueues EB RPA tasks on the UiPath Orchestrator. Each call adds one queue item to the configured EB queue, keyed by
- * {@code reference = errandId}; a robot then performs the matching Lifecare GUI flow out of band.
+ * {@code reference = errandId:action}; a robot then performs the matching Lifecare GUI flow out of band.
  *
  * <p>
  * The enqueue is idempotent on the Orchestrator side: re-running the EB process (the daily loop, a retried external
  * task) re-adds the same {@code (queue, reference)} item, which UiPath rejects with {@code 409}/{@code 1016} — that is
- * swallowed as success. A Lifecare/Orchestrator outage is <strong>not</strong> swallowed; it surfaces so the caller (a
- * topic worker) lets the engine retry. Triggering is best-effort decoration on top of the real write, so callers that
- * must not fail on RPA should guard the call themselves.
+ * swallowed as success. The reference includes the {@code action} so the dedup is per-(errand, action): two
+ * <em>different</em> actions on the same errand (e.g. fetch then write) are distinct items and neither shadows the
+ * other. A Lifecare/Orchestrator outage is <strong>not</strong> swallowed; it surfaces so the caller (a topic worker)
+ * lets the engine retry. Triggering is best-effort decoration on top of the real write, so callers that must not fail
+ * on RPA should guard the call themselves.
  */
 @Service
 public class RpaService {
@@ -78,7 +80,10 @@ public class RpaService {
 		content.put(KEY_ERRAND_ID, errandId);
 		content.put(KEY_MUNICIPALITY_ID, municipalityId);
 
-		final var item = new AddQueueItemParameters(new QueueItemData(properties.queue(), errandId, NORMAL_PRIORITY, content));
+		// Reference is per-(errand, action) so the Orchestrator's unique-reference dedup only collapses re-runs of the
+		// same action — distinct actions on the same errand remain separate queue items.
+		final var reference = errandId + ":" + action;
+		final var item = new AddQueueItemParameters(new QueueItemData(properties.queue(), reference, NORMAL_PRIORITY, content));
 
 		try {
 			rpaClient.addQueueItem(folderId, item);

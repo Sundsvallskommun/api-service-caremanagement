@@ -68,6 +68,10 @@ public final class ApplicationIncomeToFcMapper {
 		if (typeId == null) {
 			return null;
 		}
+		if (income.role() == null) {
+			// Without a recipient the line can't be posted to FC — skip it rather than NPE on role().name().
+			return null;
+		}
 		return new FcIncomeLine(typeId, fcName, income.role().name(), income.amount(), toOffsetDateTime(income), "Ansökan");
 	}
 

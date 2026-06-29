@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -13,6 +14,7 @@ import se.sundsvall.caremanagement.core.integration.db.model.ErrandNumberSequenc
 
 import static java.time.ZoneId.systemDefault;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -68,6 +70,11 @@ class ErrandNumberGeneratorTest {
 			assertThat(saved.getSequenceMonth()).isEqualTo(MONTH);
 			assertThat(saved.getCurrentValue()).isEqualTo(1L);
 		});
+
+		// The counter row is seeded idempotently before the locked read, making the first-of-month create race-safe.
+		final InOrder inOrder = inOrder(sequenceRepositoryMock);
+		inOrder.verify(sequenceRepositoryMock).ensureSequenceRow(MUNICIPALITY_ID, NAMESPACE, YEAR, MONTH);
+		inOrder.verify(sequenceRepositoryMock).findByMunicipalityIdAndNamespaceAndSequenceYearAndSequenceMonth(MUNICIPALITY_ID, NAMESPACE, YEAR, MONTH);
 	}
 
 	@Test

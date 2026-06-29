@@ -8,6 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,5 +59,17 @@ class ClassifiedIncomeToFcMapperTest {
 	@Test
 	void nullClassifiedYieldsEmpty() {
 		assertThat(ClassifiedIncomeToFcMapper.toCalculationIncomes(null, proposal())).isEmpty();
+	}
+
+	@Test
+	void toIncomeLinesDropsNullRoleInsteadOfFailing() {
+		// A classified income with no role must be skipped (it can't be folded per-recipient) rather than NPE in the grouping
+		// key.
+		final var lines = ClassifiedIncomeToFcMapper.toIncomeLines(List.of(
+			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED_KVITTNING", "1850", APPLICANT),
+			classified("Dagersättning", "Dagersättning", "TA_MED", "5000", null)),
+			proposal());
+
+		assertThat(lines).extracting(FcIncomeLine::typeId).containsExactly(20);
 	}
 }

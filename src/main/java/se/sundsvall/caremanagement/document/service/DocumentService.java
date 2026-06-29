@@ -69,7 +69,7 @@ public class DocumentService {
 	}
 
 	public Document update(final String documentId, final UpdateDocument request) {
-		final var entity = requireWorking(find(documentId), "edited");
+		final var entity = requireWorking(findForUpdate(documentId), "edited");
 		entity
 			.withType(request.type())
 			.withHeading(request.heading())
@@ -83,12 +83,12 @@ public class DocumentService {
 	}
 
 	public void delete(final String documentId) {
-		repository.delete(requireWorking(find(documentId), "deleted"));
+		repository.delete(requireWorking(findForUpdate(documentId), "deleted"));
 	}
 
 	/** Lock the document (skrivskydd) — it becomes an immutable upprättad handling. Already-locked documents 409. */
 	public Document lock(final String documentId, final LockDocument request) {
-		final var entity = find(documentId);
+		final var entity = findForUpdate(documentId);
 		if (entity.getStatus() == LOCKED) {
 			throw Problem.valueOf(CONFLICT, "Document is already locked");
 		}
@@ -102,6 +102,15 @@ public class DocumentService {
 
 	private DocumentEntity find(final String documentId) {
 		return repository.findById(documentId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No document with id '" + documentId + "'"));
+	}
+
+	/**
+	 * Reads the document under a pessimistic write lock so the lock-check-then-write in update/delete/lock cannot race a
+	 * concurrent {@link #lock} — the second transaction blocks and re-reads the current (possibly LOCKED) status.
+	 */
+	private DocumentEntity findForUpdate(final String documentId) {
+		return repository.findByIdForUpdate(documentId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No document with id '" + documentId + "'"));
 	}
 

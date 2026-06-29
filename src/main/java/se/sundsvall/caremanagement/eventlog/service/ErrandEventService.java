@@ -1,7 +1,6 @@
 package se.sundsvall.caremanagement.eventlog.service;
 
 import java.util.List;
-import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.eventlog.api.model.ErrandEvent;
@@ -47,7 +46,7 @@ public class ErrandEventService {
 	 */
 	@Transactional(readOnly = true)
 	public List<ErrandEvent> listForErrand(final String errandId, final String action, final String actor, final String source, final boolean includeReads) {
-		return filtered(errandId, action, actor, source, includeReads)
+		return repository.findFiltered(errandId, action, actor, source, includeReads).stream()
 			.map(ErrandEventService::toEvent)
 			.toList();
 	}
@@ -55,19 +54,11 @@ public class ErrandEventService {
 	/**
 	 * Counts the activity for an errand, honouring the same filters as {@link #listForErrand}. With the defaults
 	 * ({@code includeReads=true}, no other filter) this is the total event count; {@code includeReads=false} yields the
-	 * "what changed" count without the read noise.
+	 * "what changed" count without the read noise. Counted DB-side, so it does not materialise the rows.
 	 */
 	@Transactional(readOnly = true)
 	public long countForErrand(final String errandId, final String action, final String actor, final String source, final boolean includeReads) {
-		return filtered(errandId, action, actor, source, includeReads).count();
-	}
-
-	private Stream<ErrandEventEntity> filtered(final String errandId, final String action, final String actor, final String source, final boolean includeReads) {
-		return repository.findByErrandIdOrderByCreatedDesc(errandId).stream()
-			.filter(e -> action == null || action.equalsIgnoreCase(e.getAction()))
-			.filter(e -> actor == null || actor.equalsIgnoreCase(e.getActor()))
-			.filter(e -> source == null || source.equalsIgnoreCase(e.getSource()))
-			.filter(e -> includeReads || !"READ".equalsIgnoreCase(e.getAction()));
+		return repository.countFiltered(errandId, action, actor, source, includeReads);
 	}
 
 	private static ErrandEvent toEvent(final ErrandEventEntity e) {

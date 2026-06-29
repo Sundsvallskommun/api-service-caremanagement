@@ -52,7 +52,7 @@ class ErrandEventDomainListener {
 			case final ErrandAssigned assigned -> service.recordDomainEvent(entity
 				.withAction("UPDATE")
 				.withTarget("assignment")
-				.withDescription("Tilldelad " + assigned.previousAssignee() + " → " + assigned.newAssignee())
+				.withDescription("Tilldelad " + Optional.ofNullable(assigned.previousAssignee()).orElse("ingen") + " → " + Optional.ofNullable(assigned.newAssignee()).orElse("ingen"))
 				.withActor(actorOr(assigned.changedBy())));
 			case final ErrandDeleted deleted -> service.recordDomainEvent(entity
 				.withAction("DELETE")

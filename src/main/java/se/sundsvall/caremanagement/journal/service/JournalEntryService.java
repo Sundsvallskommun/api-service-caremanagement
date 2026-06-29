@@ -69,7 +69,7 @@ public class JournalEntryService {
 	}
 
 	public JournalEntry update(final String journalEntryId, final UpdateJournalEntry request) {
-		final var entity = requireWorking(find(journalEntryId), "edited");
+		final var entity = requireWorking(findForUpdate(journalEntryId), "edited");
 		entity
 			.withType(request.type())
 			.withHeading(request.heading())
@@ -83,12 +83,12 @@ public class JournalEntryService {
 	}
 
 	public void delete(final String journalEntryId) {
-		repository.delete(requireWorking(find(journalEntryId), "deleted"));
+		repository.delete(requireWorking(findForUpdate(journalEntryId), "deleted"));
 	}
 
 	/** Lock the entry (skrivskydd) — it becomes an immutable upprättad handling. Already-locked entries 409. */
 	public JournalEntry lock(final String journalEntryId, final LockJournalEntry request) {
-		final var entity = find(journalEntryId);
+		final var entity = findForUpdate(journalEntryId);
 		if (entity.getStatus() == LOCKED) {
 			throw Problem.valueOf(CONFLICT, "Journal entry is already locked");
 		}
@@ -102,6 +102,15 @@ public class JournalEntryService {
 
 	private JournalEntryEntity find(final String journalEntryId) {
 		return repository.findById(journalEntryId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No journal entry with id '" + journalEntryId + "'"));
+	}
+
+	/**
+	 * Reads the entry under a pessimistic write lock so the lock-check-then-write in update/delete/lock cannot race a
+	 * concurrent {@link #lock} — the second transaction blocks and re-reads the current (possibly LOCKED) status.
+	 */
+	private JournalEntryEntity findForUpdate(final String journalEntryId) {
+		return repository.findByIdForUpdate(journalEntryId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No journal entry with id '" + journalEntryId + "'"));
 	}
 

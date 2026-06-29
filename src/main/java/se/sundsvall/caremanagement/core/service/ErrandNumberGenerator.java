@@ -23,8 +23,9 @@ import static java.util.function.Predicate.not;
  * month.</li>
  * </ul>
  *
- * Runs inside the creating transaction ({@link ErrandService#createErrand}); the counter is incremented under a
- * pessimistic write lock so concurrent creations never collide.
+ * Runs inside the creating transaction ({@link ErrandService#createErrand}); the counter row is first seeded
+ * idempotently ({@code INSERT IGNORE}) and then incremented under a pessimistic write lock, so concurrent creations —
+ * including the very first errand of a new month — never collide nor fail on the unique index.
  */
 @Component
 class ErrandNumberGenerator {
@@ -51,6 +52,11 @@ class ErrandNumberGenerator {
 	}
 
 	private long nextSequenceValue(final String municipalityId, final String namespace, final int year, final int month) {
+		// Seed the counter row idempotently first so the locked read below always has a committed row to lock — this is
+		// what makes the very first create of a new (municipality, namespace, year, month) scope race-safe instead of
+		// two concurrent inserts colliding on the unique index.
+		sequenceRepository.ensureSequenceRow(municipalityId, namespace, year, month);
+
 		final var sequence = sequenceRepository.findByMunicipalityIdAndNamespaceAndSequenceYearAndSequenceMonth(municipalityId, namespace, year, month)
 			.orElseGet(() -> ErrandNumberSequenceEntity.create()
 				.withMunicipalityId(municipalityId)

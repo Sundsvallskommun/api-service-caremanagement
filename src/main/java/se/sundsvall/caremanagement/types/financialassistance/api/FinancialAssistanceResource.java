@@ -15,6 +15,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.groups.Default;
 import java.time.LocalDate;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -96,6 +98,8 @@ import static tools.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROP
 @RequestMapping("/{municipalityId}/{namespace}/errands")
 class FinancialAssistanceResource {
 
+	private static final Logger LOG = LoggerFactory.getLogger(FinancialAssistanceResource.class);
+
 	/** Constrains the create path variable to the three EB slugs so it never shadows other errand types. */
 	private static final String SLUG_REGEXP = "financial-assistance-new|financial-assistance-renewal|financial-assistance-supplementary";
 
@@ -174,9 +178,11 @@ class FinancialAssistanceResource {
 				.with(ACCEPT_SINGLE_VALUE_AS_ARRAY)
 				.readValue(requestJson);
 		} catch (final JacksonException e) {
-			// The JSON parsed but couldn't be mapped (wrong type/shape), or wasn't JSON at all — surface Jackson's reason
-			// so the caller can see exactly which field is wrong rather than a blanket "not valid JSON".
-			throw Problem.valueOf(BAD_REQUEST, "The 'request' part could not be read as an application: " + e.getOriginalMessage());
+			// Do NOT echo Jackson's message — it can embed the offending field value (e.g. the rejected string), and the
+			// 'request' part is the EB application carrying applicant data. Log the technical reason server-side (this
+			// service already keeps payloads out of logs elsewhere) and return a value-free message to the caller.
+			LOG.warn("Could not bind the 'request' part to a financial-assistance application: {}", e.getClass().getSimpleName());
+			throw Problem.valueOf(BAD_REQUEST, "The 'request' part could not be read as a financial-assistance application — check that it is valid JSON matching the schema.");
 		}
 
 		// Validate with both groups to mirror the framework method-validation this part used to get: OnCreate carries

@@ -10,6 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
+import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.notes.api.model.CreateNote;
 import se.sundsvall.caremanagement.notes.api.model.UpdateNote;
 import se.sundsvall.caremanagement.notes.integration.db.NoteRepository;
@@ -28,6 +30,13 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @ExtendWith(MockitoExtension.class)
 class NoteServiceTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
+	private static final String MUNICIPALITY_ID = "2281";
+	private static final String NAMESPACE = "my-namespace";
+	private static final String ERRAND_ID = "errand-1";
+	private static final String NOTE_ID = "n1";
+
+	@Mock
+	private ErrandRepository errandRepositoryMock;
 
 	@Mock
 	private NoteRepository repositoryMock;
@@ -38,72 +47,106 @@ class NoteServiceTest {
 	@InjectMocks
 	private NoteService service;
 
+	private void errandExists() {
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID)));
+	}
+
 	@Test
 	void addPublishesEventAndReturnsId() {
-		final var saved = NoteEntity.create().withId("note-1").withErrandId("errand-1");
+		errandExists();
+		final var saved = NoteEntity.create().withId(NOTE_ID).withErrandId(ERRAND_ID);
 		when(repositoryMock.save(any(NoteEntity.class))).thenReturn(saved);
 
-		final var id = service.add("errand-1", new CreateNote("body", "author"));
+		final var id = service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateNote("body", "author"));
 
-		assertThat(id).isEqualTo("note-1");
+		assertThat(id).isEqualTo(NOTE_ID);
 
 		final ArgumentCaptor<NoteEntity> entityCaptor = ArgumentCaptor.forClass(NoteEntity.class);
 		verify(repositoryMock).save(entityCaptor.capture());
-		assertThat(entityCaptor.getValue().getErrandId()).isEqualTo("errand-1");
+		assertThat(entityCaptor.getValue().getErrandId()).isEqualTo(ERRAND_ID);
 		assertThat(entityCaptor.getValue().getBody()).isEqualTo("body");
 		assertThat(entityCaptor.getValue().getAuthor()).isEqualTo("author");
 		assertThat(entityCaptor.getValue().getCreated()).isNotNull();
 
 		final ArgumentCaptor<NoteAdded> eventCaptor = ArgumentCaptor.forClass(NoteAdded.class);
 		verify(eventsMock).publishEvent(eventCaptor.capture());
-		assertThat(eventCaptor.getValue().noteId()).isEqualTo("note-1");
-		assertThat(eventCaptor.getValue().errandId()).isEqualTo("errand-1");
+		assertThat(eventCaptor.getValue().noteId()).isEqualTo(NOTE_ID);
+		assertThat(eventCaptor.getValue().errandId()).isEqualTo(ERRAND_ID);
 		assertThat(eventCaptor.getValue().author()).isEqualTo("author");
 	}
 
 	@Test
-	void listForErrandReturnsMappedNotes() {
-		final var ts = FIXED_TIMESTAMP;
-		when(repositoryMock.findByErrandIdOrderByCreatedDesc("errand-1")).thenReturn(List.of(
-			NoteEntity.create().withId("n1").withErrandId("errand-1").withBody("b1").withAuthor("a1").withCreated(ts)));
+	void addUnknownErrandNotFound() {
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.empty());
 
-		final var result = service.listForErrand("errand-1");
+		assertThatThrownBy(() -> service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateNote("body", "author")))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verify(repositoryMock, never()).save(any());
+		verify(eventsMock, never()).publishEvent(any());
+	}
+
+	@Test
+	void listForErrandReturnsMappedNotes() {
+		errandExists();
+		when(repositoryMock.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).thenReturn(List.of(
+			NoteEntity.create().withId(NOTE_ID).withErrandId(ERRAND_ID).withBody("b1").withAuthor("a1").withCreated(FIXED_TIMESTAMP)));
+
+		final var result = service.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		assertThat(result).hasSize(1);
-		assertThat(result.getFirst().getId()).isEqualTo("n1");
+		assertThat(result.getFirst().getId()).isEqualTo(NOTE_ID);
 		assertThat(result.getFirst().getBody()).isEqualTo("b1");
 		assertThat(result.getFirst().getAuthor()).isEqualTo("a1");
-		assertThat(result.getFirst().getCreated()).isEqualTo(ts);
+		assertThat(result.getFirst().getCreated()).isEqualTo(FIXED_TIMESTAMP);
 	}
 
 	@Test
 	void readReturnsNote() {
-		when(repositoryMock.findById("n1")).thenReturn(Optional.of(
-			NoteEntity.create().withId("n1").withBody("b").withErrandId("e1")));
+		errandExists();
+		when(repositoryMock.findByErrandIdAndId(ERRAND_ID, NOTE_ID)).thenReturn(Optional.of(
+			NoteEntity.create().withId(NOTE_ID).withBody("b").withErrandId(ERRAND_ID)));
 
-		final var result = service.read("n1");
+		final var result = service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID);
 
-		assertThat(result.getId()).isEqualTo("n1");
+		assertThat(result.getId()).isEqualTo(NOTE_ID);
 		assertThat(result.getBody()).isEqualTo("b");
 		verify(eventsMock, never()).publishEvent(any());
 	}
 
 	@Test
-	void readNotFound() {
-		when(repositoryMock.findById("missing")).thenReturn(Optional.empty());
+	void readNotFoundOnOtherErrand() {
+		errandExists();
+		when(repositoryMock.findByErrandIdAndId(ERRAND_ID, NOTE_ID)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.read("missing"))
+		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 	}
 
 	@Test
+	void readNotFoundOnUnknownErrand() {
+		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verify(repositoryMock, never()).findByErrandIdAndId(any(), any());
+	}
+
+	@Test
 	void updateUpdatesBodyAndReturnsNote() {
-		final var existing = NoteEntity.create().withId("n1").withErrandId("e1").withBody("old").withCreated(FIXED_TIMESTAMP);
-		when(repositoryMock.findById("n1")).thenReturn(Optional.of(existing));
+		errandExists();
+		final var existing = NoteEntity.create().withId(NOTE_ID).withErrandId(ERRAND_ID).withBody("old").withCreated(FIXED_TIMESTAMP);
+		when(repositoryMock.findByErrandIdAndId(ERRAND_ID, NOTE_ID)).thenReturn(Optional.of(existing));
 		when(repositoryMock.save(any(NoteEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		final var result = service.update("n1", new UpdateNote("new body", "editor"));
+		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID, new UpdateNote("new body", "editor"));
 
 		assertThat(result.getBody()).isEqualTo("new body");
 		assertThat(result.getModifiedBy()).isEqualTo("editor");
@@ -120,9 +163,10 @@ class NoteServiceTest {
 
 	@Test
 	void updateNotFound() {
-		when(repositoryMock.findById("missing")).thenReturn(Optional.empty());
+		errandExists();
+		when(repositoryMock.findByErrandIdAndId(ERRAND_ID, NOTE_ID)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.update("missing", new UpdateNote("b", "editor")))
+		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID, new UpdateNote("b", "editor")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
@@ -130,16 +174,34 @@ class NoteServiceTest {
 	}
 
 	@Test
-	void deleteCallsRepository() {
-		service.delete("n1");
-		verify(repositoryMock).deleteById("n1");
+	void deleteRemovesScopedNote() {
+		errandExists();
+		final var existing = NoteEntity.create().withId(NOTE_ID).withErrandId(ERRAND_ID);
+		when(repositoryMock.findByErrandIdAndId(ERRAND_ID, NOTE_ID)).thenReturn(Optional.of(existing));
+
+		service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID);
+
+		verify(repositoryMock).delete(existing);
+	}
+
+	@Test
+	void deleteNotFound() {
+		errandExists();
+		when(repositoryMock.findByErrandIdAndId(ERRAND_ID, NOTE_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verify(repositoryMock, never()).delete(any());
 	}
 
 	@Test
 	void countForErrandDelegatesToRepository() {
-		when(repositoryMock.countByErrandId("errand-1")).thenReturn(4L);
+		errandExists();
+		when(repositoryMock.countByErrandId(ERRAND_ID)).thenReturn(4L);
 
-		assertThat(service.countForErrand("errand-1")).isEqualTo(4L);
-		verify(repositoryMock).countByErrandId("errand-1");
+		assertThat(service.countForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(4L);
+		verify(repositoryMock).countByErrandId(ERRAND_ID);
 	}
 }

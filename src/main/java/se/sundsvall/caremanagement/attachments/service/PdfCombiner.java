@@ -21,10 +21,13 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.poi.hwpf.HWPFDocument;
 import org.apache.poi.hwpf.extractor.WordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE;
 
 /**
  * Merges a heterogeneous list of uploaded files into a single PDF.
@@ -39,6 +42,8 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
  */
 final class PdfCombiner {
 
+	private static final Logger LOG = LoggerFactory.getLogger(PdfCombiner.class);
+
 	private static final String DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 	private static final String DOC_MIME = "application/msword";
 	private static final byte[] PDF_MAGIC = {
@@ -49,6 +54,13 @@ final class PdfCombiner {
 	private static final float LEADING = 16f;
 	private static final int WRAP = 90;
 
+	/**
+	 * Upper bound on the combined input size. Every source is held in memory as bytes and again as a live
+	 * {@link PDDocument} during the merge, so the peak heap is a multiple of this; cap the total to fail fast with a 413
+	 * rather than OOM the request/listener thread on a pathological attachment set.
+	 */
+	private static final long MAX_TOTAL_INPUT_BYTES = 50L * 1024 * 1024;
+
 	private PdfCombiner() {}
 
 	/**
@@ -58,6 +70,15 @@ final class PdfCombiner {
 	 * @return         the combined PDF as bytes
 	 */
 	static byte[] combine(final List<SourceFile> sources) {
+		final var totalBytes = sources.stream()
+			.map(SourceFile::content)
+			.filter(content -> content != null)
+			.mapToLong(content -> content.length)
+			.sum();
+		if (totalBytes > MAX_TOTAL_INPUT_BYTES) {
+			throw Problem.valueOf(PAYLOAD_TOO_LARGE, "Attachments are too large to combine into a single PDF (%d bytes, max %d).".formatted(totalBytes, MAX_TOTAL_INPUT_BYTES));
+		}
+
 		// The source documents must stay open until the merged result is saved — PDFBox's appendDocument keeps lazy
 		// references into them — so they are closed only afterwards, in the finally block.
 		final var documents = new ArrayList<PDDocument>();
@@ -97,8 +118,11 @@ final class PdfCombiner {
 			if (isDoc(source)) {
 				return docToDocument(source.content());
 			}
+			LOG.info("Attachment '{}' (type '{}') has no inline renderer — using a placeholder page in the combined PDF", name, source.contentType());
 			return textDocument("Bilaga: %s (filtypen kunde inte infogas i sammanställningen)".formatted(name));
 		} catch (final Exception e) {
+			// Log without content/PII so a silently-dropped source is auditable; the content itself is never logged.
+			LOG.warn("Attachment '{}' could not be rendered into the combined PDF ({}) — using a placeholder page", name, e.getClass().getSimpleName());
 			return textDocument("Bilaga: %s (kunde inte läsas: %s)".formatted(name, e.getMessage()));
 		}
 	}

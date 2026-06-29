@@ -76,9 +76,13 @@ public class AttachmentService {
 		final var errand = getErrand(municipalityId, namespace, errandId);
 		final var resolvedOrigin = ofNullable(origin).orElse(ORIGIN_ERRAND);
 
-		// A case-data (ärendeuppgifter) attachment is unique per errand and is renamed to {errandNumber}.pdf.
-		if (ORIGIN_CASE_DATA.equals(resolvedOrigin) && attachmentRepository.existsByErrandIdAndOrigin(errandId, ORIGIN_CASE_DATA)) {
-			throw Problem.valueOf(BAD_REQUEST, CASE_DATA_ALREADY_EXISTS_MESSAGE.formatted(errandId, namespace, municipalityId));
+		// A case-data (ärendeuppgifter) attachment is unique per errand and is renamed to {errandNumber}.pdf. Lock the
+		// errand row first so two concurrent CASE_DATA uploads serialize instead of both passing the existence check.
+		if (ORIGIN_CASE_DATA.equals(resolvedOrigin)) {
+			lockErrand(municipalityId, namespace, errandId);
+			if (attachmentRepository.existsByErrandIdAndOrigin(errandId, ORIGIN_CASE_DATA)) {
+				throw Problem.valueOf(BAD_REQUEST, CASE_DATA_ALREADY_EXISTS_MESSAGE.formatted(errandId, namespace, municipalityId));
+			}
 		}
 
 		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, resolvedOrigin, null, file);
@@ -117,7 +121,8 @@ public class AttachmentService {
 	 * @return          the id of the created attachment
 	 */
 	public String createMessageHistoryAttachment(final String municipalityId, final String namespace, final String errandId, final String fileName, final byte[] content) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		// Lock the errand row so the one-per-errand check-then-insert can't race a concurrent archiving run.
+		lockErrand(municipalityId, namespace, errandId);
 		if (attachmentRepository.existsByErrandIdAndOrigin(errandId, ORIGIN_MESSAGE_HISTORY)) {
 			throw Problem.valueOf(BAD_REQUEST, MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE.formatted(errandId, namespace, municipalityId));
 		}
@@ -180,6 +185,10 @@ public class AttachmentService {
 		if (contents.isEmpty()) {
 			return;
 		}
+
+		// Lock the errand row so two near-simultaneous conversation events can't both insert a fresh consolidation —
+		// the second blocks here, then finds the row written by the first and overwrites in place (same id/URL).
+		lockErrand(municipalityId, namespace, errandId);
 
 		final var sources = contents.stream()
 			.map(content -> new SourceFile(content.fileName(), content.mimeType(), content.content()))
@@ -250,6 +259,17 @@ public class AttachmentService {
 
 	private void ensureErrandExists(final String municipalityId, final String namespace, final String errandId) {
 		getErrand(municipalityId, namespace, errandId);
+	}
+
+	/**
+	 * Acquires a pessimistic write lock on the errand row so the check-then-insert uniqueness guards (one CASE_DATA, one
+	 * MESSAGE_HISTORY and one consolidated client PDF per errand) are serialized: concurrent calls for the same errand
+	 * block here rather than both passing the existence check and inserting duplicates.
+	 */
+	private void lockErrand(final String municipalityId, final String namespace, final String errandId) {
+		if (!errandRepository.existsWithLockingByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)) {
+			throw Problem.valueOf(NOT_FOUND, ERRAND_NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId));
+		}
 	}
 
 	private ErrandEntity getErrand(final String municipalityId, final String namespace, final String errandId) {

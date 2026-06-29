@@ -10,17 +10,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageReadReceiptRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
-import se.sundsvall.caremanagement.conversation.integration.db.model.MessageReadReceiptEntity;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -70,14 +70,9 @@ class MessageReadServiceTest {
 
 		service.markRead(ERRAND_ID, CASEWORKER, "joe001doe", ids);
 
-		final ArgumentCaptor<List<MessageReadReceiptEntity>> captor = ArgumentCaptor.captor();
-		verify(receiptRepositoryMock).saveAll(captor.capture());
-		assertThat(captor.getValue())
-			.extracting(MessageReadReceiptEntity::getMessageId, MessageReadReceiptEntity::getReaderSide, MessageReadReceiptEntity::getReadBy)
-			.containsExactly(
-				tuple("m1", "CASEWORKER", "joe001doe"),
-				tuple("m2", "CASEWORKER", "joe001doe"));
-		assertThat(captor.getValue()).allSatisfy(receipt -> assertThat(receipt.getReadAt()).isNotNull());
+		final ArgumentCaptor<String> messageIdCaptor = ArgumentCaptor.forClass(String.class);
+		verify(receiptRepositoryMock, times(2)).insertIgnore(anyString(), messageIdCaptor.capture(), eq("CASEWORKER"), eq("joe001doe"), any());
+		assertThat(messageIdCaptor.getAllValues()).containsExactly("m1", "m2");
 	}
 
 	@Test
@@ -89,9 +84,8 @@ class MessageReadServiceTest {
 
 		service.markRead(ERRAND_ID, CASEWORKER, "joe001doe", ids);
 
-		final ArgumentCaptor<List<MessageReadReceiptEntity>> captor = ArgumentCaptor.captor();
-		verify(receiptRepositoryMock).saveAll(captor.capture());
-		assertThat(captor.getValue()).extracting(MessageReadReceiptEntity::getMessageId).containsExactly("m2");
+		verify(receiptRepositoryMock).insertIgnore(anyString(), eq("m2"), eq("CASEWORKER"), eq("joe001doe"), any());
+		verify(receiptRepositoryMock, never()).insertIgnore(anyString(), eq("m1"), anyString(), anyString(), any());
 	}
 
 	@Test
@@ -103,7 +97,7 @@ class MessageReadServiceTest {
 		service.markRead(ERRAND_ID, CASEWORKER, "joe001doe", ids);
 
 		verify(receiptRepositoryMock, never()).findReadMessageIds(anyString(), anyList());
-		verify(receiptRepositoryMock, never()).saveAll(any());
+		verify(receiptRepositoryMock, never()).insertIgnore(anyString(), anyString(), anyString(), anyString(), any());
 	}
 
 	@Test
@@ -115,9 +109,7 @@ class MessageReadServiceTest {
 
 		service.markRead(ERRAND_ID, CASEWORKER, "joe001doe", ids);
 
-		final ArgumentCaptor<List<MessageReadReceiptEntity>> captor = ArgumentCaptor.captor();
-		verify(receiptRepositoryMock).saveAll(captor.capture());
-		assertThat(captor.getValue()).extracting(MessageReadReceiptEntity::getMessageId).containsExactly("m1");
+		verify(receiptRepositoryMock, times(1)).insertIgnore(anyString(), eq("m1"), eq("CASEWORKER"), eq("joe001doe"), any());
 	}
 
 	@Test
@@ -131,6 +123,6 @@ class MessageReadServiceTest {
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
 			.hasMessageContaining("missing");
 
-		verify(receiptRepositoryMock, never()).saveAll(any());
+		verify(receiptRepositoryMock, never()).insertIgnore(any(), any(), any(), any(), any());
 	}
 }

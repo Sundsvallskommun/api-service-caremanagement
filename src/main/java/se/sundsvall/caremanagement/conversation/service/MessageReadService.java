@@ -6,12 +6,13 @@ import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageReadReceiptRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
-import se.sundsvall.caremanagement.conversation.integration.db.model.MessageReadReceiptEntity;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.OffsetDateTime.now;
 import static java.time.ZoneId.systemDefault;
+import static java.time.ZoneOffset.UTC;
 import static java.time.temporal.ChronoUnit.MILLIS;
+import static java.util.UUID.randomUUID;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /**
@@ -62,16 +63,13 @@ public class MessageReadService {
 			return;
 		}
 
+		// readAt stored as a UTC LocalDateTime to match the entity's NORMALIZE timezone storage on the native insert.
+		final var readAt = now(systemDefault()).truncatedTo(MILLIS).withOffsetSameInstant(UTC).toLocalDateTime();
 		final var alreadyRead = receiptRepository.findReadMessageIds(readerSide.name(), addressedToReader);
-		final var receipts = addressedToReader.stream()
+		addressedToReader.stream()
 			.filter(id -> !alreadyRead.contains(id))
-			.map(id -> MessageReadReceiptEntity.create()
-				.withMessageId(id)
-				.withReaderSide(readerSide.name())
-				.withReadBy(readBy)
-				.withReadAt(now(systemDefault()).truncatedTo(MILLIS)))
-			.toList();
-
-		receiptRepository.saveAll(receipts);
+			// INSERT IGNORE per row so a concurrent mark-as-read for the same message+side is a no-op rather than a
+			// unique-constraint 500 — keeping the documented idempotency true under double-click / multi-tab races.
+			.forEach(id -> receiptRepository.insertIgnore(randomUUID().toString(), id, readerSide.name(), readBy, readAt));
 	}
 }

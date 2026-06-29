@@ -12,9 +12,12 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.junit.jupiter.api.Test;
+import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
+import static org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE;
 
 class PdfCombinerTest {
 
@@ -33,6 +36,15 @@ class PdfCombinerTest {
 
 		// 2 (pdf) + 1 (image) + >=1 (docx) + 1 (placeholder for the unknown text file).
 		assertThat(pageCount(combined)).isGreaterThanOrEqualTo(5);
+	}
+
+	@Test
+	void rejectsInputAboveTheTotalSizeCap() {
+		// One source just over the 50 MB total cap — combine must fail fast with 413 rather than risk OOM.
+		final var oversized = new byte[(int) (50L * 1024 * 1024) + 1];
+		assertThatThrownBy(() -> PdfCombiner.combine(List.of(new SourceFile("huge.bin", "application/octet-stream", oversized))))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", PAYLOAD_TOO_LARGE);
 	}
 
 	@Test

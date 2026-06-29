@@ -118,7 +118,7 @@ class JournalEntryServiceTest {
 	void updateUpdatesFieldsAndReturnsEntry() {
 		final var existing = JournalEntryEntity.create().withId("je1").withErrandId("e1").withType("old").withHeading("oldH")
 			.withEntryDate(ENTRY_DATE).withStatus(WORKING).withCreated(FIXED_TIMESTAMP);
-		when(repositoryMock.findById("je1")).thenReturn(Optional.of(existing));
+		when(repositoryMock.findByIdForUpdate("je1")).thenReturn(Optional.of(existing));
 		when(repositoryMock.save(any(JournalEntryEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		final var result = service.update("je1", new UpdateJournalEntry("newT", "newH", "newText", ENTRY_DATE.plusDays(1), ENTRY_TIME, "editor"));
@@ -136,7 +136,7 @@ class JournalEntryServiceTest {
 
 	@Test
 	void updateNotFound() {
-		when(repositoryMock.findById("missing")).thenReturn(Optional.empty());
+		when(repositoryMock.findByIdForUpdate("missing")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.update("missing", new UpdateJournalEntry("t", "h", null, ENTRY_DATE, null, "editor")))
 			.isInstanceOf(ThrowableProblem.class)
@@ -147,7 +147,7 @@ class JournalEntryServiceTest {
 
 	@Test
 	void updateLockedConflicts() {
-		when(repositoryMock.findById("je1")).thenReturn(Optional.of(
+		when(repositoryMock.findByIdForUpdate("je1")).thenReturn(Optional.of(
 			JournalEntryEntity.create().withId("je1").withStatus(LOCKED)));
 
 		assertThatThrownBy(() -> service.update("je1", new UpdateJournalEntry("t", "h", null, ENTRY_DATE, null, "editor")))
@@ -160,7 +160,7 @@ class JournalEntryServiceTest {
 	@Test
 	void deleteRemovesWorkingEntry() {
 		final var existing = JournalEntryEntity.create().withId("je1").withStatus(WORKING);
-		when(repositoryMock.findById("je1")).thenReturn(Optional.of(existing));
+		when(repositoryMock.findByIdForUpdate("je1")).thenReturn(Optional.of(existing));
 
 		service.delete("je1");
 
@@ -169,7 +169,7 @@ class JournalEntryServiceTest {
 
 	@Test
 	void deleteNotFound() {
-		when(repositoryMock.findById("missing")).thenReturn(Optional.empty());
+		when(repositoryMock.findByIdForUpdate("missing")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.delete("missing"))
 			.isInstanceOf(ThrowableProblem.class)
@@ -180,7 +180,7 @@ class JournalEntryServiceTest {
 
 	@Test
 	void deleteLockedConflicts() {
-		when(repositoryMock.findById("je1")).thenReturn(Optional.of(
+		when(repositoryMock.findByIdForUpdate("je1")).thenReturn(Optional.of(
 			JournalEntryEntity.create().withId("je1").withStatus(LOCKED)));
 
 		assertThatThrownBy(() -> service.delete("je1"))
@@ -193,7 +193,7 @@ class JournalEntryServiceTest {
 	@Test
 	void lockSetsLockedStatus() {
 		final var existing = JournalEntryEntity.create().withId("je1").withStatus(WORKING).withCreated(FIXED_TIMESTAMP);
-		when(repositoryMock.findById("je1")).thenReturn(Optional.of(existing));
+		when(repositoryMock.findByIdForUpdate("je1")).thenReturn(Optional.of(existing));
 		when(repositoryMock.save(any(JournalEntryEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		final var result = service.lock("je1", new LockJournalEntry("carola"));
@@ -206,7 +206,7 @@ class JournalEntryServiceTest {
 	@Test
 	void lockWithoutBodyLeavesLockedByNull() {
 		final var existing = JournalEntryEntity.create().withId("je1").withStatus(WORKING);
-		when(repositoryMock.findById("je1")).thenReturn(Optional.of(existing));
+		when(repositoryMock.findByIdForUpdate("je1")).thenReturn(Optional.of(existing));
 		when(repositoryMock.save(any(JournalEntryEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		final var result = service.lock("je1", null);
@@ -218,7 +218,7 @@ class JournalEntryServiceTest {
 
 	@Test
 	void lockNotFound() {
-		when(repositoryMock.findById("missing")).thenReturn(Optional.empty());
+		when(repositoryMock.findByIdForUpdate("missing")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.lock("missing", new LockJournalEntry("carola")))
 			.isInstanceOf(ThrowableProblem.class)
@@ -229,7 +229,7 @@ class JournalEntryServiceTest {
 
 	@Test
 	void lockAlreadyLockedConflicts() {
-		when(repositoryMock.findById("je1")).thenReturn(Optional.of(
+		when(repositoryMock.findByIdForUpdate("je1")).thenReturn(Optional.of(
 			JournalEntryEntity.create().withId("je1").withStatus(LOCKED)));
 
 		assertThatThrownBy(() -> service.lock("je1", new LockJournalEntry("carola")))
