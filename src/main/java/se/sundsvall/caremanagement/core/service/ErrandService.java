@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.core.service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -122,7 +121,7 @@ public class ErrandService {
 		final var newStatus = entity.getStatus();
 		final var timestamp = nowTs();
 
-		Optional.ofNullable(newStatus)
+		ofNullable(newStatus)
 			.filter(s -> !s.equals(previousStatus))
 			.ifPresent(s -> eventPublisher.publishEvent(new ErrandStatusChanged(
 				entity.getId(), entity.getTypeSlug(), municipalityId, namespace,

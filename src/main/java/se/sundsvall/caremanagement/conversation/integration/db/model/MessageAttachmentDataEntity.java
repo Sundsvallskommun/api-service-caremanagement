@@ -96,6 +96,6 @@ public class MessageAttachmentDataEntity {
 
 	@Override
 	public String toString() {
-		return "MessageAttachmentDataEntity{id='" + id + "', messageAttachmentId='" + messageAttachmentId + "', file" + file + '}';
+		return "MessageAttachmentDataEntity{id='" + id + "', messageAttachmentId='" + messageAttachmentId + "', file=" + (file == null ? null : "<blob>") + '}';
 	}
 }

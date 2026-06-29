@@ -259,7 +259,8 @@ public class AttachmentEntity implements Auditable {
 
 	@Override
 	public String toString() {
-		return "AttachmentEntity{id='" + id + "', errandId='" + errandId + "', fileName='" + fileName
+		return "AttachmentEntity{id='" + id + "', errandId='" + errandId + "', namespace='" + namespace
+			+ "', municipalityId='" + municipalityId + "', fileName='" + fileName
 			+ "', mimeType='" + mimeType + "', fileSize=" + fileSize + ", documentType='" + documentType + "', senderRole='" + senderRole
 			+ "', created=" + created + ", modified=" + modified + '}';
 	}

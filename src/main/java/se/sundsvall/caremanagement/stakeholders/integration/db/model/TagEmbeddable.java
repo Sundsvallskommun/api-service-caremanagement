@@ -9,8 +9,9 @@ import java.util.Objects;
  * on stakeholders}. The errand-level {@code externalTags} usage was killed in Phase 2a (D3 in
  * docs/architecture/proposal-modulith.md).
  *
- * Column names are mapped per use-site via {@code @AttributeOverrides} on the owning entity's
- * {@code @ElementCollection}, so the same embeddable can power tables with differently named columns.
+ * The columns are the quoted reserved words {@code "key"} and {@code "value"}, fixed on the embeddable
+ * itself — there is a single use-site (the contact-channel element collection) and no
+ * {@code @AttributeOverride}.
  */
 @Embeddable
 public class TagEmbeddable {

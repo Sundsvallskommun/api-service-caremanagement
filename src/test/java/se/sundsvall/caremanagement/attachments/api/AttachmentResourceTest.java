@@ -63,7 +63,7 @@ class AttachmentResourceTest {
 	}
 
 	@Test
-	void createAttachmentWithCaseDataOrigin() {
+	void createAttachmentWithCaseDataDocumentType() {
 		when(serviceMock.createAttachment(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CASE_DATA"), any(MultipartFile.class))).thenReturn(ATTACHMENT_ID);
 
 		final var builder = new MultipartBodyBuilder();
@@ -81,7 +81,7 @@ class AttachmentResourceTest {
 	}
 
 	@Test
-	void createAttachmentInvalidOriginIsBadRequest() {
+	void createAttachmentInvalidDocumentTypeIsBadRequest() {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("file", "hello".getBytes()).filename("hello.txt");
 		final MultiValueMap<String, org.springframework.http.HttpEntity<?>> body = builder.build();
@@ -113,7 +113,7 @@ class AttachmentResourceTest {
 	}
 
 	@Test
-	void readAttachmentsFilteredByOrigin() {
+	void readAttachmentsFilteredByDocumentType() {
 		when(serviceMock.readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CONVERSATION"), isNull())).thenReturn(List.of(Attachment.create()));
 
 		webTestClient.get()
@@ -125,7 +125,7 @@ class AttachmentResourceTest {
 	}
 
 	@Test
-	void readAttachmentsFilteredByCaseDataOrigin() {
+	void readAttachmentsFilteredByCaseDataDocumentType() {
 		when(serviceMock.readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CASE_DATA"), isNull())).thenReturn(List.of(Attachment.create()));
 
 		webTestClient.get()
@@ -137,7 +137,7 @@ class AttachmentResourceTest {
 	}
 
 	@Test
-	void readAttachmentsInvalidOriginIsBadRequest() {
+	void readAttachmentsInvalidDocumentTypeIsBadRequest() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).queryParam("documentType", "BOGUS").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()

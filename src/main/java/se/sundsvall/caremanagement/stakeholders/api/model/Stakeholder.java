@@ -27,8 +27,7 @@ public class Stakeholder {
 	@Schema(description = "Type of external id", examples = "PRIVATE")
 	private String externalIdType;
 
-	@Schema(description = "Role of the stakeholder — validated against StakeholderRoleRegistry for the errand's typeSlug",
-		examples = "FOSTER_PARENT")
+	@Schema(description = "Role of the stakeholder on the errand", examples = "FOSTER_PARENT")
 	@NotBlank(groups = OnCreate.class)
 	private String role;
 

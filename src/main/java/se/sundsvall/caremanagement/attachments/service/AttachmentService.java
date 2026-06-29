@@ -145,7 +145,7 @@ public class AttachmentService {
 	public List<String> storeAndCombine(final String municipalityId, final String namespace, final String errandId, final List<MultipartFile> files) {
 		ensureErrandExists(municipalityId, namespace, errandId);
 
-		final var sources = files.stream().map(AttachmentService::read).toList();
+		final var sources = files.stream().map(AttachmentService::toSourceFile).toList();
 
 		final var ids = new ArrayList<String>();
 		sources.forEach(source -> ids.add(attachmentRepository
@@ -239,7 +239,7 @@ public class AttachmentService {
 	/**
 	 * Read a multipart file fully into memory once, so it can be both persisted and merged without re-reading the stream.
 	 */
-	private static SourceFile read(final MultipartFile file) {
+	private static SourceFile toSourceFile(final MultipartFile file) {
 		try {
 			return new SourceFile(file.getOriginalFilename(), file.getContentType(), file.getBytes());
 		} catch (final IOException ioException) {

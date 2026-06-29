@@ -61,7 +61,7 @@ class AttachmentServiceTest {
 	private AttachmentService service;
 
 	@Test
-	void createAttachmentDefaultsOriginToErrand() {
+	void createAttachmentDefaultsDocumentTypeToErrand() {
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
 			.thenReturn(Optional.of(mock(ErrandEntity.class)));
 		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
@@ -274,7 +274,7 @@ class AttachmentServiceTest {
 	}
 
 	@Test
-	void readAttachmentsFilteredByOriginReturnsOnlyMatching() {
+	void readAttachmentsFilteredByDocumentTypeReturnsOnlyMatching() {
 		final var t1 = OffsetDateTime.parse("2024-01-01T10:00:00Z");
 		final var t2 = OffsetDateTime.parse("2024-01-01T11:00:00Z");
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))

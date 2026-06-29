@@ -1,11 +1,10 @@
 /**
- * Decisions module — universal decision base.
+ * Decisions module — the errand's decision audit trail.
  *
- * Provides the shared shape (id, errand_id, outcome, motivation, decided_by,
- * decided_at). Type modules can extend by owning their own
- * {@code errand_<type>_decision_detail} table with FK to {@code decision.id}.
- *
- * Implementation lands in Phase 2 (see docs/architecture/migration-plan.md).
+ * Each {@code Decision} records a {@code decisionType} (e.g. RECOMMENDATION written by a process,
+ * PAYMENT written by a handläggare), an optional {@code value}/{@code amount}/{@code decisionMessage}
+ * and validity period ({@code decisionDate}/{@code periodFrom}/{@code periodTo}), and is owned by
+ * exactly one errand. Read and written via {@code DecisionResource}.
  */
 @ApplicationModule(displayName = "Decisions")
 package se.sundsvall.caremanagement.decisions;

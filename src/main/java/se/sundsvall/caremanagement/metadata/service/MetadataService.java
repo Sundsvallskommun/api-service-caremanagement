@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.metadata.service;
 
 import java.util.List;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.metadata.api.model.Lookup;
@@ -80,6 +81,6 @@ public class MetadataService {
 	}
 
 	private static String kindLabel(final LookupKind kind) {
-		return kind.name().toLowerCase().replace('_', ' ');
+		return kind.name().toLowerCase(Locale.ROOT).replace('_', ' ');
 	}
 }

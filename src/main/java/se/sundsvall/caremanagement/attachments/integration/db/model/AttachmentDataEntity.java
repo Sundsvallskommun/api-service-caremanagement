@@ -74,7 +74,7 @@ public class AttachmentDataEntity {
 	@Override
 	public String toString() {
 		return "AttachmentDataEntity{" + "id='" + id + '\''
-			+ ", file" + file
+			+ ", file=" + (file == null ? null : "<blob>")
 			+ '}';
 	}
 }
