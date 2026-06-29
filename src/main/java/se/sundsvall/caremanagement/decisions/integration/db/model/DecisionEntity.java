@@ -165,63 +165,63 @@ public class DecisionEntity {
 		this.created = v;
 	}
 
-	public DecisionEntity withId(final String v) {
-		this.id = v;
+	public DecisionEntity withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public DecisionEntity withErrandId(final String v) {
-		this.errandId = v;
+	public DecisionEntity withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public DecisionEntity withDecisionType(final String v) {
-		this.decisionType = v;
+	public DecisionEntity withDecisionType(final String decisionType) {
+		this.decisionType = decisionType;
 		return this;
 	}
 
-	public DecisionEntity withValue(final String v) {
-		this.value = v;
+	public DecisionEntity withValue(final String value) {
+		this.value = value;
 		return this;
 	}
 
-	public DecisionEntity withDescription(final String v) {
-		this.description = v;
+	public DecisionEntity withDescription(final String description) {
+		this.description = description;
 		return this;
 	}
 
-	public DecisionEntity withAmount(final BigDecimal v) {
-		this.amount = v;
+	public DecisionEntity withAmount(final BigDecimal amount) {
+		this.amount = amount;
 		return this;
 	}
 
-	public DecisionEntity withDecisionMessage(final String v) {
-		this.decisionMessage = v;
+	public DecisionEntity withDecisionMessage(final String decisionMessage) {
+		this.decisionMessage = decisionMessage;
 		return this;
 	}
 
-	public DecisionEntity withDecisionDate(final LocalDate v) {
-		this.decisionDate = v;
+	public DecisionEntity withDecisionDate(final LocalDate decisionDate) {
+		this.decisionDate = decisionDate;
 		return this;
 	}
 
-	public DecisionEntity withPeriodFrom(final LocalDate v) {
-		this.periodFrom = v;
+	public DecisionEntity withPeriodFrom(final LocalDate periodFrom) {
+		this.periodFrom = periodFrom;
 		return this;
 	}
 
-	public DecisionEntity withPeriodTo(final LocalDate v) {
-		this.periodTo = v;
+	public DecisionEntity withPeriodTo(final LocalDate periodTo) {
+		this.periodTo = periodTo;
 		return this;
 	}
 
-	public DecisionEntity withCreatedBy(final String v) {
-		this.createdBy = v;
+	public DecisionEntity withCreatedBy(final String createdBy) {
+		this.createdBy = createdBy;
 		return this;
 	}
 
-	public DecisionEntity withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public DecisionEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 

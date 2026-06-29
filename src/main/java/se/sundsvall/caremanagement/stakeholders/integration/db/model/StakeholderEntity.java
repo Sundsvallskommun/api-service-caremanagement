@@ -229,83 +229,83 @@ public class StakeholderEntity implements Auditable {
 		this.modified = v;
 	}
 
-	public StakeholderEntity withId(final String v) {
-		this.id = v;
+	public StakeholderEntity withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public StakeholderEntity withErrandId(final String v) {
-		this.errandId = v;
+	public StakeholderEntity withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public StakeholderEntity withExternalId(final String v) {
-		this.externalId = v;
+	public StakeholderEntity withExternalId(final String externalId) {
+		this.externalId = externalId;
 		return this;
 	}
 
-	public StakeholderEntity withExternalIdType(final String v) {
-		this.externalIdType = v;
+	public StakeholderEntity withExternalIdType(final String externalIdType) {
+		this.externalIdType = externalIdType;
 		return this;
 	}
 
-	public StakeholderEntity withRole(final String v) {
-		this.role = v;
+	public StakeholderEntity withRole(final String role) {
+		this.role = role;
 		return this;
 	}
 
-	public StakeholderEntity withFirstName(final String v) {
-		this.firstName = v;
+	public StakeholderEntity withFirstName(final String firstName) {
+		this.firstName = firstName;
 		return this;
 	}
 
-	public StakeholderEntity withLastName(final String v) {
-		this.lastName = v;
+	public StakeholderEntity withLastName(final String lastName) {
+		this.lastName = lastName;
 		return this;
 	}
 
-	public StakeholderEntity withOrganizationName(final String v) {
-		this.organizationName = v;
+	public StakeholderEntity withOrganizationName(final String organizationName) {
+		this.organizationName = organizationName;
 		return this;
 	}
 
-	public StakeholderEntity withAddress(final String v) {
-		this.address = v;
+	public StakeholderEntity withAddress(final String address) {
+		this.address = address;
 		return this;
 	}
 
-	public StakeholderEntity withCareOf(final String v) {
-		this.careOf = v;
+	public StakeholderEntity withCareOf(final String careOf) {
+		this.careOf = careOf;
 		return this;
 	}
 
-	public StakeholderEntity withZipCode(final String v) {
-		this.zipCode = v;
+	public StakeholderEntity withZipCode(final String zipCode) {
+		this.zipCode = zipCode;
 		return this;
 	}
 
-	public StakeholderEntity withCity(final String v) {
-		this.city = v;
+	public StakeholderEntity withCity(final String city) {
+		this.city = city;
 		return this;
 	}
 
-	public StakeholderEntity withCountry(final String v) {
-		this.country = v;
+	public StakeholderEntity withCountry(final String country) {
+		this.country = country;
 		return this;
 	}
 
-	public StakeholderEntity withContactChannels(final List<TagEmbeddable> v) {
-		this.contactChannels = v;
+	public StakeholderEntity withContactChannels(final List<TagEmbeddable> contactChannels) {
+		this.contactChannels = contactChannels;
 		return this;
 	}
 
-	public StakeholderEntity withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public StakeholderEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 
-	public StakeholderEntity withModified(final OffsetDateTime v) {
-		this.modified = v;
+	public StakeholderEntity withModified(final OffsetDateTime modified) {
+		this.modified = modified;
 		return this;
 	}
 

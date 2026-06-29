@@ -68,33 +68,33 @@ public class StatusHistoryEntity {
 		return changedAt;
 	}
 
-	public StatusHistoryEntity withId(final String v) {
-		this.id = v;
+	public StatusHistoryEntity withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public StatusHistoryEntity withErrandId(final String v) {
-		this.errandId = v;
+	public StatusHistoryEntity withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public StatusHistoryEntity withFromStatus(final String v) {
-		this.fromStatus = v;
+	public StatusHistoryEntity withFromStatus(final String fromStatus) {
+		this.fromStatus = fromStatus;
 		return this;
 	}
 
-	public StatusHistoryEntity withToStatus(final String v) {
-		this.toStatus = v;
+	public StatusHistoryEntity withToStatus(final String toStatus) {
+		this.toStatus = toStatus;
 		return this;
 	}
 
-	public StatusHistoryEntity withChangedBy(final String v) {
-		this.changedBy = v;
+	public StatusHistoryEntity withChangedBy(final String changedBy) {
+		this.changedBy = changedBy;
 		return this;
 	}
 
-	public StatusHistoryEntity withChangedAt(final OffsetDateTime v) {
-		this.changedAt = v;
+	public StatusHistoryEntity withChangedAt(final OffsetDateTime changedAt) {
+		this.changedAt = changedAt;
 		return this;
 	}
 }

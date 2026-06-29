@@ -81,33 +81,33 @@ public class PatchErrand {
 		this.assignedUserId = v;
 	}
 
-	public PatchErrand withTitle(final String v) {
-		this.title = v;
+	public PatchErrand withTitle(final String title) {
+		this.title = title;
 		return this;
 	}
 
-	public PatchErrand withStatus(final String v) {
-		this.status = v;
+	public PatchErrand withStatus(final String status) {
+		this.status = status;
 		return this;
 	}
 
-	public PatchErrand withDescription(final String v) {
-		this.description = v;
+	public PatchErrand withDescription(final String description) {
+		this.description = description;
 		return this;
 	}
 
-	public PatchErrand withPriority(final String v) {
-		this.priority = v;
+	public PatchErrand withPriority(final String priority) {
+		this.priority = priority;
 		return this;
 	}
 
-	public PatchErrand withReporterUserId(final String v) {
-		this.reporterUserId = v;
+	public PatchErrand withReporterUserId(final String reporterUserId) {
+		this.reporterUserId = reporterUserId;
 		return this;
 	}
 
-	public PatchErrand withAssignedUserId(final String v) {
-		this.assignedUserId = v;
+	public PatchErrand withAssignedUserId(final String assignedUserId) {
+		this.assignedUserId = assignedUserId;
 		return this;
 	}
 

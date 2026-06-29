@@ -132,78 +132,78 @@ public class ErrandEventEntity {
 		return created;
 	}
 
-	public ErrandEventEntity withId(final String v) {
-		this.id = v;
+	public ErrandEventEntity withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public ErrandEventEntity withErrandId(final String v) {
-		this.errandId = v;
+	public ErrandEventEntity withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public ErrandEventEntity withMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public ErrandEventEntity withMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 		return this;
 	}
 
-	public ErrandEventEntity withNamespace(final String v) {
-		this.namespace = v;
+	public ErrandEventEntity withNamespace(final String namespace) {
+		this.namespace = namespace;
 		return this;
 	}
 
-	public ErrandEventEntity withSource(final String v) {
-		this.source = v;
+	public ErrandEventEntity withSource(final String source) {
+		this.source = source;
 		return this;
 	}
 
-	public ErrandEventEntity withAction(final String v) {
-		this.action = v;
+	public ErrandEventEntity withAction(final String action) {
+		this.action = action;
 		return this;
 	}
 
-	public ErrandEventEntity withTarget(final String v) {
-		this.target = v;
+	public ErrandEventEntity withTarget(final String target) {
+		this.target = target;
 		return this;
 	}
 
-	public ErrandEventEntity withDescription(final String v) {
-		this.description = v;
+	public ErrandEventEntity withDescription(final String description) {
+		this.description = description;
 		return this;
 	}
 
-	public ErrandEventEntity withHttpMethod(final String v) {
-		this.httpMethod = v;
+	public ErrandEventEntity withHttpMethod(final String httpMethod) {
+		this.httpMethod = httpMethod;
 		return this;
 	}
 
-	public ErrandEventEntity withRequestPath(final String v) {
-		this.requestPath = v;
+	public ErrandEventEntity withRequestPath(final String requestPath) {
+		this.requestPath = requestPath;
 		return this;
 	}
 
-	public ErrandEventEntity withActor(final String v) {
-		this.actor = v;
+	public ErrandEventEntity withActor(final String actor) {
+		this.actor = actor;
 		return this;
 	}
 
-	public ErrandEventEntity withActorType(final String v) {
-		this.actorType = v;
+	public ErrandEventEntity withActorType(final String actorType) {
+		this.actorType = actorType;
 		return this;
 	}
 
-	public ErrandEventEntity withRequestId(final String v) {
-		this.requestId = v;
+	public ErrandEventEntity withRequestId(final String requestId) {
+		this.requestId = requestId;
 		return this;
 	}
 
-	public ErrandEventEntity withStatusCode(final Integer v) {
-		this.statusCode = v;
+	public ErrandEventEntity withStatusCode(final Integer statusCode) {
+		this.statusCode = statusCode;
 		return this;
 	}
 
-	public ErrandEventEntity withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public ErrandEventEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 }

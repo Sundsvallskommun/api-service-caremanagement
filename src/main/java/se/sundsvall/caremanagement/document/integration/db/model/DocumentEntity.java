@@ -132,73 +132,73 @@ public class DocumentEntity {
 		return locked;
 	}
 
-	public DocumentEntity withId(final String v) {
-		this.id = v;
+	public DocumentEntity withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public DocumentEntity withErrandId(final String v) {
-		this.errandId = v;
+	public DocumentEntity withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public DocumentEntity withType(final String v) {
-		this.type = v;
+	public DocumentEntity withType(final String type) {
+		this.type = type;
 		return this;
 	}
 
-	public DocumentEntity withHeading(final String v) {
-		this.heading = v;
+	public DocumentEntity withHeading(final String heading) {
+		this.heading = heading;
 		return this;
 	}
 
-	public DocumentEntity withText(final String v) {
-		this.text = v;
+	public DocumentEntity withText(final String text) {
+		this.text = text;
 		return this;
 	}
 
-	public DocumentEntity withDocumentDate(final LocalDate v) {
-		this.documentDate = v;
+	public DocumentEntity withDocumentDate(final LocalDate documentDate) {
+		this.documentDate = documentDate;
 		return this;
 	}
 
-	public DocumentEntity withDocumentTime(final LocalTime v) {
-		this.documentTime = v;
+	public DocumentEntity withDocumentTime(final LocalTime documentTime) {
+		this.documentTime = documentTime;
 		return this;
 	}
 
-	public DocumentEntity withStatus(final DocumentStatus v) {
-		this.status = v;
+	public DocumentEntity withStatus(final DocumentStatus status) {
+		this.status = status;
 		return this;
 	}
 
-	public DocumentEntity withCreatedBy(final String v) {
-		this.createdBy = v;
+	public DocumentEntity withCreatedBy(final String createdBy) {
+		this.createdBy = createdBy;
 		return this;
 	}
 
-	public DocumentEntity withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public DocumentEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 
-	public DocumentEntity withModifiedBy(final String v) {
-		this.modifiedBy = v;
+	public DocumentEntity withModifiedBy(final String modifiedBy) {
+		this.modifiedBy = modifiedBy;
 		return this;
 	}
 
-	public DocumentEntity withModified(final OffsetDateTime v) {
-		this.modified = v;
+	public DocumentEntity withModified(final OffsetDateTime modified) {
+		this.modified = modified;
 		return this;
 	}
 
-	public DocumentEntity withLockedBy(final String v) {
-		this.lockedBy = v;
+	public DocumentEntity withLockedBy(final String lockedBy) {
+		this.lockedBy = lockedBy;
 		return this;
 	}
 
-	public DocumentEntity withLocked(final OffsetDateTime v) {
-		this.locked = v;
+	public DocumentEntity withLocked(final OffsetDateTime locked) {
+		this.locked = locked;
 		return this;
 	}
 }

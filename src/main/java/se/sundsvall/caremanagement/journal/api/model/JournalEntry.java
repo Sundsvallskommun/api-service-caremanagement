@@ -173,73 +173,73 @@ public class JournalEntry {
 		this.locked = v;
 	}
 
-	public JournalEntry withId(final String v) {
-		this.id = v;
+	public JournalEntry withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public JournalEntry withErrandId(final String v) {
-		this.errandId = v;
+	public JournalEntry withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public JournalEntry withType(final String v) {
-		this.type = v;
+	public JournalEntry withType(final String type) {
+		this.type = type;
 		return this;
 	}
 
-	public JournalEntry withHeading(final String v) {
-		this.heading = v;
+	public JournalEntry withHeading(final String heading) {
+		this.heading = heading;
 		return this;
 	}
 
-	public JournalEntry withText(final String v) {
-		this.text = v;
+	public JournalEntry withText(final String text) {
+		this.text = text;
 		return this;
 	}
 
-	public JournalEntry withEntryDate(final LocalDate v) {
-		this.entryDate = v;
+	public JournalEntry withEntryDate(final LocalDate entryDate) {
+		this.entryDate = entryDate;
 		return this;
 	}
 
-	public JournalEntry withEntryTime(final LocalTime v) {
-		this.entryTime = v;
+	public JournalEntry withEntryTime(final LocalTime entryTime) {
+		this.entryTime = entryTime;
 		return this;
 	}
 
-	public JournalEntry withStatus(final String v) {
-		this.status = v;
+	public JournalEntry withStatus(final String status) {
+		this.status = status;
 		return this;
 	}
 
-	public JournalEntry withCreatedBy(final String v) {
-		this.createdBy = v;
+	public JournalEntry withCreatedBy(final String createdBy) {
+		this.createdBy = createdBy;
 		return this;
 	}
 
-	public JournalEntry withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public JournalEntry withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 
-	public JournalEntry withModifiedBy(final String v) {
-		this.modifiedBy = v;
+	public JournalEntry withModifiedBy(final String modifiedBy) {
+		this.modifiedBy = modifiedBy;
 		return this;
 	}
 
-	public JournalEntry withModified(final OffsetDateTime v) {
-		this.modified = v;
+	public JournalEntry withModified(final OffsetDateTime modified) {
+		this.modified = modified;
 		return this;
 	}
 
-	public JournalEntry withLockedBy(final String v) {
-		this.lockedBy = v;
+	public JournalEntry withLockedBy(final String lockedBy) {
+		this.lockedBy = lockedBy;
 		return this;
 	}
 
-	public JournalEntry withLocked(final OffsetDateTime v) {
-		this.locked = v;
+	public JournalEntry withLocked(final OffsetDateTime locked) {
+		this.locked = locked;
 		return this;
 	}
 

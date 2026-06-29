@@ -195,73 +195,73 @@ public class NotificationEntity implements Auditable {
 		this.modified = v;
 	}
 
-	public NotificationEntity withId(final String v) {
-		this.id = v;
+	public NotificationEntity withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public NotificationEntity withErrandId(final String v) {
-		this.errandId = v;
+	public NotificationEntity withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public NotificationEntity withMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public NotificationEntity withMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 		return this;
 	}
 
-	public NotificationEntity withNamespace(final String v) {
-		this.namespace = v;
+	public NotificationEntity withNamespace(final String namespace) {
+		this.namespace = namespace;
 		return this;
 	}
 
-	public NotificationEntity withOwnerId(final String v) {
-		this.ownerId = v;
+	public NotificationEntity withOwnerId(final String ownerId) {
+		this.ownerId = ownerId;
 		return this;
 	}
 
-	public NotificationEntity withCreatedBy(final String v) {
-		this.createdBy = v;
+	public NotificationEntity withCreatedBy(final String createdBy) {
+		this.createdBy = createdBy;
 		return this;
 	}
 
-	public NotificationEntity withType(final NotificationType v) {
-		this.type = v;
+	public NotificationEntity withType(final NotificationType type) {
+		this.type = type;
 		return this;
 	}
 
-	public NotificationEntity withSubType(final NotificationSubType v) {
-		this.subType = v;
+	public NotificationEntity withSubType(final NotificationSubType subType) {
+		this.subType = subType;
 		return this;
 	}
 
-	public NotificationEntity withDescription(final String v) {
-		this.description = v;
+	public NotificationEntity withDescription(final String description) {
+		this.description = description;
 		return this;
 	}
 
-	public NotificationEntity withContent(final String v) {
-		this.content = v;
+	public NotificationEntity withContent(final String content) {
+		this.content = content;
 		return this;
 	}
 
-	public NotificationEntity withAcknowledged(final boolean v) {
-		this.acknowledged = v;
+	public NotificationEntity withAcknowledged(final boolean acknowledged) {
+		this.acknowledged = acknowledged;
 		return this;
 	}
 
-	public NotificationEntity withExpires(final OffsetDateTime v) {
-		this.expires = v;
+	public NotificationEntity withExpires(final OffsetDateTime expires) {
+		this.expires = expires;
 		return this;
 	}
 
-	public NotificationEntity withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public NotificationEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 
-	public NotificationEntity withModified(final OffsetDateTime v) {
-		this.modified = v;
+	public NotificationEntity withModified(final OffsetDateTime modified) {
+		this.modified = modified;
 		return this;
 	}
 

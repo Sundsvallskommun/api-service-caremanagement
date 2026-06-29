@@ -173,73 +173,73 @@ public class Document {
 		this.locked = v;
 	}
 
-	public Document withId(final String v) {
-		this.id = v;
+	public Document withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public Document withErrandId(final String v) {
-		this.errandId = v;
+	public Document withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public Document withType(final String v) {
-		this.type = v;
+	public Document withType(final String type) {
+		this.type = type;
 		return this;
 	}
 
-	public Document withHeading(final String v) {
-		this.heading = v;
+	public Document withHeading(final String heading) {
+		this.heading = heading;
 		return this;
 	}
 
-	public Document withText(final String v) {
-		this.text = v;
+	public Document withText(final String text) {
+		this.text = text;
 		return this;
 	}
 
-	public Document withDocumentDate(final LocalDate v) {
-		this.documentDate = v;
+	public Document withDocumentDate(final LocalDate documentDate) {
+		this.documentDate = documentDate;
 		return this;
 	}
 
-	public Document withDocumentTime(final LocalTime v) {
-		this.documentTime = v;
+	public Document withDocumentTime(final LocalTime documentTime) {
+		this.documentTime = documentTime;
 		return this;
 	}
 
-	public Document withStatus(final String v) {
-		this.status = v;
+	public Document withStatus(final String status) {
+		this.status = status;
 		return this;
 	}
 
-	public Document withCreatedBy(final String v) {
-		this.createdBy = v;
+	public Document withCreatedBy(final String createdBy) {
+		this.createdBy = createdBy;
 		return this;
 	}
 
-	public Document withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public Document withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 
-	public Document withModifiedBy(final String v) {
-		this.modifiedBy = v;
+	public Document withModifiedBy(final String modifiedBy) {
+		this.modifiedBy = modifiedBy;
 		return this;
 	}
 
-	public Document withModified(final OffsetDateTime v) {
-		this.modified = v;
+	public Document withModified(final OffsetDateTime modified) {
+		this.modified = modified;
 		return this;
 	}
 
-	public Document withLockedBy(final String v) {
-		this.lockedBy = v;
+	public Document withLockedBy(final String lockedBy) {
+		this.lockedBy = lockedBy;
 		return this;
 	}
 
-	public Document withLocked(final OffsetDateTime v) {
-		this.locked = v;
+	public Document withLocked(final OffsetDateTime locked) {
+		this.locked = locked;
 		return this;
 	}
 

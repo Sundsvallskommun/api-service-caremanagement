@@ -261,88 +261,88 @@ public class ErrandEntity implements Auditable {
 		this.touched = touched;
 	}
 
-	public ErrandEntity withId(final String v) {
-		this.id = v;
+	public ErrandEntity withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public ErrandEntity withMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public ErrandEntity withMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 		return this;
 	}
 
-	public ErrandEntity withNamespace(final String v) {
-		this.namespace = v;
+	public ErrandEntity withNamespace(final String namespace) {
+		this.namespace = namespace;
 		return this;
 	}
 
-	public ErrandEntity withErrandNumber(final String v) {
-		this.errandNumber = v;
+	public ErrandEntity withErrandNumber(final String errandNumber) {
+		this.errandNumber = errandNumber;
 		return this;
 	}
 
-	public ErrandEntity withTypeSlug(final String v) {
-		this.typeSlug = v;
+	public ErrandEntity withTypeSlug(final String typeSlug) {
+		this.typeSlug = typeSlug;
 		return this;
 	}
 
-	public ErrandEntity withTitle(final String v) {
-		this.title = v;
+	public ErrandEntity withTitle(final String title) {
+		this.title = title;
 		return this;
 	}
 
-	public ErrandEntity withStatus(final String v) {
-		this.status = v;
+	public ErrandEntity withStatus(final String status) {
+		this.status = status;
 		return this;
 	}
 
-	public ErrandEntity withDescription(final String v) {
-		this.description = v;
+	public ErrandEntity withDescription(final String description) {
+		this.description = description;
 		return this;
 	}
 
-	public ErrandEntity withPriority(final String v) {
-		this.priority = v;
+	public ErrandEntity withPriority(final String priority) {
+		this.priority = priority;
 		return this;
 	}
 
-	public ErrandEntity withReporterUserId(final String v) {
-		this.reporterUserId = v;
+	public ErrandEntity withReporterUserId(final String reporterUserId) {
+		this.reporterUserId = reporterUserId;
 		return this;
 	}
 
-	public ErrandEntity withAssignedUserId(final String v) {
-		this.assignedUserId = v;
+	public ErrandEntity withAssignedUserId(final String assignedUserId) {
+		this.assignedUserId = assignedUserId;
 		return this;
 	}
 
-	public ErrandEntity withApplicantName(final String v) {
-		this.applicantName = v;
+	public ErrandEntity withApplicantName(final String applicantName) {
+		this.applicantName = applicantName;
 		return this;
 	}
 
-	public ErrandEntity withProcessDefinitionName(final String v) {
-		this.processDefinitionName = v;
+	public ErrandEntity withProcessDefinitionName(final String processDefinitionName) {
+		this.processDefinitionName = processDefinitionName;
 		return this;
 	}
 
-	public ErrandEntity withProcessInstanceId(final String v) {
-		this.processInstanceId = v;
+	public ErrandEntity withProcessInstanceId(final String processInstanceId) {
+		this.processInstanceId = processInstanceId;
 		return this;
 	}
 
-	public ErrandEntity withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public ErrandEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 
-	public ErrandEntity withModified(final OffsetDateTime v) {
-		this.modified = v;
+	public ErrandEntity withModified(final OffsetDateTime modified) {
+		this.modified = modified;
 		return this;
 	}
 
-	public ErrandEntity withTouched(final OffsetDateTime v) {
-		this.touched = v;
+	public ErrandEntity withTouched(final OffsetDateTime touched) {
+		this.touched = touched;
 		return this;
 	}
 

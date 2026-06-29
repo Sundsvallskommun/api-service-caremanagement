@@ -77,38 +77,38 @@ public class NoteEntity {
 		return modified;
 	}
 
-	public NoteEntity withId(final String v) {
-		this.id = v;
+	public NoteEntity withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public NoteEntity withErrandId(final String v) {
-		this.errandId = v;
+	public NoteEntity withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public NoteEntity withBody(final String v) {
-		this.body = v;
+	public NoteEntity withBody(final String body) {
+		this.body = body;
 		return this;
 	}
 
-	public NoteEntity withAuthor(final String v) {
-		this.author = v;
+	public NoteEntity withAuthor(final String author) {
+		this.author = author;
 		return this;
 	}
 
-	public NoteEntity withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public NoteEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 
-	public NoteEntity withModifiedBy(final String v) {
-		this.modifiedBy = v;
+	public NoteEntity withModifiedBy(final String modifiedBy) {
+		this.modifiedBy = modifiedBy;
 		return this;
 	}
 
-	public NoteEntity withModified(final OffsetDateTime v) {
-		this.modified = v;
+	public NoteEntity withModified(final OffsetDateTime modified) {
+		this.modified = modified;
 		return this;
 	}
 }

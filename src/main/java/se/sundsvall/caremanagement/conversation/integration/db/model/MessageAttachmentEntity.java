@@ -108,38 +108,38 @@ public class MessageAttachmentEntity {
 		this.created = v;
 	}
 
-	public MessageAttachmentEntity withId(final String v) {
-		this.id = v;
+	public MessageAttachmentEntity withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public MessageAttachmentEntity withMessageId(final String v) {
-		this.messageId = v;
+	public MessageAttachmentEntity withMessageId(final String messageId) {
+		this.messageId = messageId;
 		return this;
 	}
 
-	public MessageAttachmentEntity withFileName(final String v) {
-		this.fileName = v;
+	public MessageAttachmentEntity withFileName(final String fileName) {
+		this.fileName = fileName;
 		return this;
 	}
 
-	public MessageAttachmentEntity withMimeType(final String v) {
-		this.mimeType = v;
+	public MessageAttachmentEntity withMimeType(final String mimeType) {
+		this.mimeType = mimeType;
 		return this;
 	}
 
-	public MessageAttachmentEntity withFileSize(final Integer v) {
-		this.fileSize = v;
+	public MessageAttachmentEntity withFileSize(final Integer fileSize) {
+		this.fileSize = fileSize;
 		return this;
 	}
 
-	public MessageAttachmentEntity withSenderRole(final String v) {
-		this.senderRole = v;
+	public MessageAttachmentEntity withSenderRole(final String senderRole) {
+		this.senderRole = senderRole;
 		return this;
 	}
 
-	public MessageAttachmentEntity withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public MessageAttachmentEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 

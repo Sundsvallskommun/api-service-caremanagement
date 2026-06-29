@@ -221,88 +221,88 @@ public class Errand {
 		this.touched = v;
 	}
 
-	public Errand withId(final String v) {
-		this.id = v;
+	public Errand withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public Errand withMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public Errand withMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 		return this;
 	}
 
-	public Errand withNamespace(final String v) {
-		this.namespace = v;
+	public Errand withNamespace(final String namespace) {
+		this.namespace = namespace;
 		return this;
 	}
 
-	public Errand withErrandNumber(final String v) {
-		this.errandNumber = v;
+	public Errand withErrandNumber(final String errandNumber) {
+		this.errandNumber = errandNumber;
 		return this;
 	}
 
-	public Errand withTypeSlug(final String v) {
-		this.typeSlug = v;
+	public Errand withTypeSlug(final String typeSlug) {
+		this.typeSlug = typeSlug;
 		return this;
 	}
 
-	public Errand withTitle(final String v) {
-		this.title = v;
+	public Errand withTitle(final String title) {
+		this.title = title;
 		return this;
 	}
 
-	public Errand withStatus(final String v) {
-		this.status = v;
+	public Errand withStatus(final String status) {
+		this.status = status;
 		return this;
 	}
 
-	public Errand withDescription(final String v) {
-		this.description = v;
+	public Errand withDescription(final String description) {
+		this.description = description;
 		return this;
 	}
 
-	public Errand withPriority(final String v) {
-		this.priority = v;
+	public Errand withPriority(final String priority) {
+		this.priority = priority;
 		return this;
 	}
 
-	public Errand withReporterUserId(final String v) {
-		this.reporterUserId = v;
+	public Errand withReporterUserId(final String reporterUserId) {
+		this.reporterUserId = reporterUserId;
 		return this;
 	}
 
-	public Errand withAssignedUserId(final String v) {
-		this.assignedUserId = v;
+	public Errand withAssignedUserId(final String assignedUserId) {
+		this.assignedUserId = assignedUserId;
 		return this;
 	}
 
-	public Errand withApplicantName(final String v) {
-		this.applicantName = v;
+	public Errand withApplicantName(final String applicantName) {
+		this.applicantName = applicantName;
 		return this;
 	}
 
-	public Errand withProcessDefinitionName(final String v) {
-		this.processDefinitionName = v;
+	public Errand withProcessDefinitionName(final String processDefinitionName) {
+		this.processDefinitionName = processDefinitionName;
 		return this;
 	}
 
-	public Errand withProcessInstanceId(final String v) {
-		this.processInstanceId = v;
+	public Errand withProcessInstanceId(final String processInstanceId) {
+		this.processInstanceId = processInstanceId;
 		return this;
 	}
 
-	public Errand withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public Errand withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 
-	public Errand withModified(final OffsetDateTime v) {
-		this.modified = v;
+	public Errand withModified(final OffsetDateTime modified) {
+		this.modified = modified;
 		return this;
 	}
 
-	public Errand withTouched(final OffsetDateTime v) {
-		this.touched = v;
+	public Errand withTouched(final OffsetDateTime touched) {
+		this.touched = touched;
 		return this;
 	}
 

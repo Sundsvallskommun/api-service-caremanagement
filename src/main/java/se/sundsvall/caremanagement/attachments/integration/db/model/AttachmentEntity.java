@@ -178,63 +178,63 @@ public class AttachmentEntity implements Auditable {
 		this.modified = v;
 	}
 
-	public AttachmentEntity withId(final String v) {
-		this.id = v;
+	public AttachmentEntity withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public AttachmentEntity withErrandId(final String v) {
-		this.errandId = v;
+	public AttachmentEntity withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public AttachmentEntity withNamespace(final String v) {
-		this.namespace = v;
+	public AttachmentEntity withNamespace(final String namespace) {
+		this.namespace = namespace;
 		return this;
 	}
 
-	public AttachmentEntity withMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public AttachmentEntity withMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 		return this;
 	}
 
-	public AttachmentEntity withFileName(final String v) {
-		this.fileName = v;
+	public AttachmentEntity withFileName(final String fileName) {
+		this.fileName = fileName;
 		return this;
 	}
 
-	public AttachmentEntity withMimeType(final String v) {
-		this.mimeType = v;
+	public AttachmentEntity withMimeType(final String mimeType) {
+		this.mimeType = mimeType;
 		return this;
 	}
 
-	public AttachmentEntity withFileSize(final Integer v) {
-		this.fileSize = v;
+	public AttachmentEntity withFileSize(final Integer fileSize) {
+		this.fileSize = fileSize;
 		return this;
 	}
 
-	public AttachmentEntity withOrigin(final String v) {
-		this.origin = v;
+	public AttachmentEntity withOrigin(final String origin) {
+		this.origin = origin;
 		return this;
 	}
 
-	public AttachmentEntity withSenderRole(final String v) {
-		this.senderRole = v;
+	public AttachmentEntity withSenderRole(final String senderRole) {
+		this.senderRole = senderRole;
 		return this;
 	}
 
-	public AttachmentEntity withAttachmentData(final AttachmentDataEntity v) {
-		this.attachmentData = v;
+	public AttachmentEntity withAttachmentData(final AttachmentDataEntity attachmentData) {
+		this.attachmentData = attachmentData;
 		return this;
 	}
 
-	public AttachmentEntity withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public AttachmentEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 
-	public AttachmentEntity withModified(final OffsetDateTime v) {
-		this.modified = v;
+	public AttachmentEntity withModified(final OffsetDateTime modified) {
+		this.modified = modified;
 		return this;
 	}
 

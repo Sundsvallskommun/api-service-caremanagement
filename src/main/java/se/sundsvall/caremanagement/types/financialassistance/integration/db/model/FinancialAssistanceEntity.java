@@ -458,188 +458,188 @@ public class FinancialAssistanceEntity implements Auditable {
 		this.modified = modified;
 	}
 
-	public FinancialAssistanceEntity withErrandId(final String v) {
-		this.errandId = v;
+	public FinancialAssistanceEntity withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withApplicationType(final String v) {
-		this.applicationType = v;
+	public FinancialAssistanceEntity withApplicationType(final String applicationType) {
+		this.applicationType = applicationType;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withMaritalStatus(final String v) {
-		this.maritalStatus = v;
+	public FinancialAssistanceEntity withMaritalStatus(final String maritalStatus) {
+		this.maritalStatus = maritalStatus;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withPeriodMonth(final Integer v) {
-		this.periodMonth = v;
+	public FinancialAssistanceEntity withPeriodMonth(final Integer periodMonth) {
+		this.periodMonth = periodMonth;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withPeriodYear(final Integer v) {
-		this.periodYear = v;
+	public FinancialAssistanceEntity withPeriodYear(final Integer periodYear) {
+		this.periodYear = periodYear;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withPeriodChoice(final String v) {
-		this.periodChoice = v;
+	public FinancialAssistanceEntity withPeriodChoice(final String periodChoice) {
+		this.periodChoice = periodChoice;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withNormType(final List<String> v) {
-		this.normType = v;
+	public FinancialAssistanceEntity withNormType(final List<String> normType) {
+		this.normType = normType;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withOtherBenefitDescription(final String v) {
-		this.otherBenefitDescription = v;
+	public FinancialAssistanceEntity withOtherBenefitDescription(final String otherBenefitDescription) {
+		this.otherBenefitDescription = otherBenefitDescription;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withLivelihoodDescription(final String v) {
-		this.livelihoodDescription = v;
+	public FinancialAssistanceEntity withLivelihoodDescription(final String livelihoodDescription) {
+		this.livelihoodDescription = livelihoodDescription;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withHasChildrenUnder21(final Boolean v) {
-		this.hasChildrenUnder21 = v;
+	public FinancialAssistanceEntity withHasChildrenUnder21(final Boolean hasChildrenUnder21) {
+		this.hasChildrenUnder21 = hasChildrenUnder21;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withChildrenResidenceChanged(final Boolean v) {
-		this.childrenResidenceChanged = v;
+	public FinancialAssistanceEntity withChildrenResidenceChanged(final Boolean childrenResidenceChanged) {
+		this.childrenResidenceChanged = childrenResidenceChanged;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withChildrenResidenceChangeDescription(final String v) {
-		this.childrenResidenceChangeDescription = v;
+	public FinancialAssistanceEntity withChildrenResidenceChangeDescription(final String childrenResidenceChangeDescription) {
+		this.childrenResidenceChangeDescription = childrenResidenceChangeDescription;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withHousingForm(final String v) {
-		this.housingForm = v;
+	public FinancialAssistanceEntity withHousingForm(final String housingForm) {
+		this.housingForm = housingForm;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withHousingPersonCount(final Integer v) {
-		this.housingPersonCount = v;
+	public FinancialAssistanceEntity withHousingPersonCount(final Integer housingPersonCount) {
+		this.housingPersonCount = housingPersonCount;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withHousingRoomsPlusKitchen(final Integer v) {
-		this.housingRoomsPlusKitchen = v;
+	public FinancialAssistanceEntity withHousingRoomsPlusKitchen(final Integer housingRoomsPlusKitchen) {
+		this.housingRoomsPlusKitchen = housingRoomsPlusKitchen;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withHousingDescription(final String v) {
-		this.housingDescription = v;
+	public FinancialAssistanceEntity withHousingDescription(final String housingDescription) {
+		this.housingDescription = housingDescription;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withHousingChanged(final Boolean v) {
-		this.housingChanged = v;
+	public FinancialAssistanceEntity withHousingChanged(final Boolean housingChanged) {
+		this.housingChanged = housingChanged;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withHousingChangeDescription(final String v) {
-		this.housingChangeDescription = v;
+	public FinancialAssistanceEntity withHousingChangeDescription(final String housingChangeDescription) {
+		this.housingChangeDescription = housingChangeDescription;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withHasIncomes(final Boolean v) {
-		this.hasIncomes = v;
+	public FinancialAssistanceEntity withHasIncomes(final Boolean hasIncomes) {
+		this.hasIncomes = hasIncomes;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withHasPendingBenefits(final Boolean v) {
-		this.hasPendingBenefits = v;
+	public FinancialAssistanceEntity withHasPendingBenefits(final Boolean hasPendingBenefits) {
+		this.hasPendingBenefits = hasPendingBenefits;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withHasAssets(final Boolean v) {
-		this.hasAssets = v;
+	public FinancialAssistanceEntity withHasAssets(final Boolean hasAssets) {
+		this.hasAssets = hasAssets;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withStaysInMunicipality(final Boolean v) {
-		this.staysInMunicipality = v;
+	public FinancialAssistanceEntity withStaysInMunicipality(final Boolean staysInMunicipality) {
+		this.staysInMunicipality = staysInMunicipality;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withStayDescription(final String v) {
-		this.stayDescription = v;
+	public FinancialAssistanceEntity withStayDescription(final String stayDescription) {
+		this.stayDescription = stayDescription;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withAttestation(final Boolean v) {
-		this.attestation = v;
+	public FinancialAssistanceEntity withAttestation(final Boolean attestation) {
+		this.attestation = attestation;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withAttestedAt(final OffsetDateTime v) {
-		this.attestedAt = v;
+	public FinancialAssistanceEntity withAttestedAt(final OffsetDateTime attestedAt) {
+		this.attestedAt = attestedAt;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withLastDailyRunAt(final OffsetDateTime v) {
-		this.lastDailyRunAt = v;
+	public FinancialAssistanceEntity withLastDailyRunAt(final OffsetDateTime lastDailyRunAt) {
+		this.lastDailyRunAt = lastDailyRunAt;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withChildren(final List<FaChild> v) {
-		this.children = v;
+	public FinancialAssistanceEntity withChildren(final List<FaChild> children) {
+		this.children = children;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withCosts(final List<FaCost> v) {
-		this.costs = v;
+	public FinancialAssistanceEntity withCosts(final List<FaCost> costs) {
+		this.costs = costs;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withIncomes(final List<FaIncome> v) {
-		this.incomes = v;
+	public FinancialAssistanceEntity withIncomes(final List<FaIncome> incomes) {
+		this.incomes = incomes;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withPendingBenefits(final List<FaPendingBenefit> v) {
-		this.pendingBenefits = v;
+	public FinancialAssistanceEntity withPendingBenefits(final List<FaPendingBenefit> pendingBenefits) {
+		this.pendingBenefits = pendingBenefits;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withAssets(final List<FaAsset> v) {
-		this.assets = v;
+	public FinancialAssistanceEntity withAssets(final List<FaAsset> assets) {
+		this.assets = assets;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withPersons(final List<FaPerson> v) {
-		this.persons = v;
+	public FinancialAssistanceEntity withPersons(final List<FaPerson> persons) {
+		this.persons = persons;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withPlannings(final List<FaPlanning> v) {
-		this.plannings = v;
+	public FinancialAssistanceEntity withPlannings(final List<FaPlanning> plannings) {
+		this.plannings = plannings;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withPlannedActivities(final List<FaPlannedActivity> v) {
-		this.plannedActivities = v;
+	public FinancialAssistanceEntity withPlannedActivities(final List<FaPlannedActivity> plannedActivities) {
+		this.plannedActivities = plannedActivities;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withJobApplications(final List<FaJobApplication> v) {
-		this.jobApplications = v;
+	public FinancialAssistanceEntity withJobApplications(final List<FaJobApplication> jobApplications) {
+		this.jobApplications = jobApplications;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public FinancialAssistanceEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 
-	public FinancialAssistanceEntity withModified(final OffsetDateTime v) {
-		this.modified = v;
+	public FinancialAssistanceEntity withModified(final OffsetDateTime modified) {
+		this.modified = modified;
 		return this;
 	}
 

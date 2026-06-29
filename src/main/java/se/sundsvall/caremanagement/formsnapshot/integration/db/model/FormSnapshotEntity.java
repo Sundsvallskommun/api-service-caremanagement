@@ -118,63 +118,63 @@ public class FormSnapshotEntity {
 		return created;
 	}
 
-	public FormSnapshotEntity withId(final String v) {
-		this.id = v;
+	public FormSnapshotEntity withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public FormSnapshotEntity withErrandId(final String v) {
-		this.errandId = v;
+	public FormSnapshotEntity withErrandId(final String errandId) {
+		this.errandId = errandId;
 		return this;
 	}
 
-	public FormSnapshotEntity withMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public FormSnapshotEntity withMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 		return this;
 	}
 
-	public FormSnapshotEntity withNamespace(final String v) {
-		this.namespace = v;
+	public FormSnapshotEntity withNamespace(final String namespace) {
+		this.namespace = namespace;
 		return this;
 	}
 
-	public FormSnapshotEntity withTypeSlug(final String v) {
-		this.typeSlug = v;
+	public FormSnapshotEntity withTypeSlug(final String typeSlug) {
+		this.typeSlug = typeSlug;
 		return this;
 	}
 
-	public FormSnapshotEntity withSchemaVersion(final String v) {
-		this.schemaVersion = v;
+	public FormSnapshotEntity withSchemaVersion(final String schemaVersion) {
+		this.schemaVersion = schemaVersion;
 		return this;
 	}
 
-	public FormSnapshotEntity withFormDefinitionVersion(final String v) {
-		this.formDefinitionVersion = v;
+	public FormSnapshotEntity withFormDefinitionVersion(final String formDefinitionVersion) {
+		this.formDefinitionVersion = formDefinitionVersion;
 		return this;
 	}
 
-	public FormSnapshotEntity withLocale(final String v) {
-		this.locale = v;
+	public FormSnapshotEntity withLocale(final String locale) {
+		this.locale = locale;
 		return this;
 	}
 
-	public FormSnapshotEntity withContentHash(final String v) {
-		this.contentHash = v;
+	public FormSnapshotEntity withContentHash(final String contentHash) {
+		this.contentHash = contentHash;
 		return this;
 	}
 
-	public FormSnapshotEntity withPayload(final String v) {
-		this.payload = v;
+	public FormSnapshotEntity withPayload(final String payload) {
+		this.payload = payload;
 		return this;
 	}
 
-	public FormSnapshotEntity withCapturedAt(final OffsetDateTime v) {
-		this.capturedAt = v;
+	public FormSnapshotEntity withCapturedAt(final OffsetDateTime capturedAt) {
+		this.capturedAt = capturedAt;
 		return this;
 	}
 
-	public FormSnapshotEntity withCreated(final OffsetDateTime v) {
-		this.created = v;
+	public FormSnapshotEntity withCreated(final OffsetDateTime created) {
+		this.created = created;
 		return this;
 	}
 
