@@ -26,24 +26,27 @@ public class Attachment {
 	@Schema(description = "File size in bytes", examples = "1024", accessMode = READ_ONLY)
 	private Integer fileSize;
 
-	@Schema(description = "Where the file came from: APPLICATION (citizen's application files), CONVERSATION (sent in a "
-		+ "message thread), GENERATED (a consolidated PDF produced by the platform), ERRAND (uploaded directly to the "
-		+ "errand), CASE_DATA (ärendeuppgifter — a case-data document for the errand), DECISION (beslut — a decision "
-		+ "document for the errand) or MESSAGE_HISTORY (meddelandehistorik — the archived conversation PDF for a closed "
-		+ "errand)", allowableValues = {
-			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION", "MESSAGE_HISTORY"
+	@Schema(description = """
+		Where the file came from: APPLICATION (citizen's application files), CONVERSATION (sent in a \
+		message thread), GENERATED (a consolidated PDF produced by the platform), ERRAND (uploaded directly to the \
+		errand), CASE_DATA (ärendeuppgifter — a case-data document for the errand), DECISION (beslut — a decision \
+		document for the errand) or MESSAGE_HISTORY (meddelandehistorik — the archived conversation PDF for a closed \
+		errand)""", allowableValues = {
+		"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION", "MESSAGE_HISTORY"
 	}, examples = "CONVERSATION", accessMode = READ_ONLY)
 	private String origin;
 
-	@Schema(description = "Who the file came from: CLIENT (applicant) or CASEWORKER (caseworker). May be null for "
-		+ "files predating the distinction or with no clear sender.", allowableValues = {
-			"CLIENT", "CASEWORKER"
+	@Schema(description = """
+		Who the file came from: CLIENT (applicant) or CASEWORKER (caseworker). May be null for \
+		files predating the distinction or with no clear sender.""", allowableValues = {
+		"CLIENT", "CASEWORKER"
 	}, examples = "CLIENT", accessMode = READ_ONLY)
 	private String senderRole;
 
-	@Schema(description = "For CONVERSATION attachments, the id of the message the file is attached to — download it via "
-		+ ".../messages/{messageId}/attachments/{id}/file. Null for non-conversation attachments, which download via "
-		+ ".../attachments/{id}/file.", accessMode = READ_ONLY)
+	@Schema(description = """
+		For CONVERSATION attachments, the id of the message the file is attached to — download it via \
+		.../messages/{messageId}/attachments/{id}/file. Null for non-conversation attachments, which download via \
+		.../attachments/{id}/file.""", accessMode = READ_ONLY)
 	private String messageId;
 
 	@Schema(description = "Created timestamp", accessMode = READ_ONLY)
