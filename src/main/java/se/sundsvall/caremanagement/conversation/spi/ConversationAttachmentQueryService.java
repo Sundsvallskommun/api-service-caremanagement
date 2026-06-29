@@ -22,7 +22,6 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 @Service
 public class ConversationAttachmentQueryService {
 
-	private static final String CLIENT_ROLE = "CLIENT";
 	private static final String READ_ERROR_MESSAGE = "Could not read conversation attachment content for attachment id '%s': %s";
 
 	private final MessageAttachmentRepository attachmentRepository;
@@ -51,7 +50,7 @@ public class ConversationAttachmentQueryService {
 	@Transactional(readOnly = true)
 	public List<ConversationAttachmentContent> clientAttachmentContentsForErrand(final String errandId) {
 		return attachmentRepository.findByErrandIdOrderByCreatedAsc(errandId).stream()
-			.filter(attachment -> CLIENT_ROLE.equals(attachment.getSenderRole()))
+			.filter(attachment -> SenderRole.CLIENT.name().equals(attachment.getSenderRole()))
 			.map(this::toContent)
 			.flatMap(Optional::stream)
 			.toList();

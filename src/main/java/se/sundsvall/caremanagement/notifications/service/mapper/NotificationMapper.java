@@ -8,6 +8,16 @@ import se.sundsvall.caremanagement.notifications.integration.db.model.Notificati
 import se.sundsvall.caremanagement.notifications.integration.db.model.NotificationType;
 
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.notifications.integration.db.model.NotificationSubType.ATTACHMENT;
+import static se.sundsvall.caremanagement.notifications.integration.db.model.NotificationSubType.DECISION;
+import static se.sundsvall.caremanagement.notifications.integration.db.model.NotificationSubType.ERRAND;
+import static se.sundsvall.caremanagement.notifications.integration.db.model.NotificationSubType.MESSAGE;
+import static se.sundsvall.caremanagement.notifications.integration.db.model.NotificationSubType.PARAMETER;
+import static se.sundsvall.caremanagement.notifications.integration.db.model.NotificationSubType.STAKEHOLDER;
+import static se.sundsvall.caremanagement.notifications.integration.db.model.NotificationSubType.SYSTEM;
+import static se.sundsvall.caremanagement.notifications.integration.db.model.NotificationType.CREATE;
+import static se.sundsvall.caremanagement.notifications.integration.db.model.NotificationType.DELETE;
+import static se.sundsvall.caremanagement.notifications.integration.db.model.NotificationType.UPDATE;
 
 public final class NotificationMapper {
 
@@ -15,19 +25,19 @@ public final class NotificationMapper {
 
 	/** Notification type → Swedish display name for the frontend (the machine {@code type} stays for logic/filtering). */
 	private static final Map<NotificationType, String> TYPE_DISPLAY_NAME = Map.of(
-		NotificationType.CREATE, "Skapad",
-		NotificationType.UPDATE, "Uppdaterad",
-		NotificationType.DELETE, "Borttagen");
+		CREATE, "Skapad",
+		UPDATE, "Uppdaterad",
+		DELETE, "Borttagen");
 
 	/** Notification sub-type → Swedish display name for the frontend. */
 	private static final Map<NotificationSubType, String> SUBTYPE_DISPLAY_NAME = Map.of(
-		NotificationSubType.ERRAND, "Ärende",
-		NotificationSubType.DECISION, "Beslut",
-		NotificationSubType.ATTACHMENT, "Bilaga",
-		NotificationSubType.STAKEHOLDER, "Intressent",
-		NotificationSubType.PARAMETER, "Parameter",
-		NotificationSubType.MESSAGE, "Meddelande",
-		NotificationSubType.SYSTEM, "System");
+		ERRAND, "Ärende",
+		DECISION, "Beslut",
+		ATTACHMENT, "Bilaga",
+		STAKEHOLDER, "Intressent",
+		PARAMETER, "Parameter",
+		MESSAGE, "Meddelande",
+		SYSTEM, "System");
 
 	public static NotificationEntity toEntity(final Notification notification, final String municipalityId,
 		final String namespace, final String errandId, final OffsetDateTime expires) {

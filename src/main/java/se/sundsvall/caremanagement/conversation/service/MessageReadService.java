@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageReadReceiptRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
+import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.OffsetDateTime.now;
@@ -25,19 +26,28 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @Transactional
 public class MessageReadService {
 
+	private static final String ERRAND_NOT_FOUND_MESSAGE = "No errand with id '%s' found in namespace '%s' for municipality id '%s'";
 	private static final String MESSAGES_NOT_FOUND_MESSAGE = "No messages with ids %s on errand '%s'";
 
+	private final ErrandRepository errandRepository;
 	private final MessageRepository messageRepository;
 	private final MessageReadReceiptRepository receiptRepository;
 
-	MessageReadService(final MessageRepository messageRepository, final MessageReadReceiptRepository receiptRepository) {
+	MessageReadService(final ErrandRepository errandRepository, final MessageRepository messageRepository, final MessageReadReceiptRepository receiptRepository) {
+		this.errandRepository = errandRepository;
 		this.messageRepository = messageRepository;
 		this.receiptRepository = receiptRepository;
 	}
 
 	@Transactional(readOnly = true)
-	public long unreadCount(final String errandId, final ReaderSide readerSide) {
-		return receiptRepository.countUnread(errandId, readerSide.addressedDirection(), readerSide.name());
+	public long unreadCount(final String municipalityId, final String namespace, final String errandId, final ReaderSide readerSide) {
+		ensureErrandExists(municipalityId, namespace, errandId);
+		return receiptRepository.countUnread(errandId, readerSide.addressedDirection().name(), readerSide.name());
+	}
+
+	private void ensureErrandExists(final String municipalityId, final String namespace, final String errandId) {
+		errandRepository.findByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERRAND_NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId)));
 	}
 
 	/**
@@ -45,7 +55,8 @@ public class MessageReadService {
 	 * does not is a client error. Ids that resolve to the side's own messages (it is not their recipient) and ids already
 	 * marked read are silently ignored, so the call is idempotent.
 	 */
-	public void markRead(final String errandId, final ReaderSide readerSide, final String readBy, final List<String> messageIds) {
+	public void markRead(final String municipalityId, final String namespace, final String errandId, final ReaderSide readerSide, final String readBy, final List<String> messageIds) {
+		ensureErrandExists(municipalityId, namespace, errandId);
 		final var distinctIds = messageIds.stream().distinct().toList();
 		final var messages = messageRepository.findByErrandIdAndIdIn(errandId, distinctIds);
 
@@ -56,7 +67,7 @@ public class MessageReadService {
 		}
 
 		final var addressedToReader = messages.stream()
-			.filter(message -> readerSide.addressedDirection().equals(message.getDirection()))
+			.filter(message -> readerSide.addressedDirection().name().equals(message.getDirection()))
 			.map(MessageEntity::getId)
 			.toList();
 		if (addressedToReader.isEmpty()) {

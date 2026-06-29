@@ -17,6 +17,7 @@ import se.sundsvall.caremanagement.attachments.integration.db.AttachmentReposito
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEntity;
 import se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentQueryService;
+import se.sundsvall.caremanagement.conversation.spi.SenderRole;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -60,7 +61,7 @@ public class AttachmentService {
 	private static final String CASE_DATA_FILE_EXTENSION = ".pdf";
 	private static final String MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE = "A message-history (meddelandehistorik) attachment already exists on errand '%s' in namespace '%s' for municipality id '%s'";
 	/** Sender-role facet — the application files and the consolidated client PDF are the applicant's. */
-	private static final String SENDER_CLIENT = "CLIENT";
+	private static final String SENDER_CLIENT = SenderRole.CLIENT.name();
 
 	private final ErrandRepository errandRepository;
 	private final AttachmentRepository attachmentRepository;

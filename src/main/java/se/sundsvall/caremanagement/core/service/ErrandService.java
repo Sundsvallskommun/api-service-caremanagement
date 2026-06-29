@@ -122,7 +122,7 @@ public class ErrandService {
 		final var newStatus = entity.getStatus();
 		final var timestamp = nowTs();
 
-		Optional.of(newStatus)
+		Optional.ofNullable(newStatus)
 			.filter(s -> !s.equals(previousStatus))
 			.ifPresent(s -> eventPublisher.publishEvent(new ErrandStatusChanged(
 				entity.getId(), entity.getTypeSlug(), municipalityId, namespace,

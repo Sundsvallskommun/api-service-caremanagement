@@ -117,52 +117,52 @@ public class DecisionEntity {
 		return created;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setErrandId(final String v) {
-		this.errandId = v;
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
 	}
 
-	public void setDecisionType(final String v) {
-		this.decisionType = v;
+	public void setDecisionType(final String decisionType) {
+		this.decisionType = decisionType;
 	}
 
-	public void setValue(final String v) {
-		this.value = v;
+	public void setValue(final String value) {
+		this.value = value;
 	}
 
-	public void setDescription(final String v) {
-		this.description = v;
+	public void setDescription(final String description) {
+		this.description = description;
 	}
 
-	public void setAmount(final BigDecimal v) {
-		this.amount = v;
+	public void setAmount(final BigDecimal amount) {
+		this.amount = amount;
 	}
 
-	public void setDecisionMessage(final String v) {
-		this.decisionMessage = v;
+	public void setDecisionMessage(final String decisionMessage) {
+		this.decisionMessage = decisionMessage;
 	}
 
-	public void setDecisionDate(final LocalDate v) {
-		this.decisionDate = v;
+	public void setDecisionDate(final LocalDate decisionDate) {
+		this.decisionDate = decisionDate;
 	}
 
-	public void setPeriodFrom(final LocalDate v) {
-		this.periodFrom = v;
+	public void setPeriodFrom(final LocalDate periodFrom) {
+		this.periodFrom = periodFrom;
 	}
 
-	public void setPeriodTo(final LocalDate v) {
-		this.periodTo = v;
+	public void setPeriodTo(final LocalDate periodTo) {
+		this.periodTo = periodTo;
 	}
 
-	public void setCreatedBy(final String v) {
-		this.createdBy = v;
+	public void setCreatedBy(final String createdBy) {
+		this.createdBy = createdBy;
 	}
 
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
 	}
 
 	public DecisionEntity withId(final String id) {

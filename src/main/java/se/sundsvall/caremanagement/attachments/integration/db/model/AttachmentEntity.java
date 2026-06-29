@@ -128,54 +128,54 @@ public class AttachmentEntity implements Auditable {
 		return modified;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setErrandId(final String v) {
-		this.errandId = v;
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
 	}
 
-	public void setNamespace(final String v) {
-		this.namespace = v;
+	public void setNamespace(final String namespace) {
+		this.namespace = namespace;
 	}
 
-	public void setMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public void setMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 	}
 
-	public void setFileName(final String v) {
-		this.fileName = v;
+	public void setFileName(final String fileName) {
+		this.fileName = fileName;
 	}
 
-	public void setMimeType(final String v) {
-		this.mimeType = v;
+	public void setMimeType(final String mimeType) {
+		this.mimeType = mimeType;
 	}
 
-	public void setFileSize(final Integer v) {
-		this.fileSize = v;
+	public void setFileSize(final Integer fileSize) {
+		this.fileSize = fileSize;
 	}
 
-	public void setOrigin(final String v) {
-		this.origin = v;
+	public void setOrigin(final String origin) {
+		this.origin = origin;
 	}
 
-	public void setSenderRole(final String v) {
-		this.senderRole = v;
+	public void setSenderRole(final String senderRole) {
+		this.senderRole = senderRole;
 	}
 
-	public void setAttachmentData(final AttachmentDataEntity v) {
-		this.attachmentData = v;
-	}
-
-	@Override
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setAttachmentData(final AttachmentDataEntity attachmentData) {
+		this.attachmentData = attachmentData;
 	}
 
 	@Override
-	public void setModified(final OffsetDateTime v) {
-		this.modified = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
+	@Override
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
 	}
 
 	public AttachmentEntity withId(final String id) {

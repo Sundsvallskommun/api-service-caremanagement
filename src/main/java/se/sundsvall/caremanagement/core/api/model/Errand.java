@@ -62,7 +62,9 @@ public class Errand {
 		accessMode = READ_ONLY)
 	private String applicantName;
 
-	@Schema(description = "Name of the Operaton process definition to start when the errand is created", examples = "Handläggning av ärende")
+	@Schema(
+		description = "Name of the Operaton process definition associated with the errand. Recorded on the errand; the core create endpoint does not itself start a process — process start, when applicable, is handled per errand type by a type module reacting to the errand-created domain event.",
+		examples = "Handläggning av ärende")
 	private String processDefinitionName;
 
 	@Schema(description = "Id of the Operaton process instance started for this errand", examples = "a-process-instance-id", accessMode = READ_ONLY)
@@ -153,72 +155,72 @@ public class Errand {
 		return touched;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public void setMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 	}
 
-	public void setNamespace(final String v) {
-		this.namespace = v;
+	public void setNamespace(final String namespace) {
+		this.namespace = namespace;
 	}
 
-	public void setErrandNumber(final String v) {
-		this.errandNumber = v;
+	public void setErrandNumber(final String errandNumber) {
+		this.errandNumber = errandNumber;
 	}
 
-	public void setTypeSlug(final String v) {
-		this.typeSlug = v;
+	public void setTypeSlug(final String typeSlug) {
+		this.typeSlug = typeSlug;
 	}
 
-	public void setTitle(final String v) {
-		this.title = v;
+	public void setTitle(final String title) {
+		this.title = title;
 	}
 
-	public void setStatus(final String v) {
-		this.status = v;
+	public void setStatus(final String status) {
+		this.status = status;
 	}
 
-	public void setDescription(final String v) {
-		this.description = v;
+	public void setDescription(final String description) {
+		this.description = description;
 	}
 
-	public void setPriority(final String v) {
-		this.priority = v;
+	public void setPriority(final String priority) {
+		this.priority = priority;
 	}
 
-	public void setReporterUserId(final String v) {
-		this.reporterUserId = v;
+	public void setReporterUserId(final String reporterUserId) {
+		this.reporterUserId = reporterUserId;
 	}
 
-	public void setAssignedUserId(final String v) {
-		this.assignedUserId = v;
+	public void setAssignedUserId(final String assignedUserId) {
+		this.assignedUserId = assignedUserId;
 	}
 
-	public void setApplicantName(final String v) {
-		this.applicantName = v;
+	public void setApplicantName(final String applicantName) {
+		this.applicantName = applicantName;
 	}
 
-	public void setProcessDefinitionName(final String v) {
-		this.processDefinitionName = v;
+	public void setProcessDefinitionName(final String processDefinitionName) {
+		this.processDefinitionName = processDefinitionName;
 	}
 
-	public void setProcessInstanceId(final String v) {
-		this.processInstanceId = v;
+	public void setProcessInstanceId(final String processInstanceId) {
+		this.processInstanceId = processInstanceId;
 	}
 
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
 	}
 
-	public void setModified(final OffsetDateTime v) {
-		this.modified = v;
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
 	}
 
-	public void setTouched(final OffsetDateTime v) {
-		this.touched = v;
+	public void setTouched(final OffsetDateTime touched) {
+		this.touched = touched;
 	}
 
 	public Errand withId(final String id) {

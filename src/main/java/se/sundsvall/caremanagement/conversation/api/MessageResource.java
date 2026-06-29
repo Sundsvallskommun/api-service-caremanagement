@@ -94,7 +94,7 @@ class MessageResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId) {
 
-		return ok(service.listForErrand(errandId));
+		return ok(service.listForErrand(municipalityId, namespace, errandId));
 	}
 
 	@GetMapping(path = "/unread-count", produces = APPLICATION_JSON_VALUE)
@@ -106,7 +106,7 @@ class MessageResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId) {
 
-		return ok(new UnreadCount(readService.unreadCount(errandId, resolveReaderSide(requireIdentifier()))));
+		return ok(new UnreadCount(readService.unreadCount(municipalityId, namespace, errandId, resolveReaderSide(requireIdentifier()))));
 	}
 
 	@PostMapping(path = "/read", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
@@ -123,7 +123,7 @@ class MessageResource {
 		@Valid @NotNull @RequestBody final MarkMessagesRead request) {
 
 		final var identifier = requireIdentifier();
-		readService.markRead(errandId, resolveReaderSide(identifier), identifier.getValue(), request.messageIds());
+		readService.markRead(municipalityId, namespace, errandId, resolveReaderSide(identifier), identifier.getValue(), request.messageIds());
 		return noContent().build();
 	}
 
@@ -135,7 +135,7 @@ class MessageResource {
 		@ValidUuid @PathVariable final String errandId,
 		@ValidUuid @PathVariable final String messageId) {
 
-		return ok(service.read(messageId));
+		return ok(service.read(municipalityId, namespace, errandId, messageId));
 	}
 
 	@GetMapping(path = "/{messageId}/attachments/{attachmentId}/file", produces = ALL_VALUE)
@@ -151,7 +151,7 @@ class MessageResource {
 		@Parameter(name = "attachmentId", description = "Attachment id") @ValidUuid @PathVariable final String attachmentId,
 		final HttpServletResponse response) {
 
-		service.streamAttachmentFile(errandId, messageId, attachmentId, response);
+		service.streamAttachmentFile(municipalityId, namespace, errandId, messageId, attachmentId, response);
 	}
 
 	/** The current {@code X-Sent-By} identity; a client error if absent (read state must be attributable to a side). */

@@ -92,7 +92,7 @@ class MessageResourceTest {
 
 	@Test
 	void list() {
-		when(serviceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(Message.create().withId("m1")));
+		when(serviceMock.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Message.create().withId("m1")));
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -103,12 +103,12 @@ class MessageResourceTest {
 			.getResponseBody();
 
 		assertThat(response).hasSize(1);
-		verify(serviceMock).listForErrand(ERRAND_ID);
+		verify(serviceMock).listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
 	void unreadCountForCaseworker() {
-		when(readServiceMock.unreadCount(ERRAND_ID, CASEWORKER)).thenReturn(5L);
+		when(readServiceMock.unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CASEWORKER)).thenReturn(5L);
 
 		final var body = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -121,12 +121,12 @@ class MessageResourceTest {
 
 		assertThat(body).isNotNull();
 		assertThat(body.unreadCount()).isEqualTo(5L);
-		verify(readServiceMock).unreadCount(ERRAND_ID, CASEWORKER);
+		verify(readServiceMock).unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CASEWORKER);
 	}
 
 	@Test
 	void unreadCountForClient() {
-		when(readServiceMock.unreadCount(ERRAND_ID, CLIENT)).thenReturn(2L);
+		when(readServiceMock.unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CLIENT)).thenReturn(2L);
 
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -134,7 +134,7 @@ class MessageResourceTest {
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(readServiceMock).unreadCount(ERRAND_ID, CLIENT);
+		verify(readServiceMock).unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CLIENT);
 	}
 
 	@Test
@@ -149,12 +149,12 @@ class MessageResourceTest {
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(readServiceMock).markRead(ERRAND_ID, CASEWORKER, "joe001doe", messageIds);
+		verify(readServiceMock).markRead(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CASEWORKER, "joe001doe", messageIds);
 	}
 
 	@Test
 	void read() {
-		when(serviceMock.read(MESSAGE_ID)).thenReturn(Message.create().withId(MESSAGE_ID).withBody("b"));
+		when(serviceMock.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, MESSAGE_ID)).thenReturn(Message.create().withId(MESSAGE_ID).withBody("b"));
 
 		final var message = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{messageId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "messageId", MESSAGE_ID)))
@@ -166,16 +166,16 @@ class MessageResourceTest {
 
 		assertThat(message).isNotNull();
 		assertThat(message.getId()).isEqualTo(MESSAGE_ID);
-		verify(serviceMock).read(MESSAGE_ID);
+		verify(serviceMock).read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, MESSAGE_ID);
 	}
 
 	@Test
 	void streamAttachmentFile() {
 		doAnswer(invocation -> {
-			final HttpServletResponse response = invocation.getArgument(3);
+			final HttpServletResponse response = invocation.getArgument(5);
 			response.getOutputStream().write("file-bytes".getBytes());
 			return null;
-		}).when(serviceMock).streamAttachmentFile(eq(ERRAND_ID), eq(MESSAGE_ID), eq(ATTACHMENT_ID), any());
+		}).when(serviceMock).streamAttachmentFile(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(MESSAGE_ID), eq(ATTACHMENT_ID), any());
 
 		final var body = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{messageId}/attachments/{attachmentId}/file")
@@ -187,6 +187,6 @@ class MessageResourceTest {
 			.getResponseBody();
 
 		assertThat(new String(body)).isEqualTo("file-bytes");
-		verify(serviceMock).streamAttachmentFile(eq(ERRAND_ID), eq(MESSAGE_ID), eq(ATTACHMENT_ID), any());
+		verify(serviceMock).streamAttachmentFile(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(MESSAGE_ID), eq(ATTACHMENT_ID), any());
 	}
 }

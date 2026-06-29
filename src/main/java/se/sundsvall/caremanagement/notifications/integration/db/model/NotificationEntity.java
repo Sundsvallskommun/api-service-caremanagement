@@ -137,62 +137,62 @@ public class NotificationEntity implements Auditable {
 		return modified;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setErrandId(final String v) {
-		this.errandId = v;
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
 	}
 
-	public void setMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public void setMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 	}
 
-	public void setNamespace(final String v) {
-		this.namespace = v;
+	public void setNamespace(final String namespace) {
+		this.namespace = namespace;
 	}
 
-	public void setOwnerId(final String v) {
-		this.ownerId = v;
+	public void setOwnerId(final String ownerId) {
+		this.ownerId = ownerId;
 	}
 
-	public void setCreatedBy(final String v) {
-		this.createdBy = v;
+	public void setCreatedBy(final String createdBy) {
+		this.createdBy = createdBy;
 	}
 
-	public void setType(final NotificationType v) {
-		this.type = v;
+	public void setType(final NotificationType type) {
+		this.type = type;
 	}
 
-	public void setSubType(final NotificationSubType v) {
-		this.subType = v;
+	public void setSubType(final NotificationSubType subType) {
+		this.subType = subType;
 	}
 
-	public void setDescription(final String v) {
-		this.description = v;
+	public void setDescription(final String description) {
+		this.description = description;
 	}
 
-	public void setContent(final String v) {
-		this.content = v;
+	public void setContent(final String content) {
+		this.content = content;
 	}
 
-	public void setAcknowledged(final boolean v) {
-		this.acknowledged = v;
+	public void setAcknowledged(final boolean acknowledged) {
+		this.acknowledged = acknowledged;
 	}
 
-	public void setExpires(final OffsetDateTime v) {
-		this.expires = v;
-	}
-
-	@Override
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setExpires(final OffsetDateTime expires) {
+		this.expires = expires;
 	}
 
 	@Override
-	public void setModified(final OffsetDateTime v) {
-		this.modified = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
+	@Override
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
 	}
 
 	public NotificationEntity withId(final String id) {

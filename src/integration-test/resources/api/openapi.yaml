@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:61380
+- url: http://localhost:52174
   description: Generated server url
 tags:
 - name: Notifications
@@ -2588,8 +2588,10 @@ components:
           readOnly: true
         processDefinitionName:
           type: string
-          description: Name of the Operaton process definition to start when the errand
-            is created
+          description: "Name of the Operaton process definition associated with the\
+            \ errand. Recorded on the errand; the core create endpoint does not itself\
+            \ start a process — process start, when applicable, is handled per errand\
+            \ type by a type module reacting to the errand-created domain event."
           examples:
           - Handläggning av ärende
         processInstanceId:

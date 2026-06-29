@@ -57,28 +57,28 @@ public class PatchErrand {
 		return assignedUserId;
 	}
 
-	public void setTitle(final String v) {
-		this.title = v;
+	public void setTitle(final String title) {
+		this.title = title;
 	}
 
-	public void setStatus(final String v) {
-		this.status = v;
+	public void setStatus(final String status) {
+		this.status = status;
 	}
 
-	public void setDescription(final String v) {
-		this.description = v;
+	public void setDescription(final String description) {
+		this.description = description;
 	}
 
-	public void setPriority(final String v) {
-		this.priority = v;
+	public void setPriority(final String priority) {
+		this.priority = priority;
 	}
 
-	public void setReporterUserId(final String v) {
-		this.reporterUserId = v;
+	public void setReporterUserId(final String reporterUserId) {
+		this.reporterUserId = reporterUserId;
 	}
 
-	public void setAssignedUserId(final String v) {
-		this.assignedUserId = v;
+	public void setAssignedUserId(final String assignedUserId) {
+		this.assignedUserId = assignedUserId;
 	}
 
 	public PatchErrand withTitle(final String title) {
