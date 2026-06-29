@@ -56,8 +56,9 @@ public class Errand {
 	@Schema(description = "User id of the assignee", examples = "jane02doe")
 	private String assignedUserId;
 
-	@Schema(description = "Denormalized display name of the errand's applicant, maintained from the APPLICANT stakeholder. "
-		+ "Sortable and searchable on the errand list (e.g. ?sort=applicantName,asc). Null for errand types with no applicant.",
+	@Schema(description = """
+		Denormalized display name of the errand's applicant, maintained from the APPLICANT stakeholder. \
+		Sortable and searchable on the errand list (e.g. ?sort=applicantName,asc). Null for errand types with no applicant.""",
 		examples = "Anna Andersson",
 		accessMode = READ_ONLY)
 	private String applicantName;

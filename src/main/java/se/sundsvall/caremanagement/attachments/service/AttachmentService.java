@@ -134,20 +134,6 @@ public class AttachmentService {
 	}
 
 	/**
-	 * Combine a list of heterogeneous files into a single PDF (PDFs inlined, images rasterised, {@code .docx} rendered,
-	 * anything else a placeholder page), in order. Exposed for the conversation-archiving job, which merges the rendered
-	 * message pages with the errand's conversation attachments.
-	 *
-	 * @param  sources the files to combine, in order (must contain at least one element)
-	 * @return         the combined PDF as bytes
-	 */
-	public byte[] combineToPdf(final List<CombineSource> sources) {
-		return PdfCombiner.combine(sources.stream()
-			.map(source -> new SourceFile(source.fileName(), source.mimeType(), source.content()))
-			.toList());
-	}
-
-	/**
 	 * Persist each uploaded file as its own attachment and, in addition, a single combined PDF that merges them all (in
 	 * order). The combined PDF is stored as a further attachment named {@value #COMBINED_PDF_FILE_NAME}. The file list is
 	 * type-agnostic — PDFs, images and {@code .docx} are inlined, anything else becomes a placeholder page — so an odd

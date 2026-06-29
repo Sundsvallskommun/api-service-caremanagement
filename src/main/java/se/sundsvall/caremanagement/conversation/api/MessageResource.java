@@ -12,13 +12,13 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,6 +27,7 @@ import se.sundsvall.caremanagement.conversation.api.model.CreateMessage;
 import se.sundsvall.caremanagement.conversation.api.model.MarkMessagesRead;
 import se.sundsvall.caremanagement.conversation.api.model.Message;
 import se.sundsvall.caremanagement.conversation.api.model.UnreadCount;
+import se.sundsvall.caremanagement.conversation.api.validation.ValidIdentifier;
 import se.sundsvall.caremanagement.conversation.service.MessageReadService;
 import se.sundsvall.caremanagement.conversation.service.MessageService;
 import se.sundsvall.caremanagement.conversation.service.ReaderSide;
@@ -104,9 +105,12 @@ class MessageResource {
 	ResponseEntity<UnreadCount> unreadCount(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@ValidUuid @PathVariable final String errandId) {
+		@ValidUuid @PathVariable final String errandId,
+		@Parameter(name = Identifier.HEADER_NAME,
+			description = "Caller identity (type=adAccount → caseworker, type=partyId → applicant)",
+			example = "joe001doe; type=adAccount") @RequestHeader(Identifier.HEADER_NAME) @ValidIdentifier final String xSentBy) {
 
-		return ok(new UnreadCount(readService.unreadCount(municipalityId, namespace, errandId, resolveReaderSide(requireIdentifier()))));
+		return ok(new UnreadCount(readService.unreadCount(municipalityId, namespace, errandId, resolveReaderSide(Identifier.parse(xSentBy)))));
 	}
 
 	@PostMapping(path = "/read", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
@@ -120,9 +124,10 @@ class MessageResource {
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId,
+		@Parameter(name = Identifier.HEADER_NAME, description = "Caller identity (type=adAccount → caseworker, type=partyId → applicant)", example = "joe001doe; type=adAccount") @RequestHeader(Identifier.HEADER_NAME) @ValidIdentifier final String xSentBy,
 		@Valid @NotNull @RequestBody final MarkMessagesRead request) {
 
-		final var identifier = requireIdentifier();
+		final var identifier = Identifier.parse(xSentBy);
 		readService.markRead(municipalityId, namespace, errandId, resolveReaderSide(identifier), identifier.getValue(), request.messageIds());
 		return noContent().build();
 	}
@@ -152,13 +157,6 @@ class MessageResource {
 		final HttpServletResponse response) {
 
 		service.streamAttachmentFile(municipalityId, namespace, errandId, messageId, attachmentId, response);
-	}
-
-	/** The current {@code X-Sent-By} identity; a client error if absent (read state must be attributable to a side). */
-	private static Identifier requireIdentifier() {
-		return Optional.ofNullable(Identifier.get())
-			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, "Missing required header '" + Identifier.HEADER_NAME
-				+ "' — expected e.g. 'joe001doe; type=adAccount' or '<uuid>; type=partyId'"));
 	}
 
 	/** Maps the identity to its conversation side: an adAccount is the caseworker, a partyId is the applicant. */

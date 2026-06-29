@@ -173,16 +173,6 @@ class AttachmentServiceTest {
 	}
 
 	@Test
-	void combineToPdfMergesSourcesIntoAPdf() {
-		final var result = service.combineToPdf(List.of(
-			new CombineSource("meddelanden.pdf", "application/pdf", "%PDF-1.4 minimal".getBytes()),
-			new CombineSource("note.txt", "text/plain", "en anteckning".getBytes())));
-
-		assertThat(result).isNotEmpty();
-		assertThat(new String(result, 0, 4)).isEqualTo("%PDF");
-	}
-
-	@Test
 	void storeAndCombinePersistsEachSourceAndACombinedPdf() {
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
 			.thenReturn(Optional.of(mock(ErrandEntity.class)));

@@ -7,6 +7,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -69,6 +70,26 @@ public class MessageReadReceiptEntity {
 		return readAt;
 	}
 
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public void setMessageId(final String messageId) {
+		this.messageId = messageId;
+	}
+
+	public void setReaderSide(final String readerSide) {
+		this.readerSide = readerSide;
+	}
+
+	public void setReadBy(final String readBy) {
+		this.readBy = readBy;
+	}
+
+	public void setReadAt(final OffsetDateTime readAt) {
+		this.readAt = readAt;
+	}
+
 	public MessageReadReceiptEntity withId(final String id) {
 		this.id = id;
 		return this;
@@ -92,5 +113,26 @@ public class MessageReadReceiptEntity {
 	public MessageReadReceiptEntity withReadAt(final OffsetDateTime readAt) {
 		this.readAt = readAt;
 		return this;
+	}
+
+	@Override
+	public boolean equals(final Object o) {
+		if (o == null || getClass() != o.getClass())
+			return false;
+		final MessageReadReceiptEntity that = (MessageReadReceiptEntity) o;
+		return Objects.equals(id, that.id) && Objects.equals(messageId, that.messageId)
+			&& Objects.equals(readerSide, that.readerSide) && Objects.equals(readBy, that.readBy)
+			&& Objects.equals(readAt, that.readAt);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, messageId, readerSide, readBy, readAt);
+	}
+
+	@Override
+	public String toString() {
+		return "MessageReadReceiptEntity{id='" + id + "', messageId='" + messageId + "', readerSide='" + readerSide
+			+ "', readBy='" + readBy + "', readAt=" + readAt + '}';
 	}
 }

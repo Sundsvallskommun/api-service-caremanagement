@@ -8,8 +8,9 @@ import org.springframework.format.annotation.DateTimeFormat;
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
-@Schema(description = "Metadata of a file attached to a message. Download the content via "
-	+ "GET .../messages/{messageId}/attachments/{id}/file")
+@Schema(description = """
+	Metadata of a file attached to a message. Download the content via \
+	GET .../messages/{messageId}/attachments/{id}/file""")
 public class MessageAttachment {
 
 	@Schema(description = "Unique identifier", examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec", accessMode = READ_ONLY)
@@ -24,9 +25,10 @@ public class MessageAttachment {
 	@Schema(description = "File size in bytes", examples = "1024", accessMode = READ_ONLY)
 	private Integer fileSize;
 
-	@Schema(description = "Who sent the file, derived from the message direction: CLIENT (applicant, INBOUND) or "
-		+ "CASEWORKER (caseworker, OUTBOUND)", allowableValues = {
-			"CLIENT", "CASEWORKER"
+	@Schema(description = """
+		Who sent the file, derived from the message direction: CLIENT (applicant, INBOUND) or \
+		CASEWORKER (caseworker, OUTBOUND)""", allowableValues = {
+		"CLIENT", "CASEWORKER"
 	}, examples = "CLIENT", accessMode = READ_ONLY)
 	private String senderRole;
 

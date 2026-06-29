@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -76,6 +77,34 @@ public class MessageEntity {
 		return created;
 	}
 
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public void setDirection(final String direction) {
+		this.direction = direction;
+	}
+
+	public void setBody(final String body) {
+		this.body = body;
+	}
+
+	public void setAuthor(final String author) {
+		this.author = author;
+	}
+
+	public void setInReplyToId(final String inReplyToId) {
+		this.inReplyToId = inReplyToId;
+	}
+
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
 	public MessageEntity withId(final String id) {
 		this.id = id;
 		return this;
@@ -109,5 +138,27 @@ public class MessageEntity {
 	public MessageEntity withCreated(final OffsetDateTime created) {
 		this.created = created;
 		return this;
+	}
+
+	@Override
+	public boolean equals(final Object o) {
+		if (o == null || getClass() != o.getClass())
+			return false;
+		final MessageEntity that = (MessageEntity) o;
+		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
+			&& Objects.equals(direction, that.direction) && Objects.equals(body, that.body)
+			&& Objects.equals(author, that.author) && Objects.equals(inReplyToId, that.inReplyToId)
+			&& Objects.equals(created, that.created);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, errandId, direction, body, author, inReplyToId, created);
+	}
+
+	@Override
+	public String toString() {
+		return "MessageEntity{id='" + id + "', errandId='" + errandId + "', direction='" + direction + "', body='" + body
+			+ "', author='" + author + "', inReplyToId='" + inReplyToId + "', created=" + created + '}';
 	}
 }

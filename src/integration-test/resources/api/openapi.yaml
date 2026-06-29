@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:57029
+- url: http://localhost:62140
   description: Generated server url
 tags:
 - name: Notifications
@@ -915,6 +915,14 @@ paths:
         required: true
         schema:
           type: string
+      - name: X-Sent-By
+        in: header
+        description: "Caller identity (type=adAccount → caseworker, type=partyId →\
+          \ applicant)"
+        required: true
+        schema:
+          type: string
+        example: joe001doe; type=adAccount
       requestBody:
         content:
           application/json:
@@ -2035,6 +2043,14 @@ paths:
         required: true
         schema:
           type: string
+      - name: X-Sent-By
+        in: header
+        description: "Caller identity (type=adAccount → caseworker, type=partyId →\
+          \ applicant)"
+        required: true
+        schema:
+          type: string
+        example: joe001doe; type=adAccount
       responses:
         "200":
           description: OK
