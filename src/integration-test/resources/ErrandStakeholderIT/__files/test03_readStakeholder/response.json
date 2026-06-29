@@ -14,15 +14,5 @@
 			"key": "Email",
 			"value": "joe.doe@example.com"
 		}
-	],
-	"parameters": [
-		{
-			"id": 100,
-			"displayName": "Phone number",
-			"key": "phoneNumber",
-			"values": [
-				"+46701234567"
-			]
-		}
 	]
 }

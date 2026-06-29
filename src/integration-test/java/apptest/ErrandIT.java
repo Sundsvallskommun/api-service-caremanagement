@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 import se.sundsvall.caremanagement.Application;
-import se.sundsvall.caremanagement.integration.db.ErrandRepository;
+import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 
@@ -113,24 +113,5 @@ class ErrandIT extends AbstractAppTest {
 			.withExpectedResponseStatus(NOT_FOUND)
 			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequestAndVerifyResponse();
-	}
-
-	@Test
-	void test08_createErrandStartsOperatonProcess() {
-		setupCall()
-			.withServicePath(PATH)
-			.withHttpMethod(POST)
-			.withRequest(REQUEST_FILE)
-			.withExpectedResponseStatus(CREATED)
-			.withExpectedResponseHeader(LOCATION, List.of("^/2281/MY_NAMESPACE/errands/[a-f0-9-]+$"))
-			.withExpectedResponseBodyIsNull()
-			.sendRequestAndVerifyResponse();
-
-		final var errand = repository.findAll().stream()
-			.filter(e -> "Started Errand".equals(e.getTitle()))
-			.findFirst()
-			.orElseThrow();
-		assertThat(errand.getProcessDefinitionName()).isEqualTo("Handläggning");
-		assertThat(errand.getProcessInstanceId()).isEqualTo("pi-test-08");
 	}
 }

@@ -15,12 +15,24 @@ springdoc:
 spring:
   application:
     name: care-management
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: -1
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
   flyway:
     enabled: false
   jpa:
     properties:
+      hibernate:
+        type:
+          # Store java.util.UUID as binary(16), not the native MariaDB UUID type.
+          # MariaDB 11 (prod) has a native UUID type, MariaDB 10.6 (tests) does not,
+          # so Hibernate would otherwise bind the Spring Modulith event_publication.id
+          # as a 36-char string on prod and overflow the binary(16) column. Pinning to
+          # BINARY keeps the same representation on every engine version.
+          preferred_uuid_jdbc_type: BINARY
       jakarta:
         persistence:
           schema-generation:
@@ -33,6 +45,43 @@ spring:
           operaton:
             authorization-grant-type: client_credentials
             provider: operaton
+          messaging:
+            client-id: ${INTEGRATION_MESSAGING_CLIENT_ID:override}
+            client-secret: ${INTEGRATION_MESSAGING_CLIENT_SECRET:override}
+            authorization-grant-type: client_credentials
+            provider: messaging
+          templating:
+            client-id: ${INTEGRATION_TEMPLATING_CLIENT_ID:override}
+            client-secret: ${INTEGRATION_TEMPLATING_CLIENT_SECRET:override}
+            authorization-grant-type: client_credentials
+            provider: templating
+          citizen:
+            client-id: ${INTEGRATION_CITIZEN_CLIENT_ID:override}
+            client-secret: ${INTEGRATION_CITIZEN_CLIENT_SECRET:override}
+            authorization-grant-type: client_credentials
+            provider: citizen
+          financial-aid:
+            client-id: ${INTEGRATION_FINANCIAL_AID_CLIENT_ID:override}
+            client-secret: ${INTEGRATION_FINANCIAL_AID_CLIENT_SECRET:override}
+            authorization-grant-type: client_credentials
+            provider: financial-aid
+          rpa:
+            client-id: ${INTEGRATION_RPA_CLIENT_ID:override}
+            client-secret: ${INTEGRATION_RPA_CLIENT_SECRET:override}
+            authorization-grant-type: client_credentials
+            provider: rpa
+            scope: OR.Queues, OR.Queues.Read, OR.Queues.Write
+        provider:
+          messaging:
+            token-uri: ${INTEGRATION_MESSAGING_TOKEN_URI:http://localhost/token}
+          templating:
+            token-uri: ${INTEGRATION_TEMPLATING_TOKEN_URI:http://localhost/token}
+          citizen:
+            token-uri: ${INTEGRATION_CITIZEN_TOKEN_URI:http://localhost/token}
+          financial-aid:
+            token-uri: ${INTEGRATION_FINANCIAL_AID_TOKEN_URI:http://localhost/token}
+          rpa:
+            token-uri: ${INTEGRATION_RPA_TOKEN_URI:http://localhost/token}
 #========================================
 # Integration settings
 #========================================
@@ -40,3 +89,115 @@ integration:
   operaton:
     connect-timeout: 5
     read-timeout: 30
+  # financial-aid (SSBTEK proxy). OAuth2 client-credentials via the financial-aid Spring security registration above.
+  financial-aid:
+    url: ${INTEGRATION_FINANCIAL_AID_URL:http://localhost}
+    connect-timeout: 5
+    read-timeout: 30
+  messaging:
+    url: ${INTEGRATION_MESSAGING_URL:http://localhost}
+    connect-timeout: 5
+    read-timeout: 30
+  templating:
+    url: ${INTEGRATION_TEMPLATING_URL:http://localhost}
+    connect-timeout: 5
+    read-timeout: 30
+  citizen:
+    url: ${INTEGRATION_CITIZEN_URL:http://localhost}
+    connect-timeout: 5
+    read-timeout: 30
+  # Eneo (LLM) document/decision support. OAuth2 is built programmatically (not a Spring registration).
+  eneo:
+    url: ${INTEGRATION_ENEO_URL:http://localhost}
+    api-key: ${INTEGRATION_ENEO_API_KEY:override}
+    connect-timeout-in-seconds: 5
+    read-timeout-in-seconds: 30
+    oauth2:
+      token-url: ${INTEGRATION_ENEO_OAUTH2_TOKEN_URL:http://localhost/token}
+      client-id: ${INTEGRATION_ENEO_OAUTH2_CLIENT_ID:override}
+      client-secret: ${INTEGRATION_ENEO_OAUTH2_CLIENT_SECRET:override}
+  # Lifecare FamilyCare (FC) — EB write-back (actualisation + calculation) + proposal lookups. Auth is domain + key
+  # (query params / X-API-Key header); url is the FC base path (host + /WESE.FC.Api.FC). The key is sensitive — inject
+  # via secret and keep it out of request logging.
+  lifecare-fc:
+    url: ${INTEGRATION_LIFECARE_FC_URL:http://localhost}
+    domain: ${INTEGRATION_LIFECARE_FC_DOMAIN:override}
+    key: ${INTEGRATION_LIFECARE_FC_KEY:override}
+    connect-timeout: 5
+    read-timeout: 30
+    # Lookback (months, ending at the reference date) for the EB eligibility reads — actualisations, decisions, calculations.
+    eb-lookback-months: 13
+  # UiPath Orchestrator RPA — enqueues EB Lifecare write/fetch jobs as queue items (AddQueueItem). url is the
+  # Orchestrator base; queue is the single EB queue (the action travels in the item SpecificContent); folderIds map
+  # municipalityId → Orchestrator folder (X-UIPATH-OrganizationUnitId). OAuth2 via the rpa registration above. Set
+  # enabled=false to make every enqueue a logged no-op (environments without an Orchestrator).
+    # enabled defaults false so an unconfigured deploy is a logged no-op (no errors); set INTEGRATION_RPA_ENABLED=true
+    # plus INTEGRATION_RPA_URL/_TOKEN_URI to actually enqueue (in Drakel: the internal WireMock host + its /token stub).
+  rpa:
+    url: ${INTEGRATION_RPA_URL:http://localhost}
+    enabled: ${INTEGRATION_RPA_ENABLED:false}
+    queue: ${INTEGRATION_RPA_QUEUE:RakelEkonomisktBistand}
+    folder-ids:
+      2281: ${INTEGRATION_RPA_FOLDER_ID_2281:1}
+    connect-timeout: 5
+    read-timeout: 30
+#========================================
+# Notification settings
+#========================================
+notification:
+  ttl: P30D
+scheduler:
+  notification-cleanup:
+    cron: '0 0 2 * * *'
+    name: notification-cleanup
+    shedlock-lock-at-most-for: PT5M
+    maximum-execution-time: PT5M
+  database-cleanup:
+    cron: '-'
+    name: database-cleanup
+    shedlock-lock-at-most-for: PT5M
+    maximum-execution-time: PT10M
+  message-archive:
+    cron: '0 30 3 * * *'
+    name: message-archive
+    shedlock-lock-at-most-for: PT30M
+    maximum-execution-time: PT30M
+#========================================
+# Conversation archiving settings
+#========================================
+# Nightly job: snapshots the conversation of every closed EB errand into {errandNumber}_meddelandehistorik.pdf once it
+# has been closed (and untouched) for days-after-close days, then uploads it to the errand's Lifecare actualisation.
+# The Lifecare document-type / sender-type codes are tenant-specific (mocked in Drakel) — override per environment.
+archive:
+  message:
+    municipality-id: 2281
+    namespace: FINANCIAL_ASSISTANCE
+    days-after-close: 30
+    lifecare-document-type: ${ARCHIVE_MESSAGE_LIFECARE_DOCUMENT_TYPE:MEDDELANDEHISTORIK}
+    lifecare-document-sender-type: ${ARCHIVE_MESSAGE_LIFECARE_SENDER_TYPE:MYNDIGHET}
+    document-label: Meddelanden och bilagor från Draken
+    lifecare-sender-name: Sundsvalls kommun
+#========================================
+# Maintenance settings
+#========================================
+maintenance:
+  database-cleanup:
+    # Destructive nightly demo reset. Disabled by default; the scheduler bean is only created when this
+    # is true (set together with scheduler.database-cleanup.cron in throwaway demo environments only).
+    enabled: false
+#========================================
+# Financial assistance (EB) settings
+#========================================
+financial-assistance:
+  eligibility:
+    # "Inom X dagar" duplicate-application guard for the common-entry-point eligibility check. A request may override it.
+    duplicate-window-days: 90
+    # "Recently closed inom X dagar" guard. When an applicant's previous EB errand was closed this recently, the
+    # eligibility check recommends a renewal (reasonCode RECENTLY_CLOSED) and surfaces the closed errand, and a freshly
+    # created errand is frozen as NEEDS_MANUAL_REVIEW (no aktualisering, no arkivering) for a caseworker to reopen in
+    # Lifecare and release. Policy value — confirm the day count with legal/jurist.
+    recently-closed-window-days: 30
+    # TEST OVERRIDE: when true the eligibility check short-circuits and returns all three application types
+    # (new/renewal/supplementary application) regardless of any existing case, so the frontend can exercise all three
+    # flows. Set to false to restore the real common-entry-point routing.
+    return-all-types: true

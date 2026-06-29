@@ -1,0 +1,66 @@
+openapi: 3.1.0
+info:
+  title: Eneo API (subset)
+  description: >-
+    Trimmed subset of the Eneo (Sundsvall LLM platform) API used by rtj-management to
+    validate egensotning attachments. Only the schemas consumed by EneoClient are kept
+    (assistant sessions + file upload). The full spec lives in api-service-ai-flow.
+  version: '2.0'
+servers:
+  - url: https://api-prod.sundsvall.se/eneo-sundsvall/2.0
+paths: {}
+components:
+  schemas:
+    AskAssistant:
+      type: object
+      description: Request body for asking an Eneo assistant within a new session.
+      properties:
+        question:
+          type: string
+          title: Question
+        files:
+          type: array
+          default: []
+          maxItems: 20
+          items:
+            type: string
+            format: uuid
+          title: Files
+        stream:
+          type: boolean
+          default: false
+          title: Stream
+      required:
+        - question
+      title: AskAssistant
+    AskResponse:
+      type: object
+      description: Response from an Eneo assistant session.
+      properties:
+        session_id:
+          type: string
+          format: uuid
+          title: Session Id
+        answer:
+          type: string
+          title: Answer
+      required:
+        - answer
+      title: AskResponse
+    FilePublic:
+      type: object
+      description: Metadata for a file uploaded to Eneo.
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          title: Name
+        mimetype:
+          type: string
+          title: Mimetype
+      required:
+        - id
+      title: FilePublic

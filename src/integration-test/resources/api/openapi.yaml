@@ -7,31 +7,82 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:64288
+- url: http://localhost:61380
   description: Generated server url
 tags:
-- name: Errand decisions
-  description: "Decision audit trail on an errand. Stores both system-generated decisions\
-    \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
-    \ (e.g. handläggare APPROVE/REJECT), distinguished by `decisionType`."
-- name: Errand parameters
-  description: Errand parameter operations
+- name: Notifications
+  description: User-facing notifications raised against an errand. Recipients (`ownerId`)
+    acknowledge them when seen; expired ones are purged by a daily background job.
 - name: Errand stakeholders
   description: Errand stakeholder operations
-- name: Stakeholder parameters
-  description: Stakeholder parameter operations
 - name: Metadata
   description: Metadata (lookup) operations
 - name: Namespace config
   description: Namespace configuration operations
 - name: Errands
   description: Errand operations
+- name: Conversation
+  description: Messages between caseworker and applicant on an errand
 - name: Process messages
   description: Send BPMN message correlation events to the process instance currently
     running for an errand
 - name: Errand attachments
   description: Errand attachment operations
+- name: Errand decisions
+  description: "Decision audit trail on an errand. Stores both system-generated decisions\
+    \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
+    \ (e.g. caseworker APPROVE/REJECT), distinguished by `decisionType`."
 paths:
+  /{municipalityId}/{namespace}/errands/{errandId}/notifications/acknowledged:
+    put:
+      tags:
+      - Notifications
+      summary: Acknowledge all notifications on an errand
+      description: Sets `acknowledged=true` on every unacknowledged notification belonging
+        to the errand.
+      operationId: acknowledgeAll
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+        example: MY_NAMESPACE
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          description: Errand not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/namespace-config:
     get:
       tags:
@@ -246,6 +297,8 @@ paths:
           - TYPE
           - ROLE
           - CONTACT_REASON
+          - JOURNAL_ENTRY_TYPE
+          - DOCUMENT_TYPE
       responses:
         "200":
           description: Successful Operation
@@ -298,6 +351,8 @@ paths:
           - TYPE
           - ROLE
           - CONTACT_REASON
+          - JOURNAL_ENTRY_TYPE
+          - DOCUMENT_TYPE
       requestBody:
         content:
           application/json:
@@ -356,6 +411,26 @@ paths:
         schema:
           type: string
         example: status:'NEW' and created>'2024-01-01T00:00:00.000+01:00'
+      - name: hasUnacknowledgedNotifications
+        in: query
+        description: "When true, only errands that have at least one unacknowledged\
+          \ notification are returned. Combine with notificationOwnerId to scope to\
+          \ a single recipient."
+        required: false
+        schema:
+          type: boolean
+          default: false
+        example: true
+      - name: notificationOwnerId
+        in: query
+        description: Scopes the unacknowledged-notification filter to notifications
+          addressed to this recipient (caseworker). Only applied when hasUnacknowledgedNotifications=true.
+        required: false
+        schema:
+          type:
+          - string
+          - "null"
+        example: jane01doe
       - name: page
         in: query
         description: Zero-based page index (0..N)
@@ -555,122 +630,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/stakeholders/{stakeholderId}/parameters:
-    get:
-      tags:
-      - Stakeholder parameters
-      summary: List stakeholder parameters
-      operationId: readParameters
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: stakeholderId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/StakeholderParameter"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    post:
-      tags:
-      - Stakeholder parameters
-      summary: Create stakeholder parameter
-      operationId: createParameter
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: stakeholderId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/StakeholderParameter"
-        required: true
-      responses:
-        "201":
-          description: Successful operation
-          headers:
-            Location:
-              style: simple
-              schema:
-                type: string
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/{errandId}/process-messages:
     post:
       tags:
       - Process messages
       summary: Send a BPMN message to the running process for an errand
-      description: "Correlates a BPMN message (e.g. a handläggare's APPROVE/REJECT\
+      description: "Correlates a BPMN message (e.g. a caseworker's APPROVE/REJECT\
         \ decision, an external event) to the process instance whose business key\
         \ equals this errand id. The matching receive task or message catch event\
         \ resumes with the supplied process variables."
@@ -723,12 +688,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/parameters:
+  /{municipalityId}/{namespace}/errands/{errandId}/notifications:
     get:
       tags:
-      - Errand parameters
-      summary: List parameters
-      operationId: readParameters_1
+      - Notifications
+      summary: List notifications for an errand
+      operationId: readNotificationsByErrand
       parameters:
       - name: municipalityId
         in: path
@@ -748,15 +713,30 @@ paths:
         required: true
         schema:
           type: string
+      - name: sort
+        in: query
+        description: "Sorting criteria in the format: property,(asc|desc). Default\
+          \ sort order is ascending. Multiple sort criteria are supported."
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
       responses:
         "200":
-          description: Successful Operation
+          description: Successful operation
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Parameter"
+                  $ref: "#/components/schemas/Notification"
+        "404":
+          description: Errand not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "400":
           description: Bad request
           content:
@@ -773,9 +753,9 @@ paths:
                 $ref: "#/components/schemas/Problem"
     post:
       tags:
-      - Errand parameters
-      summary: Create parameter
-      operationId: createParameter_1
+      - Notifications
+      summary: Create notification
+      operationId: createNotification
       parameters:
       - name: municipalityId
         in: path
@@ -799,7 +779,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Parameter"
+              $ref: "#/components/schemas/Notification"
         required: true
       responses:
         "201":
@@ -809,6 +789,12 @@ paths:
               style: simple
               schema:
                 type: string
+        "404":
+          description: Errand not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "400":
           description: Bad request
           content:
@@ -823,6 +809,121 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/messages:
+    get:
+      tags:
+      - Conversation
+      summary: List the errand's messages (chronological)
+      operationId: list
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      tags:
+      - Conversation
+      summary: Post a message on the errand
+      description: Multipart request. The 'message' part carries the message (JSON);
+        the optional 'attachments' part carries the files to attach (any type).
+      operationId: post
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                message:
+                  $ref: "#/components/schemas/CreateMessage"
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+              required:
+              - message
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
+  /{municipalityId}/{namespace}/errands/{errandId}/messages/read:
+    post:
+      tags:
+      - Conversation
+      summary: Mark messages as read for the calling side
+      description: "Marks the given messages as read for the caller's side (derived\
+        \ from the 'X-Sent-By' header). Idempotent, and not recorded in the event\
+        \ log."
+      operationId: markRead
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkMessagesRead"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
   /{municipalityId}/{namespace}/errands/{errandId}/decisions:
     get:
       tags:
@@ -928,7 +1029,9 @@ paths:
       tags:
       - Errand attachments
       summary: List attachments
-      description: Fetches all attachment metadata for the errand
+      description: "Fetches all attachment metadata for the errand (application files,\
+        \ generated PDFs, manual uploads and conversation attachments), oldest first.\
+        \ Optionally filtered by origin and/or sender role."
       operationId: readAttachments
       parameters:
       - name: municipalityId
@@ -952,6 +1055,28 @@ paths:
         required: true
         schema:
           type: string
+      - name: origin
+        in: query
+        description: Only return attachments with this origin
+        required: false
+        schema:
+          type: string
+          enum:
+          - APPLICATION
+          - CONVERSATION
+          - GENERATED
+          - ERRAND
+          - CASE_DATA
+          - DECISION
+      - name: senderRole
+        in: query
+        description: Only return attachments from this sender
+        required: false
+        schema:
+          type: string
+          enum:
+          - CLIENT
+          - CASEWORKER
       responses:
         "200":
           description: Successful Operation
@@ -979,7 +1104,11 @@ paths:
       tags:
       - Errand attachments
       summary: Create attachment
-      description: Uploads a new attachment for the errand
+      description: "Uploads a new attachment for the errand. The optional origin tags\
+        \ what the file is: ERRAND (a plain manual upload, the default), CASE_DATA\
+        \ (ärendeuppgifter — a case-data document) or DECISION (beslut — a decision\
+        \ document). A CASE_DATA attachment is renamed to {errandNumber}.pdf and only\
+        \ one is allowed per errand — uploading a second returns 400."
       operationId: createAttachment
       parameters:
       - name: municipalityId
@@ -1003,6 +1132,18 @@ paths:
         required: true
         schema:
           type: string
+      - name: origin
+        in: query
+        description: "What the uploaded file is: ERRAND (a plain manual upload, the\
+          \ default), CASE_DATA (ärendeuppgifter — a case-data document) or DECISION\
+          \ (beslut — a decision document). Defaults to ERRAND when omitted."
+        required: false
+        schema:
+          type: string
+          enum:
+          - ERRAND
+          - CASE_DATA
+          - DECISION
       requestBody:
         content:
           multipart/form-data:
@@ -1073,6 +1214,8 @@ paths:
           - TYPE
           - ROLE
           - CONTACT_REASON
+          - JOURNAL_ENTRY_TYPE
+          - DOCUMENT_TYPE
       responses:
         "200":
           description: Successful Operation
@@ -1135,6 +1278,8 @@ paths:
           - TYPE
           - ROLE
           - CONTACT_REASON
+          - JOURNAL_ENTRY_TYPE
+          - DOCUMENT_TYPE
       responses:
         "204":
           description: Successful operation
@@ -1193,6 +1338,8 @@ paths:
           - TYPE
           - ROLE
           - CONTACT_REASON
+          - JOURNAL_ENTRY_TYPE
+          - DOCUMENT_TYPE
       requestBody:
         content:
           application/json:
@@ -1553,12 +1700,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/stakeholders/{stakeholderId}/parameters/{parameterId}:
+  /{municipalityId}/{namespace}/errands/{errandId}/notifications/{notificationId}:
     get:
       tags:
-      - Stakeholder parameters
-      summary: Read stakeholder parameter
-      operationId: readParameter
+      - Notifications
+      summary: Read notification
+      operationId: readNotification
       parameters:
       - name: municipalityId
         in: path
@@ -1578,26 +1725,20 @@ paths:
         required: true
         schema:
           type: string
-      - name: stakeholderId
+      - name: notificationId
         in: path
         required: true
         schema:
           type: string
-      - name: parameterId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
       responses:
         "200":
-          description: Successful Operation
+          description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StakeholderParameter"
+                $ref: "#/components/schemas/Notification"
         "404":
-          description: Not Found
+          description: Not found
           content:
             application/problem+json:
               schema:
@@ -1618,9 +1759,9 @@ paths:
                 $ref: "#/components/schemas/Problem"
     delete:
       tags:
-      - Stakeholder parameters
-      summary: Delete stakeholder parameter
-      operationId: deleteParameter
+      - Notifications
+      summary: Delete notification
+      operationId: deleteNotification
       parameters:
       - name: municipalityId
         in: path
@@ -1640,22 +1781,16 @@ paths:
         required: true
         schema:
           type: string
-      - name: stakeholderId
+      - name: notificationId
         in: path
         required: true
         schema:
           type: string
-      - name: parameterId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
       responses:
         "204":
           description: Successful operation
         "404":
-          description: Not Found
+          description: Not found
           content:
             application/problem+json:
               schema:
@@ -1676,9 +1811,11 @@ paths:
                 $ref: "#/components/schemas/Problem"
     patch:
       tags:
-      - Stakeholder parameters
-      summary: Update stakeholder parameter
-      operationId: updateParameter
+      - Notifications
+      summary: Update notification
+      description: "Partial update. Only `acknowledged`, `description`, `content`,\
+        \ `type`, and `subType` are honoured; other fields in the body are ignored."
+      operationId: updateNotification
       parameters:
       - name: municipalityId
         in: path
@@ -1698,28 +1835,22 @@ paths:
         required: true
         schema:
           type: string
-      - name: stakeholderId
+      - name: notificationId
         in: path
         required: true
         schema:
           type: string
-      - name: parameterId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/StakeholderParameter"
+              $ref: "#/components/schemas/Notification"
         required: true
       responses:
         "204":
           description: Successful operation
         "404":
-          description: Not Found
+          description: Not found
           content:
             application/problem+json:
               schema:
@@ -1738,12 +1869,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/parameters/{parameterId}:
+  /{municipalityId}/{namespace}/notifications:
     get:
       tags:
-      - Errand parameters
-      summary: Read parameter
-      operationId: readParameter_1
+      - Notifications
+      summary: List notifications for a recipient across errands
+      operationId: readNotificationsByOwner
       parameters:
       - name: municipalityId
         in: path
@@ -1758,153 +1889,159 @@ paths:
           type: string
           pattern: "[\\w|\\-]+"
         example: MY_NAMESPACE
+      - name: ownerId
+        in: query
+        description: Recipient user id
+        required: true
+        schema:
+          type: string
+          minLength: 1
+        example: jane01doe
+      - name: sort
+        in: query
+        description: "Sorting criteria in the format: property,(asc|desc). Default\
+          \ sort order is ascending. Multiple sort criteria are supported."
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/messages/{messageId}:
+    get:
+      tags:
+      - Conversation
+      summary: Read a message
+      operationId: read
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
       - name: errandId
         in: path
         required: true
         schema:
           type: string
-      - name: parameterId
+      - name: messageId
         in: path
         required: true
         schema:
           type: string
       responses:
         "200":
-          description: Successful Operation
+          description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Parameter"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    delete:
+                $ref: "#/components/schemas/Message"
+  /{municipalityId}/{namespace}/errands/{errandId}/messages/{messageId}/attachments/{attachmentId}/file:
+    get:
       tags:
-      - Errand parameters
-      summary: Delete parameter
-      operationId: deleteParameter_1
+      - Conversation
+      summary: Download a message attachment
+      description: Streams the attachment file content
+      operationId: streamAttachmentFile
       parameters:
       - name: municipalityId
         in: path
         required: true
         schema:
           type: string
-        example: 2281
       - name: namespace
         in: path
         required: true
         schema:
           type: string
           pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
       - name: errandId
         in: path
         required: true
         schema:
           type: string
-      - name: parameterId
+      - name: messageId
         in: path
         required: true
         schema:
           type: string
+      - name: attachmentId
+        in: path
+        description: Attachment id
+        required: true
+        schema:
+          type: string
       responses:
-        "204":
-          description: Successful operation
+        "200":
+          description: Successful Operation
         "404":
           description: Not Found
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    patch:
+  /{municipalityId}/{namespace}/errands/{errandId}/messages/unread-count:
+    get:
       tags:
-      - Errand parameters
-      summary: Update parameter
-      operationId: updateParameter_1
+      - Conversation
+      summary: Count unread messages for the calling side
+      description: "Returns how many messages addressed to the caller are unread.\
+        \ The caller's side is derived from the 'X-Sent-By' header (type=adAccount\
+        \ → caseworker, type=partyId → applicant). A read-only poll that is not recorded\
+        \ in the event log."
+      operationId: unreadCount
       parameters:
       - name: municipalityId
         in: path
         required: true
         schema:
           type: string
-        example: 2281
       - name: namespace
         in: path
         required: true
         schema:
           type: string
           pattern: "[\\w|\\-]+"
-        example: MY_NAMESPACE
       - name: errandId
         in: path
         required: true
         schema:
           type: string
-      - name: parameterId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Parameter"
-        required: true
       responses:
-        "204":
-          description: Successful operation
-        "404":
-          description: Not Found
+        "200":
+          description: OK
           content:
-            application/problem+json:
+            application/json:
               schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+                $ref: "#/components/schemas/UnreadCount"
   /{municipalityId}/{namespace}/errands/{errandId}/decisions/{decisionId}:
     get:
       tags:
@@ -2139,7 +2276,7 @@ paths:
       - Errand attachments
       summary: Download attachment file
       description: Streams the attachment file content
-      operationId: streamAttachmentFile
+      operationId: streamAttachmentFile_1
       parameters:
       - name: municipalityId
         in: path
@@ -2191,6 +2328,57 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/count:
+    get:
+      tags:
+      - Errands
+      summary: Count errands
+      description: Counts errands matching the optional spring-filter expression
+      operationId: countErrands
+      parameters:
+      - name: municipalityId
+        in: path
+        description: Municipality id
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        description: Namespace
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w|\\-]+"
+        example: MY_NAMESPACE
+      - name: filter
+        in: query
+        description: "Syntax description: [spring-filter](https://github.com/turkraft/spring-filter/blob/85730f950a5f8623159cc0eb4d737555f9382bb7/README.md#syntax)"
+        required: false
+        schema:
+          type: string
+        example: status:'NEW' and created>'2024-01-01T00:00:00.000+01:00'
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountResponse"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /api-docs:
     get:
       tags:
@@ -2209,37 +2397,6 @@ paths:
       x-wso2-mutual-ssl: Optional
 components:
   schemas:
-    NamespaceConfig:
-      type: object
-      description: NamespaceConfig model
-      properties:
-        id:
-          type: integer
-          format: int64
-          description: Unique identifier
-          examples:
-          - 1
-          readOnly: true
-        displayName:
-          type: string
-          description: Display name of the namespace
-          examples:
-          - My namespace
-        shortCode:
-          type: string
-          description: Short code for the namespace
-          examples:
-          - MY
-        created:
-          type: string
-          format: date-time
-          description: Created timestamp
-          readOnly: true
-        modified:
-          type: string
-          format: date-time
-          description: Modified timestamp
-          readOnly: true
     Problem:
       type: object
       properties:
@@ -2271,10 +2428,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -2302,6 +2459,37 @@ components:
           type: string
         message:
           type: string
+    NamespaceConfig:
+      type: object
+      description: NamespaceConfig model
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier
+          examples:
+          - 1
+          readOnly: true
+        displayName:
+          type: string
+          description: Display name of the namespace
+          examples:
+          - My namespace
+        shortCode:
+          type: string
+          description: Short code for the namespace
+          examples:
+          - MY
+        created:
+          type: string
+          format: date-time
+          description: Created timestamp
+          readOnly: true
+        modified:
+          type: string
+          format: date-time
+          description: Modified timestamp
+          readOnly: true
     Lookup:
       type: object
       description: "Lookup model - metadata entry (category, status, type, role, contact\
@@ -2327,68 +2515,9 @@ components:
           format: date-time
           description: Modified timestamp
           readOnly: true
-    ContactChannel:
-      type: object
-      description: ContactChannel model
-      properties:
-        key:
-          type: string
-          description: The key of the contact channel
-          examples:
-          - Email
-        value:
-          type: string
-          description: The value of the contact channel
-          examples:
-          - joe.doe@example.com
-    Decision:
-      type: object
-      description: "Decision recorded against an errand. Both system-generated decisions\
-        \ (e.g. a DMN-evaluated recommendation produced by a BPMN process) and human\
-        \ decisions (e.g. a handläggare approving a payment) are stored here, distinguished\
-        \ by `decisionType`. The list on the errand grows over time and is the audit\
-        \ trail of every decision made on the case."
-      properties:
-        id:
-          type: string
-          description: Unique identifier
-          examples:
-          - cb20c51f-fcf3-42c0-b613-de563634a8ec
-          readOnly: true
-        decisionType:
-          type: string
-          description: "Decision category. Free-form string; conventionally `RECOMMENDATION`\
-            \ for DMN-produced suggestions and `PAYMENT` for handläggare APPROVE/REJECT\
-            \ decisions, but namespaces are encouraged to define their own."
-          examples:
-          - PAYMENT
-        value:
-          type: string
-          description: Decision value. For binary outcomes use `APPROVED`/`REJECTED`;
-            for richer outputs (e.g. a calculated amount) use the value itself or
-            a short label.
-          examples:
-          - APPROVED
-        description:
-          type: string
-          description: Optional human-readable description or motivation for the decision
-          examples:
-          - "Beslutsförslag enligt regelverk: 7900 kr, ingen varning"
-        createdBy:
-          type: string
-          description: "Identifier of the actor that produced the decision. Use the\
-            \ handläggare userId for human decisions or a system identifier (e.g.\
-            \ `operaton`, `dmn-engine`) for automated ones."
-          examples:
-          - jane01doe
-        created:
-          type: string
-          format: date-time
-          description: Timestamp the decision was recorded (server-assigned)
-          readOnly: true
     Errand:
       type: object
-      description: Errand model
+      description: Errand envelope
       properties:
         id:
           type: string
@@ -2408,21 +2537,22 @@ components:
           examples:
           - MY_NAMESPACE
           readOnly: true
+        errandNumber:
+          type: string
+          description: Human-readable errand number
+          examples:
+          - EB-26060071
+          readOnly: true
+        typeSlug:
+          type: string
+          description: Registered errand type slug — validated against ErrandTypeRegistry
+          examples:
+          - case-type-slug
         title:
           type: string
           description: Title for the errand
           examples:
           - Title of the errand
-        category:
-          type: string
-          description: Category for the errand
-          examples:
-          - CATEGORY-1
-        type:
-          type: string
-          description: Type for the errand
-          examples:
-          - TYPE-1
         status:
           type: string
           description: Status of the errand
@@ -2448,39 +2578,14 @@ components:
           description: User id of the assignee
           examples:
           - jane02doe
-        contactReason:
+        applicantName:
           type: string
-          description: Contact reason (name of a CONTACT_REASON lookup)
+          description: "Denormalized display name of the errand's applicant, maintained\
+            \ from the APPLICANT stakeholder. Sortable and searchable on the errand\
+            \ list (e.g. ?sort=applicantName,asc). Null for errand types with no applicant."
           examples:
-          - PHONE
-        contactReasonDescription:
-          type: string
-          description: Contact reason description
-          examples:
-          - The reporter called in
-        externalTags:
-          type: array
-          description: External tags associated with the errand
-          items:
-            $ref: "#/components/schemas/ExternalTag"
-        stakeholders:
-          type: array
-          description: Stakeholders associated with the errand
-          items:
-            $ref: "#/components/schemas/Stakeholder"
-        parameters:
-          type: array
-          description: Parameters for the errand
-          items:
-            $ref: "#/components/schemas/Parameter"
-        decisions:
-          type: array
-          description: "Decisions recorded against the errand. Both system-generated\
-            \ (e.g. a DMN-evaluated recommendation from a BPMN process) and human\
-            \ (e.g. a handläggare APPROVE/REJECT) decisions accumulate here over the\
-            \ errand's lifetime, distinguished by `decisionType`."
-          items:
-            $ref: "#/components/schemas/Decision"
+          - Anna Andersson
+          readOnly: true
         processDefinitionName:
           type: string
           description: Name of the Operaton process definition to start when the errand
@@ -2508,53 +2613,23 @@ components:
           format: date-time
           description: Touched timestamp
           readOnly: true
-    ExternalTag:
+    ContactChannel:
       type: object
-      description: ExternalTag model
+      description: ContactChannel model
       properties:
         key:
           type: string
-          description: The key of the external tag
+          description: The key of the contact channel
           examples:
-          - caseId
+          - Email
         value:
           type: string
-          description: The value of the external tag
+          description: The value of the contact channel
           examples:
-          - "12345"
-    Parameter:
-      type: object
-      description: Parameter model
-      properties:
-        id:
-          type: string
-          description: Unique identifier
-          examples:
-          - cb20c51f-fcf3-42c0-b613-de563634a8ec
-          readOnly: true
-        displayName:
-          type: string
-          description: Display name of the parameter
-          examples:
-          - Priority level
-        parameterGroup:
-          type: string
-          description: Grouping for the parameter
-          examples:
-          - contact
-        key:
-          type: string
-          description: Key of the parameter
-          examples:
-          - priorityLevel
-        values:
-          type: array
-          description: Values of the parameter
-          items:
-            type: string
+          - joe.doe@example.com
     Stakeholder:
       type: object
-      description: Stakeholder model
+      description: Stakeholder
       properties:
         id:
           type: string
@@ -2574,9 +2649,10 @@ components:
           - PRIVATE
         role:
           type: string
-          description: Role of the stakeholder
+          description: Role of the stakeholder — validated against StakeholderRoleRegistry
+            for the errand's typeSlug
           examples:
-          - APPLICANT
+          - FOSTER_PARENT
         firstName:
           type: string
           description: First name
@@ -2622,44 +2698,13 @@ components:
           description: Contact channels for the stakeholder
           items:
             $ref: "#/components/schemas/ContactChannel"
-        parameters:
-          type: array
-          description: Parameters for the stakeholder
-          items:
-            $ref: "#/components/schemas/StakeholderParameter"
-    StakeholderParameter:
-      type: object
-      description: StakeholderParameter model
-      properties:
-        id:
-          type: integer
-          format: int64
-          description: Unique identifier
-          examples:
-          - 42
-          readOnly: true
-        displayName:
-          type: string
-          description: Display name of the parameter
-          examples:
-          - Phone number
-        key:
-          type: string
-          description: Key of the parameter
-          examples:
-          - phoneNumber
-        values:
-          type: array
-          description: Values of the parameter
-          items:
-            type: string
     ProcessMessageRequest:
       type: object
       description: "Request body for correlating a BPMN message to the process instance\
         \ currently running for an errand. The errand id is used as the process business\
         \ key, so the message is delivered to that specific process. Use this whenever\
-        \ something outside the process (a handläggare action, an external event,\
-        \ an admin override) needs to resume or interact with a running process instance."
+        \ something outside the process (a caseworker action, an external event, an\
+        \ admin override) needs to resume or interact with a running process instance."
       properties:
         messageName:
           type: string
@@ -2674,25 +2719,242 @@ components:
           description: Process variables to set when correlating the message
       required:
       - messageName
+    Notification:
+      type: object
+      description: "User-facing notification raised against an errand. Mutable: callers\
+        \ acknowledge (acknowledged=true) when the recipient has seen it; expired\
+        \ notifications are purged by a background job."
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+          readOnly: true
+        errandId:
+          type: string
+          description: Id of the errand the notification belongs to (server-assigned
+            from path)
+          examples:
+          - b82bd8ac-1507-4d9a-958d-369261eecc15
+          readOnly: true
+        ownerId:
+          type: string
+          description: User id of the recipient (the user who should see this notification)
+          examples:
+          - jane01doe
+        createdBy:
+          type: string
+          description: User or system id that produced the notification. Automatically
+            acknowledged if equal to ownerId.
+          examples:
+          - john02doe
+        type:
+          type: string
+          description: Notification type
+          enum:
+          - CREATE
+          - UPDATE
+          - DELETE
+          examples:
+          - CREATE
+        typeDisplayName:
+          type: string
+          description: Swedish display name for the notification type
+          examples:
+          - Skapad
+          readOnly: true
+        subType:
+          type: string
+          description: Notification sub-type
+          enum:
+          - ERRAND
+          - DECISION
+          - ATTACHMENT
+          - STAKEHOLDER
+          - PARAMETER
+          - MESSAGE
+          - SYSTEM
+          examples:
+          - ERRAND
+        subTypeDisplayName:
+          type: string
+          description: Swedish display name for the notification sub-type
+          examples:
+          - Ärende
+          readOnly: true
+        description:
+          type: string
+          description: Short human-readable description
+          examples:
+          - New errand assigned to you
+        content:
+          type: string
+          description: Optional longer content / body
+        acknowledged:
+          type: boolean
+          description: "Acknowledgement state. On PATCH, null leaves the value unchanged;\
+            \ true/false sets it. The bulk-acknowledge endpoint flips this to true\
+            \ for every notification on an errand."
+          examples:
+          - "false"
+        expires:
+          type: string
+          format: date-time
+          description: Timestamp after which the notification is eligible for cleanup
+            (server-assigned)
+          readOnly: true
+        created:
+          type: string
+          format: date-time
+          description: Creation timestamp (server-assigned)
+          readOnly: true
+        modified:
+          type: string
+          format: date-time
+          description: Last-modified timestamp (server-assigned)
+          readOnly: true
+    CreateMessage:
+      type: object
+      description: A new message in the errand's conversation
+      properties:
+        direction:
+          type: string
+          description: "Direction: OUTBOUND = caseworker → applicant, INBOUND = applicant\
+            \ → caseworker"
+          enum:
+          - INBOUND
+          - OUTBOUND
+          examples:
+          - OUTBOUND
+          minLength: 1
+        body:
+          type: string
+          description: Message text
+          examples:
+          - Please complete your application with a valid certificate.
+          maxLength: 8192
+          minLength: 0
+        author:
+          type: string
+          description: Author id (the caseworker's user id or the applicant's identifier)
+          examples:
+          - joe01doe
+          maxLength: 64
+          minLength: 0
+        inReplyToId:
+          type: string
+          description: Id of the message this one replies to. Optional; when set it
+            must reference a message on the same errand.
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+      required:
+      - body
+      - direction
+    MarkMessagesRead:
+      type: object
+      description: "The messages the caller has read, to be marked as read for the\
+        \ calling side"
+      properties:
+        messageIds:
+          type: array
+          description: Ids of the read messages. Must reference messages on the same
+            errand.
+          examples:
+          - - f47ac10b-58cc-4372-a567-0e02b2c3d479
+          items:
+            type: string
+          minItems: 1
+      required:
+      - messageIds
+    Decision:
+      type: object
+      description: "Decision recorded against an errand. Both system-generated decisions\
+        \ (e.g. a DMN-evaluated recommendation produced by a BPMN process) and human\
+        \ decisions (e.g. a caseworker approving a payment) are stored here, distinguished\
+        \ by `decisionType`. The list on the errand grows over time and is the audit\
+        \ trail of every decision made on the case."
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+          readOnly: true
+        decisionType:
+          type: string
+          description: "Decision category. Free-form string; conventionally `RECOMMENDATION`\
+            \ for DMN-produced suggestions and `PAYMENT` for caseworker APPROVE/REJECT\
+            \ decisions, but namespaces are encouraged to define their own."
+          examples:
+          - PAYMENT
+        value:
+          type: string
+          description: Decision value. For binary outcomes use `APPROVED`/`REJECTED`;
+            for richer outputs (e.g. a calculated amount) use the value itself or
+            a short label.
+          examples:
+          - APPROVED
+        description:
+          type: string
+          description: Optional human-readable description or motivation for the decision
+          examples:
+          - "Decision proposal per ruleset: 7900 kr, no warning"
+        amount:
+          type: number
+          description: "Optional decision amount, in SEK. For a financial-assistance\
+            \ beslut this is the granted belopp (0 for a rejection); for a recommendation\
+            \ it is the recommended amount when the pipeline has computed one."
+          examples:
+          - 7900.0
+        decisionMessage:
+          type: string
+          description: "Optional decision message (beslutsmeddelande) communicated\
+            \ to the applicant — the free-text justification shown on the decision\
+            \ letter, kept separate from the internal `description`."
+          examples:
+          - Du beviljas financial assistance för juni 2026 enligt riksnorm.
+        decisionDate:
+          type: string
+          format: date
+          description: "Optional date the decision applies (the caseworker-chosen\
+            \ decision date), distinct from the server-assigned `created` audit timestamp."
+          examples:
+          - 2026-06-18
+        periodFrom:
+          type: string
+          format: date
+          description: "Optional start of the period the decision covers (the month\
+            \ applied for, for a financial-assistance beslut)."
+          examples:
+          - 2026-06-01
+        periodTo:
+          type: string
+          format: date
+          description: Optional end of the period the decision covers.
+          examples:
+          - 2026-06-30
+        createdBy:
+          type: string
+          description: "Identifier of the actor that produced the decision. Use the\
+            \ caseworker userId for human decisions or a system identifier (e.g. `operaton`,\
+            \ `dmn-engine`) for automated ones."
+          examples:
+          - jane01doe
+        created:
+          type: string
+          format: date-time
+          description: Timestamp the decision was recorded (server-assigned)
+          readOnly: true
     PatchErrand:
       type: object
-      description: PatchErrand model - only patchable fields
+      description: PatchErrand model — patchable envelope fields only
       properties:
         title:
           type: string
           description: Title for the errand
           examples:
           - Title of the errand
-        category:
-          type: string
-          description: Category for the errand
-          examples:
-          - CATEGORY-1
-        type:
-          type: string
-          description: Type for the errand
-          examples:
-          - TYPE-1
         status:
           type: string
           description: Status of the errand
@@ -2716,19 +2978,6 @@ components:
           description: User id of the assignee
           examples:
           - jane02doe
-        contactReason:
-          type: string
-          description: Contact reason (name of a CONTACT_REASON lookup)
-          examples:
-          - PHONE
-        contactReasonDescription:
-          type: string
-          description: Contact reason description
-        externalTags:
-          type: array
-          description: External tags associated with the errand
-          items:
-            $ref: "#/components/schemas/ExternalTag"
     Direction:
       type: string
       enum:
@@ -2798,6 +3047,105 @@ components:
           description: The sort order direction
           examples:
           - ASC
+    Message:
+      type: object
+      description: A message in the errand's conversation
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+        errandId:
+          type: string
+          description: The errand the message belongs to
+        direction:
+          type: string
+          description: Direction
+          enum:
+          - INBOUND
+          - OUTBOUND
+          examples:
+          - OUTBOUND
+        body:
+          type: string
+          description: Message text
+          examples:
+          - Please complete your application with a valid certificate.
+        author:
+          type: string
+          description: Author id
+          examples:
+          - joe01doe
+        inReplyToId:
+          type: string
+          description: "Id of the message this one replies to, when it is a reply\
+            \ (same errand)"
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+        created:
+          type: string
+          format: date-time
+          description: Created timestamp
+        attachments:
+          type: array
+          description: Files attached to the message
+          items:
+            $ref: "#/components/schemas/MessageAttachment"
+          readOnly: true
+    MessageAttachment:
+      type: object
+      description: "Metadata of a file attached to a message. Download the content\
+        \ via GET .../messages/{messageId}/attachments/{id}/file"
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+          readOnly: true
+        fileName:
+          type: string
+          description: File name
+          examples:
+          - certificate.pdf
+        mimeType:
+          type: string
+          description: Mime type
+          examples:
+          - application/pdf
+        fileSize:
+          type: integer
+          format: int32
+          description: File size in bytes
+          examples:
+          - 1024
+          readOnly: true
+        senderRole:
+          type: string
+          description: "Who sent the file, derived from the message direction: CLIENT\
+            \ (applicant, INBOUND) or CASEWORKER (caseworker, OUTBOUND)"
+          enum:
+          - CLIENT
+          - CASEWORKER
+          examples:
+          - CLIENT
+          readOnly: true
+        created:
+          type: string
+          format: date-time
+          description: Created timestamp
+          readOnly: true
+    UnreadCount:
+      type: object
+      description: The number of unread messages in the errand's conversation for
+        the calling side
+      properties:
+        unreadCount:
+          type: integer
+          format: int64
+          description: Number of messages addressed to the caller that the caller
+            has not yet marked as read
+          examples:
+          - 3
     Attachment:
       type: object
       description: Attachment model
@@ -2825,6 +3173,41 @@ components:
           examples:
           - 1024
           readOnly: true
+        origin:
+          type: string
+          description: "Where the file came from: APPLICATION (citizen's application\
+            \ files), CONVERSATION (sent in a message thread), GENERATED (a consolidated\
+            \ PDF produced by the platform), ERRAND (uploaded directly to the errand),\
+            \ CASE_DATA (ärendeuppgifter — a case-data document for the errand), DECISION\
+            \ (beslut — a decision document for the errand) or MESSAGE_HISTORY (meddelandehistorik\
+            \ — the archived conversation PDF for a closed errand)"
+          enum:
+          - APPLICATION
+          - CONVERSATION
+          - GENERATED
+          - ERRAND
+          - CASE_DATA
+          - DECISION
+          - MESSAGE_HISTORY
+          examples:
+          - CONVERSATION
+          readOnly: true
+        senderRole:
+          type: string
+          description: "Who the file came from: CLIENT (applicant) or CASEWORKER (caseworker).\
+            \ May be null for files predating the distinction or with no clear sender."
+          enum:
+          - CLIENT
+          - CASEWORKER
+          examples:
+          - CLIENT
+          readOnly: true
+        messageId:
+          type: string
+          description: "For CONVERSATION attachments, the id of the message the file\
+            \ is attached to — download it via .../messages/{messageId}/attachments/{id}/file.\
+            \ Null for non-conversation attachments, which download via .../attachments/{id}/file."
+          readOnly: true
         created:
           type: string
           format: date-time
@@ -2835,4 +3218,14 @@ components:
           format: date-time
           description: Modified timestamp
           readOnly: true
+    CountResponse:
+      type: object
+      description: Count of errands matching the supplied filter
+      properties:
+        count:
+          type: integer
+          format: int64
+          description: Number of matching errands
+          examples:
+          - 42
   securitySchemes: {}
