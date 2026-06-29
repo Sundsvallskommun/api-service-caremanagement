@@ -27,7 +27,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 public class MessageReadService {
 
 	private static final String ERRAND_NOT_FOUND_MESSAGE = "No errand with id '%s' found in namespace '%s' for municipality id '%s'";
-	private static final String MESSAGES_NOT_FOUND_MESSAGE = "No messages with ids %s on errand '%s'";
+	private static final String MESSAGES_NOT_FOUND_MESSAGE = "Message ids %s were not found on errand '%s'";
 
 	private final ErrandRepository errandRepository;
 	private final MessageRepository messageRepository;
