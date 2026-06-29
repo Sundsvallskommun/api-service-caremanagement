@@ -27,14 +27,14 @@ public class Attachment {
 	private Integer fileSize;
 
 	@Schema(description = """
-		Where the file came from: APPLICATION (citizen's application files), CONVERSATION (sent in a \
+		What kind of document this is: APPLICATION (citizen's application files), CONVERSATION (sent in a \
 		message thread), GENERATED (a consolidated PDF produced by the platform), ERRAND (uploaded directly to the \
 		errand), CASE_DATA (ärendeuppgifter — a case-data document for the errand), DECISION (beslut — a decision \
 		document for the errand) or MESSAGE_HISTORY (meddelandehistorik — the archived conversation PDF for a closed \
 		errand)""", allowableValues = {
 		"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION", "MESSAGE_HISTORY"
 	}, examples = "CONVERSATION", accessMode = READ_ONLY)
-	private String origin;
+	private String documentType;
 
 	@Schema(description = """
 		Who the file came from: CLIENT (applicant) or CASEWORKER (caseworker). May be null for \
@@ -113,16 +113,16 @@ public class Attachment {
 		return this;
 	}
 
-	public String getOrigin() {
-		return origin;
+	public String getDocumentType() {
+		return documentType;
 	}
 
-	public void setOrigin(final String origin) {
-		this.origin = origin;
+	public void setDocumentType(final String documentType) {
+		this.documentType = documentType;
 	}
 
-	public Attachment withOrigin(final String origin) {
-		this.origin = origin;
+	public Attachment withDocumentType(final String documentType) {
+		this.documentType = documentType;
 		return this;
 	}
 
@@ -184,13 +184,13 @@ public class Attachment {
 			return false;
 		final Attachment that = (Attachment) o;
 		return Objects.equals(id, that.id) && Objects.equals(fileName, that.fileName) && Objects.equals(mimeType, that.mimeType) && Objects.equals(fileSize, that.fileSize)
-			&& Objects.equals(origin, that.origin) && Objects.equals(senderRole, that.senderRole) && Objects.equals(messageId, that.messageId)
+			&& Objects.equals(documentType, that.documentType) && Objects.equals(senderRole, that.senderRole) && Objects.equals(messageId, that.messageId)
 			&& Objects.equals(created, that.created) && Objects.equals(modified, that.modified);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, fileName, mimeType, fileSize, origin, senderRole, messageId, created, modified);
+		return Objects.hash(id, fileName, mimeType, fileSize, documentType, senderRole, messageId, created, modified);
 	}
 
 	@Override
@@ -200,7 +200,7 @@ public class Attachment {
 			", fileName='" + fileName + '\'' +
 			", mimeType='" + mimeType + '\'' +
 			", fileSize=" + fileSize +
-			", origin='" + origin + '\'' +
+			", documentType='" + documentType + '\'' +
 			", senderRole='" + senderRole + '\'' +
 			", messageId='" + messageId + '\'' +
 			", created=" + created +

@@ -50,13 +50,13 @@ public class AttachmentService {
 	/** Filename of the living consolidation of the client's conversation attachments (regenerated in place). */
 	private static final String CLIENT_PDF_FILE_NAME = "klientbilagor.pdf";
 
-	/** Attachment origin facet — see the {@code Attachment} schema. */
-	private static final String ORIGIN_APPLICATION = "APPLICATION";
-	private static final String ORIGIN_CONVERSATION = "CONVERSATION";
-	private static final String ORIGIN_GENERATED = "GENERATED";
-	private static final String ORIGIN_ERRAND = "ERRAND";
-	private static final String ORIGIN_CASE_DATA = "CASE_DATA";
-	private static final String ORIGIN_MESSAGE_HISTORY = "MESSAGE_HISTORY";
+	/** Attachment documentType facet — see the {@code Attachment} schema. */
+	private static final String DOCUMENT_TYPE_APPLICATION = "APPLICATION";
+	private static final String DOCUMENT_TYPE_CONVERSATION = "CONVERSATION";
+	private static final String DOCUMENT_TYPE_GENERATED = "GENERATED";
+	private static final String DOCUMENT_TYPE_ERRAND = "ERRAND";
+	private static final String DOCUMENT_TYPE_CASE_DATA = "CASE_DATA";
+	private static final String DOCUMENT_TYPE_MESSAGE_HISTORY = "MESSAGE_HISTORY";
 	/** Extension forced on the case-data (ärendeuppgifter) attachment, whose file is renamed to {errandNumber}.pdf. */
 	private static final String CASE_DATA_FILE_EXTENSION = ".pdf";
 	private static final String MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE = "A message-history (meddelandehistorik) attachment already exists on errand '%s' in namespace '%s' for municipality id '%s'";
@@ -74,21 +74,21 @@ public class AttachmentService {
 		this.conversationAttachmentQueryService = conversationAttachmentQueryService;
 	}
 
-	public String createAttachment(final String municipalityId, final String namespace, final String errandId, final String origin, final MultipartFile file) {
+	public String createAttachment(final String municipalityId, final String namespace, final String errandId, final String documentType, final MultipartFile file) {
 		final var errand = getErrand(municipalityId, namespace, errandId);
-		final var resolvedOrigin = ofNullable(origin).orElse(ORIGIN_ERRAND);
+		final var resolvedDocumentType = ofNullable(documentType).orElse(DOCUMENT_TYPE_ERRAND);
 
 		// A case-data (ärendeuppgifter) attachment is unique per errand and is renamed to {errandNumber}.pdf. Lock the
 		// errand row first so two concurrent CASE_DATA uploads serialize instead of both passing the existence check.
-		if (ORIGIN_CASE_DATA.equals(resolvedOrigin)) {
+		if (DOCUMENT_TYPE_CASE_DATA.equals(resolvedDocumentType)) {
 			lockErrand(municipalityId, namespace, errandId);
-			if (attachmentRepository.existsByErrandIdAndOrigin(errandId, ORIGIN_CASE_DATA)) {
+			if (attachmentRepository.existsByErrandIdAndDocumentType(errandId, DOCUMENT_TYPE_CASE_DATA)) {
 				throw Problem.valueOf(BAD_REQUEST, CASE_DATA_ALREADY_EXISTS_MESSAGE.formatted(errandId, namespace, municipalityId));
 			}
 		}
 
-		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, resolvedOrigin, null, file);
-		if (ORIGIN_CASE_DATA.equals(resolvedOrigin)) {
+		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, resolvedDocumentType, null, file);
+		if (DOCUMENT_TYPE_CASE_DATA.equals(resolvedDocumentType)) {
 			entity.setFileName(errand.getErrandNumber() + CASE_DATA_FILE_EXTENSION);
 		}
 
@@ -97,11 +97,11 @@ public class AttachmentService {
 
 	/**
 	 * Store the case-data (ärendeuppgifter) snapshot for the errand — a convenience over {@link #createAttachment} that
-	 * pins origin {@code CASE_DATA}, so the file is renamed to {@code {errandNumber}.pdf} and the one-per-errand rule
+	 * pins documentType {@code CASE_DATA}, so the file is renamed to {@code {errandNumber}.pdf} and the one-per-errand rule
 	 * applies. Used by the EB create bundle so the whole errand is created in a single call.
 	 */
 	public String createCaseDataAttachment(final String municipalityId, final String namespace, final String errandId, final MultipartFile file) {
-		return createAttachment(municipalityId, namespace, errandId, ORIGIN_CASE_DATA, file);
+		return createAttachment(municipalityId, namespace, errandId, DOCUMENT_TYPE_CASE_DATA, file);
 	}
 
 	/**
@@ -110,7 +110,7 @@ public class AttachmentService {
 	 */
 	@Transactional(readOnly = true)
 	public boolean messageHistoryExists(final String errandId) {
-		return attachmentRepository.existsByErrandIdAndOrigin(errandId, ORIGIN_MESSAGE_HISTORY);
+		return attachmentRepository.existsByErrandIdAndDocumentType(errandId, DOCUMENT_TYPE_MESSAGE_HISTORY);
 	}
 
 	/**
@@ -125,11 +125,11 @@ public class AttachmentService {
 	public String createMessageHistoryAttachment(final String municipalityId, final String namespace, final String errandId, final String fileName, final byte[] content) {
 		// Lock the errand row so the one-per-errand check-then-insert can't race a concurrent archiving run.
 		lockErrand(municipalityId, namespace, errandId);
-		if (attachmentRepository.existsByErrandIdAndOrigin(errandId, ORIGIN_MESSAGE_HISTORY)) {
+		if (attachmentRepository.existsByErrandIdAndDocumentType(errandId, DOCUMENT_TYPE_MESSAGE_HISTORY)) {
 			throw Problem.valueOf(BAD_REQUEST, MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE.formatted(errandId, namespace, municipalityId));
 		}
 
-		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_MESSAGE_HISTORY, null, fileName, PDF_MIME_TYPE, content);
+		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_MESSAGE_HISTORY, null, fileName, PDF_MIME_TYPE, content);
 		return attachmentRepository.save(entity).getId();
 	}
 
@@ -163,12 +163,12 @@ public class AttachmentService {
 
 		final var ids = new ArrayList<String>();
 		sources.forEach(source -> ids.add(attachmentRepository
-			.save(toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_APPLICATION, SENDER_CLIENT, source.fileName(), source.contentType(), source.content()))
+			.save(toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_APPLICATION, SENDER_CLIENT, source.fileName(), source.contentType(), source.content()))
 			.getId()));
 
 		final var combined = PdfCombiner.combine(sources);
 		ids.add(attachmentRepository
-			.save(toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_GENERATED, SENDER_CLIENT, COMBINED_PDF_FILE_NAME, PDF_MIME_TYPE, combined))
+			.save(toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_GENERATED, SENDER_CLIENT, COMBINED_PDF_FILE_NAME, PDF_MIME_TYPE, combined))
 			.getId());
 
 		return ids;
@@ -177,7 +177,8 @@ public class AttachmentService {
 	/**
 	 * Rebuild the consolidated client-attachment PDF for the errand from all client-sent (INBOUND) conversation
 	 * attachments and store it in place as a single {@code CONVERSATION} attachment named {@value #CLIENT_PDF_FILE_NAME}
-	 * (it consolidates conversation files, so it shares their origin — a {@code ?origin=CONVERSATION} listing returns the
+	 * (it consolidates conversation files, so it shares their documentType — a {@code ?documentType=CONVERSATION} listing
+	 * returns the
 	 * client's conversation files together with this consolidation). Idempotent: if the row already exists its content is
 	 * overwritten (same id/URL), otherwise it is created — safe to call repeatedly (incl. on Modulith event
 	 * re-delivery). No-op when the client has not sent any attachments yet.
@@ -196,9 +197,9 @@ public class AttachmentService {
 			.map(content -> new SourceFile(content.fileName(), content.mimeType(), content.content()))
 			.toList();
 		final var combined = PdfCombiner.combine(sources);
-		final var rebuilt = toAttachmentEntity(errandId, namespace, municipalityId, ORIGIN_CONVERSATION, SENDER_CLIENT, CLIENT_PDF_FILE_NAME, PDF_MIME_TYPE, combined);
+		final var rebuilt = toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_CONVERSATION, SENDER_CLIENT, CLIENT_PDF_FILE_NAME, PDF_MIME_TYPE, combined);
 
-		attachmentRepository.findFirstByErrandIdAndFileNameAndOrigin(errandId, CLIENT_PDF_FILE_NAME, ORIGIN_CONVERSATION)
+		attachmentRepository.findFirstByErrandIdAndFileNameAndDocumentType(errandId, CLIENT_PDF_FILE_NAME, DOCUMENT_TYPE_CONVERSATION)
 			.ifPresentOrElse(existing -> {
 				existing.getAttachmentData().setFile(rebuilt.getAttachmentData().getFile());
 				existing.setFileSize(rebuilt.getFileSize());
@@ -208,11 +209,12 @@ public class AttachmentService {
 
 	/**
 	 * The unified errand document list: the errand's own attachments (application files, generated PDFs, manual
-	 * uploads) merged with the conversation's attachments, each tagged with {@code origin} + {@code senderRole}, oldest
-	 * first. {@code origin} and {@code senderRole} are optional filters — a null value matches everything.
+	 * uploads) merged with the conversation's attachments, each tagged with {@code documentType} + {@code senderRole},
+	 * oldest
+	 * first. {@code documentType} and {@code senderRole} are optional filters — a null value matches everything.
 	 */
 	@Transactional(readOnly = true)
-	public List<Attachment> readAttachments(final String municipalityId, final String namespace, final String errandId, final String origin, final String senderRole) {
+	public List<Attachment> readAttachments(final String municipalityId, final String namespace, final String errandId, final String documentType, final String senderRole) {
 		ensureErrandExists(municipalityId, namespace, errandId);
 
 		final var errandAttachments = toAttachmentList(attachmentRepository.findByErrandId(errandId)).stream();
@@ -220,7 +222,7 @@ public class AttachmentService {
 			.map(AttachmentMapper::toAttachment);
 
 		return Stream.concat(errandAttachments, conversationAttachments)
-			.filter(attachment -> origin == null || origin.equals(attachment.getOrigin()))
+			.filter(attachment -> documentType == null || documentType.equals(attachment.getDocumentType()))
 			.filter(attachment -> senderRole == null || senderRole.equals(attachment.getSenderRole()))
 			.sorted(Comparator.comparing(Attachment::getCreated, nullsLast(Comparator.naturalOrder())))
 			.toList();

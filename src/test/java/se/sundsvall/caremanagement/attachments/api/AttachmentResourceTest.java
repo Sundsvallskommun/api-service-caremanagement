@@ -71,7 +71,7 @@ class AttachmentResourceTest {
 		final MultiValueMap<String, org.springframework.http.HttpEntity<?>> body = builder.build();
 
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH).queryParam("origin", "CASE_DATA").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.uri(uri -> uri.path(PATH).queryParam("documentType", "CASE_DATA").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(body)
 			.exchange()
@@ -87,7 +87,7 @@ class AttachmentResourceTest {
 		final MultiValueMap<String, org.springframework.http.HttpEntity<?>> body = builder.build();
 
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH).queryParam("origin", "BOGUS").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.uri(uri -> uri.path(PATH).queryParam("documentType", "BOGUS").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(body)
 			.exchange()
@@ -117,7 +117,7 @@ class AttachmentResourceTest {
 		when(serviceMock.readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CONVERSATION"), isNull())).thenReturn(List.of(Attachment.create()));
 
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH).queryParam("origin", "CONVERSATION").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.uri(uri -> uri.path(PATH).queryParam("documentType", "CONVERSATION").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
 			.expectStatus().isOk();
 
@@ -129,7 +129,7 @@ class AttachmentResourceTest {
 		when(serviceMock.readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CASE_DATA"), isNull())).thenReturn(List.of(Attachment.create()));
 
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH).queryParam("origin", "CASE_DATA").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.uri(uri -> uri.path(PATH).queryParam("documentType", "CASE_DATA").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
 			.expectStatus().isOk();
 
@@ -139,7 +139,7 @@ class AttachmentResourceTest {
 	@Test
 	void readAttachmentsInvalidOriginIsBadRequest() {
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH).queryParam("origin", "BOGUS").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.uri(uri -> uri.path(PATH).queryParam("documentType", "BOGUS").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
 			.expectStatus().isBadRequest();
 

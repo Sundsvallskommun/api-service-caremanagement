@@ -25,7 +25,7 @@ public final class AttachmentMapper {
 				.withFileName(e.getFileName())
 				.withMimeType(e.getMimeType())
 				.withFileSize(e.getFileSize())
-				.withOrigin(e.getOrigin())
+				.withDocumentType(e.getDocumentType())
 				.withSenderRole(e.getSenderRole())
 				.withCreated(e.getCreated())
 				.withModified(e.getModified()))
@@ -33,7 +33,7 @@ public final class AttachmentMapper {
 	}
 
 	public static AttachmentEntity toAttachmentEntity(final String errandId, final String namespace,
-		final String municipalityId, final String origin, final String senderRole, final MultipartFile file) {
+		final String municipalityId, final String documentType, final String senderRole, final MultipartFile file) {
 
 		if (errandId == null || file == null) {
 			return null;
@@ -46,7 +46,7 @@ public final class AttachmentMapper {
 				.withFileName(file.getOriginalFilename())
 				.withMimeType(file.getContentType())
 				.withFileSize(Math.toIntExact(file.getSize()))
-				.withOrigin(origin)
+				.withDocumentType(documentType)
 				.withSenderRole(senderRole)
 				.withAttachmentData(AttachmentDataEntity.create()
 					.withFile(Hibernate.getLobHelper().createBlob(file.getInputStream(), file.getSize())));
@@ -56,7 +56,7 @@ public final class AttachmentMapper {
 	}
 
 	public static AttachmentEntity toAttachmentEntity(final String errandId, final String namespace,
-		final String municipalityId, final String origin, final String senderRole, final String fileName, final String mimeType, final byte[] content) {
+		final String municipalityId, final String documentType, final String senderRole, final String fileName, final String mimeType, final byte[] content) {
 
 		if (errandId == null || content == null) {
 			return null;
@@ -68,13 +68,13 @@ public final class AttachmentMapper {
 			.withFileName(fileName)
 			.withMimeType(mimeType)
 			.withFileSize(content.length)
-			.withOrigin(origin)
+			.withDocumentType(documentType)
 			.withSenderRole(senderRole)
 			.withAttachmentData(AttachmentDataEntity.create()
 				.withFile(Hibernate.getLobHelper().createBlob(content)));
 	}
 
-	/** Project a conversation attachment into the unified errand attachment list, tagged with origin CONVERSATION. */
+	/** Project a conversation attachment into the unified errand attachment list, tagged with documentType CONVERSATION. */
 	public static Attachment toAttachment(final ConversationAttachment attachment) {
 		return ofNullable(attachment)
 			.map(a -> Attachment.create()
@@ -83,7 +83,7 @@ public final class AttachmentMapper {
 				.withFileName(a.fileName())
 				.withMimeType(a.mimeType())
 				.withFileSize(a.fileSize())
-				.withOrigin("CONVERSATION")
+				.withDocumentType("CONVERSATION")
 				.withSenderRole(a.senderRole())
 				.withCreated(a.created()))
 			.orElse(null);

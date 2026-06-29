@@ -58,8 +58,9 @@ public class AttachmentEntity implements Auditable {
 	@Column(name = "file_size")
 	private Integer fileSize;
 
+	// Physical column kept as the legacy name "origin" so no migration is needed; the field and API are "documentType".
 	@Column(name = "origin", length = 32)
-	private String origin;
+	private String documentType;
 
 	@Column(name = "sender_role", length = 32)
 	private String senderRole;
@@ -108,8 +109,8 @@ public class AttachmentEntity implements Auditable {
 		return fileSize;
 	}
 
-	public String getOrigin() {
-		return origin;
+	public String getDocumentType() {
+		return documentType;
 	}
 
 	public String getSenderRole() {
@@ -156,8 +157,8 @@ public class AttachmentEntity implements Auditable {
 		this.fileSize = fileSize;
 	}
 
-	public void setOrigin(final String origin) {
-		this.origin = origin;
+	public void setDocumentType(final String documentType) {
+		this.documentType = documentType;
 	}
 
 	public void setSenderRole(final String senderRole) {
@@ -213,8 +214,8 @@ public class AttachmentEntity implements Auditable {
 		return this;
 	}
 
-	public AttachmentEntity withOrigin(final String origin) {
-		this.origin = origin;
+	public AttachmentEntity withDocumentType(final String documentType) {
+		this.documentType = documentType;
 		return this;
 	}
 
@@ -246,20 +247,20 @@ public class AttachmentEntity implements Auditable {
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
 			&& Objects.equals(namespace, that.namespace) && Objects.equals(municipalityId, that.municipalityId)
 			&& Objects.equals(fileName, that.fileName) && Objects.equals(mimeType, that.mimeType)
-			&& Objects.equals(fileSize, that.fileSize) && Objects.equals(origin, that.origin)
+			&& Objects.equals(fileSize, that.fileSize) && Objects.equals(documentType, that.documentType)
 			&& Objects.equals(senderRole, that.senderRole) && Objects.equals(attachmentData, that.attachmentData)
 			&& Objects.equals(created, that.created) && Objects.equals(modified, that.modified);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, namespace, municipalityId, fileName, mimeType, fileSize, origin, senderRole, attachmentData, created, modified);
+		return Objects.hash(id, errandId, namespace, municipalityId, fileName, mimeType, fileSize, documentType, senderRole, attachmentData, created, modified);
 	}
 
 	@Override
 	public String toString() {
 		return "AttachmentEntity{id='" + id + "', errandId='" + errandId + "', fileName='" + fileName
-			+ "', mimeType='" + mimeType + "', fileSize=" + fileSize + ", origin='" + origin + "', senderRole='" + senderRole
+			+ "', mimeType='" + mimeType + "', fileSize=" + fileSize + ", documentType='" + documentType + "', senderRole='" + senderRole
 			+ "', created=" + created + ", modified=" + modified + '}';
 	}
 }

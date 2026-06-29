@@ -29,7 +29,7 @@ class AttachmentMapperTest {
 			.withFileName("f.txt")
 			.withMimeType("text/plain")
 			.withFileSize(10)
-			.withOrigin("CONVERSATION")
+			.withDocumentType("CONVERSATION")
 			.withSenderRole("CLIENT")
 			.withCreated(created)
 			.withModified(modified);
@@ -41,7 +41,7 @@ class AttachmentMapperTest {
 		assertThat(attachment.getFileName()).isEqualTo("f.txt");
 		assertThat(attachment.getMimeType()).isEqualTo("text/plain");
 		assertThat(attachment.getFileSize()).isEqualTo(10);
-		assertThat(attachment.getOrigin()).isEqualTo("CONVERSATION");
+		assertThat(attachment.getDocumentType()).isEqualTo("CONVERSATION");
 		assertThat(attachment.getSenderRole()).isEqualTo("CLIENT");
 		assertThat(attachment.getMessageId()).isNull();
 		assertThat(attachment.getCreated()).isEqualTo(created);
@@ -65,7 +65,7 @@ class AttachmentMapperTest {
 		assertThat(attachment.getFileName()).isEqualTo("intyg.pdf");
 		assertThat(attachment.getMimeType()).isEqualTo("application/pdf");
 		assertThat(attachment.getFileSize()).isEqualTo(42);
-		assertThat(attachment.getOrigin()).isEqualTo("CONVERSATION");
+		assertThat(attachment.getDocumentType()).isEqualTo("CONVERSATION");
 		assertThat(attachment.getSenderRole()).isEqualTo("CLIENT");
 		assertThat(attachment.getCreated()).isEqualTo(FIXED_TIMESTAMP);
 		assertThat(attachment.getModified()).isNull();
@@ -136,7 +136,7 @@ class AttachmentMapperTest {
 			assertThat(entity.getFileName()).isEqualTo("hello.txt");
 			assertThat(entity.getMimeType()).isEqualTo("text/plain");
 			assertThat(entity.getFileSize()).isEqualTo(5);
-			assertThat(entity.getOrigin()).isEqualTo("ERRAND");
+			assertThat(entity.getDocumentType()).isEqualTo("ERRAND");
 			assertThat(entity.getSenderRole()).isEqualTo("CASEWORKER");
 			assertThat(entity.getAttachmentData()).isNotNull();
 		} catch (final Exception e) {
@@ -162,7 +162,7 @@ class AttachmentMapperTest {
 		assertThat(entity.getFileName()).isEqualTo("sammanstallning.pdf");
 		assertThat(entity.getMimeType()).isEqualTo("application/pdf");
 		assertThat(entity.getFileSize()).isEqualTo(4);
-		assertThat(entity.getOrigin()).isEqualTo("GENERATED");
+		assertThat(entity.getDocumentType()).isEqualTo("GENERATED");
 		assertThat(entity.getSenderRole()).isEqualTo("CLIENT");
 		assertThat(entity.getAttachmentData()).isNotNull();
 	}

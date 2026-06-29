@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:52174
+- url: http://localhost:57029
   description: Generated server url
 tags:
 - name: Notifications
@@ -1031,7 +1031,7 @@ paths:
       summary: List attachments
       description: "Fetches all attachment metadata for the errand (application files,\
         \ generated PDFs, manual uploads and conversation attachments), oldest first.\
-        \ Optionally filtered by origin and/or sender role."
+        \ Optionally filtered by documentType and/or sender role."
       operationId: readAttachments
       parameters:
       - name: municipalityId
@@ -1055,9 +1055,9 @@ paths:
         required: true
         schema:
           type: string
-      - name: origin
+      - name: documentType
         in: query
-        description: Only return attachments with this origin
+        description: Only return attachments with this documentType
         required: false
         schema:
           type: string
@@ -1104,8 +1104,8 @@ paths:
       tags:
       - Errand attachments
       summary: Create attachment
-      description: "Uploads a new attachment for the errand. The optional origin tags\
-        \ what the file is: ERRAND (a plain manual upload, the default), CASE_DATA\
+      description: "Uploads a new attachment for the errand. The optional documentType\
+        \ tags what the file is: ERRAND (a plain manual upload, the default), CASE_DATA\
         \ (ärendeuppgifter — a case-data document) or DECISION (beslut — a decision\
         \ document). A CASE_DATA attachment is renamed to {errandNumber}.pdf and only\
         \ one is allowed per errand — uploading a second returns 400."
@@ -1132,7 +1132,7 @@ paths:
         required: true
         schema:
           type: string
-      - name: origin
+      - name: documentType
         in: query
         description: "What the uploaded file is: ERRAND (a plain manual upload, the\
           \ default), CASE_DATA (ärendeuppgifter — a case-data document) or DECISION\
@@ -3175,9 +3175,9 @@ components:
           examples:
           - 1024
           readOnly: true
-        origin:
+        documentType:
           type: string
-          description: "Where the file came from: APPLICATION (citizen's application\
+          description: "What kind of document this is: APPLICATION (citizen's application\
             \ files), CONVERSATION (sent in a message thread), GENERATED (a consolidated\
             \ PDF produced by the platform), ERRAND (uploaded directly to the errand),\
             \ CASE_DATA (ärendeuppgifter — a case-data document for the errand), DECISION\
