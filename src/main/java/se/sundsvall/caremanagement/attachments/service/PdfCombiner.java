@@ -28,6 +28,7 @@ import se.sundsvall.dept44.problem.Problem;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * Merges a heterogeneous list of uploaded files into a single PDF.
@@ -118,11 +119,11 @@ final class PdfCombiner {
 			if (isDoc(source)) {
 				return docToDocument(source.content());
 			}
-			LOG.info("Attachment '{}' (type '{}') has no inline renderer — using a placeholder page in the combined PDF", name, source.contentType());
+			LOG.info("Attachment '{}' (type '{}') has no inline renderer — using a placeholder page in the combined PDF", sanitizeForLogging(name), sanitizeForLogging(source.contentType()));
 			return textDocument("Bilaga: %s (filtypen kunde inte infogas i sammanställningen)".formatted(name));
 		} catch (final Exception e) {
 			// Log without content/PII so a silently-dropped source is auditable; the content itself is never logged.
-			LOG.warn("Attachment '{}' could not be rendered into the combined PDF ({}) — using a placeholder page", name, e.getClass().getSimpleName());
+			LOG.warn("Attachment '{}' could not be rendered into the combined PDF ({}) — using a placeholder page", sanitizeForLogging(name), e.getClass().getSimpleName());
 			return textDocument("Bilaga: %s (kunde inte läsas: %s)".formatted(name, e.getMessage()));
 		}
 	}
