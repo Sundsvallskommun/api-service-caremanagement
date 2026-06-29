@@ -28,6 +28,7 @@ import se.sundsvall.dept44.problem.Problem;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * Merges a heterogeneous list of uploaded files into a single PDF.
@@ -118,11 +119,11 @@ final class PdfCombiner {
 			if (isDoc(source)) {
 				return docToDocument(source.content());
 			}
-			LOG.info("Attachment '{}' (type '{}') has no inline renderer — using a placeholder page in the combined PDF", forLog(name), forLog(source.contentType()));
+			LOG.info("Attachment '{}' (type '{}') has no inline renderer — using a placeholder page in the combined PDF", sanitizeForLogging(name), sanitizeForLogging(source.contentType()));
 			return textDocument("Bilaga: %s (filtypen kunde inte infogas i sammanställningen)".formatted(name));
 		} catch (final Exception e) {
 			// Log without content/PII so a silently-dropped source is auditable; the content itself is never logged.
-			LOG.warn("Attachment '{}' could not be rendered into the combined PDF ({}) — using a placeholder page", forLog(name), e.getClass().getSimpleName());
+			LOG.warn("Attachment '{}' could not be rendered into the combined PDF ({}) — using a placeholder page", sanitizeForLogging(name), e.getClass().getSimpleName());
 			return textDocument("Bilaga: %s (kunde inte läsas: %s)".formatted(name, e.getMessage()));
 		}
 	}
@@ -220,14 +221,6 @@ final class PdfCombiner {
 		} catch (final IOException e) {
 			throw Problem.valueOf(INTERNAL_SERVER_ERROR, "Could not render text page: %s".formatted(e.getMessage()));
 		}
-	}
-
-	/**
-	 * Neutralise control characters (notably CR/LF) in an untrusted value — the filename and content-type come from the
-	 * uploaded file — before it goes into a log line, so a crafted name can't forge log entries (CWE-117).
-	 */
-	private static String forLog(final String value) {
-		return (value == null) ? null : value.replace("\n", "_").replace("\r", "_").replace("\t", "_");
 	}
 
 	/** Split on line breaks, sanitise each line, and wrap it to the page width. */
