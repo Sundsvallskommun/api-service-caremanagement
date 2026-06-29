@@ -24,9 +24,11 @@ public class Errand {
 	private String id;
 
 	@Schema(description = "Municipality id", examples = "2281", accessMode = READ_ONLY)
+	@Null(groups = OnCreate.class)
 	private String municipalityId;
 
 	@Schema(description = "Namespace", examples = "MY_NAMESPACE", accessMode = READ_ONLY)
+	@Null(groups = OnCreate.class)
 	private String namespace;
 
 	@Schema(description = "Human-readable errand number", examples = "EB-26060071", accessMode = READ_ONLY)
@@ -61,6 +63,7 @@ public class Errand {
 		Sortable and searchable on the errand list (e.g. ?sort=applicantName,asc). Null for errand types with no applicant.""",
 		examples = "Anna Andersson",
 		accessMode = READ_ONLY)
+	@Null(groups = OnCreate.class)
 	private String applicantName;
 
 	@Schema(
@@ -74,14 +77,17 @@ public class Errand {
 
 	@Schema(description = "Created timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
+	@Null(groups = OnCreate.class)
 	private OffsetDateTime created;
 
 	@Schema(description = "Modified timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
+	@Null(groups = OnCreate.class)
 	private OffsetDateTime modified;
 
 	@Schema(description = "Touched timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
+	@Null(groups = OnCreate.class)
 	private OffsetDateTime touched;
 
 	public static Errand create() {
