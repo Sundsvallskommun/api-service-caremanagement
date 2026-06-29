@@ -97,33 +97,33 @@ public class ErrandNumberSequenceEntity {
 		this.currentValue = currentValue;
 	}
 
-	public ErrandNumberSequenceEntity withId(final Long v) {
-		this.id = v;
+	public ErrandNumberSequenceEntity withId(final Long id) {
+		this.id = id;
 		return this;
 	}
 
-	public ErrandNumberSequenceEntity withMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public ErrandNumberSequenceEntity withMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 		return this;
 	}
 
-	public ErrandNumberSequenceEntity withNamespace(final String v) {
-		this.namespace = v;
+	public ErrandNumberSequenceEntity withNamespace(final String namespace) {
+		this.namespace = namespace;
 		return this;
 	}
 
-	public ErrandNumberSequenceEntity withSequenceYear(final Integer v) {
-		this.sequenceYear = v;
+	public ErrandNumberSequenceEntity withSequenceYear(final Integer sequenceYear) {
+		this.sequenceYear = sequenceYear;
 		return this;
 	}
 
-	public ErrandNumberSequenceEntity withSequenceMonth(final Integer v) {
-		this.sequenceMonth = v;
+	public ErrandNumberSequenceEntity withSequenceMonth(final Integer sequenceMonth) {
+		this.sequenceMonth = sequenceMonth;
 		return this;
 	}
 
-	public ErrandNumberSequenceEntity withCurrentValue(final Long v) {
-		this.currentValue = v;
+	public ErrandNumberSequenceEntity withCurrentValue(final Long currentValue) {
+		this.currentValue = currentValue;
 		return this;
 	}
 

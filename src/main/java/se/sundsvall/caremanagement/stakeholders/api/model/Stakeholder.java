@@ -168,68 +168,68 @@ public class Stakeholder {
 		this.contactChannels = v;
 	}
 
-	public Stakeholder withId(final String v) {
-		this.id = v;
+	public Stakeholder withId(final String id) {
+		this.id = id;
 		return this;
 	}
 
-	public Stakeholder withExternalId(final String v) {
-		this.externalId = v;
+	public Stakeholder withExternalId(final String externalId) {
+		this.externalId = externalId;
 		return this;
 	}
 
-	public Stakeholder withExternalIdType(final String v) {
-		this.externalIdType = v;
+	public Stakeholder withExternalIdType(final String externalIdType) {
+		this.externalIdType = externalIdType;
 		return this;
 	}
 
-	public Stakeholder withRole(final String v) {
-		this.role = v;
+	public Stakeholder withRole(final String role) {
+		this.role = role;
 		return this;
 	}
 
-	public Stakeholder withFirstName(final String v) {
-		this.firstName = v;
+	public Stakeholder withFirstName(final String firstName) {
+		this.firstName = firstName;
 		return this;
 	}
 
-	public Stakeholder withLastName(final String v) {
-		this.lastName = v;
+	public Stakeholder withLastName(final String lastName) {
+		this.lastName = lastName;
 		return this;
 	}
 
-	public Stakeholder withOrganizationName(final String v) {
-		this.organizationName = v;
+	public Stakeholder withOrganizationName(final String organizationName) {
+		this.organizationName = organizationName;
 		return this;
 	}
 
-	public Stakeholder withAddress(final String v) {
-		this.address = v;
+	public Stakeholder withAddress(final String address) {
+		this.address = address;
 		return this;
 	}
 
-	public Stakeholder withCareOf(final String v) {
-		this.careOf = v;
+	public Stakeholder withCareOf(final String careOf) {
+		this.careOf = careOf;
 		return this;
 	}
 
-	public Stakeholder withZipCode(final String v) {
-		this.zipCode = v;
+	public Stakeholder withZipCode(final String zipCode) {
+		this.zipCode = zipCode;
 		return this;
 	}
 
-	public Stakeholder withCity(final String v) {
-		this.city = v;
+	public Stakeholder withCity(final String city) {
+		this.city = city;
 		return this;
 	}
 
-	public Stakeholder withCountry(final String v) {
-		this.country = v;
+	public Stakeholder withCountry(final String country) {
+		this.country = country;
 		return this;
 	}
 
-	public Stakeholder withContactChannels(final List<ContactChannel> v) {
-		this.contactChannels = v;
+	public Stakeholder withContactChannels(final List<ContactChannel> contactChannels) {
+		this.contactChannels = contactChannels;
 		return this;
 	}
 

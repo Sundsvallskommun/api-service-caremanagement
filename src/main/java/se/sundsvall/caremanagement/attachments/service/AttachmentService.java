@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StreamUtils;
@@ -41,7 +42,7 @@ public class AttachmentService {
 	private static final String STREAM_ERROR_MESSAGE = "%s occurred when copying file with attachment id '%s' to response: %s";
 	private static final String READ_ERROR_MESSAGE = "Could not read input stream: %s";
 
-	private static final String PDF_MIME_TYPE = "application/pdf";
+	private static final String PDF_MIME_TYPE = MediaType.APPLICATION_PDF_VALUE;
 
 	/** Filename of the create-time combined PDF that merges the citizen's application files. */
 	private static final String COMBINED_PDF_FILE_NAME = "sammanstallning.pdf";
