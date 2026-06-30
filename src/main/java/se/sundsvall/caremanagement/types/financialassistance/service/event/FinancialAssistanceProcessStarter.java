@@ -17,6 +17,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_CO_APPLICANT;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * Starts an EB process on an errand and seeds the household start variables the BPMN/DMN flow reads. The renewal intake
@@ -98,7 +99,7 @@ class FinancialAssistanceProcessStarter {
 			processService.startProcess(municipalityId, processDefinitionName, errandId, startVariables(municipalityId, namespace, entity))
 				.ifPresent(processInstanceId -> errandService.linkProcessInstance(municipalityId, namespace, errandId, processInstanceId));
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not start '{}' for errand {}", processDefinitionName, errandId, e);
+			LOG.warn("Could not start '{}' for errand {}", sanitizeForLogging(processDefinitionName), sanitizeForLogging(errandId), e);
 		}
 	}
 

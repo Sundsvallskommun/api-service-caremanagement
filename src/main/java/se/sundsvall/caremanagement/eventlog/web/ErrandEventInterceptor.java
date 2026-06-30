@@ -17,6 +17,8 @@ import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
 import se.sundsvall.dept44.requestid.RequestId;
 import se.sundsvall.dept44.support.Identifier;
 
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
+
 /**
  * Records one {@link ErrandEventEntity} per errand-scoped HTTP request — the "who/what/when" log.
  *
@@ -70,7 +72,7 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 			recordEvent(request, response);
 		} catch (final Exception e) {
 			// An audit write must never break the request the caller already completed.
-			LOG.warn("Failed to record errand event for {} {}", request.getMethod(), request.getRequestURI(), e);
+			LOG.warn("Failed to record errand event for {} {}", sanitizeForLogging(request.getMethod()), sanitizeForLogging(request.getRequestURI()), e);
 		}
 	}
 

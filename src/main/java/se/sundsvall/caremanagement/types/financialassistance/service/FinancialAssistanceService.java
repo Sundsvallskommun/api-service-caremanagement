@@ -89,6 +89,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toEntity;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toStakeholders;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toView;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * Creates and reads financial-assistance (EB) errands. The envelope is owned by the exposed core {@link ErrandService};
@@ -541,7 +542,7 @@ public class FinancialAssistanceService {
 		try {
 			rpaService.enqueue(municipalityId, errandId, action);
 		} catch (final Exception e) {
-			LOG.warn("RPA enqueue {} failed for errand {} — Lifecare write already committed, continuing", action, errandId, e);
+			LOG.warn("RPA enqueue {} failed for errand {} — Lifecare write already committed, continuing", sanitizeForLogging(action), sanitizeForLogging(errandId), e);
 		}
 	}
 

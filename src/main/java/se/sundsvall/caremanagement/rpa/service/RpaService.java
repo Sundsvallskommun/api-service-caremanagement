@@ -14,6 +14,7 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.CONFLICT;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * Enqueues EB RPA tasks on the UiPath Orchestrator. Each call adds one queue item to the configured EB queue, keyed by
@@ -71,7 +72,7 @@ public class RpaService {
 	 */
 	public void enqueue(final String municipalityId, final String namespace, final String errandId, final String action, final Map<String, String> specificContent) {
 		if (!properties.enabled()) {
-			LOG.info("RPA disabled — skipping {} for errand {}", action, errandId);
+			LOG.info("RPA disabled — skipping {} for errand {}", sanitizeForLogging(action), sanitizeForLogging(errandId));
 			return;
 		}
 
@@ -92,10 +93,10 @@ public class RpaService {
 
 		try {
 			rpaClient.addQueueItem(folderId, item);
-			LOG.info("Enqueued RPA task {} for errand {}", action, errandId);
+			LOG.info("Enqueued RPA task {} for errand {}", sanitizeForLogging(action), sanitizeForLogging(errandId));
 		} catch (final ThrowableProblem e) {
 			if (isDuplicate(e)) {
-				LOG.info("RPA task {} for errand {} already queued — skipping", action, errandId);
+				LOG.info("RPA task {} for errand {} already queued — skipping", sanitizeForLogging(action), sanitizeForLogging(errandId));
 				return;
 			}
 			throw e;

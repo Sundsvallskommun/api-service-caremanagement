@@ -16,6 +16,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * Captures and reads the immutable form snapshot of an errand — the citizen-facing application form as it was rendered
@@ -61,7 +62,7 @@ public class FormSnapshotService {
 		final var entity = FormSnapshotMapper.toEntity(municipalityId, namespace, errandId, typeSlug, payload, snapshot, OffsetDateTime.now(ZoneId.systemDefault()));
 		final var saved = repository.save(entity);
 		LOG.info("Captured form snapshot for errand {} (typeSlug={}, sections={}, hash={})",
-			errandId, typeSlug, snapshot.getSections().size(), abbreviate(saved.getContentHash()));
+			sanitizeForLogging(errandId), sanitizeForLogging(typeSlug), snapshot.getSections().size(), abbreviate(saved.getContentHash()));
 	}
 
 	/**
