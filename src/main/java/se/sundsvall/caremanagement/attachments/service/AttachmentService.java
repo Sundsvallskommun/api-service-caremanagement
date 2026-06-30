@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StreamUtils;
@@ -29,6 +28,7 @@ import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper.toAttachment;
 import static se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper.toAttachmentEntity;
 import static se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper.toAttachmentList;
@@ -42,8 +42,6 @@ public class AttachmentService {
 	private static final String CASE_DATA_ALREADY_EXISTS_MESSAGE = "A case-data (ärendeuppgifter) attachment already exists on errand '%s' in namespace '%s' for municipality id '%s'";
 	private static final String STREAM_ERROR_MESSAGE = "%s occurred when copying file with attachment id '%s' to response: %s";
 	private static final String READ_ERROR_MESSAGE = "Could not read input stream: %s";
-
-	private static final String PDF_MIME_TYPE = MediaType.APPLICATION_PDF_VALUE;
 
 	/** Filename of the create-time combined PDF that merges the citizen's application files. */
 	private static final String COMBINED_PDF_FILE_NAME = "sammanstallning.pdf";
@@ -129,7 +127,7 @@ public class AttachmentService {
 			throw Problem.valueOf(BAD_REQUEST, MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE.formatted(errandId, namespace, municipalityId));
 		}
 
-		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_MESSAGE_HISTORY, null, new SourceFile(fileName, PDF_MIME_TYPE, content));
+		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_MESSAGE_HISTORY, null, new SourceFile(fileName, APPLICATION_PDF_VALUE, content));
 		return attachmentRepository.save(entity).getId();
 	}
 
@@ -166,7 +164,7 @@ public class AttachmentService {
 
 		final var combined = PdfCombiner.combine(sources);
 		ids.add(attachmentRepository
-			.save(toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_GENERATED, SENDER_CLIENT, new SourceFile(COMBINED_PDF_FILE_NAME, PDF_MIME_TYPE, combined)))
+			.save(toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_GENERATED, SENDER_CLIENT, new SourceFile(COMBINED_PDF_FILE_NAME, APPLICATION_PDF_VALUE, combined)))
 			.getId());
 
 		return ids;
@@ -195,7 +193,7 @@ public class AttachmentService {
 			.map(content -> new SourceFile(content.fileName(), content.mimeType(), content.content()))
 			.toList();
 		final var combined = PdfCombiner.combine(sources);
-		final var rebuilt = toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_CONVERSATION, SENDER_CLIENT, new SourceFile(CLIENT_PDF_FILE_NAME, PDF_MIME_TYPE, combined));
+		final var rebuilt = toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_CONVERSATION, SENDER_CLIENT, new SourceFile(CLIENT_PDF_FILE_NAME, APPLICATION_PDF_VALUE, combined));
 
 		attachmentRepository.findFirstByErrandIdAndFileNameAndDocumentType(errandId, CLIENT_PDF_FILE_NAME, DOCUMENT_TYPE_CONVERSATION)
 			.ifPresentOrElse(existing -> {

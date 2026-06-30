@@ -55,8 +55,8 @@ class FinancialAssistanceErrandCreatedListener {
 
 	@ApplicationModuleListener
 	void on(final ErrandCreated event) {
-		// The classification writes the errand row and can lose a snapshot-isolation race with ApplicantNameSyncListener;
-		// retry it in a fresh transaction until it lands. Only then (and only for a normal EB errand) start the process.
+		// The classification writes the errand row and can lose a snapshot-isolation race with the applicant-name sync,
+		// so retry it in a fresh transaction until it lands. Only then, and only for a normal EB errand, start the process.
 		if (assignAndClassifyWithRetry(event) == Outcome.PROCEED) {
 			processor.startProcess(event);
 		}

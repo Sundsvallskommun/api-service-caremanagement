@@ -1,5 +1,8 @@
 package se.sundsvall.caremanagement.lifecare.integration;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 /**
  * The metadata + bytes of a document uploaded and bound to a Lifecare actualisation. Grouped into one carrier so
  * {@link LifecareFcIntegration#postActualisationAttachment(Integer, ActualisationAttachment)} stays under the parameter
@@ -21,4 +24,27 @@ public record ActualisationAttachment(
 	String fileName,
 	String mimeType,
 	byte[] content) {
+
+	@Override
+	public boolean equals(final Object o) {
+		return (this == o) || (o instanceof final ActualisationAttachment other
+			&& Objects.equals(documentType, other.documentType)
+			&& Objects.equals(documentSenderType, other.documentSenderType)
+			&& Objects.equals(title, other.title)
+			&& Objects.equals(senderName, other.senderName)
+			&& Objects.equals(fileName, other.fileName)
+			&& Objects.equals(mimeType, other.mimeType)
+			&& Arrays.equals(content, other.content));
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(documentType, documentSenderType, title, senderName, fileName, mimeType, Arrays.hashCode(content));
+	}
+
+	@Override
+	public String toString() {
+		return "ActualisationAttachment[documentType=%s, documentSenderType=%s, title=%s, senderName=%s, fileName=%s, mimeType=%s, content=%d bytes]"
+			.formatted(documentType, documentSenderType, title, senderName, fileName, mimeType, content == null ? 0 : content.length);
+	}
 }

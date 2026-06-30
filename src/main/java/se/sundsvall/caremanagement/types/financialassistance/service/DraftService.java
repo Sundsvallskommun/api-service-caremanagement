@@ -310,6 +310,9 @@ public class DraftService {
 	 * A save consumer that stamps a stable position on any row that doesn't have one yet, handing out consecutive
 	 * positions from {@code start} (the next free position for the errand) so new rows append after the existing ones.
 	 */
+	// S4276: getPosition must return a nullable Integer (null = "no position yet", the condition this method keys on);
+	// ToIntFunction's primitive int cannot represent that null, so the general Function is required here.
+	@SuppressWarnings("java:S4276")
 	private static <E> Consumer<E> positioningSaver(final int start, final Function<E, Integer> getPosition, final ObjIntConsumer<E> setPosition,
 		final Consumer<E> save) {
 		final var next = new AtomicInteger(start);
