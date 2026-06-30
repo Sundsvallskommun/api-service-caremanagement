@@ -8,16 +8,17 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.permit.api.model.Permit;
 import se.sundsvall.caremanagement.permit.integration.db.PermitRepository;
 import se.sundsvall.caremanagement.permit.integration.db.model.PermitEntity;
+import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -32,7 +33,7 @@ class PermitServiceTest {
 	private static final String ERRAND_ID = "errand-1";
 
 	@Mock
-	private ErrandRepository errandRepositoryMock;
+	private ErrandService errandServiceMock;
 
 	@Mock
 	private PermitRepository permitRepositoryMock;
@@ -40,14 +41,13 @@ class PermitServiceTest {
 	@InjectMocks
 	private PermitService service;
 
-	private void errandExists() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create()));
+	private void errandMissing() {
+		doThrow(Problem.valueOf(NOT_FOUND, "No errand"))
+			.when(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
 	void issueDefaultsValidFromAndStatus() {
-		errandExists();
 		when(permitRepositoryMock.save(any(PermitEntity.class))).thenReturn(PermitEntity.create().withId("permit-1"));
 
 		final var id = service.issue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Permit.create().withPermitType("PARKING_PERMIT"));
@@ -63,7 +63,7 @@ class PermitServiceTest {
 
 	@Test
 	void issueErrandNotFound() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(Optional.empty());
+		errandMissing();
 
 		assertThatThrownBy(() -> service.issue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Permit.create().withPermitType("X")))
 			.isInstanceOf(ThrowableProblem.class)
@@ -73,7 +73,6 @@ class PermitServiceTest {
 
 	@Test
 	void readReturnsPermit() {
-		errandExists();
 		when(permitRepositoryMock.findByErrandIdAndId(ERRAND_ID, "permit-1")).thenReturn(Optional.of(PermitEntity.create().withId("permit-1").withStatus("ACTIVE")));
 
 		final var permit = service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "permit-1");
@@ -84,7 +83,6 @@ class PermitServiceTest {
 
 	@Test
 	void readPermitNotFound() {
-		errandExists();
 		when(permitRepositoryMock.findByErrandIdAndId(ERRAND_ID, "missing")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
@@ -94,7 +92,6 @@ class PermitServiceTest {
 
 	@Test
 	void readAllReturnsMappedList() {
-		errandExists();
 		when(permitRepositoryMock.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).thenReturn(List.of(
 			PermitEntity.create().withId("p1"), PermitEntity.create().withId("p2")));
 
@@ -105,7 +102,6 @@ class PermitServiceTest {
 
 	@Test
 	void revokeSetsStatusRevoked() {
-		errandExists();
 		when(permitRepositoryMock.findByErrandIdAndId(ERRAND_ID, "permit-1")).thenReturn(Optional.of(PermitEntity.create().withId("permit-1").withStatus("ACTIVE")));
 
 		service.revoke(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "permit-1");
@@ -117,7 +113,6 @@ class PermitServiceTest {
 
 	@Test
 	void revokeAllForErrandRevokesOnlyActivePermits() {
-		errandExists();
 		when(permitRepositoryMock.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).thenReturn(List.of(
 			PermitEntity.create().withId("p1").withStatus("ACTIVE"),
 			PermitEntity.create().withId("p2").withStatus("REVOKED")));
@@ -129,7 +124,6 @@ class PermitServiceTest {
 
 	@Test
 	void deleteRemovesPermit() {
-		errandExists();
 		final var entity = PermitEntity.create().withId("permit-1");
 		when(permitRepositoryMock.findByErrandIdAndId(ERRAND_ID, "permit-1")).thenReturn(Optional.of(entity));
 

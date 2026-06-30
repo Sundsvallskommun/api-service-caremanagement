@@ -4,7 +4,7 @@ import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
+import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.notes.api.model.CreateNote;
 import se.sundsvall.caremanagement.notes.api.model.Note;
 import se.sundsvall.caremanagement.notes.api.model.UpdateNote;
@@ -22,21 +22,20 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @Transactional
 public class NoteService {
 
-	private static final String ERRAND_NOT_FOUND_MESSAGE = "No errand with id '%s' found in namespace '%s' for municipality id '%s'";
 	private static final String NOTE_NOT_FOUND_MESSAGE = "No note with id '%s' found on errand '%s' in namespace '%s' for municipality id '%s'";
 
-	private final ErrandRepository errandRepository;
+	private final ErrandService errandService;
 	private final NoteRepository repository;
 	private final ApplicationEventPublisher events;
 
-	NoteService(final ErrandRepository errandRepository, final NoteRepository repository, final ApplicationEventPublisher events) {
-		this.errandRepository = errandRepository;
+	NoteService(final ErrandService errandService, final NoteRepository repository, final ApplicationEventPublisher events) {
+		this.errandService = errandService;
 		this.repository = repository;
 		this.events = events;
 	}
 
 	public String add(final String municipalityId, final String namespace, final String errandId, final CreateNote request) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandService.assertExists(municipalityId, namespace, errandId);
 		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
 		final var saved = repository.save(NoteEntity.create()
 			.withErrandId(errandId)
@@ -50,7 +49,7 @@ public class NoteService {
 
 	@Transactional(readOnly = true)
 	public List<Note> listForErrand(final String municipalityId, final String namespace, final String errandId) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandService.assertExists(municipalityId, namespace, errandId);
 		return repository.findByErrandIdOrderByCreatedDesc(errandId).stream()
 			.map(NoteService::toNote)
 			.toList();
@@ -58,7 +57,7 @@ public class NoteService {
 
 	@Transactional(readOnly = true)
 	public long countForErrand(final String municipalityId, final String namespace, final String errandId) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandService.assertExists(municipalityId, namespace, errandId);
 		return repository.countByErrandId(errandId);
 	}
 
@@ -80,13 +79,8 @@ public class NoteService {
 		repository.delete(findNote(municipalityId, namespace, errandId, noteId));
 	}
 
-	private void ensureErrandExists(final String municipalityId, final String namespace, final String errandId) {
-		errandRepository.findByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERRAND_NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId)));
-	}
-
 	private NoteEntity findNote(final String municipalityId, final String namespace, final String errandId, final String noteId) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandService.assertExists(municipalityId, namespace, errandId);
 		return repository.findByErrandIdAndId(errandId, noteId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NOTE_NOT_FOUND_MESSAGE.formatted(noteId, errandId, namespace, municipalityId)));
 	}

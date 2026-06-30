@@ -81,6 +81,18 @@ public class ErrandService {
 		return toErrand(findEntity(municipalityId, namespace, errandId));
 	}
 
+	/**
+	 * Asserts that an errand envelope exists for the given tenant. Shared pure existence guard for other modules
+	 * (notes, notifications, conversation, permits, referrals, status history) so each does not duplicate the
+	 * find-or-404 against the errand table. Throws {@code NOT_FOUND} when no such errand exists; returns nothing.
+	 */
+	@Transactional(readOnly = true)
+	public void assertExists(final String municipalityId, final String namespace, final String errandId) {
+		if (!errandRepository.existsByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)) {
+			throw Problem.valueOf(NOT_FOUND, NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId));
+		}
+	}
+
 	@Transactional(readOnly = true)
 	public FindErrandsResponse findErrands(final String municipalityId, final String namespace, final Specification<ErrandEntity> filter,
 		final boolean hasUnacknowledgedNotifications, final String notificationOwnerId, final Pageable pageable) {

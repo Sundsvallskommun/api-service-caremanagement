@@ -79,6 +79,7 @@ public class WarningService {
 	 * objects: unhandled / changed / still-missing incomes, plus income that has newly arrived in SSBTEK but is not in the
 	 * caseworker's edited draft calculation.
 	 */
+	@Transactional
 	public void reconcileIncomeWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final List<String> newIncome) {
 		final List<WarningInput> inputs = new ArrayList<>();
@@ -96,6 +97,7 @@ public class WarningService {
 	 * renewal delta (household-size + housing drift). Supersedes {@link #reconcileIncomeWarnings} once the three-section
 	 * draft is in play.
 	 */
+	@Transactional
 	public void reconcileCalculationWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final DraftChanges draftChanges, final List<WarningInput> sectionWarnings) {
 
@@ -119,9 +121,13 @@ public class WarningService {
 	 * Reconcile the errand's warnings against {@code current}: create the ones that are new, refresh the message of ones
 	 * still OPEN/ACKNOWLEDGED, and auto-close ones whose cause has resolved (no longer in {@code current}). A CLOSED
 	 * warning is never re-opened.
+	 *
+	 * <p>
+	 * Package-private and intentionally not {@code @Transactional}: it is only ever invoked by the public
+	 * {@code reconcile*Warnings} entry points above, which carry the transaction — a self-invoked {@code @Transactional}
+	 * method would bypass the Spring proxy and silently run without one.
 	 */
-	@Transactional
-	public void reconcile(final String errandId, final List<WarningInput> current) {
+	void reconcile(final String errandId, final List<WarningInput> current) {
 		final var existing = repository.findByErrandId(errandId);
 		final var currentKeys = current.stream().map(input -> key(input.type(), input.sourceKey())).collect(toSet());
 

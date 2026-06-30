@@ -5,7 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
+import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.notifications.integration.db.NotificationRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,7 +21,7 @@ class NotificationServiceTest {
 	private static final String ERRAND_ID = "11111111-1111-1111-1111-111111111111";
 
 	@Mock
-	private ErrandRepository errandRepositoryMock;
+	private ErrandService errandServiceMock;
 
 	@Mock
 	private NotificationRepository notificationRepositoryMock;

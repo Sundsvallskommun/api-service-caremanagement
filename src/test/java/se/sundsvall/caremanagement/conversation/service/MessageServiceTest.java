@@ -23,14 +23,15 @@ import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAtta
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentEntity;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
 import se.sundsvall.caremanagement.conversation.service.event.MessagePosted;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -47,7 +48,7 @@ class MessageServiceTest {
 	private static final String NAMESPACE = "my-namespace";
 
 	@Mock
-	private ErrandRepository errandRepositoryMock;
+	private ErrandService errandServiceMock;
 
 	@Mock
 	private MessageRepository repositoryMock;
@@ -64,14 +65,13 @@ class MessageServiceTest {
 	@InjectMocks
 	private MessageService service;
 
-	private void errandExists(final String errandId) {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(errandId, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(errandId)));
+	private void errandMissing(final String errandId) {
+		doThrow(Problem.valueOf(NOT_FOUND, "No errand"))
+			.when(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, errandId);
 	}
 
 	@Test
 	void postWithoutAttachmentsPublishesEventAndReturnsId() {
-		errandExists("errand-1");
 		final var saved = MessageEntity.create().withId("message-1").withErrandId("errand-1").withDirection("OUTBOUND").withAuthor("author").withCreated(FIXED_TIMESTAMP);
 		when(repositoryMock.save(any(MessageEntity.class))).thenReturn(saved);
 
@@ -103,7 +103,7 @@ class MessageServiceTest {
 
 	@Test
 	void postOnUnknownErrandIsNotFoundAndPersistsNothing() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId("errand-1", NAMESPACE, MUNICIPALITY_ID)).thenReturn(Optional.empty());
+		errandMissing("errand-1");
 
 		assertThatThrownBy(() -> service.post(MUNICIPALITY_ID, NAMESPACE, "errand-1", new CreateMessage("OUTBOUND", "body", "author", null), null))
 			.isInstanceOf(ThrowableProblem.class)
@@ -115,7 +115,6 @@ class MessageServiceTest {
 
 	@Test
 	void postWithAttachmentsStoresEachAttachment() {
-		errandExists("errand-1");
 		final var saved = MessageEntity.create().withId("message-1").withErrandId("errand-1").withDirection("INBOUND").withCreated(FIXED_TIMESTAMP);
 		when(repositoryMock.save(any(MessageEntity.class))).thenReturn(saved);
 		when(attachmentRepositoryMock.save(any(MessageAttachmentEntity.class)))
@@ -148,7 +147,6 @@ class MessageServiceTest {
 
 	@Test
 	void postWithInReplyToValidatesAndPersistsTheReference() {
-		errandExists("errand-1");
 		when(repositoryMock.findByIdAndErrandId("parent-1", "errand-1"))
 			.thenReturn(Optional.of(MessageEntity.create().withId("parent-1").withErrandId("errand-1")));
 		when(repositoryMock.save(any(MessageEntity.class))).thenReturn(MessageEntity.create().withId("message-1"));
@@ -166,7 +164,6 @@ class MessageServiceTest {
 
 	@Test
 	void postWithUnknownInReplyToIsBadRequestAndPersistsNothing() {
-		errandExists("errand-1");
 		when(repositoryMock.findByIdAndErrandId("missing-parent", "errand-1")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.post(MUNICIPALITY_ID, NAMESPACE, "errand-1", new CreateMessage("OUTBOUND", "body", "author", "missing-parent"), null))
@@ -179,7 +176,6 @@ class MessageServiceTest {
 
 	@Test
 	void listForErrandReturnsMappedMessagesWithAttachments() {
-		errandExists("errand-1");
 		when(repositoryMock.findByErrandIdOrderByCreatedAsc("errand-1")).thenReturn(List.of(
 			MessageEntity.create().withId("m1").withErrandId("errand-1").withDirection("INBOUND").withBody("b1").withAuthor("a1").withCreated(FIXED_TIMESTAMP)));
 		when(attachmentRepositoryMock.findByMessageIdIn(List.of("m1"))).thenReturn(List.of(
@@ -197,7 +193,7 @@ class MessageServiceTest {
 
 	@Test
 	void listForUnknownErrandIsNotFound() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId("errand-1", NAMESPACE, MUNICIPALITY_ID)).thenReturn(Optional.empty());
+		errandMissing("errand-1");
 
 		assertThatThrownBy(() -> service.listForErrand(MUNICIPALITY_ID, NAMESPACE, "errand-1"))
 			.isInstanceOf(ThrowableProblem.class)
@@ -208,7 +204,6 @@ class MessageServiceTest {
 
 	@Test
 	void readReturnsMessageScopedToErrand() {
-		errandExists("e1");
 		when(repositoryMock.findByIdAndErrandId("m1", "e1")).thenReturn(Optional.of(
 			MessageEntity.create().withId("m1").withErrandId("e1").withDirection("OUTBOUND").withBody("b")));
 		when(attachmentRepositoryMock.findByMessageId("m1")).thenReturn(List.of(
@@ -224,7 +219,6 @@ class MessageServiceTest {
 
 	@Test
 	void readNotFoundOnOtherErrand() {
-		errandExists("e1");
 		when(repositoryMock.findByIdAndErrandId("m1", "e1")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, "e1", "m1"))
@@ -234,7 +228,7 @@ class MessageServiceTest {
 
 	@Test
 	void readNotFoundOnUnknownErrand() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId("e1", NAMESPACE, MUNICIPALITY_ID)).thenReturn(Optional.empty());
+		errandMissing("e1");
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, "e1", "m1"))
 			.isInstanceOf(ThrowableProblem.class)
@@ -245,7 +239,6 @@ class MessageServiceTest {
 
 	@Test
 	void streamAttachmentFileStreamsContent() {
-		errandExists("e1");
 		final var response = new MockHttpServletResponse();
 		when(repositoryMock.findByIdAndErrandId("m1", "e1")).thenReturn(Optional.of(MessageEntity.create().withId("m1")));
 		when(attachmentRepositoryMock.findByMessageIdAndId("m1", "att-1")).thenReturn(Optional.of(
@@ -262,7 +255,6 @@ class MessageServiceTest {
 
 	@Test
 	void streamAttachmentFileMessageNotFound() {
-		errandExists("e1");
 		final var response = new MockHttpServletResponse();
 		when(repositoryMock.findByIdAndErrandId("m1", "e1")).thenReturn(Optional.empty());
 
@@ -275,7 +267,6 @@ class MessageServiceTest {
 
 	@Test
 	void streamAttachmentFileAttachmentNotFound() {
-		errandExists("e1");
 		final var response = new MockHttpServletResponse();
 		when(repositoryMock.findByIdAndErrandId("m1", "e1")).thenReturn(Optional.of(MessageEntity.create().withId("m1")));
 		when(attachmentRepositoryMock.findByMessageIdAndId("m1", "att-1")).thenReturn(Optional.empty());
@@ -289,7 +280,6 @@ class MessageServiceTest {
 
 	@Test
 	void streamAttachmentFileDataNotFound() {
-		errandExists("e1");
 		final var response = new MockHttpServletResponse();
 		when(repositoryMock.findByIdAndErrandId("m1", "e1")).thenReturn(Optional.of(MessageEntity.create().withId("m1")));
 		when(attachmentRepositoryMock.findByMessageIdAndId("m1", "att-1")).thenReturn(Optional.of(
@@ -303,7 +293,6 @@ class MessageServiceTest {
 
 	@Test
 	void streamAttachmentFileSqlExceptionWrappedAsInternalServerError() throws SQLException {
-		errandExists("e1");
 		final var response = new MockHttpServletResponse();
 		final var blob = mock(Blob.class);
 		when(blob.getBinaryStream()).thenThrow(new SQLException("boom"));

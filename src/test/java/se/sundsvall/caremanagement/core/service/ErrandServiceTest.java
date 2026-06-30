@@ -292,4 +292,24 @@ class ErrandServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 	}
+
+	@Test
+	void assertExistsDoesNothingWhenErrandExists() {
+		when(repositoryMock.existsByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
+
+		service.assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		verify(repositoryMock).existsByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID);
+		verify(eventPublisherMock, never()).publishEvent(any());
+	}
+
+	@Test
+	void assertExistsThrowsNotFoundWhenErrandMissing() {
+		when(repositoryMock.existsByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(false);
+
+		assertThatThrownBy(() -> service.assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessageContaining("No errand with id '%s' found in namespace '%s' for municipality id '%s'".formatted(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID));
+	}
 }

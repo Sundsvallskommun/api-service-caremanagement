@@ -18,7 +18,7 @@ import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentEntity;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
 import se.sundsvall.caremanagement.conversation.service.event.MessagePosted;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
+import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.OffsetDateTime.now;
@@ -46,22 +46,21 @@ import static se.sundsvall.caremanagement.conversation.service.mapper.MessageMap
 @Transactional
 public class MessageService {
 
-	private static final String ERRAND_NOT_FOUND_MESSAGE = "No errand with id '%s' found in namespace '%s' for municipality id '%s'";
 	private static final String MESSAGE_NOT_FOUND_MESSAGE = "No message with id '%s'";
 	private static final String IN_REPLY_TO_NOT_FOUND_MESSAGE = "Cannot reply to message '%s' - no such message on errand '%s'";
 	private static final String ATTACHMENT_NOT_FOUND_MESSAGE = "No attachment with id '%s' found on message '%s'";
 	private static final String DATA_NOT_FOUND_MESSAGE = "No file content found for attachment with id '%s'";
 	private static final String STREAM_ERROR_MESSAGE = "%s occurred when copying file with attachment id '%s' to response: %s";
 
-	private final ErrandRepository errandRepository;
+	private final ErrandService errandService;
 	private final MessageRepository repository;
 	private final MessageAttachmentRepository attachmentRepository;
 	private final MessageAttachmentDataRepository attachmentDataRepository;
 	private final ApplicationEventPublisher events;
 
-	MessageService(final ErrandRepository errandRepository, final MessageRepository repository, final MessageAttachmentRepository attachmentRepository,
+	MessageService(final ErrandService errandService, final MessageRepository repository, final MessageAttachmentRepository attachmentRepository,
 		final MessageAttachmentDataRepository attachmentDataRepository, final ApplicationEventPublisher events) {
-		this.errandRepository = errandRepository;
+		this.errandService = errandService;
 		this.repository = repository;
 		this.attachmentRepository = attachmentRepository;
 		this.attachmentDataRepository = attachmentDataRepository;
@@ -69,7 +68,7 @@ public class MessageService {
 	}
 
 	public String post(final String municipalityId, final String namespace, final String errandId, final CreateMessage request, final List<MultipartFile> attachments) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandService.assertExists(municipalityId, namespace, errandId);
 		validateInReplyTo(errandId, request.inReplyToId());
 
 		final var saved = repository.save(MessageEntity.create()
@@ -90,7 +89,7 @@ public class MessageService {
 
 	@Transactional(readOnly = true)
 	public List<Message> listForErrand(final String municipalityId, final String namespace, final String errandId) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandService.assertExists(municipalityId, namespace, errandId);
 		final var messages = repository.findByErrandIdOrderByCreatedAsc(errandId);
 		final var attachmentsByMessageId = attachmentRepository
 			.findByMessageIdIn(messages.stream().map(MessageEntity::getId).toList()).stream()
@@ -103,14 +102,14 @@ public class MessageService {
 
 	@Transactional(readOnly = true)
 	public Message read(final String municipalityId, final String namespace, final String errandId, final String messageId) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandService.assertExists(municipalityId, namespace, errandId);
 		final var message = repository.findByIdAndErrandId(messageId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, MESSAGE_NOT_FOUND_MESSAGE.formatted(messageId)));
 		return toMessage(message, attachmentRepository.findByMessageId(messageId));
 	}
 
 	public void streamAttachmentFile(final String municipalityId, final String namespace, final String errandId, final String messageId, final String attachmentId, final HttpServletResponse response) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandService.assertExists(municipalityId, namespace, errandId);
 		ensureMessageBelongsToErrand(errandId, messageId);
 		final var attachment = attachmentRepository.findByMessageIdAndId(messageId, attachmentId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ATTACHMENT_NOT_FOUND_MESSAGE.formatted(attachmentId, messageId)));
@@ -130,11 +129,6 @@ public class MessageService {
 	private void store(final String messageId, final String direction, final MultipartFile file) {
 		final var attachment = attachmentRepository.save(toMessageAttachmentEntity(messageId, direction, file));
 		attachmentDataRepository.save(toMessageAttachmentDataEntity(attachment.getId(), file));
-	}
-
-	private void ensureErrandExists(final String municipalityId, final String namespace, final String errandId) {
-		errandRepository.findByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERRAND_NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId)));
 	}
 
 	private void ensureMessageBelongsToErrand(final String errandId, final String messageId) {

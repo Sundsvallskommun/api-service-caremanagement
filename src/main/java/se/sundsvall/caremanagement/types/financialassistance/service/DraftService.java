@@ -135,7 +135,7 @@ public class DraftService {
 		ofNullable(input.getHasCustomHouseholdSize()).ifPresent(header::setHasCustomHouseholdSize);
 		ofNullable(input.getHouseholdSize()).ifPresent(header::setHouseholdSize);
 		headerRepository.save(header);
-		return get(errandId);
+		return loadDraft(errandId);
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -144,6 +144,12 @@ public class DraftService {
 
 	@Transactional(readOnly = true)
 	public CalculationDraft get(final String errandId) {
+		return loadDraft(errandId);
+	}
+
+	// Shared read used by both the public read endpoint and the write methods. Kept out of @Transactional self-invocation:
+	// a write method calling the readOnly get() via 'this' would bypass the proxy and ignore the readOnly hint anyway.
+	private CalculationDraft loadDraft(final String errandId) {
 		final var header = headerRepository.findById(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND));
 
