@@ -141,10 +141,8 @@ public class AttachmentService {
 	 * @param  sources the files to combine, in order (must contain at least one element)
 	 * @return         the combined PDF as bytes
 	 */
-	public byte[] combineToPdf(final List<CombineSource> sources) {
-		return PdfCombiner.combine(sources.stream()
-			.map(source -> new SourceFile(source.fileName(), source.mimeType(), source.content()))
-			.toList());
+	public byte[] combineToPdf(final List<SourceFile> sources) {
+		return PdfCombiner.combine(sources);
 	}
 
 	/**

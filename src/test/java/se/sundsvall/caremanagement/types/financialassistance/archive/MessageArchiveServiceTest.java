@@ -8,7 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
-import se.sundsvall.caremanagement.attachments.service.CombineSource;
+import se.sundsvall.caremanagement.attachments.service.SourceFile;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentView;
 import se.sundsvall.caremanagement.conversation.spi.ConversationMessageView;
 import se.sundsvall.caremanagement.conversation.spi.ConversationThreadQueryService;
@@ -179,7 +179,7 @@ class MessageArchiveServiceTest {
 		verifyNoInteractions(conversationThreadQueryServiceMock, decisionServiceMock, actualisationServiceMock, attachmentServiceMock);
 	}
 
-	private static List<CombineSource> argThatHasSize(final int size) {
+	private static List<SourceFile> argThatHasSize(final int size) {
 		return argThat(list -> list != null && list.size() == size);
 	}
 }

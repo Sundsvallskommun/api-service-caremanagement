@@ -65,6 +65,9 @@ class DatabaseCleanupScheduler {
 		jdbcTemplate.execute((ConnectionCallback<Void>) this::wipe);
 	}
 
+	// S2077: the only interpolated value is a table name read from information_schema for the current DATABASE() — never
+	// user input, and a table identifier cannot be a bind parameter. The bean is also demo-only (disabled by default).
+	@SuppressWarnings("java:S2077")
 	private Void wipe(final Connection connection) throws SQLException {
 		try (final var statement = connection.createStatement()) {
 			statement.execute("SET FOREIGN_KEY_CHECKS = 0");

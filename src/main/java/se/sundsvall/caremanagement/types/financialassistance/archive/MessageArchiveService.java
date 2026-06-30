@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
-import se.sundsvall.caremanagement.attachments.service.CombineSource;
+import se.sundsvall.caremanagement.attachments.service.SourceFile;
 import se.sundsvall.caremanagement.conversation.spi.ConversationMessageView;
 import se.sundsvall.caremanagement.conversation.spi.ConversationThreadQueryService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
@@ -123,11 +123,11 @@ public class MessageArchiveService {
 	private byte[] assemble(final String errandNumber, final List<ConversationMessageView> thread) {
 		final var attachments = ThreadAttachments.flatten(thread);
 
-		final var sources = new ArrayList<CombineSource>();
-		sources.add(new CombineSource("meddelanden.pdf", PDF_MIME_TYPE, MeddelandehistorikPdfRenderer.renderMessages(errandNumber, thread, attachments)));
+		final var sources = new ArrayList<SourceFile>();
+		sources.add(new SourceFile("meddelanden.pdf", PDF_MIME_TYPE, MeddelandehistorikPdfRenderer.renderMessages(errandNumber, thread, attachments)));
 		attachments.forEach(attachment -> {
-			sources.add(new CombineSource("bilaga-%d-rubrik.pdf".formatted(attachment.number()), PDF_MIME_TYPE, MeddelandehistorikPdfRenderer.renderSeparator(attachment)));
-			sources.add(new CombineSource(attachment.fileName(), attachment.mimeType(), attachment.content()));
+			sources.add(new SourceFile("bilaga-%d-rubrik.pdf".formatted(attachment.number()), PDF_MIME_TYPE, MeddelandehistorikPdfRenderer.renderSeparator(attachment)));
+			sources.add(new SourceFile(attachment.fileName(), attachment.mimeType(), attachment.content()));
 		});
 
 		return attachmentService.combineToPdf(sources);

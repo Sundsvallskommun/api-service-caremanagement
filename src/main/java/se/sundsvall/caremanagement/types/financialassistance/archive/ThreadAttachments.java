@@ -37,6 +37,9 @@ final class ThreadAttachments {
 	 * @param mimeType     the attachment MIME type
 	 * @param content      the attachment bytes
 	 */
+	// Internal value carrier, built once in flatten() and consumed in order — never compared or hashed, so the default
+	// record semantics are sufficient and content-aware equals/hashCode/toString (S6218) would be dead code.
+	@SuppressWarnings("java:S6218")
 	record NumberedAttachment(int number, int messageIndex, String role, OffsetDateTime created, String fileName, String mimeType, byte[] content) {}
 
 	static String role(final String direction) {
