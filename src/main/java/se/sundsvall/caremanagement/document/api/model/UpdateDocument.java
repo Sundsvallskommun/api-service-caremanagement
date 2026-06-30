@@ -1,0 +1,28 @@
+package se.sundsvall.caremanagement.document.api.model;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+/**
+ * Request to update a Dokument. Replaces the editable fields (Typ, Rubrik, text, Datum, Tid) and records the editor.
+ * Only allowed while the document is WORKING — a LOCKED document (upprättad handling) is immutable and rejects this
+ * with
+ * {@code 409 Conflict}.
+ */
+public record UpdateDocument(
+
+	@Schema(description = "Document type (Lifecare 'Typ'/Dokumenttyp)", example = "Brev", requiredMode = Schema.RequiredMode.REQUIRED) @NotBlank @Size(max = 255) String type,
+
+	@Schema(description = "Heading (Lifecare 'Rubrik')", example = "Beslut om ekonomiskt bistånd 2025-05", requiredMode = Schema.RequiredMode.REQUIRED) @NotBlank @Size(max = 255) String heading,
+
+	@Schema(description = "Free-text body of the document; optional", example = "Beslut har fattats enligt nedan ...") @Size(max = 1_048_576) String text,
+
+	@Schema(description = "Documented date (Lifecare 'Datum')", example = "2025-05-30", requiredMode = Schema.RequiredMode.REQUIRED) @NotNull LocalDate documentDate,
+
+	@Schema(description = "Documented time (Lifecare 'Tid'); optional", example = "14:30") LocalTime documentTime,
+
+	@Schema(description = "User id of the editor (Lifecare 'Ändrat av'); optional", example = "ebb14eri") @Size(max = 64) String modifiedBy) {}

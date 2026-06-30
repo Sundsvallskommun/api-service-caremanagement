@@ -1,0 +1,142 @@
+package se.sundsvall.caremanagement.types.financialassistance.service;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import se.sundsvall.caremanagement.operaton.service.ProcessService;
+
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_EXPENSE;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_SPECIAL_EXPENSE;
+
+/**
+ * The expense rules — the process-decided (skäligt) amount for a cost, the FC array it belongs to, and the
+ * manual-review flag. Each cost type has its <em>own</em> modeler-editable decision in the operaton engine running
+ * verksamhetens hyra-regelträd (the 8-row historik-logik: belopp styrs av föregående månads godkända belopp,
+ * gränsvärdet
+ * styr varningstexten), so any type can diverge later without touching the others:
+ *
+ * <ul>
+ * <li>{@code RENT} → {@code Decision_hyra} (tak per ålder/barn) · {@code HOME_INSURANCE} →
+ * {@code Decision_hemforsakring}
+ * (tak per hushållsstorlek)</li>
+ * <li>fasta tak:
+ * {@code ELECTRICITY}/{@code INTERNET}/{@code UNEMPLOYMENT_FUND}/{@code UNION_FEE}/{@code TRAVEL_APPROVED}/
+ * {@code TRAVEL_MEDICAL_TRANSPORT}/{@code MEDICAL_CARE}/{@code MEDICINE}</li>
+ * <li>{@code OTHER} → {@code Decision_ovrigtBistand} (alltid 0, bedöms manuellt)</li>
+ * </ul>
+ *
+ * Best-effort: an unmapped cost type, an unavailable decision, or an empty result falls back to the applied amount with
+ * the cost type's static bucket and no flag, so the daily prepare is never blocked.
+ */
+@Service
+public class ExpenseRulesService {
+
+	private static final String OUTPUT_APPROVED_AMOUNT = "approvedAmount";
+	private static final String OUTPUT_BUCKET = "bucket";
+	private static final String OUTPUT_VARNING = "varning";
+	private static final String OUTPUT_REGEL = "regel";
+
+	/** No previous-month approved amount → the sentinel the regelträd reads as "historik saknas". */
+	private static final BigDecimal NO_HISTORY = BigDecimal.valueOf(-1);
+
+	/** EB cost type → its own decision key in the engine. */
+	private static final Map<String, String> DECISION_KEY_BY_COST_TYPE = Map.ofEntries(
+		Map.entry("RENT", "Decision_hyra"),
+		Map.entry("HOME_INSURANCE", "Decision_hemforsakring"),
+		Map.entry("ELECTRICITY", "Decision_hushallsel"),
+		Map.entry("INTERNET", "Decision_internet"),
+		Map.entry("UNEMPLOYMENT_FUND", "Decision_akasseavgift"),
+		Map.entry("UNION_FEE", "Decision_fackavgift"),
+		Map.entry("TRAVEL_APPROVED", "Decision_resor"),
+		Map.entry("TRAVEL_MEDICAL_TRANSPORT", "Decision_sjukresor"),
+		Map.entry("MEDICAL_CARE", "Decision_halsosjukvard"),
+		Map.entry("MEDICINE", "Decision_medicin"),
+		Map.entry("OTHER", "Decision_ovrigtBistand"));
+
+	/** EB cost type → the FC array it posts to (the static counterpart of each decision's bucket output). */
+	private static final Map<String, String> BUCKET_BY_COST_TYPE = Map.ofEntries(
+		Map.entry("RENT", BUCKET_EXPENSE),
+		Map.entry("ELECTRICITY", BUCKET_EXPENSE),
+		Map.entry("HOME_INSURANCE", BUCKET_EXPENSE),
+		Map.entry("INTERNET", BUCKET_EXPENSE),
+		Map.entry("UNEMPLOYMENT_FUND", BUCKET_EXPENSE),
+		Map.entry("UNION_FEE", BUCKET_EXPENSE),
+		Map.entry("TRAVEL_APPROVED", BUCKET_EXPENSE),
+		Map.entry("TRAVEL_MEDICAL_TRANSPORT", BUCKET_SPECIAL_EXPENSE),
+		Map.entry("MEDICAL_CARE", BUCKET_SPECIAL_EXPENSE),
+		Map.entry("MEDICINE", BUCKET_SPECIAL_EXPENSE),
+		Map.entry("OTHER", BUCKET_SPECIAL_EXPENSE));
+
+	private static final Logger LOG = LoggerFactory.getLogger(ExpenseRulesService.class);
+
+	private final ProcessService processService;
+
+	ExpenseRulesService(final ProcessService processService) {
+		this.processService = processService;
+	}
+
+	/**
+	 * The rules verdict for a cost — the process (skäligt) amount, the FC bucket it posts to, and the manual-review
+	 * flag: {@code varning} true when the cost needs a reasonableness assessment, with {@code regel} the human-readable
+	 * reason.
+	 */
+	public record ExpenseVerdict(BigDecimal processAmount, String bucket, boolean varning, String regel) {}
+
+	/** The FC array a cost type posts to (best-effort {@code EXPENSE} for an unmapped type). */
+	public static String bucketForCostType(final String costType) {
+		return BUCKET_BY_COST_TYPE.getOrDefault(costType, BUCKET_EXPENSE);
+	}
+
+	/**
+	 * The rules verdict for a cost, evaluated through its per-type decision (the hyra-regelträd). Falls back to the
+	 * applied amount + the cost type's static bucket + unflagged when the cost type is unmapped, the decision is
+	 * unavailable, or it returns nothing.
+	 *
+	 * @param  municipalityId   the municipality the errand belongs to
+	 * @param  costType         the EB cost type (e.g. RENT, MEDICINE)
+	 * @param  appliedAmount    what the citizen applied for — the fallback and, in the regelträd, the upper bound
+	 * @param  previousApproved the approved amount for this cost type on the previous month's calculation (may be
+	 *                          {@code null} → treated as "historik saknas")
+	 * @param  sokandeAlder     the applicant's age (rent gränsvärde input; ignored by other types, may be {@code null})
+	 * @param  antalBarn        number of children in the household (rent gränsvärde input, may be {@code null})
+	 * @param  antalIHushallet  number of persons in the household (home-insurance gränsvärde input, may be {@code null})
+	 * @return                  the verdict (process amount + bucket + review flag + reason), best-effort
+	 */
+	public ExpenseVerdict verdict(final String municipalityId, final String costType, final BigDecimal appliedAmount,
+		final BigDecimal previousApproved, final Integer sokandeAlder, final Integer antalBarn, final Integer antalIHushallet) {
+
+		final var decisionKey = DECISION_KEY_BY_COST_TYPE.get(costType);
+		if (decisionKey == null) {
+			return new ExpenseVerdict(appliedAmount, bucketForCostType(costType), false, null);
+		}
+
+		try {
+			final var variables = new HashMap<String, Object>();
+			variables.put("ansoktBelopp", appliedAmount == null ? BigDecimal.ZERO : appliedAmount);
+			variables.put("godkandForra", previousApproved == null ? NO_HISTORY : previousApproved);
+			variables.put("sokandeAlder", sokandeAlder == null ? 0 : sokandeAlder);
+			variables.put("antalBarn", antalBarn == null ? 0 : antalBarn);
+			variables.put("antalIHushallet", antalIHushallet == null ? 1 : antalIHushallet);
+
+			final var rows = processService.evaluateDecision(municipalityId, decisionKey, variables);
+			if (rows.isEmpty()) {
+				return new ExpenseVerdict(appliedAmount, bucketForCostType(costType), false, null);
+			}
+			final var row = rows.getFirst();
+			final var approved = row.get(OUTPUT_APPROVED_AMOUNT);
+			final var amount = approved == null ? appliedAmount : new BigDecimal(approved.toString());
+			final var bucket = row.get(OUTPUT_BUCKET) == null ? bucketForCostType(costType) : row.get(OUTPUT_BUCKET).toString();
+			return new ExpenseVerdict(amount, bucket, Boolean.TRUE.equals(row.get(OUTPUT_VARNING)), str(row.get(OUTPUT_REGEL)));
+		} catch (final RuntimeException e) {
+			LOG.warn("Expense rules ({}) unavailable — using the applied amount + {} bucket", decisionKey, bucketForCostType(costType), e);
+			return new ExpenseVerdict(appliedAmount, bucketForCostType(costType), false, null);
+		}
+	}
+
+	private static String str(final Object value) {
+		return value == null ? null : value.toString();
+	}
+}
