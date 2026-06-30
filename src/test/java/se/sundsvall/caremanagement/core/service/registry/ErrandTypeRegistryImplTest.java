@@ -72,4 +72,13 @@ class ErrandTypeRegistryImplTest {
 		assertThat(registry.isValidTransition("fostercare", "DRAFT", "ARCHIVED")).isFalse();
 		assertThat(registry.isValidTransition("unknown", "X", "Y")).isFalse();
 	}
+
+	@Test
+	void requiresTypedCreateReflectsContributionFlag() {
+		final var typed = ErrandTypeContribution.builder("financial-assistance-renewal").typedCreateOnly(true).build();
+		final var registry = new ErrandTypeRegistryImpl(List.of(typed, fostercare()));
+		assertThat(registry.requiresTypedCreate("financial-assistance-renewal")).isTrue();
+		assertThat(registry.requiresTypedCreate("fostercare")).isFalse();
+		assertThat(registry.requiresTypedCreate("unknown-type")).isFalse();
+	}
 }

@@ -148,7 +148,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void createBuildsEnvelopeAndSavesData() {
-		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
+		when(errandServiceMock.createTypedErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
 
 		// Client sends a mismatched applicationType — the slug must win.
 		final var request = CreateFinancialAssistanceRequest.create()
@@ -160,7 +160,7 @@ class FinancialAssistanceServiceTest {
 		assertThat(result).isEqualTo(ERRAND_ID);
 
 		final ArgumentCaptor<Errand> errandCaptor = ArgumentCaptor.forClass(Errand.class);
-		verify(errandServiceMock).createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
+		verify(errandServiceMock).createTypedErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
 		assertThat(errandCaptor.getValue().getTypeSlug()).isEqualTo(SLUG_NEW);
 		assertThat(errandCaptor.getValue().getStatus()).isEqualTo(STATUS_RECEIVED);
 		assertThat(errandCaptor.getValue().getTitle()).isEqualTo("Min application");
@@ -176,7 +176,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void createSavesStakeholdersFromPersons() {
-		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
+		when(errandServiceMock.createTypedErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
 
 		final var request = CreateFinancialAssistanceRequest.create()
 			.withTitle("Renewal")
@@ -206,7 +206,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void createDerivesApplicationTypeFromSlug() {
-		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
+		when(errandServiceMock.createTypedErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
 
 		final var request = CreateFinancialAssistanceRequest.create().withTitle("Renewal").withData(FinancialAssistanceData.create());
 
@@ -214,7 +214,7 @@ class FinancialAssistanceServiceTest {
 		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_RENEWAL, request, List.of(), null, null);
 
 		final ArgumentCaptor<Errand> errandCaptor = ArgumentCaptor.forClass(Errand.class);
-		verify(errandServiceMock).createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
+		verify(errandServiceMock).createTypedErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
 		assertThat(errandCaptor.getValue().getTypeSlug()).isEqualTo(SLUG_RENEWAL);
 
 		final ArgumentCaptor<FinancialAssistanceEntity> entityCaptor = ArgumentCaptor.forClass(FinancialAssistanceEntity.class);
@@ -226,7 +226,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void createDefaultsTitleWhenMissing() {
-		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
+		when(errandServiceMock.createTypedErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
 
 		final var request = CreateFinancialAssistanceRequest.create()
 			.withData(FinancialAssistanceData.create().withApplicationType("NEW"));
@@ -234,13 +234,13 @@ class FinancialAssistanceServiceTest {
 		service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, null, null, null);
 
 		final ArgumentCaptor<Errand> errandCaptor = ArgumentCaptor.forClass(Errand.class);
-		verify(errandServiceMock).createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
+		verify(errandServiceMock).createTypedErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), errandCaptor.capture());
 		assertThat(errandCaptor.getValue().getTitle()).isEqualTo("Financial assistance");
 	}
 
 	@Test
 	void createWithAttachmentsStoresThemAndCombines() {
-		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
+		when(errandServiceMock.createTypedErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
 
 		final var request = CreateFinancialAssistanceRequest.create().withTitle("Med bilagor").withData(FinancialAssistanceData.create());
 		final List<MultipartFile> attachments = List.of(
@@ -258,7 +258,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void createWithCaseDataStoresSnapshot() {
-		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
+		when(errandServiceMock.createTypedErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
 
 		final var request = CreateFinancialAssistanceRequest.create().withTitle("Med ärendeuppgifter").withData(FinancialAssistanceData.create());
 		final var caseData = new MockMultipartFile("caseData", "snapshot.pdf", "application/pdf", "%PDF-1.4".getBytes());
@@ -273,7 +273,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void createWithFormSnapshotCapturesIt() {
-		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
+		when(errandServiceMock.createTypedErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
 
 		final var request = CreateFinancialAssistanceRequest.create().withTitle("Med formulärsnapshot").withData(FinancialAssistanceData.create());
 		final var payload = "{\"schemaVersion\":\"form-snapshot/1\",\"sections\":[]}";
@@ -286,7 +286,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void createWithBlankFormSnapshotSkipsCapture() {
-		when(errandServiceMock.createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
+		when(errandServiceMock.createTypedErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class))).thenReturn(ERRAND_ID);
 
 		final var request = CreateFinancialAssistanceRequest.create().withData(FinancialAssistanceData.create());
 

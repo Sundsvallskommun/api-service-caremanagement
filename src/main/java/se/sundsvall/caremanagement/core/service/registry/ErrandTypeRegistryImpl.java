@@ -52,4 +52,11 @@ class ErrandTypeRegistryImpl implements ErrandTypeRegistry {
 			.map(c -> c.isValidTransition(fromStatus, toStatus))
 			.orElse(false);
 	}
+
+	@Override
+	public boolean requiresTypedCreate(final String typeSlug) {
+		return Optional.ofNullable(bySlug.get(typeSlug))
+			.map(ErrandTypeContribution::typedCreateOnly)
+			.orElse(false);
+	}
 }

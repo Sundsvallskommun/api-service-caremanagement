@@ -142,6 +142,9 @@ public class FinancialAssistanceModuleConfig {
 	private static ErrandTypeContribution typeContribution(final String slug, final String displayName) {
 		return ErrandTypeContribution.builder(slug)
 			.displayName(displayName)
+			// EB errands must be created via POST /errands/{typeSlug} (which writes the FA data + starts the process);
+			// the generic POST /errands rejects these slugs so it can't produce a half-formed, process-less errand.
+			.typedCreateOnly(true)
 			// Declared in lifecycle order — the order the frontend renders them in
 			.status(STATUS_RECEIVED, DISPLAY_RECEIVED)
 			.status(STATUS_NEEDS_MANUAL_REVIEW, DISPLAY_NEEDS_MANUAL_REVIEW)

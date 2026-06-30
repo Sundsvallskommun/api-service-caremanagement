@@ -19,6 +19,7 @@ import se.sundsvall.caremanagement.core.service.event.ErrandAssigned;
 import se.sundsvall.caremanagement.core.service.event.ErrandCreated;
 import se.sundsvall.caremanagement.core.service.event.ErrandDeleted;
 import se.sundsvall.caremanagement.core.service.event.ErrandStatusChanged;
+import se.sundsvall.caremanagement.core.service.registry.ErrandTypeRegistry;
 import se.sundsvall.caremanagement.shared.NotificationRequest;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -31,6 +32,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,6 +55,9 @@ class ErrandServiceTest {
 
 	@Mock
 	private ErrandNotificationFilter errandNotificationFilterMock;
+
+	@Mock
+	private ErrandTypeRegistry errandTypeRegistryMock;
 
 	@InjectMocks
 	private ErrandService service;
@@ -94,6 +99,31 @@ class ErrandServiceTest {
 
 		verify(eventPublisherMock).publishEvent(any(ErrandCreated.class));
 		verify(eventPublisherMock, never()).publishEvent(any(NotificationRequest.class));
+	}
+
+	@Test
+	void createErrandRejectsTypedCreateOnlySlug() {
+		when(errandTypeRegistryMock.requiresTypedCreate("financial-assistance-renewal")).thenReturn(true);
+
+		assertThatThrownBy(() -> service.createErrand(MUNICIPALITY_ID, NAMESPACE,
+			Errand.create().withTypeSlug("financial-assistance-renewal")))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+
+		verifyNoInteractions(repositoryMock, eventPublisherMock);
+	}
+
+	@Test
+	void createTypedErrandBypassesTheGuard() {
+		when(errandNumberGeneratorMock.generate(MUNICIPALITY_ID, NAMESPACE)).thenReturn(ERRAND_NUMBER);
+		when(repositoryMock.save(any(ErrandEntity.class))).thenAnswer(inv -> ((ErrandEntity) inv.getArgument(0)).withId(ERRAND_ID));
+
+		final var id = service.createTypedErrand(MUNICIPALITY_ID, NAMESPACE,
+			Errand.create().withTypeSlug("financial-assistance-renewal").withReporterUserId("r"));
+
+		assertThat(id).isEqualTo(ERRAND_ID);
+		verify(eventPublisherMock).publishEvent(any(ErrandCreated.class));
+		verifyNoInteractions(errandTypeRegistryMock);
 	}
 
 	@Test

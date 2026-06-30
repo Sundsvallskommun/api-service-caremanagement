@@ -182,7 +182,7 @@ public class FinancialAssistanceService {
 			.withReporterUserId(request.getReporterUserId())
 			.withAssignedUserId(request.getAssignedUserId());
 
-		final var errandId = errandService.createErrand(municipalityId, namespace, envelope);
+		final var errandId = errandService.createTypedErrand(municipalityId, namespace, envelope);
 
 		final var entity = ofNullable(toEntity(request.getData(), errandId))
 			.orElseGet(() -> FinancialAssistanceEntity.create().withErrandId(errandId));

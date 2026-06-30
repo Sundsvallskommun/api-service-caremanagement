@@ -16,6 +16,7 @@ import se.sundsvall.caremanagement.core.service.event.ErrandAssigned;
 import se.sundsvall.caremanagement.core.service.event.ErrandCreated;
 import se.sundsvall.caremanagement.core.service.event.ErrandDeleted;
 import se.sundsvall.caremanagement.core.service.event.ErrandStatusChanged;
+import se.sundsvall.caremanagement.core.service.registry.ErrandTypeRegistry;
 import se.sundsvall.caremanagement.shared.NotificationRequest;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -23,6 +24,7 @@ import static java.time.OffsetDateTime.now;
 import static java.time.ZoneId.systemDefault;
 import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.Optional.ofNullable;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.core.integration.db.specification.ErrandSpecification.withNamespaceAndMunicipalityId;
@@ -45,21 +47,45 @@ import static se.sundsvall.caremanagement.core.service.mapper.PatchMapper.patchE
 public class ErrandService {
 
 	private static final String NOT_FOUND_MESSAGE = "No errand with id '%s' found in namespace '%s' for municipality id '%s'";
+	private static final String TYPED_CREATE_ONLY_MESSAGE = "Errands of type '%s' must be created via the type's own endpoint (which seeds the type data and starts its process), not the generic POST /errands";
 
 	private final ErrandRepository errandRepository;
 	private final ErrandNumberGenerator errandNumberGenerator;
 	private final ApplicationEventPublisher eventPublisher;
 	private final ErrandNotificationFilter errandNotificationFilter;
+	private final ErrandTypeRegistry errandTypeRegistry;
 
 	ErrandService(final ErrandRepository errandRepository, final ErrandNumberGenerator errandNumberGenerator, final ApplicationEventPublisher eventPublisher,
-		final ErrandNotificationFilter errandNotificationFilter) {
+		final ErrandNotificationFilter errandNotificationFilter, final ErrandTypeRegistry errandTypeRegistry) {
 		this.errandRepository = errandRepository;
 		this.errandNumberGenerator = errandNumberGenerator;
 		this.eventPublisher = eventPublisher;
 		this.errandNotificationFilter = errandNotificationFilter;
+		this.errandTypeRegistry = errandTypeRegistry;
 	}
 
+	/**
+	 * Generic create (the public {@code POST /errands} endpoint). Rejects types whose module owns a dedicated create
+	 * endpoint — those must go through it (which seeds the type data and starts the process), so the generic path can't
+	 * produce a half-formed, process-less errand. Type modules use {@link #createTypedErrand} instead.
+	 */
 	public String createErrand(final String municipalityId, final String namespace, final Errand errand) {
+		if (hasText(errand.getTypeSlug()) && errandTypeRegistry.requiresTypedCreate(errand.getTypeSlug())) {
+			throw Problem.valueOf(BAD_REQUEST, TYPED_CREATE_ONLY_MESSAGE.formatted(errand.getTypeSlug()));
+		}
+		return create(municipalityId, namespace, errand);
+	}
+
+	/**
+	 * Create the errand envelope for a type module's own create flow — bypasses the generic-create guard, since the
+	 * module's endpoint is the authoritative create (it seeds the typed data and starts the process). Not for external
+	 * callers.
+	 */
+	public String createTypedErrand(final String municipalityId, final String namespace, final Errand errand) {
+		return create(municipalityId, namespace, errand);
+	}
+
+	private String create(final String municipalityId, final String namespace, final Errand errand) {
 		final var entity = toErrandEntity(errand, namespace, municipalityId);
 		if (!hasText(entity.getErrandNumber())) {
 			entity.setErrandNumber(errandNumberGenerator.generate(municipalityId, namespace));
