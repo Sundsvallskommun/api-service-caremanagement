@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.api.model.Attachment;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentDataEntity;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEntity;
+import se.sundsvall.caremanagement.attachments.service.SourceFile;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachment;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -56,22 +57,22 @@ public final class AttachmentMapper {
 	}
 
 	public static AttachmentEntity toAttachmentEntity(final String errandId, final String namespace,
-		final String municipalityId, final String documentType, final String senderRole, final String fileName, final String mimeType, final byte[] content) {
+		final String municipalityId, final String documentType, final String senderRole, final SourceFile source) {
 
-		if (errandId == null || content == null) {
+		if (errandId == null || source == null || source.content() == null) {
 			return null;
 		}
 		return AttachmentEntity.create()
 			.withErrandId(errandId)
 			.withNamespace(namespace)
 			.withMunicipalityId(municipalityId)
-			.withFileName(fileName)
-			.withMimeType(mimeType)
-			.withFileSize(content.length)
+			.withFileName(source.fileName())
+			.withMimeType(source.contentType())
+			.withFileSize(source.content().length)
 			.withDocumentType(documentType)
 			.withSenderRole(senderRole)
 			.withAttachmentData(AttachmentDataEntity.create()
-				.withFile(Hibernate.getLobHelper().createBlob(content)));
+				.withFile(Hibernate.getLobHelper().createBlob(source.content())));
 	}
 
 	/** Project a conversation attachment into the unified errand attachment list, tagged with documentType CONVERSATION. */

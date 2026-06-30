@@ -73,8 +73,7 @@ public class AttachmentDataEntity {
 
 	@Override
 	public String toString() {
-		return "AttachmentDataEntity{" + "id='" + id + '\''
-			+ ", file=" + (file == null ? null : "<blob>")
-			+ '}';
+		// The LOB itself is intentionally omitted from toString (debug noise / lazy proxy).
+		return "AttachmentDataEntity{id='" + id + "'}";
 	}
 }

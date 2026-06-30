@@ -77,8 +77,10 @@ public final class MessageMapper {
 
 	/** INBOUND messages come from the applicant (CLIENT); everything else is the caseworker (CASEWORKER). */
 	private static String senderRoleFromDirection(final String direction) {
-		final var resolved = Direction.INBOUND.name().equals(direction) ? Direction.INBOUND : Direction.OUTBOUND;
-		return SenderRole.fromDirection(resolved).name();
+		if (Direction.INBOUND.name().equals(direction)) {
+			return SenderRole.CLIENT.name();
+		}
+		return SenderRole.CASEWORKER.name();
 	}
 
 	/**

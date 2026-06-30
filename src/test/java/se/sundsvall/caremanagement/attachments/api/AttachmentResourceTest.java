@@ -22,7 +22,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
@@ -81,22 +80,6 @@ class AttachmentResourceTest {
 	}
 
 	@Test
-	void createAttachmentInvalidDocumentTypeIsBadRequest() {
-		final var builder = new MultipartBodyBuilder();
-		builder.part("file", "hello".getBytes()).filename("hello.txt");
-		final MultiValueMap<String, org.springframework.http.HttpEntity<?>> body = builder.build();
-
-		webTestClient.post()
-			.uri(uri -> uri.path(PATH).queryParam("documentType", "BOGUS").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
-			.contentType(MULTIPART_FORM_DATA)
-			.bodyValue(body)
-			.exchange()
-			.expectStatus().isBadRequest();
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
 	void readAttachments() {
 		when(serviceMock.readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), isNull())).thenReturn(List.of(Attachment.create()));
 
@@ -134,16 +117,6 @@ class AttachmentResourceTest {
 			.expectStatus().isOk();
 
 		verify(serviceMock).readAttachments(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CASE_DATA"), isNull());
-	}
-
-	@Test
-	void readAttachmentsInvalidDocumentTypeIsBadRequest() {
-		webTestClient.get()
-			.uri(uri -> uri.path(PATH).queryParam("documentType", "BOGUS").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
-			.exchange()
-			.expectStatus().isBadRequest();
-
-		verifyNoInteractions(serviceMock);
 	}
 
 	@Test

@@ -236,7 +236,10 @@ final class PdfCombiner {
 				lines.add(clean.substring(start, Math.min(start + WRAP, clean.length())));
 			}
 		}
-		return lines.isEmpty() ? List.of("") : lines;
+		if (lines.isEmpty()) {
+			return List.of("");
+		}
+		return lines;
 	}
 
 	/** Keep a single line to glyphs the standard Helvetica font can render (tabs and control chars become spaces). */

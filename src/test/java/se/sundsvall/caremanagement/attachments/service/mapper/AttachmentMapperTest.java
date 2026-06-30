@@ -10,6 +10,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentDataEntity;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEntity;
+import se.sundsvall.caremanagement.attachments.service.SourceFile;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachment;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -153,7 +154,7 @@ class AttachmentMapperTest {
 
 	@Test
 	void toAttachmentEntityFromBytesBuildsEntity() {
-		final var entity = AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "GENERATED", "CLIENT", "sammanstallning.pdf", "application/pdf", "%PDF".getBytes());
+		final var entity = AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "GENERATED", "CLIENT", new SourceFile("sammanstallning.pdf", "application/pdf", "%PDF".getBytes()));
 
 		assertThat(entity).isNotNull();
 		assertThat(entity.getErrandId()).isEqualTo("eid");
@@ -169,13 +170,13 @@ class AttachmentMapperTest {
 
 	@Test
 	void toAttachmentEntityFromBytesNullErrandIdReturnsNull() {
-		assertThat(AttachmentMapper.toAttachmentEntity(null, "ns", "mid", "GENERATED", "CLIENT", "f.pdf", "application/pdf", new byte[] {
+		assertThat(AttachmentMapper.toAttachmentEntity(null, "ns", "mid", "GENERATED", "CLIENT", new SourceFile("f.pdf", "application/pdf", new byte[] {
 			1
-		})).isNull();
+		}))).isNull();
 	}
 
 	@Test
 	void toAttachmentEntityFromBytesNullContentReturnsNull() {
-		assertThat(AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "GENERATED", "CLIENT", "f.pdf", "application/pdf", null)).isNull();
+		assertThat(AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "GENERATED", "CLIENT", new SourceFile("f.pdf", "application/pdf", null))).isNull();
 	}
 }

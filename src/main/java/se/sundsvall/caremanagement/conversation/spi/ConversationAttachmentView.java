@@ -3,6 +3,8 @@ package se.sundsvall.caremanagement.conversation.spi;
 import java.util.Arrays;
 import java.util.Objects;
 
+import static java.util.Optional.ofNullable;
+
 /**
  * Read-only cross-module view of a single conversation attachment, including its binary content, for archiving the
  * thread into a document. The content is fully materialised to {@code byte[]} inside the conversation module's own
@@ -29,6 +31,6 @@ public record ConversationAttachmentView(String fileName, String mimeType, byte[
 
 	@Override
 	public String toString() {
-		return "ConversationAttachmentView[fileName=%s, mimeType=%s, content=%d bytes]".formatted(fileName, mimeType, content == null ? 0 : content.length);
+		return "ConversationAttachmentView[fileName=%s, mimeType=%s, content=%d bytes]".formatted(fileName, mimeType, ofNullable(content).map(c -> c.length).orElse(0));
 	}
 }

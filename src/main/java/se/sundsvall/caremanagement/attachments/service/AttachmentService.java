@@ -129,7 +129,7 @@ public class AttachmentService {
 			throw Problem.valueOf(BAD_REQUEST, MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE.formatted(errandId, namespace, municipalityId));
 		}
 
-		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_MESSAGE_HISTORY, null, fileName, PDF_MIME_TYPE, content);
+		final var entity = toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_MESSAGE_HISTORY, null, new SourceFile(fileName, PDF_MIME_TYPE, content));
 		return attachmentRepository.save(entity).getId();
 	}
 
@@ -149,12 +149,12 @@ public class AttachmentService {
 
 		final var ids = new ArrayList<String>();
 		sources.forEach(source -> ids.add(attachmentRepository
-			.save(toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_APPLICATION, SENDER_CLIENT, source.fileName(), source.contentType(), source.content()))
+			.save(toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_APPLICATION, SENDER_CLIENT, source))
 			.getId()));
 
 		final var combined = PdfCombiner.combine(sources);
 		ids.add(attachmentRepository
-			.save(toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_GENERATED, SENDER_CLIENT, COMBINED_PDF_FILE_NAME, PDF_MIME_TYPE, combined))
+			.save(toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_GENERATED, SENDER_CLIENT, new SourceFile(COMBINED_PDF_FILE_NAME, PDF_MIME_TYPE, combined)))
 			.getId());
 
 		return ids;
@@ -183,7 +183,7 @@ public class AttachmentService {
 			.map(content -> new SourceFile(content.fileName(), content.mimeType(), content.content()))
 			.toList();
 		final var combined = PdfCombiner.combine(sources);
-		final var rebuilt = toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_CONVERSATION, SENDER_CLIENT, CLIENT_PDF_FILE_NAME, PDF_MIME_TYPE, combined);
+		final var rebuilt = toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_CONVERSATION, SENDER_CLIENT, new SourceFile(CLIENT_PDF_FILE_NAME, PDF_MIME_TYPE, combined));
 
 		attachmentRepository.findFirstByErrandIdAndFileNameAndDocumentType(errandId, CLIENT_PDF_FILE_NAME, DOCUMENT_TYPE_CONVERSATION)
 			.ifPresentOrElse(existing -> {

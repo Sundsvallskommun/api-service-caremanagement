@@ -12,6 +12,9 @@ public enum SenderRole {
 
 	/** Applicant-sent (INBOUND) messages are from the {@link #CLIENT}; everything else is the {@link #CASEWORKER}. */
 	public static SenderRole fromDirection(final Direction direction) {
-		return direction == Direction.INBOUND ? CLIENT : CASEWORKER;
+		if (direction == Direction.INBOUND) {
+			return CLIENT;
+		}
+		return CASEWORKER;
 	}
 }
