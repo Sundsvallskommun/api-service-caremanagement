@@ -94,7 +94,7 @@ CREATE TABLE `errand` (
 CREATE TABLE `errand_document` (
   `id` varchar(36) NOT NULL,
   `errand_id` varchar(36) NOT NULL,
-  `document_type` varchar(64) NOT NULL,
+  `document_type` varchar(255) NOT NULL,
   `heading` varchar(255) NOT NULL,
   `document_text` longtext DEFAULT NULL,
   `document_date` date NOT NULL,
@@ -421,7 +421,7 @@ CREATE TABLE `errand_form_snapshot` (
 CREATE TABLE `errand_journal_entry` (
   `id` varchar(36) NOT NULL,
   `errand_id` varchar(36) NOT NULL,
-  `entry_type` varchar(64) NOT NULL,
+  `entry_type` varchar(255) NOT NULL,
   `heading` varchar(255) NOT NULL,
   `entry_text` longtext DEFAULT NULL,
   `entry_date` date NOT NULL,

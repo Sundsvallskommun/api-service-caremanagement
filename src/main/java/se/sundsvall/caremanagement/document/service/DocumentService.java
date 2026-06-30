@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.document.api.model.CreateDocument;
 import se.sundsvall.caremanagement.document.api.model.Document;
 import se.sundsvall.caremanagement.document.api.model.LockDocument;
@@ -24,8 +25,13 @@ import static se.sundsvall.caremanagement.document.integration.db.model.Document
 
 /**
  * Dokument (formal case documents) on an errand. A created document starts {@code WORKING} (an editable draft);
- * {@link #lock(String, LockDocument) locking} it makes it a {@code LOCKED} upprättad handling, after which
- * {@link #update update} and {@link #delete delete} are rejected with {@code 409 Conflict}.
+ * locking it makes it a {@code LOCKED} upprättad handling, after which {@code update} and {@code delete} are rejected
+ * with {@code 409 Conflict}.
+ *
+ * <p>
+ * Every operation is scoped to its errand and tenant: each first asserts the errand exists in the
+ * {@code (municipalityId, namespace)} tenant, then loads the document by id <em>and</em> errand id, so a document id
+ * from another errand or tenant resolves to {@code 404} rather than leaking or mutating cross-tenant data.
  */
 @Service
 @Transactional
@@ -33,13 +39,17 @@ public class DocumentService {
 
 	private final DocumentRepository repository;
 	private final ApplicationEventPublisher events;
+	private final ErrandService errandService;
 
-	DocumentService(final DocumentRepository repository, final ApplicationEventPublisher events) {
+	DocumentService(final DocumentRepository repository, final ApplicationEventPublisher events, final ErrandService errandService) {
 		this.repository = repository;
 		this.events = events;
+		this.errandService = errandService;
 	}
 
-	public String add(final String errandId, final CreateDocument request) {
+	public String add(final String municipalityId, final String namespace, final String errandId, final CreateDocument request) {
+		errandService.assertExists(municipalityId, namespace, errandId);
+
 		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
 		final var saved = repository.save(DocumentEntity.create()
 			.withErrandId(errandId)
@@ -57,19 +67,25 @@ public class DocumentService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<Document> listForErrand(final String errandId) {
+	public List<Document> listForErrand(final String municipalityId, final String namespace, final String errandId) {
+		errandService.assertExists(municipalityId, namespace, errandId);
+
 		return repository.findByErrandIdOrderByDocumentDateDescDocumentTimeDescCreatedDesc(errandId).stream()
 			.map(DocumentService::toDocument)
 			.toList();
 	}
 
 	@Transactional(readOnly = true)
-	public Document read(final String documentId) {
-		return toDocument(find(documentId));
+	public Document read(final String municipalityId, final String namespace, final String errandId, final String documentId) {
+		errandService.assertExists(municipalityId, namespace, errandId);
+
+		return toDocument(find(errandId, documentId));
 	}
 
-	public Document update(final String documentId, final UpdateDocument request) {
-		final var entity = requireWorking(findForUpdate(documentId), "edited");
+	public Document update(final String municipalityId, final String namespace, final String errandId, final String documentId, final UpdateDocument request) {
+		errandService.assertExists(municipalityId, namespace, errandId);
+
+		final var entity = requireWorking(findForUpdate(errandId, documentId), "edited");
 		entity
 			.withType(request.type())
 			.withHeading(request.heading())
@@ -82,13 +98,17 @@ public class DocumentService {
 		return toDocument(repository.save(entity));
 	}
 
-	public void delete(final String documentId) {
-		repository.delete(requireWorking(findForUpdate(documentId), "deleted"));
+	public void delete(final String municipalityId, final String namespace, final String errandId, final String documentId) {
+		errandService.assertExists(municipalityId, namespace, errandId);
+
+		repository.delete(requireWorking(findForUpdate(errandId, documentId), "deleted"));
 	}
 
 	/** Lock the document (skrivskydd) — it becomes an immutable upprättad handling. Already-locked documents 409. */
-	public Document lock(final String documentId, final LockDocument request) {
-		final var entity = findForUpdate(documentId);
+	public Document lock(final String municipalityId, final String namespace, final String errandId, final String documentId, final LockDocument request) {
+		errandService.assertExists(municipalityId, namespace, errandId);
+
+		final var entity = findForUpdate(errandId, documentId);
 		if (entity.getStatus() == LOCKED) {
 			throw Problem.valueOf(CONFLICT, "Document is already locked");
 		}
@@ -100,17 +120,18 @@ public class DocumentService {
 		return toDocument(repository.save(entity));
 	}
 
-	private DocumentEntity find(final String documentId) {
-		return repository.findById(documentId)
+	private DocumentEntity find(final String errandId, final String documentId) {
+		return repository.findByIdAndErrandId(documentId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No document with id '" + documentId + "'"));
 	}
 
 	/**
-	 * Reads the document under a pessimistic write lock so the lock-check-then-write in update/delete/lock cannot race a
-	 * concurrent {@link #lock} — the second transaction blocks and re-reads the current (possibly LOCKED) status.
+	 * Reads the document under a pessimistic write lock, scoped to the errand, so the lock-check-then-write in
+	 * update/delete/lock cannot race a concurrent lock — the second transaction blocks and re-reads the current
+	 * (possibly LOCKED) status. A document belonging to another errand resolves to {@code 404}.
 	 */
-	private DocumentEntity findForUpdate(final String documentId) {
-		return repository.findByIdForUpdate(documentId)
+	private DocumentEntity findForUpdate(final String errandId, final String documentId) {
+		return repository.findByIdAndErrandIdForUpdate(documentId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No document with id '" + documentId + "'"));
 	}
 

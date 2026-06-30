@@ -54,7 +54,7 @@ class DocumentResource {
 		@ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final CreateDocument request) {
 
-		final var documentId = service.add(errandId, request);
+		final var documentId = service.add(municipalityId, namespace, errandId, request);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/{errandId}/documents/{documentId}")
 			.buildAndExpand(municipalityId, namespace, errandId, documentId).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)
@@ -68,7 +68,7 @@ class DocumentResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId) {
 
-		return ok(service.listForErrand(errandId));
+		return ok(service.listForErrand(municipalityId, namespace, errandId));
 	}
 
 	@GetMapping(path = "/{documentId}", produces = APPLICATION_JSON_VALUE)
@@ -79,7 +79,7 @@ class DocumentResource {
 		@ValidUuid @PathVariable final String errandId,
 		@ValidUuid @PathVariable final String documentId) {
 
-		return ok(service.read(documentId));
+		return ok(service.read(municipalityId, namespace, errandId, documentId));
 	}
 
 	@PatchMapping(path = "/{documentId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
@@ -91,7 +91,7 @@ class DocumentResource {
 		@ValidUuid @PathVariable final String documentId,
 		@Valid @NotNull @RequestBody final UpdateDocument request) {
 
-		return ok(service.update(documentId, request));
+		return ok(service.update(municipalityId, namespace, errandId, documentId, request));
 	}
 
 	@PostMapping(path = "/{documentId}/lock", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
@@ -103,7 +103,7 @@ class DocumentResource {
 		@ValidUuid @PathVariable final String documentId,
 		@Valid @RequestBody(required = false) final LockDocument request) {
 
-		return ok(service.lock(documentId, request));
+		return ok(service.lock(municipalityId, namespace, errandId, documentId, request));
 	}
 
 	@DeleteMapping(path = "/{documentId}", produces = ALL_VALUE)
@@ -114,7 +114,7 @@ class DocumentResource {
 		@ValidUuid @PathVariable final String errandId,
 		@ValidUuid @PathVariable final String documentId) {
 
-		service.delete(documentId);
+		service.delete(municipalityId, namespace, errandId, documentId);
 		return noContent().header(CONTENT_TYPE, ALL_VALUE).build();
 	}
 }

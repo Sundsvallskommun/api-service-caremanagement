@@ -46,7 +46,7 @@ class JournalEntryResourceTest {
 	@Test
 	void add() {
 		final var request = new CreateJournalEntry("Journalfört meddelande", "Rubrik", "body", ENTRY_DATE, ENTRY_TIME, "carola");
-		when(serviceMock.add(ERRAND_ID, request)).thenReturn(JOURNAL_ENTRY_ID);
+		when(serviceMock.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request)).thenReturn(JOURNAL_ENTRY_ID);
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -55,12 +55,12 @@ class JournalEntryResourceTest {
 			.expectStatus().isCreated()
 			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/" + ERRAND_ID + "/journal-entries/" + JOURNAL_ENTRY_ID);
 
-		verify(serviceMock).add(ERRAND_ID, request);
+		verify(serviceMock).add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request);
 	}
 
 	@Test
 	void list() {
-		when(serviceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(JournalEntry.create().withId("je1")));
+		when(serviceMock.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(JournalEntry.create().withId("je1")));
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -71,12 +71,12 @@ class JournalEntryResourceTest {
 			.getResponseBody();
 
 		assertThat(response).hasSize(1);
-		verify(serviceMock).listForErrand(ERRAND_ID);
+		verify(serviceMock).listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
 	void read() {
-		when(serviceMock.read(JOURNAL_ENTRY_ID)).thenReturn(JournalEntry.create().withId(JOURNAL_ENTRY_ID).withHeading("H"));
+		when(serviceMock.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, JOURNAL_ENTRY_ID)).thenReturn(JournalEntry.create().withId(JOURNAL_ENTRY_ID).withHeading("H"));
 
 		final var entry = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{journalEntryId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "journalEntryId", JOURNAL_ENTRY_ID)))
@@ -88,13 +88,13 @@ class JournalEntryResourceTest {
 
 		assertThat(entry).isNotNull();
 		assertThat(entry.getId()).isEqualTo(JOURNAL_ENTRY_ID);
-		verify(serviceMock).read(JOURNAL_ENTRY_ID);
+		verify(serviceMock).read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, JOURNAL_ENTRY_ID);
 	}
 
 	@Test
 	void update() {
 		final var request = new UpdateJournalEntry("Journalfört meddelande", "Ny rubrik", "updated", ENTRY_DATE, ENTRY_TIME, "editor");
-		when(serviceMock.update(JOURNAL_ENTRY_ID, request)).thenReturn(JournalEntry.create().withId(JOURNAL_ENTRY_ID).withHeading("Ny rubrik").withModifiedBy("editor"));
+		when(serviceMock.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, JOURNAL_ENTRY_ID, request)).thenReturn(JournalEntry.create().withId(JOURNAL_ENTRY_ID).withHeading("Ny rubrik").withModifiedBy("editor"));
 
 		final var entry = webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/{journalEntryId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "journalEntryId", JOURNAL_ENTRY_ID)))
@@ -108,13 +108,13 @@ class JournalEntryResourceTest {
 		assertThat(entry).isNotNull();
 		assertThat(entry.getHeading()).isEqualTo("Ny rubrik");
 		assertThat(entry.getModifiedBy()).isEqualTo("editor");
-		verify(serviceMock).update(JOURNAL_ENTRY_ID, request);
+		verify(serviceMock).update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, JOURNAL_ENTRY_ID, request);
 	}
 
 	@Test
 	void lock() {
 		final var request = new LockJournalEntry("carola");
-		when(serviceMock.lock(JOURNAL_ENTRY_ID, request)).thenReturn(JournalEntry.create().withId(JOURNAL_ENTRY_ID).withStatus("LOCKED").withLockedBy("carola"));
+		when(serviceMock.lock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, JOURNAL_ENTRY_ID, request)).thenReturn(JournalEntry.create().withId(JOURNAL_ENTRY_ID).withStatus("LOCKED").withLockedBy("carola"));
 
 		final var entry = webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/{journalEntryId}/lock").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "journalEntryId", JOURNAL_ENTRY_ID)))
@@ -128,12 +128,12 @@ class JournalEntryResourceTest {
 		assertThat(entry).isNotNull();
 		assertThat(entry.getStatus()).isEqualTo("LOCKED");
 		assertThat(entry.getLockedBy()).isEqualTo("carola");
-		verify(serviceMock).lock(JOURNAL_ENTRY_ID, request);
+		verify(serviceMock).lock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, JOURNAL_ENTRY_ID, request);
 	}
 
 	@Test
 	void lockWithoutBody() {
-		when(serviceMock.lock(JOURNAL_ENTRY_ID, null)).thenReturn(JournalEntry.create().withId(JOURNAL_ENTRY_ID).withStatus("LOCKED"));
+		when(serviceMock.lock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, JOURNAL_ENTRY_ID, null)).thenReturn(JournalEntry.create().withId(JOURNAL_ENTRY_ID).withStatus("LOCKED"));
 
 		final var entry = webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/{journalEntryId}/lock").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "journalEntryId", JOURNAL_ENTRY_ID)))
@@ -145,7 +145,7 @@ class JournalEntryResourceTest {
 
 		assertThat(entry).isNotNull();
 		assertThat(entry.getStatus()).isEqualTo("LOCKED");
-		verify(serviceMock).lock(JOURNAL_ENTRY_ID, null);
+		verify(serviceMock).lock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, JOURNAL_ENTRY_ID, null);
 	}
 
 	@Test
@@ -155,6 +155,6 @@ class JournalEntryResourceTest {
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(serviceMock).delete(JOURNAL_ENTRY_ID);
+		verify(serviceMock).delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, JOURNAL_ENTRY_ID);
 	}
 }

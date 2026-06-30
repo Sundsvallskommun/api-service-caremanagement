@@ -54,7 +54,7 @@ class JournalEntryResource {
 		@ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final CreateJournalEntry request) {
 
-		final var journalEntryId = service.add(errandId, request);
+		final var journalEntryId = service.add(municipalityId, namespace, errandId, request);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/{errandId}/journal-entries/{journalEntryId}")
 			.buildAndExpand(municipalityId, namespace, errandId, journalEntryId).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)
@@ -68,7 +68,7 @@ class JournalEntryResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId) {
 
-		return ok(service.listForErrand(errandId));
+		return ok(service.listForErrand(municipalityId, namespace, errandId));
 	}
 
 	@GetMapping(path = "/{journalEntryId}", produces = APPLICATION_JSON_VALUE)
@@ -79,7 +79,7 @@ class JournalEntryResource {
 		@ValidUuid @PathVariable final String errandId,
 		@ValidUuid @PathVariable final String journalEntryId) {
 
-		return ok(service.read(journalEntryId));
+		return ok(service.read(municipalityId, namespace, errandId, journalEntryId));
 	}
 
 	@PatchMapping(path = "/{journalEntryId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
@@ -91,7 +91,7 @@ class JournalEntryResource {
 		@ValidUuid @PathVariable final String journalEntryId,
 		@Valid @NotNull @RequestBody final UpdateJournalEntry request) {
 
-		return ok(service.update(journalEntryId, request));
+		return ok(service.update(municipalityId, namespace, errandId, journalEntryId, request));
 	}
 
 	@PostMapping(path = "/{journalEntryId}/lock", produces = APPLICATION_JSON_VALUE)
@@ -103,7 +103,7 @@ class JournalEntryResource {
 		@ValidUuid @PathVariable final String journalEntryId,
 		@Valid @RequestBody(required = false) final LockJournalEntry request) {
 
-		return ok(service.lock(journalEntryId, request));
+		return ok(service.lock(municipalityId, namespace, errandId, journalEntryId, request));
 	}
 
 	@DeleteMapping(path = "/{journalEntryId}", produces = ALL_VALUE)
@@ -114,7 +114,7 @@ class JournalEntryResource {
 		@ValidUuid @PathVariable final String errandId,
 		@ValidUuid @PathVariable final String journalEntryId) {
 
-		service.delete(journalEntryId);
+		service.delete(municipalityId, namespace, errandId, journalEntryId);
 		return noContent().header(CONTENT_TYPE, ALL_VALUE).build();
 	}
 }
