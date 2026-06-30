@@ -28,13 +28,13 @@ public class ReferralEntity implements Auditable {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "authority", length = 64)
 	private String authority;
 
-	@Column(name = "recipient", length = 255)
+	@Column(name = "recipient", length = 32)
 	private String recipient;
 
 	@Column(name = "sent_at")

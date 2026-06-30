@@ -30,7 +30,7 @@ import static org.hibernate.Length.LONG32;
 public class FinancialAssistanceEntity implements Auditable {
 
 	@Id
-	@Column(name = "errand_id", length = 255)
+	@Column(name = "errand_id", length = 36)
 	private String errandId;
 
 	@Column(name = "application_type", length = 32)

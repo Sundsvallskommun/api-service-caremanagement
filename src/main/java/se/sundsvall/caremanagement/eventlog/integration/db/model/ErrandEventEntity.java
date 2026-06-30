@@ -25,7 +25,7 @@ public class ErrandEventEntity {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "municipality_id", nullable = false, length = 16)
@@ -52,7 +52,7 @@ public class ErrandEventEntity {
 	@Column(name = "request_path", length = 1024)
 	private String requestPath;
 
-	@Column(name = "actor", length = 255)
+	@Column(name = "actor", length = 64)
 	private String actor;
 
 	@Column(name = "actor_type", length = 32)

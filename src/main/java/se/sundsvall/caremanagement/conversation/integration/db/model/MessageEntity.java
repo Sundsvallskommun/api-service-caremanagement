@@ -25,7 +25,7 @@ public class MessageEntity {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "direction", nullable = false, length = 16)
@@ -37,7 +37,7 @@ public class MessageEntity {
 	@Column(name = "author", length = 64)
 	private String author;
 
-	@Column(name = "in_reply_to_id", length = 255)
+	@Column(name = "in_reply_to_id", length = 36)
 	private String inReplyToId;
 
 	@Column(name = "created", nullable = false)

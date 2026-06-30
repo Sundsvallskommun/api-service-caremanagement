@@ -25,7 +25,7 @@ public class NoteEntity {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "body", nullable = false, length = LONG32)

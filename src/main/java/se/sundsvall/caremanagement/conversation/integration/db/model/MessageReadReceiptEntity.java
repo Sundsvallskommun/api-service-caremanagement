@@ -33,7 +33,7 @@ public class MessageReadReceiptEntity {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "message_id", nullable = false, length = 255)
+	@Column(name = "message_id", nullable = false, length = 36)
 	private String messageId;
 
 	@Column(name = "reader_side", nullable = false, length = 16)

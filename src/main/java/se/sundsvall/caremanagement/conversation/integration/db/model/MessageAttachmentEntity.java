@@ -29,7 +29,7 @@ public class MessageAttachmentEntity {
 	@Column(name = "id", length = 36)
 	private String id;
 
-	@Column(name = "message_id", nullable = false, length = 255)
+	@Column(name = "message_id", nullable = false, length = 36)
 	private String messageId;
 
 	@Column(name = "file_name")

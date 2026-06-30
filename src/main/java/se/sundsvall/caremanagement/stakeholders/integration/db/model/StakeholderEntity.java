@@ -39,7 +39,7 @@ public class StakeholderEntity implements Auditable {
 	@Column(name = "id", length = 36)
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "external_id")
