@@ -3,13 +3,14 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.ObjIntConsumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
@@ -54,6 +55,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
  */
 @Service
 public class DraftService {
+
+	private static final String NO_DRAFT_FOR_ERRAND = "No draft calculation for errand";
 
 	private final FaCalculationDraftRepository headerRepository;
 	private final FaNormIncomeRepository incomeRepository;
@@ -115,7 +118,7 @@ public class DraftService {
 		});
 		ofNullable(normId).ifPresent(header::setNormId);
 		ofNullable(normType).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
-		header.setCalculationDate(LocalDate.now());
+		header.setCalculationDate(LocalDate.now(ZoneId.systemDefault()));
 		headerRepository.save(header);
 	}
 
@@ -123,7 +126,7 @@ public class DraftService {
 	@Transactional
 	public CalculationDraft patchHeader(final String errandId, final NormHeaderInput input) {
 		final var header = headerRepository.findById(errandId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft calculation for errand"));
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND));
 		ofNullable(input.getNormId()).ifPresent(header::setNormId);
 		ofNullable(input.getNormType()).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
 		ofNullable(input.getCalculationFromDate()).ifPresent(header::setCalculationFromDate);
@@ -142,7 +145,7 @@ public class DraftService {
 	@Transactional(readOnly = true)
 	public CalculationDraft get(final String errandId) {
 		final var header = headerRepository.findById(errandId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft calculation for errand"));
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND));
 
 		final var incomes = incomeRepository.findByErrandId(errandId).stream()
 			.sorted(comparing(FaNormIncomeEntity::getPosition, nullsLast(naturalOrder()))).map(DraftService::toIncomeRow).toList();
@@ -296,18 +299,18 @@ public class DraftService {
 	// ------------------------------------------------------------------------------------------------------------------
 
 	public static BigDecimal effectiveAmount(final BigDecimal caseworkerAmount, final BigDecimal processAmount) {
-		return caseworkerAmount != null ? caseworkerAmount : processAmount;
+		return ofNullable(caseworkerAmount).orElse(processAmount);
 	}
 
 	public static Integer effectiveDays(final Integer caseworkerDays, final Integer processDays) {
-		return caseworkerDays != null ? caseworkerDays : processDays;
+		return ofNullable(caseworkerDays).orElse(processDays);
 	}
 
 	/**
 	 * A save consumer that stamps a stable position on any row that doesn't have one yet, handing out consecutive
 	 * positions from {@code start} (the next free position for the errand) so new rows append after the existing ones.
 	 */
-	private static <E> Consumer<E> positioningSaver(final int start, final Function<E, Integer> getPosition, final BiConsumer<E, Integer> setPosition,
+	private static <E> Consumer<E> positioningSaver(final int start, final Function<E, Integer> getPosition, final ObjIntConsumer<E> setPosition,
 		final Consumer<E> save) {
 		final var next = new AtomicInteger(start);
 		return entity -> {
@@ -324,7 +327,7 @@ public class DraftService {
 
 	private void requireHeader(final String errandId) {
 		if (!headerRepository.existsById(errandId)) {
-			throw Problem.valueOf(NOT_FOUND, "No draft calculation for errand");
+			throw Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND);
 		}
 	}
 
@@ -341,7 +344,10 @@ public class DraftService {
 	}
 
 	private static String bucketOrDefault(final String bucket) {
-		return BUCKET_SPECIAL_EXPENSE.equals(bucket) ? BUCKET_SPECIAL_EXPENSE : BUCKET_EXPENSE;
+		if (BUCKET_SPECIAL_EXPENSE.equals(bucket)) {
+			return BUCKET_SPECIAL_EXPENSE;
+		}
+		return BUCKET_EXPENSE;
 	}
 
 	private static <E> List<E> nullSafe(final List<E> list) {

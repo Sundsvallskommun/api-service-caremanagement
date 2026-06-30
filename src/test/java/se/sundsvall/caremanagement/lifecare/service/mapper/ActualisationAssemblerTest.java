@@ -12,12 +12,13 @@ import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsWorkingStatusD
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 
+import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ActualisationAssemblerTest {
 
 	private static final String PERSON_ID = "198001012389";
-	private static final LocalDate DATE = LocalDate.of(2026, 6, 1);
+	private static final LocalDate DATE = LocalDate.of(2026, JUNE, 1);
 
 	@Test
 	void assemblesPersonAndDateWithoutProposal() {

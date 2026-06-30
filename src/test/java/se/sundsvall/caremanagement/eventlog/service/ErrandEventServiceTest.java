@@ -29,7 +29,7 @@ class ErrandEventServiceTest {
 	void recordStampsCreatedAndSaves() {
 		final var entity = ErrandEventEntity.create().withErrandId("e1").withAction("READ").withTarget("errand");
 
-		service.record(entity);
+		service.recordEvent(entity);
 
 		verify(repositoryMock).save(entity);
 		assertThat(entity.getCreated()).isNotNull();

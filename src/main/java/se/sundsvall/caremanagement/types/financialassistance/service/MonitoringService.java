@@ -139,7 +139,10 @@ public class MonitoringService {
 
 	/** The supplied source, defaulting to {@link #SOURCE_CASEWORKER} when blank (the form omits it for caseworker rows). */
 	private static String resolveSource(final String source) {
-		return hasText(source) ? source : SOURCE_CASEWORKER;
+		if (hasText(source)) {
+			return source;
+		}
+		return SOURCE_CASEWORKER;
 	}
 
 	private static Monitoring toMonitoring(final FaMonitoringEntity entity) {

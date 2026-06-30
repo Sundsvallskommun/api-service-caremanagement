@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -115,11 +116,11 @@ public class ExpenseRulesService {
 
 		try {
 			final var variables = new HashMap<String, Object>();
-			variables.put("ansoktBelopp", appliedAmount == null ? BigDecimal.ZERO : appliedAmount);
-			variables.put("godkandForra", previousApproved == null ? NO_HISTORY : previousApproved);
-			variables.put("sokandeAlder", sokandeAlder == null ? 0 : sokandeAlder);
-			variables.put("antalBarn", antalBarn == null ? 0 : antalBarn);
-			variables.put("antalIHushallet", antalIHushallet == null ? 1 : antalIHushallet);
+			variables.put("ansoktBelopp", Optional.ofNullable(appliedAmount).orElse(BigDecimal.ZERO));
+			variables.put("godkandForra", Optional.ofNullable(previousApproved).orElse(NO_HISTORY));
+			variables.put("sokandeAlder", Optional.ofNullable(sokandeAlder).orElse(0));
+			variables.put("antalBarn", Optional.ofNullable(antalBarn).orElse(0));
+			variables.put("antalIHushallet", Optional.ofNullable(antalIHushallet).orElse(1));
 
 			final var rows = processService.evaluateDecision(municipalityId, decisionKey, variables);
 			if (rows.isEmpty()) {
@@ -127,8 +128,8 @@ public class ExpenseRulesService {
 			}
 			final var row = rows.getFirst();
 			final var approved = row.get(OUTPUT_APPROVED_AMOUNT);
-			final var amount = approved == null ? appliedAmount : new BigDecimal(approved.toString());
-			final var bucket = row.get(OUTPUT_BUCKET) == null ? bucketForCostType(costType) : row.get(OUTPUT_BUCKET).toString();
+			final var amount = Optional.ofNullable(approved).map(value -> new BigDecimal(value.toString())).orElse(appliedAmount);
+			final var bucket = Optional.ofNullable(row.get(OUTPUT_BUCKET)).map(Object::toString).orElseGet(() -> bucketForCostType(costType));
 			return new ExpenseVerdict(amount, bucket, Boolean.TRUE.equals(row.get(OUTPUT_VARNING)), str(row.get(OUTPUT_REGEL)));
 		} catch (final RuntimeException e) {
 			LOG.warn("Expense rules ({}) unavailable — using the applied amount + {} bucket", decisionKey, bucketForCostType(costType), e);
@@ -137,6 +138,6 @@ public class ExpenseRulesService {
 	}
 
 	private static String str(final Object value) {
-		return value == null ? null : value.toString();
+		return Optional.ofNullable(value).map(Object::toString).orElse(null);
 	}
 }

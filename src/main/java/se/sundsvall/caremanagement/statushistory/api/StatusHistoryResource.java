@@ -39,6 +39,6 @@ class StatusHistoryResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId) {
 
-		return ok(service.listForErrand(errandId));
+		return ok(service.listForErrand(municipalityId, namespace, errandId));
 	}
 }

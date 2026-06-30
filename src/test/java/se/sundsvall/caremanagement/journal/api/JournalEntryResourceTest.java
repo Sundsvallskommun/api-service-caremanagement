@@ -132,6 +132,23 @@ class JournalEntryResourceTest {
 	}
 
 	@Test
+	void lockWithoutBody() {
+		when(serviceMock.lock(JOURNAL_ENTRY_ID, null)).thenReturn(JournalEntry.create().withId(JOURNAL_ENTRY_ID).withStatus("LOCKED"));
+
+		final var entry = webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/{journalEntryId}/lock").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "journalEntryId", JOURNAL_ENTRY_ID)))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(JournalEntry.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(entry).isNotNull();
+		assertThat(entry.getStatus()).isEqualTo("LOCKED");
+		verify(serviceMock).lock(JOURNAL_ENTRY_ID, null);
+	}
+
+	@Test
 	void delete() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(PATH + "/{journalEntryId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "journalEntryId", JOURNAL_ENTRY_ID)))

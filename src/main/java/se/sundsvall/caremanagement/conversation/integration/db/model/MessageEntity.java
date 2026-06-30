@@ -10,7 +10,6 @@ import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
-import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 @Entity
@@ -32,7 +31,7 @@ public class MessageEntity {
 	@Column(name = "direction", nullable = false, length = 16)
 	private String direction;
 
-	@Column(name = "body", nullable = false, length = LONG32)
+	@Column(name = "body", nullable = false, length = 8192)
 	private String body;
 
 	@Column(name = "author", length = 64)

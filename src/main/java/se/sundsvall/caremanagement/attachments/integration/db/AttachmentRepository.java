@@ -25,6 +25,4 @@ public interface AttachmentRepository extends JpaRepository<AttachmentEntity, St
 
 	/** Guards the at-most-one-per-errand rule for the case-data (ärendeuppgifter) attachment. */
 	boolean existsByErrandIdAndDocumentType(String errandId, String documentType);
-
-	long deleteByErrandId(String errandId);
 }

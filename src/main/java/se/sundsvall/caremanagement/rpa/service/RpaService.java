@@ -38,6 +38,7 @@ public class RpaService {
 	private static final String KEY_ACTION = "action";
 	private static final String KEY_ERRAND_ID = "errandId";
 	private static final String KEY_MUNICIPALITY_ID = "municipalityId";
+	private static final String KEY_NAMESPACE = "namespace";
 
 	private final RpaClient rpaClient;
 	private final RpaProperties properties;
@@ -55,18 +56,20 @@ public class RpaService {
 	 * @param action         one of {@link RpaAction}
 	 */
 	public void enqueue(final String municipalityId, final String errandId, final String action) {
-		enqueue(municipalityId, errandId, action, Map.of());
+		enqueue(municipalityId, null, errandId, action, Map.of());
 	}
 
 	/**
 	 * Enqueue an RPA task for an errand with extra hints for the robot.
 	 *
 	 * @param municipalityId  the municipality whose Orchestrator folder the item is added to
+	 * @param namespace       the namespace the errand lives in — placed in the queue item's {@code SpecificContent} so the
+	 *                        robot can reconstruct the namespace-scoped errand API path to write back (may be {@code null})
 	 * @param errandId        the errand the robot acts on (becomes the queue item reference)
 	 * @param action          one of {@link RpaAction}
 	 * @param specificContent additional key/values placed in the queue item's {@code SpecificContent}
 	 */
-	public void enqueue(final String municipalityId, final String errandId, final String action, final Map<String, String> specificContent) {
+	public void enqueue(final String municipalityId, final String namespace, final String errandId, final String action, final Map<String, String> specificContent) {
 		if (!properties.enabled()) {
 			LOG.info("RPA disabled — skipping {} for errand {}", action, errandId);
 			return;
@@ -79,10 +82,12 @@ public class RpaService {
 		content.put(KEY_ACTION, action);
 		content.put(KEY_ERRAND_ID, errandId);
 		content.put(KEY_MUNICIPALITY_ID, municipalityId);
+		ofNullable(namespace).ifPresent(value -> content.put(KEY_NAMESPACE, value));
 
-		// Reference is per-(errand, action) so the Orchestrator's unique-reference dedup only collapses re-runs of the
-		// same action — distinct actions on the same errand remain separate queue items.
-		final var reference = errandId + ":" + action;
+		// Reference is per-(namespace, errand, action) so the Orchestrator's unique-reference dedup only collapses re-runs
+		// of the same action — distinct actions on the same errand remain separate queue items, and the same action on the
+		// same errandId in different namespaces stays distinct too.
+		final var reference = ofNullable(namespace).map(value -> value + ":").orElse("") + errandId + ":" + action;
 		final var item = new AddQueueItemParameters(new QueueItemData(properties.queue(), reference, NORMAL_PRIORITY, content));
 
 		try {

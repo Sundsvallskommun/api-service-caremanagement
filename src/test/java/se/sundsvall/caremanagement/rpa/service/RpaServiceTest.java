@@ -24,6 +24,7 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 class RpaServiceTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
+	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = "errand-1";
 	private static final String FOLDER_ID = "7";
 
@@ -36,20 +37,36 @@ class RpaServiceTest {
 		final var client = mock(RpaClient.class);
 		final var service = new RpaService(client, properties(true));
 
-		service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.WRITE_NORMBERAKNING, Map.of("hint", "x"));
+		service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.WRITE_NORMBERAKNING, Map.of("hint", "x"));
 
 		final var captor = ArgumentCaptor.forClass(AddQueueItemParameters.class);
 		verify(client).addQueueItem(org.mockito.ArgumentMatchers.eq(FOLDER_ID), captor.capture());
 
 		final var data = captor.getValue().itemData();
 		assertThat(data.name()).isEqualTo("RakelEkonomisktBistand");
-		assertThat(data.reference()).isEqualTo(ERRAND_ID + ":" + RpaAction.WRITE_NORMBERAKNING);
+		assertThat(data.reference()).isEqualTo(NAMESPACE + ":" + ERRAND_ID + ":" + RpaAction.WRITE_NORMBERAKNING);
 		assertThat(data.priority()).isEqualTo("Normal");
 		assertThat(data.specificContent())
 			.containsEntry("action", RpaAction.WRITE_NORMBERAKNING)
 			.containsEntry("errandId", ERRAND_ID)
 			.containsEntry("municipalityId", MUNICIPALITY_ID)
+			.containsEntry("namespace", NAMESPACE)
 			.containsEntry("hint", "x");
+	}
+
+	@Test
+	void enqueueWithoutNamespaceOmitsNamespaceAndKeepsErrandActionReference() {
+		final var client = mock(RpaClient.class);
+		final var service = new RpaService(client, properties(true));
+
+		service.enqueue(MUNICIPALITY_ID, null, ERRAND_ID, RpaAction.WRITE_DECISION, Map.of());
+
+		final var captor = ArgumentCaptor.forClass(AddQueueItemParameters.class);
+		verify(client).addQueueItem(org.mockito.ArgumentMatchers.eq(FOLDER_ID), captor.capture());
+
+		final var data = captor.getValue().itemData();
+		assertThat(data.reference()).isEqualTo(ERRAND_ID + ":" + RpaAction.WRITE_DECISION);
+		assertThat(data.specificContent()).doesNotContainKey("namespace");
 	}
 
 	@Test

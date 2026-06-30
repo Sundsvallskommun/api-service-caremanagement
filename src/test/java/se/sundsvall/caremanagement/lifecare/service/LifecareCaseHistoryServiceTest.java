@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 
+import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -29,8 +30,8 @@ import static org.mockito.Mockito.when;
 class LifecareCaseHistoryServiceTest {
 
 	private static final String PERSON_ID = "199001011234";
-	private static final LocalDate FROM = LocalDate.of(2026, 1, 1);
-	private static final LocalDate TO = LocalDate.of(2026, 6, 30);
+	private static final LocalDate FROM = LocalDate.of(2026, JANUARY, 1);
+	private static final LocalDate TO = LocalDate.of(2026, JUNE, 30);
 
 	@Mock
 	private LifecareFcIntegration lifecareFcIntegrationMock;

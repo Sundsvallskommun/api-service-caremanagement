@@ -1,14 +1,11 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationAktualiseringDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationExpensePostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationIncomePostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationInvestigationDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationNormDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonPostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationServiceDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationSpecialExpensePostDTO;
 import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -16,6 +13,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationSections;
 
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
@@ -75,32 +73,25 @@ public final class CalculationAssembler {
 	 * Build the full three-section FC calculation body — incomes (subtracted), expenses (added) and the household
 	 * persons (the norm base) — for one applicant and application month. Reuses the income + proposal-link selection of
 	 * {@link #assemble(String, PersonBasedCalculationProposalDTO, List, YearMonth)}; adds the expenses and persons and,
-	 * when given, overrides the proposal-selected norm with the one chosen on the draft.
+	 * when given, overrides the proposal-selected norm with the one chosen on the draft header.
 	 *
-	 * @param  applicantPersonId  the applicant's personnummer (the FC calculation owner)
-	 * @param  proposal           the FC calculation proposal supplying the link ids; may be {@code null}
-	 * @param  calculationIncomes the effective FC income rows; may be {@code null}
-	 * @param  expenses           the effective FC expense rows; may be {@code null}
-	 * @param  persons            the household person rows; may be {@code null}
-	 * @param  normIdOverride     the norm chosen on the draft, overriding the proposal selection; may be {@code null}
-	 * @param  applicationMonth   the month the application concerns
-	 * @return                    the assembled {@link PostCalculationBodyRequest}
+	 * @param  applicantPersonId the applicant's personnummer (the FC calculation owner)
+	 * @param  proposal          the FC calculation proposal supplying the link ids; may be {@code null}
+	 * @param  sections          the income/expense/special-expense/person rows + draft header; fields may be {@code null}
+	 * @param  applicationMonth  the month the application concerns
+	 * @return                   the assembled {@link PostCalculationBodyRequest}
 	 */
 	public static PostCalculationBodyRequest assemble(
 		final String applicantPersonId,
 		final PersonBasedCalculationProposalDTO proposal,
-		final List<PersonBasedCalculationIncomePostDTO> calculationIncomes,
-		final List<PersonBasedCalculationExpensePostDTO> expenses,
-		final List<PersonBasedCalculationSpecialExpensePostDTO> specialExpenses,
-		final List<PersonBasedCalculationPersonPostDTO> persons,
-		final CalculationHeader header,
+		final CalculationSections sections,
 		final YearMonth applicationMonth) {
 
-		final var body = assemble(applicantPersonId, proposal, calculationIncomes, applicationMonth);
-		ofNullable(expenses).ifPresent(body::calculationExpenses);
-		ofNullable(specialExpenses).ifPresent(body::calculationSpecialExpenses);
-		ofNullable(persons).ifPresent(body::calculationPersons);
-		ofNullable(header).ifPresent(h -> applyHeader(body, h));
+		final var body = assemble(applicantPersonId, proposal, sections.incomes(), applicationMonth);
+		ofNullable(sections.expenses()).ifPresent(body::calculationExpenses);
+		ofNullable(sections.specialExpenses()).ifPresent(body::calculationSpecialExpenses);
+		ofNullable(sections.persons()).ifPresent(body::calculationPersons);
+		ofNullable(sections.header()).ifPresent(h -> applyHeader(body, h));
 		return body;
 	}
 

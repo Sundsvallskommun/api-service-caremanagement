@@ -268,7 +268,8 @@ class LifecareFcIntegrationTest {
 			9, 8, 7
 		};
 
-		integration.postActualisationAttachment(4711, "DOC", "SENDER", "Title", "Sender", "EB-1_meddelandehistorik.pdf", "application/pdf", content);
+		integration.postActualisationAttachment(4711,
+			new ActualisationAttachment("DOC", "SENDER", "Title", "Sender", "EB-1_meddelandehistorik.pdf", "application/pdf", content));
 
 		final ArgumentCaptor<MultipartFile> fileCaptor = ArgumentCaptor.forClass(MultipartFile.class);
 		verify(clientMock).postActualisationAttachment(eq(4711), eq("DOC"), eq("SENDER"), eq("Title"), eq("Sender"), fileCaptor.capture());
@@ -284,10 +285,44 @@ class LifecareFcIntegrationTest {
 		doThrow(new RuntimeException("connection reset")).when(clientMock)
 			.postActualisationAttachment(eq(4711), any(), any(), any(), any(), any());
 
-		assertThatThrownBy(() -> integration.postActualisationAttachment(4711, "DOC", "SENDER", "Title", "Sender", "f.pdf", "application/pdf", new byte[] {
-			1
-		}))
+		assertThatThrownBy(() -> integration.postActualisationAttachment(4711,
+			new ActualisationAttachment("DOC", "SENDER", "Title", "Sender", "f.pdf", "application/pdf", new byte[] {
+				1
+			})))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+	}
+
+	// ---- describe(): transport-failure messages must not reach the problem detail ------------------------------------
+
+	@Test
+	void transportFailureMessageIsNotLeakedIntoProblemDetail() {
+		// A Feign transport failure embeds the full request line (personId + key) in its message — must be dropped.
+		final var leaky = "GET https://lifecare-fc/Persons?personId=200001012384&key=SUPER-SECRET-KEY HTTP/1.1";
+		when(clientMock.getPerson(PERSON_ID)).thenThrow(new RuntimeException(leaky));
+
+		assertThatThrownBy(() -> integration.getPerson(PERSON_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.satisfies(detail -> {
+				assertThat(detail).doesNotContain(leaky);
+				assertThat(detail).doesNotContain("200001012384");
+				assertThat(detail).doesNotContain("SUPER-SECRET-KEY");
+				// Only the exception class name is exposed.
+				assertThat(detail).isEqualTo("Error fetching person in Lifecare FC: RuntimeException");
+			});
+	}
+
+	@Test
+	void throwableProblemDetailIsStillExposed() {
+		// ThrowableProblem causes are already clean — keep status + detail for self-diagnosing logs.
+		when(clientMock.getPerson(PERSON_ID)).thenThrow(Problem.valueOf(NOT_FOUND, "person not found"));
+
+		assertThatThrownBy(() -> integration.getPerson(PERSON_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.satisfies(detail -> assertThat(detail).contains("404").contains("person not found"));
 	}
 }

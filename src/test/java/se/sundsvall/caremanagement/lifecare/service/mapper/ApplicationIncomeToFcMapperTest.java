@@ -10,6 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 
+import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.APPLICANT;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;
@@ -30,8 +31,8 @@ class ApplicationIncomeToFcMapperTest {
 	@Test
 	void resolvesApplicationTypeToFcTypeIdByName() {
 		final var lines = ApplicationIncomeToFcMapper.toIncomeLines(List.of(
-			income("SALARY", "18500", LocalDate.of(2026, 5, 25), APPLICANT),
-			income("SWISH_DEPOSITS", "300", LocalDate.of(2026, 5, 10), CO_APPLICANT)),
+			income("SALARY", "18500", LocalDate.of(2026, MAY, 25), APPLICANT),
+			income("SWISH_DEPOSITS", "300", LocalDate.of(2026, MAY, 10), CO_APPLICANT)),
 			proposal());
 
 		assertThat(lines).hasSize(2);

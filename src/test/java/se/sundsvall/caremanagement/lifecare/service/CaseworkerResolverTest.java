@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 
+import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -23,7 +24,7 @@ import static org.mockito.Mockito.when;
 class CaseworkerResolverTest {
 
 	private static final String PERSON_ID = "199001011234";
-	private static final LocalDate DATE = LocalDate.of(2026, 6, 1);
+	private static final LocalDate DATE = LocalDate.of(2026, JUNE, 1);
 	private static final int LOOKBACK_MONTHS = 36;
 	private static final int USERS_LIMIT = 1000;
 

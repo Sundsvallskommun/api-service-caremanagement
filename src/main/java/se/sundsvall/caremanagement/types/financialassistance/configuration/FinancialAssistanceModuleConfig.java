@@ -48,7 +48,7 @@ public class FinancialAssistanceModuleConfig {
 		SLUG_RENEWAL, APPLICATION_TYPE_RENEWAL,
 		SLUG_SUPPLEMENTARY, APPLICATION_TYPE_SUPPLEMENTARY);
 
-	public static final Set<String> SLUGS = SLUG_TO_APPLICATION_TYPE.keySet();
+	public static final Set<String> SLUGS = Set.copyOf(SLUG_TO_APPLICATION_TYPE.keySet());
 
 	// Application-type ("ansökningstyp") display names — the Swedish labels Draken shows the handläggare.
 	// Mirrored into the editable lookup store (kind=TYPE) for the Drakel tenant by

@@ -48,6 +48,38 @@ class MessageResourceFailureTest {
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", errandId)))
+			.header(Identifier.HEADER_NAME, "joe001doe; type=adAccount")
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void post_missingIdentifier() {
+		final var builder = new MultipartBodyBuilder();
+		builder.part("message", new CreateMessage("OUTBOUND", "body", "author", null), APPLICATION_JSON);
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void post_invalidIdentifier() {
+		final var builder = new MultipartBodyBuilder();
+		builder.part("message", new CreateMessage("OUTBOUND", "body", "author", null), APPLICATION_JSON);
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "not-a-valid-identifier")
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()

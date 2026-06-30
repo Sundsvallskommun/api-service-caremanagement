@@ -199,15 +199,18 @@ public class WarningService {
 
 	/** A stable dedup/grouping key for the income a warning concerns — the benefit/type before any " (..." or ": ...". */
 	private static String sourceKey(final String text) {
-		return (text == null) ? "" : text.split("[(:]", 2)[0].trim();
+		if (text == null) {
+			return "";
+		}
+		return text.split("[(:]", 2)[0].trim();
 	}
 
 	private static String key(final String type, final String sourceKey) {
-		return type + "::" + (sourceKey == null ? "" : sourceKey);
+		return type + "::" + ofNullable(sourceKey).orElse("");
 	}
 
 	private static List<String> ofList(final List<String> list) {
-		return (list == null) ? List.of() : list;
+		return ofNullable(list).orElseGet(List::of);
 	}
 
 	private static Warning toWarning(final FaWarningEntity entity) {

@@ -11,6 +11,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static java.time.Month.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
@@ -33,8 +34,8 @@ class MonitoringRequestTest {
 
 	@Test
 	void builderMethods() {
-		final var startDate = LocalDate.of(2026, 7, 1);
-		final var endDate = LocalDate.of(2026, 7, 31);
+		final var startDate = LocalDate.of(2026, JULY, 1);
+		final var endDate = LocalDate.of(2026, JULY, 31);
 		final var request = MonitoringRequest.create()
 			.withSource("LIFECARE")
 			.withLifecareId("987654")

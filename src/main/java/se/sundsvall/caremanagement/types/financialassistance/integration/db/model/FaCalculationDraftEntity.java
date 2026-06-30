@@ -11,6 +11,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
@@ -73,14 +74,14 @@ public class FaCalculationDraftEntity {
 
 	@PrePersist
 	void prePersist() {
-		final var now = OffsetDateTime.now();
+		final var now = OffsetDateTime.now(ZoneId.systemDefault());
 		created = now;
 		updated = now;
 	}
 
 	@PreUpdate
 	void preUpdate() {
-		updated = OffsetDateTime.now();
+		updated = OffsetDateTime.now(ZoneId.systemDefault());
 	}
 
 	public String getErrandId() {

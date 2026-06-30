@@ -9,6 +9,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
@@ -91,14 +92,14 @@ public class FaNormIncomeEntity {
 
 	@PrePersist
 	void prePersist() {
-		final var now = OffsetDateTime.now();
+		final var now = OffsetDateTime.now(ZoneId.systemDefault());
 		created = now;
 		updated = now;
 	}
 
 	@PreUpdate
 	void preUpdate() {
-		updated = OffsetDateTime.now();
+		updated = OffsetDateTime.now(ZoneId.systemDefault());
 	}
 
 	public String getId() {

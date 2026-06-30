@@ -73,7 +73,12 @@ public final class ExpenseTypeMapper {
 		if (fcName == null) {
 			return Optional.empty();
 		}
-		final var catalogue = BUCKET_SPECIAL_EXPENSE.equals(bucket) ? specialIdByName(proposal) : idByName(proposal);
+		final Map<String, Integer> catalogue;
+		if (BUCKET_SPECIAL_EXPENSE.equals(bucket)) {
+			catalogue = specialIdByName(proposal);
+		} else {
+			catalogue = idByName(proposal);
+		}
 		return ofNullable(catalogue.get(normalize(fcName)));
 	}
 
@@ -94,6 +99,6 @@ public final class ExpenseTypeMapper {
 	}
 
 	private static String normalize(final String value) {
-		return value == null ? "" : value.trim().toLowerCase();
+		return ofNullable(value).map(v -> v.trim().toLowerCase()).orElse("");
 	}
 }

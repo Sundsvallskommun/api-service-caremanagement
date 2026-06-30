@@ -26,6 +26,8 @@ public final class ApplicationIncomeToFcMapper {
 
 	private ApplicationIncomeToFcMapper() {}
 
+	private static final String FC_OTHER_INCOME = "Övriga inkomster";
+
 	/**
 	 * The application income code → FC income-type name table. The values must match the names Lifecare returns in the
 	 * calculation proposal ({@code calculationIncomeTypes}); matching is case-insensitive and trim-insensitive. Edit here
@@ -36,9 +38,9 @@ public final class ApplicationIncomeToFcMapper {
 		"SWISH_DEPOSITS", "Swish/Insättningar/Överföringar",
 		"OCCUPATIONAL_PENSION_INSURANCE", "Pension/SA/Livränta/Omvårdnadsbidrag",
 		"CHILD_SUPPORT", "Underhållsstöd",
-		"RENT_SHARE_FROM_CHILD", "Övriga inkomster",
-		"OTHER_INCOME", "Övriga inkomster",
-		"FINANCIAL_AID_OTHER_MUNICIPALITY", "Övriga inkomster");
+		"RENT_SHARE_FROM_CHILD", FC_OTHER_INCOME,
+		"OTHER_INCOME", FC_OTHER_INCOME,
+		"FINANCIAL_AID_OTHER_MUNICIPALITY", FC_OTHER_INCOME);
 
 	/**
 	 * Map the declared application incomes to FC income lines for the given calculation proposal — one line per (resolved
@@ -88,6 +90,6 @@ public final class ApplicationIncomeToFcMapper {
 	}
 
 	private static String normalize(final String value) {
-		return value == null ? "" : value.trim().toLowerCase();
+		return ofNullable(value).map(v -> v.trim().toLowerCase()).orElse("");
 	}
 }

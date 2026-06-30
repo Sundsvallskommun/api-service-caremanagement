@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:59450
+- url: http://localhost:56560
   description: Generated server url
 tags:
 - name: Statistics
@@ -950,8 +950,8 @@ paths:
               $ref: "#/components/schemas/RpaTaskRequest"
         required: true
       responses:
-        "200":
-          description: OK
+        "202":
+          description: Accepted - the RPA task was enqueued
   /{municipalityId}/{namespace}/errands/{errandId}/referrals:
     get:
       tags:
@@ -1460,8 +1460,10 @@ paths:
       tags:
       - Conversation
       summary: Post a message on the errand
-      description: Multipart request. The 'message' part carries the message (JSON);
-        the optional 'attachments' part carries the files to attach (any type).
+      description: "Multipart request. The 'message' part carries the message (JSON);\
+        \ the optional 'attachments' part carries the files to attach (any type).\
+        \ The sender's identity is taken from the 'X-Sent-By' header (type=adAccount\
+        \ → caseworker, type=partyId → applicant)."
       operationId: post
       parameters:
       - name: municipalityId
@@ -1480,6 +1482,14 @@ paths:
         required: true
         schema:
           type: string
+      - name: X-Sent-By
+        in: header
+        description: "Sender identity (type=adAccount → caseworker, type=partyId →\
+          \ applicant)"
+        required: true
+        schema:
+          type: string
+        example: joe001doe; type=adAccount
       requestBody:
         content:
           multipart/form-data:
@@ -5865,10 +5875,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri

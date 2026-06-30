@@ -16,6 +16,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Monitorin
 import se.sundsvall.caremanagement.types.financialassistance.api.model.MonitoringRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.MonitoringService;
 
+import static java.time.Month.*;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -50,7 +51,7 @@ class MonitoringResourceTest {
 	}
 
 	private static MonitoringRequest request() {
-		return MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, 7, 1)).withEndDate(LocalDate.of(2026, 7, 31));
+		return MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, JULY, 1)).withEndDate(LocalDate.of(2026, JULY, 31));
 	}
 
 	@Test

@@ -13,6 +13,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static java.time.Month.*;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -38,9 +39,9 @@ class FaCalculationDraftEntityTest {
 	@Test
 	void testBuilderMethods() {
 		final var created = OffsetDateTime.parse("2026-06-01T12:00:00Z");
-		final var calculationFromDate = LocalDate.of(2026, 6, 1);
-		final var calculationToDate = LocalDate.of(2026, 6, 30);
-		final var calculationDate = LocalDate.of(2026, 6, 15);
+		final var calculationFromDate = LocalDate.of(2026, JUNE, 1);
+		final var calculationToDate = LocalDate.of(2026, JUNE, 30);
+		final var calculationDate = LocalDate.of(2026, JUNE, 15);
 		final var entity = FaCalculationDraftEntity.create()
 			.withErrandId("errand")
 			.withApplicationMonth("2026-06")

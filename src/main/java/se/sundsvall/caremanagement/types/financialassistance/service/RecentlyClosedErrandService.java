@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Optional;
@@ -56,7 +57,7 @@ public class RecentlyClosedErrandService {
 	 * Parties are partyIds (applicant + optional co-applicant); blank entries are ignored.
 	 */
 	public Optional<RecentlyClosed> findRecentlyClosed(final String municipalityId, final String namespace, final Collection<String> partyIds) {
-		final var cutoff = OffsetDateTime.now().minusDays(windowDays);
+		final var cutoff = OffsetDateTime.now(ZoneId.systemDefault()).minusDays(windowDays);
 		final var errandIds = partyIds.stream()
 			.filter(StringUtils::hasText)
 			.flatMap(partyId -> financialAssistanceRepository.findErrandIdsByPartyId(partyId).stream())

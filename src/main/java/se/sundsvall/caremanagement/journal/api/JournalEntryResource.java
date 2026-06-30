@@ -94,7 +94,7 @@ class JournalEntryResource {
 		return ok(service.update(journalEntryId, request));
 	}
 
-	@PostMapping(path = "/{journalEntryId}/lock", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@PostMapping(path = "/{journalEntryId}/lock", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Lock a journal entry (skrivskydd) — it becomes an immutable upprättad handling")
 	ResponseEntity<JournalEntry> lock(
 		@ValidMunicipalityId @PathVariable final String municipalityId,

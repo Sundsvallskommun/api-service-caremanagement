@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.eventlog.service;
 
+import java.time.ZoneId;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,8 +24,8 @@ public class ErrandEventService {
 	 * Records an HTTP-sourced event (from the interceptor): stamps the current time and persists. The single source of
 	 * truth for the {@code created} timestamp, so the interceptor need not carry a clock.
 	 */
-	public void record(final ErrandEventEntity entity) {
-		repository.save(entity.withCreated(now()));
+	public void recordEvent(final ErrandEventEntity entity) {
+		repository.save(entity.withCreated(now(ZoneId.systemDefault())));
 	}
 
 	/**

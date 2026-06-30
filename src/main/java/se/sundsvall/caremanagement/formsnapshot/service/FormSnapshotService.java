@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.formsnapshot.service;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -57,7 +58,7 @@ public class FormSnapshotService {
 		final var snapshot = parse(payload);
 		validate(snapshot);
 
-		final var entity = FormSnapshotMapper.toEntity(municipalityId, namespace, errandId, typeSlug, payload, snapshot, OffsetDateTime.now());
+		final var entity = FormSnapshotMapper.toEntity(municipalityId, namespace, errandId, typeSlug, payload, snapshot, OffsetDateTime.now(ZoneId.systemDefault()));
 		final var saved = repository.save(entity);
 		LOG.info("Captured form snapshot for errand {} (typeSlug={}, sections={}, hash={})",
 			errandId, typeSlug, snapshot.getSections().size(), abbreviate(saved.getContentHash()));
@@ -93,6 +94,9 @@ public class FormSnapshotService {
 	}
 
 	private static String abbreviate(final String hash) {
-		return hash.length() <= 12 ? hash : hash.substring(0, 12);
+		if (hash.length() <= 12) {
+			return hash;
+		}
+		return hash.substring(0, 12);
 	}
 }

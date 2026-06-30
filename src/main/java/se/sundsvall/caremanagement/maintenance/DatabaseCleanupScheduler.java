@@ -73,11 +73,14 @@ class DatabaseCleanupScheduler {
 			statement.execute("SET FOREIGN_KEY_CHECKS = 0");
 			try {
 				final var tables = tablesToWipe(statement);
-				var totalRows = 0;
 				for (final var table : tables) {
-					final var deleted = statement.executeUpdate("DELETE FROM `" + table + "`");
-					totalRows += deleted;
-					LOG.info("Wiped {} row(s) from {}", deleted, table);
+					statement.addBatch("DELETE FROM `" + table + "`");
+				}
+				final var deletedPerTable = statement.executeBatch();
+				var totalRows = 0;
+				for (var i = 0; i < deletedPerTable.length; i++) {
+					totalRows += deletedPerTable[i];
+					LOG.info("Wiped {} row(s) from {}", deletedPerTable[i], tables.get(i));
 				}
 				LOG.info("Nightly demo reset complete: removed {} row(s) from {} table(s); preserved {}",
 					totalRows, tables.size(), PRESERVED_TABLES);

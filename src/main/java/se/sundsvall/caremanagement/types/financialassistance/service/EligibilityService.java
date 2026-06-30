@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -99,10 +100,10 @@ public class EligibilityService {
 	}
 
 	public EligibilityResponse evaluate(final String municipalityId, final String namespace, final EligibilityRequest request) {
-		final var today = LocalDate.now();
+		final var today = LocalDate.now(ZoneId.systemDefault());
 		final var currentMonth = YearMonth.from(today);
 		final var nextMonth = currentMonth.plusMonths(1);
-		final var cutoff = OffsetDateTime.now().minusDays(windowDays);
+		final var cutoff = OffsetDateTime.now(ZoneId.systemDefault()).minusDays(windowDays);
 		final var hasCoApplicant = hasText(request.getCoApplicant());
 
 		// TEST OVERRIDE (financial-assistance.eligibility.return-all-types): short-circuit the routing and offer all three
@@ -117,8 +118,7 @@ public class EligibilityService {
 		// co-applicant must not be routed into self-service: offer no application (empty suggestions) and let the frontend
 		// hand off to a caseworker. The protected status is kept internal — it never leaves this service. Best-effort per
 		// source, so an upstream outage degrades to normal routing rather than blocking every applicant.
-		if (hasProtectedIdentity(municipalityId, request.getApplicant())
-			|| (hasCoApplicant && hasProtectedIdentity(municipalityId, request.getCoApplicant()))) {
+		if (anyPartyProtected(municipalityId, request, hasCoApplicant)) {
 			return protectedIdentityResponse(hasCoApplicant);
 		}
 
@@ -126,47 +126,24 @@ public class EligibilityService {
 			.withWindowDays(windowDays)
 			.withHasCoApplicant(hasCoApplicant);
 
-		// Lifecare (best-effort).
-		var lifecareChecked = true;
-		LifecareEbCaseSummary applicantLc;
-		LifecareEbCaseSummary coApplicantLc = null;
-		try {
-			applicantLc = lifecareEbCaseService.summarize(personalNumber(municipalityId, request.getApplicant()), today);
-			if (hasCoApplicant) {
-				coApplicantLc = lifecareEbCaseService.summarize(personalNumber(municipalityId, request.getCoApplicant()), today);
-			}
-		} catch (final ThrowableProblem e) {
-			lifecareChecked = false;
-			applicantLc = LifecareEbCaseSummary.none();
-			coApplicantLc = hasCoApplicant ? LifecareEbCaseSummary.none() : null;
-		}
-
-		response.setLifecareChecked(lifecareChecked);
-		response.setHasPreviousCalculation(applicantLc.hasCalculation());
-		ofNullable(applicantLc.latestDecisionPeriod()).ifPresent(period -> {
-			response.setLatestDecisionPeriodMonth(period.getMonthValue());
-			response.setLatestDecisionPeriodYear(period.getYear());
-		});
+		final var lifecare = loadLifecare(municipalityId, request, today, hasCoApplicant);
+		applyLifecareFacts(response, lifecare);
 
 		// Caremanagement (Druken) EB errands for the applicant (+ co-applicant), scoped to this namespace/municipality.
 		final var cmRecords = loadCmRecords(municipalityId, namespace, request);
-		final var existsInCm = cmRecords.stream().anyMatch(record -> personIn(record.fa(), request.getApplicant()));
+		final var existsInCm = cmRecords.stream().anyMatch(cm -> personIn(cm.fa(), request.getApplicant()));
 		response.setExistsInCm(existsInCm);
-		response.setExistsInLc(applicantLc.hasFootprint());
+		response.setExistsInLc(lifecare.applicant().hasFootprint());
 
 		// 1) Finns i CM? + LC — applicant must exist; when applying together the co-applicant must too.
-		final var applicantExists = existsInCm || applicantLc.hasFootprint();
-		final var coApplicantExists = !hasCoApplicant
-			|| cmRecords.stream().anyMatch(record -> personIn(record.fa(), request.getCoApplicant()))
-			|| (coApplicantLc != null && coApplicantLc.hasFootprint());
-		if (!(applicantExists && coApplicantExists)) {
+		if (!bothPartiesExist(cmRecords, lifecare, request, existsInCm, hasCoApplicant)) {
 			return newApplication(response, REASON_NO_EXISTING_CASE,
-				"Inget befintligt ärende hittades" + (lifecareChecked ? "" : " (Lifecare kunde inte nås)") + ". Föreslår en nyansökan.");
+				"Inget befintligt ärende hittades" + lifecareNote(lifecare.checked()) + ". Föreslår en nyansökan.");
 		}
 
 		// 2) Samma marital status? — constellation (alone vs partner, and which partner) vs the most recent existing case.
 		// A different co-applicant (a new person, same household size) is a new constellation too → new application.
-		final var previousHadCoApplicant = previousHadCoApplicant(cmRecords, applicantLc);
+		final var previousHadCoApplicant = previousHadCoApplicant(cmRecords, lifecare.applicant());
 		final var maritalStatusMatches = hasCoApplicant == previousHadCoApplicant && sameCoApplicantIfKnown(cmRecords, request);
 		response.setMaritalStatusMatches(maritalStatusMatches);
 		if (!maritalStatusMatches) {
@@ -178,16 +155,83 @@ public class EligibilityService {
 		// a renewal and surface the closed errand so a caseworker can reopen it (in Lifecare) and release it for processing.
 		final var recentlyClosed = recentlyClosedErrandService.findRecentlyClosed(municipalityId, namespace, parties(request));
 		if (recentlyClosed.isPresent()) {
-			response.setReopenableErrandId(recentlyClosed.get().errandId());
-			response.setClosedAt(recentlyClosed.get().closedAt());
-			response.setSuggestions(List.of(suggestion(SLUG_RENEWAL, currentMonth, true)));
-			response.setReasonCode(REASON_RECENTLY_CLOSED);
-			response.setMessage("Ett nyligen avslutat ärende hittades. Föreslår en återansökan; en handläggare återöppnar det "
-				+ "tidigare ärendet och släpper det för handläggning.");
-			return response;
+			return recentlyClosedResponse(response, recentlyClosed.get(), currentMonth);
 		}
 
 		// 3) Per-month — application/decision already present for this/next month?
+		return perMonthResponse(response, cmRecords, lifecare.applicant(), currentMonth, nextMonth, cutoff);
+	}
+
+	/** Protected-identity gate across both parties (best-effort per source). */
+	private boolean anyPartyProtected(final String municipalityId, final EligibilityRequest request, final boolean hasCoApplicant) {
+		return hasProtectedIdentity(municipalityId, request.getApplicant())
+			|| (hasCoApplicant && hasProtectedIdentity(municipalityId, request.getCoApplicant()));
+	}
+
+	/** The Lifecare summaries for the applicant (+ co-applicant), best-effort: an upstream failure degrades to "none". */
+	private LifecareFacts loadLifecare(final String municipalityId, final EligibilityRequest request, final LocalDate today, final boolean hasCoApplicant) {
+		try {
+			final var applicant = lifecareEbCaseService.summarize(personalNumber(municipalityId, request.getApplicant()), today);
+			LifecareEbCaseSummary coApplicant = null;
+			if (hasCoApplicant) {
+				coApplicant = lifecareEbCaseService.summarize(personalNumber(municipalityId, request.getCoApplicant()), today);
+			}
+			return new LifecareFacts(true, applicant, coApplicant);
+		} catch (final ThrowableProblem e) {
+			LifecareEbCaseSummary coApplicant = null;
+			if (hasCoApplicant) {
+				coApplicant = LifecareEbCaseSummary.none();
+			}
+			return new LifecareFacts(false, LifecareEbCaseSummary.none(), coApplicant);
+		}
+	}
+
+	/** Stamp the response's Lifecare-derived facts (checked flag, previous calculation, latest decision period). */
+	private static void applyLifecareFacts(final EligibilityResponse response, final LifecareFacts lifecare) {
+		response.setLifecareChecked(lifecare.checked());
+		response.setHasPreviousCalculation(lifecare.applicant().hasCalculation());
+		ofNullable(lifecare.applicant().latestDecisionPeriod()).ifPresent(period -> {
+			response.setLatestDecisionPeriodMonth(period.getMonthValue());
+			response.setLatestDecisionPeriodYear(period.getYear());
+		});
+	}
+
+	/** Gate 1: the applicant must exist (CM or LC); when applying together the co-applicant must too. */
+	private static boolean bothPartiesExist(final List<CmRecord> cmRecords, final LifecareFacts lifecare, final EligibilityRequest request,
+		final boolean existsInCm, final boolean hasCoApplicant) {
+		final var applicantExists = existsInCm || lifecare.applicant().hasFootprint();
+		final var coApplicantExists = !hasCoApplicant
+			|| cmRecords.stream().anyMatch(cm -> personIn(cm.fa(), request.getCoApplicant()))
+			|| (lifecare.coApplicant() != null && lifecare.coApplicant().hasFootprint());
+		return applicantExists && coApplicantExists;
+	}
+
+	private static String lifecareNote(final boolean lifecareChecked) {
+		if (lifecareChecked) {
+			return "";
+		}
+		return " (Lifecare kunde inte nås)";
+	}
+
+	/** Gate 2.5 response: recommend a renewal and surface the recently-closed errand for reopening. */
+	private static EligibilityResponse recentlyClosedResponse(final EligibilityResponse response,
+		final RecentlyClosedErrandService.RecentlyClosed recentlyClosed, final YearMonth currentMonth) {
+		response.setReopenableErrandId(recentlyClosed.errandId());
+		response.setClosedAt(recentlyClosed.closedAt());
+		response.setSuggestions(List.of(suggestion(SLUG_RENEWAL, currentMonth, true)));
+		response.setReasonCode(REASON_RECENTLY_CLOSED);
+		response.setMessage("Ett nyligen avslutat ärende hittades. Föreslår en återansökan; en handläggare återöppnar det "
+			+ "tidigare ärendet och släpper det för handläggning.");
+		return response;
+	}
+
+	/**
+	 * Gate 3 response: the per-month renewal/supplementary suggestions, recommended by whether the current month is
+	 * decided.
+	 */
+	private static EligibilityResponse perMonthResponse(final EligibilityResponse response, final List<CmRecord> cmRecords,
+		final LifecareEbCaseSummary applicantLc, final YearMonth currentMonth, final YearMonth nextMonth, final OffsetDateTime cutoff) {
+
 		final var existsThisMonth = applicationExists(cmRecords, applicantLc, currentMonth, cutoff);
 		final var existsNextMonth = applicationExists(cmRecords, applicantLc, nextMonth, cutoff);
 		final var currentMonthDecided = applicantLc.decisionMonths().contains(currentMonth);
@@ -200,12 +244,23 @@ public class EligibilityService {
 		final var nextMonthSuggestion = monthSuggestion(nextMonth, existsNextMonth, currentMonthDecided);
 
 		// Recommended = the current month while it's still open; next month once the current month is decided.
-		response.setSuggestions(currentMonthDecided ? List.of(nextMonthSuggestion, thisMonth) : List.of(thisMonth, nextMonthSuggestion));
+		final List<ApplicationSuggestion> suggestions;
+		final String message;
+		if (currentMonthDecided) {
+			suggestions = List.of(nextMonthSuggestion, thisMonth);
+			message = "Beslut finns för aktuell månad. Föreslår en återansökan för nästa månad eller en tilläggsansökan.";
+		} else {
+			suggestions = List.of(thisMonth, nextMonthSuggestion);
+			message = "Befintligt ärende utan beslut för aktuell månad. Föreslår en återansökan för aktuell månad.";
+		}
+		response.setSuggestions(suggestions);
 		response.setReasonCode(REASON_EXISTING_CASE);
-		response.setMessage(currentMonthDecided
-			? "Beslut finns för aktuell månad. Föreslår en återansökan för nästa månad eller en tilläggsansökan."
-			: "Befintligt ärende utan beslut för aktuell månad. Föreslår en återansökan för aktuell månad.");
+		response.setMessage(message);
 		return response;
+	}
+
+	/** The Lifecare summaries gathered for an eligibility check, plus whether Lifecare was reachable. */
+	private record LifecareFacts(boolean checked, LifecareEbCaseSummary applicant, LifecareEbCaseSummary coApplicant) {
 	}
 
 	/**
@@ -271,7 +326,13 @@ public class EligibilityService {
 
 	/** A month's suggestion: supplementary application when an application already exists for it, otherwise renewal. */
 	private static ApplicationSuggestion monthSuggestion(final YearMonth month, final boolean exists, final boolean recommended) {
-		return suggestion(exists ? SLUG_SUPPLEMENTARY : SLUG_RENEWAL, month, recommended);
+		final String slug;
+		if (exists) {
+			slug = SLUG_SUPPLEMENTARY;
+		} else {
+			slug = SLUG_RENEWAL;
+		}
+		return suggestion(slug, month, recommended);
 	}
 
 	/**
@@ -279,7 +340,7 @@ public class EligibilityService {
 	 */
 	private static boolean applicationExists(final List<CmRecord> cmRecords, final LifecareEbCaseSummary applicantLc,
 		final YearMonth month, final OffsetDateTime cutoff) {
-		final var inCm = cmRecords.stream().anyMatch(record -> periodEquals(record.fa(), month) && createdWithin(record.errand(), cutoff));
+		final var inCm = cmRecords.stream().anyMatch(cm -> periodEquals(cm.fa(), month) && createdWithin(cm.errand(), cutoff));
 		return inCm || applicantLc.decisionMonths().contains(month);
 	}
 
@@ -289,7 +350,7 @@ public class EligibilityService {
 	 */
 	private static boolean previousHadCoApplicant(final List<CmRecord> cmRecords, final LifecareEbCaseSummary applicantLc) {
 		return cmRecords.stream().findFirst()
-			.map(record -> hasCoApplicantPerson(record.fa()))
+			.map(cm -> hasCoApplicantPerson(cm.fa()))
 			.orElseGet(applicantLc::hasCoApplicant);
 	}
 
@@ -304,7 +365,7 @@ public class EligibilityService {
 			return true;
 		}
 		return cmRecords.stream().findFirst()
-			.flatMap(record -> coApplicantPartyId(record.fa()))
+			.flatMap(cm -> coApplicantPartyId(cm.fa()))
 			.map(previous -> previous.equals(request.getCoApplicant()))
 			.orElse(true);
 	}
@@ -336,8 +397,8 @@ public class EligibilityService {
 			.flatMap(Optional::stream)
 			.filter(errand -> SLUGS.contains(errand.getTypeSlug()))
 			.map(errand -> new CmRecord(errand, financialAssistanceRepository.findByErrandId(errand.getId()).orElse(null)))
-			.filter(record -> record.fa() != null)
-			.sorted(comparing((CmRecord record) -> record.errand().getCreated(), nullsFirst(naturalOrder())).reversed())
+			.filter(cm -> cm.fa() != null)
+			.sorted(comparing((CmRecord cm) -> cm.errand().getCreated(), nullsFirst(naturalOrder())).reversed())
 			.toList();
 	}
 
@@ -372,8 +433,8 @@ public class EligibilityService {
 		return ApplicationSuggestion.create()
 			.withTypeSlug(slug)
 			.withApplicationType(applicationTypeFor(slug))
-			.withPeriodMonth(period == null ? null : period.getMonthValue())
-			.withPeriodYear(period == null ? null : period.getYear())
+			.withPeriodMonth(ofNullable(period).map(YearMonth::getMonthValue).orElse(null))
+			.withPeriodYear(ofNullable(period).map(YearMonth::getYear).orElse(null))
 			.withRecommended(recommended)
 			.withLabel(label(slug, period));
 	}
@@ -392,7 +453,10 @@ public class EligibilityService {
 			case SLUG_RENEWAL -> "Återansökan";
 			default -> "Tilläggsansökan";
 		};
-		return period == null ? base : base + " för " + MONTHS_SV[period.getMonthValue() - 1] + " " + period.getYear();
+		if (period == null) {
+			return base;
+		}
+		return base + " för " + MONTHS_SV[period.getMonthValue() - 1] + " " + period.getYear();
 	}
 
 	/** An EB errand envelope paired with its typed financial-assistance row. */

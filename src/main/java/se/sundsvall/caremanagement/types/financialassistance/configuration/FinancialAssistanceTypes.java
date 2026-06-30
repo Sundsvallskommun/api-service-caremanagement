@@ -86,7 +86,7 @@ public final class FinancialAssistanceTypes {
 		cost("TRAVEL_MEDICAL_TRANSPORT", "Resor med sjukresor/färdtjänst till godkänd planering/aktivitet (egenavgift)", "Sjukresor", GROUP_WORK_AND_STUDIES),
 		cost("MEDICAL_CARE", "Läkarvård (inom högkostnadsskydd)", "Läkarvård", GROUP_HEALTH),
 		cost("MEDICINE", "Medicin (inom högkostnadsskydd/förmån/egenavgift)", "Medicin", GROUP_HEALTH),
-		cost("OTHER", "Övrigt bistånd", "Övriga utgifter", GROUP_OTHER),
+		cost(GROUP_OTHER, "Övrigt bistånd", "Övriga utgifter", GROUP_OTHER),
 		// Handläggare-only Lifecare costs (no Mina-sidor counterpart)
 		handlaggareOnly("ELECTRICITY_2", "El 2"),
 		handlaggareOnly("CHILDCARE_FEE", "Barnomsorgsavgift"),

@@ -62,6 +62,45 @@ class CalculationFeederTest {
 	}
 
 	@Test
+	void incomeRowsSumsSameTypeSameRecipientLines() {
+		// the application/nyansökan path emits one line per raw declared income with no folding: two OTHER_INCOME for the
+		// same applicant resolve to the same FC type id + recipient and must be summed, not collapsed to the first.
+		final var firstDate = OffsetDateTime.parse("2026-05-15T00:00:00Z");
+		final var secondDate = OffsetDateTime.parse("2026-05-20T00:00:00Z");
+		final var lines = List.of(
+			new FcIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("1500"), firstDate, "first"),
+			new FcIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("2500"), secondDate, "second"),
+			new FcIncomeLine(40, "Övriga inkomster", "CO_APPLICANT", new BigDecimal("800"), firstDate, null));
+
+		final var rows = feeder.incomeRows(ERRAND_ID, lines);
+
+		assertThat(rows).hasSize(1);
+		final var row = rows.getFirst();
+		assertThat(row.getTypeId()).isEqualTo(40);
+		assertThat(row.getTypeName()).isEqualTo("Övriga inkomster");
+		// 1500 + 2500 summed, not just the first line's 1500
+		assertThat(row.getApplicantProcessAmount()).isEqualByComparingTo(new BigDecimal("4000"));
+		// non-amount fields come from the first line in the recipient group
+		assertThat(row.getApplicantAmountDate()).isEqualTo(firstDate);
+		assertThat(row.getNote()).isEqualTo("first");
+		assertThat(row.getCoapplicantProcessAmount()).isEqualByComparingTo(new BigDecimal("800"));
+		assertThat(row.getCoapplicantAmountDate()).isEqualTo(firstDate);
+	}
+
+	@Test
+	void incomeRowsLeavesAbsentRecipientAmountNull() {
+		// only an applicant line for the type → the co-applicant side stays null (not zero)
+		final var lines = List.of(
+			new FcIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("1500"), null, null));
+
+		final var rows = feeder.incomeRows(ERRAND_ID, lines);
+
+		assertThat(rows).hasSize(1);
+		assertThat(rows.getFirst().getApplicantProcessAmount()).isEqualByComparingTo(new BigDecimal("1500"));
+		assertThat(rows.getFirst().getCoapplicantProcessAmount()).isNull();
+	}
+
+	@Test
 	void incomeRowsHandlesNullLines() {
 		assertThat(feeder.incomeRows(ERRAND_ID, null)).isEmpty();
 	}

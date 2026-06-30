@@ -51,7 +51,7 @@ class ErrandEventInterceptorTest {
 
 	private ErrandEventEntity capture() {
 		final var captor = ArgumentCaptor.forClass(ErrandEventEntity.class);
-		verify(serviceMock).record(captor.capture());
+		verify(serviceMock).recordEvent(captor.capture());
 		return captor.getValue();
 	}
 
@@ -227,13 +227,13 @@ class ErrandEventInterceptorTest {
 
 		interceptor().afterCompletion(request, response, new Object(), null);
 
-		verify(serviceMock, never()).record(any());
+		verify(serviceMock, never()).recordEvent(any());
 	}
 
 	@Test
 	void swallowsExceptionsFromRecording() {
 		stub("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID, 200);
-		doThrow(new RuntimeException("db down")).when(serviceMock).record(any());
+		doThrow(new RuntimeException("db down")).when(serviceMock).recordEvent(any());
 
 		assertThatNoException().isThrownBy(() -> interceptor().afterCompletion(request, response, new Object(), null));
 	}

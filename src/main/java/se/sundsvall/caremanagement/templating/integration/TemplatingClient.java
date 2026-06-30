@@ -25,6 +25,6 @@ public interface TemplatingClient {
 	 */
 	@PostMapping(path = "/{municipalityId}/render/pdf", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	RenderResponse render(
-		@PathVariable(name = "municipalityId") final String municipalityId,
+		@PathVariable final String municipalityId,
 		@RequestBody final RenderRequest renderRequest);
 }

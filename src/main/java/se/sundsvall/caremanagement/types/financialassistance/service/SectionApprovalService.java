@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
@@ -54,8 +55,17 @@ public class SectionApprovalService {
 			.orElseGet(() -> FaSectionApprovalEntity.create().withErrandId(errandId).withSection(target));
 
 		entity.setApproved(approved);
-		entity.setApprovedBy(approved ? approvedBy : null);
-		entity.setApprovedAt(approved ? OffsetDateTime.now() : null);
+		final String resolvedApprovedBy;
+		final OffsetDateTime resolvedApprovedAt;
+		if (approved) {
+			resolvedApprovedBy = approvedBy;
+			resolvedApprovedAt = OffsetDateTime.now(ZoneId.systemDefault());
+		} else {
+			resolvedApprovedBy = null;
+			resolvedApprovedAt = null;
+		}
+		entity.setApprovedBy(resolvedApprovedBy);
+		entity.setApprovedAt(resolvedApprovedAt);
 
 		return toApproval(target, repository.save(entity));
 	}

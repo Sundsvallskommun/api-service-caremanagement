@@ -24,6 +24,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -273,7 +274,7 @@ class DraftServiceTest {
 		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
 		final var draft = service.patchHeader(ERRAND_ID, new NormHeaderInput().withNormId(9).withNormType(List.of("NATIONAL_NORM"))
-			.withCalculationFromDate(LocalDate.of(2026, 6, 1)).withCalculationToDate(LocalDate.of(2026, 6, 30)).withCalculationDate(LocalDate.of(2026, 6, 18))
+			.withCalculationFromDate(LocalDate.of(2026, JUNE, 1)).withCalculationToDate(LocalDate.of(2026, JUNE, 30)).withCalculationDate(LocalDate.of(2026, JUNE, 18))
 			.withHasCustomHouseholdSize(true).withHouseholdSize(1));
 
 		assertThat(header.getNormId()).isEqualTo(9);

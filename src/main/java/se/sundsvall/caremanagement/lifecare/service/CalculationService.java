@@ -27,6 +27,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationDraftBuild;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationResult;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationSections;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
 import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
@@ -193,7 +194,8 @@ public class CalculationService {
 
 		final var personDtos = ofNullable(persons).orElseGet(List::of).stream().map(CalculationService::toPersonDto).toList();
 
-		final var body = CalculationAssembler.assemble(applicantPersonId, proposal, incomeDtos, expenseDtos, specialExpenseDtos, personDtos, header, applicationMonth);
+		final var sections = new CalculationSections(incomeDtos, expenseDtos, specialExpenseDtos, personDtos, header);
+		final var body = CalculationAssembler.assemble(applicantPersonId, proposal, sections, applicationMonth);
 		return lifecareFcIntegration.createCalculation(body);
 	}
 

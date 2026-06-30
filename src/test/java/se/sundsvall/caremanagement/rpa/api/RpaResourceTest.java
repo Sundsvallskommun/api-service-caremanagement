@@ -44,6 +44,6 @@ class RpaResourceTest {
 			.exchange()
 			.expectStatus().isAccepted();
 
-		verify(serviceMock).enqueue(eq(MUNICIPALITY_ID), eq(ERRAND_ID), eq("FETCH_SUPPLEMENTS"), eq(Map.of("k", "v")));
+		verify(serviceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("FETCH_SUPPLEMENTS"), eq(Map.of("k", "v")));
 	}
 }

@@ -147,7 +147,10 @@ public final class ClassifiedIncomeToFcMapper {
 
 	private static Resolved resolve(final ClassifiedIncome classified, final Map<String, Integer> typeIdByName) {
 		final var typeId = typeIdByName.get(normalize(classified.calculation()));
-		return (typeId == null) ? null : new Resolved(typeId, classified.income());
+		if (typeId == null) {
+			return null;
+		}
+		return new Resolved(typeId, classified.income());
 	}
 
 	private static Map<String, Integer> indexIncomeTypeIds(final PersonBasedCalculationProposalDTO proposal) {
@@ -175,7 +178,10 @@ public final class ClassifiedIncomeToFcMapper {
 			.map(SsbtekIncome::netAmount)
 			.filter(Objects::nonNull)
 			.toList();
-		return amounts.isEmpty() ? null : amounts.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+		if (amounts.isEmpty()) {
+			return null;
+		}
+		return amounts.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 
 	private static LocalDate latestDateByRole(final List<Resolved> group, final ApplicantRole role) {
@@ -212,7 +218,7 @@ public final class ClassifiedIncomeToFcMapper {
 	}
 
 	private static String normalize(final String value) {
-		return value == null ? "" : value.trim().toLowerCase();
+		return ofNullable(value).map(v -> v.trim().toLowerCase()).orElse("");
 	}
 
 	/** An income that resolved to a concrete FC income-type id, pending aggregation. */

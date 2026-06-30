@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,7 @@ public class RenewalPrefillService {
 	public RenewalPrefill prefill(final String municipalityId, final String partyId) {
 		try {
 			return citizenService.getPersonalNumber(municipalityId, partyId)
-				.map(personalNumber -> toPrefill(municipalityId, lifecareEbCaseService.latestRoster(personalNumber, LocalDate.now())))
+				.map(personalNumber -> toPrefill(municipalityId, lifecareEbCaseService.latestRoster(personalNumber, LocalDate.now(ZoneId.systemDefault()))))
 				.orElseGet(RenewalPrefillService::empty);
 		} catch (final ThrowableProblem e) {
 			return empty();

@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.Period;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -283,7 +284,7 @@ public class FinancialAssistanceService {
 		applyCompletenessStatus(municipalityId, namespace, errandId, completeness.informationComplete());
 
 		// Stamp the errand with this daily-loop run so Draken can show "last checked" and ops can spot stale loops.
-		errand.setLastDailyRunAt(OffsetDateTime.now());
+		errand.setLastDailyRunAt(OffsetDateTime.now(ZoneId.systemDefault()));
 		repository.save(errand);
 		return response;
 	}
@@ -316,7 +317,7 @@ public class FinancialAssistanceService {
 		}
 		try {
 			final var birth = LocalDate.parse(digits.substring(0, 8), DateTimeFormatter.BASIC_ISO_DATE);
-			return Period.between(birth, LocalDate.now()).getYears();
+			return Period.between(birth, LocalDate.now(ZoneId.systemDefault())).getYears();
 		} catch (final RuntimeException e) {
 			return null;
 		}
@@ -446,7 +447,14 @@ public class FinancialAssistanceService {
 	/**
 	 * Create the calculation in Lifecare FC from the classified incomes — called once a decision is taken, never during
 	 * the daily SSBTEK loop. Returns the created calculation id (plus the completeness verdict for reference).
+	 *
+	 * <p>
+	 * {@code namespace} is currently unused by the commit itself (the errand is resolved by id and the Lifecare write is
+	 * keyed on personnummer), but is kept to match the uniform {@code (municipalityId, namespace, request)} signature the
+	 * {@link se.sundsvall.caremanagement.types.financialassistance.api.FinancialAssistanceResource} passes for every
+	 * scoped endpoint — and so a later scope check can be added without changing the controller contract.
 	 */
+	@SuppressWarnings("java:S1172") // namespace retained for controller-facing signature symmetry; see Javadoc
 	public CalculationResponse commitCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
 		final var errandId = requireErrandId(request);
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
@@ -480,7 +488,12 @@ public class FinancialAssistanceService {
 	 * own declared incomes (resolved to FC types by name), expenses and persons from the same feeder the renewal path uses
 	 * (both already application-sourced), and the norm from the proposal for the application month. Posts in one shot and
 	 * returns the created calculation id.
+	 *
+	 * <p>
+	 * {@code namespace} is currently unused by the commit itself (see {@link #commitCalculation}); it is kept for the same
+	 * controller-facing signature symmetry.
 	 */
+	@SuppressWarnings("java:S1172") // namespace retained for controller-facing signature symmetry; see Javadoc
 	public CalculationResponse commitFromApplication(final String municipalityId, final String namespace, final CalculationRequest request) {
 		final var errandId = requireErrandId(request);
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
@@ -500,7 +513,7 @@ public class FinancialAssistanceService {
 			.map(FinancialAssistanceService::toEffectivePerson).toList();
 
 		final var normId = calculationService.selectNormId(applicant, applicationMonth);
-		final var header = new CalculationHeader(normId, applicationMonth.atDay(1), applicationMonth.atEndOfMonth(), LocalDate.now(), false, null);
+		final var header = new CalculationHeader(normId, applicationMonth.atDay(1), applicationMonth.atEndOfMonth(), LocalDate.now(ZoneId.systemDefault()), false, null);
 
 		final var calculationId = calculationService.commitEffective(applicant, applicationMonth, header, incomes, expenses, persons);
 		triggerRpaWrite(municipalityId, errandId, WRITE_NORMBERAKNING);
@@ -517,7 +530,10 @@ public class FinancialAssistanceService {
 
 	/** Map the application recipient code to a role — anything but the explicit co-applicant code is the applicant. */
 	private static ApplicantRole toRole(final String recipient) {
-		return ApplicantRole.CO_APPLICANT.name().equals(recipient) ? ApplicantRole.CO_APPLICANT : ApplicantRole.APPLICANT;
+		if (ApplicantRole.CO_APPLICANT.name().equals(recipient)) {
+			return ApplicantRole.CO_APPLICANT;
+		}
+		return ApplicantRole.APPLICANT;
 	}
 
 	/** Enqueue an RPA write, swallowing any failure — RPA mirroring must never roll back a successful Lifecare write. */
@@ -588,9 +604,15 @@ public class FinancialAssistanceService {
 			? header + "Inga varningar – inkomsterna kunde överföras utan anmärkning."
 			: header + warnings.size() + " varning(ar) att granska:\n" + String.join("\n", warnings);
 
+		final String value;
+		if (warnings.isEmpty()) {
+			value = VALUE_OK;
+		} else {
+			value = VALUE_REVIEW_REQUIRED;
+		}
 		decisionService.create(municipalityId, namespace, errandId, Decision.create()
 			.withDecisionType(RECOMMENDATION_TYPE)
-			.withValue(warnings.isEmpty() ? VALUE_OK : VALUE_REVIEW_REQUIRED)
+			.withValue(value)
 			.withDescription(description)
 			.withCreatedBy(CREATED_BY));
 	}
@@ -602,7 +624,12 @@ public class FinancialAssistanceService {
 	 * no-op).
 	 */
 	private void applyCompletenessStatus(final String municipalityId, final String namespace, final String errandId, final boolean informationComplete) {
-		final var target = informationComplete ? STATUS_AWAITING_DECISION : STATUS_SUPPLEMENT_REQUESTED;
+		final String target;
+		if (informationComplete) {
+			target = STATUS_AWAITING_DECISION;
+		} else {
+			target = STATUS_SUPPLEMENT_REQUESTED;
+		}
 		final var current = errandService.readErrand(municipalityId, namespace, errandId).getStatus();
 		if (!target.equals(current)) {
 			errandService.updateErrand(municipalityId, namespace, errandId, PatchErrand.create().withStatus(target));

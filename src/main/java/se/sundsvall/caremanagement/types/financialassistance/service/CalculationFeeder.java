@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -70,7 +71,11 @@ public class CalculationFeeder {
 
 	/**
 	 * The fresh income process rows — one per FC income type, the classified lines folded into a applicant + co-applicant
-	 * side.
+	 * side. Within each (FC type, recipient) the amounts are summed: the SSBTEK/classified path arrives pre-summed (one
+	 * line per recipient), but the application/nyansökan path emits one line per raw declared income, so two same-type
+	 * same-recipient incomes (e.g. two OTHER_INCOME) must be added together rather than dropping all but the first — else
+	 * the income is understated and the computed benefit inflated. The first line in a recipient group supplies the
+	 * non-amount fields (date, type name, note).
 	 */
 	public List<FaNormIncomeEntity> incomeRows(final String errandId, final List<FcIncomeLine> lines) {
 		final var byType = ofNullable(lines).orElseGet(List::of).stream()
@@ -79,18 +84,45 @@ public class CalculationFeeder {
 
 		return byType.entrySet().stream().map(entry -> {
 			final var group = entry.getValue();
-			final var applicant = group.stream().filter(line -> RECIPIENT_APPLICANT.equals(line.recipient())).findFirst();
-			final var coApplicant = group.stream().filter(line -> RECIPIENT_CO_APPLICANT.equals(line.recipient())).findFirst();
+			final var applicant = recipientLines(group, RECIPIENT_APPLICANT);
+			final var coApplicant = recipientLines(group, RECIPIENT_CO_APPLICANT);
 			final var any = group.getFirst();
 			return FaNormIncomeEntity.create()
 				.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
 				.withTypeId(entry.getKey()).withTypeName(any.typeName())
-				.withApplicantProcessAmount(applicant.map(FcIncomeLine::amount).orElse(null))
-				.withApplicantAmountDate(applicant.map(FcIncomeLine::date).orElse(null))
-				.withCoapplicantProcessAmount(coApplicant.map(FcIncomeLine::amount).orElse(null))
-				.withCoapplicantAmountDate(coApplicant.map(FcIncomeLine::date).orElse(null))
+				.withApplicantProcessAmount(sumAmounts(applicant))
+				.withApplicantAmountDate(firstDate(applicant))
+				.withCoapplicantProcessAmount(sumAmounts(coApplicant))
+				.withCoapplicantAmountDate(firstDate(coApplicant))
 				.withNote(any.note());
 		}).toList();
+	}
+
+	/** The lines in a type group belonging to a single recipient, in encounter order. */
+	private static List<FcIncomeLine> recipientLines(final List<FcIncomeLine> group, final String recipient) {
+		return group.stream().filter(line -> recipient.equals(line.recipient())).toList();
+	}
+
+	/**
+	 * The summed amount across a recipient's lines, or {@code null} when the recipient has no lines at all. Null
+	 * individual amounts are skipped; a recipient with only null-amount lines therefore sums to zero.
+	 */
+	private static BigDecimal sumAmounts(final List<FcIncomeLine> lines) {
+		if (lines.isEmpty()) {
+			return null;
+		}
+		return lines.stream()
+			.map(FcIncomeLine::amount)
+			.filter(amount -> amount != null)
+			.reduce(BigDecimal.ZERO, BigDecimal::add);
+	}
+
+	/**
+	 * The first line's amount date for a recipient (the non-amount fields come from the first line), {@code null} when
+	 * none.
+	 */
+	private static OffsetDateTime firstDate(final List<FcIncomeLine> lines) {
+		return lines.stream().findFirst().map(FcIncomeLine::date).orElse(null);
 	}
 
 	/**
@@ -174,13 +206,19 @@ public class CalculationFeeder {
 	/** Stable dedup key for the cost a warning concerns — cost type, plus the other sub-type when present. */
 	private static String expenseSourceKey(final FaCost cost) {
 		final var sub = cost.getOtherSubType();
-		return ((sub == null) || sub.isBlank()) ? nz(cost.getCostType()) : nz(cost.getCostType()) + ":" + sub;
+		if ((sub == null) || sub.isBlank()) {
+			return nz(cost.getCostType());
+		}
+		return nz(cost.getCostType()) + ":" + sub;
 	}
 
 	private static String expenseLabel(final FaCost cost) {
 		final var label = COST_LABEL.getOrDefault(cost.getCostType(), nz(cost.getCostType()));
 		final var sub = cost.getOtherSubType();
-		return ((sub == null) || sub.isBlank()) ? label : label + " (" + sub + ")";
+		if ((sub == null) || sub.isBlank()) {
+			return label;
+		}
+		return label + " (" + sub + ")";
 	}
 
 	/** Plain (no scientific notation, no trailing zeros) rendering of a non-null amount for warning messages. */
@@ -189,7 +227,7 @@ public class CalculationFeeder {
 	}
 
 	private static String nz(final String value) {
-		return (value == null) ? "" : value;
+		return ofNullable(value).orElse("");
 	}
 
 	/**
@@ -207,7 +245,7 @@ public class CalculationFeeder {
 		ofNullable(errand.getChildren()).orElseGet(List::of).forEach(child -> rows.add(FaNormPersonEntity.create()
 			.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
 			.withPartyId(child.getPartyId()).withRole(childRole(child.getResidenceExtent())).withName(childName(child.getFirstName(), child.getLastName()))
-			.withProcessDays(child.getDaysInHome() != null ? child.getDaysInHome() : FULL_MONTH_DAYS).withIncluded(true)));
+			.withProcessDays(ofNullable(child.getDaysInHome()).orElse(FULL_MONTH_DAYS)).withIncluded(true)));
 
 		return rows;
 	}
@@ -275,7 +313,12 @@ public class CalculationFeeder {
 			return Optional.empty();
 		}
 
-		final var sign = (percent.signum() >= 0) ? "+" : "";
+		final String sign;
+		if (percent.signum() >= 0) {
+			sign = "+";
+		} else {
+			sign = "";
+		}
 		final var detail = "Boendekostnaden har ändrats " + sign + percent + "% (tidigare " + plain(previousBd) + " kr → nu " + plain(currentRent) + " kr)";
 		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "housing-kostnad", withRegel(detail, verdict.regel())));
 	}
@@ -290,12 +333,18 @@ public class CalculationFeeder {
 	}
 
 	private static String withRegel(final String detail, final String regel) {
-		return ((regel == null) || regel.isBlank()) ? detail : detail + " — " + regel;
+		if ((regel == null) || regel.isBlank()) {
+			return detail;
+		}
+		return detail + " — " + regel;
 	}
 
 	/** A full-time child is a CHILD; a part-time / other child is an visitation child. */
 	private static String childRole(final String residenceExtent) {
-		return ((residenceExtent == null) || RESIDENCE_FULL_TIME.equals(residenceExtent)) ? ROLE_CHILD : ROLE_VISITATION_CHILD;
+		if ((residenceExtent == null) || RESIDENCE_FULL_TIME.equals(residenceExtent)) {
+			return ROLE_CHILD;
+		}
+		return ROLE_VISITATION_CHILD;
 	}
 
 	private static String childName(final String firstName, final String lastName) {

@@ -13,6 +13,7 @@ import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.MonitoringRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.MonitoringService;
 
+import static java.time.Month.*;
 import static java.util.UUID.randomUUID;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
@@ -42,7 +43,7 @@ class MonitoringResourceFailureTest {
 	void createMonitoring_blankTitle() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(base()))
-			.bodyValue(MonitoringRequest.create().withTitle(" ").withStartDate(LocalDate.of(2026, 7, 1)))
+			.bodyValue(MonitoringRequest.create().withTitle(" ").withStartDate(LocalDate.of(2026, JULY, 1)))
 			.exchange()
 			.expectStatus().isBadRequest();
 
@@ -64,7 +65,7 @@ class MonitoringResourceFailureTest {
 	void createMonitoring_invalidSource() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(base()))
-			.bodyValue(MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, 7, 1)).withSource("SOMETHING_ELSE"))
+			.bodyValue(MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, JULY, 1)).withSource("SOMETHING_ELSE"))
 			.exchange()
 			.expectStatus().isBadRequest();
 
@@ -75,7 +76,7 @@ class MonitoringResourceFailureTest {
 	void createMonitoring_invalidErrandId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
-			.bodyValue(MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, 7, 1)))
+			.bodyValue(MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, JULY, 1)))
 			.exchange()
 			.expectStatus().isBadRequest();
 
@@ -97,7 +98,7 @@ class MonitoringResourceFailureTest {
 	void createMonitoring_invalidMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "abc", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
-			.bodyValue(MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, 7, 1)))
+			.bodyValue(MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, JULY, 1)))
 			.exchange()
 			.expectStatus().isBadRequest();
 

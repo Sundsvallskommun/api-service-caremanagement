@@ -29,6 +29,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 import tools.jackson.databind.ObjectMapper;
 
+import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -38,7 +39,7 @@ import static org.mockito.Mockito.when;
 class CalculationServiceTest {
 
 	private static final String APPLICANT = "199001011234";
-	private static final YearMonth MONTH = YearMonth.of(2026, 6);
+	private static final YearMonth MONTH = YearMonth.of(2026, JUNE);
 
 	@Mock
 	private LifecareFcIntegration lifecareFcIntegrationMock;
@@ -54,7 +55,7 @@ class CalculationServiceTest {
 
 	private static ClassifiedIncome bostadsbidrag() {
 		return new ClassifiedIncome(
-			new SsbtekIncome("Bostadsbidrag", null, "Månad", new BigDecimal("1850"), LocalDate.of(2026, 5, 15), ApplicantRole.APPLICANT),
+			new SsbtekIncome("Bostadsbidrag", null, "Månad", new BigDecimal("1850"), LocalDate.of(2026, MAY, 15), ApplicantRole.APPLICANT),
 			"TA_MED_KVITTNING", "Bostadsbidrag", false, "Ta med kvittning");
 	}
 
@@ -175,7 +176,7 @@ class CalculationServiceTest {
 			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(11).name("Lön efter skatt")));
 
 		final var lines = service.applicationIncomeLines(APPLICANT, List.of(
-			new se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome("SALARY", new BigDecimal("18500"), LocalDate.of(2026, 5, 25), ApplicantRole.APPLICANT)));
+			new se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome("SALARY", new BigDecimal("18500"), LocalDate.of(2026, MAY, 25), ApplicantRole.APPLICANT)));
 
 		assertThat(lines).singleElement().satisfies(line -> {
 			assertThat(line.typeId()).isEqualTo(11);

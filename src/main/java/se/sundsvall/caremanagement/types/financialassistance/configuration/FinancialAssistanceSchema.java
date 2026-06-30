@@ -25,6 +25,10 @@ final class FinancialAssistanceSchema {
 
 	private FinancialAssistanceSchema() {}
 
+	private static final String TYPE_INTEGER = "INTEGER";
+	private static final String TYPE_STRING = "STRING";
+	private static final String TYPE_BOOLEAN = "BOOLEAN";
+
 	private static final List<String> NRS = List.of(APPLICATION_TYPE_NEW, APPLICATION_TYPE_RENEWAL, APPLICATION_TYPE_SUPPLEMENTARY);
 	private static final List<String> NR = List.of(APPLICATION_TYPE_NEW, APPLICATION_TYPE_RENEWAL);
 	private static final List<String> N = List.of(APPLICATION_TYPE_NEW);
@@ -44,37 +48,37 @@ final class FinancialAssistanceSchema {
 	/** The superset of collectable fields, in form order. */
 	private static final List<FieldDescriptor> CATALOG = List.of(
 		enumField("maritalStatus", List.of("SINGLE", "COHABITING"), true, NRS, null, "Marital status of the applicant"),
-		scalar("periodMonth", "INTEGER", true, NRS, null, "Month (1-12) the application period concerns"),
-		scalar("periodYear", "INTEGER", true, NRS, null, "Year the application period concerns"),
+		scalar("periodMonth", TYPE_INTEGER, true, NRS, null, "Month (1-12) the application period concerns"),
+		scalar("periodYear", TYPE_INTEGER, true, NRS, null, "Year the application period concerns"),
 		enumField("periodChoice", List.of("CURRENT_MONTH", "NEXT_MONTH", "OTHER_BENEFIT"), true, N, null, "Which period the new application concerns"),
-		scalar("otherBenefitDescription", "STRING", false, N, "periodChoice == OTHER_BENEFIT", "Free-text description of the other benefit applied for"),
+		scalar("otherBenefitDescription", TYPE_STRING, false, N, "periodChoice == OTHER_BENEFIT", "Free-text description of the other benefit applied for"),
 		enumArray("normType", List.of("NATIONAL_NORM", "OTHER_NORM"), true, NRS, null, "The norms used for the calculation"),
-		scalar("livelihoodDescription", "STRING", true, N, null, "How the applicant has supported themselves"),
-		scalar("hasChildrenUnder21", "BOOLEAN", true, NR, null, "Whether the household has children under 21 (gates children)"),
+		scalar("livelihoodDescription", TYPE_STRING, true, N, null, "How the applicant has supported themselves"),
+		scalar("hasChildrenUnder21", TYPE_BOOLEAN, true, NR, null, "Whether the household has children under 21 (gates children)"),
 		array("children", "Child", NR, "hasChildrenUnder21 == true", "Children in the household"),
-		scalar("childrenResidenceChanged", "BOOLEAN", true, R, null, "Whether the children's residence situation changed since the last application"),
-		scalar("childrenResidenceChangeDescription", "STRING", false, R, "childrenResidenceChanged == true", "Description of the change in children's residence"),
+		scalar("childrenResidenceChanged", TYPE_BOOLEAN, true, R, null, "Whether the children's residence situation changed since the last application"),
+		scalar("childrenResidenceChangeDescription", TYPE_STRING, false, R, "childrenResidenceChanged == true", "Description of the change in children's residence"),
 		enumField("housingForm", List.of("NO_HOUSING_OR_INSTITUTION", "RENTAL", "SUBLET", "LODGER", "CONDOMINIUM", "OWNED_HOUSE", "RENTED_HOUSE", "LIVING_WITH_PARENTS"), false, NR, "New: required; renewal: only when housing changed",
 			"The household's housing form"),
-		scalar("housingPersonCount", "INTEGER", false, NR, "Per housing form", "Total persons living in the housing"),
-		scalar("housingRoomsPlusKitchen", "INTEGER", false, NR, "Lodger housing form", "Number of rooms plus kitchen"),
-		scalar("housingDescription", "STRING", false, NR, null, "Free-text description of the housing"),
-		scalar("housingChanged", "BOOLEAN", true, R, null, "Whether the housing situation changed since the last application"),
-		scalar("housingChangeDescription", "STRING", false, R, "housingChanged == true", "Description of the housing change"),
-		scalar("hasIncomes", "BOOLEAN", true, NR, null, "Whether the household has incomes (gates incomes)"),
+		scalar("housingPersonCount", TYPE_INTEGER, false, NR, "Per housing form", "Total persons living in the housing"),
+		scalar("housingRoomsPlusKitchen", TYPE_INTEGER, false, NR, "Lodger housing form", "Number of rooms plus kitchen"),
+		scalar("housingDescription", TYPE_STRING, false, NR, null, "Free-text description of the housing"),
+		scalar("housingChanged", TYPE_BOOLEAN, true, R, null, "Whether the housing situation changed since the last application"),
+		scalar("housingChangeDescription", TYPE_STRING, false, R, "housingChanged == true", "Description of the housing change"),
+		scalar("hasIncomes", TYPE_BOOLEAN, true, NR, null, "Whether the household has incomes (gates incomes)"),
 		array("incomes", "Income", NR, "hasIncomes == true", "Incomes reported by the household"),
-		scalar("hasPendingBenefits", "BOOLEAN", true, NR, null, "Whether the household awaits decisions on benefits (gates pendingBenefits)"),
+		scalar("hasPendingBenefits", TYPE_BOOLEAN, true, NR, null, "Whether the household awaits decisions on benefits (gates pendingBenefits)"),
 		array("pendingBenefits", "PendingBenefit", NR, "hasPendingBenefits == true", "Benefits the household is awaiting a decision on"),
-		scalar("hasAssets", "BOOLEAN", true, NR, null, "Whether the household has assets (gates assets)"),
+		scalar("hasAssets", TYPE_BOOLEAN, true, NR, null, "Whether the household has assets (gates assets)"),
 		array("assets", "Asset", NR, "hasAssets == true", "Assets owned by the household"),
 		array("plannings", "Planning", NR, null, "Per-person planning towards self-sufficiency"),
 		array("plannedActivities", "PlannedActivity", N, null, "Planned activities (e.g. AF-planering)"),
 		array("jobApplications", "JobApplication", N, null, "Jobs applied for"),
-		scalar("staysInMunicipality", "BOOLEAN", true, NR, null, "Whether the applicant stays in the municipality during the period"),
-		scalar("stayDescription", "STRING", false, NR, "staysInMunicipality == false", "Description of why the applicant stays elsewhere"),
+		scalar("staysInMunicipality", TYPE_BOOLEAN, true, NR, null, "Whether the applicant stays in the municipality during the period"),
+		scalar("stayDescription", TYPE_STRING, false, NR, "staysInMunicipality == false", "Description of why the applicant stays elsewhere"),
 		array("costs", "Cost", NRS, null, "Costs applied for"),
 		array("persons", "Person", NRS, null, "Applicant and optional co-applicant, including payment details"),
-		scalar("attestation", "BOOLEAN", true, NRS, null, "Applicant's attestation on heder och samvete (must be true)"));
+		scalar("attestation", TYPE_BOOLEAN, true, NRS, null, "Applicant's attestation on heder och samvete (must be true)"));
 
 	/** The catalogue filtered to one application type, preserving form order. */
 	static List<FieldDescriptor> forApplicationType(final String applicationType) {

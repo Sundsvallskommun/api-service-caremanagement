@@ -43,7 +43,10 @@ final class ThreadAttachments {
 	record NumberedAttachment(int number, int messageIndex, String role, OffsetDateTime created, String fileName, String mimeType, byte[] content) {}
 
 	static String role(final String direction) {
-		return INBOUND.equals(direction) ? ROLE_APPLICANT : ROLE_CASEWORKER;
+		if (INBOUND.equals(direction)) {
+			return ROLE_APPLICANT;
+		}
+		return ROLE_CASEWORKER;
 	}
 
 	/**

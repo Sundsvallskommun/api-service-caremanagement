@@ -66,6 +66,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static java.time.Month.*;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -379,7 +380,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void commitPostsEffectiveRowsAndReturnsId() {
-		final var month = YearMonth.of(2026, 6);
+		final var month = YearMonth.of(2026, JUNE);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(7)));
 		when(draftServiceMock.liveIncomes(ERRAND_ID)).thenReturn(List.of(
@@ -428,7 +429,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void commitFromApplicationFeedsApplicationDataThroughTheSamePipeline() {
-		final var month = YearMonth.of(2026, 6);
+		final var month = YearMonth.of(2026, JUNE);
 		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withIncomes(List.of(
 			FaIncome.create().withIncomeType("SALARY").withAmount(new BigDecimal("18500")).withRecipient("APPLICANT"),
 			FaIncome.create().withIncomeType("SWISH_DEPOSITS").withAmount(new BigDecimal("300")).withRecipient("CO_APPLICANT")));
@@ -519,7 +520,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void prepareRecordsReviewRequiredRecommendationAndKompletteringWhenIncomplete() {
-		final var month = YearMonth.of(2026, 6);
+		final var month = YearMonth.of(2026, JUNE);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM"))));
 		when(calculationServiceMock.completeness("199001011234", month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
@@ -555,7 +556,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void prepareRecordsOkRecommendationAndVantarWhenComplete() {
-		final var month = YearMonth.of(2026, 6);
+		final var month = YearMonth.of(2026, JUNE);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
 		when(calculationServiceMock.completeness("199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
@@ -584,7 +585,7 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void prepareDoesNotDuplicateRecommendationOrRewriteUnchangedStatus() {
-		final var month = YearMonth.of(2026, 6);
+		final var month = YearMonth.of(2026, JUNE);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
 		when(calculationServiceMock.completeness("199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
@@ -693,7 +694,7 @@ class FinancialAssistanceServiceTest {
 	@Test
 	void createActualisationResolvesPartyDelegatesAndMaps() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, 6, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
+		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -702,7 +703,7 @@ class FinancialAssistanceServiceTest {
 		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		assertThat(response.getActualisationId()).isEqualTo(5012);
-		verify(actualisationServiceMock).create("199001011234", LocalDate.of(2026, 6, 1));
+		verify(actualisationServiceMock).create("199001011234", LocalDate.of(2026, JUNE, 1));
 		// No errandId on the request → nothing recorded on an errand and no assignment.
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
@@ -711,7 +712,7 @@ class FinancialAssistanceServiceTest {
 	@Test
 	void createActualisationWithErrandIdRecordsActualisationDecisionAndAssignsCaseworker() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, 6, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
+		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -738,7 +739,7 @@ class FinancialAssistanceServiceTest {
 	@Test
 	void createActualisationWithErrandIdButNoResolvedCaseworkerRecordsDecisionWithoutAssigning() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, 6, 1))).thenReturn(new ActualisationResult(5012, null));
+		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, null));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -801,12 +802,12 @@ class FinancialAssistanceServiceTest {
 	@Test
 	void listActualisationsUsesExplicitPeriod() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.list("199001011234", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30))).thenReturn(List.of());
+		when(actualisationServiceMock.list("199001011234", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30))).thenReturn(List.of());
 
-		final var result = service.listActualisations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+		final var result = service.listActualisations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 
 		assertThat(result).isEmpty();
-		verify(actualisationServiceMock).list("199001011234", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+		verify(actualisationServiceMock).list("199001011234", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 	}
 
 	@Test
@@ -869,7 +870,7 @@ class FinancialAssistanceServiceTest {
 			List.of(new DecisionPersonView("198001019999", "Sven Svensson", Boolean.TRUE)));
 		when(lifecareCaseHistoryServiceMock.listDecisions(eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
 
-		final var result = service.listDecisions(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+		final var result = service.listDecisions(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 
 		assertThat(result).singleElement().satisfies(decision -> {
 			assertThat(decision.getId()).isEqualTo(9900);
@@ -877,7 +878,7 @@ class FinancialAssistanceServiceTest {
 			assertThat(decision.getAmount()).isEqualTo(8500.0);
 			assertThat(decision.getPersons()).singleElement().satisfies(person -> assertThat(person.getCoApplicant()).isTrue());
 		});
-		verify(lifecareCaseHistoryServiceMock).listDecisions("199001011234", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+		verify(lifecareCaseHistoryServiceMock).listDecisions("199001011234", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 	}
 
 	@Test
@@ -976,7 +977,7 @@ class FinancialAssistanceServiceTest {
 	@Test
 	void checkPaymentStatusEffectuated() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(paymentStatusServiceMock.read("199001011234", YearMonth.of(2026, 6))).thenReturn(new PaymentStatus(true, "2026-05-27"));
+		when(paymentStatusServiceMock.read("199001011234", YearMonth.of(2026, JUNE))).thenReturn(new PaymentStatus(true, "2026-05-27"));
 
 		final var request = PaymentStatusRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
 
@@ -984,13 +985,13 @@ class FinancialAssistanceServiceTest {
 
 		assertThat(response.getEffectuated()).isTrue();
 		assertThat(response.getPaymentDate()).isEqualTo("2026-05-27");
-		verify(paymentStatusServiceMock).read("199001011234", YearMonth.of(2026, 6));
+		verify(paymentStatusServiceMock).read("199001011234", YearMonth.of(2026, JUNE));
 	}
 
 	@Test
 	void checkPaymentStatusNotEffectuated() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(paymentStatusServiceMock.read("199001011234", YearMonth.of(2026, 6))).thenReturn(new PaymentStatus(false, null));
+		when(paymentStatusServiceMock.read("199001011234", YearMonth.of(2026, JUNE))).thenReturn(new PaymentStatus(false, null));
 
 		final var request = PaymentStatusRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
 

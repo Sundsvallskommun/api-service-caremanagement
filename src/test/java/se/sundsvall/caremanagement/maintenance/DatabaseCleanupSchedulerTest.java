@@ -45,14 +45,17 @@ class DatabaseCleanupSchedulerTest {
 		// information_schema yields: errand (wipe), namespace_config (preserved), errand_note (wipe)
 		when(resultSetMock.next()).thenReturn(true, true, true, false);
 		when(resultSetMock.getString(1)).thenReturn("errand", "namespace_config", "errand_note");
-		when(statementMock.executeUpdate(anyString())).thenReturn(3);
+		when(statementMock.executeBatch()).thenReturn(new int[] {
+			3, 3
+		});
 
 		scheduler.resetDemoData();
 
 		verify(statementMock).execute("SET FOREIGN_KEY_CHECKS = 0");
 		verify(statementMock).execute("SET FOREIGN_KEY_CHECKS = 1");
-		verify(statementMock).executeUpdate("DELETE FROM `errand`");
-		verify(statementMock).executeUpdate("DELETE FROM `errand_note`");
-		verify(statementMock, never()).executeUpdate("DELETE FROM `namespace_config`");
+		verify(statementMock).addBatch("DELETE FROM `errand`");
+		verify(statementMock).addBatch("DELETE FROM `errand_note`");
+		verify(statementMock, never()).addBatch("DELETE FROM `namespace_config`");
+		verify(statementMock).executeBatch();
 	}
 }

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -51,7 +52,7 @@ public class RenewalDeltaService {
 			final var variables = new HashMap<String, Object>();
 			variables.put("changeKind", nz(changeKind));
 			variables.put("changeCount", changeCount);
-			variables.put("changePercent", changePercent == null ? BigDecimal.ZERO : changePercent);
+			variables.put("changePercent", Optional.ofNullable(changePercent).orElse(BigDecimal.ZERO));
 
 			final var rows = processService.evaluateDecision(municipalityId, DECISION_KEY, variables);
 			if (rows.isEmpty()) {
@@ -66,10 +67,10 @@ public class RenewalDeltaService {
 	}
 
 	private static String str(final Object value) {
-		return value == null ? null : value.toString();
+		return Optional.ofNullable(value).map(Object::toString).orElse(null);
 	}
 
 	private static String nz(final String value) {
-		return value == null ? "" : value;
+		return Optional.ofNullable(value).orElse("");
 	}
 }

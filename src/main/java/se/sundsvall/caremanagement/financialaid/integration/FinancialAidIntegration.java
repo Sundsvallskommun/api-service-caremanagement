@@ -48,11 +48,16 @@ public class FinancialAidIntegration {
 		}
 	}
 
-	/** Short upstream descriptor (HTTP status when available) to make failures self-diagnosing without leaking payloads. */
+	/**
+	 * Short upstream descriptor (HTTP status when available) to make failures self-diagnosing without leaking payloads.
+	 * For {@link ThrowableProblem} causes the (already-clean) status + detail is used; for any other cause only the
+	 * exception class name is emitted — transport failures embed the full request URL in their message, which carries the
+	 * personalNumber, so the message is deliberately dropped.
+	 */
 	private static String describe(final Throwable e) {
 		if (e instanceof final ThrowableProblem problem) {
 			return ofNullable(problem.getStatus()).map(status -> status.value() + " " + problem.getMessage()).orElseGet(problem::getMessage);
 		}
-		return e.getClass().getSimpleName() + ": " + e.getMessage();
+		return e.getClass().getSimpleName();
 	}
 }

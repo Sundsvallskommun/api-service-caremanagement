@@ -30,6 +30,6 @@ public interface MessagingClient {
 	 */
 	@PostMapping(path = "/{municipalityId}/email", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	MessageResult sendEmail(
-		@PathVariable(name = "municipalityId") final String municipalityId,
+		@PathVariable final String municipalityId,
 		@RequestBody final EmailRequest request);
 }

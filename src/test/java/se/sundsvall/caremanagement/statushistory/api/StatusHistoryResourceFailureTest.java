@@ -1,7 +1,5 @@
 package se.sundsvall.caremanagement.statushistory.api;
 
-import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,20 +9,20 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
-import se.sundsvall.caremanagement.statushistory.api.model.StatusHistoryEntry;
 import se.sundsvall.caremanagement.statushistory.service.StatusHistoryService;
+import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.UUID.randomUUID;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
 @ActiveProfiles("junit")
-class StatusHistoryResourceTest {
-	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
+class StatusHistoryResourceFailureTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
@@ -38,35 +36,45 @@ class StatusHistoryResourceTest {
 	private WebTestClient webTestClient;
 
 	@Test
-	void list() {
-		final var entry = new StatusHistoryEntry("h1", ERRAND_ID, "OPEN", "CLOSED", "user", FIXED_TIMESTAMP);
-		when(serviceMock.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(entry));
-
-		final var response = webTestClient.get()
-			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+	void listWithInvalidMunicipalityId() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
-			.expectStatus().isOk()
-			.expectBodyList(StatusHistoryEntry.class)
-			.returnResult()
-			.getResponseBody();
+			.expectStatus().isBadRequest();
 
-		assertThat(response).hasSize(1);
-		verify(serviceMock).listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verifyNoInteractions(serviceMock);
 	}
 
 	@Test
-	void listEmpty() {
-		when(serviceMock.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+	void listWithInvalidNamespace() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isBadRequest();
 
-		final var response = webTestClient.get()
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void listWithInvalidErrandId() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void listWhenErrandNotFound() {
+		when(serviceMock.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenThrow(Problem.valueOf(NOT_FOUND, "No errand with id '%s' found in namespace '%s' for municipality id '%s'".formatted(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)));
+
+		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
-			.expectStatus().isOk()
-			.expectBodyList(StatusHistoryEntry.class)
-			.returnResult()
-			.getResponseBody();
+			.expectStatus().isNotFound();
 
-		assertThat(response).isEmpty();
 		verify(serviceMock).listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 }

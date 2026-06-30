@@ -53,6 +53,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.Eligibility
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
 
+import static java.time.Month.*;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -631,7 +632,7 @@ class FinancialAssistanceResourceTest {
 	@Test
 	void listActualisationsWithExplicitPeriod() {
 		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-		when(serviceMock.listActualisations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30)))
+		when(serviceMock.listActualisations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30)))
 			.thenReturn(List.of());
 
 		webTestClient.get()
@@ -639,7 +640,7 @@ class FinancialAssistanceResourceTest {
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(serviceMock).listActualisations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+		verify(serviceMock).listActualisations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 	}
 
 	@Test
@@ -663,7 +664,7 @@ class FinancialAssistanceResourceTest {
 	@Test
 	void listCalculationsWithExplicitPeriod() {
 		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-		when(serviceMock.listCalculations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30)))
+		when(serviceMock.listCalculations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30)))
 			.thenReturn(List.of());
 
 		webTestClient.get()
@@ -671,7 +672,7 @@ class FinancialAssistanceResourceTest {
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(serviceMock).listCalculations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+		verify(serviceMock).listCalculations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 	}
 
 	@Test

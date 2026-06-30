@@ -120,13 +120,12 @@ public class LifecareFcIntegration {
 
 	/**
 	 * Upload a document and bind it to a Lifecare actualisation. The raw bytes are wrapped in an in-memory multipart
-	 * {@code Content} part named {@code fileName} with the given MIME type. No payload is logged.
+	 * {@code Content} part named after the attachment's file name with its MIME type. No payload is logged.
 	 */
-	public void postActualisationAttachment(final Integer actualisationId, final String documentType, final String documentSenderType,
-		final String title, final String senderName, final String fileName, final String mimeType, final byte[] content) {
-		final var file = new ByteArrayMultipartFile("Content", fileName, mimeType, content);
+	public void postActualisationAttachment(final Integer actualisationId, final ActualisationAttachment attachment) {
+		final var file = new ByteArrayMultipartFile("Content", attachment.fileName(), attachment.mimeType(), attachment.content());
 		call("uploading actualisation attachment", () -> {
-			lifecareFcClient.postActualisationAttachment(actualisationId, documentType, documentSenderType, title, senderName, file);
+			lifecareFcClient.postActualisationAttachment(actualisationId, attachment.documentType(), attachment.documentSenderType(), attachment.title(), attachment.senderName(), file);
 			return null;
 		});
 	}
@@ -144,11 +143,16 @@ public class LifecareFcIntegration {
 		}
 	}
 
-	/** Short upstream descriptor (HTTP status when available) to make failures self-diagnosing without leaking payloads. */
+	/**
+	 * Short upstream descriptor (HTTP status when available) to make failures self-diagnosing without leaking payloads.
+	 * For {@link ThrowableProblem} causes the (already-clean) status + detail is used; for any other cause only the
+	 * exception class name is emitted — transport failures (e.g. Feign {@code RetryableException}) embed the full request
+	 * line in their message, which carries personnummer and the FC API key, so the message is deliberately dropped.
+	 */
 	private static String describe(final Throwable e) {
 		if (e instanceof final ThrowableProblem problem) {
 			return ofNullable(problem.getStatus()).map(status -> status.value() + " " + problem.getMessage()).orElseGet(problem::getMessage);
 		}
-		return e.getClass().getSimpleName() + ": " + e.getMessage();
+		return e.getClass().getSimpleName();
 	}
 }

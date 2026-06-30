@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 
+import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -29,7 +30,7 @@ import static org.mockito.Mockito.when;
 class LifecareEbCaseServiceTest {
 
 	private static final String APPLICANT = "198001012389";
-	private static final LocalDate REFERENCE = LocalDate.of(2026, 6, 15);
+	private static final LocalDate REFERENCE = LocalDate.of(2026, JUNE, 15);
 
 	@Mock
 	private LifecareFcIntegration integrationMock;
@@ -64,8 +65,8 @@ class LifecareEbCaseServiceTest {
 		final var summary = service().summarize(APPLICANT, REFERENCE);
 
 		assertThat(summary.hasFootprint()).isTrue();
-		assertThat(summary.decisionMonths()).containsExactlyInAnyOrder(YearMonth.of(2026, 5), YearMonth.of(2026, 6));
-		assertThat(summary.latestDecisionPeriod()).isEqualTo(YearMonth.of(2026, 6));
+		assertThat(summary.decisionMonths()).containsExactlyInAnyOrder(YearMonth.of(2026, MAY), YearMonth.of(2026, JUNE));
+		assertThat(summary.latestDecisionPeriod()).isEqualTo(YearMonth.of(2026, JUNE));
 		assertThat(summary.hasCalculation()).isTrue();
 		assertThat(summary.hasCoApplicant()).isTrue();
 	}
@@ -138,7 +139,7 @@ class LifecareEbCaseServiceTest {
 
 		final var summary = service().summarize(APPLICANT, REFERENCE);
 
-		assertThat(summary.decisionMonths()).containsExactly(YearMonth.of(2026, 6));
+		assertThat(summary.decisionMonths()).containsExactly(YearMonth.of(2026, JUNE));
 		assertThat(summary.hasCoApplicant()).isTrue();
 	}
 
@@ -153,9 +154,9 @@ class LifecareEbCaseServiceTest {
 
 		final var summary = service().summarize(APPLICANT, REFERENCE);
 
-		assertThat(summary.latestDecisionPeriod()).isEqualTo(YearMonth.of(2026, 5));
+		assertThat(summary.latestDecisionPeriod()).isEqualTo(YearMonth.of(2026, MAY));
 		assertThat(summary.hasCoApplicant()).isFalse(); // newest decision has none
-		assertThat(summary.decisionMonths()).containsExactlyInAnyOrder(YearMonth.of(2026, 3), YearMonth.of(2026, 5));
+		assertThat(summary.decisionMonths()).containsExactlyInAnyOrder(YearMonth.of(2026, MARCH), YearMonth.of(2026, MAY));
 	}
 
 	@Test
@@ -237,7 +238,7 @@ class LifecareEbCaseServiceTest {
 		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, thisMonth)));
 
-		final var types = service().previousCalculationIncomeTypes(APPLICANT, YearMonth.of(2026, 6));
+		final var types = service().previousCalculationIncomeTypes(APPLICANT, YearMonth.of(2026, JUNE));
 
 		assertThat(types).containsExactlyInAnyOrder("Bostadsbidrag", "Dagersättning");
 	}
@@ -246,7 +247,7 @@ class LifecareEbCaseServiceTest {
 	void previousCalculationIncomeTypesEmptyWhenNoPriorCalc() {
 		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
 
-		assertThat(service().previousCalculationIncomeTypes(APPLICANT, YearMonth.of(2026, 6))).isEmpty();
+		assertThat(service().previousCalculationIncomeTypes(APPLICANT, YearMonth.of(2026, JUNE))).isEmpty();
 	}
 
 	@Test
@@ -265,7 +266,7 @@ class LifecareEbCaseServiceTest {
 		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, current)));
 
-		final var household = service().previousHousehold(APPLICANT, YearMonth.of(2026, 6));
+		final var household = service().previousHousehold(APPLICANT, YearMonth.of(2026, JUNE));
 
 		assertThat(household.personIds()).containsExactlyInAnyOrder(APPLICANT, "201801012380");
 		assertThat(household.memberCount()).isEqualTo(2);
@@ -277,7 +278,7 @@ class LifecareEbCaseServiceTest {
 	void previousHouseholdEmptyWhenNoPriorCalculation() {
 		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
 
-		final var household = service().previousHousehold(APPLICANT, YearMonth.of(2026, 6));
+		final var household = service().previousHousehold(APPLICANT, YearMonth.of(2026, JUNE));
 
 		assertThat(household.personIds()).isEmpty();
 		assertThat(household.memberCount()).isZero();
@@ -315,10 +316,10 @@ class LifecareEbCaseServiceTest {
 
 	@Test
 	void toYearMonthHandlesVariousFormats() {
-		assertThat(LifecareEbCaseService.toYearMonth("2026-06")).contains(YearMonth.of(2026, 6));
-		assertThat(LifecareEbCaseService.toYearMonth("2026-06-15")).contains(YearMonth.of(2026, 6));
-		assertThat(LifecareEbCaseService.toYearMonth("2026-06-15T08:30:00")).contains(YearMonth.of(2026, 6));
-		assertThat(LifecareEbCaseService.toYearMonth("2026-06-15 08:30:00")).contains(YearMonth.of(2026, 6));
+		assertThat(LifecareEbCaseService.toYearMonth("2026-06")).contains(YearMonth.of(2026, JUNE));
+		assertThat(LifecareEbCaseService.toYearMonth("2026-06-15")).contains(YearMonth.of(2026, JUNE));
+		assertThat(LifecareEbCaseService.toYearMonth("2026-06-15T08:30:00")).contains(YearMonth.of(2026, JUNE));
+		assertThat(LifecareEbCaseService.toYearMonth("2026-06-15 08:30:00")).contains(YearMonth.of(2026, JUNE));
 		assertThat(LifecareEbCaseService.toYearMonth(null)).isEmpty();
 		assertThat(LifecareEbCaseService.toYearMonth("  ")).isEmpty();
 		assertThat(LifecareEbCaseService.toYearMonth("2026")).isEmpty();

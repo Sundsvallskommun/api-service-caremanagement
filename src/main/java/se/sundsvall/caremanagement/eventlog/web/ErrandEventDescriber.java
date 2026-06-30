@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.eventlog.web;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Turns an errand-scoped request into a plain-language (Swedish) description of what happened — e.g. "Öppnade ärendet",
@@ -101,17 +102,30 @@ final class ErrandEventDescriber {
 		final var leaf = tail.get(tail.size() - 1);
 
 		if ("restore".equals(leaf)) {
-			final var resource = tail.size() >= 2 ? tail.get(tail.size() - 2) : "rad";
+			final String resource;
+			if (tail.size() >= 2) {
+				resource = tail.get(tail.size() - 2);
+			} else {
+				resource = "rad";
+			}
 			return "Återställde " + singular(resource) + calculationContext(tail, resource);
 		}
 		if ("approval".equals(leaf) || "approvals".equals(leaf)) {
-			return "GET".equals(method) ? "Visade sektionsgodkännanden" : "Godkände en sektion";
+			if ("GET".equals(method)) {
+				return "Visade sektionsgodkännanden";
+			}
+			return "Godkände en sektion";
 		}
 		if ("acknowledged".equals(leaf)) {
 			return "Kvitterade notiser";
 		}
 
-		final var noun = "GET".equals(method) && !itemLevel ? plural(leaf) : singular(leaf);
+		final String noun;
+		if ("GET".equals(method) && !itemLevel) {
+			noun = plural(leaf);
+		} else {
+			noun = singular(leaf);
+		}
 		return verb(method) + " " + noun + calculationContext(tail, leaf);
 	}
 
@@ -127,7 +141,10 @@ final class ErrandEventDescriber {
 
 	private static String calculationContext(final List<String> tail, final String resource) {
 		final var rowType = "incomes".equals(resource) || "expenses".equals(resource) || "persons".equals(resource);
-		return tail.contains("calculation") && rowType ? " i utkastberäkningen" : "";
+		if (tail.contains("calculation") && rowType) {
+			return " i utkastberäkningen";
+		}
+		return "";
 	}
 
 	private static String singular(final String leaf) {
@@ -136,12 +153,14 @@ final class ErrandEventDescriber {
 			return mapped[0];
 		}
 		final var humanized = humanize(leaf);
-		return humanized.endsWith("s") ? humanized.substring(0, humanized.length() - 1) : humanized;
+		if (humanized.endsWith("s")) {
+			return humanized.substring(0, humanized.length() - 1);
+		}
+		return humanized;
 	}
 
 	private static String plural(final String leaf) {
-		final var mapped = NOUNS.get(leaf);
-		return mapped != null ? mapped[1] : humanize(leaf);
+		return Optional.ofNullable(NOUNS.get(leaf)).map(mapped -> mapped[1]).orElseGet(() -> humanize(leaf));
 	}
 
 	private static String humanize(final String leaf) {

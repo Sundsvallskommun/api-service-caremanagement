@@ -207,7 +207,10 @@ final class MeddelandehistorikPdfRenderer {
 		if (!current.isEmpty()) {
 			out.add(current.toString());
 		}
-		return out.isEmpty() ? List.of("") : out;
+		if (out.isEmpty()) {
+			return List.of("");
+		}
+		return out;
 	}
 
 	/** Break a single token so every piece fits the page width (only triggers for words longer than a full line). */
@@ -244,7 +247,13 @@ final class MeddelandehistorikPdfRenderer {
 				builder.append(' ');
 			} else if (codePoint >= 0x20) {
 				final var character = new String(Character.toChars(codePoint));
-				builder.append(encodable(character, font) ? character : "?");
+				final String appended;
+				if (encodable(character, font)) {
+					appended = character;
+				} else {
+					appended = "?";
+				}
+				builder.append(appended);
 			}
 		});
 		return builder.toString().strip();

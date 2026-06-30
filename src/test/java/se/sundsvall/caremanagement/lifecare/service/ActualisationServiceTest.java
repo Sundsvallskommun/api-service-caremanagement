@@ -13,8 +13,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.lifecare.integration.ActualisationAttachment;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 
+import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -24,7 +26,7 @@ import static org.mockito.Mockito.when;
 class ActualisationServiceTest {
 
 	private static final String APPLICANT = "199001011234";
-	private static final LocalDate DATE = LocalDate.of(2026, 6, 1);
+	private static final LocalDate DATE = LocalDate.of(2026, JUNE, 1);
 
 	@Mock
 	private LifecareFcIntegration lifecareFcIntegrationMock;
@@ -104,7 +106,7 @@ class ActualisationServiceTest {
 		when(lifecareFcIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30", null, null, false))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO().addResultItem(dto));
 
-		final var result = service.list(APPLICANT, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+		final var result = service.list(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 
 		assertThat(result).singleElement().satisfies(summary -> {
 			assertThat(summary.id()).isEqualTo(5012);
@@ -127,7 +129,7 @@ class ActualisationServiceTest {
 	void listReturnsEmptyWhenFcHasNoPage() {
 		when(lifecareFcIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30", null, null, false)).thenReturn(null);
 
-		assertThat(service.list(APPLICANT, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30))).isEmpty();
+		assertThat(service.list(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30))).isEmpty();
 	}
 
 	@Test
@@ -138,7 +140,8 @@ class ActualisationServiceTest {
 
 		service.uploadAttachment(5012, "EB-26060001_meddelandehistorik.pdf", content, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun");
 
-		verify(lifecareFcIntegrationMock).postActualisationAttachment(5012, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik",
-			"Sundsvalls kommun", "EB-26060001_meddelandehistorik.pdf", "application/pdf", content);
+		verify(lifecareFcIntegrationMock).postActualisationAttachment(5012,
+			new ActualisationAttachment("MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun",
+				"EB-26060001_meddelandehistorik.pdf", "application/pdf", content));
 	}
 }
