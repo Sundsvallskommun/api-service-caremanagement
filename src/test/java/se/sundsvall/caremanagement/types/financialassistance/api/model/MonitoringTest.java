@@ -15,7 +15,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static java.time.Month.*;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class MonitoringTest {
@@ -28,7 +27,7 @@ class MonitoringTest {
 
 	@Test
 	void testBean() {
-		assertThat(Monitoring.class, allOf(
+		org.hamcrest.MatcherAssert.assertThat(Monitoring.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -53,17 +52,17 @@ class MonitoringTest {
 			.withCreated(created)
 			.withUpdated(created);
 
-		org.assertj.core.api.Assertions.assertThat(monitoring.getId()).isEqualTo("id");
-		org.assertj.core.api.Assertions.assertThat(monitoring.getSource()).isEqualTo("LIFECARE");
-		org.assertj.core.api.Assertions.assertThat(monitoring.getLifecareId()).isEqualTo("987654");
-		org.assertj.core.api.Assertions.assertThat(monitoring.getTitle()).isEqualTo("Följ upp");
-		org.assertj.core.api.Assertions.assertThat(monitoring.getStartDate()).isEqualTo(startDate);
-		org.assertj.core.api.Assertions.assertThat(monitoring.getEndDate()).isEqualTo(endDate);
-		org.assertj.core.api.Assertions.assertThat(monitoring.getCreatedBy()).isEqualTo("joe01doe");
+		assertThat(monitoring.getId()).isEqualTo("id");
+		assertThat(monitoring.getSource()).isEqualTo("LIFECARE");
+		assertThat(monitoring.getLifecareId()).isEqualTo("987654");
+		assertThat(monitoring.getTitle()).isEqualTo("Följ upp");
+		assertThat(monitoring.getStartDate()).isEqualTo(startDate);
+		assertThat(monitoring.getEndDate()).isEqualTo(endDate);
+		assertThat(monitoring.getCreatedBy()).isEqualTo("joe01doe");
 	}
 
 	@Test
 	void createReturnsEmptyInstance() {
-		org.assertj.core.api.Assertions.assertThat(Monitoring.create()).hasAllNullFieldsOrProperties();
+		assertThat(Monitoring.create()).hasAllNullFieldsOrProperties();
 	}
 }

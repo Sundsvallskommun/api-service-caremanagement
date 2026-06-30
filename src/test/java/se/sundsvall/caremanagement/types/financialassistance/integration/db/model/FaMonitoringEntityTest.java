@@ -15,7 +15,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static java.time.Month.*;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class FaMonitoringEntityTest {
@@ -28,7 +27,7 @@ class FaMonitoringEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(FaMonitoringEntity.class, allOf(
+		org.hamcrest.MatcherAssert.assertThat(FaMonitoringEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -54,35 +53,35 @@ class FaMonitoringEntityTest {
 			.withCreated(created)
 			.withUpdated(created);
 
-		org.assertj.core.api.Assertions.assertThat(entity).hasNoNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(entity.getId()).isEqualTo("id");
-		org.assertj.core.api.Assertions.assertThat(entity.getErrandId()).isEqualTo("errand");
-		org.assertj.core.api.Assertions.assertThat(entity.getSource()).isEqualTo("LIFECARE");
-		org.assertj.core.api.Assertions.assertThat(entity.getLifecareId()).isEqualTo("987654");
-		org.assertj.core.api.Assertions.assertThat(entity.getTitle()).isEqualTo("Följ upp");
-		org.assertj.core.api.Assertions.assertThat(entity.getStartDate()).isEqualTo(startDate);
-		org.assertj.core.api.Assertions.assertThat(entity.getEndDate()).isEqualTo(endDate);
-		org.assertj.core.api.Assertions.assertThat(entity.getCreatedBy()).isEqualTo("joe01doe");
+		assertThat(entity).hasNoNullFieldsOrProperties();
+		assertThat(entity.getId()).isEqualTo("id");
+		assertThat(entity.getErrandId()).isEqualTo("errand");
+		assertThat(entity.getSource()).isEqualTo("LIFECARE");
+		assertThat(entity.getLifecareId()).isEqualTo("987654");
+		assertThat(entity.getTitle()).isEqualTo("Följ upp");
+		assertThat(entity.getStartDate()).isEqualTo(startDate);
+		assertThat(entity.getEndDate()).isEqualTo(endDate);
+		assertThat(entity.getCreatedBy()).isEqualTo("joe01doe");
 	}
 
 	@Test
 	void testNoDirtOnCreatedBean() {
-		org.assertj.core.api.Assertions.assertThat(FaMonitoringEntity.create()).hasAllNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(new FaMonitoringEntity()).hasAllNullFieldsOrProperties();
+		assertThat(FaMonitoringEntity.create()).hasAllNullFieldsOrProperties();
+		assertThat(new FaMonitoringEntity()).hasAllNullFieldsOrProperties();
 	}
 
 	@Test
 	void prePersistSetsTimestamps() {
 		final var entity = FaMonitoringEntity.create();
 		entity.prePersist();
-		org.assertj.core.api.Assertions.assertThat(entity.getCreated()).isNotNull();
-		org.assertj.core.api.Assertions.assertThat(entity.getUpdated()).isNotNull();
+		assertThat(entity.getCreated()).isNotNull();
+		assertThat(entity.getUpdated()).isNotNull();
 	}
 
 	@Test
 	void preUpdateSetsUpdated() {
 		final var entity = FaMonitoringEntity.create();
 		entity.preUpdate();
-		org.assertj.core.api.Assertions.assertThat(entity.getUpdated()).isNotNull();
+		assertThat(entity.getUpdated()).isNotNull();
 	}
 }

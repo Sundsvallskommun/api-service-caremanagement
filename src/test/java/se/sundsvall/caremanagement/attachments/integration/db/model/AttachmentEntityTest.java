@@ -12,7 +12,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class AttachmentEntityTest {
@@ -25,7 +24,7 @@ class AttachmentEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(AttachmentEntity.class, allOf(
+		org.hamcrest.MatcherAssert.assertThat(AttachmentEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -35,7 +34,7 @@ class AttachmentEntityTest {
 	@Test
 	void testToString() {
 		final var entity = AttachmentEntity.create().withId("id").withErrandId("e1").withFileName("f.txt");
-		org.assertj.core.api.Assertions.assertThat(entity.toString())
+		assertThat(entity.toString())
 			.contains("AttachmentEntity{").contains("id='id'").contains("errandId='e1'").contains("fileName='f.txt'");
 	}
 
@@ -59,24 +58,24 @@ class AttachmentEntityTest {
 			.withCreated(created)
 			.withModified(modified);
 
-		org.assertj.core.api.Assertions.assertThat(entity).hasNoNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(entity.getId()).isEqualTo("id");
-		org.assertj.core.api.Assertions.assertThat(entity.getErrandId()).isEqualTo("errand");
-		org.assertj.core.api.Assertions.assertThat(entity.getNamespace()).isEqualTo("ns");
-		org.assertj.core.api.Assertions.assertThat(entity.getMunicipalityId()).isEqualTo("mid");
-		org.assertj.core.api.Assertions.assertThat(entity.getFileName()).isEqualTo("file.txt");
-		org.assertj.core.api.Assertions.assertThat(entity.getMimeType()).isEqualTo("text/plain");
-		org.assertj.core.api.Assertions.assertThat(entity.getFileSize()).isEqualTo(10);
-		org.assertj.core.api.Assertions.assertThat(entity.getDocumentType()).isEqualTo("CONVERSATION");
-		org.assertj.core.api.Assertions.assertThat(entity.getSenderRole()).isEqualTo("CLIENT");
-		org.assertj.core.api.Assertions.assertThat(entity.getAttachmentData()).isSameAs(attachmentData);
-		org.assertj.core.api.Assertions.assertThat(entity.getCreated()).isEqualTo(created);
-		org.assertj.core.api.Assertions.assertThat(entity.getModified()).isEqualTo(modified);
+		assertThat(entity).hasNoNullFieldsOrProperties();
+		assertThat(entity.getId()).isEqualTo("id");
+		assertThat(entity.getErrandId()).isEqualTo("errand");
+		assertThat(entity.getNamespace()).isEqualTo("ns");
+		assertThat(entity.getMunicipalityId()).isEqualTo("mid");
+		assertThat(entity.getFileName()).isEqualTo("file.txt");
+		assertThat(entity.getMimeType()).isEqualTo("text/plain");
+		assertThat(entity.getFileSize()).isEqualTo(10);
+		assertThat(entity.getDocumentType()).isEqualTo("CONVERSATION");
+		assertThat(entity.getSenderRole()).isEqualTo("CLIENT");
+		assertThat(entity.getAttachmentData()).isSameAs(attachmentData);
+		assertThat(entity.getCreated()).isEqualTo(created);
+		assertThat(entity.getModified()).isEqualTo(modified);
 	}
 
 	@Test
 	void testNoDirtOnCreatedBean() {
-		org.assertj.core.api.Assertions.assertThat(AttachmentEntity.create()).hasAllNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(new AttachmentEntity()).hasAllNullFieldsOrProperties();
+		assertThat(AttachmentEntity.create()).hasAllNullFieldsOrProperties();
+		assertThat(new AttachmentEntity()).hasAllNullFieldsOrProperties();
 	}
 }

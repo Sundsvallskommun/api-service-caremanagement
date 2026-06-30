@@ -13,7 +13,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class WarningTest {
@@ -25,7 +24,7 @@ class WarningTest {
 
 	@Test
 	void testBean() {
-		assertThat(Warning.class, allOf(
+		org.hamcrest.MatcherAssert.assertThat(Warning.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -46,14 +45,14 @@ class WarningTest {
 			.withCreated(created)
 			.withUpdated(created);
 
-		org.assertj.core.api.Assertions.assertThat(warning.getId()).isEqualTo("id");
-		org.assertj.core.api.Assertions.assertThat(warning.getType()).isEqualTo("MISSING_SSBTEK");
-		org.assertj.core.api.Assertions.assertThat(warning.getStatus()).isEqualTo("OPEN");
-		org.assertj.core.api.Assertions.assertThat(warning.getMessage()).isEqualTo("Still missing in SSBTEK: Dagersättning");
+		assertThat(warning.getId()).isEqualTo("id");
+		assertThat(warning.getType()).isEqualTo("MISSING_SSBTEK");
+		assertThat(warning.getStatus()).isEqualTo("OPEN");
+		assertThat(warning.getMessage()).isEqualTo("Still missing in SSBTEK: Dagersättning");
 	}
 
 	@Test
 	void createReturnsEmptyInstance() {
-		org.assertj.core.api.Assertions.assertThat(Warning.create()).hasAllNullFieldsOrPropertiesExcept("autoResolved");
+		assertThat(Warning.create()).hasAllNullFieldsOrPropertiesExcept("autoResolved");
 	}
 }

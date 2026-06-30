@@ -13,7 +13,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class SectionApprovalTest {
@@ -25,7 +24,7 @@ class SectionApprovalTest {
 
 	@Test
 	void testBean() {
-		assertThat(SectionApproval.class, allOf(
+		org.hamcrest.MatcherAssert.assertThat(SectionApproval.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -42,15 +41,15 @@ class SectionApprovalTest {
 			.withApprovedBy("jane02doe")
 			.withApprovedAt(when);
 
-		org.assertj.core.api.Assertions.assertThat(approval.getSection()).isEqualTo("CALCULATION");
-		org.assertj.core.api.Assertions.assertThat(approval.isApproved()).isTrue();
-		org.assertj.core.api.Assertions.assertThat(approval.getApprovedBy()).isEqualTo("jane02doe");
-		org.assertj.core.api.Assertions.assertThat(approval.getApprovedAt()).isEqualTo(when);
-		org.assertj.core.api.Assertions.assertThat(approval).hasNoNullFieldsOrProperties();
+		assertThat(approval.getSection()).isEqualTo("CALCULATION");
+		assertThat(approval.isApproved()).isTrue();
+		assertThat(approval.getApprovedBy()).isEqualTo("jane02doe");
+		assertThat(approval.getApprovedAt()).isEqualTo(when);
+		assertThat(approval).hasNoNullFieldsOrProperties();
 	}
 
 	@Test
 	void createReturnsEmptyInstance() {
-		org.assertj.core.api.Assertions.assertThat(SectionApproval.create()).hasAllNullFieldsOrPropertiesExcept("approved");
+		assertThat(SectionApproval.create()).hasAllNullFieldsOrPropertiesExcept("approved");
 	}
 }

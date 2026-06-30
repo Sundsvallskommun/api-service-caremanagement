@@ -8,14 +8,13 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class DraftIncomeRowTest {
 
 	@Test
 	void testBean() {
-		assertThat(DraftIncomeRow.class, allOf(
+		org.hamcrest.MatcherAssert.assertThat(DraftIncomeRow.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -34,9 +33,9 @@ class DraftIncomeRowTest {
 			.withCoApplicantAmountDate(null)
 			.withNote("SSBTEK: Bostadsbidrag");
 
-		org.assertj.core.api.Assertions.assertThat(row.getTypeId()).isEqualTo(20);
-		org.assertj.core.api.Assertions.assertThat(row.getTypeName()).isEqualTo("Bostadsbidrag");
-		org.assertj.core.api.Assertions.assertThat(row.getApplicantAmount()).isEqualTo(1850.0);
-		org.assertj.core.api.Assertions.assertThat(row.getNote()).isEqualTo("SSBTEK: Bostadsbidrag");
+		assertThat(row.getTypeId()).isEqualTo(20);
+		assertThat(row.getTypeName()).isEqualTo("Bostadsbidrag");
+		assertThat(row.getApplicantAmount()).isEqualTo(1850.0);
+		assertThat(row.getNote()).isEqualTo("SSBTEK: Bostadsbidrag");
 	}
 }

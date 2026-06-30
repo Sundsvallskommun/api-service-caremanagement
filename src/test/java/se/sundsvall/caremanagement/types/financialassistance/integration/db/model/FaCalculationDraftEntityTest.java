@@ -16,7 +16,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static java.time.Month.*;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class FaCalculationDraftEntityTest {
@@ -28,7 +27,7 @@ class FaCalculationDraftEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(FaCalculationDraftEntity.class, allOf(
+		org.hamcrest.MatcherAssert.assertThat(FaCalculationDraftEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -55,29 +54,29 @@ class FaCalculationDraftEntityTest {
 			.withCreated(created)
 			.withUpdated(created);
 
-		org.assertj.core.api.Assertions.assertThat(entity).hasNoNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(entity.getErrandId()).isEqualTo("errand");
-		org.assertj.core.api.Assertions.assertThat(entity.getNormId()).isEqualTo(7);
-		org.assertj.core.api.Assertions.assertThat(entity.getCalculationFromDate()).isEqualTo(calculationFromDate);
-		org.assertj.core.api.Assertions.assertThat(entity.getCalculationToDate()).isEqualTo(calculationToDate);
-		org.assertj.core.api.Assertions.assertThat(entity.getCalculationDate()).isEqualTo(calculationDate);
-		org.assertj.core.api.Assertions.assertThat(entity.getHasCustomHouseholdSize()).isTrue();
-		org.assertj.core.api.Assertions.assertThat(entity.getHouseholdSize()).isEqualTo(3);
+		assertThat(entity).hasNoNullFieldsOrProperties();
+		assertThat(entity.getErrandId()).isEqualTo("errand");
+		assertThat(entity.getNormId()).isEqualTo(7);
+		assertThat(entity.getCalculationFromDate()).isEqualTo(calculationFromDate);
+		assertThat(entity.getCalculationToDate()).isEqualTo(calculationToDate);
+		assertThat(entity.getCalculationDate()).isEqualTo(calculationDate);
+		assertThat(entity.getHasCustomHouseholdSize()).isTrue();
+		assertThat(entity.getHouseholdSize()).isEqualTo(3);
 	}
 
 	@Test
 	void testNoDirtOnCreatedBean() {
-		org.assertj.core.api.Assertions.assertThat(FaCalculationDraftEntity.create()).hasAllNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(new FaCalculationDraftEntity()).hasAllNullFieldsOrProperties();
+		assertThat(FaCalculationDraftEntity.create()).hasAllNullFieldsOrProperties();
+		assertThat(new FaCalculationDraftEntity()).hasAllNullFieldsOrProperties();
 	}
 
 	@Test
 	void prePersistAndPreUpdateSetTimestamps() {
 		final var entity = FaCalculationDraftEntity.create();
 		entity.prePersist();
-		org.assertj.core.api.Assertions.assertThat(entity.getCreated()).isNotNull();
-		org.assertj.core.api.Assertions.assertThat(entity.getUpdated()).isNotNull();
+		assertThat(entity.getCreated()).isNotNull();
+		assertThat(entity.getUpdated()).isNotNull();
 		entity.preUpdate();
-		org.assertj.core.api.Assertions.assertThat(entity.getUpdated()).isNotNull();
+		assertThat(entity.getUpdated()).isNotNull();
 	}
 }

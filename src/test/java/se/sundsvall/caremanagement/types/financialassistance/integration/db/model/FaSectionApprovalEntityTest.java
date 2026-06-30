@@ -13,7 +13,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class FaSectionApprovalEntityTest {
@@ -25,7 +24,7 @@ class FaSectionApprovalEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(FaSectionApprovalEntity.class, allOf(
+		org.hamcrest.MatcherAssert.assertThat(FaSectionApprovalEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -46,31 +45,31 @@ class FaSectionApprovalEntityTest {
 			.withCreated(when)
 			.withUpdated(when);
 
-		org.assertj.core.api.Assertions.assertThat(entity).hasNoNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(entity.getId()).isEqualTo("id");
-		org.assertj.core.api.Assertions.assertThat(entity.getSection()).isEqualTo("CALCULATION");
-		org.assertj.core.api.Assertions.assertThat(entity.isApproved()).isTrue();
-		org.assertj.core.api.Assertions.assertThat(entity.getApprovedBy()).isEqualTo("jane02doe");
+		assertThat(entity).hasNoNullFieldsOrProperties();
+		assertThat(entity.getId()).isEqualTo("id");
+		assertThat(entity.getSection()).isEqualTo("CALCULATION");
+		assertThat(entity.isApproved()).isTrue();
+		assertThat(entity.getApprovedBy()).isEqualTo("jane02doe");
 	}
 
 	@Test
 	void testNoDirtOnCreatedBean() {
-		org.assertj.core.api.Assertions.assertThat(FaSectionApprovalEntity.create()).hasAllNullFieldsOrPropertiesExcept("approved");
-		org.assertj.core.api.Assertions.assertThat(new FaSectionApprovalEntity()).hasAllNullFieldsOrPropertiesExcept("approved");
+		assertThat(FaSectionApprovalEntity.create()).hasAllNullFieldsOrPropertiesExcept("approved");
+		assertThat(new FaSectionApprovalEntity()).hasAllNullFieldsOrPropertiesExcept("approved");
 	}
 
 	@Test
 	void prePersistSetsTimestamps() {
 		final var entity = FaSectionApprovalEntity.create();
 		entity.prePersist();
-		org.assertj.core.api.Assertions.assertThat(entity.getCreated()).isNotNull();
-		org.assertj.core.api.Assertions.assertThat(entity.getUpdated()).isNotNull();
+		assertThat(entity.getCreated()).isNotNull();
+		assertThat(entity.getUpdated()).isNotNull();
 	}
 
 	@Test
 	void preUpdateSetsUpdated() {
 		final var entity = FaSectionApprovalEntity.create();
 		entity.preUpdate();
-		org.assertj.core.api.Assertions.assertThat(entity.getUpdated()).isNotNull();
+		assertThat(entity.getUpdated()).isNotNull();
 	}
 }

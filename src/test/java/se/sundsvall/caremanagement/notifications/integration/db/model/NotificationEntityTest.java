@@ -12,7 +12,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class NotificationEntityTest {
@@ -25,7 +24,7 @@ class NotificationEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(NotificationEntity.class, allOf(
+		org.hamcrest.MatcherAssert.assertThat(NotificationEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -54,34 +53,34 @@ class NotificationEntityTest {
 			.withCreated(created)
 			.withModified(modified);
 
-		org.assertj.core.api.Assertions.assertThat(entity).hasNoNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(entity.getId()).isEqualTo("id");
-		org.assertj.core.api.Assertions.assertThat(entity.getErrandId()).isEqualTo("errand");
-		org.assertj.core.api.Assertions.assertThat(entity.getMunicipalityId()).isEqualTo("mid");
-		org.assertj.core.api.Assertions.assertThat(entity.getNamespace()).isEqualTo("ns");
-		org.assertj.core.api.Assertions.assertThat(entity.getOwnerId()).isEqualTo("owner");
-		org.assertj.core.api.Assertions.assertThat(entity.getCreatedBy()).isEqualTo("creator");
-		org.assertj.core.api.Assertions.assertThat(entity.getType()).isEqualTo(NotificationType.CREATE);
-		org.assertj.core.api.Assertions.assertThat(entity.getSubType()).isEqualTo(NotificationSubType.ERRAND);
-		org.assertj.core.api.Assertions.assertThat(entity.getDescription()).isEqualTo("desc");
-		org.assertj.core.api.Assertions.assertThat(entity.getContent()).isEqualTo("content");
-		org.assertj.core.api.Assertions.assertThat(entity.isAcknowledged()).isTrue();
-		org.assertj.core.api.Assertions.assertThat(entity.getExpires()).isEqualTo(expires);
-		org.assertj.core.api.Assertions.assertThat(entity.getCreated()).isEqualTo(created);
-		org.assertj.core.api.Assertions.assertThat(entity.getModified()).isEqualTo(modified);
+		assertThat(entity).hasNoNullFieldsOrProperties();
+		assertThat(entity.getId()).isEqualTo("id");
+		assertThat(entity.getErrandId()).isEqualTo("errand");
+		assertThat(entity.getMunicipalityId()).isEqualTo("mid");
+		assertThat(entity.getNamespace()).isEqualTo("ns");
+		assertThat(entity.getOwnerId()).isEqualTo("owner");
+		assertThat(entity.getCreatedBy()).isEqualTo("creator");
+		assertThat(entity.getType()).isEqualTo(NotificationType.CREATE);
+		assertThat(entity.getSubType()).isEqualTo(NotificationSubType.ERRAND);
+		assertThat(entity.getDescription()).isEqualTo("desc");
+		assertThat(entity.getContent()).isEqualTo("content");
+		assertThat(entity.isAcknowledged()).isTrue();
+		assertThat(entity.getExpires()).isEqualTo(expires);
+		assertThat(entity.getCreated()).isEqualTo(created);
+		assertThat(entity.getModified()).isEqualTo(modified);
 	}
 
 	@Test
 	void testNoDirtOnCreatedBean() {
 		final var entity = NotificationEntity.create();
-		org.assertj.core.api.Assertions.assertThat(entity.getId()).isNull();
-		org.assertj.core.api.Assertions.assertThat(entity.isAcknowledged()).isFalse();
+		assertThat(entity.getId()).isNull();
+		assertThat(entity.isAcknowledged()).isFalse();
 	}
 
 	@Test
 	void testToString() {
 		final var entity = NotificationEntity.create().withId("id").withErrandId("e").withOwnerId("o").withDescription("d");
-		org.assertj.core.api.Assertions.assertThat(entity.toString())
+		assertThat(entity.toString())
 			.contains("NotificationEntity{").contains("id='id'").contains("errandId='e'").contains("ownerId='o'");
 	}
 }

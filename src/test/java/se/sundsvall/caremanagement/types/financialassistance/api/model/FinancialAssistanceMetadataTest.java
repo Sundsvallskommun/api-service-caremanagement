@@ -8,14 +8,14 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class FinancialAssistanceMetadataTest {
 
 	@Test
 	void testBean() {
-		assertThat(FinancialAssistanceMetadata.class, allOf(
+		org.hamcrest.MatcherAssert.assertThat(FinancialAssistanceMetadata.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -32,13 +32,13 @@ class FinancialAssistanceMetadataTest {
 			.withIncomeTypes(income)
 			.withCostTypes(cost);
 
-		org.assertj.core.api.Assertions.assertThat(metadata.getIncomeTypes()).isEqualTo(income);
-		org.assertj.core.api.Assertions.assertThat(metadata.getCostTypes()).isEqualTo(cost);
-		org.assertj.core.api.Assertions.assertThat(metadata).hasNoNullFieldsOrProperties();
+		assertThat(metadata.getIncomeTypes()).isEqualTo(income);
+		assertThat(metadata.getCostTypes()).isEqualTo(cost);
+		assertThat(metadata).hasNoNullFieldsOrProperties();
 	}
 
 	@Test
 	void createReturnsEmptyInstance() {
-		org.assertj.core.api.Assertions.assertThat(FinancialAssistanceMetadata.create()).hasAllNullFieldsOrProperties();
+		assertThat(FinancialAssistanceMetadata.create()).hasAllNullFieldsOrProperties();
 	}
 }

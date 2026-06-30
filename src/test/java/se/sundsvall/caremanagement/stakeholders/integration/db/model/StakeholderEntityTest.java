@@ -13,7 +13,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.AllOf.allOf;
 
 class StakeholderEntityTest {
@@ -26,7 +25,7 @@ class StakeholderEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(StakeholderEntity.class, allOf(
+		org.hamcrest.MatcherAssert.assertThat(StakeholderEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -57,28 +56,28 @@ class StakeholderEntityTest {
 			.withCreated(created)
 			.withModified(modified);
 
-		org.assertj.core.api.Assertions.assertThat(entity).hasNoNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(entity.getId()).isEqualTo("id");
-		org.assertj.core.api.Assertions.assertThat(entity.getErrandId()).isEqualTo("e1");
-		org.assertj.core.api.Assertions.assertThat(entity.getExternalId()).isEqualTo("ext");
-		org.assertj.core.api.Assertions.assertThat(entity.getExternalIdType()).isEqualTo("PRIVATE");
-		org.assertj.core.api.Assertions.assertThat(entity.getRole()).isEqualTo("APPLICANT");
-		org.assertj.core.api.Assertions.assertThat(entity.getFirstName()).isEqualTo("Joe");
-		org.assertj.core.api.Assertions.assertThat(entity.getLastName()).isEqualTo("Doe");
-		org.assertj.core.api.Assertions.assertThat(entity.getOrganizationName()).isEqualTo("Org");
-		org.assertj.core.api.Assertions.assertThat(entity.getAddress()).isEqualTo("Street 1");
-		org.assertj.core.api.Assertions.assertThat(entity.getCareOf()).isEqualTo("c/o");
-		org.assertj.core.api.Assertions.assertThat(entity.getZipCode()).isEqualTo("00000");
-		org.assertj.core.api.Assertions.assertThat(entity.getCity()).isEqualTo("City");
-		org.assertj.core.api.Assertions.assertThat(entity.getCountry()).isEqualTo("Country");
-		org.assertj.core.api.Assertions.assertThat(entity.getContactChannels()).isEqualTo(contactChannels);
-		org.assertj.core.api.Assertions.assertThat(entity.getCreated()).isEqualTo(created);
-		org.assertj.core.api.Assertions.assertThat(entity.getModified()).isEqualTo(modified);
+		assertThat(entity).hasNoNullFieldsOrProperties();
+		assertThat(entity.getId()).isEqualTo("id");
+		assertThat(entity.getErrandId()).isEqualTo("e1");
+		assertThat(entity.getExternalId()).isEqualTo("ext");
+		assertThat(entity.getExternalIdType()).isEqualTo("PRIVATE");
+		assertThat(entity.getRole()).isEqualTo("APPLICANT");
+		assertThat(entity.getFirstName()).isEqualTo("Joe");
+		assertThat(entity.getLastName()).isEqualTo("Doe");
+		assertThat(entity.getOrganizationName()).isEqualTo("Org");
+		assertThat(entity.getAddress()).isEqualTo("Street 1");
+		assertThat(entity.getCareOf()).isEqualTo("c/o");
+		assertThat(entity.getZipCode()).isEqualTo("00000");
+		assertThat(entity.getCity()).isEqualTo("City");
+		assertThat(entity.getCountry()).isEqualTo("Country");
+		assertThat(entity.getContactChannels()).isEqualTo(contactChannels);
+		assertThat(entity.getCreated()).isEqualTo(created);
+		assertThat(entity.getModified()).isEqualTo(modified);
 	}
 
 	@Test
 	void testNoDirtOnCreatedBean() {
-		org.assertj.core.api.Assertions.assertThat(StakeholderEntity.create()).hasAllNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(new StakeholderEntity()).hasAllNullFieldsOrProperties();
+		assertThat(StakeholderEntity.create()).hasAllNullFieldsOrProperties();
+		assertThat(new StakeholderEntity()).hasAllNullFieldsOrProperties();
 	}
 }
