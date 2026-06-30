@@ -106,9 +106,9 @@ class AttachmentResource {
 		@Parameter(name = "namespace", description = "Namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Parameter(name = "errandId", description = "Errand id") @ValidUuid @PathVariable final String errandId,
 		@Parameter(name = "documentType", description = "Only return attachments with this documentType", schema = @Schema(allowableValues = {
-			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION"
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION", "MESSAGE_HISTORY"
 		})) @OneOf(value = {
-			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION"
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION", "MESSAGE_HISTORY"
 		}, nullable = true) @RequestParam(required = false) final String documentType,
 		@Parameter(name = "senderRole", description = "Only return attachments from this sender", schema = @Schema(allowableValues = {
 			"CLIENT", "CASEWORKER"

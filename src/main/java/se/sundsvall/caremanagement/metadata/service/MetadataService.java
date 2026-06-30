@@ -55,8 +55,10 @@ public class MetadataService {
 	public List<Lookup> readAll(final String municipalityId, final String namespace, final String kind) {
 		final LookupKind parsedKind;
 		try {
+			// NullPointerException covers a null kind, IllegalArgumentException an unrecognised one — both map to "no
+			// such kind", honouring the empty-list contract rather than surfacing a 500.
 			parsedKind = LookupKind.valueOf(kind);
-		} catch (final IllegalArgumentException e) {
+		} catch (final IllegalArgumentException | NullPointerException e) {
 			return List.of();
 		}
 		return readAll(municipalityId, namespace, parsedKind);

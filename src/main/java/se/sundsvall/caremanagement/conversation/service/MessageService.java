@@ -39,7 +39,8 @@ import static se.sundsvall.caremanagement.conversation.service.mapper.MessageMap
  * Per-errand message thread between caseworker and applicant. Universal across all errand types — a message is
  * {@code (errandId, direction, body, author, created)} plus any number of file attachments. Persists the message (and
  * its attachments) and publishes a {@link MessagePosted} event so other modules can notify (typically a content-free
- * notification on OUTBOUND); the body and attachments never leave this in-app thread.
+ * notification on INBOUND — the applicant's message to the caseworker); the body and attachments never leave this
+ * in-app thread.
  */
 @Service
 @Transactional

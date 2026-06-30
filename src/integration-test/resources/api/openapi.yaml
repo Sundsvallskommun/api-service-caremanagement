@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:63041
+- url: http://localhost:56661
   description: Generated server url
 tags:
 - name: Notifications
@@ -1076,6 +1076,7 @@ paths:
           - ERRAND
           - CASE_DATA
           - DECISION
+          - MESSAGE_HISTORY
       - name: senderRole
         in: query
         description: Only return attachments from this sender
@@ -2444,10 +2445,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
