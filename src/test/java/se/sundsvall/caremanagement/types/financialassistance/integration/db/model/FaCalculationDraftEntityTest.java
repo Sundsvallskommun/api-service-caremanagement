@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +28,7 @@ class FaCalculationDraftEntityTest {
 
 	@Test
 	void testBean() {
-		org.hamcrest.MatcherAssert.assertThat(FaCalculationDraftEntity.class, allOf(
+		MatcherAssert.assertThat(FaCalculationDraftEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),

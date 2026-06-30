@@ -4,6 +4,7 @@ import com.google.code.beanmatchers.BeanMatchers;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +28,7 @@ class MonitoringTest {
 
 	@Test
 	void testBean() {
-		org.hamcrest.MatcherAssert.assertThat(Monitoring.class, allOf(
+		MatcherAssert.assertThat(Monitoring.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),

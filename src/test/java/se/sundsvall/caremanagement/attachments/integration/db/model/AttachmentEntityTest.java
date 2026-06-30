@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.attachments.integration.db.model;
 import com.google.code.beanmatchers.BeanMatchers;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +25,7 @@ class AttachmentEntityTest {
 
 	@Test
 	void testBean() {
-		org.hamcrest.MatcherAssert.assertThat(AttachmentEntity.class, allOf(
+		MatcherAssert.assertThat(AttachmentEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),

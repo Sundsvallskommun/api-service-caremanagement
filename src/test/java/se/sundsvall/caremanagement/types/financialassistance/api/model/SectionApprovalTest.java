@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import com.google.code.beanmatchers.BeanMatchers;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +25,7 @@ class SectionApprovalTest {
 
 	@Test
 	void testBean() {
-		org.hamcrest.MatcherAssert.assertThat(SectionApproval.class, allOf(
+		MatcherAssert.assertThat(SectionApproval.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),

@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import java.util.List;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
@@ -15,7 +16,7 @@ class FinancialAssistanceMetadataTest {
 
 	@Test
 	void testBean() {
-		org.hamcrest.MatcherAssert.assertThat(FinancialAssistanceMetadata.class, allOf(
+		MatcherAssert.assertThat(FinancialAssistanceMetadata.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
