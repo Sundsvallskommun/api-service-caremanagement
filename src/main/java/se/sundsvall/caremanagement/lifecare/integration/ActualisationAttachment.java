@@ -3,6 +3,8 @@ package se.sundsvall.caremanagement.lifecare.integration;
 import java.util.Arrays;
 import java.util.Objects;
 
+import static java.util.Optional.ofNullable;
+
 /**
  * The metadata + bytes of a document uploaded and bound to a Lifecare actualisation. Grouped into one carrier so
  * {@link LifecareFcIntegration#postActualisationAttachment(Integer, ActualisationAttachment)} stays under the parameter
@@ -45,6 +47,6 @@ public record ActualisationAttachment(
 	@Override
 	public String toString() {
 		return "ActualisationAttachment[documentType=%s, documentSenderType=%s, title=%s, senderName=%s, fileName=%s, mimeType=%s, content=%d bytes]"
-			.formatted(documentType, documentSenderType, title, senderName, fileName, mimeType, content == null ? 0 : content.length);
+			.formatted(documentType, documentSenderType, title, senderName, fileName, mimeType, ofNullable(content).map(c -> c.length).orElse(0));
 	}
 }
