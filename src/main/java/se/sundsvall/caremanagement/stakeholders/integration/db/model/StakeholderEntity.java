@@ -36,7 +36,7 @@ public class StakeholderEntity implements Auditable {
 
 	@Id
 	@UuidGenerator
-	@Column(name = "id")
+	@Column(name = "id", length = 36)
 	private String id;
 
 	@Column(name = "errand_id", nullable = false, length = 255)

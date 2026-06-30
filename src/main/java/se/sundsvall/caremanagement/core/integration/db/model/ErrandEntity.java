@@ -30,10 +30,7 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 @Entity
 @Table(name = "errand",
 	indexes = {
-		@Index(name = "idx_errand_id", columnList = "id"),
 		@Index(name = "idx_errand_namespace", columnList = "namespace"),
-		@Index(name = "idx_errand_municipality_id", columnList = "municipality_id"),
-		@Index(name = "idx_errand_errand_number", columnList = "errand_number"),
 		@Index(name = "idx_errand_municipality_namespace_type_slug", columnList = "municipality_id,namespace,type_slug"),
 		@Index(name = "idx_errand_municipality_namespace_status", columnList = "municipality_id,namespace,status"),
 		@Index(name = "idx_errand_municipality_namespace_assigned_user_id", columnList = "municipality_id,namespace,assigned_user_id"),

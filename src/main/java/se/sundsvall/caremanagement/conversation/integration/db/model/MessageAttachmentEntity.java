@@ -26,7 +26,7 @@ public class MessageAttachmentEntity {
 
 	@Id
 	@UuidGenerator
-	@Column(name = "id")
+	@Column(name = "id", length = 36)
 	private String id;
 
 	@Column(name = "message_id", nullable = false, length = 255)

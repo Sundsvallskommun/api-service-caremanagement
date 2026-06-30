@@ -27,7 +27,7 @@ public class MessageAttachmentDataEntity {
 	@Column(name = "id")
 	private int id;
 
-	@Column(name = "message_attachment_id", nullable = false, length = 255)
+	@Column(name = "message_attachment_id", nullable = false, length = 36)
 	private String messageAttachmentId;
 
 	@Column(name = "file", columnDefinition = "longblob")
