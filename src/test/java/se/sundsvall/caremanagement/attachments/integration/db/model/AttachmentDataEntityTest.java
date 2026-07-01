@@ -4,8 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.mariadb.jdbc.MariaDbBlob;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
-import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
-import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -17,9 +15,31 @@ class AttachmentDataEntityTest {
 	void testBean() {
 		assertThat(AttachmentDataEntity.class, allOf(
 			hasValidBeanConstructor(),
-			hasValidGettersAndSetters(),
-			hasValidBeanHashCode(),
-			hasValidBeanEquals()));
+			hasValidGettersAndSetters()));
+	}
+
+	@Test
+	void equalsIsIdBasedAndExcludesBlob() {
+		final var entity = AttachmentDataEntity.create().withId(1).withFile(new MariaDbBlob("a".getBytes()));
+		final var sameIdDifferentBlob = AttachmentDataEntity.create().withId(1).withFile(new MariaDbBlob("z".getBytes()));
+		final var differentId = AttachmentDataEntity.create().withId(2);
+
+		assertThat(entity.equals(entity)).isTrue();               // same instance
+		assertThat(entity.equals(null)).isFalse();                // null
+		assertThat(entity.equals("not an entity")).isFalse();     // different class
+		assertThat(entity).isEqualTo(sameIdDifferentBlob);        // same id, blob excluded
+		assertThat(entity).isNotEqualTo(differentId);             // different id
+		assertThat(AttachmentDataEntity.create()).isNotEqualTo(AttachmentDataEntity.create()); // two transient rows (id 0)
+	}
+
+	@Test
+	void hashCodeIsConstantClassBased() {
+		final var withBlob = AttachmentDataEntity.create().withId(1).withFile(new MariaDbBlob("a".getBytes()));
+		final var transientEntity = AttachmentDataEntity.create();
+
+		// constant across instances and lifecycle (transient/persisted), never reads the blob
+		assertThat(withBlob.hashCode()).isEqualTo(AttachmentDataEntity.class.hashCode());
+		assertThat(transientEntity.hashCode()).isEqualTo(AttachmentDataEntity.class.hashCode());
 	}
 
 	@Test

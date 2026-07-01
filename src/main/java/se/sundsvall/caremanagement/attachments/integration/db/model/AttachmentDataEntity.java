@@ -7,7 +7,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.sql.Blob;
-import java.util.Objects;
 
 import static jakarta.persistence.GenerationType.IDENTITY;
 
@@ -63,12 +62,16 @@ public class AttachmentDataEntity {
 			return false;
 		}
 		final AttachmentDataEntity that = (AttachmentDataEntity) o;
-		return Objects.equals(id, that.id) && Objects.equals(file, that.file);
+		// Identity is the persisted id only. The blob is deliberately excluded (comparing it would read the whole
+		// longblob), and a transient row (id 0, pre-persist) is equal only to itself — never to another unsaved row.
+		return id != 0 && id == that.id;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, file);
+		// Constant, class-based hash: stable across the entity's lifecycle — the generated id is 0 until persisted, so an
+		// id-based hash would change on save and break HashSet membership — and it never reads the blob.
+		return getClass().hashCode();
 	}
 
 	@Override
