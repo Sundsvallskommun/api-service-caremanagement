@@ -26,7 +26,7 @@ CREATE TABLE `attachment` (
   KEY `idx_attachment_file_name` (`file_name`),
   KEY `idx_attachment_municipality_id` (`municipality_id`),
   KEY `idx_attachment_namespace` (`namespace`),
-  KEY `fk_errand_attachment_errand_id` (`errand_id`),
+  KEY `idx_attachment_errand_id_origin` (`errand_id`,`origin`),
   CONSTRAINT `fk_attachment_data_attachment` FOREIGN KEY (`attachment_data_id`) REFERENCES `attachment_data` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `attachment_data` (
