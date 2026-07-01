@@ -47,7 +47,7 @@ class ErrandEventResource {
 		@RequestParam(required = false) final String source,
 		@RequestParam(defaultValue = "true") final boolean includeReads) {
 
-		return ok(service.listForErrand(errandId, action, actor, source, includeReads));
+		return ok(service.listForErrand(municipalityId, namespace, errandId, action, actor, source, includeReads));
 	}
 
 	@GetMapping(path = "/count", produces = APPLICATION_JSON_VALUE)
@@ -63,6 +63,6 @@ class ErrandEventResource {
 		@RequestParam(required = false) final String source,
 		@RequestParam(defaultValue = "true") final boolean includeReads) {
 
-		return ok(new ErrandEventCount(service.countForErrand(errandId, action, actor, source, includeReads)));
+		return ok(new ErrandEventCount(service.countForErrand(municipalityId, namespace, errandId, action, actor, source, includeReads)));
 	}
 }

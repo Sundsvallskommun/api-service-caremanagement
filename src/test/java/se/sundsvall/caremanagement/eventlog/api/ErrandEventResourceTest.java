@@ -44,7 +44,7 @@ class ErrandEventResourceTest {
 	void list() {
 		final var event = new ErrandEvent("ev1", ERRAND_ID, MUNICIPALITY_ID, NAMESPACE, "HTTP", "READ", "errand", "Öppnade ärendet",
 			"GET", "/path", "joe001doe", "adAccount", "req-1", 200, FIXED_TIMESTAMP);
-		when(serviceMock.listForErrand(eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(List.of(event));
+		when(serviceMock.listForErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(List.of(event));
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -55,12 +55,12 @@ class ErrandEventResourceTest {
 			.getResponseBody();
 
 		assertThat(response).hasSize(1);
-		verify(serviceMock).listForErrand(ERRAND_ID, null, null, null, true);
+		verify(serviceMock).listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, null, null, true);
 	}
 
 	@Test
 	void listWithFilters() {
-		when(serviceMock.listForErrand(eq(ERRAND_ID), eq("UPDATE"), eq("joe001doe"), eq("EVENT"), eq(false))).thenReturn(List.of());
+		when(serviceMock.listForErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("UPDATE"), eq("joe001doe"), eq("EVENT"), eq(false))).thenReturn(List.of());
 
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH)
@@ -70,12 +70,12 @@ class ErrandEventResourceTest {
 			.expectStatus().isOk()
 			.expectBodyList(ErrandEvent.class);
 
-		verify(serviceMock).listForErrand(ERRAND_ID, "UPDATE", "joe001doe", "EVENT", false);
+		verify(serviceMock).listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "UPDATE", "joe001doe", "EVENT", false);
 	}
 
 	@Test
 	void count() {
-		when(serviceMock.countForErrand(eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(7L);
+		when(serviceMock.countForErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(7L);
 
 		final var body = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -87,12 +87,12 @@ class ErrandEventResourceTest {
 
 		assertThat(body).isNotNull();
 		assertThat(body.count()).isEqualTo(7L);
-		verify(serviceMock).countForErrand(ERRAND_ID, null, null, null, true);
+		verify(serviceMock).countForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, null, null, true);
 	}
 
 	@Test
 	void countWithFilters() {
-		when(serviceMock.countForErrand(eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(false))).thenReturn(3L);
+		when(serviceMock.countForErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(false))).thenReturn(3L);
 
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/count").queryParam("includeReads", "false")
@@ -100,12 +100,12 @@ class ErrandEventResourceTest {
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(serviceMock).countForErrand(ERRAND_ID, null, null, null, false);
+		verify(serviceMock).countForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, null, null, false);
 	}
 
 	@Test
 	void listEmpty() {
-		when(serviceMock.listForErrand(eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(List.of());
+		when(serviceMock.listForErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(List.of());
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))

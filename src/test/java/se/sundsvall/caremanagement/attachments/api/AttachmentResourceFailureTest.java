@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -35,7 +36,7 @@ class AttachmentResourceFailureTest {
 	@Autowired
 	private WebTestClient webTestClient;
 
-	private static MultiValueMap<String, org.springframework.http.HttpEntity<?>> multipartBody() {
+	private static MultiValueMap<String, HttpEntity<?>> multipartBody() {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("file", "hello".getBytes()).filename("hello.txt");
 		return builder.build();

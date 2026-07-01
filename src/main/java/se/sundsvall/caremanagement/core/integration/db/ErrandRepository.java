@@ -41,4 +41,14 @@ public interface ErrandRepository extends JpaRepository<ErrandEntity, String>, J
 	@Modifying(clearAutomatically = true)
 	@Query("update ErrandEntity e set e.applicantName = :applicantName where e.id = :errandId")
 	int updateApplicantName(@Param("errandId") String errandId, @Param("applicantName") String applicantName);
+
+	/**
+	 * Links the started Operaton process instance to the errand. A targeted bulk update on purpose: it avoids the
+	 * load-then-save read-modify-write that races the async applicant-name / classification writers on the same errand
+	 * row (MariaDB snapshot isolation, error 1020), the same reason {@link #updateApplicantName} is a targeted update.
+	 * Tenant-scoped; returns the number of rows updated (0 = no such errand in the given namespace/municipality).
+	 */
+	@Modifying(clearAutomatically = true)
+	@Query("update ErrandEntity e set e.processInstanceId = :processInstanceId where e.id = :errandId and e.namespace = :namespace and e.municipalityId = :municipalityId")
+	int updateProcessInstanceId(@Param("municipalityId") String municipalityId, @Param("namespace") String namespace, @Param("errandId") String errandId, @Param("processInstanceId") String processInstanceId);
 }

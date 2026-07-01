@@ -179,11 +179,16 @@ public class ErrandService {
 	 * Records the Operaton process instance started for an errand on its envelope. A type module calls this after
 	 * starting the errand's BPMN process (process start is per-type — see the class note), so Cockpit/inspection and the
 	 * frontend can link the errand to its running instance. Scoped to the namespace/municipality; publishes no events.
+	 *
+	 * <p>
+	 * A targeted update rather than a load-then-save: linking runs in the async errand-created flow, concurrently with
+	 * the applicant-name / classification writers on the same row, so a read-modify-write would risk a MariaDB
+	 * snapshot-isolation conflict (error 1020).
 	 */
 	public void linkProcessInstance(final String municipalityId, final String namespace, final String errandId, final String processInstanceId) {
-		final var entity = findEntity(municipalityId, namespace, errandId);
-		entity.setProcessInstanceId(processInstanceId);
-		errandRepository.save(entity);
+		if (errandRepository.updateProcessInstanceId(municipalityId, namespace, errandId, processInstanceId) == 0) {
+			throw Problem.valueOf(NOT_FOUND, NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId));
+		}
 	}
 
 	public void deleteErrand(final String municipalityId, final String namespace, final String errandId) {

@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -238,7 +239,7 @@ public class CalculationService {
 			.map(PersonBasedCalculationProposalDTO::getCalculationIncomeTypes)
 			.orElseGet(List::of).stream()
 			.filter(type -> (type.getId() != null) && (type.getName() != null))
-			.collect(java.util.stream.Collectors.toMap(PersonBasedCalculationCalculationIncomeTypeDTO::getId,
+			.collect(Collectors.toMap(PersonBasedCalculationCalculationIncomeTypeDTO::getId,
 				PersonBasedCalculationCalculationIncomeTypeDTO::getName, (first, second) -> first, LinkedHashMap::new));
 	}
 

@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.core.api;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,7 +75,7 @@ class ErrandResourceTest {
 
 	@Test
 	void findErrands() {
-		when(serviceMock.findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(), eq(false), isNull(), any())).thenReturn(FindErrandsResponse.create().withErrands(java.util.List.of(Errand.create())));
+		when(serviceMock.findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(), eq(false), isNull(), any())).thenReturn(FindErrandsResponse.create().withErrands(List.of(Errand.create())));
 
 		webTestClient.get()
 			.uri(builder -> builder.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))

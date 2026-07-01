@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -50,7 +51,7 @@ class WarningServiceTest {
 			List.of("Lön"));
 
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
-		verify(repositoryMock, org.mockito.Mockito.times(4)).save(captor.capture());
+		verify(repositoryMock, times(4)).save(captor.capture());
 		final var saved = captor.getAllValues();
 		assertThat(saved).allMatch(w -> "OPEN".equals(w.getStatus()) && !w.isAutoResolved());
 		assertThat(saved).extracting(FaWarningEntity::getType, FaWarningEntity::getSourceKey)
@@ -90,7 +91,7 @@ class WarningServiceTest {
 		service.reconcileIncomeWarnings(ERRAND_ID, List.of(), List.of(), List.of(), List.of());
 
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
-		verify(repositoryMock, org.mockito.Mockito.times(2)).save(captor.capture()); // open + acknowledged auto-close; closed untouched
+		verify(repositoryMock, times(2)).save(captor.capture()); // open + acknowledged auto-close; closed untouched
 		assertThat(captor.getAllValues()).allMatch(w -> "CLOSED".equals(w.getStatus()) && w.isAutoResolved());
 		assertThat(captor.getAllValues()).extracting(FaWarningEntity::getType)
 			.containsExactlyInAnyOrder("MISSING_SSBTEK", "UNHANDLED_INCOME");
@@ -169,7 +170,7 @@ class WarningServiceTest {
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
 		// 3 income/change/missing + NEW_INCOME + NEW_EXPENSE + NEW_PERSON + INCOME_DROPPED (draft) + 4 section warnings
 		// (HOUSEHOLD_CHANGE + HOUSING_COST_CHANGE + EXPENSE_REVIEW + EXPENSE_CAPPED) = 11
-		verify(repositoryMock, org.mockito.Mockito.times(11)).save(captor.capture());
+		verify(repositoryMock, times(11)).save(captor.capture());
 		assertThat(captor.getAllValues()).extracting(FaWarningEntity::getType)
 			.containsExactlyInAnyOrder("UNHANDLED_INCOME", "INCOME_CHANGE", "MISSING_SSBTEK",
 				"NEW_INCOME", "NEW_EXPENSE", "NEW_PERSON", "INCOME_DROPPED",

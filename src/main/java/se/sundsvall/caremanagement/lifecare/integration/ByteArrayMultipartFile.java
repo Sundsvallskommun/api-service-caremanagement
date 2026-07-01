@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.lifecare.integration;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -71,7 +72,7 @@ class ByteArrayMultipartFile implements MultipartFile {
 	}
 
 	@Override
-	public void transferTo(final java.io.File dest) throws IOException {
+	public void transferTo(final File dest) throws IOException {
 		try (final OutputStream out = Files.newOutputStream(dest.toPath())) {
 			out.write(content);
 		}

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -49,7 +50,7 @@ class AttachmentResourceTest {
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("file", "hello".getBytes()).filename("hello.txt");
-		final MultiValueMap<String, org.springframework.http.HttpEntity<?>> body = builder.build();
+		final MultiValueMap<String, HttpEntity<?>> body = builder.build();
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -67,7 +68,7 @@ class AttachmentResourceTest {
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("file", "hello".getBytes()).filename("arendeuppgifter.pdf");
-		final MultiValueMap<String, org.springframework.http.HttpEntity<?>> body = builder.build();
+		final MultiValueMap<String, HttpEntity<?>> body = builder.build();
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).queryParam("documentType", "CASE_DATA").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))

@@ -28,6 +28,7 @@ import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
@@ -79,7 +80,7 @@ class DraftServiceTest {
 	}
 
 	private void verifySaved(final ArgumentCaptor<FaCalculationDraftEntity> captor) {
-		org.mockito.Mockito.verify(headerRepository).save(captor.capture());
+		verify(headerRepository).save(captor.capture());
 	}
 
 	@Test

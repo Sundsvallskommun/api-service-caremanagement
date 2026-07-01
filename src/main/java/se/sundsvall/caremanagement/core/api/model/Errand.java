@@ -35,7 +35,8 @@ public class Errand {
 	@Null(groups = OnCreate.class)
 	private String errandNumber;
 
-	@Schema(description = "Registered errand type slug — validated against ErrandTypeRegistry", examples = "case-type-slug")
+	@Schema(description = "Errand type slug. Types whose module owns a dedicated create endpoint (e.g. financial-assistance) are rejected on this generic endpoint and must be created through that endpoint; any other slug is accepted as-is.",
+		examples = "case-type-slug")
 	@NotBlank(groups = OnCreate.class)
 	private String typeSlug;
 

@@ -32,6 +32,7 @@ import tools.jackson.databind.ObjectMapper;
 import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -134,7 +135,7 @@ class CalculationServiceTest {
 		assertThat(result.rows().getFirst().typeId()).isEqualTo(20);
 		assertThat(result.rows().getFirst().typeName()).isEqualTo("Bostadsbidrag");
 		assertThat(result.rows().getFirst().applicantAmount()).isEqualTo(1850.0);
-		verify(lifecareFcIntegrationMock, org.mockito.Mockito.never()).createCalculation(any());
+		verify(lifecareFcIntegrationMock, never()).createCalculation(any());
 	}
 
 	@Test

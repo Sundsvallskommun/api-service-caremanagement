@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -74,6 +75,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -962,10 +964,10 @@ class FinancialAssistanceServiceTest {
 	}
 
 	@Test
-	void archiveToActualisationWrapsUnreadableFileAs400() throws java.io.IOException {
-		final var file = org.mockito.Mockito.mock(MultipartFile.class);
+	void archiveToActualisationWrapsUnreadableFileAs400() throws IOException {
+		final var file = mock(MultipartFile.class);
 		when(file.getOriginalFilename()).thenReturn("tillaggsansokan.pdf");
-		when(file.getBytes()).thenThrow(new java.io.IOException("stream closed"));
+		when(file.getBytes()).thenThrow(new IOException("stream closed"));
 
 		assertThatThrownBy(() -> service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, 5012, file, null))
 			.isInstanceOf(ThrowableProblem.class)

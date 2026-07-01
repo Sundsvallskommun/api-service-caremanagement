@@ -301,22 +301,17 @@ class ErrandServiceTest {
 
 	@Test
 	void linkProcessInstanceStoresIdAndPublishesNothing() {
-		final var entity = ErrandEntity.create().withId(ERRAND_ID).withTypeSlug("t");
-		when(repositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(entity));
+		when(repositoryMock.updateProcessInstanceId(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "proc-1")).thenReturn(1);
 
 		service.linkProcessInstance(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "proc-1");
 
-		final var entityCaptor = ArgumentCaptor.forClass(ErrandEntity.class);
-		verify(repositoryMock).save(entityCaptor.capture());
-		assertThat(entityCaptor.getValue().getProcessInstanceId()).isEqualTo("proc-1");
+		verify(repositoryMock).updateProcessInstanceId(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "proc-1");
 		verify(eventPublisherMock, never()).publishEvent(any());
 	}
 
 	@Test
 	void linkProcessInstanceMissingThrows() {
-		when(repositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.empty());
+		when(repositoryMock.updateProcessInstanceId(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "proc-1")).thenReturn(0);
 
 		assertThatThrownBy(() -> service.linkProcessInstance(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "proc-1"))
 			.isInstanceOf(ThrowableProblem.class)

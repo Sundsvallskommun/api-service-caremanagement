@@ -14,6 +14,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.Fina
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -83,7 +84,7 @@ class FinancialAssistanceReleaseListenerTest {
 		listener.on(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
 
 		verifyNoInteractions(processStarterMock);
-		verify(repositoryMock, org.mockito.Mockito.never()).findByErrandId(any());
+		verify(repositoryMock, never()).findByErrandId(any());
 	}
 
 	@Test

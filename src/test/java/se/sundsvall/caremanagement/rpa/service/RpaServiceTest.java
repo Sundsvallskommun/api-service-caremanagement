@@ -12,8 +12,11 @@ import se.sundsvall.dept44.problem.Problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -40,7 +43,7 @@ class RpaServiceTest {
 		service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.WRITE_NORMBERAKNING, Map.of("hint", "x"));
 
 		final var captor = ArgumentCaptor.forClass(AddQueueItemParameters.class);
-		verify(client).addQueueItem(org.mockito.ArgumentMatchers.eq(FOLDER_ID), captor.capture());
+		verify(client).addQueueItem(eq(FOLDER_ID), captor.capture());
 
 		final var data = captor.getValue().itemData();
 		assertThat(data.name()).isEqualTo("RakelEkonomisktBistand");
@@ -62,7 +65,7 @@ class RpaServiceTest {
 		service.enqueue(MUNICIPALITY_ID, null, ERRAND_ID, RpaAction.WRITE_DECISION, Map.of());
 
 		final var captor = ArgumentCaptor.forClass(AddQueueItemParameters.class);
-		verify(client).addQueueItem(org.mockito.ArgumentMatchers.eq(FOLDER_ID), captor.capture());
+		verify(client).addQueueItem(eq(FOLDER_ID), captor.capture());
 
 		final var data = captor.getValue().itemData();
 		assertThat(data.reference()).isEqualTo(ERRAND_ID + ":" + RpaAction.WRITE_DECISION);
@@ -78,7 +81,7 @@ class RpaServiceTest {
 		service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.WRITE_DECISION);
 
 		final var captor = ArgumentCaptor.forClass(AddQueueItemParameters.class);
-		verify(client, org.mockito.Mockito.times(2)).addQueueItem(org.mockito.ArgumentMatchers.eq(FOLDER_ID), captor.capture());
+		verify(client, times(2)).addQueueItem(eq(FOLDER_ID), captor.capture());
 
 		final var references = captor.getAllValues().stream().map(p -> p.itemData().reference()).toList();
 		assertThat(references).containsExactly(
@@ -93,7 +96,7 @@ class RpaServiceTest {
 
 		service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.FETCH_SUPPLEMENTS);
 
-		verify(client).addQueueItem(org.mockito.ArgumentMatchers.eq(FOLDER_ID), org.mockito.ArgumentMatchers.any());
+		verify(client).addQueueItem(eq(FOLDER_ID), any());
 	}
 
 	@Test
@@ -110,7 +113,7 @@ class RpaServiceTest {
 	void duplicateConflictIsSwallowed() {
 		final var client = mock(RpaClient.class);
 		doThrow(Problem.valueOf(CONFLICT, "Queue item already exists, error code 1016"))
-			.when(client).addQueueItem(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+			.when(client).addQueueItem(any(), any());
 		final var service = new RpaService(client, properties(true));
 
 		// no exception
@@ -121,7 +124,7 @@ class RpaServiceTest {
 	void otherProblemIsRethrown() {
 		final var client = mock(RpaClient.class);
 		doThrow(Problem.valueOf(INTERNAL_SERVER_ERROR, "boom"))
-			.when(client).addQueueItem(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+			.when(client).addQueueItem(any(), any());
 		final var service = new RpaService(client, properties(true));
 
 		assertThatThrownBy(() -> service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.WRITE_DECISION))
