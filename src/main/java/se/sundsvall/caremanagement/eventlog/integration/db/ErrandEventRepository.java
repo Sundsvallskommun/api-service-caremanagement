@@ -11,30 +11,40 @@ import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEnti
 public interface ErrandEventRepository extends JpaRepository<ErrandEventEntity, String> {
 
 	/**
-	 * The errand's events newest-first, with all filters applied in the database. {@code action}/{@code actor}/
-	 * {@code source} are optional (case-insensitive; {@code null} matches all); when {@code includeReads} is false the
-	 * READ rows are dropped. Filtering at the DB avoids materialising the whole — potentially large — per-errand history
-	 * into the heap just to filter it in Java.
+	 * The errand's events newest-first, with all filters applied in the database. Scoped to the owning tenant
+	 * ({@code municipalityId} + {@code namespace}) so a caller on one tenant's path can never read another tenant's
+	 * activity log by errand id. {@code action}/{@code actor}/{@code source} are optional (case-insensitive;
+	 * {@code null} matches all); when {@code includeReads} is false the READ rows are dropped. Filtering at the DB avoids
+	 * materialising the whole — potentially large — per-errand history into the heap just to filter it in Java.
 	 */
 	@Query("""
 		select e from ErrandEventEntity e
 		where e.errandId = :errandId
+		  and e.municipalityId = :municipalityId
+		  and e.namespace = :namespace
 		  and (:action is null or lower(e.action) = lower(:action))
 		  and (:actor is null or lower(e.actor) = lower(:actor))
 		  and (:source is null or lower(e.source) = lower(:source))
 		  and (:includeReads = true or lower(e.action) <> 'read')
 		order by e.created desc
 		""")
-	List<ErrandEventEntity> findFiltered(@Param("errandId") String errandId, @Param("action") String action, @Param("actor") String actor, @Param("source") String source, @Param("includeReads") boolean includeReads);
+	List<ErrandEventEntity> findFiltered(@Param("municipalityId") String municipalityId, @Param("namespace") String namespace, @Param("errandId") String errandId, @Param("action") String action, @Param("actor") String actor, @Param("source") String source,
+		@Param("includeReads") boolean includeReads);
 
-	/** Counts the errand's events honouring the same filters as {@link #findFiltered}, DB-side (no row materialisation). */
+	/**
+	 * Counts the errand's events honouring the same tenant scope and filters as {@link #findFiltered}, DB-side (no row
+	 * materialisation).
+	 */
 	@Query("""
 		select count(e) from ErrandEventEntity e
 		where e.errandId = :errandId
+		  and e.municipalityId = :municipalityId
+		  and e.namespace = :namespace
 		  and (:action is null or lower(e.action) = lower(:action))
 		  and (:actor is null or lower(e.actor) = lower(:actor))
 		  and (:source is null or lower(e.source) = lower(:source))
 		  and (:includeReads = true or lower(e.action) <> 'read')
 		""")
-	long countFiltered(@Param("errandId") String errandId, @Param("action") String action, @Param("actor") String actor, @Param("source") String source, @Param("includeReads") boolean includeReads);
+	long countFiltered(@Param("municipalityId") String municipalityId, @Param("namespace") String namespace, @Param("errandId") String errandId, @Param("action") String action, @Param("actor") String actor, @Param("source") String source,
+		@Param("includeReads") boolean includeReads);
 }

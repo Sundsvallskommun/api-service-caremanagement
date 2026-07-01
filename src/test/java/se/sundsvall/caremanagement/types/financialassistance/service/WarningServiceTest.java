@@ -15,6 +15,7 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -54,10 +55,10 @@ class WarningServiceTest {
 		assertThat(saved).allMatch(w -> "OPEN".equals(w.getStatus()) && !w.isAutoResolved());
 		assertThat(saved).extracting(FaWarningEntity::getType, FaWarningEntity::getSourceKey)
 			.containsExactlyInAnyOrder(
-				org.assertj.core.groups.Tuple.tuple("UNHANDLED_INCOME", "Bostadstillägg"),
-				org.assertj.core.groups.Tuple.tuple("INCOME_CHANGE", "Bostadsbidrag"),
-				org.assertj.core.groups.Tuple.tuple("MISSING_SSBTEK", "Dagersättning"),
-				org.assertj.core.groups.Tuple.tuple("NEW_INCOME", "Lön"));
+				tuple("UNHANDLED_INCOME", "Bostadstillägg"),
+				tuple("INCOME_CHANGE", "Bostadsbidrag"),
+				tuple("MISSING_SSBTEK", "Dagersättning"),
+				tuple("NEW_INCOME", "Lön"));
 	}
 
 	@Test
