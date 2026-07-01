@@ -84,6 +84,8 @@ class DocumentServiceTest {
 		verify(eventsMock).publishEvent(eventCaptor.capture());
 		assertThat(eventCaptor.getValue().documentId()).isEqualTo("doc-1");
 		assertThat(eventCaptor.getValue().errandId()).isEqualTo(ERRAND_ID);
+		assertThat(eventCaptor.getValue().municipalityId()).isEqualTo(MUNICIPALITY_ID);
+		assertThat(eventCaptor.getValue().namespace()).isEqualTo(NAMESPACE);
 		assertThat(eventCaptor.getValue().type()).isEqualTo("Brev");
 		assertThat(eventCaptor.getValue().createdBy()).isEqualTo("carola");
 	}

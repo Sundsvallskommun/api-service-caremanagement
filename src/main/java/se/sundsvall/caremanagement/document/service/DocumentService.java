@@ -62,7 +62,7 @@ public class DocumentService {
 			.withCreatedBy(request.createdBy())
 			.withCreated(timestamp));
 
-		events.publishEvent(new DocumentAdded(saved.getId(), errandId, request.type(), request.createdBy(), timestamp));
+		events.publishEvent(new DocumentAdded(saved.getId(), errandId, municipalityId, namespace, request.type(), request.createdBy(), timestamp));
 		return saved.getId();
 	}
 
