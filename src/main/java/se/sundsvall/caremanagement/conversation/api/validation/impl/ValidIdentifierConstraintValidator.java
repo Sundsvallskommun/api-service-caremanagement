@@ -7,12 +7,22 @@ import se.sundsvall.dept44.support.Identifier;
 
 public class ValidIdentifierConstraintValidator implements ConstraintValidator<ValidIdentifier, String> {
 
+	private boolean nullable;
+
+	@Override
+	public void initialize(final ValidIdentifier constraintAnnotation) {
+		this.nullable = constraintAnnotation.nullable();
+	}
+
 	/**
-	 * A {@code null} value passes (let {@code @RequestHeader} enforce presence); a non-null value is valid only when it
+	 * A {@code null} value is valid only when the annotation is {@code nullable}; a non-null value is valid only when it
 	 * parses into a dept44 {@link Identifier}.
 	 */
 	@Override
 	public boolean isValid(final String value, final ConstraintValidatorContext context) {
-		return value == null || Identifier.parse(value) != null;
+		if (value == null) {
+			return nullable;
+		}
+		return Identifier.parse(value) != null;
 	}
 }

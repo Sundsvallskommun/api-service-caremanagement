@@ -10,9 +10,8 @@ import se.sundsvall.caremanagement.conversation.api.validation.impl.ValidIdentif
 
 /**
  * Validates that a {@code X-Sent-By} header value is parseable into a dept44
- * {@link se.sundsvall.dept44.support.Identifier}
- * (i.e. {@code <value>; type=<type>}). A {@code null} value passes — pair the annotation with a required
- * {@code @RequestHeader} when the header is mandatory.
+ * {@link se.sundsvall.dept44.support.Identifier} (i.e. {@code <value>; type=<type>}). A {@code null} value is rejected
+ * by default; set {@link #nullable()} to {@code true} to accept {@code null} (e.g. for a genuinely optional header).
  */
 @Target({
 	ElementType.FIELD, ElementType.PARAMETER
@@ -22,6 +21,14 @@ import se.sundsvall.caremanagement.conversation.api.validation.impl.ValidIdentif
 public @interface ValidIdentifier {
 
 	String message() default "X-Sent-By must be in the format '<value>; type=<type>', e.g. 'joe001doe; type=adAccount'";
+
+	/**
+	 * Controls whether a {@code null} value is accepted. When {@code false} (default) a {@code null} value is rejected;
+	 * when {@code true} it passes, leaving presence to be enforced elsewhere (e.g. a required {@code @RequestHeader}).
+	 *
+	 * @return {@code true} if {@code null} is accepted as valid, {@code false} otherwise.
+	 */
+	boolean nullable() default false;
 
 	Class<?>[] groups() default {};
 
