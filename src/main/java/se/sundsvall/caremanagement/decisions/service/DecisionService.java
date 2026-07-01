@@ -11,6 +11,7 @@ import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.caremanagement.shared.NotificationRequest;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -30,11 +31,13 @@ public class DecisionService {
 	private final ErrandRepository errandRepository;
 	private final DecisionRepository decisionRepository;
 	private final ApplicationEventPublisher eventPublisher;
+	private final ErrandAccessGuard errandGuard;
 
-	DecisionService(final ErrandRepository errandRepository, final DecisionRepository decisionRepository, final ApplicationEventPublisher eventPublisher) {
+	DecisionService(final ErrandRepository errandRepository, final DecisionRepository decisionRepository, final ApplicationEventPublisher eventPublisher, final ErrandAccessGuard errandGuard) {
 		this.errandRepository = errandRepository;
 		this.decisionRepository = decisionRepository;
 		this.eventPublisher = eventPublisher;
+		this.errandGuard = errandGuard;
 	}
 
 	public String create(final String municipalityId, final String namespace, final String errandId, final Decision decision) {
@@ -51,7 +54,7 @@ public class DecisionService {
 
 	@Transactional(readOnly = true)
 	public List<Decision> readAll(final String municipalityId, final String namespace, final String errandId) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		return toDecisionList(decisionRepository.findByErrandIdOrderByCreatedDesc(errandId));
 	}
 
@@ -65,12 +68,8 @@ public class DecisionService {
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERRAND_NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId)));
 	}
 
-	private void ensureErrandExists(final String municipalityId, final String namespace, final String errandId) {
-		findErrand(municipalityId, namespace, errandId);
-	}
-
 	private DecisionEntity findDecision(final String municipalityId, final String namespace, final String errandId, final String decisionId) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		return decisionRepository.findByErrandIdAndId(errandId, decisionId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, DECISION_NOT_FOUND_MESSAGE.formatted(decisionId, errandId, namespace, municipalityId)));
 	}

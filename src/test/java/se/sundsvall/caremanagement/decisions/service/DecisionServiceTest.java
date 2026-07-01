@@ -14,6 +14,7 @@ import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.caremanagement.shared.NotificationRequest;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -43,6 +44,9 @@ class DecisionServiceTest {
 
 	@Mock
 	private ApplicationEventPublisher eventPublisherMock;
+
+	@Mock
+	private ErrandAccessGuard errandGuardMock;
 
 	@InjectMocks
 	private DecisionService service;
@@ -110,8 +114,6 @@ class DecisionServiceTest {
 
 	@Test
 	void readReturnsMappedDecision() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID)));
 		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID))
 			.thenReturn(Optional.of(DecisionEntity.create().withId(DECISION_ID).withDecisionType("PAYMENT").withValue("APPROVED")));
 
@@ -124,8 +126,6 @@ class DecisionServiceTest {
 
 	@Test
 	void readWhenDecisionMissingThrowsNotFound() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID)));
 		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID))
@@ -135,8 +135,6 @@ class DecisionServiceTest {
 
 	@Test
 	void readAllReturnsList() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID)));
 		when(decisionRepositoryMock.findByErrandIdOrderByCreatedDesc(ERRAND_ID))
 			.thenReturn(List.of(DecisionEntity.create().withId(DECISION_ID)));
 
@@ -149,8 +147,6 @@ class DecisionServiceTest {
 	@Test
 	void deleteRemovesEntity() {
 		final var entity = DecisionEntity.create().withId(DECISION_ID);
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID)));
 		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.of(entity));
 
 		service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID);
