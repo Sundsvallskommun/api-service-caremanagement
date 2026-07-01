@@ -124,17 +124,6 @@ class MessageResourceFailureTest {
 	}
 
 	@Test
-	void unreadCount_unsupportedIdentifierType() {
-		webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
-			.header(Identifier.HEADER_NAME, "some-system; type=someCustomType")
-			.exchange()
-			.expectStatus().isBadRequest();
-
-		verifyNoInteractions(readServiceMock);
-	}
-
-	@Test
 	void markRead_missingIdentifier() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/read").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))

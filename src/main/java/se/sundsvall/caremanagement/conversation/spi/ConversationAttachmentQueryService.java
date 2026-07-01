@@ -3,7 +3,7 @@ package se.sundsvall.caremanagement.conversation.spi;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachmentDataRepository;
@@ -50,13 +50,13 @@ public class ConversationAttachmentQueryService {
 	@Transactional(readOnly = true)
 	public List<ConversationAttachmentContent> clientAttachmentContentsForErrand(final String errandId) {
 		return attachmentRepository.findByErrandIdOrderByCreatedAsc(errandId).stream()
-			.filter(attachment -> SenderRole.CLIENT.name().equals(attachment.getSenderRole()))
+			.filter(attachment -> Direction.INBOUND.role().equals(attachment.getSenderRole()))
 			.map(this::toContent)
-			.flatMap(Optional::stream)
+			.filter(Objects::nonNull)
 			.toList();
 	}
 
-	private Optional<ConversationAttachmentContent> toContent(final MessageAttachmentEntity attachment) {
+	private ConversationAttachmentContent toContent(final MessageAttachmentEntity attachment) {
 		return attachmentDataRepository.findByMessageAttachmentId(attachment.getId())
 			.map(data -> {
 				try {
@@ -66,7 +66,8 @@ public class ConversationAttachmentQueryService {
 				} catch (final SQLException | IOException exception) {
 					throw Problem.valueOf(INTERNAL_SERVER_ERROR, READ_ERROR_MESSAGE.formatted(attachment.getId(), exception.getMessage()));
 				}
-			});
+			})
+			.orElse(null);
 	}
 
 	private static ConversationAttachment toConversationAttachment(final MessageAttachmentEntity entity) {

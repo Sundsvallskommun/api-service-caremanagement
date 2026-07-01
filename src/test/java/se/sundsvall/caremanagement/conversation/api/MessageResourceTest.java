@@ -30,8 +30,6 @@ import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
-import static se.sundsvall.caremanagement.conversation.service.ReaderSide.CASEWORKER;
-import static se.sundsvall.caremanagement.conversation.service.ReaderSide.CLIENT;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -110,7 +108,7 @@ class MessageResourceTest {
 
 	@Test
 	void unreadCountForCaseworker() {
-		when(readServiceMock.unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CASEWORKER)).thenReturn(5L);
+		when(readServiceMock.unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Identifier.parse("joe001doe; type=adAccount"))).thenReturn(5L);
 
 		final var body = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -123,12 +121,12 @@ class MessageResourceTest {
 
 		assertThat(body).isNotNull();
 		assertThat(body.unreadCount()).isEqualTo(5L);
-		verify(readServiceMock).unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CASEWORKER);
+		verify(readServiceMock).unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Identifier.parse("joe001doe; type=adAccount"));
 	}
 
 	@Test
 	void unreadCountForClient() {
-		when(readServiceMock.unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CLIENT)).thenReturn(2L);
+		when(readServiceMock.unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Identifier.parse("f47ac10b-58cc-4372-a567-0e02b2c3d479; type=partyId"))).thenReturn(2L);
 
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -136,7 +134,7 @@ class MessageResourceTest {
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(readServiceMock).unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CLIENT);
+		verify(readServiceMock).unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Identifier.parse("f47ac10b-58cc-4372-a567-0e02b2c3d479; type=partyId"));
 	}
 
 	@Test
@@ -151,7 +149,7 @@ class MessageResourceTest {
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(readServiceMock).markRead(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CASEWORKER, "joe001doe", messageIds);
+		verify(readServiceMock).markRead(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Identifier.parse("joe001doe; type=adAccount"), messageIds);
 	}
 
 	@Test

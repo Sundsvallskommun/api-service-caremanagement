@@ -3,7 +3,7 @@ package se.sundsvall.caremanagement.conversation.spi;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachmentDataRepository;
@@ -57,12 +57,12 @@ public class ConversationThreadQueryService {
 				message.getCreated(),
 				attachmentsByMessageId.getOrDefault(message.getId(), List.of()).stream()
 					.map(this::toView)
-					.flatMap(Optional::stream)
+					.filter(Objects::nonNull)
 					.toList()))
 			.toList();
 	}
 
-	private Optional<ConversationAttachmentView> toView(final MessageAttachmentEntity attachment) {
+	private ConversationAttachmentView toView(final MessageAttachmentEntity attachment) {
 		return attachmentDataRepository.findByMessageAttachmentId(attachment.getId())
 			.map(data -> {
 				try {
@@ -71,6 +71,7 @@ public class ConversationThreadQueryService {
 				} catch (final SQLException | IOException exception) {
 					throw Problem.valueOf(INTERNAL_SERVER_ERROR, READ_ERROR_MESSAGE.formatted(attachment.getId(), exception.getMessage()));
 				}
-			});
+			})
+			.orElse(null);
 	}
 }
