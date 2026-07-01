@@ -5,10 +5,10 @@ import java.time.ZoneId;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.referral.api.model.Referral;
 import se.sundsvall.caremanagement.referral.integration.db.ReferralRepository;
 import se.sundsvall.caremanagement.referral.integration.db.model.ReferralEntity;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -30,16 +30,16 @@ public class ReferralService {
 
 	private static final String REFERRAL_NOT_FOUND_MESSAGE = "No referral with id '%s' found on errand '%s' in namespace '%s' for municipality id '%s'";
 
-	private final ErrandService errandService;
+	private final ErrandAccessGuard errandGuard;
 	private final ReferralRepository referralRepository;
 
-	ReferralService(final ErrandService errandService, final ReferralRepository referralRepository) {
-		this.errandService = errandService;
+	ReferralService(final ErrandAccessGuard errandGuard, final ReferralRepository referralRepository) {
+		this.errandGuard = errandGuard;
 		this.referralRepository = referralRepository;
 	}
 
 	public String create(final String municipalityId, final String namespace, final String errandId, final Referral referral) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		final var entity = toReferralEntity(referral, errandId);
 		if (entity.getSentAt() == null) {
 			entity.setSentAt(LocalDate.now(ZoneId.systemDefault()));
@@ -57,7 +57,7 @@ public class ReferralService {
 
 	@Transactional(readOnly = true)
 	public List<Referral> readAll(final String municipalityId, final String namespace, final String errandId) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		return toReferralList(referralRepository.findByErrandIdOrderByCreatedDesc(errandId));
 	}
 
@@ -77,7 +77,7 @@ public class ReferralService {
 	}
 
 	private ReferralEntity findReferral(final String municipalityId, final String namespace, final String errandId, final String referralId) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		return referralRepository.findByErrandIdAndId(errandId, referralId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, REFERRAL_NOT_FOUND_MESSAGE.formatted(referralId, errandId, namespace, municipalityId)));
 	}

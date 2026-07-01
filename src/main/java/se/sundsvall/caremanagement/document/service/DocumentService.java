@@ -4,7 +4,6 @@ import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.document.api.model.CreateDocument;
 import se.sundsvall.caremanagement.document.api.model.Document;
 import se.sundsvall.caremanagement.document.api.model.LockDocument;
@@ -12,6 +11,7 @@ import se.sundsvall.caremanagement.document.api.model.UpdateDocument;
 import se.sundsvall.caremanagement.document.integration.db.DocumentRepository;
 import se.sundsvall.caremanagement.document.integration.db.model.DocumentEntity;
 import se.sundsvall.caremanagement.document.service.event.DocumentAdded;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.OffsetDateTime.now;
@@ -39,16 +39,16 @@ public class DocumentService {
 
 	private final DocumentRepository repository;
 	private final ApplicationEventPublisher events;
-	private final ErrandService errandService;
+	private final ErrandAccessGuard errandGuard;
 
-	DocumentService(final DocumentRepository repository, final ApplicationEventPublisher events, final ErrandService errandService) {
+	DocumentService(final DocumentRepository repository, final ApplicationEventPublisher events, final ErrandAccessGuard errandGuard) {
 		this.repository = repository;
 		this.events = events;
-		this.errandService = errandService;
+		this.errandGuard = errandGuard;
 	}
 
 	public String add(final String municipalityId, final String namespace, final String errandId, final CreateDocument request) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
 		final var saved = repository.save(DocumentEntity.create()
@@ -68,7 +68,7 @@ public class DocumentService {
 
 	@Transactional(readOnly = true)
 	public List<Document> listForErrand(final String municipalityId, final String namespace, final String errandId) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		return repository.findByErrandIdOrderByDocumentDateDescDocumentTimeDescCreatedDesc(errandId).stream()
 			.map(DocumentService::toDocument)
@@ -77,13 +77,13 @@ public class DocumentService {
 
 	@Transactional(readOnly = true)
 	public Document read(final String municipalityId, final String namespace, final String errandId, final String documentId) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		return toDocument(find(errandId, documentId));
 	}
 
 	public Document update(final String municipalityId, final String namespace, final String errandId, final String documentId, final UpdateDocument request) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		final var entity = requireWorking(findForUpdate(errandId, documentId), "edited");
 		entity
@@ -99,14 +99,14 @@ public class DocumentService {
 	}
 
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String documentId) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		repository.delete(requireWorking(findForUpdate(errandId, documentId), "deleted"));
 	}
 
 	/** Lock the document (skrivskydd) — it becomes an immutable upprättad handling. Already-locked documents 409. */
 	public Document lock(final String municipalityId, final String namespace, final String errandId, final String documentId, final LockDocument request) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		final var entity = findForUpdate(errandId, documentId);
 		if (entity.getStatus() == LOCKED) {

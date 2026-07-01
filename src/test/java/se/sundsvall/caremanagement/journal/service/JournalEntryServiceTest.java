@@ -12,13 +12,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.journal.api.model.CreateJournalEntry;
 import se.sundsvall.caremanagement.journal.api.model.LockJournalEntry;
 import se.sundsvall.caremanagement.journal.api.model.UpdateJournalEntry;
 import se.sundsvall.caremanagement.journal.integration.db.JournalEntryRepository;
 import se.sundsvall.caremanagement.journal.integration.db.model.JournalEntryEntity;
 import se.sundsvall.caremanagement.journal.service.event.JournalEntryAdded;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -51,7 +51,7 @@ class JournalEntryServiceTest {
 	private ApplicationEventPublisher eventsMock;
 
 	@Mock
-	private ErrandService errandServiceMock;
+	private ErrandAccessGuard errandGuardMock;
 
 	@InjectMocks
 	private JournalEntryService service;
@@ -65,7 +65,7 @@ class JournalEntryServiceTest {
 
 		assertThat(id).isEqualTo("je-1");
 
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		final ArgumentCaptor<JournalEntryEntity> entityCaptor = ArgumentCaptor.forClass(JournalEntryEntity.class);
 		verify(repositoryMock).save(entityCaptor.capture());
@@ -90,7 +90,7 @@ class JournalEntryServiceTest {
 
 	@Test
 	void addMissingErrandNotFound() {
-		doThrow(Problem.valueOf(NOT_FOUND, "no errand")).when(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		doThrow(Problem.valueOf(NOT_FOUND, "no errand")).when(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		assertThatThrownBy(() -> service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateJournalEntry("T", "H", null, ENTRY_DATE, null, "carola")))
 			.isInstanceOf(ThrowableProblem.class)
@@ -114,7 +114,7 @@ class JournalEntryServiceTest {
 		assertThat(result.getFirst().getEntryDate()).isEqualTo(ENTRY_DATE);
 		assertThat(result.getFirst().getStatus()).isEqualTo("WORKING");
 		assertThat(result.getFirst().getCreated()).isEqualTo(FIXED_TIMESTAMP);
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
@@ -127,7 +127,7 @@ class JournalEntryServiceTest {
 		assertThat(result.getId()).isEqualTo("je1");
 		assertThat(result.getHeading()).isEqualTo("H");
 		assertThat(result.getStatus()).isEqualTo("WORKING");
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(eventsMock, never()).publishEvent(any());
 	}
 
@@ -142,7 +142,7 @@ class JournalEntryServiceTest {
 
 	@Test
 	void readMissingErrandNotFound() {
-		doThrow(Problem.valueOf(NOT_FOUND, "no errand")).when(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		doThrow(Problem.valueOf(NOT_FOUND, "no errand")).when(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "je1"))
 			.isInstanceOf(ThrowableProblem.class)
@@ -163,7 +163,7 @@ class JournalEntryServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(repositoryMock).findByIdAndErrandId("je-from-other-errand", ERRAND_ID);
 	}
 
@@ -185,7 +185,7 @@ class JournalEntryServiceTest {
 		assertThat(result.getModified()).isNotNull();
 		assertThat(result.getStatus()).isEqualTo("WORKING");
 		assertThat(result.getCreated()).isEqualTo(FIXED_TIMESTAMP);
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
@@ -218,7 +218,7 @@ class JournalEntryServiceTest {
 
 		service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "je1");
 
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(repositoryMock).delete(existing);
 	}
 
@@ -256,7 +256,7 @@ class JournalEntryServiceTest {
 		assertThat(result.getStatus()).isEqualTo("LOCKED");
 		assertThat(result.getLockedBy()).isEqualTo("carola");
 		assertThat(result.getLocked()).isNotNull();
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test

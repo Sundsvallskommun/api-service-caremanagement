@@ -13,10 +13,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.operaton.integration.OperatonClient;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRequest;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +38,7 @@ class ProcessServiceTest {
 	private OperatonClient operatonClientMock;
 
 	@Mock
-	private ErrandService errandServiceMock;
+	private ErrandAccessGuard errandGuardMock;
 
 	@InjectMocks
 	private ProcessService service;
@@ -106,7 +106,7 @@ class ProcessServiceTest {
 	void correlateMessagePassesVariables() {
 		service.correlateMessage(MUNICIPALITY_ID, NAMESPACE, "msg-1", "biz-1", Map.of("k", "v"));
 
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, "biz-1");
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, "biz-1");
 		final ArgumentCaptor<CorrelationMessageRequest> captor = ArgumentCaptor.forClass(CorrelationMessageRequest.class);
 		verify(operatonClientMock).correlateMessage(eq(MUNICIPALITY_ID), captor.capture());
 		assertThat(captor.getValue().getMessageName()).isEqualTo("msg-1");

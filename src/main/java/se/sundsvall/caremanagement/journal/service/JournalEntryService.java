@@ -4,7 +4,6 @@ import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.journal.api.model.CreateJournalEntry;
 import se.sundsvall.caremanagement.journal.api.model.JournalEntry;
 import se.sundsvall.caremanagement.journal.api.model.LockJournalEntry;
@@ -12,6 +11,7 @@ import se.sundsvall.caremanagement.journal.api.model.UpdateJournalEntry;
 import se.sundsvall.caremanagement.journal.integration.db.JournalEntryRepository;
 import se.sundsvall.caremanagement.journal.integration.db.model.JournalEntryEntity;
 import se.sundsvall.caremanagement.journal.service.event.JournalEntryAdded;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.OffsetDateTime.now;
@@ -39,16 +39,16 @@ public class JournalEntryService {
 
 	private final JournalEntryRepository repository;
 	private final ApplicationEventPublisher events;
-	private final ErrandService errandService;
+	private final ErrandAccessGuard errandGuard;
 
-	JournalEntryService(final JournalEntryRepository repository, final ApplicationEventPublisher events, final ErrandService errandService) {
+	JournalEntryService(final JournalEntryRepository repository, final ApplicationEventPublisher events, final ErrandAccessGuard errandGuard) {
 		this.repository = repository;
 		this.events = events;
-		this.errandService = errandService;
+		this.errandGuard = errandGuard;
 	}
 
 	public String add(final String municipalityId, final String namespace, final String errandId, final CreateJournalEntry request) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
 		final var saved = repository.save(JournalEntryEntity.create()
@@ -68,7 +68,7 @@ public class JournalEntryService {
 
 	@Transactional(readOnly = true)
 	public List<JournalEntry> listForErrand(final String municipalityId, final String namespace, final String errandId) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		return repository.findByErrandIdOrderByEntryDateDescEntryTimeDescCreatedDesc(errandId).stream()
 			.map(JournalEntryService::toJournalEntry)
@@ -77,13 +77,13 @@ public class JournalEntryService {
 
 	@Transactional(readOnly = true)
 	public JournalEntry read(final String municipalityId, final String namespace, final String errandId, final String journalEntryId) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		return toJournalEntry(find(errandId, journalEntryId));
 	}
 
 	public JournalEntry update(final String municipalityId, final String namespace, final String errandId, final String journalEntryId, final UpdateJournalEntry request) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		final var entity = requireWorking(findForUpdate(errandId, journalEntryId), "edited");
 		entity
@@ -99,14 +99,14 @@ public class JournalEntryService {
 	}
 
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String journalEntryId) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		repository.delete(requireWorking(findForUpdate(errandId, journalEntryId), "deleted"));
 	}
 
 	/** Lock the entry (skrivskydd) — it becomes an immutable upprättad handling. Already-locked entries 409. */
 	public JournalEntry lock(final String municipalityId, final String namespace, final String errandId, final String journalEntryId, final LockJournalEntry request) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		final var entity = findForUpdate(errandId, journalEntryId);
 		if (entity.getStatus() == LOCKED) {

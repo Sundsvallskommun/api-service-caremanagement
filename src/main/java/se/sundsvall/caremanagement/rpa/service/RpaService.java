@@ -6,11 +6,11 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.rpa.integration.RpaClient;
 import se.sundsvall.caremanagement.rpa.integration.configuration.RpaProperties;
 import se.sundsvall.caremanagement.rpa.integration.model.AddQueueItemParameters;
 import se.sundsvall.caremanagement.rpa.integration.model.QueueItemData;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.util.Optional.ofNullable;
@@ -44,12 +44,12 @@ public class RpaService {
 
 	private final RpaClient rpaClient;
 	private final RpaProperties properties;
-	private final ErrandService errandService;
+	private final ErrandAccessGuard errandGuard;
 
-	public RpaService(final RpaClient rpaClient, final RpaProperties properties, final ErrandService errandService) {
+	public RpaService(final RpaClient rpaClient, final RpaProperties properties, final ErrandAccessGuard errandGuard) {
 		this.rpaClient = rpaClient;
 		this.properties = properties;
-		this.errandService = errandService;
+		this.errandGuard = errandGuard;
 	}
 
 	/**
@@ -77,7 +77,7 @@ public class RpaService {
 		// Inbound enqueues (via RpaResource) carry a namespace — assert the errand exists in that tenant so a caller cannot
 		// enqueue a robot job against a foreign/unknown errandId. Internal callers pass a null namespace and skip the check
 		// (they act on an errand already resolved in the current flow).
-		ofNullable(namespace).ifPresent(value -> errandService.assertExists(municipalityId, value, errandId));
+		ofNullable(namespace).ifPresent(value -> errandGuard.verifyExistingErrand(municipalityId, value, errandId));
 
 		if (!properties.enabled()) {
 			LOG.info("RPA disabled — skipping {} for errand {}", sanitizeForLogging(action), sanitizeForLogging(errandId));

@@ -8,10 +8,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
-import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.operaton.integration.OperatonClient;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRequest;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
@@ -28,11 +28,11 @@ public class ProcessService {
 	private static final String NO_DEFINITION_FOUND_MESSAGE = "No Operaton process definition found with name '%s'";
 
 	private final OperatonClient operatonClient;
-	private final ErrandService errandService;
+	private final ErrandAccessGuard errandGuard;
 
-	ProcessService(final OperatonClient operatonClient, final ErrandService errandService) {
+	ProcessService(final OperatonClient operatonClient, final ErrandAccessGuard errandGuard) {
 		this.operatonClient = operatonClient;
-		this.errandService = errandService;
+		this.errandGuard = errandGuard;
 	}
 
 	/**
@@ -64,7 +64,7 @@ public class ProcessService {
 	 * that does not belong to their (municipalityId, namespace).
 	 */
 	public void correlateMessage(final String municipalityId, final String namespace, final String messageName, final String businessKey, final Map<String, Object> variables) {
-		errandService.assertExists(municipalityId, namespace, businessKey);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, businessKey);
 		operatonClient.correlateMessage(municipalityId, new CorrelationMessageRequest()
 			.messageName(messageName)
 			.businessKey(businessKey)

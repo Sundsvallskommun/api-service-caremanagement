@@ -18,7 +18,7 @@ import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentEntity;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
 import se.sundsvall.caremanagement.conversation.service.event.MessagePosted;
-import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.OffsetDateTime.now;
@@ -52,15 +52,15 @@ public class MessageService {
 	private static final String DATA_NOT_FOUND_MESSAGE = "No file content found for attachment with id '%s'";
 	private static final String STREAM_ERROR_MESSAGE = "%s occurred when copying file with attachment id '%s' to response: %s";
 
-	private final ErrandService errandService;
+	private final ErrandAccessGuard errandGuard;
 	private final MessageRepository repository;
 	private final MessageAttachmentRepository attachmentRepository;
 	private final MessageAttachmentDataRepository attachmentDataRepository;
 	private final ApplicationEventPublisher events;
 
-	MessageService(final ErrandService errandService, final MessageRepository repository, final MessageAttachmentRepository attachmentRepository,
+	MessageService(final ErrandAccessGuard errandGuard, final MessageRepository repository, final MessageAttachmentRepository attachmentRepository,
 		final MessageAttachmentDataRepository attachmentDataRepository, final ApplicationEventPublisher events) {
-		this.errandService = errandService;
+		this.errandGuard = errandGuard;
 		this.repository = repository;
 		this.attachmentRepository = attachmentRepository;
 		this.attachmentDataRepository = attachmentDataRepository;
@@ -68,7 +68,7 @@ public class MessageService {
 	}
 
 	public String post(final String municipalityId, final String namespace, final String errandId, final CreateMessage request, final List<MultipartFile> attachments) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		validateInReplyTo(errandId, request.inReplyToId());
 
 		final var saved = repository.save(MessageEntity.create()
@@ -89,7 +89,7 @@ public class MessageService {
 
 	@Transactional(readOnly = true)
 	public List<Message> listForErrand(final String municipalityId, final String namespace, final String errandId) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		final var messages = repository.findByErrandIdOrderByCreatedAsc(errandId);
 		final var attachmentsByMessageId = attachmentRepository
 			.findByMessageIdIn(messages.stream().map(MessageEntity::getId).toList()).stream()
@@ -102,14 +102,14 @@ public class MessageService {
 
 	@Transactional(readOnly = true)
 	public Message read(final String municipalityId, final String namespace, final String errandId, final String messageId) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		final var message = repository.findByIdAndErrandId(messageId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, MESSAGE_NOT_FOUND_MESSAGE.formatted(messageId)));
 		return toMessage(message, attachmentRepository.findByMessageId(messageId));
 	}
 
 	public void streamAttachmentFile(final String municipalityId, final String namespace, final String errandId, final String messageId, final String attachmentId, final HttpServletResponse response) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		ensureMessageBelongsToErrand(errandId, messageId);
 		final var attachment = attachmentRepository.findByMessageIdAndId(messageId, attachmentId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ATTACHMENT_NOT_FOUND_MESSAGE.formatted(attachmentId, messageId)));

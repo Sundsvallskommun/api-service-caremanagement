@@ -6,7 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageReadReceiptRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
-import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.OffsetDateTime.now;
@@ -28,19 +28,19 @@ public class MessageReadService {
 
 	private static final String MESSAGES_NOT_FOUND_MESSAGE = "Message ids %s were not found on errand '%s'";
 
-	private final ErrandService errandService;
+	private final ErrandAccessGuard errandGuard;
 	private final MessageRepository messageRepository;
 	private final MessageReadReceiptRepository receiptRepository;
 
-	MessageReadService(final ErrandService errandService, final MessageRepository messageRepository, final MessageReadReceiptRepository receiptRepository) {
-		this.errandService = errandService;
+	MessageReadService(final ErrandAccessGuard errandGuard, final MessageRepository messageRepository, final MessageReadReceiptRepository receiptRepository) {
+		this.errandGuard = errandGuard;
 		this.messageRepository = messageRepository;
 		this.receiptRepository = receiptRepository;
 	}
 
 	@Transactional(readOnly = true)
 	public long unreadCount(final String municipalityId, final String namespace, final String errandId, final ReaderSide readerSide) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		return receiptRepository.countUnread(errandId, readerSide.addressedDirection().name(), readerSide.name());
 	}
 
@@ -50,7 +50,7 @@ public class MessageReadService {
 	 * marked read are silently ignored, so the call is idempotent.
 	 */
 	public void markRead(final String municipalityId, final String namespace, final String errandId, final ReaderSide readerSide, final String readBy, final List<String> messageIds) {
-		errandService.assertExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		final var distinctIds = messageIds.stream().distinct().toList();
 		final var messages = messageRepository.findByErrandIdAndIdIn(errandId, distinctIds);
 

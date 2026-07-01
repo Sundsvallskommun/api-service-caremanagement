@@ -23,7 +23,7 @@ import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAtta
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentEntity;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
 import se.sundsvall.caremanagement.conversation.service.event.MessagePosted;
-import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -48,7 +48,7 @@ class MessageServiceTest {
 	private static final String NAMESPACE = "my-namespace";
 
 	@Mock
-	private ErrandService errandServiceMock;
+	private ErrandAccessGuard errandGuardMock;
 
 	@Mock
 	private MessageRepository repositoryMock;
@@ -67,7 +67,7 @@ class MessageServiceTest {
 
 	private void errandMissing(final String errandId) {
 		doThrow(Problem.valueOf(NOT_FOUND, "No errand"))
-			.when(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, errandId);
+			.when(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, errandId);
 	}
 
 	@Test

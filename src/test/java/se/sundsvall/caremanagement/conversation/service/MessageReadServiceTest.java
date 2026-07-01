@@ -10,7 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageReadReceiptRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
-import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -39,7 +39,7 @@ class MessageReadServiceTest {
 	private static final String ERRAND_ID = "errand-1";
 
 	@Mock
-	private ErrandService errandServiceMock;
+	private ErrandAccessGuard errandGuardMock;
 
 	@Mock
 	private MessageRepository messageRepositoryMock;
@@ -52,7 +52,7 @@ class MessageReadServiceTest {
 
 	private void errandMissing() {
 		doThrow(Problem.valueOf(NOT_FOUND, "No errand"))
-			.when(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+			.when(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	private static MessageEntity message(final String id, final String direction) {

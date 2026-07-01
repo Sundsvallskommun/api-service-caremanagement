@@ -8,10 +8,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.permit.api.model.Permit;
 import se.sundsvall.caremanagement.permit.integration.db.PermitRepository;
 import se.sundsvall.caremanagement.permit.integration.db.model.PermitEntity;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -33,7 +33,7 @@ class PermitServiceTest {
 	private static final String ERRAND_ID = "errand-1";
 
 	@Mock
-	private ErrandService errandServiceMock;
+	private ErrandAccessGuard errandGuardMock;
 
 	@Mock
 	private PermitRepository permitRepositoryMock;
@@ -43,7 +43,7 @@ class PermitServiceTest {
 
 	private void errandMissing() {
 		doThrow(Problem.valueOf(NOT_FOUND, "No errand"))
-			.when(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+			.when(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test

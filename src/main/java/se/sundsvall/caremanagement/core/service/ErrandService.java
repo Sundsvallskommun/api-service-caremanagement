@@ -17,6 +17,7 @@ import se.sundsvall.caremanagement.core.service.event.ErrandCreated;
 import se.sundsvall.caremanagement.core.service.event.ErrandDeleted;
 import se.sundsvall.caremanagement.core.service.event.ErrandStatusChanged;
 import se.sundsvall.caremanagement.core.service.registry.ErrandTypeRegistry;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.caremanagement.shared.NotificationRequest;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -44,7 +45,7 @@ import static se.sundsvall.caremanagement.core.service.mapper.PatchMapper.patchE
  */
 @Service
 @Transactional
-public class ErrandService {
+public class ErrandService implements ErrandAccessGuard {
 
 	private static final String NOT_FOUND_MESSAGE = "No errand with id '%s' found in namespace '%s' for municipality id '%s'";
 	private static final String TYPED_CREATE_ONLY_MESSAGE = "Errands of type '%s' must be created via the type's own endpoint (which seeds the type data and starts its process), not the generic POST /errands";
@@ -110,10 +111,12 @@ public class ErrandService {
 	/**
 	 * Asserts that an errand envelope exists for the given tenant. Shared pure existence guard for other modules
 	 * (notes, notifications, conversation, permits, referrals, status history) so each does not duplicate the
-	 * find-or-404 against the errand table. Throws {@code NOT_FOUND} when no such errand exists; returns nothing.
+	 * find-or-404 against the errand table — exposed to them through the {@link ErrandAccessGuard} port. Throws
+	 * {@code NOT_FOUND} when no such errand exists; returns nothing.
 	 */
+	@Override
 	@Transactional(readOnly = true)
-	public void assertExists(final String municipalityId, final String namespace, final String errandId) {
+	public void verifyExistingErrand(final String municipalityId, final String namespace, final String errandId) {
 		if (!errandRepository.existsByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)) {
 			throw Problem.valueOf(NOT_FOUND, NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId));
 		}

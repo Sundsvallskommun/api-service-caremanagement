@@ -10,12 +10,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.notes.api.model.CreateNote;
 import se.sundsvall.caremanagement.notes.api.model.UpdateNote;
 import se.sundsvall.caremanagement.notes.integration.db.NoteRepository;
 import se.sundsvall.caremanagement.notes.integration.db.model.NoteEntity;
 import se.sundsvall.caremanagement.notes.service.event.NoteAdded;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -37,7 +37,7 @@ class NoteServiceTest {
 	private static final String NOTE_ID = "n1";
 
 	@Mock
-	private ErrandService errandServiceMock;
+	private ErrandAccessGuard errandGuardMock;
 
 	@Mock
 	private NoteRepository repositoryMock;
@@ -50,7 +50,7 @@ class NoteServiceTest {
 
 	private void errandMissing() {
 		doThrow(Problem.valueOf(NOT_FOUND, "No errand"))
-			.when(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+			.when(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
@@ -61,7 +61,7 @@ class NoteServiceTest {
 		final var id = service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateNote("body", "author"));
 
 		assertThat(id).isEqualTo(NOTE_ID);
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		final ArgumentCaptor<NoteEntity> entityCaptor = ArgumentCaptor.forClass(NoteEntity.class);
 		verify(repositoryMock).save(entityCaptor.capture());
@@ -80,7 +80,7 @@ class NoteServiceTest {
 	@Test
 	void addUnknownErrandNotFound() {
 		doThrow(Problem.valueOf(NOT_FOUND, "No errand"))
-			.when(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+			.when(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		assertThatThrownBy(() -> service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateNote("body", "author")))
 			.isInstanceOf(ThrowableProblem.class)
@@ -102,7 +102,7 @@ class NoteServiceTest {
 		assertThat(result.getFirst().getBody()).isEqualTo("b1");
 		assertThat(result.getFirst().getAuthor()).isEqualTo("a1");
 		assertThat(result.getFirst().getCreated()).isEqualTo(FIXED_TIMESTAMP);
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
@@ -114,7 +114,7 @@ class NoteServiceTest {
 
 		assertThat(result.getId()).isEqualTo(NOTE_ID);
 		assertThat(result.getBody()).isEqualTo("b");
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(eventsMock, never()).publishEvent(any());
 	}
 
@@ -196,7 +196,7 @@ class NoteServiceTest {
 		when(repositoryMock.countByErrandId(ERRAND_ID)).thenReturn(4L);
 
 		assertThat(service.countForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(4L);
-		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(repositoryMock).countByErrandId(ERRAND_ID);
 	}
 }
