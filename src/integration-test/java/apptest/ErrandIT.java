@@ -22,6 +22,7 @@ import se.sundsvall.caremanagement.conversation.integration.db.MessageReadReceip
 import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.document.integration.db.DocumentRepository;
+import se.sundsvall.caremanagement.formsnapshot.integration.db.FormSnapshotRepository;
 import se.sundsvall.caremanagement.notes.integration.db.NoteRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.dept44.test.AbstractAppTest;
@@ -52,6 +53,7 @@ class ErrandIT extends AbstractAppTest {
 	private static final String MESSAGE_READ_RECEIPT_ID = "cccccccc-cccc-cccc-cccc-cccccccccr01";
 	private static final String NOTE_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbn01";
 	private static final String DOCUMENT_ID = "ffffffff-ffff-ffff-ffff-ffffffffff01";
+	private static final String FORM_SNAPSHOT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-fffff0000001";
 
 	@Autowired
 	private ErrandRepository repository;
@@ -76,6 +78,9 @@ class ErrandIT extends AbstractAppTest {
 
 	@Autowired
 	private FinancialAssistanceRepository financialAssistanceRepository;
+
+	@Autowired
+	private FormSnapshotRepository formSnapshotRepository;
 
 	@Test
 	void test01_createErrand() {
@@ -164,6 +169,7 @@ class ErrandIT extends AbstractAppTest {
 		assertThat(noteRepository.existsById(NOTE_ID)).isTrue();
 		assertThat(documentRepository.existsById(DOCUMENT_ID)).isTrue();
 		assertThat(financialAssistanceRepository.existsById(CASCADE_ERRAND_ID)).isTrue();
+		assertThat(formSnapshotRepository.existsById(FORM_SNAPSHOT_ID)).isTrue();
 
 		setupCall()
 			.withServicePath(PATH + "/" + CASCADE_ERRAND_ID)
@@ -181,5 +187,6 @@ class ErrandIT extends AbstractAppTest {
 		assertThat(noteRepository.existsById(NOTE_ID)).isFalse();
 		assertThat(documentRepository.existsById(DOCUMENT_ID)).isFalse();
 		assertThat(financialAssistanceRepository.existsById(CASCADE_ERRAND_ID)).isFalse();
+		assertThat(formSnapshotRepository.existsById(FORM_SNAPSHOT_ID)).isFalse();
 	}
 }

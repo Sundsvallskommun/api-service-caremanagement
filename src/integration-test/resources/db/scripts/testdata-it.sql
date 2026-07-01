@@ -74,3 +74,8 @@ INSERT INTO errand_document (id, errand_id, document_type, heading, document_tex
 -- errand deletion (without ON DELETE CASCADE the errand delete would FK-violate and roll back).
 INSERT INTO errand_financial_assistance (errand_id) VALUES
     ('44444444-4444-4444-4444-444444444444');
+
+-- Form snapshot on the same errand — proves fk_form_snapshot_errand_id cascades on errand deletion (its module's
+-- ErrandDeletedListener was removed as redundant; the DB cascade is now the sole cleanup).
+INSERT INTO errand_form_snapshot (id, errand_id, municipality_id, namespace, type_slug, schema_version, content_hash, payload, created) VALUES
+    ('aaaaaaaa-aaaa-aaaa-aaaa-fffff0000001', '44444444-4444-4444-4444-444444444444', '2281', 'MY_NAMESPACE', 'TYPE-1', 'v1', '0000000000000000000000000000000000000000000000000000000000000000', '{}', '2025-01-02 09:30:00.000000');

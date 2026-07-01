@@ -5,6 +5,7 @@ TRUNCATE TABLE contact_channel;
 TRUNCATE TABLE decision;
 TRUNCATE TABLE errand_document;
 TRUNCATE TABLE errand_financial_assistance;
+TRUNCATE TABLE errand_form_snapshot;
 TRUNCATE TABLE errand_message;
 TRUNCATE TABLE errand_note;
 TRUNCATE TABLE errand_status_history;
