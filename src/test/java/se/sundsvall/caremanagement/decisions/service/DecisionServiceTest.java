@@ -14,6 +14,7 @@ import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
+import se.sundsvall.caremanagement.decisions.service.event.DecisionRecorded;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.caremanagement.shared.NotificationRequest;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -21,6 +22,7 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -64,10 +66,13 @@ class DecisionServiceTest {
 
 		assertThat(id).isEqualTo(DECISION_ID);
 
-		final ArgumentCaptor<NotificationRequest> captor = ArgumentCaptor.forClass(NotificationRequest.class);
-		verify(eventPublisherMock, times(2)).publishEvent(captor.capture());
-		assertThat(captor.getAllValues()).extracting("ownerId").containsExactlyInAnyOrder("reporter", "assignee");
-		assertThat(captor.getAllValues()).allSatisfy(req -> {
+		verify(eventPublisherMock).publishEvent(isA(DecisionRecorded.class));
+		final ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+		verify(eventPublisherMock, times(3)).publishEvent(captor.capture());
+		final var notifications = captor.getAllValues().stream()
+			.filter(NotificationRequest.class::isInstance).map(NotificationRequest.class::cast).toList();
+		assertThat(notifications).extracting("ownerId").containsExactlyInAnyOrder("reporter", "assignee");
+		assertThat(notifications).allSatisfy(req -> {
 			assertThat(req.type()).isEqualTo("CREATE");
 			assertThat(req.subType()).isEqualTo("DECISION");
 			assertThat(req.description()).contains("PAYMENT").contains("APPROVED");
@@ -84,7 +89,8 @@ class DecisionServiceTest {
 
 		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Decision.create().withDecisionType("X").withValue("Y"));
 
-		verify(eventPublisherMock, never()).publishEvent(any());
+		verify(eventPublisherMock).publishEvent(isA(DecisionRecorded.class));
+		verify(eventPublisherMock, never()).publishEvent(isA(NotificationRequest.class));
 	}
 
 	@Test
@@ -97,6 +103,7 @@ class DecisionServiceTest {
 
 		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Decision.create().withDecisionType("X").withValue("Y"));
 
+		verify(eventPublisherMock).publishEvent(isA(DecisionRecorded.class));
 		verify(eventPublisherMock, times(1)).publishEvent(any(NotificationRequest.class));
 	}
 

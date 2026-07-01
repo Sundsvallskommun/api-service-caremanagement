@@ -1,0 +1,42 @@
+package se.sundsvall.caremanagement.eventlog.service.event;
+
+import java.util.Optional;
+import org.springframework.modulith.events.ApplicationModuleListener;
+import org.springframework.stereotype.Component;
+import se.sundsvall.caremanagement.conversation.service.event.MessagePosted;
+import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEntity;
+import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
+
+/**
+ * Records a published {@link MessagePosted} as a descriptive change-log row ({@code source = EVENT}) on the errand,
+ * mirroring {@link ErrandEventDomainListener}. The message body never leaves the in-app thread — only the fact that a
+ * message was posted is logged, worded by direction (OUTBOUND = caseworker → applicant, INBOUND = applicant →
+ * caseworker), with the actor taken from the message's {@code author}.
+ */
+@Component
+class MessagePostedEventListener {
+
+	static final String SOURCE = "EVENT";
+	static final String SYSTEM_ACTOR = "system";
+	static final String OUTBOUND = "OUTBOUND";
+
+	private final ErrandEventService service;
+
+	MessagePostedEventListener(final ErrandEventService service) {
+		this.service = service;
+	}
+
+	@ApplicationModuleListener
+	void on(final MessagePosted event) {
+		service.recordDomainEvent(ErrandEventEntity.create()
+			.withErrandId(event.errandId())
+			.withMunicipalityId(event.municipalityId())
+			.withNamespace(event.namespace())
+			.withSource(SOURCE)
+			.withAction("CREATE")
+			.withTarget("message")
+			.withDescription(OUTBOUND.equals(event.direction()) ? "Meddelande skickat" : "Meddelande mottaget")
+			.withActor(Optional.ofNullable(event.author()).filter(value -> !value.isBlank()).orElse(SYSTEM_ACTOR))
+			.withCreated(event.timestamp()));
+	}
+}

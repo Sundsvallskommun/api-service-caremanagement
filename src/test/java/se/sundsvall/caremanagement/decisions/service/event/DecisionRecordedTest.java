@@ -11,11 +11,13 @@ class DecisionRecordedTest {
 	@Test
 	void accessors() {
 		final var timestamp = FIXED_TIMESTAMP;
-		final var event = new DecisionRecorded("decision-1", "errand-1", "type-slug",
+		final var event = new DecisionRecorded("decision-1", "errand-1", "2281", "my-namespace", "type-slug",
 			"APPROVED", "decider", timestamp);
 
 		assertThat(event.decisionId()).isEqualTo("decision-1");
 		assertThat(event.errandId()).isEqualTo("errand-1");
+		assertThat(event.municipalityId()).isEqualTo("2281");
+		assertThat(event.namespace()).isEqualTo("my-namespace");
 		assertThat(event.typeSlug()).isEqualTo("type-slug");
 		assertThat(event.outcome()).isEqualTo("APPROVED");
 		assertThat(event.decidedBy()).isEqualTo("decider");

@@ -5,6 +5,8 @@ import java.time.OffsetDateTime;
 public record DecisionRecorded(
 	String decisionId,
 	String errandId,
+	String municipalityId,
+	String namespace,
 	String typeSlug,
 	String outcome,
 	String decidedBy,
