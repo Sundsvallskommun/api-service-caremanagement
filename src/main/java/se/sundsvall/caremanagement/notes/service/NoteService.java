@@ -43,7 +43,7 @@ public class NoteService {
 			.withAuthor(request.author())
 			.withCreated(timestamp));
 
-		events.publishEvent(new NoteAdded(saved.getId(), errandId, request.author(), timestamp));
+		events.publishEvent(new NoteAdded(saved.getId(), errandId, municipalityId, namespace, request.author(), timestamp));
 		return saved.getId();
 	}
 

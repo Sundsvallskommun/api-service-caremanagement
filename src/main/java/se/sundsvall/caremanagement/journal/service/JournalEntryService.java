@@ -62,7 +62,7 @@ public class JournalEntryService {
 			.withCreatedBy(request.createdBy())
 			.withCreated(timestamp));
 
-		events.publishEvent(new JournalEntryAdded(saved.getId(), errandId, request.type(), request.createdBy(), timestamp));
+		events.publishEvent(new JournalEntryAdded(saved.getId(), errandId, municipalityId, namespace, request.type(), request.createdBy(), timestamp));
 		return saved.getId();
 	}
 

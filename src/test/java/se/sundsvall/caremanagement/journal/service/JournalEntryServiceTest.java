@@ -84,6 +84,8 @@ class JournalEntryServiceTest {
 		verify(eventsMock).publishEvent(eventCaptor.capture());
 		assertThat(eventCaptor.getValue().journalEntryId()).isEqualTo("je-1");
 		assertThat(eventCaptor.getValue().errandId()).isEqualTo(ERRAND_ID);
+		assertThat(eventCaptor.getValue().municipalityId()).isEqualTo(MUNICIPALITY_ID);
+		assertThat(eventCaptor.getValue().namespace()).isEqualTo(NAMESPACE);
 		assertThat(eventCaptor.getValue().type()).isEqualTo("Journalfört meddelande");
 		assertThat(eventCaptor.getValue().createdBy()).isEqualTo("carola");
 	}

@@ -5,5 +5,7 @@ import java.time.OffsetDateTime;
 public record NoteAdded(
 	String noteId,
 	String errandId,
+	String municipalityId,
+	String namespace,
 	String author,
 	OffsetDateTime timestamp) {}

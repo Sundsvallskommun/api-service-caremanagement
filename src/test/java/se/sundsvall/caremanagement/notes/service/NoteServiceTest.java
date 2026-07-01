@@ -74,6 +74,8 @@ class NoteServiceTest {
 		verify(eventsMock).publishEvent(eventCaptor.capture());
 		assertThat(eventCaptor.getValue().noteId()).isEqualTo(NOTE_ID);
 		assertThat(eventCaptor.getValue().errandId()).isEqualTo(ERRAND_ID);
+		assertThat(eventCaptor.getValue().municipalityId()).isEqualTo(MUNICIPALITY_ID);
+		assertThat(eventCaptor.getValue().namespace()).isEqualTo(NAMESPACE);
 		assertThat(eventCaptor.getValue().author()).isEqualTo("author");
 	}
 
