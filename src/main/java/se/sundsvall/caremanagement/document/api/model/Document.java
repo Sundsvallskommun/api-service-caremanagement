@@ -117,60 +117,60 @@ public class Document {
 		return locked;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setErrandId(final String v) {
-		this.errandId = v;
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
 	}
 
-	public void setType(final String v) {
-		this.type = v;
+	public void setType(final String type) {
+		this.type = type;
 	}
 
-	public void setHeading(final String v) {
-		this.heading = v;
+	public void setHeading(final String heading) {
+		this.heading = heading;
 	}
 
-	public void setText(final String v) {
-		this.text = v;
+	public void setText(final String text) {
+		this.text = text;
 	}
 
-	public void setDocumentDate(final LocalDate v) {
-		this.documentDate = v;
+	public void setDocumentDate(final LocalDate documentDate) {
+		this.documentDate = documentDate;
 	}
 
-	public void setDocumentTime(final LocalTime v) {
-		this.documentTime = v;
+	public void setDocumentTime(final LocalTime documentTime) {
+		this.documentTime = documentTime;
 	}
 
-	public void setStatus(final String v) {
-		this.status = v;
+	public void setStatus(final String status) {
+		this.status = status;
 	}
 
-	public void setCreatedBy(final String v) {
-		this.createdBy = v;
+	public void setCreatedBy(final String createdBy) {
+		this.createdBy = createdBy;
 	}
 
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
 	}
 
-	public void setModifiedBy(final String v) {
-		this.modifiedBy = v;
+	public void setModifiedBy(final String modifiedBy) {
+		this.modifiedBy = modifiedBy;
 	}
 
-	public void setModified(final OffsetDateTime v) {
-		this.modified = v;
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
 	}
 
-	public void setLockedBy(final String v) {
-		this.lockedBy = v;
+	public void setLockedBy(final String lockedBy) {
+		this.lockedBy = lockedBy;
 	}
 
-	public void setLocked(final OffsetDateTime v) {
-		this.locked = v;
+	public void setLocked(final OffsetDateTime locked) {
+		this.locked = locked;
 	}
 
 	public Document withId(final String id) {

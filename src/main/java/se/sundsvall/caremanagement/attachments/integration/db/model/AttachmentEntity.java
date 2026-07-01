@@ -248,13 +248,15 @@ public class AttachmentEntity implements Auditable {
 			&& Objects.equals(namespace, that.namespace) && Objects.equals(municipalityId, that.municipalityId)
 			&& Objects.equals(fileName, that.fileName) && Objects.equals(mimeType, that.mimeType)
 			&& Objects.equals(fileSize, that.fileSize) && Objects.equals(documentType, that.documentType)
-			&& Objects.equals(senderRole, that.senderRole) && Objects.equals(attachmentData, that.attachmentData)
+			&& Objects.equals(senderRole, that.senderRole)
 			&& Objects.equals(created, that.created) && Objects.equals(modified, that.modified);
 	}
 
+	// attachmentData (the lazily-loaded blob) is deliberately excluded from equals/hashCode: including it would force
+	// reading the whole attachment into memory just to compare or hash an entity. Identity/metadata fields suffice.
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, namespace, municipalityId, fileName, mimeType, fileSize, documentType, senderRole, attachmentData, created, modified);
+		return Objects.hash(id, errandId, namespace, municipalityId, fileName, mimeType, fileSize, documentType, senderRole, created, modified);
 	}
 
 	@Override
