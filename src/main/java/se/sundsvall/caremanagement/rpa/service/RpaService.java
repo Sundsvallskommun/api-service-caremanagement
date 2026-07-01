@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.rpa.integration.RpaClient;
 import se.sundsvall.caremanagement.rpa.integration.configuration.RpaProperties;
 import se.sundsvall.caremanagement.rpa.integration.model.AddQueueItemParameters;
@@ -43,10 +44,12 @@ public class RpaService {
 
 	private final RpaClient rpaClient;
 	private final RpaProperties properties;
+	private final ErrandService errandService;
 
-	public RpaService(final RpaClient rpaClient, final RpaProperties properties) {
+	public RpaService(final RpaClient rpaClient, final RpaProperties properties, final ErrandService errandService) {
 		this.rpaClient = rpaClient;
 		this.properties = properties;
+		this.errandService = errandService;
 	}
 
 	/**
@@ -71,6 +74,11 @@ public class RpaService {
 	 * @param specificContent additional key/values placed in the queue item's {@code SpecificContent}
 	 */
 	public void enqueue(final String municipalityId, final String namespace, final String errandId, final String action, final Map<String, String> specificContent) {
+		// Inbound enqueues (via RpaResource) carry a namespace — assert the errand exists in that tenant so a caller cannot
+		// enqueue a robot job against a foreign/unknown errandId. Internal callers pass a null namespace and skip the check
+		// (they act on an errand already resolved in the current flow).
+		ofNullable(namespace).ifPresent(value -> errandService.assertExists(municipalityId, value, errandId));
+
 		if (!properties.enabled()) {
 			LOG.info("RPA disabled — skipping {} for errand {}", sanitizeForLogging(action), sanitizeForLogging(errandId));
 			return;

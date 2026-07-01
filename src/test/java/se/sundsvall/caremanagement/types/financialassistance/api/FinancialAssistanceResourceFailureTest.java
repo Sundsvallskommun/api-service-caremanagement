@@ -24,6 +24,7 @@ import static java.util.UUID.randomUUID;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PDF;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
@@ -222,7 +223,7 @@ class FinancialAssistanceResourceFailureTest {
 		builder.part("file", "%PDF-1.4".getBytes()).filename("tillaggsansokan.pdf");
 
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").build(Map.of("municipalityId", "x", "namespace", NAMESPACE, "actualisationId", 5012)))
+			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").queryParam("partyId", "f47ac10b-58cc-4372-a567-0e02b2c3d479").build(Map.of("municipalityId", "x", "namespace", NAMESPACE, "actualisationId", 5012)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
@@ -237,7 +238,7 @@ class FinancialAssistanceResourceFailureTest {
 		builder.part("request", se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest.create().withTitle("x"), APPLICATION_JSON);
 
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
+			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").queryParam("partyId", "f47ac10b-58cc-4372-a567-0e02b2c3d479").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
@@ -253,9 +254,46 @@ class FinancialAssistanceResourceFailureTest {
 		builder.part("request", se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest.create().withErrandId("not-a-uuid"), APPLICATION_JSON);
 
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
+			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").queryParam("partyId", "f47ac10b-58cc-4372-a567-0e02b2c3d479").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void archiveToActualisation_invalidPartyId() {
+		final var builder = new MultipartBodyBuilder();
+		builder.part("file", "%PDF-1.4".getBytes()).filename("tillaggsansokan.pdf");
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").queryParam("partyId", "not-a-uuid").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void readDocumentContent_invalidPartyId() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/documents/{documentId}/content").queryParam("partyId", "not-a-uuid").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "documentId", "a3f1c2d4-0000-1111-2222-333344445555")))
+			.accept(APPLICATION_PDF)
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void readDocumentContent_missingPartyId() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/documents/{documentId}/content").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "documentId", "a3f1c2d4-0000-1111-2222-333344445555")))
+			.accept(APPLICATION_PDF)
 			.exchange()
 			.expectStatus().isBadRequest();
 

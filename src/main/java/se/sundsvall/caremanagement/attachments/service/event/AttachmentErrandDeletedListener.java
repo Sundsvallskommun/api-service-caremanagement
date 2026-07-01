@@ -12,13 +12,13 @@ import se.sundsvall.caremanagement.core.service.event.ErrandDeleted;
  * cascade and keeps the modules loosely coupled.
  *
  * <p>
- * Attachments are loaded and deleted one by one rather than via a derived bulk
- * {@code delete ... where errand_id = ?}: the only DB-level {@code ON DELETE CASCADE} runs
- * from {@code attachment_data} to {@code attachment}, not the other way around, so a bulk
- * delete of the parent {@code attachment} rows would orphan every {@code attachment_data}
- * longblob. Removing each entity instead lets the {@code cascade = ALL} on
+ * Attachments are loaded and removed via {@code deleteAll(entities)} rather than a derived bulk
+ * {@code delete ... where errand_id = ?}: {@code deleteAll} still removes each entity through the persistence context
+ * (not a bulk SQL delete), so the {@code cascade = ALL} on
  * {@link se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEntity#getAttachmentData()}
- * remove the child blob row as well.
+ * removes the child {@code attachment_data} blob too. A bulk delete of the parent {@code attachment} rows would orphan
+ * every {@code attachment_data} longblob, because the only DB-level {@code ON DELETE CASCADE} runs from
+ * {@code attachment_data} to {@code attachment}, not the other way around.
  * </p>
  */
 @Component
@@ -32,6 +32,6 @@ class AttachmentErrandDeletedListener {
 
 	@ApplicationModuleListener
 	void on(final ErrandDeleted event) {
-		repository.findByErrandId(event.errandId()).forEach(repository::delete);
+		repository.deleteAll(repository.findByErrandId(event.errandId()));
 	}
 }

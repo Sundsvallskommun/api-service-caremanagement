@@ -87,8 +87,7 @@ public class StakeholderService {
 
 	private StakeholderEntity findStakeholder(final String municipalityId, final String namespace, final String errandId, final String stakeholderId) {
 		ensureErrandExists(municipalityId, namespace, errandId);
-		return stakeholderRepository.findById(stakeholderId)
-			.filter(entity -> errandId.equals(entity.getErrandId()))
+		return stakeholderRepository.findByErrandIdAndId(errandId, stakeholderId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, STAKEHOLDER_NOT_FOUND_MESSAGE.formatted(stakeholderId, errandId, namespace, municipalityId)));
 	}
 }

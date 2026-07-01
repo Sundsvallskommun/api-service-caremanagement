@@ -2658,8 +2658,10 @@ paths:
       summary: Archive a document to a Lifecare actualisation
       description: "Binds an uploaded document (e.g. a supplementary application —\
         \ tilläggsansökan) as an attachment to a specific Lifecare actualisation.\
-        \ Multipart request: the 'file' part carries the document; the optional 'request'\
-        \ part carries the metadata (errandId, title, documentType, documentSenderType,\
+        \ The target actualisation must belong to the given applicant (partyId) —\
+        \ a foreign actualisation id yields 404 before anything is uploaded. Multipart\
+        \ request: the 'file' part carries the document; the optional 'request' part\
+        \ carries the metadata (errandId, title, documentType, documentSenderType,\
         \ senderName) — title/documentType/documentSenderType/senderName each fall\
         \ back to a server default, and the title defaults to the uploaded file name.\
         \ caremanagement only forwards the bytes to Lifecare. When 'request.errandId'\
@@ -2685,6 +2687,13 @@ paths:
         schema:
           type: integer
           format: int32
+      - name: partyId
+        in: query
+        description: The applicant's partyId (personId GUID) that owns the target
+          actualisation
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           multipart/form-data:
@@ -5422,10 +5431,12 @@ paths:
       - Financial Assistance · Lifecare history
       summary: Read a Lifecare document's content (PDF)
       description: "Streams a single Lifecare document's content (the generated PDF)\
-        \ by its document id, straight from Lifecare. caremanagement only forwards\
-        \ the bytes. 502 when Lifecare is unreachable; Lifecare answers 404 when the\
-        \ document has no generated PDF (content exists only for PDF-backed document\
-        \ types)."
+        \ straight from Lifecare. caremanagement only forwards the bytes. The document\
+        \ must belong to the given applicant (partyId) — a document id not in that\
+        \ applicant's list for the period yields 404, so a caller cannot read another\
+        \ applicant's document by its Lifecare id. 502 when Lifecare is unreachable;\
+        \ Lifecare answers 404 when the document has no generated PDF (content exists\
+        \ only for PDF-backed document types)."
       operationId: readDocumentContent
       parameters:
       - name: municipalityId
@@ -5445,6 +5456,28 @@ paths:
         required: true
         schema:
           type: string
+      - name: partyId
+        in: query
+        description: The applicant's partyId (personId GUID) that owns the document
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Inclusive start of the ownership-check period (ISO date). Defaults
+          to 24 months before 'to'.
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        description: Inclusive end of the ownership-check period (ISO date). Defaults
+          to today.
+        required: false
+        schema:
+          type: string
+          format: date
       responses:
         "200":
           description: Successful Operation

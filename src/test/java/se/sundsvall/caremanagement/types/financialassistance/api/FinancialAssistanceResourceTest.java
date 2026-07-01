@@ -714,10 +714,11 @@ class FinancialAssistanceResourceTest {
 	@Test
 	void readDocumentContent() {
 		final var documentId = "a3f1c2d4-0000-1111-2222-333344445555";
-		when(serviceMock.readDocumentContent(documentId)).thenReturn("%PDF-1.4".getBytes());
+		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+		when(serviceMock.readDocumentContent(eq(MUNICIPALITY_ID), eq(partyId), eq(documentId), isNull(), isNull())).thenReturn("%PDF-1.4".getBytes());
 
 		final var body = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/documents/{documentId}/content").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "documentId", documentId)))
+			.uri(uri -> uri.path(PATH + "/documents/{documentId}/content").queryParam("partyId", partyId).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "documentId", documentId)))
 			.accept(APPLICATION_PDF)
 			.exchange()
 			.expectStatus().isOk()
@@ -727,38 +728,40 @@ class FinancialAssistanceResourceTest {
 			.getResponseBody();
 
 		assertThat(body).isEqualTo("%PDF-1.4".getBytes());
-		verify(serviceMock).readDocumentContent(documentId);
+		verify(serviceMock).readDocumentContent(MUNICIPALITY_ID, partyId, documentId, null, null);
 	}
 
 	@Test
 	void archiveToActualisation() {
+		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 		final var builder = new MultipartBodyBuilder();
 		builder.part("file", "%PDF-1.4".getBytes()).filename("tillaggsansokan.pdf");
 		builder.part("request", ArchiveActualisationRequest.create().withTitle("Tilläggsansökan"), APPLICATION_JSON);
 
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
+			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").queryParam("partyId", partyId).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(serviceMock).archiveToActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(5012), any(MultipartFile.class), any(ArchiveActualisationRequest.class));
+		verify(serviceMock).archiveToActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(partyId), eq(5012), any(MultipartFile.class), any(ArchiveActualisationRequest.class));
 	}
 
 	@Test
 	void archiveToActualisationWithoutMetadata() {
+		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 		final var builder = new MultipartBodyBuilder();
 		builder.part("file", "%PDF-1.4".getBytes()).filename("tillaggsansokan.pdf");
 
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
+			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").queryParam("partyId", partyId).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(serviceMock).archiveToActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(5012), any(MultipartFile.class), isNull());
+		verify(serviceMock).archiveToActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(partyId), eq(5012), any(MultipartFile.class), isNull());
 	}
 
 	@Test

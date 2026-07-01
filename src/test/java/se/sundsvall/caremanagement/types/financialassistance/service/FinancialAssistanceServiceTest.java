@@ -900,22 +900,45 @@ class FinancialAssistanceServiceTest {
 	}
 
 	@Test
-	void readDocumentContentForwardsBytes() {
+	void readDocumentContentForwardsBytesWhenOwnedByApplicant() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(lifecareCaseHistoryServiceMock.listDocuments(eq("199001011234"), any(LocalDate.class), any(LocalDate.class)))
+			.thenReturn(List.of(new DocumentView("doc-1", "Beslut", "2026-06-02", "Beslut", "9900", "Decision")));
 		when(lifecareCaseHistoryServiceMock.documentContent("doc-1")).thenReturn("%PDF-1.4".getBytes());
 
-		final var content = service.readDocumentContent("doc-1");
+		final var content = service.readDocumentContent(MUNICIPALITY_ID, APPLICANT_PARTY_ID, "doc-1", null, null);
 
 		assertThat(content).isEqualTo("%PDF-1.4".getBytes());
 		verify(lifecareCaseHistoryServiceMock).documentContent("doc-1");
 	}
 
 	@Test
+	void readDocumentContentForeignDocumentYields404() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(lifecareCaseHistoryServiceMock.listDocuments(eq("199001011234"), any(LocalDate.class), any(LocalDate.class)))
+			.thenReturn(List.of(new DocumentView("doc-1", "Beslut", "2026-06-02", "Beslut", "9900", "Decision")));
+
+		assertThatThrownBy(() -> service.readDocumentContent(MUNICIPALITY_ID, APPLICANT_PARTY_ID, "doc-OTHER", null, null))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verify(lifecareCaseHistoryServiceMock, never()).documentContent(any());
+	}
+
+	private void applicantOwnsActualisation5012() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(actualisationServiceMock.list(eq("199001011234"), any(LocalDate.class), any(LocalDate.class)))
+			.thenReturn(List.of(new ActualisationSummary(5012, "Ansökan", "EB", "2026-06-01", "Nyansökan", "Försörjningsstöd", "Den enskilde", "Anna", "IFO", "Pågående", 8801, 7700, 9900)));
+	}
+
+	@Test
 	void archiveToActualisationForwardsFileWithDefaultsWhenNoMetadata() {
+		applicantOwnsActualisation5012();
 		final var file = new MockMultipartFile("file", "tillaggsansokan.pdf", "application/pdf", new byte[] {
 			1, 2, 3
 		});
 
-		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, 5012, file, null);
+		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, APPLICANT_PARTY_ID, 5012, file, null);
 
 		verify(actualisationServiceMock).uploadAttachment(5012, "tillaggsansokan.pdf", new byte[] {
 			1, 2, 3
@@ -934,8 +957,9 @@ class FinancialAssistanceServiceTest {
 			.withDocumentType("KOMPLETTERING")
 			.withDocumentSenderType("MYNDIGHET")
 			.withSenderName("Sundsvalls kommun");
+		applicantOwnsActualisation5012();
 
-		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, 5012, file, request);
+		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, APPLICANT_PARTY_ID, 5012, file, request);
 
 		verify(actualisationServiceMock).uploadAttachment(5012, "tillaggsansokan.pdf", new byte[] {
 			9
@@ -949,8 +973,9 @@ class FinancialAssistanceServiceTest {
 			7
 		});
 		final var request = ArchiveActualisationRequest.create().withErrandId(ERRAND_ID);
+		applicantOwnsActualisation5012();
 
-		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, 5012, file, request);
+		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, APPLICANT_PARTY_ID, 5012, file, request);
 
 		verify(actualisationServiceMock).uploadAttachment(eq(5012), eq("tillaggsansokan.pdf"), any(), eq("ANSOKAN"), eq("ENSKILD"), eq("tillaggsansokan.pdf"), eq("Draken"));
 
@@ -965,13 +990,28 @@ class FinancialAssistanceServiceTest {
 
 	@Test
 	void archiveToActualisationWrapsUnreadableFileAs400() throws IOException {
+		applicantOwnsActualisation5012();
 		final var file = mock(MultipartFile.class);
 		when(file.getOriginalFilename()).thenReturn("tillaggsansokan.pdf");
 		when(file.getBytes()).thenThrow(new IOException("stream closed"));
 
-		assertThatThrownBy(() -> service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, 5012, file, null))
+		assertThatThrownBy(() -> service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, APPLICANT_PARTY_ID, 5012, file, null))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+
+		verify(actualisationServiceMock, never()).uploadAttachment(any(), any(), any(), any(), any(), any(), any());
+	}
+
+	@Test
+	void archiveToActualisationForeignActualisationYields404() {
+		applicantOwnsActualisation5012();
+		final var file = new MockMultipartFile("file", "x.pdf", "application/pdf", new byte[] {
+			1
+		});
+
+		assertThatThrownBy(() -> service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, APPLICANT_PARTY_ID, 9999, file, null))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
 		verify(actualisationServiceMock, never()).uploadAttachment(any(), any(), any(), any(), any(), any(), any());
 	}

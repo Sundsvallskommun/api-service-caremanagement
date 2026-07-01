@@ -44,7 +44,7 @@ class ProcessMessageResourceTest {
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(processServiceMock).correlateMessage(MUNICIPALITY_ID, "PaymentDecisionReceived", ERRAND_ID, Map.of("paymentDecision", "APPROVED"));
+		verify(processServiceMock).correlateMessage(MUNICIPALITY_ID, NAMESPACE, "PaymentDecisionReceived", ERRAND_ID, Map.of("paymentDecision", "APPROVED"));
 	}
 
 	@Test
@@ -58,6 +58,6 @@ class ProcessMessageResourceTest {
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(processServiceMock).correlateMessage(MUNICIPALITY_ID, "DocumentReady", ERRAND_ID, null);
+		verify(processServiceMock).correlateMessage(MUNICIPALITY_ID, NAMESPACE, "DocumentReady", ERRAND_ID, null);
 	}
 }

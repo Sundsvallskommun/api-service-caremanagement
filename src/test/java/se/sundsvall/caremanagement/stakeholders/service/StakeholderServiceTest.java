@@ -119,7 +119,7 @@ class StakeholderServiceTest {
 			.thenReturn(Optional.of(new ErrandEntity().withTypeSlug(TYPE_SLUG)));
 		when(roleRegistryMock.knownTypes()).thenReturn(Set.of(TYPE_SLUG));
 		when(roleRegistryMock.isValidRole(TYPE_SLUG, "APPLICANT")).thenReturn(true);
-		when(stakeholderRepositoryMock.findById(STAKEHOLDER_ID))
+		when(stakeholderRepositoryMock.findByErrandIdAndId(ERRAND_ID, STAKEHOLDER_ID))
 			.thenReturn(Optional.of(StakeholderEntity.create().withId(STAKEHOLDER_ID).withErrandId(ERRAND_ID)));
 
 		service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, STAKEHOLDER_ID,
@@ -152,7 +152,7 @@ class StakeholderServiceTest {
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
 			.thenReturn(Optional.of(new ErrandEntity()));
 		final var entity = StakeholderEntity.create().withId(STAKEHOLDER_ID).withErrandId(ERRAND_ID);
-		when(stakeholderRepositoryMock.findById(STAKEHOLDER_ID)).thenReturn(Optional.of(entity));
+		when(stakeholderRepositoryMock.findByErrandIdAndId(ERRAND_ID, STAKEHOLDER_ID)).thenReturn(Optional.of(entity));
 
 		service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, STAKEHOLDER_ID);
 
@@ -164,7 +164,7 @@ class StakeholderServiceTest {
 	void readReturnsStakeholderWithoutPublishing() {
 		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
 			.thenReturn(Optional.of(new ErrandEntity()));
-		when(stakeholderRepositoryMock.findById(STAKEHOLDER_ID))
+		when(stakeholderRepositoryMock.findByErrandIdAndId(ERRAND_ID, STAKEHOLDER_ID))
 			.thenReturn(Optional.of(StakeholderEntity.create().withId(STAKEHOLDER_ID).withErrandId(ERRAND_ID).withRole("APPLICANT")));
 
 		final var stakeholder = service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, STAKEHOLDER_ID);

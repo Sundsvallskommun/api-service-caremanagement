@@ -28,9 +28,9 @@ class AttachmentErrandDeletedListenerTest {
 
 	@Test
 	void deletesAllAttachmentsForErrandIncludingAttachmentData() {
-		// Each attachment carries its own attachment_data blob — deleting via the entity (not a bulk
-		// derived delete) is what lets JPA's cascade=ALL remove the child attachment_data rows too,
-		// so no longblob is orphaned on errand deletion.
+		// Each attachment carries its own attachment_data blob — deleteAll(entities) removes via the persistence
+		// context (not a bulk SQL delete), which is what lets JPA's cascade=ALL remove the child attachment_data rows
+		// too, so no longblob is orphaned on errand deletion.
 		final var first = AttachmentEntity.create()
 			.withId("a1")
 			.withErrandId("e1")
@@ -44,8 +44,7 @@ class AttachmentErrandDeletedListenerTest {
 		listener.on(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", FIXED_TIMESTAMP));
 
 		verify(repositoryMock).findByErrandId("e1");
-		verify(repositoryMock).delete(first);
-		verify(repositoryMock).delete(second);
+		verify(repositoryMock).deleteAll(List.of(first, second));
 		verifyNoMoreInteractions(repositoryMock);
 	}
 
@@ -56,6 +55,7 @@ class AttachmentErrandDeletedListenerTest {
 		listener.on(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", FIXED_TIMESTAMP));
 
 		verify(repositoryMock).findByErrandId("e1");
+		verify(repositoryMock).deleteAll(List.of());
 		verifyNoMoreInteractions(repositoryMock);
 	}
 }

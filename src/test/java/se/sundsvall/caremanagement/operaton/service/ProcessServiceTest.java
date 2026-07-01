@@ -13,6 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.operaton.integration.OperatonClient;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRequest;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
@@ -31,9 +32,13 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 class ProcessServiceTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
+	private static final String NAMESPACE = "my-namespace";
 
 	@Mock
 	private OperatonClient operatonClientMock;
+
+	@Mock
+	private ErrandService errandServiceMock;
 
 	@InjectMocks
 	private ProcessService service;
@@ -99,8 +104,9 @@ class ProcessServiceTest {
 
 	@Test
 	void correlateMessagePassesVariables() {
-		service.correlateMessage(MUNICIPALITY_ID, "msg-1", "biz-1", Map.of("k", "v"));
+		service.correlateMessage(MUNICIPALITY_ID, NAMESPACE, "msg-1", "biz-1", Map.of("k", "v"));
 
+		verify(errandServiceMock).assertExists(MUNICIPALITY_ID, NAMESPACE, "biz-1");
 		final ArgumentCaptor<CorrelationMessageRequest> captor = ArgumentCaptor.forClass(CorrelationMessageRequest.class);
 		verify(operatonClientMock).correlateMessage(eq(MUNICIPALITY_ID), captor.capture());
 		assertThat(captor.getValue().getMessageName()).isEqualTo("msg-1");
@@ -110,7 +116,7 @@ class ProcessServiceTest {
 
 	@Test
 	void correlateMessageNullVariablesDefaultsToEmptyMap() {
-		service.correlateMessage(MUNICIPALITY_ID, "msg", "biz", null);
+		service.correlateMessage(MUNICIPALITY_ID, NAMESPACE, "msg", "biz", null);
 
 		final ArgumentCaptor<CorrelationMessageRequest> captor = ArgumentCaptor.forClass(CorrelationMessageRequest.class);
 		verify(operatonClientMock).correlateMessage(eq(MUNICIPALITY_ID), captor.capture());

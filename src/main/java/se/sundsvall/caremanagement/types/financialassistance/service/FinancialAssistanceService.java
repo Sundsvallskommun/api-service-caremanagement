@@ -119,6 +119,8 @@ public class FinancialAssistanceService {
 	private static final String DEFAULT_ARCHIVE_DOCUMENT_TYPE = "ANSOKAN";
 	private static final String DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE = "ENSKILD";
 	private static final String DEFAULT_ARCHIVE_SENDER_NAME = "Draken";
+	private static final String DOCUMENT_NOT_FOUND_MESSAGE = "No Lifecare document '%s' found for the given applicant";
+	private static final String ACTUALISATION_NOT_FOUND_MESSAGE = "No Lifecare actualisation '%s' found for the given applicant";
 	private static final String VALUE_REVIEW_REQUIRED = "REVIEW_REQUIRED";
 	private static final String VALUE_OK = "OK";
 
@@ -760,11 +762,18 @@ public class FinancialAssistanceService {
 	}
 
 	/**
-	 * Read a single Lifecare document's content (the generated PDF) by its document id — the bytes are streamed straight
-	 * from Lifecare. caremanagement only forwards them.
+	 * Read a single Lifecare document's content (the generated PDF) — the bytes are streamed straight from Lifecare,
+	 * caremanagement only forwards them. Gated on ownership: the document id must belong to the given applicant (the same
+	 * partyId scope as {@link #listDocuments}), so a caller cannot read another applicant's document by guessing its
+	 * Lifecare-global id. A document id not in the applicant's list for the period yields 404 before any bytes are read.
 	 */
 	@Transactional(readOnly = true)
-	public byte[] readDocumentContent(final String documentId) {
+	public byte[] readDocumentContent(final String municipalityId, final String partyId, final String documentId, final LocalDate from, final LocalDate to) {
+		final var owned = listDocuments(municipalityId, partyId, from, to).stream()
+			.anyMatch(document -> documentId.equals(document.getId()));
+		if (!owned) {
+			throw Problem.valueOf(NOT_FOUND, DOCUMENT_NOT_FOUND_MESSAGE.formatted(documentId));
+		}
 		return lifecareCaseHistoryService.documentContent(documentId);
 	}
 
@@ -775,8 +784,19 @@ public class FinancialAssistanceService {
 	 * title defaults to the uploaded file name. When the request carries an {@code errandId}, the target actualisation id
 	 * is recorded on that errand as a {@code Decision(ACTUALISATION)} — setting the errand's Lifecare actualisation to the
 	 * one archived to.
+	 *
+	 * <p>
+	 * Gated on ownership: the actualisation id must belong to the given applicant (the same partyId scope as
+	 * {@link #listActualisations}), so a caller cannot bind a file to another applicant's actualisation by guessing its
+	 * (sequential) Lifecare-global id — a foreign id yields 404 before anything is uploaded.
 	 */
-	public void archiveToActualisation(final String municipalityId, final String namespace, final Integer actualisationId, final MultipartFile file, final ArchiveActualisationRequest request) {
+	public void archiveToActualisation(final String municipalityId, final String namespace, final String partyId, final Integer actualisationId, final MultipartFile file, final ArchiveActualisationRequest request) {
+		final var owned = listActualisations(municipalityId, partyId, null, null).stream()
+			.anyMatch(actualisation -> actualisationId.equals(actualisation.getId()));
+		if (!owned) {
+			throw Problem.valueOf(NOT_FOUND, ACTUALISATION_NOT_FOUND_MESSAGE.formatted(actualisationId));
+		}
+
 		final var meta = ofNullable(request).orElseGet(ArchiveActualisationRequest::create);
 		final var fileName = ofNullable(file.getOriginalFilename()).filter(StringUtils::hasText).orElse("dokument.pdf");
 		final var title = ofNullable(meta.getTitle()).filter(StringUtils::hasText).orElse(fileName);
