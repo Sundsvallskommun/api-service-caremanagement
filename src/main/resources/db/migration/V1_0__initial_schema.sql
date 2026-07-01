@@ -342,7 +342,7 @@ CREATE TABLE `errand_financial_assistance` (
   `housing_person_count` int(11) DEFAULT NULL,
   `last_daily_run_at` datetime(6) DEFAULT NULL,
   PRIMARY KEY (`errand_id`),
-  CONSTRAINT `fk_financial_assistance_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`)
+  CONSTRAINT `fk_financial_assistance_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `errand_financial_assistance_calculation_draft` (
   `errand_id` varchar(36) NOT NULL,

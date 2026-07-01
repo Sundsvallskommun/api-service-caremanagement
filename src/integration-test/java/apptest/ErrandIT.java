@@ -23,6 +23,7 @@ import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.document.integration.db.DocumentRepository;
 import se.sundsvall.caremanagement.notes.integration.db.NoteRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 
@@ -72,6 +73,9 @@ class ErrandIT extends AbstractAppTest {
 
 	@Autowired
 	private DocumentRepository documentRepository;
+
+	@Autowired
+	private FinancialAssistanceRepository financialAssistanceRepository;
 
 	@Test
 	void test01_createErrand() {
@@ -159,6 +163,7 @@ class ErrandIT extends AbstractAppTest {
 		assertThat(messageReadReceiptRepository.existsById(MESSAGE_READ_RECEIPT_ID)).isTrue();
 		assertThat(noteRepository.existsById(NOTE_ID)).isTrue();
 		assertThat(documentRepository.existsById(DOCUMENT_ID)).isTrue();
+		assertThat(financialAssistanceRepository.existsById(CASCADE_ERRAND_ID)).isTrue();
 
 		setupCall()
 			.withServicePath(PATH + "/" + CASCADE_ERRAND_ID)
@@ -175,5 +180,6 @@ class ErrandIT extends AbstractAppTest {
 		assertThat(messageReadReceiptRepository.existsById(MESSAGE_READ_RECEIPT_ID)).isFalse();
 		assertThat(noteRepository.existsById(NOTE_ID)).isFalse();
 		assertThat(documentRepository.existsById(DOCUMENT_ID)).isFalse();
+		assertThat(financialAssistanceRepository.existsById(CASCADE_ERRAND_ID)).isFalse();
 	}
 }
