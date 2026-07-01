@@ -27,7 +27,7 @@ import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 
 /**
- * Reads a person's Lifecare FC case history — normberäkningar, beslut and documents — for the handläggare-facing case
+ * Reads a person's Lifecare FC case history — calculations, decisions and documents — for the caseworker-facing case
  * view, and fetches a single document's content. Wraps {@link LifecareFcIntegration}, reducing the generated FC DTOs to
  * the display projections in {@code lifecare.service.model} so the generated types never leave the integration
  * boundary.
@@ -49,9 +49,9 @@ public class LifecareCaseHistoryService {
 	}
 
 	/**
-	 * List the normberäkningar registered on a person in the given period, newest-first as Lifecare returns them.
+	 * List the calculations registered on a person in the given period, newest-first as Lifecare returns them.
 	 *
-	 * @param  personId the person's personnummer (the calculation owner)
+	 * @param  personId the person's personal identity number (the calculation owner)
 	 * @param  fromDate the inclusive start of the listing period
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's calculations in the period (empty when none)
@@ -66,9 +66,9 @@ public class LifecareCaseHistoryService {
 	}
 
 	/**
-	 * List the beslut registered on a person in the given period, newest-first as Lifecare returns them.
+	 * List the decisions registered on a person in the given period, newest-first as Lifecare returns them.
 	 *
-	 * @param  personId the person's personnummer (the decision owner)
+	 * @param  personId the person's personal identity number (the decision owner)
 	 * @param  fromDate the inclusive start of the listing period
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's decisions in the period (empty when none)
@@ -86,7 +86,7 @@ public class LifecareCaseHistoryService {
 	 * List the documents registered on a person in the given period (metadata only), newest-first as Lifecare returns
 	 * them.
 	 *
-	 * @param  personId the person's personnummer (the document owner)
+	 * @param  personId the person's personal identity number (the document owner)
 	 * @param  fromDate the inclusive start of the listing period
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's documents in the period (empty when none)

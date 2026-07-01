@@ -34,7 +34,7 @@ public class Document {
 	@Schema(description = "Documented time (Lifecare 'Tid'); optional", example = "14:30")
 	private LocalTime documentTime;
 
-	@Schema(description = "Skrivskydd status — WORKING is an editable draft, LOCKED is an upprättad handling", allowableValues = {
+	@Schema(description = "Write-protection status — WORKING is an editable draft, LOCKED is a finalised record", allowableValues = {
 		"WORKING", "LOCKED"
 	}, example = "WORKING")
 	private String status;

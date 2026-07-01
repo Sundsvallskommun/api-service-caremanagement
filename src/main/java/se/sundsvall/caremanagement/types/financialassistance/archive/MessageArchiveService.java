@@ -100,7 +100,7 @@ public class MessageArchiveService {
 
 			final var actualisationId = resolveActualisationId(errand);
 			if (actualisationId.isEmpty()) {
-				LOG.warn("Skipping errand {} - no Lifecare actualisation id recorded, cannot upload the meddelandehistorik", errand.getErrandNumber());
+				LOG.warn("Skipping errand {} - no Lifecare actualisation id recorded, cannot upload the message history", errand.getErrandNumber());
 				return;
 			}
 
@@ -113,9 +113,9 @@ public class MessageArchiveService {
 
 			attachmentService.createMessageHistoryAttachment(errand.getMunicipalityId(), errand.getNamespace(), errand.getId(), fileName, pdf);
 
-			LOG.info("Archived meddelandehistorik for errand {} ({} message(s)) to Lifecare actualisation {}", errand.getErrandNumber(), thread.size(), actualisationId.get());
+			LOG.info("Archived message history for errand {} ({} message(s)) to Lifecare actualisation {}", errand.getErrandNumber(), thread.size(), actualisationId.get());
 		} catch (final Exception e) {
-			LOG.error("Failed to archive meddelandehistorik for errand {}: {}", errand.getErrandNumber(), e.getMessage(), e);
+			LOG.error("Failed to archive message history for errand {}: {}", errand.getErrandNumber(), e.getMessage(), e);
 		}
 	}
 
@@ -124,9 +124,9 @@ public class MessageArchiveService {
 		final var attachments = ThreadAttachments.flatten(thread);
 
 		final var sources = new ArrayList<SourceFile>();
-		sources.add(new SourceFile("meddelanden.pdf", PDF_MIME_TYPE, MeddelandehistorikPdfRenderer.renderMessages(errandNumber, thread, attachments)));
+		sources.add(new SourceFile("meddelanden.pdf", PDF_MIME_TYPE, MessageHistoryPdfRenderer.renderMessages(errandNumber, thread, attachments)));
 		attachments.forEach(attachment -> {
-			sources.add(new SourceFile("bilaga-%d-rubrik.pdf".formatted(attachment.number()), PDF_MIME_TYPE, MeddelandehistorikPdfRenderer.renderSeparator(attachment)));
+			sources.add(new SourceFile("bilaga-%d-rubrik.pdf".formatted(attachment.number()), PDF_MIME_TYPE, MessageHistoryPdfRenderer.renderSeparator(attachment)));
 			sources.add(new SourceFile(attachment.fileName(), attachment.mimeType(), attachment.content()));
 		});
 

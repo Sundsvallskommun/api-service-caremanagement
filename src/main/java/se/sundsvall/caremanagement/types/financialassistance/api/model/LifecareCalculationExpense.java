@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * A single expense row on a Lifecare normberäkning — used for both regular and special expenses — with the applied
+ * A single expense row on a Lifecare calculation — used for both regular and special expenses — with the applied
  * amount and the amount Lifecare approved.
  */
 @Schema(description = "An expense row on a Lifecare calculation.")

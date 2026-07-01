@@ -34,8 +34,9 @@ import static java.util.stream.Collectors.toSet;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Answers EB-routing questions about a person from Lifecare FC. Wraps {@link LifecareFcIntegration}, reading
- * actualisations, decision and calculationar over a lookback window ending at the reference date, and reduces them to
+ * Answers financial-assistance-routing questions about a person from Lifecare FC. Wraps {@link LifecareFcIntegration},
+ * reading
+ * actualisations, decision and calculations over a lookback window ending at the reference date, and reduces them to
  * a
  * domain {@link LifecareEbCaseSummary}. FC's date strings (from/to periods) and generated DTOs never leave this module.
  *
@@ -60,9 +61,10 @@ public class LifecareEbCaseService {
 	}
 
 	/**
-	 * Summarises the person's EB footprint in FC over the lookback window ending at {@code referenceDate}.
+	 * Summarises the person's financial assistance footprint in FC over the lookback window ending at
+	 * {@code referenceDate}.
 	 *
-	 * @param  personId      the person's personnummer
+	 * @param  personId      the person's personal identity number
 	 * @param  referenceDate the date the routing is evaluated against (bounds the lookback window)
 	 * @return               the distilled summary; never {@code null}
 	 */
@@ -103,7 +105,7 @@ public class LifecareEbCaseService {
 	 * integration's
 	 * {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
 	 *
-	 * @param  personId the person's personnummer
+	 * @param  personId the person's personal identity number
 	 * @return          {@code true} when either protection flag is set; {@code false} when neither is set or FC has no
 	 *                  record
 	 */
@@ -115,10 +117,11 @@ public class LifecareEbCaseService {
 
 	/**
 	 * The household roster from the person's most recent calculation over the lookback window, paired with the
-	 * co-applicant flagged on the most recent decision — the basis for an EB renewal pre-fill. Propagates the
+	 * co-applicant flagged on the most recent decision — the basis for a financial assistance renewal pre-fill. Propagates
+	 * the
 	 * integration's {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
 	 *
-	 * @param  personId      the applicant's personnummer
+	 * @param  personId      the applicant's personal identity number
 	 * @param  referenceDate the date the lookup is evaluated against (bounds the lookback window)
 	 * @return               the roster (applicant, co-applicant and the calculation members); members empty when none
 	 */
@@ -150,12 +153,13 @@ public class LifecareEbCaseService {
 
 	/**
 	 * The distinct FC income-type names on the person's most recent calculation strictly before
-	 * {@code applicationMonth} — the baseline for the EB "all last month's values present" completeness check. Empty when
+	 * {@code applicationMonth} — the baseline for the financial assistance "all last month's values present" completeness
+	 * check. Empty when
 	 * there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the caller
 	 * decides whether to treat the lookup as best-effort.
 	 *
-	 * @param  personId         the applicant's personnummer
-	 * @param  applicationMonth the month being applied for; only calculationar before it are considered
+	 * @param  personId         the applicant's personal identity number
+	 * @param  applicationMonth the month being applied for; only calculations before it are considered
 	 * @return                  the previous calculation's distinct income-type names, or empty
 	 */
 	public List<String> previousCalculationIncomeTypes(final String personId, final YearMonth applicationMonth) {
@@ -184,8 +188,8 @@ public class LifecareEbCaseService {
 	 * Empty when there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the
 	 * caller decides whether to treat the lookup as best-effort.
 	 *
-	 * @param  personId         the applicant's personnummer
-	 * @param  applicationMonth the month being applied for; only calculationar before it are considered
+	 * @param  personId         the applicant's personal identity number
+	 * @param  applicationMonth the month being applied for; only calculations before it are considered
 	 * @return                  the previous household (empty when none)
 	 */
 	public PreviousHousehold previousHousehold(final String personId, final YearMonth applicationMonth) {
@@ -220,15 +224,17 @@ public class LifecareEbCaseService {
 	}
 
 	/**
-	 * The approved amount per EB cost type on the person's most recent previous calculation — read from the regular
+	 * The approved amount per financial assistance cost type on the person's most recent previous calculation — read from
+	 * the regular
 	 * (UTGIFTER) expense array and mapped back from each FC type name via {@link ExpenseTypeMapper}. Empty when there is
-	 * no previous calculation. Feeds the expense regelträd's "godkänt belopp föregående månad" (best-effort: an FC name
-	 * with no EB cost type is skipped; the special-expense (LEVNADSKOSTNADER I ÖVRIGT) array is untyped in the FC spec
+	 * no previous calculation. Feeds the expense rule tree's "godkänt belopp föregående månad" (best-effort: an FC name
+	 * with no financial assistance cost type is skipped; the special-expense (LEVNADSKOSTNADER I ÖVRIGT) array is untyped
+	 * in the FC spec
 	 * and not read, so those types start without history).
 	 *
-	 * @param  personId         the applicant's personnummer
-	 * @param  applicationMonth the month being applied for; only calculationar before it are considered
-	 * @return                  approved amount keyed by EB cost type (empty when none)
+	 * @param  personId         the applicant's personal identity number
+	 * @param  applicationMonth the month being applied for; only calculations before it are considered
+	 * @return                  approved amount keyed by financial assistance cost type (empty when none)
 	 */
 	public Map<String, Double> previousExpenseAmounts(final String personId, final YearMonth applicationMonth) {
 		final var referenceDate = applicationMonth.atDay(1);
@@ -283,7 +289,9 @@ public class LifecareEbCaseService {
 		return flagged || hasText(decision.getCoApplicant());
 	}
 
-	/** The co-applicant's personnummer on a decision — a flagged participant, falling back to the scalar field. */
+	/**
+	 * The co-applicant's personal identity number on a decision — a flagged participant, falling back to the scalar field.
+	 */
 	private static Optional<String> coApplicantPersonId(final PersonBasedDecisionDTO decision) {
 		final var flagged = ofNullable(decision.getDecisionPersonDTOs()).orElseGet(List::of).stream()
 			.filter(person -> Boolean.TRUE.equals(person.getIsCoApplicant()))

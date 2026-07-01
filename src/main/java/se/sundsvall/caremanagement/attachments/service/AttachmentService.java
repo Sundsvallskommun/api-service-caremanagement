@@ -55,9 +55,9 @@ public class AttachmentService {
 	private static final String DOCUMENT_TYPE_ERRAND = "ERRAND";
 	private static final String DOCUMENT_TYPE_CASE_DATA = "CASE_DATA";
 	private static final String DOCUMENT_TYPE_MESSAGE_HISTORY = "MESSAGE_HISTORY";
-	/** Extension forced on the case-data (ärendeuppgifter) attachment, whose file is renamed to {errandNumber}.pdf. */
+	/** Extension forced on the case-data attachment, whose file is renamed to {errandNumber}.pdf. */
 	private static final String CASE_DATA_FILE_EXTENSION = ".pdf";
-	private static final String MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE = "A message-history (meddelandehistorik) attachment already exists on errand '%s' in namespace '%s' for municipality id '%s'";
+	private static final String MESSAGE_HISTORY_ALREADY_EXISTS_MESSAGE = "A message-history attachment already exists on errand '%s' in namespace '%s' for municipality id '%s'";
 	/** Sender-role facet — the application files and the consolidated client PDF are the applicant's. */
 	private static final String SENDER_CLIENT = Direction.INBOUND.role();
 
@@ -76,7 +76,7 @@ public class AttachmentService {
 		final var errand = getErrand(municipalityId, namespace, errandId);
 		final var resolvedDocumentType = ofNullable(documentType).orElse(DOCUMENT_TYPE_ERRAND);
 
-		// A case-data (ärendeuppgifter) attachment is unique per errand and is renamed to {errandNumber}.pdf. Lock the
+		// A case-data attachment is unique per errand and is renamed to {errandNumber}.pdf. Lock the
 		// errand row first so two concurrent CASE_DATA uploads serialize instead of both passing the existence check.
 		if (DOCUMENT_TYPE_CASE_DATA.equals(resolvedDocumentType)) {
 			lockErrand(municipalityId, namespace, errandId);
@@ -94,16 +94,16 @@ public class AttachmentService {
 	}
 
 	/**
-	 * Store the case-data (ärendeuppgifter) snapshot for the errand — a convenience over {@link #createAttachment} that
+	 * Store the case-data snapshot for the errand — a convenience over {@link #createAttachment} that
 	 * pins documentType {@code CASE_DATA}, so the file is renamed to {@code {errandNumber}.pdf} and the one-per-errand rule
-	 * applies. Used by the EB create bundle so the whole errand is created in a single call.
+	 * applies. Used by the financial assistance create bundle so the whole errand is created in a single call.
 	 */
 	public String createCaseDataAttachment(final String municipalityId, final String namespace, final String errandId, final MultipartFile file) {
 		return createAttachment(municipalityId, namespace, errandId, DOCUMENT_TYPE_CASE_DATA, file);
 	}
 
 	/**
-	 * Whether the errand already carries its message-history (meddelandehistorik) archive. Used by the archiving job as
+	 * Whether the errand already carries its message-history archive. Used by the archiving job as
 	 * its idempotency guard — an errand whose conversation has already been archived is skipped.
 	 */
 	@Transactional(readOnly = true)
@@ -112,7 +112,7 @@ public class AttachmentService {
 	}
 
 	/**
-	 * Store the platform-generated message-history (meddelandehistorik) PDF for the errand as a {@code MESSAGE_HISTORY}
+	 * Store the platform-generated message-history PDF for the errand as a {@code MESSAGE_HISTORY}
 	 * attachment under the given file name. Unique per errand — a second one is rejected — so the row doubles as the
 	 * archived-marker for the archiving job.
 	 *

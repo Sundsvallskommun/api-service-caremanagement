@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A Lifecare beslut with the full breakdown — the decision metadata and the persons it covers — the read model the
+ * A Lifecare decision with the full breakdown — the decision metadata and the persons it covers — the read model the
  * frontend renders so a caseworker can review a registered decision.
  */
-@Schema(description = "A Lifecare beslut, full breakdown.")
+@Schema(description = "A Lifecare decision, full breakdown.")
 public class LifecareDecision {
 
 	@Schema(description = "The Lifecare decision id", examples = "9900")

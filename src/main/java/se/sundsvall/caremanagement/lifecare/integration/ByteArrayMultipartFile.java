@@ -12,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import static java.util.Optional.ofNullable;
 
 /**
- * In-memory {@link MultipartFile} over a {@code byte[]} — lets platform-generated content (e.g. the meddelandehistorik
+ * In-memory {@link MultipartFile} over a {@code byte[]} — lets platform-generated content (e.g. the message history
  * PDF) be sent as the {@code Content} file part of a multipart Feign call without ever touching disk or the
  * (test-scope)
  * {@code MockMultipartFile}. Read-only: the backing bytes are never mutated.

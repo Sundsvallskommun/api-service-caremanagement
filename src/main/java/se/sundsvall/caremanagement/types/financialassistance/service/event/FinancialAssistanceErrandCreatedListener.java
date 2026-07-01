@@ -11,25 +11,29 @@ import se.sundsvall.caremanagement.types.financialassistance.service.DefaultAssi
 import se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceErrandCreatedProcessor.Outcome;
 
 /**
- * Reacts to a created EB errand. Runs once the create transaction has committed
+ * Reacts to a created financial assistance errand. Runs once the create transaction has committed
  * ({@link ApplicationModuleListener} = after-commit, async, new transaction) so the errand and its typed data are
  * persisted and visible both to the re-read below and to any Operaton workers that call back the moment the flow
  * starts.
  *
  * <p>
- * Every EB errand (one carrying typed FA data) that arrived without an assignee is first routed to the default
- * handläggare resolved from {@link DefaultAssigneeService} — the same handläggar-less fallback the Lifecare
+ * Every financial assistance errand (one carrying typed FA data) that arrived without an assignee is first routed to
+ * the default
+ * caseworker resolved from {@link DefaultAssigneeService} — the same caseworker-less fallback the Lifecare
  * {@code CaseworkerResolver} can't place.
  *
  * <p>
- * Then the recently-closed guard runs: if the applicant (or co-applicant) had an EB errand closed within the
- * recently-closed window, this re-application is <em>frozen</em> as {@code NEEDS_MANUAL_REVIEW} — no aktualisering (the
+ * Then the recently-closed guard runs: if the applicant (or co-applicant) had a financial assistance errand closed
+ * within the
+ * recently-closed window, this re-application is <em>frozen</em> as {@code NEEDS_MANUAL_REVIEW} — no actualisation (the
  * process is not started), and being non-CLOSED it is never picked up by the archive job — so a caseworker reopens the
- * previous insats in Lifecare and releases it (see {@link FinancialAssistanceReleaseListener}). Otherwise the normal
+ * previous intervention in Lifecare and releases it (see {@link FinancialAssistanceReleaseListener}). Otherwise the
+ * normal
  * path applies: a renewal starts the full decision-support process, a supplementary application starts the lighter
- * tilläggsansökan process (whose actualisation step attaches the previous återansökan's Lifecare caseworker), and a new
- * application starts the nyansökan process (status + actualisation, then a normberäkning built straight from the
- * application); having no prior insats, a new application keeps the default assignee.
+ * supplementary-application process (whose actualisation step attaches the previous renewal application's Lifecare
+ * caseworker), and a new
+ * application starts the new-application process (status + actualisation, then a calculation built straight from the
+ * application); having no prior intervention, a new application keeps the default assignee.
  *
  * <p>
  * The classification step writes the {@code errand} row and so races {@link ApplicantNameSyncListener}, which updates
@@ -56,7 +60,8 @@ class FinancialAssistanceErrandCreatedListener {
 	@ApplicationModuleListener
 	void on(final ErrandCreated event) {
 		// The classification writes the errand row and can lose a snapshot-isolation race with the applicant-name sync,
-		// so retry it in a fresh transaction until it lands. Only then, and only for a normal EB errand, start the process.
+		// so retry it in a fresh transaction until it lands. Only then, and only for a normal financial assistance errand,
+		// start the process.
 		if (assignAndClassifyWithRetry(event) == Outcome.PROCEED) {
 			processor.startProcess(event);
 		}

@@ -5,9 +5,9 @@ import java.util.Objects;
 
 /**
  * One allowed decision outcome (decision alternatives) for an errand type — the options a caseworker may pick from when
- * recording a {@code Decision} on the case. {@code carriesAmount} tells the frontend whether the option expects a
- * belopp
- * (e.g. a granted amount) or implies a zero amount (e.g. a rejection), so the Beslut form can react.
+ * recording a {@code Decision} on the case. {@code carriesAmount} tells the frontend whether the option expects an
+ * amount
+ * (e.g. a granted amount) or implies a zero amount (e.g. a rejection), so the Decision form can react.
  */
 @Schema(description = "An allowed decision outcome (decision alternatives) for an errand type.")
 public class DecisionOption {
@@ -18,7 +18,7 @@ public class DecisionOption {
 	@Schema(description = "Human-readable label for the outcome", examples = "Bifall")
 	private String displayName;
 
-	@Schema(description = "Whether the outcome carries a belopp — true for outcomes that grant an amount, false for ones that imply 0 (e.g. avslag)", examples = "true")
+	@Schema(description = "Whether the outcome carries an amount — true for outcomes that grant an amount, false for ones that imply 0 (e.g. a rejection)", examples = "true")
 	private boolean carriesAmount;
 
 	public static DecisionOption create() {

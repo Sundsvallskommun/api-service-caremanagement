@@ -5,10 +5,11 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 
 /**
- * An EB income warning on an errand — an acknowledgeable object the caseworker reviews in Draken. Produced and
+ * A financial assistance income warning on an errand — an acknowledgeable object the caseworker reviews in Draken.
+ * Produced and
  * reconciled by the daily prepare step; a caseworker can acknowledge or close it.
  */
-@Schema(description = "An EB income warning the caseworker can acknowledge or close.")
+@Schema(description = "A financial assistance income warning the caseworker can acknowledge or close.")
 public class Warning {
 
 	@Schema(description = "The warning id", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", accessMode = Schema.AccessMode.READ_ONLY)

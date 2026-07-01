@@ -23,6 +23,6 @@ public interface AttachmentRepository extends JpaRepository<AttachmentEntity, St
 	 */
 	Optional<AttachmentEntity> findFirstByErrandIdAndFileNameAndDocumentType(String errandId, String fileName, String documentType);
 
-	/** Guards the at-most-one-per-errand rule for the case-data (ärendeuppgifter) attachment. */
+	/** Guards the at-most-one-per-errand rule for the case-data attachment. */
 	boolean existsByErrandIdAndDocumentType(String errandId, String documentType);
 }

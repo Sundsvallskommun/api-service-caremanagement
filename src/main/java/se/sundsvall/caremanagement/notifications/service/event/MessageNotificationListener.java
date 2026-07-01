@@ -15,7 +15,7 @@ import se.sundsvall.caremanagement.notifications.service.NotificationService;
  * Raises a notification whenever the applicant posts an INBOUND message on an errand. The notification is content-free
  * —
  * it only signals that a new message exists; the body stays in the in-app conversation thread. The recipient
- * ({@code ownerId}) is the errand's assigned caseworker (handläggare) when there is one; if the errand is still
+ * ({@code ownerId}) is the errand's assigned caseworker when there is one; if the errand is still
  * unassigned the notification is raised ownerless ({@code ownerId == null}), so the errand still shows up in the
  * owner-agnostic unread-notification filter and is claimed by whoever picks it up (see
  * {@link ErrandAssignmentNotificationListener}). A missing errand raises nothing. Runs asynchronously in its own

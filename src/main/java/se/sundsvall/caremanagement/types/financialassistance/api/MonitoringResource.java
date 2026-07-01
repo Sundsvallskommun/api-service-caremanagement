@@ -42,7 +42,7 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/monitorings")
 @Tag(name = "Financial Assistance · Monitorings",
-	description = "Financial assistance (EB) monitorings — date-bound watch/reminder objects on an errand, with full CRUD. Unlike the income warnings they carry no acknowledge lifecycle.")
+	description = "Financial assistance monitorings — date-bound watch/reminder objects on an errand, with full CRUD. Unlike the income warnings they carry no acknowledge lifecycle.")
 class MonitoringResource {
 
 	private final MonitoringService service;

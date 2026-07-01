@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * A single household member on a Lifecare normberäkning — the amount the member contributes to the norm and any
+ * A single household member on a Lifecare calculation — the amount the member contributes to the norm and any
  * deviation period Lifecare applied.
  */
 @Schema(description = "A household member on a Lifecare calculation.")

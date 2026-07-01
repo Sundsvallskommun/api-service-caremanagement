@@ -20,16 +20,19 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
- * Starts an EB process on an errand and seeds the household start variables the BPMN/DMN flow reads. The renewal intake
+ * Starts a financial assistance process on an errand and seeds the household start variables the BPMN/DMN flow reads.
+ * The renewal intake
  * ({@link FinancialAssistanceErrandCreatedListener}) and the manual-review release
  * ({@link FinancialAssistanceReleaseListener}) start the full decision-support process
- * ({@code rakel-ekonomiskt-bistand}); the supplementary intake starts the lighter tilläggsansökan process
- * ({@code rakel-ekonomiskt-bistand-tillaggsansokan}) and the new-application intake the nyansökan process
+ * ({@code rakel-ekonomiskt-bistand}); the supplementary intake starts the lighter supplementary-application process
+ * ({@code rakel-ekonomiskt-bistand-tillaggsansokan}) and the new-application intake the new-application process
  * ({@code rakel-ekonomiskt-bistand-nyansokan}) — both reuse the same first steps (status + actualisation) without
- * SSBTEK/normberäkning, the nyansökan additionally building a normberäkning straight from what the citizen declared. In
- * each case the actualisation step resolves the handläggare off the applicant's most recent Lifecare insats (for a
- * tilläggsansökan: the ongoing återansökan's caseworker), so the errand ends up on that caseworker rather than the
- * default assignee (a nyansökan has no prior insats and keeps the default assignee).
+ * SSBTEK/calculation, the new application additionally building a calculation straight from what the citizen declared.
+ * In
+ * each case the actualisation step resolves the caseworker off the applicant's most recent Lifecare intervention (for a
+ * supplementary application: the ongoing renewal application's caseworker), so the errand ends up on that caseworker
+ * rather than the
+ * default assignee (a new application has no prior intervention and keeps the default assignee).
  *
  * <p>
  * The process is started with {@code businessKey = errandId} and seeded with the municipalityId and namespace, the
@@ -43,14 +46,20 @@ class FinancialAssistanceProcessStarter {
 
 	private static final Logger LOG = LoggerFactory.getLogger(FinancialAssistanceProcessStarter.class);
 
-	/** The EB decision-support BPMN process (renewal), deployed to Operaton via the modeler. businessKey = errandId. */
+	/**
+	 * The financial assistance decision-support BPMN process (renewal), deployed to Operaton via the modeler. businessKey =
+	 * errandId.
+	 */
 	static final String PROCESS_DEFINITION_NAME = "rakel-ekonomiskt-bistand";
 
-	/** The EB tilläggsansökan BPMN process — status + actualisation only, no SSBTEK/normberäkning. */
+	/**
+	 * The financial assistance supplementary-application BPMN process — status + actualisation only, no SSBTEK/calculation.
+	 */
 	static final String PROCESS_DEFINITION_NAME_SUPPLEMENTARY = "rakel-ekonomiskt-bistand-tillaggsansokan";
 
 	/**
-	 * The EB nyansökan BPMN process — status + actualisation, then a normberäkning built from the application (no
+	 * The financial assistance new-application BPMN process — status + actualisation, then a calculation built from the
+	 * application (no
 	 * SSBTEK/daily loop).
 	 */
 	static final String PROCESS_DEFINITION_NAME_NEW = "rakel-ekonomiskt-bistand-nyansokan";
@@ -78,17 +87,25 @@ class FinancialAssistanceProcessStarter {
 		this.citizenService = citizenService;
 	}
 
-	/** Start the EB decision-support process (renewal) on {@code errandId} and link the instance back. Best-effort. */
+	/**
+	 * Start the financial assistance decision-support process (renewal) on {@code errandId} and link the instance back.
+	 * Best-effort.
+	 */
 	void start(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity entity) {
 		start(PROCESS_DEFINITION_NAME, municipalityId, namespace, errandId, entity);
 	}
 
-	/** Start the EB tilläggsansökan process on {@code errandId} and link the instance back. Best-effort. */
+	/**
+	 * Start the financial assistance supplementary-application process on {@code errandId} and link the instance back.
+	 * Best-effort.
+	 */
 	void startSupplementary(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity entity) {
 		start(PROCESS_DEFINITION_NAME_SUPPLEMENTARY, municipalityId, namespace, errandId, entity);
 	}
 
-	/** Start the EB nyansökan process on {@code errandId} and link the instance back. Best-effort. */
+	/**
+	 * Start the financial assistance new-application process on {@code errandId} and link the instance back. Best-effort.
+	 */
 	void startNew(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity entity) {
 		start(PROCESS_DEFINITION_NAME_NEW, municipalityId, namespace, errandId, entity);
 	}

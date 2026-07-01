@@ -20,15 +20,18 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_CLOSED;
 
 /**
- * Detects whether any of a set of parties has a <em>recently closed</em> EB errand — an errand of an EB type whose
+ * Detects whether any of a set of parties has a <em>recently closed</em> financial assistance errand — an errand of a
+ * financial assistance type whose
  * current status is {@code CLOSED} and which was last touched within the configured window. The {@code touched}
- * timestamp is used as the close time, the same heuristic the EB message-archive job uses for "closed since" (a closed
+ * timestamp is used as the close time, the same heuristic the financial assistance message-archive job uses for "closed
+ * since" (a closed
  * errand is normally not touched again after closing). Shared by the common-entry-point eligibility routing (which
  * recommends a renewal and surfaces the closed errand for reopening) and by the errand-created freeze (which halts
  * auto-actualisation and forces manual review).
  *
  * <p>
- * The reopen itself is a human action in Lifecare (the caseworker opens the insats); caremanagement only flags the
+ * The reopen itself is a human action in Lifecare (the caseworker opens the intervention); caremanagement only flags
+ * the
  * situation. The window is a policy value — confirm the day count with legal — configured via
  * {@code financial-assistance.eligibility.recently-closed-window-days}.
  */
@@ -36,7 +39,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 @Transactional(readOnly = true)
 public class RecentlyClosedErrandService {
 
-	/** A recently closed EB errand: its id and when it was closed. */
+	/** A recently closed financial assistance errand: its id and when it was closed. */
 	public record RecentlyClosed(String errandId, OffsetDateTime closedAt) {
 	}
 
@@ -53,7 +56,8 @@ public class RecentlyClosedErrandService {
 	}
 
 	/**
-	 * The most recently closed EB errand for any of the given parties whose close happened within the window, if any.
+	 * The most recently closed financial assistance errand for any of the given parties whose close happened within the
+	 * window, if any.
 	 * Parties are partyIds (applicant + optional co-applicant); blank entries are ignored.
 	 */
 	public Optional<RecentlyClosed> findRecentlyClosed(final String municipalityId, final String namespace, final Collection<String> partyIds) {

@@ -95,7 +95,7 @@ class DocumentResource {
 	}
 
 	@PostMapping(path = "/{documentId}/lock", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Lock a document (skrivskydd) — it becomes an immutable upprättad handling")
+	@Operation(summary = "Lock a document (write-protection) — it becomes an immutable finalised record")
 	ResponseEntity<Document> lock(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,

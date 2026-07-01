@@ -32,10 +32,10 @@ public class Decision {
 	@Schema(description = "Optional human-readable description or motivation for the decision", examples = "Decision proposal per ruleset: 7900 kr, no warning")
 	private String description;
 
-	@Schema(description = "Optional decision amount, in SEK. For a financial-assistance beslut this is the granted belopp (0 for a rejection); for a recommendation it is the recommended amount when the pipeline has computed one.", examples = "7900.00")
+	@Schema(description = "Optional decision amount, in SEK. For a financial-assistance decision this is the granted amount (0 for a rejection); for a recommendation it is the recommended amount when the pipeline has computed one.", examples = "7900.00")
 	private BigDecimal amount;
 
-	@Schema(description = "Optional decision message (beslutsmeddelande) communicated to the applicant — the free-text justification shown on the decision letter, kept separate from the internal `description`.",
+	@Schema(description = "Optional decision message communicated to the applicant — the free-text justification shown on the decision letter, kept separate from the internal `description`.",
 		examples = "Du beviljas financial assistance för juni 2026 enligt riksnorm.")
 	private String decisionMessage;
 
@@ -43,7 +43,7 @@ public class Decision {
 	@DateTimeFormat(iso = DATE)
 	private LocalDate decisionDate;
 
-	@Schema(description = "Optional start of the period the decision covers (the month applied for, for a financial-assistance beslut).", examples = "2026-06-01")
+	@Schema(description = "Optional start of the period the decision covers (the month applied for, for a financial-assistance decision).", examples = "2026-06-01")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate periodFrom;
 

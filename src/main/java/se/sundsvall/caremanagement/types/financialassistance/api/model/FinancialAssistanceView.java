@@ -52,7 +52,7 @@ public class FinancialAssistanceView {
 	@Schema(description = "Touched", accessMode = READ_ONLY)
 	private OffsetDateTime touched;
 
-	@Schema(description = "When the EB process last ran its daily loop for this errand (the calculation /prepare step). Null until the first loop has run.", accessMode = READ_ONLY)
+	@Schema(description = "When the financial assistance process last ran its daily loop for this errand (the calculation /prepare step). Null until the first loop has run.", accessMode = READ_ONLY)
 	private OffsetDateTime lastDailyRunAt;
 
 	@Schema(description = "The typed financial assistance application payload")
@@ -64,7 +64,7 @@ public class FinancialAssistanceView {
 	private Decision recommendation;
 
 	@Schema(
-		description = "The caseworker approval state of the three EB view sections (calculation, payment, decision) — whether each has been verified as approved. Always present with all three sections.",
+		description = "The caseworker approval state of the three financial assistance view sections (calculation, payment, decision) — whether each has been verified as approved. Always present with all three sections.",
 		accessMode = READ_ONLY)
 	private SectionApprovals sectionApprovals;
 

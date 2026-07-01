@@ -34,8 +34,10 @@ import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 import static se.sundsvall.caremanagement.lifecare.integration.configuration.LifecareFcConfiguration.CLIENT_ID;
 
 /**
- * Feign contract for the EB subset of the Tieto/Lifecare FamilyCare (FC) API: the person-based case-data reads
- * (person, contacts, and the date-ranged lists that make up the EB lifecycle — actualisations, calculationar,
+ * Feign contract for the financial assistance subset of the Tieto/Lifecare FamilyCare (FC) API: the person-based
+ * case-data reads
+ * (person, contacts, and the date-ranged lists that make up the financial assistance lifecycle — actualisations,
+ * calculations,
  * decision, payments, investigations, services, executions, resource allocations), the write-back (create
  * actualisation + calculation), and the two proposal lookups that supply the code lists those POST bodies reference.
  * The mandatory {@code domain} + {@code key} auth (and the {@code X-API-Key} header) are added globally by
@@ -52,7 +54,7 @@ public interface LifecareFcClient {
 	/**
 	 * Read the FC master data for a person.
 	 *
-	 * @param  personId the full personnummer
+	 * @param  personId the full personal identity number
 	 * @return          the person's FC master data
 	 */
 	@GetMapping(path = "/apifc/v1/Persons", produces = APPLICATION_JSON_VALUE)
@@ -62,7 +64,7 @@ public interface LifecareFcClient {
 	/**
 	 * List the contacts registered on a person.
 	 *
-	 * @param  personId the full personnummer
+	 * @param  personId the full personal identity number
 	 * @return          the person's contacts
 	 */
 	@GetMapping(path = "/apifc/v1/Contacts", produces = APPLICATION_JSON_VALUE)
@@ -82,7 +84,7 @@ public interface LifecareFcClient {
 		@RequestParam(value = "ascending", required = false) final Boolean ascending);
 
 	/**
-	 * List the calculationar registered on a person in the given period.
+	 * List the calculations registered on a person in the given period.
 	 */
 	@GetMapping(path = "/apifc/v1/Calculations", produces = APPLICATION_JSON_VALUE)
 	ApiPaginationCompositePersonBasedCalculationDTO getCalculations(
@@ -212,7 +214,7 @@ public interface LifecareFcClient {
 	 * Fetch the proposal (valid code lists: types, reasons, fromWho, organisations, working status, investigation/service
 	 * types, attachment types) needed to build a {@link PostAktualiseringsBodyRequest} for the given person.
 	 *
-	 * @param  personId the full personnummer the actualisation concerns
+	 * @param  personId the full personal identity number the actualisation concerns
 	 * @return          the actualisation proposal lookups
 	 */
 	@GetMapping(path = "/apifc/v1/Actualisations/Proposals", produces = APPLICATION_JSON_VALUE)
@@ -233,7 +235,7 @@ public interface LifecareFcClient {
 	 * Fetch the proposal (norms, household members, income/expense/special-expense types, linkable
 	 * investigations/services/actualisations) needed to build a {@link PostCalculationBodyRequest} for the given person.
 	 *
-	 * @param  personId the full personnummer the calculation concerns
+	 * @param  personId the full personal identity number the calculation concerns
 	 * @return          the calculation proposal lookups
 	 */
 	@GetMapping(path = "/apifc/v1/Calculations/Proposals", produces = APPLICATION_JSON_VALUE)

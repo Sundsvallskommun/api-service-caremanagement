@@ -14,15 +14,18 @@ import static java.util.stream.Collectors.joining;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_APPLICANT;
 
 /**
- * Keeps the errand envelope's denormalized {@code applicantName} in sync with the EB applicant. The errand envelope has
+ * Keeps the errand envelope's denormalized {@code applicantName} in sync with the financial assistance applicant. The
+ * errand envelope has
  * no JPA relation to stakeholders (separate module/table), so the errand list can't otherwise be sorted or searched by
  * applicant — this listener maintains a sortable read-model copy on the envelope.
  *
  * <p>
  * Runs asynchronously after the stakeholder write commits ({@code @ApplicationModuleListener}, durably staged in the
  * Spring Modulith outbox). It recomputes the name from the errand's current {@code APPLICANT} stakeholder and writes it
- * via a targeted update that does <b>not</b> bump {@code touched}. Since only the EB type contributes an
- * {@code APPLICANT} role, non-EB errands resolve to no applicant and are left untouched (null stays null). Errands that
+ * via a targeted update that does <b>not</b> bump {@code touched}. Since only the financial assistance type contributes
+ * an
+ * {@code APPLICANT} role, non-financial-assistance errands resolve to no applicant and are left untouched (null stays
+ * null). Errands that
  * have vanished by the time the event is handled (e.g. deleted) are skipped, so a delete never gets stuck retrying.
  */
 @Component

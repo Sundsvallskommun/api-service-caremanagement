@@ -104,7 +104,7 @@ public class DocumentService {
 		repository.delete(requireWorking(findForUpdate(errandId, documentId), "deleted"));
 	}
 
-	/** Lock the document (skrivskydd) — it becomes an immutable upprättad handling. Already-locked documents 409. */
+	/** Lock the document (write-protection) — it becomes an immutable finalised record. Already-locked documents 409. */
 	public Document lock(final String municipalityId, final String namespace, final String errandId, final String documentId, final LockDocument request) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 

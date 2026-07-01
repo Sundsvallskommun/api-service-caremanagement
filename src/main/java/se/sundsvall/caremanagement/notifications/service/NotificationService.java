@@ -79,7 +79,7 @@ public class NotificationService {
 	}
 
 	/**
-	 * Claims every ownerless notification on the errand for {@code ownerId} — used when a handläggare is assigned, so the
+	 * Claims every ownerless notification on the errand for {@code ownerId} — used when a caseworker is assigned, so the
 	 * messages that arrived while the errand was unassigned land in the new owner's unread list. Acknowledgement state is
 	 * left untouched (the rows stay unread). A blank {@code ownerId} is a no-op.
 	 */

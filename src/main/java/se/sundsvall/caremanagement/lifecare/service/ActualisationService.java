@@ -43,12 +43,12 @@ public class ActualisationService {
 	}
 
 	/**
-	 * Build and post the actualisation for the applicant and intake date. The handläggare is resolved off the applicant's
+	 * Build and post the actualisation for the applicant and intake date. The caseworker is resolved off the applicant's
 	 * most recent Lifecare Service and, when found, set as the actualisation {@code CaseworkerId}; the same user's network
 	 * id is returned so the caller can assign the careM errand. Caseworker resolution is best-effort — a lookup failure is
 	 * logged and the intake is still created without a caseworker.
 	 *
-	 * @param  applicantPersonId the applicant's personnummer (the FC actualisation owner)
+	 * @param  applicantPersonId the applicant's personal identity number (the FC actualisation owner)
 	 * @param  date              the intake date
 	 * @return                   the created actualisation id and the resolved errand assignee (assignee {@code null} when
 	 *                           no caseworker was resolved)
@@ -76,10 +76,11 @@ public class ActualisationService {
 
 	/**
 	 * List the actualisations (case intakes) registered on a person in the given period, mapped to the privacy-safe
-	 * {@link ActualisationSummary} projection (the personnummer is dropped). The dates bound the Lifecare query and are
+	 * {@link ActualisationSummary} projection (the personal identity number is dropped). The dates bound the Lifecare query
+	 * and are
 	 * formatted as ISO local dates. An empty/absent FC page maps to an empty list.
 	 *
-	 * @param  personId the person's personnummer (the actualisation owner)
+	 * @param  personId the person's personal identity number (the actualisation owner)
 	 * @param  fromDate the inclusive start of the listing period
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's actualisations in the period (newest-first as Lifecare returns them)
@@ -93,7 +94,10 @@ public class ActualisationService {
 			.toList();
 	}
 
-	/** Project the generated FC DTO onto the privacy-safe summary — deliberately omitting the personId (personnummer). */
+	/**
+	 * Project the generated FC DTO onto the privacy-safe summary — deliberately omitting the personId (personal identity
+	 * number).
+	 */
 	private static ActualisationSummary toSummary(final PersonBasedAktualiseringDTO dto) {
 		return new ActualisationSummary(dto.getId(), dto.getType(), dto.getName(), dto.getDate(), dto.getReason(), dto.getRegards(),
 			dto.getFromWho(), dto.getCaseworker(), dto.getOrganization(), dto.getStatus(), dto.getInvestigationId(), dto.getServiceId(), dto.getDecisionId());

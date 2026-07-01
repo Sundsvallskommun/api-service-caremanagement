@@ -66,7 +66,7 @@ class AttachmentResource {
 	@Operation(summary = "Create attachment",
 		description = """
 			Uploads a new attachment for the errand. The optional documentType tags what the file is: ERRAND (a plain \
-			manual upload, the default), CASE_DATA (ärendeuppgifter — a case-data document) or DECISION (beslut — a \
+			manual upload, the default), CASE_DATA (a case-data document) or DECISION (a \
 			decision document). A CASE_DATA attachment is renamed to {errandNumber}.pdf and only one is allowed per \
 			errand — uploading a second returns 400.""",
 		responses = {
@@ -79,7 +79,7 @@ class AttachmentResource {
 		@Parameter(name = "documentType",
 			description = """
 				What the uploaded file is: ERRAND (a plain manual upload, the default), CASE_DATA \
-				(ärendeuppgifter — a case-data document) or DECISION (beslut — a decision document). Defaults to ERRAND \
+				(a case-data document) or DECISION (a decision document). Defaults to ERRAND \
 				when omitted.""",
 			schema = @Schema(allowableValues = {
 				"ERRAND", "CASE_DATA", "DECISION"

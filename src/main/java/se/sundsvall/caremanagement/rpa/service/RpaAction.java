@@ -3,7 +3,8 @@ package se.sundsvall.caremanagement.rpa.service;
 import java.util.Set;
 
 /**
- * The EB RPA actions a robot can be asked to perform. They all ride on the one EB queue (see
+ * The financial assistance RPA actions a robot can be asked to perform. They all ride on the one financial assistance
+ * queue (see
  * {@code integration.rpa.queue}); the action string is the {@code action} key in the queue item's
  * {@code SpecificContent}, telling the robot which Lifecare GUI flow to run.
  *
@@ -16,16 +17,16 @@ public final class RpaAction {
 
 	private RpaAction() {}
 
-	/** Fetch bevakningar / journal / dokument from Lifecare and feed them back into the errand. */
+	/** Fetch watches/reminders / journal / documents from Lifecare and feed them back into the errand. */
 	public static final String FETCH_SUPPLEMENTS = "FETCH_SUPPLEMENTS";
 
-	/** Write the committed normberäkning into Lifecare. */
+	/** Write the committed calculation into Lifecare. */
 	public static final String WRITE_NORMBERAKNING = "WRITE_NORMBERAKNING";
 
-	/** Write the beslut into Lifecare. */
+	/** Write the decision into Lifecare. */
 	public static final String WRITE_DECISION = "WRITE_DECISION";
 
-	/** Write a journalanteckning into Lifecare. */
+	/** Write a journal entry into Lifecare. */
 	public static final String WRITE_JOURNAL = "WRITE_JOURNAL";
 
 	/** Write a dokument into Lifecare. */

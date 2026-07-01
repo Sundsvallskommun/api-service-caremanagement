@@ -29,7 +29,7 @@ import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.A
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;
 
 /**
- * Maps incomes already classified by the operaton regelverk to FC calculation income rows. The raw list decision is
+ * Maps incomes already classified by the operaton rules to FC calculation income rows. The raw list decision is
  * done — each income carries its target calculation category; this mapper only resolves that category to the numeric
  * FC type id offered by the calculation proposal and merges incomes of the same type into one row (applicant and
  * co-applicant amounts summed into their own columns). Off-list / "ej ta med" incomes (no {@code TA_MED} action or no
@@ -45,7 +45,7 @@ public final class ClassifiedIncomeToFcMapper {
 	/**
 	 * Map the classified incomes to FC calculation rows for the given calculation proposal.
 	 *
-	 * @param  classified the incomes classified by the operaton regelverk (maybe {@code null})
+	 * @param  classified the incomes classified by the operaton rules (maybe {@code null})
 	 * @param  proposal   the FC calculation proposal whose {@code calculationIncomeTypes} supply the numeric type ids
 	 * @return            the FC income rows (incomes resolving to the same type id are merged)
 	 */
@@ -69,7 +69,7 @@ public final class ClassifiedIncomeToFcMapper {
 	 * transferability + type-id resolution as {@link #toCalculationIncomes} is used; the difference is the rows are not
 	 * folded across recipients.
 	 *
-	 * @param  classified the incomes classified by the operaton regelverk (maybe {@code null})
+	 * @param  classified the incomes classified by the operaton rules (maybe {@code null})
 	 * @param  proposal   the FC calculation proposal whose {@code calculationIncomeTypes} supply the numeric type ids +
 	 *                    names
 	 * @return            one income line per (type id, recipient), amounts summed within the pair
@@ -108,7 +108,8 @@ public final class ClassifiedIncomeToFcMapper {
 	}
 
 	/**
-	 * The previous-month FC income-type names not covered by this month's classified incomes — the basis for the EB "all
+	 * The previous-month FC income-type names not covered by this month's classified incomes — the basis for the financial
+	 * assistance "all
 	 * last month's calculation values present" completeness check. Matching is on the normalised type name, the same key
 	 * {@link #toCalculationIncomes} resolves on, so the two months compare like-for-like. An empty result means every
 	 * previous income type has a transferable income this month (i.e. the information is complete).

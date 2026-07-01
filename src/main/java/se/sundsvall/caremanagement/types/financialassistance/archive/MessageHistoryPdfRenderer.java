@@ -27,7 +27,7 @@ import static java.util.stream.Collectors.joining;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 /**
- * Renders the text pages of the meddelandehistorik. {@link #renderMessages} produces the conversation section — a
+ * Renders the text pages of the message history. {@link #renderMessages} produces the conversation section — a
  * title,
  * a short summary and every message oldest-first as a bold header ({@code timestamp · role · author}), the body and,
  * when present, a {@code Bilagor:} line listing the message's attachments by their global {@code Bilaga {n}} number.
@@ -42,7 +42,7 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
  * character never breaks the render and content flows across as many A4 pages as it takes.
  * </p>
  */
-final class MeddelandehistorikPdfRenderer {
+final class MessageHistoryPdfRenderer {
 
 	private static final float MARGIN = 50f;
 	private static final float TITLE_SIZE = 18f;
@@ -58,7 +58,7 @@ final class MeddelandehistorikPdfRenderer {
 	private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-	private MeddelandehistorikPdfRenderer() {}
+	private MessageHistoryPdfRenderer() {}
 
 	/** A single laid-out line and how to render it. */
 	private record Line(String text, PDFont font, float size) {}
@@ -135,7 +135,7 @@ final class MeddelandehistorikPdfRenderer {
 			document.save(output);
 			return output.toByteArray();
 		} catch (final IOException e) {
-			throw Problem.valueOf(INTERNAL_SERVER_ERROR, "Could not render meddelandehistorik PDF: %s".formatted(e.getMessage()));
+			throw Problem.valueOf(INTERNAL_SERVER_ERROR, "Could not render message history PDF: %s".formatted(e.getMessage()));
 		}
 	}
 
@@ -272,7 +272,7 @@ final class MeddelandehistorikPdfRenderer {
 		try {
 			return font.getStringWidth(text) / 1000f * size;
 		} catch (final IOException e) {
-			throw Problem.valueOf(INTERNAL_SERVER_ERROR, "Could not measure text for the meddelandehistorik PDF: %s".formatted(e.getMessage()));
+			throw Problem.valueOf(INTERNAL_SERVER_ERROR, "Could not measure text for the message history PDF: %s".formatted(e.getMessage()));
 		}
 	}
 }

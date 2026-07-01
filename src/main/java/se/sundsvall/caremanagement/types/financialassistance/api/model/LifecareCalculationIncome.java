@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * A single income row on a Lifecare normberäkning, split between the applicant and the co-applicant with the search
+ * A single income row on a Lifecare calculation, split between the applicant and the co-applicant with the search
  * date Lifecare used for each.
  */
 @Schema(description = "An income row on a Lifecare calculation.")

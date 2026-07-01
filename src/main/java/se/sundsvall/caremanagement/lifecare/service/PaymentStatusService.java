@@ -29,7 +29,7 @@ public class PaymentStatusService {
 	 * PayDate and its ConcernedMonth carries the application month (yyyy-MM). The query window spans the month before the
 	 * application month (payments are typically made late in the preceding month) through the application month.
 	 *
-	 * @param  applicantPersonId the applicant's personnummer
+	 * @param  applicantPersonId the applicant's personal identity number
 	 * @param  applicationMonth  the month the payment concerns
 	 * @return                   the effectuated flag and, when effectuated, the Lifecare PayDate
 	 */

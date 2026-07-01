@@ -17,8 +17,10 @@ import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 
 /**
- * Resolves the handläggare to put on an EB intake: reads the applicant's <em>most recent</em> Lifecare FC Service
- * (insats) over a lookback window, takes its {@code Caseworker} display name, and matches that name against the FC
+ * Resolves the caseworker to put on a financial assistance intake: reads the applicant's <em>most recent</em> Lifecare
+ * FC Service
+ * (support effort) over a lookback window, takes its {@code Caseworker} display name, and matches that name against the
+ * FC
  * user directory ({@code Users/GetUsers}) to recover the user's FC {@code Id} (the actualisation {@code CaseworkerId})
  * and {@code NetworkUserId} (the careM errand {@code assignedUserId}). The person-based Service read only carries the
  * caseworker as a display name, so the directory match is the only way to recover the ids the writes need.
@@ -46,7 +48,7 @@ public class CaseworkerResolver {
 	/**
 	 * Resolve the caseworker for the applicant as of the intake date.
 	 *
-	 * @param  personId      the applicant's personnummer
+	 * @param  personId      the applicant's personal identity number
 	 * @param  referenceDate the intake date (bounds the Service lookback window)
 	 * @return               the resolved caseworker, or empty when none can be determined
 	 */

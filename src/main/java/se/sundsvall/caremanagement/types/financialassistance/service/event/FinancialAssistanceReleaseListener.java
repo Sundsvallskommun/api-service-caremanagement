@@ -11,10 +11,12 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_UNDER_REVIEW;
 
 /**
- * Releases a manually-reviewed EB errand for processing. After a caseworker has reopened the previous insats in
+ * Releases a manually-reviewed financial assistance errand for processing. After a caseworker has reopened the previous
+ * intervention in
  * Lifecare
- * and moves the frozen errand {@code NEEDS_MANUAL_REVIEW → UNDER_REVIEW}, this starts the EB process on the same errand
- * so it runs like a normal renewal (SSBTEK → normberäkning → recommendation → caseworker in the loop).
+ * and moves the frozen errand {@code NEEDS_MANUAL_REVIEW → UNDER_REVIEW}, this starts the financial assistance process
+ * on the same errand
+ * so it runs like a normal renewal (SSBTEK → calculation → recommendation → caseworker in the loop).
  *
  * <p>
  * The trigger is scoped precisely to that one edge so the normal renewal flow — which already starts its process at

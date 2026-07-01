@@ -11,8 +11,8 @@ import se.sundsvall.caremanagement.notifications.service.NotificationService;
  * Backfills the recipient of ownerless notifications when an errand is assigned. While an errand is unassigned, an
  * applicant's INBOUND message raises an ownerless MESSAGE notification (see {@link MessageNotificationListener}); once
  * a
- * handläggare picks the errand up, those notifications are claimed for the new assignee so they appear in the
- * handläggare's unread list. Reassignment of an already-owned errand is a no-op (nothing left ownerless). Runs
+ * caseworker picks the errand up, those notifications are claimed for the new assignee so they appear in the
+ * caseworker's unread list. Reassignment of an already-owned errand is a no-op (nothing left ownerless). Runs
  * asynchronously in its own transaction after the assignment commits ({@link ErrandAssigned} is durably staged in
  * Spring Modulith's outbox in between).
  */

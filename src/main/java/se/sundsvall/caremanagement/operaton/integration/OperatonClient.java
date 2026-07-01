@@ -96,7 +96,7 @@ public interface OperatonClient {
 
 	/**
 	 * Evaluate a deployed DMN decision in the engine and return its result rows — used to run the (modeler-editable)
-	 * normberäkning regelverk, e.g. the expense cap decision, from caremanagement.
+	 * calculation rules, e.g. the expense cap decision, from caremanagement.
 	 *
 	 * @param  municipalityId the id of the municipality
 	 * @param  key            the decision definition key (e.g. {@code Decision_utgiftRegelverk})

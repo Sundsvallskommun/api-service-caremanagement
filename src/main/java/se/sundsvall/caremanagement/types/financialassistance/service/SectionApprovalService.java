@@ -14,7 +14,8 @@ import static java.util.stream.Collectors.toMap;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
- * The caseworker approval state of the three Draken EB view sections — {@code CALCULATION} (calculation),
+ * The caseworker approval state of the three Draken financial assistance view sections — {@code CALCULATION}
+ * (calculation),
  * {@code PAYMENT} (payment) and {@code DECISION} (decision). Each section is an upsertable acknowledgeable object on
  * the errand: a caseworker verifies a section as approved (stamping who/when), or withdraws an earlier approval. A
  * section that has never been touched reads back as {@code approved=false}, so the bundle always carries all three.

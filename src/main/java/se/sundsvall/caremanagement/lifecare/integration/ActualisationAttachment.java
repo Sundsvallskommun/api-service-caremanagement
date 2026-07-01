@@ -8,7 +8,7 @@ import static java.util.Optional.ofNullable;
 /**
  * The metadata + bytes of a document uploaded and bound to a Lifecare actualisation. Grouped into one carrier so
  * {@link LifecareFcIntegration#postActualisationAttachment(Integer, ActualisationAttachment)} stays under the parameter
- * limit. Carries no personnummer — the document is bound by {@code actualisationId} only.
+ * limit. Carries no personal identity number — the document is bound by {@code actualisationId} only.
  *
  * @param documentType       the Lifecare {@code InsertDocumentType} code
  * @param documentSenderType the Lifecare {@code InsertDocumentSenderType} code

@@ -5,7 +5,7 @@ import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
- * Optional metadata for archiving an uploaded document (e.g. a supplementary application — tilläggsansökan) to a
+ * Optional metadata for archiving an uploaded document (e.g. a supplementary application) to a
  * Lifecare actualisation. Sent as the JSON {@code request} part alongside the file in the multipart archive call. Every
  * field is optional; an omitted field falls back to a server default (and the title defaults to the uploaded file
  * name). {@code documentType} and {@code documentSenderType} are Lifecare {@code InsertDocumentType} /

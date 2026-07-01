@@ -21,7 +21,8 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /**
- * EB income warnings as acknowledgeable objects. The daily prepare step reconciles the current set against what is
+ * financial assistance income warnings as acknowledgeable objects. The daily prepare step reconciles the current set
+ * against what is
  * stored — creating new warnings, refreshing open ones, and auto-closing ones whose cause has resolved — while never
  * re-opening a warning the caseworker has already acted on. A caseworker can acknowledge or close each warning.
  */

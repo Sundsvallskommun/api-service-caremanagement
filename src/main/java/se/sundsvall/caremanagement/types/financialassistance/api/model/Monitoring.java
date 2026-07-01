@@ -6,12 +6,13 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 
 /**
- * An EB monitoring on an errand — a date-bound watch/reminder the caseworker manages in Draken. Unlike the income
+ * A financial assistance monitoring on an errand — a date-bound watch/reminder the caseworker manages in Draken. Unlike
+ * the income
  * warnings it has no acknowledge lifecycle: it is created, edited and removed directly, and carries a start date plus
  * an
  * optional end date.
  */
-@Schema(description = "An EB monitoring (date-bound watch/reminder) on an errand.")
+@Schema(description = "A financial assistance monitoring (date-bound watch/reminder) on an errand.")
 public class Monitoring {
 
 	@Schema(description = "The monitoring id", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", accessMode = Schema.AccessMode.READ_ONLY)

@@ -29,8 +29,8 @@ public class Attachment {
 	@Schema(description = """
 		What kind of document this is: APPLICATION (citizen's application files), CONVERSATION (sent in a \
 		message thread), GENERATED (a consolidated PDF produced by the platform), ERRAND (uploaded directly to the \
-		errand), CASE_DATA (ärendeuppgifter — a case-data document for the errand), DECISION (beslut — a decision \
-		document for the errand) or MESSAGE_HISTORY (meddelandehistorik — the archived conversation PDF for a closed \
+		errand), CASE_DATA (a case-data document for the errand), DECISION (a decision \
+		document for the errand) or MESSAGE_HISTORY (the archived conversation PDF for a closed \
 		errand)""", allowableValues = {
 		"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION", "MESSAGE_HISTORY"
 	}, examples = "CONVERSATION", accessMode = READ_ONLY)

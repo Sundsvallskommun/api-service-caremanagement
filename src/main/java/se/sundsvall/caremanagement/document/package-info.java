@@ -1,7 +1,8 @@
 /**
  * Document module — Dokument (formal case documents) attached to an errand. The sibling of
- * {@link se.sundsvall.caremanagement.journal journalanteckningar}: in Lifecare both live in the same "Dokumentation"
- * container and share the same shape (Typ, Rubrik, text, Datum/Tid, authorship) and the skrivskydd lifecycle — but a
+ * {@link se.sundsvall.caremanagement.journal journal entries}: in Lifecare both live in the same "Dokumentation"
+ * container and share the same shape (Typ, Rubrik, text, Datum/Tid, authorship) and the write-protection lifecycle —
+ * but a
  * Dokument is its own concept with its own type catalogue (Dokumenttyp), modelled here so it can later be RPA:ed into
  * Lifecare.
  *
@@ -16,8 +17,9 @@
  * </p>
  *
  * <p>
- * It also models Lifecare's skrivskydd lifecycle: a freshly created document is an editable {@code WORKING} draft;
- * locking it ({@code POST .../{id}/lock}) turns it into a {@code LOCKED} "upprättad handling" — after which edits and
+ * It also models Lifecare's write-protection lifecycle: a freshly created document is an editable {@code WORKING}
+ * draft;
+ * locking it ({@code POST .../{id}/lock}) turns it into a {@code LOCKED} "finalised record" — after which edits and
  * deletes are rejected with {@code 409 Conflict}.
  * </p>
  */

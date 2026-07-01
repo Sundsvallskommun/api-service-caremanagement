@@ -15,27 +15,20 @@ tags:
 - name: Permits
   description: "Permits issued on an errand: validity period, conditions and status.\
     \ Revoking sets the status to REVOKED."
-- name: Financial Assistance · Approvals
-  description: "Caseworker approval state of the three EB view sections (CALCULATION\
-    \ / PAYMENT / DECISION) — read all three, or set/withdraw one."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
+- name: Financial Assistance · Monitorings
+  description: "Financial assistance monitorings — date-bound watch/reminder objects\
+    \ on an errand, with full CRUD. Unlike the income warnings they carry no acknowledge\
+    \ lifecycle."
 - name: Notifications
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen; expired ones are purged by a daily background job.
-- name: Financial Assistance · Errands
-  description: "Create, read and replace EB errands. Create against one of the three\
-    \ application-type slugs (financial-assistance-new / -renewal / -supplementary);\
-    \ read and replace the typed data via the shared financial-assistance path."
 - name: Status History
   description: Status transition log for an errand
 - name: RPA
   description: Enqueue UiPath RPA tasks (Lifecare write-backs / supplement fetches)
     for an errand
-- name: Financial Assistance · Warnings
-  description: "Acknowledgeable EB income warnings on an errand — create, list and\
-    \ set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare step reconciles\
-    \ them."
 - name: Metadata
   description: Metadata (lookup) operations
 - name: Namespace config
@@ -43,10 +36,20 @@ tags:
 - name: Process messages
   description: Send BPMN message correlation events to the process instance currently
     running for an errand
+- name: Financial Assistance · Calculation
+  description: "The calculation: prepare the calculation each daily loop (no Lifecare\
+    \ write), commit it to Lifecare after a decision, and read or edit the draft header."
 - name: Financial Assistance · Intake
   description: "Pre-application and case-intake calls: eligibility routing (common\
     \ entry point), renewal pre-fill from Lifecare, the income/cost type metadata\
     \ catalogue, and Lifecare actualisation (case intake)."
+- name: Financial Assistance · Approvals
+  description: "Caseworker approval state of the three financial assistance view sections\
+    \ (CALCULATION / PAYMENT / DECISION) — read all three, or set/withdraw one."
+- name: Financial Assistance · Warnings
+  description: "Acknowledgeable financial assistance income warnings on an errand\
+    \ — create, list and set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare\
+    \ step reconciles them."
 - name: Notes
   description: Notes attached to an errand
 - name: Errand stakeholders
@@ -57,12 +60,6 @@ tags:
 - name: Referrals
   description: "Referrals/consultations on an errand: receiving authority, due date,\
     \ free-text response and status (SENT → RESPONDED)."
-- name: Financial Assistance · Lifecare history
-  description: "Read the applicant's case history straight from Lifecare — the normberä\
-    kningar (calculations), beslut (decisions) and documents — plus a single document's\
-    \ PDF content. Keyed by partyId (resolved to a personnummer via the citizen service);\
-    \ the period defaults to the last 24 months. caremanagement only forwards the\
-    \ reads."
 - name: Event Log
   description: "Who/what/when activity log for an errand — every read and write, with\
     \ the acting user"
@@ -74,24 +71,27 @@ tags:
     \ (e.g. caseworker APPROVE/REJECT), distinguished by `decisionType`."
 - name: Documents
   description: Dokument (formal case documents) attached to an errand
+- name: Financial Assistance · Errands
+  description: "Create, read and replace financial assistance errands. Create against\
+    \ one of the three application-type slugs (financial-assistance-new / -renewal\
+    \ / -supplementary); read and replace the typed data via the shared financial-assistance\
+    \ path."
+- name: Financial Assistance · Lifecare history
+  description: "Read the applicant's case history straight from Lifecare — the calculations,\
+    \ decisions and documents — plus a single document's PDF content. Keyed by partyId\
+    \ (resolved to a personnummer via the citizen service); the period defaults to\
+    \ the last 24 months. caremanagement only forwards the reads."
 - name: Errands
   description: Errand operations
 - name: Financial Assistance · Payment
   description: Read whether the manual Lifecare payment for the applicant and application
     month has been effectuated. caremanagement makes no payment itself.
-- name: Financial Assistance · Calculation
-  description: "The normberäkning: prepare the calculation each daily loop (no Lifecare\
-    \ write), commit it to Lifecare after a decision, and read or edit the draft header."
 - name: Financial Assistance · Draft rows
   description: "Caseworker edits to the draft calculation rows — add, edit, soft-delete\
     \ and restore income, expense and person rows. Each touches only the caseworker\
     \ value / note / soft-delete; the process columns are owned by the daily prepare."
 - name: Errand attachments
   description: Errand attachment operations
-- name: Financial Assistance · Monitorings
-  description: "Financial assistance (EB) monitorings — date-bound watch/reminder\
-    \ objects on an errand, with full CRUD. Unlike the income warnings they carry\
-    \ no acknowledge lifecycle."
 paths:
   /{municipalityId}/{namespace}/errands/{errandId}/notifications/acknowledged:
     put:
@@ -764,7 +764,7 @@ paths:
       description: "Multipart request. The 'request' part carries the application\
         \ (JSON); the optional 'attachments' part carries the citizen's supporting\
         \ files (any type); the optional 'caseData' part carries the application snapshot\
-        \ (ärendeuppgifter), stored as a single CASE_DATA attachment renamed to {errandNumber}.pdf;\
+        \ (case data), stored as a single CASE_DATA attachment renamed to {errandNumber}.pdf;\
         \ the optional 'formSnapshot' part carries the self-describing JSON snapshot\
         \ of the form exactly as the applicant saw it (every question, help/info/notice\
         \ text, option label and answer), captured write-once for the legal record\
@@ -1624,8 +1624,8 @@ paths:
     post:
       tags:
       - Journal
-      summary: Lock a journal entry (skrivskydd) — it becomes an immutable upprättad
-        handling
+      summary: Lock a journal entry (write-protection) — it becomes an immutable finalised
+        record
       operationId: lock
       parameters:
       - name: municipalityId
@@ -1728,7 +1728,8 @@ paths:
     post:
       tags:
       - Documents
-      summary: Lock a document (skrivskydd) — it becomes an immutable upprättad handling
+      summary: Lock a document (write-protection) — it becomes an immutable finalised
+        record
       operationId: lock_1
       parameters:
       - name: municipalityId
@@ -1947,9 +1948,9 @@ paths:
       summary: Create attachment
       description: "Uploads a new attachment for the errand. The optional documentType\
         \ tags what the file is: ERRAND (a plain manual upload, the default), CASE_DATA\
-        \ (ärendeuppgifter — a case-data document) or DECISION (beslut — a decision\
-        \ document). A CASE_DATA attachment is renamed to {errandNumber}.pdf and only\
-        \ one is allowed per errand — uploading a second returns 400."
+        \ (a case-data document) or DECISION (a decision document). A CASE_DATA attachment\
+        \ is renamed to {errandNumber}.pdf and only one is allowed per errand — uploading\
+        \ a second returns 400."
       operationId: createAttachment
       parameters:
       - name: municipalityId
@@ -1976,8 +1977,8 @@ paths:
       - name: documentType
         in: query
         description: "What the uploaded file is: ERRAND (a plain manual upload, the\
-          \ default), CASE_DATA (ärendeuppgifter — a case-data document) or DECISION\
-          \ (beslut — a decision document). Defaults to ERRAND when omitted."
+          \ default), CASE_DATA (a case-data document) or DECISION (a decision document).\
+          \ Defaults to ERRAND when omitted."
         required: false
         schema:
           type: string
@@ -2023,7 +2024,7 @@ paths:
     get:
       tags:
       - Financial Assistance · Warnings
-      summary: List the EB income warnings on an errand
+      summary: List the financial assistance income warnings on an errand
       description: "The acknowledgeable income warnings the caseworker reviews — unhandled\
         \ incomes, significant changes, and income types still missing from SSBTEK.\
         \ The daily prepare step reconciles them."
@@ -2063,7 +2064,7 @@ paths:
     post:
       tags:
       - Financial Assistance · Warnings
-      summary: Create an EB income warning on an errand
+      summary: Create a financial assistance income warning on an errand
       description: "Creates an acknowledgeable income warning directly on the errand\
         \ — the careM temp stage, with no Lifecare round-trip. The warning is created\
         \ OPEN; use the PATCH endpoint to acknowledge or close it."
@@ -2535,8 +2536,9 @@ paths:
         \ type the previous calculation had (informationComplete + missingIncomeTypes),\
         \ records the income warnings on the errand as a single Decision(RECOMMENDATION),\
         \ and reflects completeness in the errand status (SUPPLEMENT_REQUESTED ⇄ AWAITING_DECISION).\
-        \ Does NOT create a calculation in Lifecare — the EB process calls this each\
-        \ daily loop. Use /commit after a decision to create it in Lifecare."
+        \ Does NOT create a calculation in Lifecare — the financial assistance process\
+        \ calls this each daily loop. Use /commit after a decision to create it in\
+        \ Lifecare."
       operationId: prepareCalculation
       parameters:
       - name: municipalityId
@@ -2573,12 +2575,13 @@ paths:
     post:
       tags:
       - Financial Assistance · Calculation
-      summary: Create the calculation in Lifecare straight from the application (nyansökan)
+      summary: Create the calculation in Lifecare straight from the application (new
+        application)
       description: "Builds the calculation from the data the citizen declared in the\
         \ application — incomes resolved to FC types by name, expenses and household\
         \ from the same feeder the renewal path uses — and creates it in Lifecare\
         \ FC in one shot, returning the created calculation id. No SSBTEK, no daily\
-        \ loop, no caseworker draft. Used by the nyansökan process."
+        \ loop, no caseworker draft. Used by the new application process."
       operationId: commitFromApplication
       parameters:
       - name: municipalityId
@@ -2656,15 +2659,14 @@ paths:
       tags:
       - Financial Assistance · Intake
       summary: Archive a document to a Lifecare actualisation
-      description: "Binds an uploaded document (e.g. a supplementary application —\
-        \ tilläggsansökan) as an attachment to a specific Lifecare actualisation.\
-        \ The target actualisation must belong to the given applicant (partyId) —\
-        \ a foreign actualisation id yields 404 before anything is uploaded. Multipart\
-        \ request: the 'file' part carries the document; the optional 'request' part\
-        \ carries the metadata (errandId, title, documentType, documentSenderType,\
-        \ senderName) — title/documentType/documentSenderType/senderName each fall\
-        \ back to a server default, and the title defaults to the uploaded file name.\
-        \ caremanagement only forwards the bytes to Lifecare. When 'request.errandId'\
+      description: "Binds an uploaded document (e.g. a supplementary application)\
+        \ as an attachment to a specific Lifecare actualisation. The target actualisation\
+        \ must belong to the given applicant (partyId) — a foreign actualisation id\
+        \ yields 404 before anything is uploaded. Multipart request: the 'file' part\
+        \ carries the document; the optional 'request' part carries the metadata (errandId,\
+        \ title, documentType, documentSenderType, senderName) — title/documentType/documentSenderType/senderName\
+        \ each fall back to a server default, and the title defaults to the uploaded\
+        \ file name. caremanagement only forwards the bytes to Lifecare. When 'request.errandId'\
         \ is set, the target actualisation id is recorded on that errand as a Decision(ACTUALISATION),\
         \ setting the errand's Lifecare actualisation to the one archived to."
       operationId: archiveToActualisation
@@ -3775,7 +3777,7 @@ paths:
     patch:
       tags:
       - Financial Assistance · Warnings
-      summary: Set the status of an EB income warning
+      summary: Set the status of a financial assistance income warning
       description: "A caseworker acknowledges (seen, kept on record), closes (dismisses),\
         \ or re-opens a warning to OPEN (undoing an earlier acknowledge/close)."
       operationId: updateWarning
@@ -3835,9 +3837,9 @@ paths:
       tags:
       - Financial Assistance · Approvals
       summary: Set a section's approval (caseworker)
-      description: "A caseworker verifies one of the EB view sections (CALCULATION\
-        \ / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving\
-        \ stamps who/when; withdrawing clears them."
+      description: "A caseworker verifies one of the financial assistance view sections\
+        \ (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier\
+        \ approval. Approving stamps who/when; withdrawing clears them."
       operationId: setSectionApproval
       parameters:
       - name: municipalityId
@@ -5096,7 +5098,7 @@ paths:
     get:
       tags:
       - Financial Assistance · Warnings
-      summary: Count the active EB income warnings on an errand
+      summary: Count the active financial assistance income warnings on an errand
       description: How many warnings are still active (OPEN or ACKNOWLEDGED) — closed
         ones are not counted. Not recorded in the event log.
       operationId: countWarnings
@@ -5135,10 +5137,10 @@ paths:
       tags:
       - Financial Assistance · Approvals
       summary: Read the section approvals on an errand
-      description: "The caseworker approval state of the three EB view sections (CALCULATION\
-        \ = calculation, PAYMENT = payment, DECISION = decision). Always returns all\
-        \ three — a section never approved is present with approved=false. The same\
-        \ object is embedded in the errand view."
+      description: "The caseworker approval state of the three financial assistance\
+        \ view sections (CALCULATION = calculation, PAYMENT = payment, DECISION =\
+        \ decision). Always returns all three — a section never approved is present\
+        \ with approved=false. The same object is embedded in the errand view."
       operationId: getSectionApprovals
       parameters:
       - name: municipalityId
@@ -5255,9 +5257,9 @@ paths:
       tags:
       - Financial Assistance · Calculation
       summary: Read the draft calculation
-      description: The FC income rows the EB process prepared (not yet created in
-        Lifecare) for the caseworker to review and edit before a decision. 404 when
-        no draft exists yet.
+      description: The FC income rows the financial assistance process prepared (not
+        yet created in Lifecare) for the caseworker to review and edit before a decision.
+        404 when no draft exists yet.
       operationId: getDraft
       parameters:
       - name: municipalityId
@@ -5295,11 +5297,12 @@ paths:
       - Financial Assistance · Intake
       summary: Renewal pre-fill from Lifecare
       description: Returns the household children from the applicant's most recent
-        Lifecare calculation to pre-fill an EB renewal. The applicant is identified
-        by partyId (resolved to a personnummer via the citizen service). Only children
-        are pre-filled — the applicant is the logged-in citizen and the co-applicant
-        comes from the portal. Best-effort — degrades to an empty result (lifecareChecked=false)
-        when the partyId cannot be resolved or Lifecare is unreachable.
+        Lifecare calculation to pre-fill a financial assistance renewal. The applicant
+        is identified by partyId (resolved to a personnummer via the citizen service).
+        Only children are pre-filled — the applicant is the logged-in citizen and
+        the co-applicant comes from the portal. Best-effort — degrades to an empty
+        result (lifecareChecked=false) when the partyId cannot be resolved or Lifecare
+        is unreachable.
       operationId: prefill
       parameters:
       - name: municipalityId
@@ -5329,17 +5332,18 @@ paths:
     get:
       tags:
       - Financial Assistance · Intake
-      summary: Read EB type metadata (income / cost dropdowns)
+      summary: Read financial assistance type metadata (income / cost dropdowns)
       description: "The complete income and cost type catalogue the frontend feeds\
-        \ its EB dropdowns from. Each type carries a code, the citizen Mina-sidor\
-        \ label (externalDisplayName), the matching Lifecare handläggare-dropdown\
-        \ label (internalDisplayName), the Mina-sidor form group as a stable code\
-        \ (HOUSING / WORK_AND_STUDIES / HEALTH / OTHER — null for income) and citizenReportable.\
-        \ citizenReportable=true types are the Mina-sidor form (code = the Income.incomeType\
-        \ / Cost.costType value, externalDisplayName set); citizenReportable=false\
-        \ types are handläggare-only Lifecare dropdowns (internalDisplayName only,\
-        \ externalDisplayName null, their codes are NOT citizen payload values). Static;\
-        \ a label/grouping layer that never changes the payload codes."
+        \ its financial assistance dropdowns from. Each type carries a code, the citizen\
+        \ Mina-sidor label (externalDisplayName), the matching Lifecare caseworker\
+        \ dropdown label (internalDisplayName), the Mina-sidor form group as a stable\
+        \ code (HOUSING / WORK_AND_STUDIES / HEALTH / OTHER — null for income) and\
+        \ citizenReportable. citizenReportable=true types are the Mina-sidor form\
+        \ (code = the Income.incomeType / Cost.costType value, externalDisplayName\
+        \ set); citizenReportable=false types are caseworker-only Lifecare dropdowns\
+        \ (internalDisplayName only, externalDisplayName null, their codes are NOT\
+        \ citizen payload values). Static; a label/grouping layer that never changes\
+        \ the payload codes."
       operationId: getMetadata
       parameters:
       - name: municipalityId
@@ -5496,8 +5500,8 @@ paths:
     get:
       tags:
       - Financial Assistance · Lifecare history
-      summary: List the applicant's Lifecare decisions (beslut)
-      description: The applicant's Lifecare beslut over the period — the decision
+      summary: List the applicant's Lifecare decisions
+      description: The applicant's Lifecare decisions over the period — the decision
         header plus the persons each concerned — served straight from Lifecare. The
         applicant is identified by partyId (resolved to a personnummer via the citizen
         service). The period defaults to the last 24 months up to today when from/to
@@ -5561,9 +5565,9 @@ paths:
     get:
       tags:
       - Financial Assistance · Lifecare history
-      summary: List the applicant's Lifecare calculations (normberäkningar)
-      description: "The applicant's Lifecare normberäkningar over the period — the\
-        \ full breakdown (header sums plus income, expense, special-expense and household-member\
+      summary: List the applicant's Lifecare calculations
+      description: "The applicant's Lifecare calculations over the period — the full\
+        \ breakdown (header sums plus income, expense, special-expense and household-member\
         \ rows) the frontend renders straight from Lifecare. The applicant is identified\
         \ by partyId (resolved to a personnummer via the citizen service). The period\
         \ defaults to the last 24 months up to today when from/to are omitted."
@@ -5629,9 +5633,9 @@ paths:
       summary: List the applicant's Lifecare actualisations
       description: The Lifecare actualisations (case intakes) registered on the applicant
         — what the frontend lists so a caseworker can pick which actualisation to
-        archive a supplementary application (tilläggsansökan) to. The applicant is
-        identified by partyId (resolved to a personnummer via the citizen service).
-        The period defaults to the last 24 months up to today when from/to are omitted.
+        archive a supplementary application to. The applicant is identified by partyId
+        (resolved to a personnummer via the citizen service). The period defaults
+        to the last 24 months up to today when from/to are omitted.
       operationId: listActualisations
       parameters:
       - name: municipalityId
@@ -5908,10 +5912,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -5941,7 +5945,8 @@ components:
           type: string
     MonitoringRequest:
       type: object
-      description: Request to create or replace an EB monitoring on an errand.
+      description: Request to create or replace a financial assistance monitoring
+        on an errand.
       properties:
         source:
           type: string
@@ -5994,7 +5999,8 @@ components:
       - title
     Monitoring:
       type: object
-      description: An EB monitoring (date-bound watch/reminder) on an errand.
+      description: A financial assistance monitoring (date-bound watch/reminder) on
+        an errand.
       properties:
         id:
           type: string
@@ -7376,8 +7382,8 @@ components:
           example: 14:30
         status:
           type: string
-          description: "Skrivskydd status — WORKING is an editable arbetsanteckning,\
-            \ LOCKED is an upprättad handling"
+          description: "Write-protection status — WORKING is an editable working note,\
+            \ LOCKED is a finalised record"
           enum:
           - WORKING
           - LOCKED
@@ -7492,8 +7498,8 @@ components:
           example: 14:30
         status:
           type: string
-          description: "Skrivskydd status — WORKING is an editable draft, LOCKED is\
-            \ an upprättad handling"
+          description: "Write-protection status — WORKING is an editable draft, LOCKED\
+            \ is a finalised record"
           enum:
           - WORKING
           - LOCKED
@@ -7560,15 +7566,15 @@ components:
         amount:
           type: number
           description: "Optional decision amount, in SEK. For a financial-assistance\
-            \ beslut this is the granted belopp (0 for a rejection); for a recommendation\
+            \ decision this is the granted amount (0 for a rejection); for a recommendation\
             \ it is the recommended amount when the pipeline has computed one."
           examples:
           - 7900.0
         decisionMessage:
           type: string
-          description: "Optional decision message (beslutsmeddelande) communicated\
-            \ to the applicant — the free-text justification shown on the decision\
-            \ letter, kept separate from the internal `description`."
+          description: "Optional decision message communicated to the applicant —\
+            \ the free-text justification shown on the decision letter, kept separate\
+            \ from the internal `description`."
           examples:
           - Du beviljas financial assistance för juni 2026 enligt riksnorm.
         decisionDate:
@@ -7582,7 +7588,7 @@ components:
           type: string
           format: date
           description: "Optional start of the period the decision covers (the month\
-            \ applied for, for a financial-assistance beslut)."
+            \ applied for, for a financial-assistance decision)."
           examples:
           - 2026-06-01
         periodTo:
@@ -7605,8 +7611,8 @@ components:
           readOnly: true
     CreateWarningRequest:
       type: object
-      description: Request to create an EB income warning on an errand (no Lifecare
-        round-trip).
+      description: Request to create a financial assistance income warning on an errand
+        (no Lifecare round-trip).
       properties:
         type:
           type: string
@@ -7640,7 +7646,8 @@ components:
       - type
     Warning:
       type: object
-      description: An EB income warning the caseworker can acknowledge or close.
+      description: A financial assistance income warning the caseworker can acknowledge
+        or close.
       properties:
         id:
           type: string
@@ -8244,12 +8251,14 @@ components:
           - Open errand without a decision for the current month. Suggesting a renewal.
         existsInCm:
           type: boolean
-          description: True when the applicant already has an EB errand in caremanagement
+          description: True when the applicant already has a financial assistance
+            errand in caremanagement
           examples:
           - "true"
         existsInLc:
           type: boolean
-          description: True when the applicant has an EB footprint in Lifecare (actualisation/decision/calculation)
+          description: True when the applicant has a financial assistance footprint
+            in Lifecare (actualisation/decision/calculation)
           examples:
           - "true"
         maritalStatusMatches:
@@ -8649,7 +8658,7 @@ components:
       - type
     SectionApprovalRequest:
       type: object
-      description: Set the approval state of an EB view section.
+      description: Set the approval state of a financial assistance view section.
       properties:
         approved:
           type: boolean
@@ -8667,8 +8676,8 @@ components:
       - approved
     SectionApproval:
       type: object
-      description: A caseworker's approval of one section of the EB view (calculation
-        / payment / decision).
+      description: A caseworker's approval of one section of the financial assistance
+        view (calculation / payment / decision).
       properties:
         section:
           type: string
@@ -9151,9 +9160,9 @@ components:
           description: "What kind of document this is: APPLICATION (citizen's application\
             \ files), CONVERSATION (sent in a message thread), GENERATED (a consolidated\
             \ PDF produced by the platform), ERRAND (uploaded directly to the errand),\
-            \ CASE_DATA (ärendeuppgifter — a case-data document for the errand), DECISION\
-            \ (beslut — a decision document for the errand) or MESSAGE_HISTORY (meddelandehistorik\
-            \ — the archived conversation PDF for a closed errand)"
+            \ CASE_DATA (a case-data document for the errand), DECISION (a decision\
+            \ document for the errand) or MESSAGE_HISTORY (the archived conversation\
+            \ PDF for a closed errand)"
           enum:
           - APPLICATION
           - CONVERSATION
@@ -9297,8 +9306,9 @@ components:
         lastDailyRunAt:
           type: string
           format: date-time
-          description: When the EB process last ran its daily loop for this errand
-            (the calculation /prepare step). Null until the first loop has run.
+          description: When the financial assistance process last ran its daily loop
+            for this errand (the calculation /prepare step). Null until the first
+            loop has run.
           readOnly: true
         data:
           $ref: "#/components/schemas/FinancialAssistanceData"
@@ -9313,14 +9323,14 @@ components:
           readOnly: true
         sectionApprovals:
           $ref: "#/components/schemas/SectionApprovals"
-          description: "The caseworker approval state of the three EB view sections\
-            \ (calculation, payment, decision) — whether each has been verified as\
-            \ approved. Always present with all three sections."
+          description: "The caseworker approval state of the three financial assistance\
+            \ view sections (calculation, payment, decision) — whether each has been\
+            \ verified as approved. Always present with all three sections."
           readOnly: true
     SectionApprovals:
       type: object
-      description: "The caseworker approval state of the three EB view sections (calculation,\
-        \ payment, decision)."
+      description: "The caseworker approval state of the three financial assistance\
+        \ view sections (calculation, payment, decision)."
       properties:
         calculation:
           $ref: "#/components/schemas/SectionApproval"
@@ -9611,24 +9621,23 @@ components:
           - "true"
     FinancialAssistanceMetadata:
       type: object
-      description: "EB type catalogue for the frontend dropdowns: income and cost\
-        \ types with labels, groups and the citizen flag."
+      description: "Financial assistance type catalogue for the frontend dropdowns:\
+        \ income and cost types with labels, groups and the citizen flag."
       properties:
         incomeTypes:
           type: array
-          description: The income types (inkomster)
+          description: The income types
           items:
             $ref: "#/components/schemas/TypeOption"
         costTypes:
           type: array
-          description: "The cost types (kostnader), grouped by their Mina-sidor form\
-            \ section"
+          description: "The cost types, grouped by their Mina-sidor form section"
           items:
             $ref: "#/components/schemas/TypeOption"
     TypeOption:
       type: object
-      description: "A selectable EB income/cost type — the payload code plus its Mina-sidor\
-        \ + Lifecare labels, form group and citizen flag."
+      description: "A selectable financial assistance income/cost type — the payload\
+        \ code plus its Mina-sidor + Lifecare labels, form group and citizen flag."
       properties:
         code:
           type: string
@@ -9637,14 +9646,14 @@ components:
           - RENT
         externalDisplayName:
           type: string
-          description: The citizen Mina-sidor label; null for handläggare-only types
+          description: The citizen Mina-sidor label; null for caseworker-only types
             not on the citizen form
           examples:
           - Hyra (inte parkering/garage)
         internalDisplayName:
           type: string
-          description: "The matching Lifecare handläggare-dropdown label, or null\
-            \ when there is no Lifecare counterpart"
+          description: "The matching Lifecare caseworker dropdown label, or null when\
+            \ there is no Lifecare counterpart"
           examples:
           - Boendekostnad
         group:
@@ -9699,7 +9708,7 @@ components:
           - Decision
     LifecareDecision:
       type: object
-      description: "A Lifecare beslut, full breakdown."
+      description: "A Lifecare decision, full breakdown."
       properties:
         id:
           type: integer
@@ -9783,7 +9792,7 @@ components:
           - "false"
     LifecareCalculation:
       type: object
-      description: "A Lifecare normberäkning, full breakdown."
+      description: "A Lifecare calculation, full breakdown."
       properties:
         id:
           type: integer
@@ -10079,8 +10088,8 @@ components:
           - Bifall
         carriesAmount:
           type: boolean
-          description: "Whether the outcome carries a belopp — true for outcomes that\
-            \ grant an amount, false for ones that imply 0 (e.g. avslag)"
+          description: "Whether the outcome carries an amount — true for outcomes\
+            \ that grant an amount, false for ones that imply 0 (e.g. a rejection)"
           examples:
           - "true"
     ErrandTypeSchema:

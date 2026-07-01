@@ -100,28 +100,31 @@ class FinancialAssistanceResource {
 
 	private static final Logger LOG = LoggerFactory.getLogger(FinancialAssistanceResource.class);
 
-	/** Constrains the create path variable to the three EB slugs so it never shadows other errand types. */
+	/**
+	 * Constrains the create path variable to the three financial assistance slugs so it never shadows other errand types.
+	 */
 	private static final String SLUG_REGEXP = "financial-assistance-new|financial-assistance-renewal|financial-assistance-supplementary";
 
-	// Swagger tag groups. The EB surface is large (~29 operations), so each phase of the workflow is its own
+	// Swagger tag groups. The financial assistance surface is large (~29 operations), so each phase of the workflow is its
+	// own
 	// navigable sub-section. They share the "Financial Assistance ·" prefix, so springdoc's alpha tagsSorter
 	// keeps them clustered together while still splitting the flat list.
 	private static final String TAG_ERRANDS = "Financial Assistance · Errands";
-	private static final String TAG_ERRANDS_DESC = "Create, read and replace EB errands. Create against one of the three application-type slugs (financial-assistance-new / -renewal / -supplementary); read and replace the typed data via the shared financial-assistance path.";
+	private static final String TAG_ERRANDS_DESC = "Create, read and replace financial assistance errands. Create against one of the three application-type slugs (financial-assistance-new / -renewal / -supplementary); read and replace the typed data via the shared financial-assistance path.";
 	private static final String TAG_INTAKE = "Financial Assistance · Intake";
 	private static final String TAG_INTAKE_DESC = "Pre-application and case-intake calls: eligibility routing (common entry point), renewal pre-fill from Lifecare, the income/cost type metadata catalogue, and Lifecare actualisation (case intake).";
 	private static final String TAG_CALCULATION = "Financial Assistance · Calculation";
-	private static final String TAG_CALCULATION_DESC = "The normberäkning: prepare the calculation each daily loop (no Lifecare write), commit it to Lifecare after a decision, and read or edit the draft header.";
+	private static final String TAG_CALCULATION_DESC = "The calculation: prepare the calculation each daily loop (no Lifecare write), commit it to Lifecare after a decision, and read or edit the draft header.";
 	private static final String TAG_DRAFT_ROWS = "Financial Assistance · Draft rows";
 	private static final String TAG_DRAFT_ROWS_DESC = "Caseworker edits to the draft calculation rows — add, edit, soft-delete and restore income, expense and person rows. Each touches only the caseworker value / note / soft-delete; the process columns are owned by the daily prepare.";
 	private static final String TAG_WARNINGS = "Financial Assistance · Warnings";
-	private static final String TAG_WARNINGS_DESC = "Acknowledgeable EB income warnings on an errand — create, list and set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare step reconciles them.";
+	private static final String TAG_WARNINGS_DESC = "Acknowledgeable financial assistance income warnings on an errand — create, list and set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare step reconciles them.";
 	private static final String TAG_APPROVALS = "Financial Assistance · Approvals";
-	private static final String TAG_APPROVALS_DESC = "Caseworker approval state of the three EB view sections (CALCULATION / PAYMENT / DECISION) — read all three, or set/withdraw one.";
+	private static final String TAG_APPROVALS_DESC = "Caseworker approval state of the three financial assistance view sections (CALCULATION / PAYMENT / DECISION) — read all three, or set/withdraw one.";
 	private static final String TAG_PAYMENT = "Financial Assistance · Payment";
 	private static final String TAG_PAYMENT_DESC = "Read whether the manual Lifecare payment for the applicant and application month has been effectuated. caremanagement makes no payment itself.";
 	private static final String TAG_LIFECARE = "Financial Assistance · Lifecare history";
-	private static final String TAG_LIFECARE_DESC = "Read the applicant's case history straight from Lifecare — the normberäkningar (calculations), beslut (decisions) and documents — plus a single document's PDF content. Keyed by partyId (resolved to a personnummer via the citizen service); the period defaults to the last 24 months. caremanagement only forwards the reads.";
+	private static final String TAG_LIFECARE_DESC = "Read the applicant's case history straight from Lifecare — the calculations, decisions and documents — plus a single document's PDF content. Keyed by partyId (resolved to a personnummer via the citizen service); the period defaults to the last 24 months. caremanagement only forwards the reads.";
 
 	private final FinancialAssistanceService service;
 	private final EligibilityService eligibilityService;
@@ -141,7 +144,7 @@ class FinancialAssistanceResource {
 	@Tag(name = TAG_ERRANDS, description = TAG_ERRANDS_DESC)
 	@PostMapping(path = "/{typeSlug:" + SLUG_REGEXP + "}", consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Create financial assistance errand",
-		description = "Multipart request. The 'request' part carries the application (JSON); the optional 'attachments' part carries the citizen's supporting files (any type); the optional 'caseData' part carries the application snapshot (ärendeuppgifter), stored as a single CASE_DATA attachment renamed to {errandNumber}.pdf; the optional 'formSnapshot' part carries the self-describing JSON snapshot of the form exactly as the applicant saw it (every question, help/info/notice text, option label and answer), captured write-once for the legal record and readable back via GET .../form-snapshot. typeSlug is one of financial-assistance-new, financial-assistance-renewal, financial-assistance-supplementary. Each attachment is stored on the errand, and a single combined PDF merging them all is generated and stored alongside.",
+		description = "Multipart request. The 'request' part carries the application (JSON); the optional 'attachments' part carries the citizen's supporting files (any type); the optional 'caseData' part carries the application snapshot (case data), stored as a single CASE_DATA attachment renamed to {errandNumber}.pdf; the optional 'formSnapshot' part carries the self-describing JSON snapshot of the form exactly as the applicant saw it (every question, help/info/notice text, option label and answer), captured write-once for the legal record and readable back via GET .../form-snapshot. typeSlug is one of financial-assistance-new, financial-assistance-renewal, financial-assistance-supplementary. Each attachment is stored on the errand, and a single combined PDF merging them all is generated and stored alongside.",
 		responses = {
 			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
 		})
@@ -179,7 +182,8 @@ class FinancialAssistanceResource {
 				.readValue(requestJson);
 		} catch (final JacksonException e) {
 			// Do NOT echo Jackson's message — it can embed the offending field value (e.g. the rejected string), and the
-			// 'request' part is the EB application carrying applicant data. Log the technical reason server-side (this
+			// 'request' part is the financial assistance application carrying applicant data. Log the technical reason server-side
+			// (this
 			// service already keeps payloads out of logs elsewhere) and return a value-free message to the caller.
 			LOG.warn("Could not bind the 'request' part to a financial-assistance application: {}", e.getClass().getSimpleName());
 			throw Problem.valueOf(BAD_REQUEST, "The 'request' part could not be read as a financial-assistance application — check that it is valid JSON matching the schema.");
@@ -212,7 +216,7 @@ class FinancialAssistanceResource {
 	@Tag(name = TAG_CALCULATION, description = TAG_CALCULATION_DESC)
 	@PostMapping(path = "/financial-assistance/calculation/prepare", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Prepare the calculation (no Lifecare write)",
-		description = "Reports whether this month's classified incomes cover every income type the previous calculation had (informationComplete + missingIncomeTypes), records the income warnings on the errand as a single Decision(RECOMMENDATION), and reflects completeness in the errand status (SUPPLEMENT_REQUESTED ⇄ AWAITING_DECISION). Does NOT create a calculation in Lifecare — the EB process calls this each daily loop. Use /commit after a decision to create it in Lifecare.",
+		description = "Reports whether this month's classified incomes cover every income type the previous calculation had (informationComplete + missingIncomeTypes), records the income warnings on the errand as a single Decision(RECOMMENDATION), and reflects completeness in the errand status (SUPPLEMENT_REQUESTED ⇄ AWAITING_DECISION). Does NOT create a calculation in Lifecare — the financial assistance process calls this each daily loop. Use /commit after a decision to create it in Lifecare.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -243,8 +247,8 @@ class FinancialAssistanceResource {
 
 	@Tag(name = TAG_CALCULATION, description = TAG_CALCULATION_DESC)
 	@PostMapping(path = "/financial-assistance/calculation/from-application", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Create the calculation in Lifecare straight from the application (nyansökan)",
-		description = "Builds the calculation from the data the citizen declared in the application — incomes resolved to FC types by name, expenses and household from the same feeder the renewal path uses — and creates it in Lifecare FC in one shot, returning the created calculation id. No SSBTEK, no daily loop, no caseworker draft. Used by the nyansökan process.",
+	@Operation(summary = "Create the calculation in Lifecare straight from the application (new application)",
+		description = "Builds the calculation from the data the citizen declared in the application — incomes resolved to FC types by name, expenses and household from the same feeder the renewal path uses — and creates it in Lifecare FC in one shot, returning the created calculation id. No SSBTEK, no daily loop, no caseworker draft. Used by the new application process.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -259,7 +263,7 @@ class FinancialAssistanceResource {
 
 	@Tag(name = TAG_WARNINGS, description = TAG_WARNINGS_DESC)
 	@PostMapping(path = "/financial-assistance/{errandId}/warnings", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Create an EB income warning on an errand",
+	@Operation(summary = "Create a financial assistance income warning on an errand",
 		description = "Creates an acknowledgeable income warning directly on the errand — the careM temp stage, with no Lifecare round-trip. The warning is created OPEN; use the PATCH endpoint to acknowledge or close it.",
 		responses = {
 			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true),
@@ -279,7 +283,7 @@ class FinancialAssistanceResource {
 
 	@Tag(name = TAG_WARNINGS, description = TAG_WARNINGS_DESC)
 	@GetMapping(path = "/financial-assistance/{errandId}/warnings", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "List the EB income warnings on an errand",
+	@Operation(summary = "List the financial assistance income warnings on an errand",
 		description = "The acknowledgeable income warnings the caseworker reviews — unhandled incomes, significant changes, and income types still missing from SSBTEK. The daily prepare step reconciles them.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -295,7 +299,7 @@ class FinancialAssistanceResource {
 
 	@Tag(name = TAG_WARNINGS, description = TAG_WARNINGS_DESC)
 	@GetMapping(path = "/financial-assistance/{errandId}/warnings/count", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Count the active EB income warnings on an errand",
+	@Operation(summary = "Count the active financial assistance income warnings on an errand",
 		description = "How many warnings are still active (OPEN or ACKNOWLEDGED) — closed ones are not counted. Not recorded in the event log.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -311,7 +315,7 @@ class FinancialAssistanceResource {
 
 	@Tag(name = TAG_WARNINGS, description = TAG_WARNINGS_DESC)
 	@PatchMapping(path = "/financial-assistance/{errandId}/warnings/{warningId}", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Set the status of an EB income warning",
+	@Operation(summary = "Set the status of a financial assistance income warning",
 		description = "A caseworker acknowledges (seen, kept on record), closes (dismisses), or re-opens a warning to OPEN (undoing an earlier acknowledge/close).",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
@@ -333,7 +337,7 @@ class FinancialAssistanceResource {
 	@Tag(name = TAG_APPROVALS, description = TAG_APPROVALS_DESC)
 	@GetMapping(path = "/financial-assistance/{errandId}/sections/approvals", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read the section approvals on an errand",
-		description = "The caseworker approval state of the three EB view sections (CALCULATION = calculation, PAYMENT = payment, DECISION = decision). Always returns all three — a section never approved is present with approved=false. The same object is embedded in the errand view.",
+		description = "The caseworker approval state of the three financial assistance view sections (CALCULATION = calculation, PAYMENT = payment, DECISION = decision). Always returns all three — a section never approved is present with approved=false. The same object is embedded in the errand view.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -349,7 +353,7 @@ class FinancialAssistanceResource {
 	@Tag(name = TAG_APPROVALS, description = TAG_APPROVALS_DESC)
 	@PatchMapping(path = "/financial-assistance/{errandId}/sections/{section}/approval", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Set a section's approval (caseworker)",
-		description = "A caseworker verifies one of the EB view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them.",
+		description = "A caseworker verifies one of the financial assistance view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "400", description = "Bad Request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
@@ -370,7 +374,7 @@ class FinancialAssistanceResource {
 	@Tag(name = TAG_CALCULATION, description = TAG_CALCULATION_DESC)
 	@GetMapping(path = "/financial-assistance/{errandId}/calculation/draft", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read the draft calculation",
-		description = "The FC income rows the EB process prepared (not yet created in Lifecare) for the caseworker to review and edit before a decision. 404 when no draft exists yet.",
+		description = "The FC income rows the financial assistance process prepared (not yet created in Lifecare) for the caseworker to review and edit before a decision. 404 when no draft exists yet.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -606,7 +610,7 @@ class FinancialAssistanceResource {
 	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)
 	@GetMapping(path = "/financial-assistance/actualisations", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "List the applicant's Lifecare actualisations",
-		description = "The Lifecare actualisations (case intakes) registered on the applicant — what the frontend lists so a caseworker can pick which actualisation to archive a supplementary application (tilläggsansökan) to. The applicant is identified by partyId (resolved to a personnummer via the citizen service). The period defaults to the last 24 months up to today when from/to are omitted.",
+		description = "The Lifecare actualisations (case intakes) registered on the applicant — what the frontend lists so a caseworker can pick which actualisation to archive a supplementary application to. The applicant is identified by partyId (resolved to a personnummer via the citizen service). The period defaults to the last 24 months up to today when from/to are omitted.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
@@ -624,8 +628,8 @@ class FinancialAssistanceResource {
 
 	@Tag(name = TAG_LIFECARE, description = TAG_LIFECARE_DESC)
 	@GetMapping(path = "/financial-assistance/calculations", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "List the applicant's Lifecare calculations (normberäkningar)",
-		description = "The applicant's Lifecare normberäkningar over the period — the full breakdown (header sums plus income, expense, special-expense and household-member rows) the frontend renders straight from Lifecare. The applicant is identified by partyId (resolved to a personnummer via the citizen service). The period defaults to the last 24 months up to today when from/to are omitted.",
+	@Operation(summary = "List the applicant's Lifecare calculations",
+		description = "The applicant's Lifecare calculations over the period — the full breakdown (header sums plus income, expense, special-expense and household-member rows) the frontend renders straight from Lifecare. The applicant is identified by partyId (resolved to a personnummer via the citizen service). The period defaults to the last 24 months up to today when from/to are omitted.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
@@ -643,8 +647,8 @@ class FinancialAssistanceResource {
 
 	@Tag(name = TAG_LIFECARE, description = TAG_LIFECARE_DESC)
 	@GetMapping(path = "/financial-assistance/decisions", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "List the applicant's Lifecare decisions (beslut)",
-		description = "The applicant's Lifecare beslut over the period — the decision header plus the persons each concerned — served straight from Lifecare. The applicant is identified by partyId (resolved to a personnummer via the citizen service). The period defaults to the last 24 months up to today when from/to are omitted.",
+	@Operation(summary = "List the applicant's Lifecare decisions",
+		description = "The applicant's Lifecare decisions over the period — the decision header plus the persons each concerned — served straight from Lifecare. The applicant is identified by partyId (resolved to a personnummer via the citizen service). The period defaults to the last 24 months up to today when from/to are omitted.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
@@ -701,7 +705,7 @@ class FinancialAssistanceResource {
 	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)
 	@PostMapping(path = "/financial-assistance/actualisations/{actualisationId}/archive", consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Archive a document to a Lifecare actualisation",
-		description = "Binds an uploaded document (e.g. a supplementary application — tilläggsansökan) as an attachment to a specific Lifecare actualisation. The target actualisation must belong to the given applicant (partyId) — a foreign actualisation id yields 404 before anything is uploaded. Multipart request: the 'file' part carries the document; the optional 'request' part carries the metadata (errandId, title, documentType, documentSenderType, senderName) — title/documentType/documentSenderType/senderName each fall back to a server default, and the title defaults to the uploaded file name. caremanagement only forwards the bytes to Lifecare. When 'request.errandId' is set, the target actualisation id is recorded on that errand as a Decision(ACTUALISATION), setting the errand's Lifecare actualisation to the one archived to.",
+		description = "Binds an uploaded document (e.g. a supplementary application) as an attachment to a specific Lifecare actualisation. The target actualisation must belong to the given applicant (partyId) — a foreign actualisation id yields 404 before anything is uploaded. Multipart request: the 'file' part carries the document; the optional 'request' part carries the metadata (errandId, title, documentType, documentSenderType, senderName) — title/documentType/documentSenderType/senderName each fall back to a server default, and the title defaults to the uploaded file name. caremanagement only forwards the bytes to Lifecare. When 'request.errandId' is set, the target actualisation id is recorded on that errand as a Decision(ACTUALISATION), setting the errand's Lifecare actualisation to the one archived to.",
 		responses = {
 			@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "400", description = "Bad Request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
@@ -737,8 +741,8 @@ class FinancialAssistanceResource {
 
 	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)
 	@GetMapping(path = "/financial-assistance/metadata", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Read EB type metadata (income / cost dropdowns)",
-		description = "The complete income and cost type catalogue the frontend feeds its EB dropdowns from. Each type carries a code, the citizen Mina-sidor label (externalDisplayName), the matching Lifecare handläggare-dropdown label (internalDisplayName), the Mina-sidor form group as a stable code (HOUSING / WORK_AND_STUDIES / HEALTH / OTHER — null for income) and citizenReportable. citizenReportable=true types are the Mina-sidor form (code = the Income.incomeType / Cost.costType value, externalDisplayName set); citizenReportable=false types are handläggare-only Lifecare dropdowns (internalDisplayName only, externalDisplayName null, their codes are NOT citizen payload values). Static; a label/grouping layer that never changes the payload codes.",
+	@Operation(summary = "Read financial assistance type metadata (income / cost dropdowns)",
+		description = "The complete income and cost type catalogue the frontend feeds its financial assistance dropdowns from. Each type carries a code, the citizen Mina-sidor label (externalDisplayName), the matching Lifecare caseworker dropdown label (internalDisplayName), the Mina-sidor form group as a stable code (HOUSING / WORK_AND_STUDIES / HEALTH / OTHER — null for income) and citizenReportable. citizenReportable=true types are the Mina-sidor form (code = the Income.incomeType / Cost.costType value, externalDisplayName set); citizenReportable=false types are caseworker-only Lifecare dropdowns (internalDisplayName only, externalDisplayName null, their codes are NOT citizen payload values). Static; a label/grouping layer that never changes the payload codes.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 		})
@@ -752,7 +756,7 @@ class FinancialAssistanceResource {
 	@Tag(name = TAG_INTAKE, description = TAG_INTAKE_DESC)
 	@GetMapping(path = "/financial-assistance/prefill", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Renewal pre-fill from Lifecare",
-		description = "Returns the household children from the applicant's most recent Lifecare calculation to pre-fill an EB renewal. The applicant is identified by partyId (resolved to a personnummer via the citizen service). Only children are pre-filled — the applicant is the logged-in citizen and the co-applicant comes from the portal. Best-effort — degrades to an empty result (lifecareChecked=false) when the partyId cannot be resolved or Lifecare is unreachable.",
+		description = "Returns the household children from the applicant's most recent Lifecare calculation to pre-fill a financial assistance renewal. The applicant is identified by partyId (resolved to a personnummer via the citizen service). Only children are pre-filled — the applicant is the logged-in citizen and the co-applicant comes from the portal. Best-effort — degrades to an empty result (lifecareChecked=false) when the partyId cannot be resolved or Lifecare is unreachable.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 		})

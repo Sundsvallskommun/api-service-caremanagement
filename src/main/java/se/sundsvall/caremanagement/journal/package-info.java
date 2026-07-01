@@ -13,8 +13,8 @@
  * </p>
  *
  * <p>
- * It also models Lifecare's skrivskydd lifecycle: a freshly created entry is an editable {@code WORKING}
- * arbetsanteckning; locking it ({@code POST .../{id}/lock}) turns it into a {@code LOCKED} "upprättad handling" — after
+ * It also models Lifecare's write-protection lifecycle: a freshly created entry is an editable {@code WORKING}
+ * working note; locking it ({@code POST .../{id}/lock}) turns it into a {@code LOCKED} "finalised record" — after
  * which edits and deletes are rejected with {@code 409 Conflict}.
  * </p>
  */

@@ -6,10 +6,11 @@ import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
 /**
- * Request to create an EB income warning directly on an errand — the careM "temp stage", with no Lifecare round-trip.
+ * Request to create a financial assistance income warning directly on an errand — the careM "temp stage", with no
+ * Lifecare round-trip.
  * The warning is created {@code OPEN}; a caseworker acknowledges or closes it via the warning PATCH endpoint.
  */
-@Schema(description = "Request to create an EB income warning on an errand (no Lifecare round-trip).")
+@Schema(description = "Request to create a financial assistance income warning on an errand (no Lifecare round-trip).")
 public class CreateWarningRequest {
 
 	@Schema(description = "The warning type", examples = "UNHANDLED_INCOME", requiredMode = Schema.RequiredMode.REQUIRED, allowableValues = {

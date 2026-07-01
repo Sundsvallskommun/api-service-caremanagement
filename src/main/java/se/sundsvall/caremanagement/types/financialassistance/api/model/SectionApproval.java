@@ -7,11 +7,12 @@ import java.util.Objects;
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 
 /**
- * One section of the Draken EB view as an acknowledgeable object — whether a caseworker has verified it as approved.
+ * One section of the Draken financial assistance view as an acknowledgeable object — whether a caseworker has verified
+ * it as approved.
  * The section is {@code CALCULATION} (calculation), {@code PAYMENT} (payment) or {@code DECISION} (decision).
  * {@code approvedBy} / {@code approvedAt} are populated while approved and null once the approval is withdrawn.
  */
-@Schema(description = "A caseworker's approval of one section of the EB view (calculation / payment / decision).")
+@Schema(description = "A caseworker's approval of one section of the financial assistance view (calculation / payment / decision).")
 public class SectionApproval {
 
 	@Schema(description = "The section this approval concerns", examples = "CALCULATION", allowableValues = {

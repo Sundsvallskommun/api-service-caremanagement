@@ -4,7 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 
 /**
- * Optional request body for locking a Dokument (skrivskydd). Carries who locked it; the body may be omitted entirely.
+ * Optional request body for locking a document (write-protection). Carries who locked it; the body may be omitted
+ * entirely.
  */
 public record LockDocument(
 

@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A Lifecare normberäkning with the full breakdown — sums, household members, incomes and expenses — the read model the
+ * A Lifecare calculation with the full breakdown — sums, household members, incomes and expenses — the read model the
  * frontend renders so a caseworker can review the calculation behind a decision.
  */
-@Schema(description = "A Lifecare normberäkning, full breakdown.")
+@Schema(description = "A Lifecare calculation, full breakdown.")
 public class LifecareCalculation {
 
 	@Schema(description = "The Lifecare calculation id", examples = "7001")

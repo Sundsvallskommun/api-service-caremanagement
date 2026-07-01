@@ -11,10 +11,11 @@ import se.sundsvall.dept44.common.validators.annotation.OneOf;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 
 /**
- * Request to create or replace an EB monitoring on an errand. The same body is used for create (POST) and update (PUT);
+ * Request to create or replace a financial assistance monitoring on an errand. The same body is used for create (POST)
+ * and update (PUT);
  * the monitoring has no acknowledge lifecycle, so every mutable field is supplied each time.
  */
-@Schema(description = "Request to create or replace an EB monitoring on an errand.")
+@Schema(description = "Request to create or replace a financial assistance monitoring on an errand.")
 public class MonitoringRequest {
 
 	@Schema(description = "Provenance, defaults to CASEWORKER when omitted. RPA POSTs LIFECARE (with lifecareId) to surface a "

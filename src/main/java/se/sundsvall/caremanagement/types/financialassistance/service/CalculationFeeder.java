@@ -44,7 +44,7 @@ public class CalculationFeeder {
 	private static final String CHANGE_HOUSING_COST = "HOUSING_COST";
 	private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
-	/** EB cost type → Swedish label for handläggare-facing warning text. */
+	/** financial assistance cost type → Swedish label for caseworker-facing warning text. */
 	private static final Map<String, String> COST_LABEL = Map.ofEntries(
 		Map.entry("RENT", "Hyra"),
 		Map.entry("ELECTRICITY", "Hushållsel"),
@@ -72,7 +72,8 @@ public class CalculationFeeder {
 	/**
 	 * The fresh income process rows — one per FC income type, the classified lines folded into a applicant + co-applicant
 	 * side. Within each (FC type, recipient) the amounts are summed: the SSBTEK/classified path arrives pre-summed (one
-	 * line per recipient), but the application/nyansökan path emits one line per raw declared income, so two same-type
+	 * line per recipient), but the application/new-application path emits one line per raw declared income, so two
+	 * same-type
 	 * same-recipient incomes (e.g. two OTHER_INCOME) must be added together rather than dropping all but the first — else
 	 * the income is understated and the computed benefit inflated. The first line in a recipient group supplies the
 	 * non-amount fields (date, type name, note).
@@ -157,8 +158,9 @@ public class CalculationFeeder {
 	}
 
 	/**
-	 * The application's expense rows for the direct nyansökan commit — applied amount + the cost type's static bucket,
-	 * with no historik-regelträd (a nyansökan has no previous month) and no warnings. The regelträd applies to the
+	 * The application's expense rows for the direct new-application commit — applied amount + the cost type's static
+	 * bucket,
+	 * with no history rule tree (a new application has no previous month) and no warnings. The rule tree applies to the
 	 * daily-prepare draft ({@link #expenseFeed}) instead, where there is history and a caseworker review before commit.
 	 */
 	public List<FaNormExpenseEntity> applicationExpenseRows(final String errandId, final FinancialAssistanceEntity errand) {
@@ -254,7 +256,7 @@ public class CalculationFeeder {
 	 * Renewal delta warnings against the previous calculation in Lifecare — household-size drift (members
 	 * added/removed, count changed) and housing-cost drift. Each candidate delta is classified by the
 	 * {@code Decision_ateransokanDelta} DMN, which decides — by what changed and how much — whether it is worth flagging
-	 * and the notering to show; a small change passes silently. New members are surfaced separately as NEW_PERSON warnings
+	 * and the note to show; a small change passes silently. New members are surfaced separately as NEW_PERSON warnings
 	 * from the merge.
 	 */
 	public List<WarningService.WarningInput> householdDeltaWarnings(final String municipalityId, final FinancialAssistanceEntity errand,

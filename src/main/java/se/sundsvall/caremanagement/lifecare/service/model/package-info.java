@@ -1,6 +1,6 @@
 /**
  * Lifecare service-layer domain models: the normalised SSBTEK income shape ({@code SsbtekIncome},
- * {@code ApplicantRole}) and the regelverk-classified income ({@code ClassifiedIncome}) the operaton process produces
+ * {@code ApplicantRole}) and the rules-classified income ({@code ClassifiedIncome}) the operaton process produces
  * and caremanagement maps onto FC calculation rows.
  */
 @NamedInterface("model")

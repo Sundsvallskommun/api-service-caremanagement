@@ -8,7 +8,7 @@ import org.springframework.validation.annotation.Validated;
 
 /**
  * Configuration for the conversation-archiving job (see {@code MessageArchiveScheduler}). The job snapshots the
- * conversation of every closed EB errand into a {@code {errandNumber}_meddelandehistorik.pdf} once the errand has been
+ * conversation of every closed EB errand into a message-history PDF once the errand has been
  * quiet for {@code daysAfterClose} days, then uploads it to the errand's Lifecare actualisation.
  *
  * @param municipalityId             the municipality whose errands are archived

@@ -5,11 +5,12 @@ import jakarta.validation.constraints.NotNull;
 import java.util.Objects;
 
 /**
- * Request to set the approval state of one EB view section. {@code approved=true} records the section as verified by
+ * Request to set the approval state of one financial assistance view section. {@code approved=true} records the section
+ * as verified by
  * {@code approvedBy} (the logged-in caseworker); {@code approved=false} withdraws an earlier approval. The approver is
  * stored only when approving — withdrawing clears who/when.
  */
-@Schema(description = "Set the approval state of an EB view section.")
+@Schema(description = "Set the approval state of a financial assistance view section.")
 public class SectionApprovalRequest {
 
 	@Schema(description = "Whether the section is approved (true) or its approval withdrawn (false)", examples = "true", requiredMode = Schema.RequiredMode.REQUIRED)

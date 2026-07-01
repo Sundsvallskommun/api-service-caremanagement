@@ -14,7 +14,8 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPr
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 /**
- * Builds an EB renewal pre-fill from Lifecare — only the household children. Takes the applicant's partyId,
+ * Builds a financial assistance renewal pre-fill from Lifecare — only the household children. Takes the applicant's
+ * partyId,
  * resolves it to a personnummer via {@link CitizenService} (the API never accepts personnummer directly), reads the
  * applicant's most recent calculation roster (and the co-applicant from the most recent decision) via
  * {@link LifecareEbCaseService}, then keeps the members that are neither the applicant nor the co-applicant and maps

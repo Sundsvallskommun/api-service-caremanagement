@@ -92,12 +92,13 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.mapp
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
- * Creates and reads financial-assistance (EB) errands. The envelope is owned by the exposed core {@link ErrandService};
- * the {@code typeSlug} is one of the three EB slugs (new / renewal / supplementary) and the stored
+ * Creates and reads financial-assistance errands. The envelope is owned by the exposed core {@link ErrandService};
+ * the {@code typeSlug} is one of the three financial assistance slugs (new / renewal / supplementary) and the stored
  * {@code applicationType}
  * is derived from it server-side, so the slug stays authoritative. Initial status is {@code RECEIVED}. The
  * strongly-typed
- * application data lives on this module's own table, keyed by the envelope id. The title falls back to the EB display
+ * application data lives on this module's own table, keyed by the envelope id. The title falls back to the financial
+ * assistance display
  * name when the client omits one.
  */
 @Service
@@ -165,10 +166,11 @@ public class FinancialAssistanceService {
 	}
 
 	/**
-	 * Create the EB errand, persist its strongly-typed data, promote the application's persons (applicant/co-applicant) to
+	 * Create the financial assistance errand, persist its strongly-typed data, promote the application's persons
+	 * (applicant/co-applicant) to
 	 * core stakeholder rows on the errand, and — when the citizen supplied supporting files — store each attachment plus a
 	 * single combined PDF merging them all. Attachments are type-agnostic: the list is handed to the attachments module
-	 * as-is. The optional {@code caseData} file is the application snapshot (ärendeuppgifter): it is stored as a single
+	 * as-is. The optional {@code caseData} file is the application snapshot (case data): it is stored as a single
 	 * {@code CASE_DATA} attachment, renamed to {@code {errandNumber}.pdf}, so the whole errand is created in one call.
 	 * The optional {@code formSnapshot} is the self-describing JSON snapshot of the form as the applicant saw it (every
 	 * question, help/info/notice text, option label and answer): it is captured write-once for the legal record.
@@ -246,7 +248,8 @@ public class FinancialAssistanceService {
 
 	/**
 	 * Prepare — but do <strong>not</strong> create in Lifecare — the calculation for the application month from incomes
-	 * already classified by the operaton rules. The EB process calls this each daily loop: it reports whether the
+	 * already classified by the operaton rules. The financial assistance process calls this each daily loop: it reports
+	 * whether the
 	 * information is complete (does this month cover every income type the previous calculation had?), records the income
 	 * warnings on the errand as a single {@code Decision(RECOMMENDATION)} the caseworker reviews, and reflects
 	 * completeness in the errand status ({@code SUPPLEMENT_REQUESTED} while incomplete, {@code AWAITING_DECISION} when
@@ -399,7 +402,8 @@ public class FinancialAssistanceService {
 	}
 
 	/**
-	 * The EB income warnings on an errand — the acknowledgeable objects a caseworker reviews in Draken. Scoped: throws
+	 * The financial assistance income warnings on an errand — the acknowledgeable objects a caseworker reviews in Draken.
+	 * Scoped: throws
 	 * {@code 404} when the errand is missing in this namespace/municipality.
 	 */
 	@Transactional(readOnly = true)
@@ -428,7 +432,8 @@ public class FinancialAssistanceService {
 	}
 
 	/**
-	 * The caseworker approval state of the three EB view sections (calculation / payment / decision). Scoped: throws
+	 * The caseworker approval state of the three financial assistance view sections (calculation / payment / decision).
+	 * Scoped: throws
 	 * {@code 404} when the errand is missing in this namespace/municipality.
 	 */
 	@Transactional(readOnly = true)
@@ -475,7 +480,7 @@ public class FinancialAssistanceService {
 			header.getCalculationDate(), header.getHasCustomHouseholdSize(), header.getHouseholdSize());
 		final var calculationId = calculationService.commitEffective(applicant, applicationMonth, calculationHeader, incomes, expenses, persons);
 
-		// The normberäkning is now in Lifecare via the FC API; ask RPA to mirror the rest of the beslut surface that has no
+		// The calculation is now in Lifecare via the FC API; ask RPA to mirror the rest of the decision surface that has no
 		// FC endpoint. Best-effort — the Lifecare write already succeeded, so a queue hiccup must not fail the commit.
 		triggerRpaWrite(municipalityId, errandId, WRITE_NORMBERAKNING);
 
@@ -487,7 +492,8 @@ public class FinancialAssistanceService {
 
 	/**
 	 * Create the calculation in Lifecare FC straight from the incomes, costs and household the citizen declared in the
-	 * application — the nyansökan path: no SSBTEK, no daily loop, no caseworker draft. Incomes come from the application's
+	 * application — the new application path: no SSBTEK, no daily loop, no caseworker draft. Incomes come from the
+	 * application's
 	 * own declared incomes (resolved to FC types by name), expenses and persons from the same feeder the renewal path uses
 	 * (both already application-sourced), and the norm from the proposal for the application month. Posts in one shot and
 	 * returns the created calculation id.
@@ -672,7 +678,7 @@ public class FinancialAssistanceService {
 	/**
 	 * Record the created actualisation on the errand as a {@code Decision(ACTUALISATION)} — the canonical audit-trail
 	 * vehicle on the case — carrying the Lifecare actualisation id as the value, and assign the errand to the resolved
-	 * handläggare when one was found (the same caseworker set on the Lifecare actualisation).
+	 * caseworker when one was found (the same caseworker set on the Lifecare actualisation).
 	 */
 	private void recordActualisation(final String municipalityId, final String namespace, final String errandId, final ActualisationResult result) {
 		addActualisationDecision(municipalityId, namespace, errandId, result.actualisationId(),
@@ -696,7 +702,7 @@ public class FinancialAssistanceService {
 
 	/**
 	 * List the Lifecare actualisations (case intakes) registered on the applicant, so a caseworker can pick which one a
-	 * supplementary application (tilläggsansökan) is archived to. The applicant is identified by partyId (resolved to a
+	 * supplementary application is archived to. The applicant is identified by partyId (resolved to a
 	 * personnummer via the citizen service — 404 when unknown). The period defaults to the last
 	 * {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when {@code from}/{@code to} are omitted.
 	 */
@@ -712,7 +718,7 @@ public class FinancialAssistanceService {
 	}
 
 	/**
-	 * List the applicant's Lifecare normberäkningar (calculations) — the full case-history read the frontend renders
+	 * List the applicant's Lifecare calculations — the full case-history read the frontend renders
 	 * straight from Lifecare. The applicant is identified by partyId (resolved to a personnummer via the citizen service —
 	 * 404 when unknown). The period defaults to the last {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when
 	 * {@code from}/{@code to} are omitted.
@@ -729,7 +735,7 @@ public class FinancialAssistanceService {
 	}
 
 	/**
-	 * List the applicant's Lifecare beslut (decisions) — served straight from Lifecare. The applicant is identified by
+	 * List the applicant's Lifecare decisions — served straight from Lifecare. The applicant is identified by
 	 * partyId (resolved to a personnummer via the citizen service — 404 when unknown). The period defaults to the last
 	 * {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when {@code from}/{@code to} are omitted.
 	 */
@@ -778,7 +784,7 @@ public class FinancialAssistanceService {
 	}
 
 	/**
-	 * Archive an uploaded document (e.g. a supplementary application — tilläggsansökan) to a specific Lifecare
+	 * Archive an uploaded document (e.g. a supplementary application) to a specific Lifecare
 	 * actualisation by binding it as an attachment. caremanagement only forwards the bytes — the file is supplied by the
 	 * frontend. Document type / sender type / sender name fall back to server defaults when the request omits them; the
 	 * title defaults to the uploaded file name. When the request carries an {@code errandId}, the target actualisation id

@@ -27,10 +27,10 @@ public class EligibilityResponse {
 	@Schema(description = "Human-readable Swedish explanation of the suggestion", examples = "Open errand without a decision for the current month. Suggesting a renewal.")
 	private String message;
 
-	@Schema(description = "True when the applicant already has an EB errand in caremanagement", examples = "true")
+	@Schema(description = "True when the applicant already has a financial assistance errand in caremanagement", examples = "true")
 	private boolean existsInCm;
 
-	@Schema(description = "True when the applicant has an EB footprint in Lifecare (actualisation/decision/calculation)", examples = "true")
+	@Schema(description = "True when the applicant has a financial assistance footprint in Lifecare (actualisation/decision/calculation)", examples = "true")
 	private boolean existsInLc;
 
 	@Schema(description = "Whether the requested marital status (alone vs with a partner) matches the previous application. Null when not evaluated (no existing case).", examples = "true")

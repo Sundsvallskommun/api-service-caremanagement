@@ -26,7 +26,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * REQUIRES_NEW}).
  *
  * <p>
- * The errand-envelope writes here ({@link #assignAndClassify} — default-handläggare assignment and the recently-closed
+ * The errand-envelope writes here ({@link #assignAndClassify} — default-caseworker assignment and the recently-closed
  * freeze) race the {@link ApplicantNameSyncListener}, which updates the same {@code errand} row from a sibling
  * {@code StakeholderMutated} event the moment the errand is created. On MariaDB 11 (InnoDB snapshot isolation) that
  * concurrency surfaces as a hard {@code 1020 "Record has changed since last read"} on the losing writer rather than a

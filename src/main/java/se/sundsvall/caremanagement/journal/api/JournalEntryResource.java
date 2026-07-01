@@ -95,7 +95,7 @@ class JournalEntryResource {
 	}
 
 	@PostMapping(path = "/{journalEntryId}/lock", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Lock a journal entry (skrivskydd) — it becomes an immutable upprättad handling")
+	@Operation(summary = "Lock a journal entry (write-protection) — it becomes an immutable finalised record")
 	ResponseEntity<JournalEntry> lock(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,

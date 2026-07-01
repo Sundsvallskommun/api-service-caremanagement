@@ -50,9 +50,10 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * carries
  * <em>no</em> reason or flag — the protected status must not leak across the API edge — so the frontend simply sees
  * that nothing can be recommended and directs the citizen to a caseworker.</li>
- * <li><b>Finns i CM? + LC</b> — does the applicant already exist (an EB errand in caremanagement, or a Lifecare
+ * <li><b>Exists in CM? + LC</b> — does the applicant already exist (a financial assistance errand in caremanagement, or
+ * a Lifecare
  * footprint)? When applying together, <em>both</em> must exist. If not → new application.</li>
- * <li><b>Samma marital status?</b> — does the requested constellation (alone vs with a partner, inferred from the
+ * <li><b>Same marital status?</b> — does the requested constellation (alone vs with a partner, inferred from the
  * co-applicant) match the previous application's? If it changed → new application.</li>
  * <li><b>Per-month</b> — for the current and next month, is there already an application/decision (within the window)?
  * If yes → supplementary application for that month; if no → renewal. The current month being decided in Lifecare makes
@@ -129,7 +130,8 @@ public class EligibilityService {
 		final var lifecare = loadLifecare(municipalityId, request, today, hasCoApplicant);
 		applyLifecareFacts(response, lifecare);
 
-		// Caremanagement (Druken) EB errands for the applicant (+ co-applicant), scoped to this namespace/municipality.
+		// Caremanagement (Druken) financial assistance errands for the applicant (+ co-applicant), scoped to this
+		// namespace/municipality.
 		final var cmRecords = loadCmRecords(municipalityId, namespace, request);
 		final var existsInCm = cmRecords.stream().anyMatch(cm -> personIn(cm.fa(), request.getApplicant()));
 		response.setExistsInCm(existsInCm);
@@ -151,7 +153,8 @@ public class EligibilityService {
 				"Civilståndet skiljer sig från föregående ansökan. Föreslår en nyansökan.");
 		}
 
-		// 2.5) Recently closed — a prior EB errand for either party was closed within the recently-closed window. Recommend
+		// 2.5) Recently closed — a prior financial assistance errand for either party was closed within the recently-closed
+		// window. Recommend
 		// a renewal and surface the closed errand so a caseworker can reopen it (in Lifecare) and release it for processing.
 		final var recentlyClosed = recentlyClosedErrandService.findRecentlyClosed(municipalityId, namespace, parties(request));
 		if (recentlyClosed.isPresent()) {
@@ -386,7 +389,10 @@ public class EligibilityService {
 			.toList();
 	}
 
-	/** EB errands (newest first) for either applicant, scoped to the namespace/municipality and the EB type slugs. */
+	/**
+	 * financial assistance errands (newest first) for either applicant, scoped to the namespace/municipality and the
+	 * financial assistance type slugs.
+	 */
 	private List<CmRecord> loadCmRecords(final String municipalityId, final String namespace, final EligibilityRequest request) {
 		final var ids = new LinkedHashSet<>(financialAssistanceRepository.findErrandIdsByPartyId(request.getApplicant()));
 		if (hasText(request.getCoApplicant())) {
@@ -459,7 +465,7 @@ public class EligibilityService {
 		return base + " för " + MONTHS_SV[period.getMonthValue() - 1] + " " + period.getYear();
 	}
 
-	/** An EB errand envelope paired with its typed financial-assistance row. */
+	/** A financial assistance errand envelope paired with its typed financial-assistance row. */
 	private record CmRecord(ErrandEntity errand, FinancialAssistanceEntity fa) {
 	}
 }

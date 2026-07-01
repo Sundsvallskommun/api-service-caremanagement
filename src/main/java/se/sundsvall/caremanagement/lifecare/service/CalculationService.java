@@ -46,12 +46,13 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper.BUCKET_SPECIAL_EXPENSE;
 
 /**
- * Builds and posts the calculation to Lifecare FC from incomes already classified by the operaton regelverk.
- * caremanagement no longer fetches SSBTEK or evaluates the raw list — the regelverk lives in the process. This service
+ * Builds and posts the calculation to Lifecare FC from incomes already classified by the operaton rules.
+ * caremanagement no longer fetches SSBTEK or evaluates the raw list — the rules live in the process. This service
  * resolves each classified income's category to an FC income-type id (via {@link ClassifiedIncomeToFcMapper}),
  * assembles
  * the calculation against the applicant's proposal (via {@link CalculationAssembler}), and posts it. It also reports
- * whether this month's calculation covers every income type the previous month's did — the EB process polls SSBTEK
+ * whether this month's calculation covers every income type the previous month's did — the financial assistance process
+ * polls SSBTEK
  * daily until it does.
  */
 @Service
@@ -71,12 +72,12 @@ public class CalculationService {
 	}
 
 	/**
-	 * Build and post the calculation from incomes already classified by the operaton regelverk, and report whether the
+	 * Build and post the calculation from incomes already classified by the operaton rules, and report whether the
 	 * information is complete — i.e. whether every income type on the previous month's calculation is present this
 	 * month. The completeness lookup is best-effort: a failure reading the previous calculation never fails the just-
 	 * created calculation; it is reported as complete (with no missing types) so the process is not wedged.
 	 *
-	 * @param  applicantPersonId     the applicant's personnummer (the FC proposal owner)
+	 * @param  applicantPersonId     the applicant's personal identity number (the FC proposal owner)
 	 * @param  applicationMonth      the month the application concerns
 	 * @param  classifiedIncomesJson the operaton {@code classifiedIncomes} JSON
 	 * @return                       the created calculation id plus the completeness verdict + missing income types
@@ -94,11 +95,12 @@ public class CalculationService {
 
 	/**
 	 * Build the draft calculation from the classified incomes — the FC income rows plus the completeness verdict —
-	 * <strong>without</strong> creating anything in Lifecare. The EB process stores the rows as an editable draft and
+	 * <strong>without</strong> creating anything in Lifecare. The financial assistance process stores the rows as an
+	 * editable draft and
 	 * polls SSBTEK daily until the information is complete; the Lifecare calculation is created later, on a decision, from
 	 * the (possibly edited) draft (see {@link #postDraftRows}).
 	 *
-	 * @param  applicantPersonId     the applicant's personnummer (the FC proposal owner)
+	 * @param  applicantPersonId     the applicant's personal identity number (the FC proposal owner)
 	 * @param  applicationMonth      the month the application concerns
 	 * @param  classifiedIncomesJson the operaton {@code classifiedIncomes} JSON
 	 * @return                       the FC income rows + completeness verdict; nothing is written to Lifecare
@@ -135,7 +137,8 @@ public class CalculationService {
 
 	/**
 	 * The process-derived income lines for a calculation built straight from the incomes the citizen declared in the
-	 * application — the nyansökan sibling of {@link #incomeLines}, no SSBTEK. Each application income code is translated to
+	 * application — the new application sibling of {@link #incomeLines}, no SSBTEK. Each application income code is
+	 * translated to
 	 * its FC income type and resolved against the applicant's calculation proposal (via
 	 * {@link ApplicationIncomeToFcMapper});
 	 * incomes whose type does not resolve are skipped. Same {@link FcIncomeLine} shape as the SSBTEK path, so the
@@ -148,7 +151,7 @@ public class CalculationService {
 
 	/**
 	 * Whether this month's classified incomes cover every income type the previous calculation had. Best-effort: a
-	 * failure reading the previous month is treated as complete so the EB process is not wedged.
+	 * failure reading the previous month is treated as complete so the financial assistance process is not wedged.
 	 */
 	public Completeness completeness(final String applicantPersonId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
 		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
@@ -161,7 +164,10 @@ public class CalculationService {
 		return lifecareEbCaseService.previousHousehold(applicantPersonId, applicationMonth);
 	}
 
-	/** Approved amount per EB cost type on the applicant's previous calculation — the expense regelträd's history input. */
+	/**
+	 * Approved amount per financial assistance cost type on the applicant's previous calculation — the expense rule tree's
+	 * history input.
+	 */
 	public Map<String, Double> previousExpenseAmounts(final String applicantPersonId, final YearMonth applicationMonth) {
 		return lifecareEbCaseService.previousExpenseAmounts(applicantPersonId, applicationMonth);
 	}

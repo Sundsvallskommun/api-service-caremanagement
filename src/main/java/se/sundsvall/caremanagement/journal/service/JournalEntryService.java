@@ -104,7 +104,7 @@ public class JournalEntryService {
 		repository.delete(requireWorking(findForUpdate(errandId, journalEntryId), "deleted"));
 	}
 
-	/** Lock the entry (skrivskydd) — it becomes an immutable upprättad handling. Already-locked entries 409. */
+	/** Lock the entry (write-protection) — it becomes an immutable finalised record. Already-locked entries 409. */
 	public JournalEntry lock(final String municipalityId, final String namespace, final String errandId, final String journalEntryId, final LockJournalEntry request) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 

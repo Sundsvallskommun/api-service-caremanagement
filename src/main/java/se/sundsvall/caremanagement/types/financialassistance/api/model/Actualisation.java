@@ -5,7 +5,7 @@ import java.util.Objects;
 
 /**
  * A single Lifecare actualisation (case intake) registered on a person — the read model the frontend lists so a
- * caseworker can pick which actualisation to archive a supplementary application (tilläggsansökan) to. The personnummer
+ * caseworker can pick which actualisation to archive a supplementary application to. The personnummer
  * is deliberately not exposed.
  */
 @Schema(description = "A Lifecare actualisation (case intake) registered on a person.")

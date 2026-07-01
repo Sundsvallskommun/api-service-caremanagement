@@ -31,7 +31,7 @@ import static java.util.Optional.ofNullable;
  * Sprint defaults where the proposal offers a choice: the first offered actualisation type is taken, then its first
  * reason and first fromWho; the first organisation (id + unit), the first service and the first investigation. A
  * specify-type is only set when the chosen type marks it mandatory, and a working-status only when the chosen type asks
- * for it — then the first offered value is used. The {@code CaseworkerId} is set from the handläggare resolved off the
+ * for it — then the first offered value is used. The {@code CaseworkerId} is set from the caseworker resolved off the
  * applicant's most recent Lifecare Service (see {@code CaseworkerResolver}) when one is supplied, and left unset
  * otherwise. These selections are intentionally simple and isolated here so they are easy to refine once real FC
  * proposals are available, mirroring {@link CalculationAssembler}.
@@ -43,7 +43,7 @@ public final class ActualisationAssembler {
 	/**
 	 * Build the FC actualisation body for one applicant and intake date.
 	 *
-	 * @param  applicantPersonId the applicant's personnummer (the FC actualisation owner)
+	 * @param  applicantPersonId the applicant's personal identity number (the FC actualisation owner)
 	 * @param  proposal          the FC actualisation proposal supplying the code lists; may be {@code null}
 	 * @param  date              the intake date
 	 * @param  caseworkerId      the resolved FC caseworker id to set on the body; may be {@code null}/blank to leave unset

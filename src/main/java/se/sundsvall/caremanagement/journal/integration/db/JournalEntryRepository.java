@@ -26,7 +26,7 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntryEntity
 	 * Loads the entry under a pessimistic write lock, scoped to the given errand. Mutating paths (update/delete/lock)
 	 * use this so a concurrent lock and edit are serialized: the second transaction blocks, then re-reads the
 	 * now-{@code LOCKED} status and is rejected — closing the read-check-write race that would otherwise let an edit
-	 * slip past skrivskydd. The errand scope also prevents mutating an entry belonging to another errand/tenant.
+	 * slip past write-protection. The errand scope also prevents mutating an entry belonging to another errand/tenant.
 	 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select e from JournalEntryEntity e where e.id = :id and e.errandId = :errandId")

@@ -19,15 +19,16 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * EB monitorings (bevakningar) — date-bound watch/reminder objects on an errand. Unlike the income
+ * financial assistance monitorings (watch/reminder objects) — date-bound watch/reminder objects on an errand. Unlike
+ * the income
  * {@link WarningService warnings} these carry no acknowledge lifecycle: a caseworker simply creates, edits and removes
  * them. Every method is scoped to the errand's namespace/municipality (404 when the errand is missing there); each
  * monitoring has a required start date and an optional end date that, when set, must not precede the start.
  *
  * <p>
  * A monitoring carries a {@code source} ({@code CASEWORKER}, the default, or {@code LIFECARE}) and an optional
- * {@code lifecareId}. Lifecare FC exposes no bevakningar endpoint, so the mirror is driven out-of-band by RPA: RPA
- * surfaces a Lifecare bevakning by POSTing {@code source=LIFECARE} with its {@code lifecareId} (idempotent per
+ * {@code lifecareId}. Lifecare FC exposes no watch/reminder endpoint, so the mirror is driven out-of-band by RPA: RPA
+ * surfaces a Lifecare watch/reminder by POSTing {@code source=LIFECARE} with its {@code lifecareId} (idempotent per
  * errand + lifecareId, so re-runs don't duplicate), and mirrors a caseworker monitoring the other way, later stamping
  * back the {@code lifecareId} it was given in Lifecare. The provenance fields are system/RPA-managed: an update only
  * touches them when supplied, so a caseworker edit never drops them.
