@@ -1,5 +1,5 @@
 /**
- * Document module — Dokument (formal case documents) attached to an errand. The sibling of
+ * Document module — Formal case documents attached to an errand. The sibling of
  * {@link se.sundsvall.caremanagement.journal journal entries}: in Lifecare both live in the same "Dokumentation"
  * container and share the same shape (Typ, Rubrik, text, Datum/Tid, authorship) and the write-protection lifecycle —
  * but a

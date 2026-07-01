@@ -37,7 +37,7 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @RestController
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands/{errandId}/documents")
-@Tag(name = "Documents", description = "Dokument (formal case documents) attached to an errand")
+@Tag(name = "Documents", description = "Formal case documents attached to an errand")
 class DocumentResource {
 
 	private final DocumentService service;

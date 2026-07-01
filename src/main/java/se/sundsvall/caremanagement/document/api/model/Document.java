@@ -19,39 +19,39 @@ public class Document {
 	@Schema(description = "Errand id this document belongs to")
 	private String errandId;
 
-	@Schema(description = "Document type (Lifecare 'Typ'/Dokumenttyp). A municipality-configured value; see the metadata catalogue for a provisional set.", example = "Brev")
+	@Schema(description = "Document type (Lifecare 'Typ'/Dokumenttyp). A municipality-configured value; see the metadata catalogue for a provisional set.", examples = "Brev")
 	private String type;
 
-	@Schema(description = "Heading (Lifecare 'Rubrik')", example = "Beslut om ekonomiskt bistånd 2025-05")
+	@Schema(description = "Heading (Lifecare 'Rubrik')", examples = "Beslut om ekonomiskt bistånd 2025-05")
 	private String heading;
 
-	@Schema(description = "Free-text body of the document", example = "Beslut har fattats enligt nedan ...")
+	@Schema(description = "Free-text body of the document", examples = "Beslut har fattats enligt nedan ...")
 	private String text;
 
-	@Schema(description = "Documented date (Lifecare 'Datum'), distinct from the system created timestamp", example = "2025-05-30")
+	@Schema(description = "Documented date (Lifecare 'Datum'), distinct from the system created timestamp", examples = "2025-05-30")
 	private LocalDate documentDate;
 
-	@Schema(description = "Documented time (Lifecare 'Tid'); optional", example = "14:30")
+	@Schema(description = "Documented time (Lifecare 'Tid'); optional", examples = "14:30")
 	private LocalTime documentTime;
 
 	@Schema(description = "Write-protection status — WORKING is an editable draft, LOCKED is a finalised record", allowableValues = {
 		"WORKING", "LOCKED"
-	}, example = "WORKING")
+	}, examples = "WORKING")
 	private String status;
 
-	@Schema(description = "User id of the author (Lifecare 'Upprättad av'/'Ägare')", example = "carola01winberg")
+	@Schema(description = "User id of the author (Lifecare 'Upprättad av'/'Ägare')", examples = "carola01winberg")
 	private String createdBy;
 
 	@Schema(description = "Created timestamp")
 	private OffsetDateTime created;
 
-	@Schema(description = "User id of the last editor (Lifecare 'Ändrat av'); null until the document has been edited", example = "ebb14eri")
+	@Schema(description = "User id of the last editor (Lifecare 'Ändrat av'); null until the document has been edited", examples = "ebb14eri")
 	private String modifiedBy;
 
 	@Schema(description = "Last modified timestamp; null until the document has been edited")
 	private OffsetDateTime modified;
 
-	@Schema(description = "User id of whoever locked the document; null while WORKING", example = "carola01winberg")
+	@Schema(description = "User id of whoever locked the document; null while WORKING", examples = "carola01winberg")
 	private String lockedBy;
 
 	@Schema(description = "Timestamp when the document was locked (became an upprättad handling); null while WORKING")

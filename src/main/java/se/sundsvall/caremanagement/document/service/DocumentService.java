@@ -24,7 +24,7 @@ import static se.sundsvall.caremanagement.document.integration.db.model.Document
 import static se.sundsvall.caremanagement.document.integration.db.model.DocumentStatus.WORKING;
 
 /**
- * Dokument (formal case documents) on an errand. A created document starts {@code WORKING} (an editable draft);
+ * Formal case documents on an errand. A created document starts {@code WORKING} (an editable draft);
  * locking it makes it a {@code LOCKED} upprättad handling, after which {@code update} and {@code delete} are rejected
  * with {@code 409 Conflict}.
  *

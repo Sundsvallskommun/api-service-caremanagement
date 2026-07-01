@@ -15,14 +15,14 @@ import java.time.LocalTime;
  */
 public record UpdateDocument(
 
-	@Schema(description = "Document type (Lifecare 'Typ'/Dokumenttyp)", example = "Brev", requiredMode = Schema.RequiredMode.REQUIRED) @NotBlank @Size(max = 255) String type,
+	@Schema(description = "Document type (Lifecare 'Typ'/Dokumenttyp)", examples = "Brev", requiredMode = Schema.RequiredMode.REQUIRED) @NotBlank @Size(max = 255) String type,
 
-	@Schema(description = "Heading (Lifecare 'Rubrik')", example = "Beslut om ekonomiskt bistånd 2025-05", requiredMode = Schema.RequiredMode.REQUIRED) @NotBlank @Size(max = 255) String heading,
+	@Schema(description = "Heading (Lifecare 'Rubrik')", examples = "Beslut om ekonomiskt bistånd 2025-05", requiredMode = Schema.RequiredMode.REQUIRED) @NotBlank @Size(max = 255) String heading,
 
-	@Schema(description = "Free-text body of the document; optional", example = "Beslut har fattats enligt nedan ...") @Size(max = 1_048_576) String text,
+	@Schema(description = "Free-text body of the document; optional", examples = "Beslut har fattats enligt nedan ...") @Size(max = 1_048_576) String text,
 
-	@Schema(description = "Documented date (Lifecare 'Datum')", example = "2025-05-30", requiredMode = Schema.RequiredMode.REQUIRED) @NotNull LocalDate documentDate,
+	@Schema(description = "Documented date (Lifecare 'Datum')", examples = "2025-05-30", requiredMode = Schema.RequiredMode.REQUIRED) @NotNull LocalDate documentDate,
 
-	@Schema(description = "Documented time (Lifecare 'Tid'); optional", example = "14:30") LocalTime documentTime,
+	@Schema(description = "Documented time (Lifecare 'Tid'); optional", examples = "14:30") LocalTime documentTime,
 
-	@Schema(description = "User id of the editor (Lifecare 'Ändrat av'); optional", example = "ebb14eri") @Size(max = 64) String modifiedBy) {}
+	@Schema(description = "User id of the editor (Lifecare 'Ändrat av'); optional", examples = "ebb14eri") @Size(max = 64) String modifiedBy) {}

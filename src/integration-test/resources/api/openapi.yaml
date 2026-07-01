@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:56560
+- url: http://localhost:52097
   description: Generated server url
 tags:
 - name: Statistics
@@ -69,8 +69,6 @@ tags:
   description: "Decision audit trail on an errand. Stores both system-generated decisions\
     \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
     \ (e.g. caseworker APPROVE/REJECT), distinguished by `decisionType`."
-- name: Documents
-  description: Dokument (formal case documents) attached to an errand
 - name: Financial Assistance · Errands
   description: "Create, read and replace financial assistance errands. Create against\
     \ one of the three application-type slugs (financial-assistance-new / -renewal\
@@ -81,6 +79,8 @@ tags:
     \ decisions and documents — plus a single document's PDF content. Keyed by partyId\
     \ (resolved to a personnummer via the citizen service); the period defaults to\
     \ the last 24 months. caremanagement only forwards the reads."
+- name: Documents
+  description: Formal case documents attached to an errand
 - name: Errands
   description: Errand operations
 - name: Financial Assistance · Payment
@@ -7420,34 +7420,40 @@ components:
         type:
           type: string
           description: Document type (Lifecare 'Typ'/Dokumenttyp)
-          example: Brev
+          examples:
+          - Brev
           maxLength: 255
           minLength: 0
         heading:
           type: string
           description: Heading (Lifecare 'Rubrik')
-          example: Beslut om ekonomiskt bistånd 2025-05
+          examples:
+          - Beslut om ekonomiskt bistånd 2025-05
           maxLength: 255
           minLength: 0
         text:
           type: string
           description: Free-text body of the document; optional
-          example: Beslut har fattats enligt nedan ...
+          examples:
+          - Beslut har fattats enligt nedan ...
           maxLength: 1048576
           minLength: 0
         documentDate:
           type: string
           format: date
           description: Documented date (Lifecare 'Datum')
-          example: 2025-05-30
+          examples:
+          - 2025-05-30
         documentTime:
           type: string
           description: Documented time (Lifecare 'Tid'); optional
-          example: 14:30
+          examples:
+          - 14:30
         createdBy:
           type: string
           description: User id of the author (Lifecare 'Upprättad av'); optional
-          example: carola01winberg
+          examples:
+          - carola01winberg
           maxLength: 64
           minLength: 0
       required:
@@ -7460,7 +7466,8 @@ components:
         lockedBy:
           type: string
           description: User id of whoever locks the document; optional
-          example: carola01winberg
+          examples:
+          - carola01winberg
           maxLength: 64
           minLength: 0
     Document:
@@ -7477,25 +7484,30 @@ components:
           type: string
           description: Document type (Lifecare 'Typ'/Dokumenttyp). A municipality-configured
             value; see the metadata catalogue for a provisional set.
-          example: Brev
+          examples:
+          - Brev
         heading:
           type: string
           description: Heading (Lifecare 'Rubrik')
-          example: Beslut om ekonomiskt bistånd 2025-05
+          examples:
+          - Beslut om ekonomiskt bistånd 2025-05
         text:
           type: string
           description: Free-text body of the document
-          example: Beslut har fattats enligt nedan ...
+          examples:
+          - Beslut har fattats enligt nedan ...
         documentDate:
           type: string
           format: date
           description: "Documented date (Lifecare 'Datum'), distinct from the system\
             \ created timestamp"
-          example: 2025-05-30
+          examples:
+          - 2025-05-30
         documentTime:
           type: string
           description: Documented time (Lifecare 'Tid'); optional
-          example: 14:30
+          examples:
+          - 14:30
         status:
           type: string
           description: "Write-protection status — WORKING is an editable draft, LOCKED\
@@ -7503,11 +7515,13 @@ components:
           enum:
           - WORKING
           - LOCKED
-          example: WORKING
+          examples:
+          - WORKING
         createdBy:
           type: string
           description: User id of the author (Lifecare 'Upprättad av'/'Ägare')
-          example: carola01winberg
+          examples:
+          - carola01winberg
         created:
           type: string
           format: date-time
@@ -7516,7 +7530,8 @@ components:
           type: string
           description: User id of the last editor (Lifecare 'Ändrat av'); null until
             the document has been edited
-          example: ebb14eri
+          examples:
+          - ebb14eri
         modified:
           type: string
           format: date-time
@@ -7524,7 +7539,8 @@ components:
         lockedBy:
           type: string
           description: User id of whoever locked the document; null while WORKING
-          example: carola01winberg
+          examples:
+          - carola01winberg
         locked:
           type: string
           format: date-time
@@ -8622,34 +8638,40 @@ components:
         type:
           type: string
           description: Document type (Lifecare 'Typ'/Dokumenttyp)
-          example: Brev
+          examples:
+          - Brev
           maxLength: 255
           minLength: 0
         heading:
           type: string
           description: Heading (Lifecare 'Rubrik')
-          example: Beslut om ekonomiskt bistånd 2025-05
+          examples:
+          - Beslut om ekonomiskt bistånd 2025-05
           maxLength: 255
           minLength: 0
         text:
           type: string
           description: Free-text body of the document; optional
-          example: Beslut har fattats enligt nedan ...
+          examples:
+          - Beslut har fattats enligt nedan ...
           maxLength: 1048576
           minLength: 0
         documentDate:
           type: string
           format: date
           description: Documented date (Lifecare 'Datum')
-          example: 2025-05-30
+          examples:
+          - 2025-05-30
         documentTime:
           type: string
           description: Documented time (Lifecare 'Tid'); optional
-          example: 14:30
+          examples:
+          - 14:30
         modifiedBy:
           type: string
           description: User id of the editor (Lifecare 'Ändrat av'); optional
-          example: ebb14eri
+          examples:
+          - ebb14eri
           maxLength: 64
           minLength: 0
       required:
@@ -10056,11 +10078,13 @@ components:
         code:
           type: string
           description: The type code
-          example: LETTER
+          examples:
+          - LETTER
         displayName:
           type: string
           description: Human-readable Swedish label (the Lifecare 'Typ' value)
-          example: Brev
+          examples:
+          - Brev
     CountResponse:
       type: object
       description: Count of errands matching the supplied filter

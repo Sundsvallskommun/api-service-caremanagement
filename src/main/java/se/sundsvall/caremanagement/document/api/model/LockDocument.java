@@ -9,4 +9,4 @@ import jakarta.validation.constraints.Size;
  */
 public record LockDocument(
 
-	@Schema(description = "User id of whoever locks the document; optional", example = "carola01winberg") @Size(max = 64) String lockedBy) {}
+	@Schema(description = "User id of whoever locks the document; optional", examples = "carola01winberg") @Size(max = 64) String lockedBy) {}

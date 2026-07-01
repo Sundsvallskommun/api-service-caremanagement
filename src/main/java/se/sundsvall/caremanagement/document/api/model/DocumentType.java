@@ -11,10 +11,10 @@ import java.util.Objects;
 @Schema(description = "A selectable document type — the code and the Swedish Lifecare label.")
 public class DocumentType {
 
-	@Schema(description = "The type code", example = "LETTER")
+	@Schema(description = "The type code", examples = "LETTER")
 	private String code;
 
-	@Schema(description = "Human-readable Swedish label (the Lifecare 'Typ' value)", example = "Brev")
+	@Schema(description = "Human-readable Swedish label (the Lifecare 'Typ' value)", examples = "Brev")
 	private String displayName;
 
 	public static DocumentType create() {
