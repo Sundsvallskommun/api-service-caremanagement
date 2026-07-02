@@ -86,12 +86,14 @@ public class MessageAttachmentDataEntity {
 			return false;
 		}
 		final MessageAttachmentDataEntity that = (MessageAttachmentDataEntity) o;
-		return id == that.id && Objects.equals(messageAttachmentId, that.messageAttachmentId) && Objects.equals(file, that.file);
+		// The blob is intentionally excluded — comparing it would read the whole longblob (same reason it is left out
+		// of toString).
+		return id == that.id && Objects.equals(messageAttachmentId, that.messageAttachmentId);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, messageAttachmentId, file);
+		return Objects.hash(id, messageAttachmentId);
 	}
 
 	@Override
