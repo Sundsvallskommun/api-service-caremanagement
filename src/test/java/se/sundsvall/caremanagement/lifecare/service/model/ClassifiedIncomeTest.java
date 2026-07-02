@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
+import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ClassifiedIncomeTest {
@@ -44,7 +45,7 @@ class ClassifiedIncomeTest {
 		assertThat(result.income()).isNotNull();
 		assertThat(result.income().benefit()).isEqualTo("Bostadsbidrag");
 		assertThat(result.income().netAmount()).isEqualByComparingTo(new BigDecimal("1850"));
-		assertThat(result.income().period()).isEqualTo(LocalDate.of(2026, 5, 15));
+		assertThat(result.income().period()).isEqualTo(LocalDate.of(2026, MAY, 15));
 		assertThat(result.income().role()).isEqualTo(ApplicantRole.APPLICANT);
 	}
 }
