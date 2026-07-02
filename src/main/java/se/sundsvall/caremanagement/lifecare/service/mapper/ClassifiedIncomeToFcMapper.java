@@ -142,7 +142,7 @@ public final class ClassifiedIncomeToFcMapper {
 	}
 
 	private static boolean isTransferable(final ClassifiedIncome classified) {
-		return (classified.atgard() != null) && classified.atgard().startsWith(TRANSFER_ACTION_PREFIX)
+		return (classified.action() != null) && classified.action().startsWith(TRANSFER_ACTION_PREFIX)
 			&& (classified.calculation() != null) && !classified.calculation().isBlank() && !"-".equals(classified.calculation());
 	}
 
