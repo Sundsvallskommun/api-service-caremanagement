@@ -4,7 +4,7 @@ import java.time.ZoneId;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.sundsvall.caremanagement.eventlog.api.model.ErrandEvent;
+import se.sundsvall.caremanagement.eventlog.api.model.ErrandEventEntry;
 import se.sundsvall.caremanagement.eventlog.integration.db.ErrandEventRepository;
 import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEntity;
 
@@ -50,7 +50,7 @@ public class ErrandEventService {
 	 * @param includeReads   when {@code false}, drops READ rows — a clean "what changed" timeline without the read noise
 	 */
 	@Transactional(readOnly = true)
-	public List<ErrandEvent> listForErrand(final String municipalityId, final String namespace, final String errandId, final String action, final String actor, final String source, final boolean includeReads) {
+	public List<ErrandEventEntry> listForErrand(final String municipalityId, final String namespace, final String errandId, final String action, final String actor, final String source, final boolean includeReads) {
 		return repository.findFiltered(municipalityId, namespace, errandId, action, actor, source, includeReads).stream()
 			.map(ErrandEventService::toEvent)
 			.toList();
@@ -66,8 +66,8 @@ public class ErrandEventService {
 		return repository.countFiltered(municipalityId, namespace, errandId, action, actor, source, includeReads);
 	}
 
-	private static ErrandEvent toEvent(final ErrandEventEntity e) {
-		return new ErrandEvent(
+	private static ErrandEventEntry toEvent(final ErrandEventEntity e) {
+		return new ErrandEventEntry(
 			e.getId(),
 			e.getErrandId(),
 			e.getMunicipalityId(),

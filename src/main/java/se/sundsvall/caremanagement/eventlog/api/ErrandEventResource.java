@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import se.sundsvall.caremanagement.eventlog.api.model.ErrandEvent;
 import se.sundsvall.caremanagement.eventlog.api.model.ErrandEventCount;
+import se.sundsvall.caremanagement.eventlog.api.model.ErrandEventEntry;
 import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
@@ -38,7 +38,7 @@ class ErrandEventResource {
 	@Operation(summary = "List activity events for an errand (newest first)",
 		description = "Optionally filter by action (READ/CREATE/UPDATE/DELETE), actor (the X-Sent-By value, e.g. an AD account) "
 			+ "and source (HTTP access log or EVENT change log). Set includeReads=false for a clean 'what changed' timeline without the read noise.")
-	ResponseEntity<List<ErrandEvent>> list(
+	ResponseEntity<List<ErrandEventEntry>> list(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId,

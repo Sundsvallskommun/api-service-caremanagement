@@ -24,7 +24,7 @@ import java.time.OffsetDateTime;
  * @param statusCode     the HTTP response status code
  * @param created        when the activity happened
  */
-public record ErrandEvent(
+public record ErrandEventEntry(
 	String id,
 	String errandId,
 	String municipalityId,

@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:52097
+- url: http://localhost:55225
   description: Generated server url
 tags:
 - name: Statistics
@@ -4690,7 +4690,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ErrandEvent"
+                  $ref: "#/components/schemas/ErrandEventEntry"
   /{municipalityId}/{namespace}/errands/{errandId}/events/count:
     get:
       tags:
@@ -5912,10 +5912,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -9104,7 +9104,7 @@ components:
             has not yet marked as read
           examples:
           - 3
-    ErrandEvent:
+    ErrandEventEntry:
       type: object
       properties:
         id:

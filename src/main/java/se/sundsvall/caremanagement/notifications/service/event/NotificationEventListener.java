@@ -2,8 +2,8 @@ package se.sundsvall.caremanagement.notifications.service.event;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionalEventListener;
 import se.sundsvall.caremanagement.notifications.api.model.Notification;
 import se.sundsvall.caremanagement.notifications.service.NotificationService;
 import se.sundsvall.caremanagement.shared.NotificationRequest;
@@ -19,7 +19,7 @@ class NotificationEventListener {
 		this.notificationService = notificationService;
 	}
 
-	@TransactionalEventListener
+	@ApplicationModuleListener
 	void onNotificationRequested(final NotificationRequest event) {
 		try {
 			final var notification = Notification.create()

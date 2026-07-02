@@ -11,8 +11,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
-import se.sundsvall.caremanagement.eventlog.api.model.ErrandEvent;
 import se.sundsvall.caremanagement.eventlog.api.model.ErrandEventCount;
+import se.sundsvall.caremanagement.eventlog.api.model.ErrandEventEntry;
 import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
 
 import static java.util.UUID.randomUUID;
@@ -42,7 +42,7 @@ class ErrandEventResourceTest {
 
 	@Test
 	void list() {
-		final var event = new ErrandEvent("ev1", ERRAND_ID, MUNICIPALITY_ID, NAMESPACE, "HTTP", "READ", "errand", "Öppnade ärendet",
+		final var event = new ErrandEventEntry("ev1", ERRAND_ID, MUNICIPALITY_ID, NAMESPACE, "HTTP", "READ", "errand", "Öppnade ärendet",
 			"GET", "/path", "joe001doe", "adAccount", "req-1", 200, FIXED_TIMESTAMP);
 		when(serviceMock.listForErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(List.of(event));
 
@@ -50,7 +50,7 @@ class ErrandEventResourceTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
 			.expectStatus().isOk()
-			.expectBodyList(ErrandEvent.class)
+			.expectBodyList(ErrandEventEntry.class)
 			.returnResult()
 			.getResponseBody();
 
@@ -68,7 +68,7 @@ class ErrandEventResourceTest {
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
 			.expectStatus().isOk()
-			.expectBodyList(ErrandEvent.class);
+			.expectBodyList(ErrandEventEntry.class);
 
 		verify(serviceMock).listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "UPDATE", "joe001doe", "EVENT", false);
 	}
@@ -111,7 +111,7 @@ class ErrandEventResourceTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
 			.expectStatus().isOk()
-			.expectBodyList(ErrandEvent.class)
+			.expectBodyList(ErrandEventEntry.class)
 			.returnResult()
 			.getResponseBody();
 

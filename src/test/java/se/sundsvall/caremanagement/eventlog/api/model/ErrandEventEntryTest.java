@@ -5,12 +5,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ErrandEventTest {
+class ErrandEventEntryTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void componentsAreExposed() {
-		final var event = new ErrandEvent(
+		final var event = new ErrandEventEntry(
 			"id", "errand-1", "2281", "FINANCIAL_ASSISTANCE", "HTTP",
 			"UPDATE", "financial-assistance/calculation/draft/incomes",
 			"UPDATE financial-assistance/calculation/draft/incomes",
