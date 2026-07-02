@@ -14,26 +14,27 @@ import static org.mockito.Mockito.mock;
 class ErrandEventWebConfigurationTest {
 
 	@Test
-	void registersErrandEventInterceptor() {
+	void registersBothInterceptors() {
 		final var configuration = new ErrandEventWebConfiguration(
+			new RequireIdentifierInterceptor(true),
 			new ErrandEventInterceptor(mock(ErrandEventService.class)));
 		final var registry = new InterceptorRegistry();
 
 		configuration.addInterceptors(registry);
 
 		final List<?> interceptors = ReflectionTestUtils.invokeMethod(registry, "getInterceptors");
-		assertThat(interceptors).hasSize(1);
+		assertThat(interceptors).hasSize(2);
 	}
 
 	@Test
-	void errandPatternMatchesOnlyNumericMunicipalityErrandPaths() {
-		final var pattern = new PathPatternParser().parse(ErrandEventWebConfiguration.ERRAND_PATTERN);
+	void businessApiPatternMatchesOnlyNumericMunicipalityPaths() {
+		final var pattern = new PathPatternParser().parse(ErrandEventWebConfiguration.BUSINESS_API_PATTERN);
 
-		// real errand-scoped paths are gated
+		// real municipality-scoped business paths are gated
 		assertThat(pattern.matches(PathContainer.parsePath("/2281/FINANCIAL_ASSISTANCE/errands/abc"))).isTrue();
+		assertThat(pattern.matches(PathContainer.parsePath("/2281/FINANCIAL_ASSISTANCE/metadata"))).isTrue();
 
-		// non-errand and infra / non-numeric first segments must NOT be gated (so api docs + swagger keep working)
-		assertThat(pattern.matches(PathContainer.parsePath("/2281/FINANCIAL_ASSISTANCE/metadata"))).isFalse();
+		// infra / non-numeric first segments must NOT be gated (so api docs + swagger keep working)
 		assertThat(pattern.matches(PathContainer.parsePath("/api-docs"))).isFalse();
 		assertThat(pattern.matches(PathContainer.parsePath("/api-docs/swagger-config"))).isFalse();
 		assertThat(pattern.matches(PathContainer.parsePath("/swagger-ui/index.html"))).isFalse();

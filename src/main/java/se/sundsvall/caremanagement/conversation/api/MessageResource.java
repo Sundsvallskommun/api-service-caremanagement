@@ -27,7 +27,6 @@ import se.sundsvall.caremanagement.conversation.api.model.CreateMessage;
 import se.sundsvall.caremanagement.conversation.api.model.MarkMessagesRead;
 import se.sundsvall.caremanagement.conversation.api.model.Message;
 import se.sundsvall.caremanagement.conversation.api.model.UnreadCount;
-import se.sundsvall.caremanagement.conversation.api.validation.ValidIdentifier;
 import se.sundsvall.caremanagement.conversation.service.MessageReadService;
 import se.sundsvall.caremanagement.conversation.service.MessageService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
@@ -75,7 +74,7 @@ class MessageResource {
 		@ValidUuid @PathVariable final String errandId,
 		@Parameter(name = Identifier.HEADER_NAME,
 			description = "Sender identity (type=adAccount → caseworker, type=partyId → applicant)",
-			example = "joe001doe; type=adAccount") @RequestHeader(Identifier.HEADER_NAME) @ValidIdentifier final String xSentBy,
+			example = "joe001doe; type=adAccount") @RequestHeader(Identifier.HEADER_NAME) final String xSentBy,
 		@Valid @NotNull @RequestPart("message") final CreateMessage message,
 		@RequestPart(value = "attachments", required = false) final List<MultipartFile> attachments) {
 
@@ -106,7 +105,7 @@ class MessageResource {
 		@ValidUuid @PathVariable final String errandId,
 		@Parameter(name = Identifier.HEADER_NAME,
 			description = "Caller identity (type=adAccount → caseworker, type=partyId → applicant)",
-			example = "joe001doe; type=adAccount") @RequestHeader(Identifier.HEADER_NAME) @ValidIdentifier final String xSentBy) {
+			example = "joe001doe; type=adAccount") @RequestHeader(Identifier.HEADER_NAME) final String xSentBy) {
 
 		return ok(new UnreadCount(readService.unreadCount(municipalityId, namespace, errandId, Identifier.parse(xSentBy))));
 	}
@@ -122,7 +121,7 @@ class MessageResource {
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId,
-		@Parameter(name = Identifier.HEADER_NAME, description = "Caller identity (type=adAccount → caseworker, type=partyId → applicant)", example = "joe001doe; type=adAccount") @RequestHeader(Identifier.HEADER_NAME) @ValidIdentifier final String xSentBy,
+		@Parameter(name = Identifier.HEADER_NAME, description = "Caller identity (type=adAccount → caseworker, type=partyId → applicant)", example = "joe001doe; type=adAccount") @RequestHeader(Identifier.HEADER_NAME) final String xSentBy,
 		@Valid @NotNull @RequestBody final MarkMessagesRead request) {
 
 		readService.markRead(municipalityId, namespace, errandId, Identifier.parse(xSentBy), request.messageIds());
