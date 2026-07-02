@@ -1,8 +1,6 @@
 package se.sundsvall.caremanagement.journal.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 
@@ -28,11 +26,8 @@ public class JournalEntry {
 	@Schema(description = "Free-text body of the journal entry", example = "Hej! Vill bara informera att jag fått jobb på Mejeriet.")
 	private String text;
 
-	@Schema(description = "Documented date (Lifecare 'Datum'), distinct from the system created timestamp", example = "2025-05-30")
-	private LocalDate entryDate;
-
-	@Schema(description = "Documented time (Lifecare 'Tid'); optional", example = "14:30")
-	private LocalTime entryTime;
+	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid'), distinct from the system created timestamp", example = "2025-05-30T14:30:00+02:00")
+	private OffsetDateTime entryDateTime;
 
 	@Schema(description = "Write-protection status — WORKING is an editable working note, LOCKED is a finalised record", allowableValues = {
 		"WORKING", "LOCKED"
@@ -81,12 +76,8 @@ public class JournalEntry {
 		return text;
 	}
 
-	public LocalDate getEntryDate() {
-		return entryDate;
-	}
-
-	public LocalTime getEntryTime() {
-		return entryTime;
+	public OffsetDateTime getEntryDateTime() {
+		return entryDateTime;
 	}
 
 	public String getStatus() {
@@ -137,12 +128,8 @@ public class JournalEntry {
 		this.text = v;
 	}
 
-	public void setEntryDate(final LocalDate v) {
-		this.entryDate = v;
-	}
-
-	public void setEntryTime(final LocalTime v) {
-		this.entryTime = v;
+	public void setEntryDateTime(final OffsetDateTime v) {
+		this.entryDateTime = v;
 	}
 
 	public void setStatus(final String v) {
@@ -198,13 +185,8 @@ public class JournalEntry {
 		return this;
 	}
 
-	public JournalEntry withEntryDate(final LocalDate entryDate) {
-		this.entryDate = entryDate;
-		return this;
-	}
-
-	public JournalEntry withEntryTime(final LocalTime entryTime) {
-		this.entryTime = entryTime;
+	public JournalEntry withEntryDateTime(final OffsetDateTime entryDateTime) {
+		this.entryDateTime = entryDateTime;
 		return this;
 	}
 
@@ -250,8 +232,8 @@ public class JournalEntry {
 		final JournalEntry that = (JournalEntry) o;
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
 			&& Objects.equals(type, that.type) && Objects.equals(heading, that.heading)
-			&& Objects.equals(text, that.text) && Objects.equals(entryDate, that.entryDate)
-			&& Objects.equals(entryTime, that.entryTime) && Objects.equals(status, that.status)
+			&& Objects.equals(text, that.text) && Objects.equals(entryDateTime, that.entryDateTime)
+			&& Objects.equals(status, that.status)
 			&& Objects.equals(createdBy, that.createdBy) && Objects.equals(created, that.created)
 			&& Objects.equals(modifiedBy, that.modifiedBy) && Objects.equals(modified, that.modified)
 			&& Objects.equals(lockedBy, that.lockedBy) && Objects.equals(locked, that.locked);
@@ -259,6 +241,6 @@ public class JournalEntry {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, heading, text, entryDate, entryTime, status, createdBy, created, modifiedBy, modified, lockedBy, locked);
+		return Objects.hash(id, errandId, type, heading, text, entryDateTime, status, createdBy, created, modifiedBy, modified, lockedBy, locked);
 	}
 }

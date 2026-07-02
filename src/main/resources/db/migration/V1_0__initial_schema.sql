@@ -424,8 +424,7 @@ CREATE TABLE `errand_journal_entry` (
   `entry_type` varchar(255) NOT NULL,
   `heading` varchar(255) NOT NULL,
   `entry_text` longtext DEFAULT NULL,
-  `entry_date` date NOT NULL,
-  `entry_time` time DEFAULT NULL,
+  `entry_date_time` datetime(6) NOT NULL,
   `status` varchar(16) NOT NULL,
   `created_by` varchar(64) DEFAULT NULL,
   `created` datetime(6) NOT NULL,
@@ -435,7 +434,7 @@ CREATE TABLE `errand_journal_entry` (
   `locked` datetime(6) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_journal_entry_errand_id` (`errand_id`),
-  KEY `idx_journal_entry_entry_date` (`entry_date`),
+  KEY `idx_journal_entry_entry_date_time` (`entry_date_time`),
   CONSTRAINT `fk_journal_entry_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `errand_message` (

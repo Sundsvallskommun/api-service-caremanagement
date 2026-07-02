@@ -56,8 +56,7 @@ public class JournalEntryService {
 			.withType(request.type())
 			.withHeading(request.heading())
 			.withText(request.text())
-			.withEntryDate(request.entryDate())
-			.withEntryTime(request.entryTime())
+			.withEntryDateTime(request.entryDateTime())
 			.withStatus(WORKING)
 			.withCreatedBy(request.createdBy())
 			.withCreated(timestamp));
@@ -70,7 +69,7 @@ public class JournalEntryService {
 	public List<JournalEntry> listForErrand(final String municipalityId, final String namespace, final String errandId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
-		return repository.findByErrandIdOrderByEntryDateDescEntryTimeDescCreatedDesc(errandId).stream()
+		return repository.findByErrandIdOrderByEntryDateTimeDescCreatedDesc(errandId).stream()
 			.map(JournalEntryService::toJournalEntry)
 			.toList();
 	}
@@ -90,8 +89,7 @@ public class JournalEntryService {
 			.withType(request.type())
 			.withHeading(request.heading())
 			.withText(request.text())
-			.withEntryDate(request.entryDate())
-			.withEntryTime(request.entryTime())
+			.withEntryDateTime(request.entryDateTime())
 			.withModifiedBy(request.modifiedBy())
 			.withModified(now(systemDefault()).truncatedTo(MILLIS));
 
@@ -149,8 +147,7 @@ public class JournalEntryService {
 			.withType(e.getType())
 			.withHeading(e.getHeading())
 			.withText(e.getText())
-			.withEntryDate(e.getEntryDate())
-			.withEntryTime(e.getEntryTime())
+			.withEntryDateTime(e.getEntryDateTime())
 			.withStatus(ofNullable(e.getStatus()).map(Enum::name).orElse(null))
 			.withCreatedBy(e.getCreatedBy())
 			.withCreated(e.getCreated())

@@ -1,8 +1,6 @@
 package se.sundsvall.caremanagement.journal.integration.db.model;
 
 import com.google.code.beanmatchers.BeanMatchers;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Random;
 import org.hamcrest.MatcherAssert;
@@ -24,8 +22,6 @@ class JournalEntryEntityTest {
 	@BeforeAll
 	static void setup() {
 		BeanMatchers.registerValueGenerator(() -> now().plusDays(new Random().nextInt()), OffsetDateTime.class);
-		BeanMatchers.registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(1000)), LocalDate.class);
-		BeanMatchers.registerValueGenerator(() -> LocalTime.ofNanoOfDay(Math.floorMod(new Random().nextLong(), 86_400_000_000_000L)), LocalTime.class);
 	}
 
 	@Test
@@ -46,8 +42,7 @@ class JournalEntryEntityTest {
 
 	@Test
 	void testBuilderMethods() {
-		final var entryDate = LocalDate.parse("2025-05-30");
-		final var entryTime = LocalTime.of(14, 30);
+		final var entryDateTime = OffsetDateTime.parse("2025-05-30T14:30:00+02:00");
 		final var modified = FIXED_TIMESTAMP.plusHours(1);
 		final var locked = FIXED_TIMESTAMP.plusHours(2);
 
@@ -57,8 +52,7 @@ class JournalEntryEntityTest {
 			.withType("Journalfört meddelande")
 			.withHeading("Rubrik")
 			.withText("body")
-			.withEntryDate(entryDate)
-			.withEntryTime(entryTime)
+			.withEntryDateTime(entryDateTime)
 			.withStatus(WORKING)
 			.withCreatedBy("carola")
 			.withCreated(FIXED_TIMESTAMP)
@@ -73,8 +67,7 @@ class JournalEntryEntityTest {
 		assertThat(entity.getType()).isEqualTo("Journalfört meddelande");
 		assertThat(entity.getHeading()).isEqualTo("Rubrik");
 		assertThat(entity.getText()).isEqualTo("body");
-		assertThat(entity.getEntryDate()).isEqualTo(entryDate);
-		assertThat(entity.getEntryTime()).isEqualTo(entryTime);
+		assertThat(entity.getEntryDateTime()).isEqualTo(entryDateTime);
 		assertThat(entity.getStatus()).isEqualTo(WORKING);
 		assertThat(entity.getCreatedBy()).isEqualTo("carola");
 		assertThat(entity.getCreated()).isEqualTo(FIXED_TIMESTAMP);

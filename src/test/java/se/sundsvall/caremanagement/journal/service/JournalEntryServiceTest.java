@@ -1,7 +1,5 @@
 package se.sundsvall.caremanagement.journal.service;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -38,8 +36,7 @@ import static se.sundsvall.caremanagement.journal.integration.db.model.JournalEn
 @ExtendWith(MockitoExtension.class)
 class JournalEntryServiceTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
-	private static final LocalDate ENTRY_DATE = LocalDate.parse("2025-05-30");
-	private static final LocalTime ENTRY_TIME = LocalTime.of(14, 30);
+	private static final OffsetDateTime ENTRY_DATE_TIME = OffsetDateTime.parse("2025-05-30T14:30:00+02:00");
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = "errand-1";
@@ -61,7 +58,7 @@ class JournalEntryServiceTest {
 		final var saved = JournalEntryEntity.create().withId("je-1").withErrandId(ERRAND_ID);
 		when(repositoryMock.save(any(JournalEntryEntity.class))).thenReturn(saved);
 
-		final var id = service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateJournalEntry("Journalfört meddelande", "Rubrik", "text", ENTRY_DATE, ENTRY_TIME, "carola"));
+		final var id = service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateJournalEntry("Journalfört meddelande", "Rubrik", "text", ENTRY_DATE_TIME, "carola"));
 
 		assertThat(id).isEqualTo("je-1");
 
@@ -74,8 +71,7 @@ class JournalEntryServiceTest {
 		assertThat(captured.getType()).isEqualTo("Journalfört meddelande");
 		assertThat(captured.getHeading()).isEqualTo("Rubrik");
 		assertThat(captured.getText()).isEqualTo("text");
-		assertThat(captured.getEntryDate()).isEqualTo(ENTRY_DATE);
-		assertThat(captured.getEntryTime()).isEqualTo(ENTRY_TIME);
+		assertThat(captured.getEntryDateTime()).isEqualTo(ENTRY_DATE_TIME);
 		assertThat(captured.getStatus()).isEqualTo(WORKING);
 		assertThat(captured.getCreatedBy()).isEqualTo("carola");
 		assertThat(captured.getCreated()).isNotNull();
@@ -94,7 +90,7 @@ class JournalEntryServiceTest {
 	void addMissingErrandNotFound() {
 		doThrow(Problem.valueOf(NOT_FOUND, "no errand")).when(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
-		assertThatThrownBy(() -> service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateJournalEntry("T", "H", null, ENTRY_DATE, null, "carola")))
+		assertThatThrownBy(() -> service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateJournalEntry("T", "H", null, ENTRY_DATE_TIME, "carola")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
@@ -104,16 +100,16 @@ class JournalEntryServiceTest {
 
 	@Test
 	void listForErrandReturnsMappedEntries() {
-		when(repositoryMock.findByErrandIdOrderByEntryDateDescEntryTimeDescCreatedDesc(ERRAND_ID)).thenReturn(List.of(
+		when(repositoryMock.findByErrandIdOrderByEntryDateTimeDescCreatedDesc(ERRAND_ID)).thenReturn(List.of(
 			JournalEntryEntity.create().withId("je1").withErrandId(ERRAND_ID).withType("T").withHeading("H")
-				.withText("b").withEntryDate(ENTRY_DATE).withEntryTime(ENTRY_TIME).withStatus(WORKING).withCreated(FIXED_TIMESTAMP)));
+				.withText("b").withEntryDateTime(ENTRY_DATE_TIME).withStatus(WORKING).withCreated(FIXED_TIMESTAMP)));
 
 		final var result = service.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		assertThat(result).hasSize(1);
 		assertThat(result.getFirst().getId()).isEqualTo("je1");
 		assertThat(result.getFirst().getHeading()).isEqualTo("H");
-		assertThat(result.getFirst().getEntryDate()).isEqualTo(ENTRY_DATE);
+		assertThat(result.getFirst().getEntryDateTime()).isEqualTo(ENTRY_DATE_TIME);
 		assertThat(result.getFirst().getStatus()).isEqualTo("WORKING");
 		assertThat(result.getFirst().getCreated()).isEqualTo(FIXED_TIMESTAMP);
 		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
@@ -172,17 +168,16 @@ class JournalEntryServiceTest {
 	@Test
 	void updateUpdatesFieldsAndReturnsEntry() {
 		final var existing = JournalEntryEntity.create().withId("je1").withErrandId(ERRAND_ID).withType("old").withHeading("oldH")
-			.withEntryDate(ENTRY_DATE).withStatus(WORKING).withCreated(FIXED_TIMESTAMP);
+			.withEntryDateTime(ENTRY_DATE_TIME).withStatus(WORKING).withCreated(FIXED_TIMESTAMP);
 		when(repositoryMock.findByIdAndErrandIdForUpdate("je1", ERRAND_ID)).thenReturn(Optional.of(existing));
 		when(repositoryMock.save(any(JournalEntryEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "je1", new UpdateJournalEntry("newT", "newH", "newText", ENTRY_DATE.plusDays(1), ENTRY_TIME, "editor"));
+		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "je1", new UpdateJournalEntry("newT", "newH", "newText", ENTRY_DATE_TIME.plusDays(1), "editor"));
 
 		assertThat(result.getType()).isEqualTo("newT");
 		assertThat(result.getHeading()).isEqualTo("newH");
 		assertThat(result.getText()).isEqualTo("newText");
-		assertThat(result.getEntryDate()).isEqualTo(ENTRY_DATE.plusDays(1));
-		assertThat(result.getEntryTime()).isEqualTo(ENTRY_TIME);
+		assertThat(result.getEntryDateTime()).isEqualTo(ENTRY_DATE_TIME.plusDays(1));
 		assertThat(result.getModifiedBy()).isEqualTo("editor");
 		assertThat(result.getModified()).isNotNull();
 		assertThat(result.getStatus()).isEqualTo("WORKING");
@@ -194,7 +189,7 @@ class JournalEntryServiceTest {
 	void updateNotFound() {
 		when(repositoryMock.findByIdAndErrandIdForUpdate("missing", ERRAND_ID)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing", new UpdateJournalEntry("t", "h", null, ENTRY_DATE, null, "editor")))
+		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing", new UpdateJournalEntry("t", "h", null, ENTRY_DATE_TIME, "editor")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
@@ -206,7 +201,7 @@ class JournalEntryServiceTest {
 		when(repositoryMock.findByIdAndErrandIdForUpdate("je1", ERRAND_ID)).thenReturn(Optional.of(
 			JournalEntryEntity.create().withId("je1").withStatus(LOCKED)));
 
-		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "je1", new UpdateJournalEntry("t", "h", null, ENTRY_DATE, null, "editor")))
+		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "je1", new UpdateJournalEntry("t", "h", null, ENTRY_DATE_TIME, "editor")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", CONFLICT);
 

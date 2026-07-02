@@ -13,7 +13,7 @@ import se.sundsvall.caremanagement.journal.integration.db.model.JournalEntryEnti
 @CircuitBreaker(name = "journalEntryRepository")
 public interface JournalEntryRepository extends JpaRepository<JournalEntryEntity, String> {
 
-	List<JournalEntryEntity> findByErrandIdOrderByEntryDateDescEntryTimeDescCreatedDesc(String errandId);
+	List<JournalEntryEntity> findByErrandIdOrderByEntryDateTimeDescCreatedDesc(String errandId);
 
 	/**
 	 * Loads the entry only if it belongs to the given errand. Scopes reads to the errand (and, via the

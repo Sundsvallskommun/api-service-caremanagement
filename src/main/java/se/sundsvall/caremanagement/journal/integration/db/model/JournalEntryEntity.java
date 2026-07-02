@@ -7,8 +7,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
@@ -21,7 +19,7 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 @Table(name = "errand_journal_entry",
 	indexes = {
 		@Index(name = "idx_journal_entry_errand_id", columnList = "errand_id"),
-		@Index(name = "idx_journal_entry_entry_date", columnList = "entry_date")
+		@Index(name = "idx_journal_entry_entry_date_time", columnList = "entry_date_time")
 	})
 public class JournalEntryEntity {
 
@@ -42,11 +40,9 @@ public class JournalEntryEntity {
 	@Column(name = "entry_text", length = LONG32)
 	private String text;
 
-	@Column(name = "entry_date", nullable = false)
-	private LocalDate entryDate;
-
-	@Column(name = "entry_time")
-	private LocalTime entryTime;
+	@Column(name = "entry_date_time", nullable = false)
+	@TimeZoneStorage(NORMALIZE)
+	private OffsetDateTime entryDateTime;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false, length = 16)
@@ -97,12 +93,8 @@ public class JournalEntryEntity {
 		return text;
 	}
 
-	public LocalDate getEntryDate() {
-		return entryDate;
-	}
-
-	public LocalTime getEntryTime() {
-		return entryTime;
+	public OffsetDateTime getEntryDateTime() {
+		return entryDateTime;
 	}
 
 	public JournalEntryStatus getStatus() {
@@ -153,12 +145,8 @@ public class JournalEntryEntity {
 		this.text = text;
 	}
 
-	public void setEntryDate(final LocalDate entryDate) {
-		this.entryDate = entryDate;
-	}
-
-	public void setEntryTime(final LocalTime entryTime) {
-		this.entryTime = entryTime;
+	public void setEntryDateTime(final OffsetDateTime entryDateTime) {
+		this.entryDateTime = entryDateTime;
 	}
 
 	public void setStatus(final JournalEntryStatus status) {
@@ -214,13 +202,8 @@ public class JournalEntryEntity {
 		return this;
 	}
 
-	public JournalEntryEntity withEntryDate(final LocalDate entryDate) {
-		this.entryDate = entryDate;
-		return this;
-	}
-
-	public JournalEntryEntity withEntryTime(final LocalTime entryTime) {
-		this.entryTime = entryTime;
+	public JournalEntryEntity withEntryDateTime(final OffsetDateTime entryDateTime) {
+		this.entryDateTime = entryDateTime;
 		return this;
 	}
 
@@ -267,8 +250,8 @@ public class JournalEntryEntity {
 			return false;
 		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
 			&& Objects.equals(type, other.type) && Objects.equals(heading, other.heading)
-			&& Objects.equals(text, other.text) && Objects.equals(entryDate, other.entryDate)
-			&& Objects.equals(entryTime, other.entryTime) && status == other.status
+			&& Objects.equals(text, other.text) && Objects.equals(entryDateTime, other.entryDateTime)
+			&& status == other.status
 			&& Objects.equals(createdBy, other.createdBy) && Objects.equals(created, other.created)
 			&& Objects.equals(modifiedBy, other.modifiedBy) && Objects.equals(modified, other.modified)
 			&& Objects.equals(lockedBy, other.lockedBy) && Objects.equals(locked, other.locked);
@@ -276,14 +259,14 @@ public class JournalEntryEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, heading, text, entryDate, entryTime, status, createdBy, created,
+		return Objects.hash(id, errandId, type, heading, text, entryDateTime, status, createdBy, created,
 			modifiedBy, modified, lockedBy, locked);
 	}
 
 	@Override
 	public String toString() {
 		return "JournalEntryEntity{id='" + id + "', errandId='" + errandId + "', type='" + type + "', heading='"
-			+ heading + "', entryDate=" + entryDate + ", entryTime=" + entryTime + ", status=" + status
+			+ heading + "', entryDateTime=" + entryDateTime + ", status=" + status
 			+ ", createdBy='" + createdBy + "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified="
 			+ modified + ", lockedBy='" + lockedBy + "', locked=" + locked + '}';
 	}

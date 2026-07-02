@@ -1,7 +1,6 @@
 package se.sundsvall.caremanagement.journal.api;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +26,7 @@ class JournalEntryResourceFailureTest {
 	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = randomUUID().toString();
 	private static final String PATH = "/{municipalityId}/{namespace}/errands/{errandId}/journal-entries";
-	private static final LocalDate ENTRY_DATE = LocalDate.parse("2025-05-30");
-	private static final LocalTime ENTRY_TIME = LocalTime.of(14, 30);
+	private static final OffsetDateTime ENTRY_DATE_TIME = OffsetDateTime.parse("2025-05-30T14:30:00+02:00");
 
 	@MockitoBean
 	private JournalEntryService serviceMock;
@@ -38,24 +36,24 @@ class JournalEntryResourceFailureTest {
 
 	@Test
 	void addWithBlankType() {
-		post(new CreateJournalEntry(" ", "Rubrik", "body", ENTRY_DATE, ENTRY_TIME, "carola"));
+		post(new CreateJournalEntry(" ", "Rubrik", "body", ENTRY_DATE_TIME, "carola"));
 	}
 
 	@Test
 	void addWithBlankHeading() {
-		post(new CreateJournalEntry("Journalfört meddelande", " ", "body", ENTRY_DATE, ENTRY_TIME, "carola"));
+		post(new CreateJournalEntry("Journalfört meddelande", " ", "body", ENTRY_DATE_TIME, "carola"));
 	}
 
 	@Test
-	void addWithMissingEntryDate() {
-		post(new CreateJournalEntry("Journalfört meddelande", "Rubrik", "body", null, ENTRY_TIME, "carola"));
+	void addWithMissingEntryDateTime() {
+		post(new CreateJournalEntry("Journalfört meddelande", "Rubrik", "body", null, "carola"));
 	}
 
 	@Test
 	void addWithInvalidErrandId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
-			.bodyValue(new CreateJournalEntry("Journalfört meddelande", "Rubrik", "body", ENTRY_DATE, ENTRY_TIME, "carola"))
+			.bodyValue(new CreateJournalEntry("Journalfört meddelande", "Rubrik", "body", ENTRY_DATE_TIME, "carola"))
 			.exchange()
 			.expectStatus().isBadRequest();
 
@@ -66,7 +64,7 @@ class JournalEntryResourceFailureTest {
 	void addWithInvalidMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "invalid", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
-			.bodyValue(new CreateJournalEntry("Journalfört meddelande", "Rubrik", "body", ENTRY_DATE, ENTRY_TIME, "carola"))
+			.bodyValue(new CreateJournalEntry("Journalfört meddelande", "Rubrik", "body", ENTRY_DATE_TIME, "carola"))
 			.exchange()
 			.expectStatus().isBadRequest();
 

@@ -8,8 +8,8 @@
  * {@code /journal-entries/metadata} catalogue offers a dropdown source, backed by the core metadata lookup store —
  * seeded {@code JOURNAL_ENTRY_TYPE} lookups for the namespace, or a built-in provisional set as fallback), a
  * {@code heading} (Rubrik),
- * free-text {@code text}, a documented {@code entryDate}/{@code entryTime} (Datum/Tid, distinct from the system
- * {@code created} timestamp) and authorship ({@code createdBy} = Upprättad av/Ägare, {@code modifiedBy} = Ändrat av).
+ * free-text {@code text}, a documented {@code entryDateTime} (Datum/Tid, distinct from the system {@code created}
+ * timestamp) and authorship ({@code createdBy} = Upprättad av/Ägare, {@code modifiedBy} = Ändrat av).
  * </p>
  *
  * <p>

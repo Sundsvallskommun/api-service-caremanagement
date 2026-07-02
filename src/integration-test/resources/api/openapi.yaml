@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:57380
+- url: http://localhost:58838
   description: Generated server url
 tags:
 - name: Statistics
@@ -6029,9 +6029,9 @@ components:
     Problem:
       type: object
       properties:
-        detail:
-          type: string
         title:
+          type: string
+        detail:
           type: string
         instance:
           type: string
@@ -7464,15 +7464,11 @@ components:
           example: Hej! Vill bara informera att jag fått jobb på Mejeriet.
           maxLength: 1048576
           minLength: 0
-        entryDate:
+        entryDateTime:
           type: string
-          format: date
-          description: Documented date (Lifecare 'Datum')
-          example: 2025-05-30
-        entryTime:
-          type: string
-          description: Documented time (Lifecare 'Tid'); optional
-          example: 14:30
+          format: date-time
+          description: Documented date and time (Lifecare 'Datum'/'Tid')
+          example: 2025-05-30T14:30:00+02:00
         createdBy:
           type: string
           description: User id of the author (Lifecare 'Upprättad av'); optional
@@ -7480,7 +7476,7 @@ components:
           maxLength: 64
           minLength: 0
       required:
-      - entryDate
+      - entryDateTime
       - heading
       - type
     LockJournalEntry:
@@ -7515,16 +7511,12 @@ components:
           type: string
           description: Free-text body of the journal entry
           example: Hej! Vill bara informera att jag fått jobb på Mejeriet.
-        entryDate:
+        entryDateTime:
           type: string
-          format: date
-          description: "Documented date (Lifecare 'Datum'), distinct from the system\
-            \ created timestamp"
-          example: 2025-05-30
-        entryTime:
-          type: string
-          description: Documented time (Lifecare 'Tid'); optional
-          example: 14:30
+          format: date-time
+          description: "Documented date and time (Lifecare 'Datum'/'Tid'), distinct\
+            \ from the system created timestamp"
+          example: 2025-05-30T14:30:00+02:00
         status:
           type: string
           description: "Write-protection status — WORKING is an editable working note,\
@@ -8758,15 +8750,11 @@ components:
           example: Hej! Vill bara informera att jag fått jobb på Mejeriet.
           maxLength: 1048576
           minLength: 0
-        entryDate:
+        entryDateTime:
           type: string
-          format: date
-          description: Documented date (Lifecare 'Datum')
-          example: 2025-05-30
-        entryTime:
-          type: string
-          description: Documented time (Lifecare 'Tid'); optional
-          example: 14:30
+          format: date-time
+          description: Documented date and time (Lifecare 'Datum'/'Tid')
+          example: 2025-05-30T14:30:00+02:00
         modifiedBy:
           type: string
           description: User id of the editor (Lifecare 'Ändrat av'); optional
@@ -8774,7 +8762,7 @@ components:
           maxLength: 64
           minLength: 0
       required:
-      - entryDate
+      - entryDateTime
       - heading
       - type
     UpdateDocument:

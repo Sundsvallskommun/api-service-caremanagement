@@ -1,7 +1,6 @@
 package se.sundsvall.caremanagement.journal.api;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -34,8 +33,7 @@ class JournalEntryResourceTest {
 	private static final String ERRAND_ID = randomUUID().toString();
 	private static final String JOURNAL_ENTRY_ID = randomUUID().toString();
 	private static final String PATH = "/{municipalityId}/{namespace}/errands/{errandId}/journal-entries";
-	private static final LocalDate ENTRY_DATE = LocalDate.parse("2025-05-30");
-	private static final LocalTime ENTRY_TIME = LocalTime.of(14, 30);
+	private static final OffsetDateTime ENTRY_DATE_TIME = OffsetDateTime.parse("2025-05-30T14:30:00+02:00");
 
 	@MockitoBean
 	private JournalEntryService serviceMock;
@@ -45,7 +43,7 @@ class JournalEntryResourceTest {
 
 	@Test
 	void add() {
-		final var request = new CreateJournalEntry("Journalfört meddelande", "Rubrik", "body", ENTRY_DATE, ENTRY_TIME, "carola");
+		final var request = new CreateJournalEntry("Journalfört meddelande", "Rubrik", "body", ENTRY_DATE_TIME, "carola");
 		when(serviceMock.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request)).thenReturn(JOURNAL_ENTRY_ID);
 
 		webTestClient.post()
@@ -93,7 +91,7 @@ class JournalEntryResourceTest {
 
 	@Test
 	void update() {
-		final var request = new UpdateJournalEntry("Journalfört meddelande", "Ny rubrik", "updated", ENTRY_DATE, ENTRY_TIME, "editor");
+		final var request = new UpdateJournalEntry("Journalfört meddelande", "Ny rubrik", "updated", ENTRY_DATE_TIME, "editor");
 		when(serviceMock.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, JOURNAL_ENTRY_ID, request)).thenReturn(JournalEntry.create().withId(JOURNAL_ENTRY_ID).withHeading("Ny rubrik").withModifiedBy("editor"));
 
 		final var entry = webTestClient.patch()

@@ -4,8 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.OffsetDateTime;
 
 /**
  * Request to update a journalanteckning. Replaces the editable fields (Typ, Rubrik, text, Datum, Tid) and records the
@@ -20,8 +19,6 @@ public record UpdateJournalEntry(
 
 	@Schema(description = "Free-text body of the journal entry; optional", example = "Hej! Vill bara informera att jag fått jobb på Mejeriet.") @Size(max = 1_048_576) String text,
 
-	@Schema(description = "Documented date (Lifecare 'Datum')", example = "2025-05-30", requiredMode = Schema.RequiredMode.REQUIRED) @NotNull LocalDate entryDate,
-
-	@Schema(description = "Documented time (Lifecare 'Tid'); optional", example = "14:30") LocalTime entryTime,
+	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid')", example = "2025-05-30T14:30:00+02:00", requiredMode = Schema.RequiredMode.REQUIRED) @NotNull OffsetDateTime entryDateTime,
 
 	@Schema(description = "User id of the editor (Lifecare 'Ändrat av'); optional", example = "ebb14eri") @Size(max = 64) String modifiedBy) {}
