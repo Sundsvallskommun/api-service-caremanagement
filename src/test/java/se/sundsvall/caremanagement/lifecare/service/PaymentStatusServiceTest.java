@@ -30,7 +30,7 @@ class PaymentStatusServiceTest {
 	@Test
 	void effectuatedWhenMatchingPaymentExists() {
 		final var payment = new PersonBasedPaymentDTO().payDate("2026-05-27").concernedMonth("2026-06");
-		when(lifecareFcIntegrationMock.getPayments(eq("199001011234"), any(), any(), any(), any(), any()))
+		when(lifecareFcIntegrationMock.getPayments(eq("199001011234"), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().result(List.of(payment)));
 
 		final var status = service.read("199001011234", YearMonth.of(2026, JUNE));
@@ -42,7 +42,7 @@ class PaymentStatusServiceTest {
 	@Test
 	void notEffectuatedWhenPaymentConcernsAnotherMonth() {
 		final var payment = new PersonBasedPaymentDTO().payDate("2026-04-27").concernedMonth("2026-05");
-		when(lifecareFcIntegrationMock.getPayments(any(), any(), any(), any(), any(), any()))
+		when(lifecareFcIntegrationMock.getPayments(any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().result(List.of(payment)));
 
 		final var status = service.read("199001011234", YearMonth.of(2026, JUNE));
@@ -54,7 +54,7 @@ class PaymentStatusServiceTest {
 	@Test
 	void notEffectuatedWhenPaymentHasNoPayDate() {
 		final var payment = new PersonBasedPaymentDTO().concernedMonth("2026-06");
-		when(lifecareFcIntegrationMock.getPayments(any(), any(), any(), any(), any(), any()))
+		when(lifecareFcIntegrationMock.getPayments(any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().result(List.of(payment)));
 
 		final var status = service.read("199001011234", YearMonth.of(2026, JUNE));
@@ -64,7 +64,7 @@ class PaymentStatusServiceTest {
 
 	@Test
 	void notEffectuatedWhenResponseIsNull() {
-		when(lifecareFcIntegrationMock.getPayments(any(), any(), any(), any(), any(), any())).thenReturn(null);
+		when(lifecareFcIntegrationMock.getPayments(any(), any(), any())).thenReturn(null);
 
 		final var status = service.read("199001011234", YearMonth.of(2026, JUNE));
 
@@ -74,11 +74,11 @@ class PaymentStatusServiceTest {
 
 	@Test
 	void queriesThePriorMonthThroughApplicationMonthWindow() {
-		when(lifecareFcIntegrationMock.getPayments(any(), any(), any(), any(), any(), any()))
+		when(lifecareFcIntegrationMock.getPayments(any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().result(List.of()));
 
 		service.read("199001011234", YearMonth.of(2026, JUNE));
 
-		verify(lifecareFcIntegrationMock).getPayments("199001011234", "2026-05-01", "2026-06-30", null, null, false);
+		verify(lifecareFcIntegrationMock).getPayments("199001011234", "2026-05-01", "2026-06-30");
 	}
 }

@@ -4,13 +4,13 @@ import generated.se.sundsvall.lifecarefc.PersonBasedCalculationCalculationIncome
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
 
+import static java.util.Collections.emptyList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toMap;
 
@@ -54,7 +54,7 @@ public final class ApplicationIncomeToFcMapper {
 	public static List<FcIncomeLine> toIncomeLines(final List<ApplicationIncome> incomes, final PersonBasedCalculationProposalDTO proposal) {
 		final var typeIdByName = indexIncomeTypeIds(proposal);
 
-		return ofNullable(incomes).orElseGet(List::of).stream()
+		return ofNullable(incomes).orElse(emptyList()).stream()
 			.filter(Objects::nonNull)
 			.map(income -> toLine(income, typeIdByName))
 			.filter(Objects::nonNull)
@@ -82,7 +82,7 @@ public final class ApplicationIncomeToFcMapper {
 			.map(PersonBasedCalculationProposalDTO::getCalculationIncomeTypes)
 			.orElseGet(List::of).stream()
 			.filter(type -> (type.getName() != null) && (type.getId() != null))
-			.collect(toMap(type -> normalize(type.getName()), PersonBasedCalculationCalculationIncomeTypeDTO::getId, (first, second) -> first, LinkedHashMap::new));
+			.collect(toMap(type -> normalize(type.getName()), PersonBasedCalculationCalculationIncomeTypeDTO::getId));
 	}
 
 	private static OffsetDateTime toOffsetDateTime(final ApplicationIncome income) {

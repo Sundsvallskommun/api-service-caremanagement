@@ -43,9 +43,6 @@ class LifecareFcIntegrationTest {
 	private static final String PERSON_ID = "200001012384";
 	private static final String START = "2026-04-01";
 	private static final String END = "2026-06-30";
-	private static final Integer PAGE_SIZE = 50;
-	private static final Integer PAGE_NR = 0;
-	private static final Boolean ASCENDING = true;
 
 	@Mock
 	private LifecareFcClient clientMock;
@@ -78,70 +75,70 @@ class LifecareFcIntegrationTest {
 	@Test
 	void getActualisations() {
 		final var response = new ApiPaginationCompositePersonBasedAktualiseringDTO();
-		when(clientMock.getActualisations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).thenReturn(response);
+		when(clientMock.getActualisations(PERSON_ID, START, END, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getActualisations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).isSameAs(response);
-		verify(clientMock).getActualisations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING);
+		assertThat(integration.getActualisations(PERSON_ID, START, END)).isSameAs(response);
+		verify(clientMock).getActualisations(PERSON_ID, START, END, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getCalculations() {
 		final var response = new ApiPaginationCompositePersonBasedCalculationDTO();
-		when(clientMock.getCalculations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).thenReturn(response);
+		when(clientMock.getCalculations(PERSON_ID, START, END, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getCalculations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).isSameAs(response);
-		verify(clientMock).getCalculations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING);
+		assertThat(integration.getCalculations(PERSON_ID, START, END)).isSameAs(response);
+		verify(clientMock).getCalculations(PERSON_ID, START, END, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getDecisions() {
 		final var response = new ApiPaginationCompositePersonBasedDecisionDTO();
-		when(clientMock.getDecisions(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).thenReturn(response);
+		when(clientMock.getDecisions(PERSON_ID, START, END, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getDecisions(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).isSameAs(response);
-		verify(clientMock).getDecisions(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING);
+		assertThat(integration.getDecisions(PERSON_ID, START, END)).isSameAs(response);
+		verify(clientMock).getDecisions(PERSON_ID, START, END, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getPayments() {
 		final var response = new ApiPaginationCompositePersonBasedPaymentDTO();
-		when(clientMock.getPayments(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).thenReturn(response);
+		when(clientMock.getPayments(PERSON_ID, START, END, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getPayments(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).isSameAs(response);
-		verify(clientMock).getPayments(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING);
+		assertThat(integration.getPayments(PERSON_ID, START, END)).isSameAs(response);
+		verify(clientMock).getPayments(PERSON_ID, START, END, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getInvestigations() {
 		final var response = new ApiPaginationCompositePersonBasedInvestigationDTO();
-		when(clientMock.getInvestigations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).thenReturn(response);
+		when(clientMock.getInvestigations(PERSON_ID, START, END, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getInvestigations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).isSameAs(response);
-		verify(clientMock).getInvestigations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING);
+		assertThat(integration.getInvestigations(PERSON_ID, START, END)).isSameAs(response);
+		verify(clientMock).getInvestigations(PERSON_ID, START, END, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getServices() {
 		final var response = new ApiPaginationCompositePersonBasedServiceDTO();
-		when(clientMock.getServices(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).thenReturn(response);
+		when(clientMock.getServices(PERSON_ID, START, END, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getServices(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).isSameAs(response);
-		verify(clientMock).getServices(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING);
+		assertThat(integration.getServices(PERSON_ID, START, END)).isSameAs(response);
+		verify(clientMock).getServices(PERSON_ID, START, END, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getExecutions() {
 		final var response = new ApiPaginationCompositePersonBasedExecutionDTO();
-		when(clientMock.getExecutions(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).thenReturn(response);
+		when(clientMock.getExecutions(PERSON_ID, START, END, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getExecutions(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).isSameAs(response);
-		verify(clientMock).getExecutions(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING);
+		assertThat(integration.getExecutions(PERSON_ID, START, END)).isSameAs(response);
+		verify(clientMock).getExecutions(PERSON_ID, START, END, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
@@ -167,22 +164,22 @@ class LifecareFcIntegrationTest {
 	@Test
 	void getResourceAllocations() {
 		final var response = new ApiPaginationCompositePersonBasedResourceAllocationDTO();
-		when(clientMock.getResourceAllocations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).thenReturn(response);
+		when(clientMock.getResourceAllocations(PERSON_ID, START, END, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getResourceAllocations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).isSameAs(response);
-		verify(clientMock).getResourceAllocations(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING);
+		assertThat(integration.getResourceAllocations(PERSON_ID, START, END)).isSameAs(response);
+		verify(clientMock).getResourceAllocations(PERSON_ID, START, END, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getDecisionsFailure() {
-		when(clientMock.getDecisions(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING)).thenThrow(new RuntimeException("timeout"));
+		when(clientMock.getDecisions(PERSON_ID, START, END, null, null, false)).thenThrow(new RuntimeException("timeout"));
 
-		assertThatThrownBy(() -> integration.getDecisions(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING))
+		assertThatThrownBy(() -> integration.getDecisions(PERSON_ID, START, END))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
 
-		verify(clientMock).getDecisions(PERSON_ID, START, END, PAGE_SIZE, PAGE_NR, ASCENDING);
+		verify(clientMock).getDecisions(PERSON_ID, START, END, null, null, false);
 	}
 
 	// ---- Write-back + proposals --------------------------------------------------------------------------------------

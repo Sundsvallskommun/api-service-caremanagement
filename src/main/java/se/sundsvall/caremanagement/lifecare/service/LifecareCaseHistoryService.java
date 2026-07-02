@@ -57,7 +57,7 @@ public class LifecareCaseHistoryService {
 	 * @return          the person's calculations in the period (empty when none)
 	 */
 	public List<CalculationView> listCalculations(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFcIntegration.getCalculations(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE), null, null, false))
+		return ofNullable(lifecareFcIntegration.getCalculations(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -74,7 +74,7 @@ public class LifecareCaseHistoryService {
 	 * @return          the person's decisions in the period (empty when none)
 	 */
 	public List<DecisionView> listDecisions(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFcIntegration.getDecisions(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE), null, null, false))
+		return ofNullable(lifecareFcIntegration.getDecisions(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -92,7 +92,7 @@ public class LifecareCaseHistoryService {
 	 * @return          the person's documents in the period (empty when none)
 	 */
 	public List<DocumentView> listDocuments(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFcIntegration.getDocuments(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE), null, null, false))
+		return ofNullable(lifecareFcIntegration.getDocuments(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
 			.map(ApiPaginationCompositePersonBasedDocumentDTO::getResult)
 			.orElseGet(List::of)
 			.stream()

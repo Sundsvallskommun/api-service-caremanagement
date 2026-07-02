@@ -72,15 +72,15 @@ public class LifecareEbCaseService {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		final var actualisations = ofNullable(lifecareFcIntegration.getActualisations(personId, start, end, null, null, false))
+		final var actualisations = ofNullable(lifecareFcIntegration.getActualisations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedAktualiseringDTO::getResult)
 			.orElseGet(List::of);
 
-		final var decisions = ofNullable(lifecareFcIntegration.getDecisions(personId, start, end, null, null, false))
+		final var decisions = ofNullable(lifecareFcIntegration.getDecisions(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of);
 
-		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end, null, null, false))
+		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of);
 
@@ -129,11 +129,11 @@ public class LifecareEbCaseService {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end, null, null, false))
+		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of);
 
-		final var decisions = ofNullable(lifecareFcIntegration.getDecisions(personId, start, end, null, null, false))
+		final var decisions = ofNullable(lifecareFcIntegration.getDecisions(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of);
 
@@ -167,7 +167,7 @@ public class LifecareEbCaseService {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end, null, null, false))
+		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
@@ -197,7 +197,7 @@ public class LifecareEbCaseService {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end, null, null, false))
+		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
@@ -241,7 +241,7 @@ public class LifecareEbCaseService {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end, null, null, false))
+		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))

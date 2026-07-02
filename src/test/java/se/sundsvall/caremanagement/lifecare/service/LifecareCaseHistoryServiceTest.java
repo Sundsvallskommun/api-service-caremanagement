@@ -22,7 +22,6 @@ import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -49,7 +48,7 @@ class LifecareCaseHistoryServiceTest {
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Lön").amountApplicant(12000.0).applicantSearchDate("2026-05-15").amountCoApplicant(0.0).coApplicantSearchDate(null))
 			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Hyra").appliedAmount(7500.0).approvedAmount(7000.0))
 			.addCalculationSpecialExpensesDTOsItem(new CommonCalculationSpecialExpenseDTO().type("Tandvård").appliedAmount(500.0).approvedAmount(500.0));
-		when(lifecareFcIntegrationMock.getCalculations(eq(PERSON_ID), eq("2026-01-01"), eq("2026-06-30"), isNull(), isNull(), eq(false)))
+		when(lifecareFcIntegrationMock.getCalculations(eq(PERSON_ID), eq("2026-01-01"), eq("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(dto));
 
 		final var result = service.listCalculations(PERSON_ID, FROM, TO);
@@ -68,14 +67,14 @@ class LifecareCaseHistoryServiceTest {
 
 	@Test
 	void listCalculationsEmptyWhenNoPage() {
-		when(lifecareFcIntegrationMock.getCalculations(eq(PERSON_ID), eq("2026-01-01"), eq("2026-06-30"), isNull(), isNull(), eq(false))).thenReturn(null);
+		when(lifecareFcIntegrationMock.getCalculations(eq(PERSON_ID), eq("2026-01-01"), eq("2026-06-30"))).thenReturn(null);
 
 		assertThat(service.listCalculations(PERSON_ID, FROM, TO)).isEmpty();
 	}
 
 	@Test
 	void listCalculationsHandlesNullRowLists() {
-		when(lifecareFcIntegrationMock.getCalculations(eq(PERSON_ID), eq("2026-01-01"), eq("2026-06-30"), isNull(), isNull(), eq(false)))
+		when(lifecareFcIntegrationMock.getCalculations(eq(PERSON_ID), eq("2026-01-01"), eq("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(new PersonBasedCalculationDTO().id(1)));
 
 		assertThat(service.listCalculations(PERSON_ID, FROM, TO)).singleElement().satisfies(calculation -> {
@@ -92,7 +91,7 @@ class LifecareCaseHistoryServiceTest {
 			.id(9900).date("2026-06-02").type("Bifall").fromDate("2026-06-01").toDate("2026-06-30")
 			.reason("Beviljas").decisionMaker("Anna").organization("IFO").amount(8500.0).coApplicant("198001019999").reasonCoApplicant("Sammanboende")
 			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId("198001019999").name("Sven").isCoApplicant(true));
-		when(lifecareFcIntegrationMock.getDecisions(eq(PERSON_ID), eq("2026-01-01"), eq("2026-06-30"), isNull(), isNull(), eq(false)))
+		when(lifecareFcIntegrationMock.getDecisions(eq(PERSON_ID), eq("2026-01-01"), eq("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().addResultItem(dto));
 
 		assertThat(service.listDecisions(PERSON_ID, FROM, TO)).singleElement().satisfies(decision -> {
@@ -106,7 +105,7 @@ class LifecareCaseHistoryServiceTest {
 	@Test
 	void listDocumentsMapsMetadata() {
 		final var dto = new PersonBasedDocumentDTO().id("doc-1").title("Beslut").date("2026-06-02").documentType("Beslut").ownerId("9900").ownerType("Decision");
-		when(lifecareFcIntegrationMock.getDocuments(eq(PERSON_ID), eq("2026-01-01"), eq("2026-06-30"), isNull(), isNull(), eq(false)))
+		when(lifecareFcIntegrationMock.getDocuments(eq(PERSON_ID), eq("2026-01-01"), eq("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedDocumentDTO().addResultItem(dto));
 
 		assertThat(service.listDocuments(PERSON_ID, FROM, TO)).singleElement().satisfies(document -> {

@@ -103,7 +103,7 @@ class ActualisationServiceTest {
 			.id(5012).type("Ansökan").personId(APPLICANT).name("Ekonomiskt bistånd").date("2026-06-01")
 			.reason("Nyansökan").regards("Försörjningsstöd").fromWho("Den enskilde").caseworker("Anna Andersson")
 			.organization("IFO").status("Pågående").investigationId(8801).serviceId(7700).decisionId(9900);
-		when(lifecareFcIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30", null, null, false))
+		when(lifecareFcIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30"))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO().addResultItem(dto));
 
 		final var result = service.list(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
@@ -127,7 +127,7 @@ class ActualisationServiceTest {
 
 	@Test
 	void listReturnsEmptyWhenFcHasNoPage() {
-		when(lifecareFcIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30", null, null, false)).thenReturn(null);
+		when(lifecareFcIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30")).thenReturn(null);
 
 		assertThat(service.list(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30))).isEmpty();
 	}

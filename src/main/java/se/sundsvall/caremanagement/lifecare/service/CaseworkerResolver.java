@@ -63,7 +63,7 @@ public class CaseworkerResolver {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		return ofNullable(lifecareFcIntegration.getServices(personId, start, end, null, null, false))
+		return ofNullable(lifecareFcIntegration.getServices(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedServiceDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(Objects::nonNull)

@@ -40,12 +40,12 @@ class LifecareEbCaseServiceTest {
 	}
 
 	private void noActualisations() {
-		when(integrationMock.getActualisations(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getActualisations(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO());
 	}
 
 	private void noCalculations() {
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO());
 	}
 
@@ -57,9 +57,9 @@ class LifecareEbCaseServiceTest {
 			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId("198202022397").isCoApplicant(true));
 
 		noActualisations();
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().addResultItem(decision));
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(new PersonBasedCalculationDTO()));
 
 		final var summary = service().summarize(APPLICANT, REFERENCE);
@@ -73,9 +73,9 @@ class LifecareEbCaseServiceTest {
 
 	@Test
 	void footprintFromActualisationOnly() {
-		when(integrationMock.getActualisations(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getActualisations(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO().addResultItem(new PersonBasedAktualiseringDTO().status("OPEN")));
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 		noCalculations();
 
@@ -90,9 +90,9 @@ class LifecareEbCaseServiceTest {
 	@Test
 	void footprintFromCalculationOnly() {
 		noActualisations();
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(new PersonBasedCalculationDTO()));
 
 		final var summary = service().summarize(APPLICANT, REFERENCE);
@@ -104,7 +104,7 @@ class LifecareEbCaseServiceTest {
 	@Test
 	void noFootprintYieldsEmptySummary() {
 		noActualisations();
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 		noCalculations();
 
@@ -119,9 +119,9 @@ class LifecareEbCaseServiceTest {
 
 	@Test
 	void nullCompositesAreToleratedAsEmpty() {
-		when(integrationMock.getActualisations(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
+		when(integrationMock.getActualisations(eq(APPLICANT), any(), any())).thenReturn(null);
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any())).thenReturn(null);
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any())).thenReturn(null);
 
 		final var summary = service().summarize(APPLICANT, REFERENCE);
 
@@ -132,7 +132,7 @@ class LifecareEbCaseServiceTest {
 	@Test
 	void decisionMonthsFromSingleDateAndCoApplicantScalar() {
 		noActualisations();
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO()
 				.addResultItem(new PersonBasedDecisionDTO().toDate("2026-06-30").coApplicant("198202022397")));
 		noCalculations();
@@ -148,7 +148,7 @@ class LifecareEbCaseServiceTest {
 		final var older = new PersonBasedDecisionDTO().toDate("2026-03-31").coApplicant("197001010000");
 		final var newer = new PersonBasedDecisionDTO().toDate("2026-05-31"); // no co-applicant
 		noActualisations();
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().result(List.of(older, newer)));
 		noCalculations();
 
@@ -169,9 +169,9 @@ class LifecareEbCaseServiceTest {
 		final var decision = new PersonBasedDecisionDTO().toDate("2026-06-30")
 			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId("198202022397").isCoApplicant(true));
 
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(olderCalc, newerCalc)));
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().addResultItem(decision));
 
 		final var roster = service().latestRoster(APPLICANT, REFERENCE);
@@ -188,9 +188,9 @@ class LifecareEbCaseServiceTest {
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT).name("Anna"))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("  ").name("Blank"));
 
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(calc));
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO()
 				.addResultItem(new PersonBasedDecisionDTO().toDate("2026-06-30").coApplicant("198202022397")));
 
@@ -202,9 +202,9 @@ class LifecareEbCaseServiceTest {
 
 	@Test
 	void latestRosterEmptyWhenNoCalculationsOrDecisions() {
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO());
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 
 		final var roster = service().latestRoster(APPLICANT, REFERENCE);
@@ -216,8 +216,8 @@ class LifecareEbCaseServiceTest {
 
 	@Test
 	void latestRosterToleratesNullComposites() {
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
-		when(integrationMock.getDecisions(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any())).thenReturn(null);
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any())).thenReturn(null);
 
 		final var roster = service().latestRoster(APPLICANT, REFERENCE);
 
@@ -235,7 +235,7 @@ class LifecareEbCaseServiceTest {
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Bostadsbidrag")); // duplicate collapses
 		final var thisMonth = new PersonBasedCalculationDTO().toDate("2026-06-30")
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Bostadsbidrag"));
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, thisMonth)));
 
 		final var types = service().previousCalculationIncomeTypes(APPLICANT, YearMonth.of(2026, JUNE));
@@ -245,7 +245,7 @@ class LifecareEbCaseServiceTest {
 
 	@Test
 	void previousCalculationIncomeTypesEmptyWhenNoPriorCalc() {
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any())).thenReturn(null);
 
 		assertThat(service().previousCalculationIncomeTypes(APPLICANT, YearMonth.of(2026, JUNE))).isEmpty();
 	}
@@ -263,7 +263,7 @@ class LifecareEbCaseServiceTest {
 			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Housing").appliedAmount(1500.0)) // approved null -> applied
 			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Electricity").approvedAmount(900.0)); // not housing
 		final var current = new PersonBasedCalculationDTO().toDate("2026-06-30"); // not strictly before June -> excluded
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any()))
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, current)));
 
 		final var household = service().previousHousehold(APPLICANT, YearMonth.of(2026, JUNE));
@@ -276,7 +276,7 @@ class LifecareEbCaseServiceTest {
 
 	@Test
 	void previousHouseholdEmptyWhenNoPriorCalculation() {
-		when(integrationMock.getCalculations(eq(APPLICANT), any(), any(), any(), any(), any())).thenReturn(null);
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any())).thenReturn(null);
 
 		final var household = service().previousHousehold(APPLICANT, YearMonth.of(2026, JUNE));
 

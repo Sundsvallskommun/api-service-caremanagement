@@ -44,36 +44,36 @@ public final class ActualisationAssembler {
 	 * Build the FC actualisation body for one applicant and intake date.
 	 *
 	 * @param  applicantPersonId the applicant's personal identity number (the FC actualisation owner)
-	 * @param  proposal          the FC actualisation proposal supplying the code lists; may be {@code null}
+	 * @param  proposalDTO       the FC actualisation proposal supplying the code lists; may be {@code null}
 	 * @param  date              the intake date
 	 * @param  caseworkerId      the resolved FC caseworker id to set on the body; may be {@code null}/blank to leave unset
 	 * @return                   the assembled {@link PostAktualiseringsBodyRequest}
 	 */
-	public static PostAktualiseringsBodyRequest assemble(final String applicantPersonId, final PersonBasedAktualiseringProposalDTO proposal, final LocalDate date, final String caseworkerId) {
+	public static PostAktualiseringsBodyRequest assemble(final String applicantPersonId, final PersonBasedAktualiseringProposalDTO proposalDTO, final LocalDate date, final String caseworkerId) {
 		final var body = new PostAktualiseringsBodyRequest()
 			.personId(applicantPersonId)
 			.date(date.format(ISO_LOCAL_DATE));
 
 		ofNullable(caseworkerId).filter(StringUtils::hasText).ifPresent(body::caseworkerId);
 
-		ofNullable(proposal).ifPresent(p -> {
-			firstActualisationType(p).ifPresent(type -> {
+		ofNullable(proposalDTO).ifPresent(proposal -> {
+			firstActualisationType(proposal).ifPresent(type -> {
 				body.type(type.getId());
 				firstReasonId(type).ifPresent(body::reason);
 				firstFromWhoId(type).ifPresent(body::fromWho);
 				if (Boolean.TRUE.equals(type.getSpecifyTypeMandatory())) {
-					firstSpecifyTypeId(p).ifPresent(body::specifies);
+					firstSpecifyTypeId(proposal).ifPresent(body::specifies);
 				}
 				if (Boolean.TRUE.equals(type.getWorkingStatus())) {
-					firstWorkingStatusId(p).ifPresent(body::workingStatus);
+					firstWorkingStatusId(proposal).ifPresent(body::workingStatus);
 				}
 			});
-			firstOrganization(p).ifPresent(org -> {
+			firstOrganization(proposal).ifPresent(org -> {
 				body.organisationId(org.getId());
 				body.organisationUnitId(org.getUnitId());
 			});
-			firstServiceId(p).ifPresent(body::serviceId);
-			firstInvestigationId(p).ifPresent(body::investigationId);
+			firstServiceId(proposal).ifPresent(body::serviceId);
+			firstInvestigationId(proposal).ifPresent(body::investigationId);
 		});
 
 		return body;

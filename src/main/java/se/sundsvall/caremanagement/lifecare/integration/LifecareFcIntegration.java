@@ -69,44 +69,44 @@ public class LifecareFcIntegration {
 		return call("fetching contacts", () -> lifecareFcClient.getContacts(personId));
 	}
 
-	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching actualisations", () -> lifecareFcClient.getActualisations(personId, startDate, endDate, pageSize, pageNr, ascending));
+	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String personId, final String startDate, final String endDate) {
+		return call("fetching actualisations", () -> lifecareFcClient.getActualisations(personId, startDate, endDate, null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching calculations", () -> lifecareFcClient.getCalculations(personId, startDate, endDate, pageSize, pageNr, ascending));
+	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String personId, final String startDate, final String endDate) {
+		return call("fetching calculations", () -> lifecareFcClient.getCalculations(personId, startDate, endDate, null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching decision", () -> lifecareFcClient.getDecisions(personId, startDate, endDate, pageSize, pageNr, ascending));
+	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String personId, final String startDate, final String endDate) {
+		return call("fetching decision", () -> lifecareFcClient.getDecisions(personId, startDate, endDate, null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching payments", () -> lifecareFcClient.getPayments(personId, startDate, endDate, pageSize, pageNr, ascending));
+	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String personId, final String startDate, final String endDate) {
+		return call("fetching payments", () -> lifecareFcClient.getPayments(personId, startDate, endDate, null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching investigations", () -> lifecareFcClient.getInvestigations(personId, startDate, endDate, pageSize, pageNr, ascending));
+	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String personId, final String startDate, final String endDate) {
+		return call("fetching investigations", () -> lifecareFcClient.getInvestigations(personId, startDate, endDate, null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching services", () -> lifecareFcClient.getServices(personId, startDate, endDate, pageSize, pageNr, ascending));
+	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String personId, final String startDate, final String endDate) {
+		return call("fetching services", () -> lifecareFcClient.getServices(personId, startDate, endDate, null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching executions", () -> lifecareFcClient.getExecutions(personId, startDate, endDate, pageSize, pageNr, ascending));
+	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String personId, final String startDate, final String endDate) {
+		return call("fetching executions", () -> lifecareFcClient.getExecutions(personId, startDate, endDate, null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching resource allocations", () -> lifecareFcClient.getResourceAllocations(personId, startDate, endDate, pageSize, pageNr, ascending));
+	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String personId, final String startDate, final String endDate) {
+		return call("fetching resource allocations", () -> lifecareFcClient.getResourceAllocations(personId, startDate, endDate, null, null, false));
 	}
 
 	public List<User> getUsers(final Integer limit, final Integer offset, final String modifiedAfter, final String modifiedBefore) {
 		return call("fetching users", () -> lifecareFcClient.getUsers(limit, offset, modifiedAfter, modifiedBefore));
 	}
 
-	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String personId, final String startDate, final String endDate, final Integer pageSize, final Integer pageNr, final Boolean ascending) {
-		return call("fetching documents", () -> lifecareFcClient.getDocuments(personId, startDate, endDate, pageSize, pageNr, ascending));
+	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String personId, final String startDate, final String endDate) {
+		return call("fetching documents", () -> lifecareFcClient.getDocuments(personId, startDate, endDate, null, null, false));
 	}
 
 	// ---- Write-back (actualisation + calculation) and the proposals that drive it ----------------------------------

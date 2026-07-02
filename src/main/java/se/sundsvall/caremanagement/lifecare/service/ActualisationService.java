@@ -86,7 +86,7 @@ public class ActualisationService {
 	 * @return          the person's actualisations in the period (newest-first as Lifecare returns them)
 	 */
 	public List<ActualisationSummary> list(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFcIntegration.getActualisations(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE), null, null, false))
+		return ofNullable(lifecareFcIntegration.getActualisations(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
 			.map(ApiPaginationCompositePersonBasedAktualiseringDTO::getResult)
 			.orElseGet(List::of)
 			.stream()

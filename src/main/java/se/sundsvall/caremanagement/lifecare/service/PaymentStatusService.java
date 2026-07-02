@@ -37,7 +37,7 @@ public class PaymentStatusService {
 		final var from = applicationMonth.minusMonths(1).atDay(1).format(ISO_LOCAL_DATE);
 		final var to = applicationMonth.atEndOfMonth().format(ISO_LOCAL_DATE);
 
-		final var payments = ofNullable(lifecareFcIntegration.getPayments(applicantPersonId, from, to, null, null, false))
+		final var payments = ofNullable(lifecareFcIntegration.getPayments(applicantPersonId, from, to))
 			.map(ApiPaginationCompositePersonBasedPaymentDTO::getResult)
 			.orElseGet(List::of);
 
