@@ -7,7 +7,7 @@ public record DecisionCreated(
 	String errandId,
 	String municipalityId,
 	String namespace,
-	String typeSlug,
+	String decisionType,
 	String outcome,
 	String decidedBy,
 	OffsetDateTime timestamp) {}

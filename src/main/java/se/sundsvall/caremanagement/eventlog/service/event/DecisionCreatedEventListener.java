@@ -43,7 +43,7 @@ class DecisionCreatedEventListener {
 	}
 
 	private static String description(final DecisionCreated event) {
-		final var base = "Beslut registrerat: " + event.typeSlug();
+		final var base = "Beslut registrerat: " + event.decisionType();
 		return hasText(event.outcome()) ? base + " = " + event.outcome() : base;
 	}
 }

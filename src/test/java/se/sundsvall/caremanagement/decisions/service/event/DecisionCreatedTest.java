@@ -11,14 +11,14 @@ class DecisionCreatedTest {
 	@Test
 	void accessors() {
 		final var timestamp = FIXED_TIMESTAMP;
-		final var event = new DecisionCreated("decision-1", "errand-1", "2281", "my-namespace", "type-slug",
+		final var event = new DecisionCreated("decision-1", "errand-1", "2281", "my-namespace", "PAYMENT",
 			"APPROVED", "decider", timestamp);
 
 		assertThat(event.decisionId()).isEqualTo("decision-1");
 		assertThat(event.errandId()).isEqualTo("errand-1");
 		assertThat(event.municipalityId()).isEqualTo("2281");
 		assertThat(event.namespace()).isEqualTo("my-namespace");
-		assertThat(event.typeSlug()).isEqualTo("type-slug");
+		assertThat(event.decisionType()).isEqualTo("PAYMENT");
 		assertThat(event.outcome()).isEqualTo("APPROVED");
 		assertThat(event.decidedBy()).isEqualTo("decider");
 		assertThat(event.timestamp()).isEqualTo(timestamp);
