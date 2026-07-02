@@ -26,12 +26,12 @@ public class NoteService {
 
 	private final ErrandAccessGuard errandGuard;
 	private final NoteRepository repository;
-	private final ApplicationEventPublisher events;
+	private final ApplicationEventPublisher publisher;
 
-	NoteService(final ErrandAccessGuard errandGuard, final NoteRepository repository, final ApplicationEventPublisher events) {
+	NoteService(final ErrandAccessGuard errandGuard, final NoteRepository repository, final ApplicationEventPublisher publisher) {
 		this.errandGuard = errandGuard;
 		this.repository = repository;
-		this.events = events;
+		this.publisher = publisher;
 	}
 
 	public String add(final String municipalityId, final String namespace, final String errandId, final CreateNote request) {
@@ -43,7 +43,7 @@ public class NoteService {
 			.withAuthor(request.author())
 			.withCreated(timestamp));
 
-		events.publishEvent(new NoteCreated(saved.getId(), errandId, municipalityId, namespace, request.author(), timestamp));
+		publisher.publishEvent(new NoteCreated(saved.getId(), errandId, municipalityId, namespace, request.author(), timestamp));
 		return saved.getId();
 	}
 

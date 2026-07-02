@@ -52,15 +52,15 @@ public class ErrandService implements ErrandAccessGuard {
 
 	private final ErrandRepository errandRepository;
 	private final ErrandNumberGenerator errandNumberGenerator;
-	private final ApplicationEventPublisher eventPublisher;
+	private final ApplicationEventPublisher publisher;
 	private final ErrandNotificationFilter errandNotificationFilter;
 	private final ErrandTypeRegistry errandTypeRegistry;
 
-	ErrandService(final ErrandRepository errandRepository, final ErrandNumberGenerator errandNumberGenerator, final ApplicationEventPublisher eventPublisher,
+	ErrandService(final ErrandRepository errandRepository, final ErrandNumberGenerator errandNumberGenerator, final ApplicationEventPublisher publisher,
 		final ErrandNotificationFilter errandNotificationFilter, final ErrandTypeRegistry errandTypeRegistry) {
 		this.errandRepository = errandRepository;
 		this.errandNumberGenerator = errandNumberGenerator;
-		this.eventPublisher = eventPublisher;
+		this.publisher = publisher;
 		this.errandNotificationFilter = errandNotificationFilter;
 		this.errandTypeRegistry = errandTypeRegistry;
 	}
@@ -95,7 +95,7 @@ public class ErrandService implements ErrandAccessGuard {
 		final var saved = errandRepository.save(entity);
 		final var timestamp = nowTs();
 
-		eventPublisher.publishEvent(new ErrandCreated(
+		publisher.publishEvent(new ErrandCreated(
 			saved.getId(), saved.getTypeSlug(), municipalityId, namespace,
 			saved.getReporterUserId(), saved.getAssignedUserId(), timestamp));
 
@@ -164,12 +164,12 @@ public class ErrandService implements ErrandAccessGuard {
 
 		ofNullable(newStatus)
 			.filter(s -> !s.equals(previousStatus))
-			.ifPresent(s -> eventPublisher.publishEvent(new ErrandStatusChanged(
+			.ifPresent(s -> publisher.publishEvent(new ErrandStatusChanged(
 				entity.getId(), entity.getTypeSlug(), municipalityId, namespace,
 				previousStatus, s, /* changedBy */ null, timestamp)));
 
 		if (hasText(newAssignee) && !newAssignee.equals(previousAssignee)) {
-			eventPublisher.publishEvent(new ErrandAssigned(
+			publisher.publishEvent(new ErrandAssigned(
 				entity.getId(), entity.getTypeSlug(), municipalityId, namespace,
 				previousAssignee, newAssignee, /* changedBy */ null, timestamp));
 
@@ -199,7 +199,7 @@ public class ErrandService implements ErrandAccessGuard {
 		final var typeSlug = entity.getTypeSlug();
 		errandRepository.delete(entity);
 
-		eventPublisher.publishEvent(new ErrandDeleted(
+		publisher.publishEvent(new ErrandDeleted(
 			errandId, typeSlug, municipalityId, namespace, /* deletedBy */ null, nowTs()));
 	}
 
@@ -214,7 +214,7 @@ public class ErrandService implements ErrandAccessGuard {
 		if (!hasText(assignedUserId) || assignedUserId.equals(reporterUserId)) {
 			return;
 		}
-		eventPublisher.publishEvent(new NotificationRequest(
+		publisher.publishEvent(new NotificationRequest(
 			municipalityId, namespace, errandId, assignedUserId, reporterUserId, type, "ERRAND", description));
 	}
 

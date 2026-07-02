@@ -56,15 +56,15 @@ public class MessageService {
 	private final MessageRepository repository;
 	private final MessageAttachmentRepository attachmentRepository;
 	private final MessageAttachmentDataRepository attachmentDataRepository;
-	private final ApplicationEventPublisher events;
+	private final ApplicationEventPublisher publisher;
 
 	MessageService(final ErrandAccessGuard errandGuard, final MessageRepository repository, final MessageAttachmentRepository attachmentRepository,
-		final MessageAttachmentDataRepository attachmentDataRepository, final ApplicationEventPublisher events) {
+		final MessageAttachmentDataRepository attachmentDataRepository, final ApplicationEventPublisher publisher) {
 		this.errandGuard = errandGuard;
 		this.repository = repository;
 		this.attachmentRepository = attachmentRepository;
 		this.attachmentDataRepository = attachmentDataRepository;
-		this.events = events;
+		this.publisher = publisher;
 	}
 
 	public String post(final String municipalityId, final String namespace, final String errandId, final CreateMessage request, final List<MultipartFile> attachments) {
@@ -82,7 +82,7 @@ public class MessageService {
 		final var files = ofNullable(attachments).orElse(emptyList());
 		files.forEach(file -> store(saved.getId(), saved.getDirection(), file));
 
-		events.publishEvent(new MessageCreated(saved.getId(), municipalityId, namespace, errandId,
+		publisher.publishEvent(new MessageCreated(saved.getId(), municipalityId, namespace, errandId,
 			saved.getDirection(), saved.getAuthor(), !files.isEmpty(), saved.getCreated()));
 		return saved.getId();
 	}

@@ -30,14 +30,12 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 /**
  * Thin wrapper over {@link LifecareFcClient}. Every call goes through {@link #call(String, Supplier)}, which translates
  * any transport/FC failure into a {@code BAD_GATEWAY} problem carrying the upstream status into the log and problem
- * detail. Deliberately logs no {@code personId} or request/response payloads — FC carries personal identity number and
- * income data
- * (sprint privacy rule, vof-ekonomiskt-bistand/CLAUDE.md).
+ * detail. Deliberately
+ * logs no {@code personId} or request/response payloads — FC carries personal identity number and income data (sprint
+ * privacy rule, vof-ekonomiskt-bistand/CLAUDE.md).
  */
 @Component
 public class LifecareFcIntegration {
-
-	public static final String CLIENT_ID = LifecareFcClient.class.getSimpleName();
 
 	private static final Logger LOG = LoggerFactory.getLogger(LifecareFcIntegration.class);
 
@@ -48,6 +46,20 @@ public class LifecareFcIntegration {
 	}
 
 	// ---- Person-based reads ------------------------------------------------------------------------------------------
+
+	/**
+	 * Short upstream descriptor (HTTP status when available) to make failures self-diagnosing without leaking payloads. For
+	 * {@link ThrowableProblem} causes the (already-clean) status + detail is used; for any other cause only the exception
+	 * class name is
+	 * emitted — transport failures (e.g. Feign {@code RetryableException}) embed the full request line in their message,
+	 * which carries personal identity number and the FC API key, so the message is deliberately dropped.
+	 */
+	private static String describe(final Throwable e) {
+		if (e instanceof final ThrowableProblem problem) {
+			return ofNullable(problem.getStatus()).map(status -> status.value() + " " + problem.getMessage()).orElseGet(problem::getMessage);
+		}
+		return e.getClass().getSimpleName();
+	}
 
 	public PersonBasedPersonDTO getPerson(final String personId) {
 		return call("fetching person", () -> lifecareFcClient.getPerson(personId));
@@ -97,11 +109,11 @@ public class LifecareFcIntegration {
 		return call("fetching documents", () -> lifecareFcClient.getDocuments(personId, startDate, endDate, pageSize, pageNr, ascending));
 	}
 
+	// ---- Write-back (actualisation + calculation) and the proposals that drive it ----------------------------------
+
 	public byte[] getDocumentContent(final String id) {
 		return call("fetching document content", () -> lifecareFcClient.getDocumentContent(id));
 	}
-
-	// ---- Write-back (actualisation + calculation) and the proposals that drive it ----------------------------------
 
 	public PersonBasedAktualiseringProposalDTO getActualisationProposal(final String personId) {
 		return call("fetching actualisation proposal", () -> lifecareFcClient.getActualisationProposal(personId));
@@ -142,19 +154,5 @@ public class LifecareFcIntegration {
 			LOG.error("Error {} in Lifecare FC: {}", action, describe(e), e);
 			throw Problem.valueOf(BAD_GATEWAY, "Error %s in Lifecare FC: %s".formatted(action, describe(e)));
 		}
-	}
-
-	/**
-	 * Short upstream descriptor (HTTP status when available) to make failures self-diagnosing without leaking payloads.
-	 * For {@link ThrowableProblem} causes the (already-clean) status + detail is used; for any other cause only the
-	 * exception class name is emitted — transport failures (e.g. Feign {@code RetryableException}) embed the full request
-	 * line in their message, which carries personal identity number and the FC API key, so the message is deliberately
-	 * dropped.
-	 */
-	private static String describe(final Throwable e) {
-		if (e instanceof final ThrowableProblem problem) {
-			return ofNullable(problem.getStatus()).map(status -> status.value() + " " + problem.getMessage()).orElseGet(problem::getMessage);
-		}
-		return e.getClass().getSimpleName();
 	}
 }

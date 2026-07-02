@@ -261,33 +261,6 @@
 						</configuration>
 					</execution>
 					<execution>
-						<id>eneo-api</id>
-						<goals>
-							<goal>generate</goal>
-						</goals>
-						<configuration>
-							<inputSpec>src/main/resources/integrations/eneo-api.yml</inputSpec>
-							<output>${generated-sources-path}</output>
-							<generatorName>spring</generatorName>
-							<generateApis>false</generateApis>
-							<generateSupportingFiles>false</generateSupportingFiles>
-							<modelsToGenerate>AskAssistant,AskResponse,FilePublic</modelsToGenerate>
-							<configOptions>
-								<useSpringBoot4>true</useSpringBoot4>
-								<useJackson3>true</useJackson3>
-								<sourceFolder>models</sourceFolder>
-								<dateLibrary>java8</dateLibrary>
-								<apiPackage>generated</apiPackage>
-								<modelPackage>generated.se.sundsvall.eneo</modelPackage>
-								<openApiNullable>false</openApiNullable>
-								<generatePom>false</generatePom>
-								<useBeanValidation>true</useBeanValidation>
-								<useSwaggerAnnotations>true</useSwaggerAnnotations>
-								<interfaceOnly>true</interfaceOnly>
-							</configOptions>
-						</configuration>
-					</execution>
-					<execution>
 						<id>lifecare-fc-api</id>
 						<goals>
 							<goal>generate</goal>

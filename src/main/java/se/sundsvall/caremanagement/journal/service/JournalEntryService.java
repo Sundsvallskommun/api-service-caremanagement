@@ -38,12 +38,12 @@ import static se.sundsvall.caremanagement.journal.integration.db.model.JournalEn
 public class JournalEntryService {
 
 	private final JournalEntryRepository repository;
-	private final ApplicationEventPublisher events;
+	private final ApplicationEventPublisher publisher;
 	private final ErrandAccessGuard errandGuard;
 
-	JournalEntryService(final JournalEntryRepository repository, final ApplicationEventPublisher events, final ErrandAccessGuard errandGuard) {
+	JournalEntryService(final JournalEntryRepository repository, final ApplicationEventPublisher publisher, final ErrandAccessGuard errandGuard) {
 		this.repository = repository;
-		this.events = events;
+		this.publisher = publisher;
 		this.errandGuard = errandGuard;
 	}
 
@@ -62,7 +62,7 @@ public class JournalEntryService {
 			.withCreatedBy(request.createdBy())
 			.withCreated(timestamp));
 
-		events.publishEvent(new JournalEntryCreated(saved.getId(), errandId, municipalityId, namespace, request.type(), request.createdBy(), timestamp));
+		publisher.publishEvent(new JournalEntryCreated(saved.getId(), errandId, municipalityId, namespace, request.type(), request.createdBy(), timestamp));
 		return saved.getId();
 	}
 

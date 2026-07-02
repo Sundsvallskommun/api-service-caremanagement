@@ -34,20 +34,20 @@ public class DecisionService {
 
 	private final ErrandRepository errandRepository;
 	private final DecisionRepository decisionRepository;
-	private final ApplicationEventPublisher eventPublisher;
+	private final ApplicationEventPublisher publisher;
 	private final ErrandAccessGuard errandGuard;
 
-	DecisionService(final ErrandRepository errandRepository, final DecisionRepository decisionRepository, final ApplicationEventPublisher eventPublisher, final ErrandAccessGuard errandGuard) {
+	DecisionService(final ErrandRepository errandRepository, final DecisionRepository decisionRepository, final ApplicationEventPublisher publisher, final ErrandAccessGuard errandGuard) {
 		this.errandRepository = errandRepository;
 		this.decisionRepository = decisionRepository;
-		this.eventPublisher = eventPublisher;
+		this.publisher = publisher;
 		this.errandGuard = errandGuard;
 	}
 
 	public String create(final String municipalityId, final String namespace, final String errandId, final Decision decision) {
 		final var errand = findErrand(municipalityId, namespace, errandId);
 		final var saved = decisionRepository.save(toDecisionEntity(decision, errandId));
-		eventPublisher.publishEvent(new DecisionCreated(saved.getId(), errandId, municipalityId, namespace,
+		publisher.publishEvent(new DecisionCreated(saved.getId(), errandId, municipalityId, namespace,
 			decision.getDecisionType(), decision.getValue(), decision.getCreatedBy(), now(systemDefault()).truncatedTo(MILLIS)));
 		publishDecisionNotifications(municipalityId, namespace, errand, decision);
 		return saved.getId();
@@ -92,7 +92,7 @@ public class DecisionService {
 			return;
 		}
 		final var description = "Decision recorded: %s = %s".formatted(decision.getDecisionType(), decision.getValue());
-		recipients.forEach(ownerId -> eventPublisher.publishEvent(new NotificationRequest(
+		recipients.forEach(ownerId -> publisher.publishEvent(new NotificationRequest(
 			municipalityId, namespace, errand.getId(), ownerId, decision.getCreatedBy(), "CREATE", "DECISION", description)));
 	}
 }

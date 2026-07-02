@@ -38,12 +38,12 @@ import static se.sundsvall.caremanagement.document.integration.db.model.Document
 public class DocumentService {
 
 	private final DocumentRepository repository;
-	private final ApplicationEventPublisher events;
+	private final ApplicationEventPublisher publisher;
 	private final ErrandAccessGuard errandGuard;
 
-	DocumentService(final DocumentRepository repository, final ApplicationEventPublisher events, final ErrandAccessGuard errandGuard) {
+	DocumentService(final DocumentRepository repository, final ApplicationEventPublisher publisher, final ErrandAccessGuard errandGuard) {
 		this.repository = repository;
-		this.events = events;
+		this.publisher = publisher;
 		this.errandGuard = errandGuard;
 	}
 
@@ -62,7 +62,7 @@ public class DocumentService {
 			.withCreatedBy(request.createdBy())
 			.withCreated(timestamp));
 
-		events.publishEvent(new DocumentCreated(saved.getId(), errandId, municipalityId, namespace, request.type(), request.createdBy(), timestamp));
+		publisher.publishEvent(new DocumentCreated(saved.getId(), errandId, municipalityId, namespace, request.type(), request.createdBy(), timestamp));
 		return saved.getId();
 	}
 

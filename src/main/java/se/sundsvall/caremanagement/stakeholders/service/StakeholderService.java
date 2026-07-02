@@ -30,21 +30,21 @@ public class StakeholderService {
 	private final ErrandRepository errandRepository;
 	private final StakeholderRepository stakeholderRepository;
 	private final StakeholderRoleRegistry roleRegistry;
-	private final ApplicationEventPublisher eventPublisher;
+	private final ApplicationEventPublisher publisher;
 
 	StakeholderService(final ErrandRepository errandRepository, final StakeholderRepository stakeholderRepository,
-		final StakeholderRoleRegistry roleRegistry, final ApplicationEventPublisher eventPublisher) {
+		final StakeholderRoleRegistry roleRegistry, final ApplicationEventPublisher publisher) {
 		this.errandRepository = errandRepository;
 		this.stakeholderRepository = stakeholderRepository;
 		this.roleRegistry = roleRegistry;
-		this.eventPublisher = eventPublisher;
+		this.publisher = publisher;
 	}
 
 	public String create(final String municipalityId, final String namespace, final String errandId, final Stakeholder stakeholder) {
 		final var errand = ensureErrandExists(municipalityId, namespace, errandId);
 		validateRole(errand.getTypeSlug(), stakeholder.getRole());
 		final var saved = stakeholderRepository.save(toStakeholderEntity(stakeholder, errandId));
-		eventPublisher.publishEvent(new StakeholderMutated(municipalityId, namespace, errandId));
+		publisher.publishEvent(new StakeholderMutated(municipalityId, namespace, errandId));
 		return saved.getId();
 	}
 
@@ -65,13 +65,13 @@ public class StakeholderService {
 		final var entity = findStakeholder(municipalityId, namespace, errandId, stakeholderId);
 		updateStakeholderEntity(entity, stakeholder);
 		stakeholderRepository.save(entity);
-		eventPublisher.publishEvent(new StakeholderMutated(municipalityId, namespace, errandId));
+		publisher.publishEvent(new StakeholderMutated(municipalityId, namespace, errandId));
 	}
 
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String stakeholderId) {
 		final var entity = findStakeholder(municipalityId, namespace, errandId, stakeholderId);
 		stakeholderRepository.delete(entity);
-		eventPublisher.publishEvent(new StakeholderMutated(municipalityId, namespace, errandId));
+		publisher.publishEvent(new StakeholderMutated(municipalityId, namespace, errandId));
 	}
 
 	private ErrandEntity ensureErrandExists(final String municipalityId, final String namespace, final String errandId) {
