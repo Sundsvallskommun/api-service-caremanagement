@@ -12,7 +12,6 @@ import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
-import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 @Entity
@@ -37,7 +36,7 @@ public class JournalEntryEntity {
 	@Column(name = "heading", nullable = false, length = 255)
 	private String heading;
 
-	@Column(name = "entry_text", length = LONG32)
+	@Column(name = "entry_text", length = 1_048_576)
 	private String text;
 
 	@Column(name = "entry_date_time", nullable = false)

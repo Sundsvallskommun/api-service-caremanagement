@@ -423,7 +423,7 @@ CREATE TABLE `errand_journal_entry` (
   `errand_id` varchar(36) NOT NULL,
   `entry_type` varchar(255) NOT NULL,
   `heading` varchar(255) NOT NULL,
-  `entry_text` longtext DEFAULT NULL,
+  `entry_text` mediumtext DEFAULT NULL,
   `entry_date_time` datetime(6) NOT NULL,
   `status` varchar(16) NOT NULL,
   `created_by` varchar(64) DEFAULT NULL,
