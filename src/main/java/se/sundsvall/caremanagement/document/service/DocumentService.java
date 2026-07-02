@@ -10,7 +10,7 @@ import se.sundsvall.caremanagement.document.api.model.LockDocument;
 import se.sundsvall.caremanagement.document.api.model.UpdateDocument;
 import se.sundsvall.caremanagement.document.integration.db.DocumentRepository;
 import se.sundsvall.caremanagement.document.integration.db.model.DocumentEntity;
-import se.sundsvall.caremanagement.document.service.event.DocumentAdded;
+import se.sundsvall.caremanagement.document.service.event.DocumentCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -62,7 +62,7 @@ public class DocumentService {
 			.withCreatedBy(request.createdBy())
 			.withCreated(timestamp));
 
-		events.publishEvent(new DocumentAdded(saved.getId(), errandId, municipalityId, namespace, request.type(), request.createdBy(), timestamp));
+		events.publishEvent(new DocumentCreated(saved.getId(), errandId, municipalityId, namespace, request.type(), request.createdBy(), timestamp));
 		return saved.getId();
 	}
 

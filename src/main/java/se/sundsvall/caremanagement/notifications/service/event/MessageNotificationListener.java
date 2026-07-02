@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.conversation.service.event.MessagePosted;
+import se.sundsvall.caremanagement.conversation.service.event.MessageCreated;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.notifications.api.model.Notification;
 import se.sundsvall.caremanagement.notifications.service.NotificationService;
@@ -19,7 +19,7 @@ import se.sundsvall.caremanagement.notifications.service.NotificationService;
  * unassigned the notification is raised ownerless ({@code ownerId == null}), so the errand still shows up in the
  * owner-agnostic unread-notification filter and is claimed by whoever picks it up (see
  * {@link ErrandAssignmentNotificationListener}). A missing errand raises nothing. Runs asynchronously in its own
- * transaction after the message-post commits (the {@link MessagePosted} event is durably staged in Spring Modulith's
+ * transaction after the message-post commits (the {@link MessageCreated} event is durably staged in Spring Modulith's
  * outbox in between).
  */
 @Component
@@ -39,7 +39,7 @@ class MessageNotificationListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final MessagePosted event) {
+	void on(final MessageCreated event) {
 		if (!INBOUND.equals(event.direction())) {
 			return;
 		}

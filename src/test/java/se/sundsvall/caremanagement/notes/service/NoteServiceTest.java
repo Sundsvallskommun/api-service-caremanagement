@@ -14,7 +14,7 @@ import se.sundsvall.caremanagement.notes.api.model.CreateNote;
 import se.sundsvall.caremanagement.notes.api.model.UpdateNote;
 import se.sundsvall.caremanagement.notes.integration.db.NoteRepository;
 import se.sundsvall.caremanagement.notes.integration.db.model.NoteEntity;
-import se.sundsvall.caremanagement.notes.service.event.NoteAdded;
+import se.sundsvall.caremanagement.notes.service.event.NoteCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -70,7 +70,7 @@ class NoteServiceTest {
 		assertThat(entityCaptor.getValue().getAuthor()).isEqualTo("author");
 		assertThat(entityCaptor.getValue().getCreated()).isNotNull();
 
-		final ArgumentCaptor<NoteAdded> eventCaptor = ArgumentCaptor.forClass(NoteAdded.class);
+		final ArgumentCaptor<NoteCreated> eventCaptor = ArgumentCaptor.forClass(NoteCreated.class);
 		verify(eventsMock).publishEvent(eventCaptor.capture());
 		assertThat(eventCaptor.getValue().noteId()).isEqualTo(NOTE_ID);
 		assertThat(eventCaptor.getValue().errandId()).isEqualTo(ERRAND_ID);

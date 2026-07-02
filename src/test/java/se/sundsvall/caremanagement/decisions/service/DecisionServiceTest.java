@@ -14,7 +14,7 @@ import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
-import se.sundsvall.caremanagement.decisions.service.event.DecisionRecorded;
+import se.sundsvall.caremanagement.decisions.service.event.DecisionCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.caremanagement.shared.NotificationRequest;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -66,7 +66,7 @@ class DecisionServiceTest {
 
 		assertThat(id).isEqualTo(DECISION_ID);
 
-		verify(eventPublisherMock).publishEvent(isA(DecisionRecorded.class));
+		verify(eventPublisherMock).publishEvent(isA(DecisionCreated.class));
 		final ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
 		verify(eventPublisherMock, times(3)).publishEvent(captor.capture());
 		final var notifications = captor.getAllValues().stream()
@@ -89,7 +89,7 @@ class DecisionServiceTest {
 
 		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Decision.create().withDecisionType("X").withValue("Y"));
 
-		verify(eventPublisherMock).publishEvent(isA(DecisionRecorded.class));
+		verify(eventPublisherMock).publishEvent(isA(DecisionCreated.class));
 		verify(eventPublisherMock, never()).publishEvent(isA(NotificationRequest.class));
 	}
 
@@ -103,7 +103,7 @@ class DecisionServiceTest {
 
 		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Decision.create().withDecisionType("X").withValue("Y"));
 
-		verify(eventPublisherMock).publishEvent(isA(DecisionRecorded.class));
+		verify(eventPublisherMock).publishEvent(isA(DecisionCreated.class));
 		verify(eventPublisherMock, times(1)).publishEvent(any(NotificationRequest.class));
 	}
 

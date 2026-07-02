@@ -5,12 +5,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class JournalEntryAddedTest {
+class JournalEntryCreatedTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void accessors() {
-		final var event = new JournalEntryAdded("je-1", "errand-1", "2281", "my-namespace", "Journalfört meddelande", "carola", FIXED_TIMESTAMP);
+		final var event = new JournalEntryCreated("je-1", "errand-1", "2281", "my-namespace", "Journalfört meddelande", "carola", FIXED_TIMESTAMP);
 
 		assertThat(event.journalEntryId()).isEqualTo("je-1");
 		assertThat(event.errandId()).isEqualTo("errand-1");

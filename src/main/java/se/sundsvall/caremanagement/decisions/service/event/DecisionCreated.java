@@ -2,7 +2,7 @@ package se.sundsvall.caremanagement.decisions.service.event;
 
 import java.time.OffsetDateTime;
 
-public record DecisionRecorded(
+public record DecisionCreated(
 	String decisionId,
 	String errandId,
 	String municipalityId,

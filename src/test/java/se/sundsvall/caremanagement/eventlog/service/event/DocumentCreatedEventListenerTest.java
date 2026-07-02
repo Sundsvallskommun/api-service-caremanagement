@@ -7,7 +7,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.document.service.event.DocumentAdded;
+import se.sundsvall.caremanagement.document.service.event.DocumentCreated;
 import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEntity;
 import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
 
@@ -15,14 +15,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class DocumentAddedEventListenerTest {
+class DocumentCreatedEventListenerTest {
 	private static final OffsetDateTime TS = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Mock
 	private ErrandEventService serviceMock;
 
 	@InjectMocks
-	private DocumentAddedEventListener listener;
+	private DocumentCreatedEventListener listener;
 
 	private ErrandEventEntity capture() {
 		final var captor = ArgumentCaptor.forClass(ErrandEventEntity.class);
@@ -31,8 +31,8 @@ class DocumentAddedEventListenerTest {
 	}
 
 	@Test
-	void recordsDocumentAddedAsDescriptiveEventRow() {
-		listener.on(new DocumentAdded("doc-1", "errand-1", "2281", "EB", "Brev", "carola01winberg", TS));
+	void recordsDocumentCreatedAsDescriptiveEventRow() {
+		listener.on(new DocumentCreated("doc-1", "errand-1", "2281", "EB", "Brev", "carola01winberg", TS));
 
 		final var entity = capture();
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
@@ -48,7 +48,7 @@ class DocumentAddedEventListenerTest {
 
 	@Test
 	void defaultsActorToSystemWhenCreatedByBlank() {
-		listener.on(new DocumentAdded("doc-1", "errand-1", "2281", "EB", "Brev", " ", TS));
+		listener.on(new DocumentCreated("doc-1", "errand-1", "2281", "EB", "Brev", " ", TS));
 
 		assertThat(capture().getActor()).isEqualTo("system");
 	}

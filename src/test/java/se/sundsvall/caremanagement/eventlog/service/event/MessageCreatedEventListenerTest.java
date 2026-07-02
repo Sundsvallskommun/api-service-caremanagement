@@ -7,22 +7,22 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.conversation.service.event.MessageCreated;
 import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEntity;
 import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
-import se.sundsvall.caremanagement.journal.service.event.JournalEntryAdded;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class JournalEntryAddedEventListenerTest {
+class MessageCreatedEventListenerTest {
 	private static final OffsetDateTime TS = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Mock
 	private ErrandEventService serviceMock;
 
 	@InjectMocks
-	private JournalEntryAddedEventListener listener;
+	private MessageCreatedEventListener listener;
 
 	private ErrandEventEntity capture() {
 		final var captor = ArgumentCaptor.forClass(ErrandEventEntity.class);
@@ -31,8 +31,8 @@ class JournalEntryAddedEventListenerTest {
 	}
 
 	@Test
-	void recordsJournalEntryAddedAsDescriptiveEventRow() {
-		listener.on(new JournalEntryAdded("je-1", "errand-1", "2281", "EB", "Journalfört meddelande", "carola01winberg", TS));
+	void recordsOutboundMessageAsSent() {
+		listener.on(new MessageCreated("m-1", "2281", "EB", "errand-1", "OUTBOUND", "carola01winberg", true, TS));
 
 		final var entity = capture();
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
@@ -40,15 +40,22 @@ class JournalEntryAddedEventListenerTest {
 		assertThat(entity.getNamespace()).isEqualTo("EB");
 		assertThat(entity.getSource()).isEqualTo("EVENT");
 		assertThat(entity.getAction()).isEqualTo("CREATE");
-		assertThat(entity.getTarget()).isEqualTo("journal-entry");
-		assertThat(entity.getDescription()).isEqualTo("Journalanteckning tillagd: Journalfört meddelande");
+		assertThat(entity.getTarget()).isEqualTo("message");
+		assertThat(entity.getDescription()).isEqualTo("Meddelande skickat");
 		assertThat(entity.getActor()).isEqualTo("carola01winberg");
 		assertThat(entity.getCreated()).isEqualTo(TS);
 	}
 
 	@Test
-	void defaultsActorToSystemWhenCreatedByBlank() {
-		listener.on(new JournalEntryAdded("je-1", "errand-1", "2281", "EB", "Journalfört meddelande", " ", TS));
+	void recordsInboundMessageAsReceived() {
+		listener.on(new MessageCreated("m-1", "2281", "EB", "errand-1", "INBOUND", "199001011234", false, TS));
+
+		assertThat(capture().getDescription()).isEqualTo("Meddelande mottaget");
+	}
+
+	@Test
+	void defaultsActorToSystemWhenAuthorBlank() {
+		listener.on(new MessageCreated("m-1", "2281", "EB", "errand-1", "OUTBOUND", " ", false, TS));
 
 		assertThat(capture().getActor()).isEqualTo("system");
 	}

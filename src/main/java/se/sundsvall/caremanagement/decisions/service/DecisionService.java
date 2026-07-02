@@ -11,7 +11,7 @@ import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
-import se.sundsvall.caremanagement.decisions.service.event.DecisionRecorded;
+import se.sundsvall.caremanagement.decisions.service.event.DecisionCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.caremanagement.shared.NotificationRequest;
 import se.sundsvall.dept44.problem.Problem;
@@ -47,7 +47,7 @@ public class DecisionService {
 	public String create(final String municipalityId, final String namespace, final String errandId, final Decision decision) {
 		final var errand = findErrand(municipalityId, namespace, errandId);
 		final var saved = decisionRepository.save(toDecisionEntity(decision, errandId));
-		eventPublisher.publishEvent(new DecisionRecorded(saved.getId(), errandId, municipalityId, namespace,
+		eventPublisher.publishEvent(new DecisionCreated(saved.getId(), errandId, municipalityId, namespace,
 			decision.getDecisionType(), decision.getValue(), decision.getCreatedBy(), now(systemDefault()).truncatedTo(MILLIS)));
 		publishDecisionNotifications(municipalityId, namespace, errand, decision);
 		return saved.getId();

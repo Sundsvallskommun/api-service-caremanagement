@@ -8,7 +8,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.conversation.service.event.MessagePosted;
+import se.sundsvall.caremanagement.conversation.service.event.MessageCreated;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.notifications.api.model.Notification;
@@ -59,7 +59,7 @@ class MessageNotificationListenerTest {
 
 	@Test
 	void outboundMessageIsIgnored() {
-		listener.on(new MessagePosted(MESSAGE_ID, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "OUTBOUND", "jane01doe", false, OffsetDateTime.now()));
+		listener.on(new MessageCreated(MESSAGE_ID, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "OUTBOUND", "jane01doe", false, OffsetDateTime.now()));
 
 		verifyNoInteractions(errandRepositoryMock, notificationServiceMock);
 	}
@@ -112,7 +112,7 @@ class MessageNotificationListenerTest {
 		verify(notificationServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Notification.class));
 	}
 
-	private static MessagePosted inbound() {
-		return new MessagePosted(MESSAGE_ID, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "INBOUND", APPLICANT, false, OffsetDateTime.now());
+	private static MessageCreated inbound() {
+		return new MessageCreated(MESSAGE_ID, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "INBOUND", APPLICANT, false, OffsetDateTime.now());
 	}
 }

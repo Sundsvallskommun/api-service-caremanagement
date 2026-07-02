@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:55225
+- url: http://localhost:55662
   description: Generated server url
 tags:
 - name: Statistics
@@ -1397,7 +1397,7 @@ paths:
       tags:
       - Notes
       summary: Add note to errand
-      operationId: add
+      operationId: createNote
       parameters:
       - name: municipalityId
         in: path
@@ -1464,7 +1464,7 @@ paths:
         \ the optional 'attachments' part carries the files to attach (any type).\
         \ The sender's identity is taken from the 'X-Sent-By' header (type=adAccount\
         \ → caseworker, type=partyId → applicant)."
-      operationId: post
+      operationId: createMessage
       parameters:
       - name: municipalityId
         in: path
@@ -1593,7 +1593,7 @@ paths:
       tags:
       - Journal
       summary: Add a journal entry to an errand
-      operationId: add_1
+      operationId: createJournalEntry
       parameters:
       - name: municipalityId
         in: path
@@ -1697,7 +1697,7 @@ paths:
       tags:
       - Documents
       summary: Add a document to an errand
-      operationId: add_2
+      operationId: createDocument
       parameters:
       - name: municipalityId
         in: path
@@ -5912,10 +5912,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri

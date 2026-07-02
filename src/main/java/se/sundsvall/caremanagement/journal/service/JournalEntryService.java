@@ -10,7 +10,7 @@ import se.sundsvall.caremanagement.journal.api.model.LockJournalEntry;
 import se.sundsvall.caremanagement.journal.api.model.UpdateJournalEntry;
 import se.sundsvall.caremanagement.journal.integration.db.JournalEntryRepository;
 import se.sundsvall.caremanagement.journal.integration.db.model.JournalEntryEntity;
-import se.sundsvall.caremanagement.journal.service.event.JournalEntryAdded;
+import se.sundsvall.caremanagement.journal.service.event.JournalEntryCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -62,7 +62,7 @@ public class JournalEntryService {
 			.withCreatedBy(request.createdBy())
 			.withCreated(timestamp));
 
-		events.publishEvent(new JournalEntryAdded(saved.getId(), errandId, municipalityId, namespace, request.type(), request.createdBy(), timestamp));
+		events.publishEvent(new JournalEntryCreated(saved.getId(), errandId, municipalityId, namespace, request.type(), request.createdBy(), timestamp));
 		return saved.getId();
 	}
 

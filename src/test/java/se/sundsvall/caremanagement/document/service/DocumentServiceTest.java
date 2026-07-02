@@ -17,7 +17,7 @@ import se.sundsvall.caremanagement.document.api.model.LockDocument;
 import se.sundsvall.caremanagement.document.api.model.UpdateDocument;
 import se.sundsvall.caremanagement.document.integration.db.DocumentRepository;
 import se.sundsvall.caremanagement.document.integration.db.model.DocumentEntity;
-import se.sundsvall.caremanagement.document.service.event.DocumentAdded;
+import se.sundsvall.caremanagement.document.service.event.DocumentCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -80,7 +80,7 @@ class DocumentServiceTest {
 		assertThat(captured.getCreatedBy()).isEqualTo("carola");
 		assertThat(captured.getCreated()).isNotNull();
 
-		final ArgumentCaptor<DocumentAdded> eventCaptor = ArgumentCaptor.forClass(DocumentAdded.class);
+		final ArgumentCaptor<DocumentCreated> eventCaptor = ArgumentCaptor.forClass(DocumentCreated.class);
 		verify(eventsMock).publishEvent(eventCaptor.capture());
 		assertThat(eventCaptor.getValue().documentId()).isEqualTo("doc-1");
 		assertThat(eventCaptor.getValue().errandId()).isEqualTo(ERRAND_ID);

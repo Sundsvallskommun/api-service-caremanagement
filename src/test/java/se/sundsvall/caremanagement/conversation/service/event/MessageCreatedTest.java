@@ -5,13 +5,13 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class MessagePostedTest {
+class MessageCreatedTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
 	void accessors() {
 		final var timestamp = FIXED_TIMESTAMP;
-		final var event = new MessagePosted("message-1", "2281", "my-namespace", "errand-1", "OUTBOUND", "author-1", true, timestamp);
+		final var event = new MessageCreated("message-1", "2281", "my-namespace", "errand-1", "OUTBOUND", "author-1", true, timestamp);
 
 		assertThat(event.messageId()).isEqualTo("message-1");
 		assertThat(event.municipalityId()).isEqualTo("2281");

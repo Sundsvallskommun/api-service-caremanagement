@@ -9,7 +9,7 @@ import se.sundsvall.caremanagement.notes.api.model.Note;
 import se.sundsvall.caremanagement.notes.api.model.UpdateNote;
 import se.sundsvall.caremanagement.notes.integration.db.NoteRepository;
 import se.sundsvall.caremanagement.notes.integration.db.model.NoteEntity;
-import se.sundsvall.caremanagement.notes.service.event.NoteAdded;
+import se.sundsvall.caremanagement.notes.service.event.NoteCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -43,7 +43,7 @@ public class NoteService {
 			.withAuthor(request.author())
 			.withCreated(timestamp));
 
-		events.publishEvent(new NoteAdded(saved.getId(), errandId, municipalityId, namespace, request.author(), timestamp));
+		events.publishEvent(new NoteCreated(saved.getId(), errandId, municipalityId, namespace, request.author(), timestamp));
 		return saved.getId();
 	}
 

@@ -13,7 +13,7 @@ import java.time.OffsetDateTime;
  * module only rebuilds the client-attachment PDF on INBOUND messages that actually carry attachments). The
  * {@code municipalityId}/{@code namespace} are carried so a consumer can act on the errand without re-deriving them.
  */
-public record MessagePosted(
+public record MessageCreated(
 	String messageId,
 	String municipalityId,
 	String namespace,

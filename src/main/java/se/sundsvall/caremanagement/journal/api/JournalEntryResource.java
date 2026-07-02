@@ -48,7 +48,7 @@ class JournalEntryResource {
 
 	@PostMapping(consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Add a journal entry to an errand")
-	ResponseEntity<Void> add(
+	ResponseEntity<Void> createJournalEntry(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId,

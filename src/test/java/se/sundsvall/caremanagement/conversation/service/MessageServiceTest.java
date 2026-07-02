@@ -22,7 +22,7 @@ import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentDataEntity;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentEntity;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
-import se.sundsvall.caremanagement.conversation.service.event.MessagePosted;
+import se.sundsvall.caremanagement.conversation.service.event.MessageCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -90,7 +90,7 @@ class MessageServiceTest {
 
 		verifyNoInteractions(attachmentRepositoryMock, attachmentDataRepositoryMock);
 
-		final ArgumentCaptor<MessagePosted> eventCaptor = ArgumentCaptor.forClass(MessagePosted.class);
+		final ArgumentCaptor<MessageCreated> eventCaptor = ArgumentCaptor.forClass(MessageCreated.class);
 		verify(eventsMock).publishEvent(eventCaptor.capture());
 		assertThat(eventCaptor.getValue().messageId()).isEqualTo("message-1");
 		assertThat(eventCaptor.getValue().municipalityId()).isEqualTo(MUNICIPALITY_ID);
@@ -139,7 +139,7 @@ class MessageServiceTest {
 		assertThat(dataCaptor.getValue().getMessageAttachmentId()).isEqualTo("attachment-1");
 		assertThat(dataCaptor.getValue().getFile()).isNotNull();
 
-		final ArgumentCaptor<MessagePosted> eventCaptor = ArgumentCaptor.forClass(MessagePosted.class);
+		final ArgumentCaptor<MessageCreated> eventCaptor = ArgumentCaptor.forClass(MessageCreated.class);
 		verify(eventsMock).publishEvent(eventCaptor.capture());
 		assertThat(eventCaptor.getValue().hasAttachments()).isTrue();
 		assertThat(eventCaptor.getValue().direction()).isEqualTo("INBOUND");
@@ -159,7 +159,7 @@ class MessageServiceTest {
 		verify(repositoryMock).save(entityCaptor.capture());
 		assertThat(entityCaptor.getValue().getInReplyToId()).isEqualTo("parent-1");
 
-		verify(eventsMock).publishEvent(any(MessagePosted.class));
+		verify(eventsMock).publishEvent(any(MessageCreated.class));
 	}
 
 	@Test

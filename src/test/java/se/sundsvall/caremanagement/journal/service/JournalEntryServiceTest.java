@@ -17,7 +17,7 @@ import se.sundsvall.caremanagement.journal.api.model.LockJournalEntry;
 import se.sundsvall.caremanagement.journal.api.model.UpdateJournalEntry;
 import se.sundsvall.caremanagement.journal.integration.db.JournalEntryRepository;
 import se.sundsvall.caremanagement.journal.integration.db.model.JournalEntryEntity;
-import se.sundsvall.caremanagement.journal.service.event.JournalEntryAdded;
+import se.sundsvall.caremanagement.journal.service.event.JournalEntryCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -80,7 +80,7 @@ class JournalEntryServiceTest {
 		assertThat(captured.getCreatedBy()).isEqualTo("carola");
 		assertThat(captured.getCreated()).isNotNull();
 
-		final ArgumentCaptor<JournalEntryAdded> eventCaptor = ArgumentCaptor.forClass(JournalEntryAdded.class);
+		final ArgumentCaptor<JournalEntryCreated> eventCaptor = ArgumentCaptor.forClass(JournalEntryCreated.class);
 		verify(eventsMock).publishEvent(eventCaptor.capture());
 		assertThat(eventCaptor.getValue().journalEntryId()).isEqualTo("je-1");
 		assertThat(eventCaptor.getValue().errandId()).isEqualTo(ERRAND_ID);

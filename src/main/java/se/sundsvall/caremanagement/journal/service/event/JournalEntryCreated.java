@@ -1,9 +1,9 @@
-package se.sundsvall.caremanagement.document.service.event;
+package se.sundsvall.caremanagement.journal.service.event;
 
 import java.time.OffsetDateTime;
 
-public record DocumentAdded(
-	String documentId,
+public record JournalEntryCreated(
+	String journalEntryId,
 	String errandId,
 	String municipalityId,
 	String namespace,

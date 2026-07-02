@@ -2,7 +2,7 @@ package se.sundsvall.caremanagement.notes.service.event;
 
 import java.time.OffsetDateTime;
 
-public record NoteAdded(
+public record NoteCreated(
 	String noteId,
 	String errandId,
 	String municipalityId,

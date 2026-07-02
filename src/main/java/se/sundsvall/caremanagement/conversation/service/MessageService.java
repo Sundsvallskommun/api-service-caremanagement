@@ -17,7 +17,7 @@ import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachment
 import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentEntity;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
-import se.sundsvall.caremanagement.conversation.service.event.MessagePosted;
+import se.sundsvall.caremanagement.conversation.service.event.MessageCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -38,7 +38,7 @@ import static se.sundsvall.caremanagement.conversation.service.mapper.MessageMap
 /**
  * Per-errand message thread between caseworker and applicant. Universal across all errand types — a message is
  * {@code (errandId, direction, body, author, created)} plus any number of file attachments. Persists the message (and
- * its attachments) and publishes a {@link MessagePosted} event so other modules can notify (typically a content-free
+ * its attachments) and publishes a {@link MessageCreated} event so other modules can notify (typically a content-free
  * notification on OUTBOUND — the caseworker's message to the applicant); the body and attachments never leave this
  * in-app thread.
  */
@@ -82,7 +82,7 @@ public class MessageService {
 		final var files = ofNullable(attachments).orElse(emptyList());
 		files.forEach(file -> store(saved.getId(), saved.getDirection(), file));
 
-		events.publishEvent(new MessagePosted(saved.getId(), municipalityId, namespace, errandId,
+		events.publishEvent(new MessageCreated(saved.getId(), municipalityId, namespace, errandId,
 			saved.getDirection(), saved.getAuthor(), !files.isEmpty(), saved.getCreated()));
 		return saved.getId();
 	}

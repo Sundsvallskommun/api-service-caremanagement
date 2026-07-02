@@ -7,22 +7,22 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.decisions.service.event.DecisionRecorded;
 import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEntity;
 import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
+import se.sundsvall.caremanagement.journal.service.event.JournalEntryCreated;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class DecisionRecordedEventListenerTest {
+class JournalEntryCreatedEventListenerTest {
 	private static final OffsetDateTime TS = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Mock
 	private ErrandEventService serviceMock;
 
 	@InjectMocks
-	private DecisionRecordedEventListener listener;
+	private JournalEntryCreatedEventListener listener;
 
 	private ErrandEventEntity capture() {
 		final var captor = ArgumentCaptor.forClass(ErrandEventEntity.class);
@@ -31,8 +31,8 @@ class DecisionRecordedEventListenerTest {
 	}
 
 	@Test
-	void recordsDecisionWithTypeAndOutcome() {
-		listener.on(new DecisionRecorded("d-1", "errand-1", "2281", "EB", "PAYMENT", "APPROVED", "carola01winberg", TS));
+	void recordsJournalEntryCreatedAsDescriptiveEventRow() {
+		listener.on(new JournalEntryCreated("je-1", "errand-1", "2281", "EB", "Journalfört meddelande", "carola01winberg", TS));
 
 		final var entity = capture();
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
@@ -40,18 +40,16 @@ class DecisionRecordedEventListenerTest {
 		assertThat(entity.getNamespace()).isEqualTo("EB");
 		assertThat(entity.getSource()).isEqualTo("EVENT");
 		assertThat(entity.getAction()).isEqualTo("CREATE");
-		assertThat(entity.getTarget()).isEqualTo("decision");
-		assertThat(entity.getDescription()).isEqualTo("Beslut registrerat: PAYMENT = APPROVED");
+		assertThat(entity.getTarget()).isEqualTo("journal-entry");
+		assertThat(entity.getDescription()).isEqualTo("Journalanteckning tillagd: Journalfört meddelande");
 		assertThat(entity.getActor()).isEqualTo("carola01winberg");
 		assertThat(entity.getCreated()).isEqualTo(TS);
 	}
 
 	@Test
-	void omitsOutcomeWhenBlankAndDefaultsActorToSystem() {
-		listener.on(new DecisionRecorded("d-1", "errand-1", "2281", "EB", "RECOMMENDATION", " ", null, TS));
+	void defaultsActorToSystemWhenCreatedByBlank() {
+		listener.on(new JournalEntryCreated("je-1", "errand-1", "2281", "EB", "Journalfört meddelande", " ", TS));
 
-		final var entity = capture();
-		assertThat(entity.getDescription()).isEqualTo("Beslut registrerat: RECOMMENDATION");
-		assertThat(entity.getActor()).isEqualTo("system");
+		assertThat(capture().getActor()).isEqualTo("system");
 	}
 }

@@ -1,5 +1,5 @@
 /**
- * Exposed so the event log can record decision domain events (e.g. {@link DecisionRecorded}) as errand activity.
+ * Exposed so the event log can record decision domain events (e.g. {@link DecisionCreated}) as errand activity.
  */
 @NamedInterface("events")
 package se.sundsvall.caremanagement.decisions.service.event;
