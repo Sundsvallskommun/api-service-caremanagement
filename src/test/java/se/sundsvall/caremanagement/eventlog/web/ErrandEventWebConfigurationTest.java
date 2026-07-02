@@ -11,30 +11,29 @@ import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-class EventLogWebConfigurationTest {
+class ErrandEventWebConfigurationTest {
 
 	@Test
-	void registersBothInterceptors() {
-		final var configuration = new EventLogWebConfiguration(
-			new RequireIdentifierInterceptor(true),
+	void registersErrandEventInterceptor() {
+		final var configuration = new ErrandEventWebConfiguration(
 			new ErrandEventInterceptor(mock(ErrandEventService.class)));
 		final var registry = new InterceptorRegistry();
 
 		configuration.addInterceptors(registry);
 
 		final List<?> interceptors = ReflectionTestUtils.invokeMethod(registry, "getInterceptors");
-		assertThat(interceptors).hasSize(2);
+		assertThat(interceptors).hasSize(1);
 	}
 
 	@Test
-	void businessApiPatternMatchesOnlyNumericMunicipalityPaths() {
-		final var pattern = new PathPatternParser().parse(EventLogWebConfiguration.BUSINESS_API_PATTERN);
+	void errandPatternMatchesOnlyNumericMunicipalityErrandPaths() {
+		final var pattern = new PathPatternParser().parse(ErrandEventWebConfiguration.ERRAND_PATTERN);
 
-		// real municipality-scoped business paths are gated
+		// real errand-scoped paths are gated
 		assertThat(pattern.matches(PathContainer.parsePath("/2281/FINANCIAL_ASSISTANCE/errands/abc"))).isTrue();
-		assertThat(pattern.matches(PathContainer.parsePath("/2281/FINANCIAL_ASSISTANCE/metadata"))).isTrue();
 
-		// infra / non-numeric first segments must NOT be gated (so api docs + swagger keep working)
+		// non-errand and infra / non-numeric first segments must NOT be gated (so api docs + swagger keep working)
+		assertThat(pattern.matches(PathContainer.parsePath("/2281/FINANCIAL_ASSISTANCE/metadata"))).isFalse();
 		assertThat(pattern.matches(PathContainer.parsePath("/api-docs"))).isFalse();
 		assertThat(pattern.matches(PathContainer.parsePath("/api-docs/swagger-config"))).isFalse();
 		assertThat(pattern.matches(PathContainer.parsePath("/swagger-ui/index.html"))).isFalse();
