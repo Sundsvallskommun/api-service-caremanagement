@@ -7,6 +7,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -118,6 +119,54 @@ public class FormSnapshotEntity {
 		return created;
 	}
 
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public void setMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
+	}
+
+	public void setNamespace(final String namespace) {
+		this.namespace = namespace;
+	}
+
+	public void setTypeSlug(final String typeSlug) {
+		this.typeSlug = typeSlug;
+	}
+
+	public void setSchemaVersion(final String schemaVersion) {
+		this.schemaVersion = schemaVersion;
+	}
+
+	public void setFormDefinitionVersion(final String formDefinitionVersion) {
+		this.formDefinitionVersion = formDefinitionVersion;
+	}
+
+	public void setLocale(final String locale) {
+		this.locale = locale;
+	}
+
+	public void setContentHash(final String contentHash) {
+		this.contentHash = contentHash;
+	}
+
+	public void setPayload(final String payload) {
+		this.payload = payload;
+	}
+
+	public void setCapturedAt(final OffsetDateTime capturedAt) {
+		this.capturedAt = capturedAt;
+	}
+
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
 	public FormSnapshotEntity withId(final String id) {
 		this.id = id;
 		return this;
@@ -176,6 +225,26 @@ public class FormSnapshotEntity {
 	public FormSnapshotEntity withCreated(final OffsetDateTime created) {
 		this.created = created;
 		return this;
+	}
+
+	@Override
+	public boolean equals(final Object obj) {
+		if (this == obj)
+			return true;
+		if (!(obj instanceof final FormSnapshotEntity other))
+			return false;
+		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
+			&& Objects.equals(municipalityId, other.municipalityId) && Objects.equals(namespace, other.namespace)
+			&& Objects.equals(typeSlug, other.typeSlug) && Objects.equals(schemaVersion, other.schemaVersion)
+			&& Objects.equals(formDefinitionVersion, other.formDefinitionVersion) && Objects.equals(locale, other.locale)
+			&& Objects.equals(contentHash, other.contentHash) && Objects.equals(payload, other.payload)
+			&& Objects.equals(capturedAt, other.capturedAt) && Objects.equals(created, other.created);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, errandId, municipalityId, namespace, typeSlug, schemaVersion, formDefinitionVersion,
+			locale, contentHash, payload, capturedAt, created);
 	}
 
 	/**

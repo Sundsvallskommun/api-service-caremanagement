@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -132,6 +133,62 @@ public class DocumentEntity {
 		return locked;
 	}
 
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public void setType(final String type) {
+		this.type = type;
+	}
+
+	public void setHeading(final String heading) {
+		this.heading = heading;
+	}
+
+	public void setText(final String text) {
+		this.text = text;
+	}
+
+	public void setDocumentDate(final LocalDate documentDate) {
+		this.documentDate = documentDate;
+	}
+
+	public void setDocumentTime(final LocalTime documentTime) {
+		this.documentTime = documentTime;
+	}
+
+	public void setStatus(final DocumentStatus status) {
+		this.status = status;
+	}
+
+	public void setCreatedBy(final String createdBy) {
+		this.createdBy = createdBy;
+	}
+
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
+	public void setModifiedBy(final String modifiedBy) {
+		this.modifiedBy = modifiedBy;
+	}
+
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
+	}
+
+	public void setLockedBy(final String lockedBy) {
+		this.lockedBy = lockedBy;
+	}
+
+	public void setLocked(final OffsetDateTime locked) {
+		this.locked = locked;
+	}
+
 	public DocumentEntity withId(final String id) {
 		this.id = id;
 		return this;
@@ -200,5 +257,34 @@ public class DocumentEntity {
 	public DocumentEntity withLocked(final OffsetDateTime locked) {
 		this.locked = locked;
 		return this;
+	}
+
+	@Override
+	public boolean equals(final Object obj) {
+		if (this == obj)
+			return true;
+		if (!(obj instanceof final DocumentEntity other))
+			return false;
+		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
+			&& Objects.equals(type, other.type) && Objects.equals(heading, other.heading)
+			&& Objects.equals(text, other.text) && Objects.equals(documentDate, other.documentDate)
+			&& Objects.equals(documentTime, other.documentTime) && status == other.status
+			&& Objects.equals(createdBy, other.createdBy) && Objects.equals(created, other.created)
+			&& Objects.equals(modifiedBy, other.modifiedBy) && Objects.equals(modified, other.modified)
+			&& Objects.equals(lockedBy, other.lockedBy) && Objects.equals(locked, other.locked);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, errandId, type, heading, text, documentDate, documentTime, status, createdBy, created,
+			modifiedBy, modified, lockedBy, locked);
+	}
+
+	@Override
+	public String toString() {
+		return "DocumentEntity{id='" + id + "', errandId='" + errandId + "', type='" + type + "', heading='" + heading
+			+ "', documentDate=" + documentDate + ", documentTime=" + documentTime + ", status=" + status
+			+ ", createdBy='" + createdBy + "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified="
+			+ modified + ", lockedBy='" + lockedBy + "', locked=" + locked + '}';
 	}
 }

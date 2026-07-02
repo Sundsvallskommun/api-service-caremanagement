@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -132,6 +133,66 @@ public class ErrandEventEntity {
 		return created;
 	}
 
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public void setMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
+	}
+
+	public void setNamespace(final String namespace) {
+		this.namespace = namespace;
+	}
+
+	public void setSource(final String source) {
+		this.source = source;
+	}
+
+	public void setAction(final String action) {
+		this.action = action;
+	}
+
+	public void setTarget(final String target) {
+		this.target = target;
+	}
+
+	public void setDescription(final String description) {
+		this.description = description;
+	}
+
+	public void setHttpMethod(final String httpMethod) {
+		this.httpMethod = httpMethod;
+	}
+
+	public void setRequestPath(final String requestPath) {
+		this.requestPath = requestPath;
+	}
+
+	public void setActor(final String actor) {
+		this.actor = actor;
+	}
+
+	public void setActorType(final String actorType) {
+		this.actorType = actorType;
+	}
+
+	public void setRequestId(final String requestId) {
+		this.requestId = requestId;
+	}
+
+	public void setStatusCode(final Integer statusCode) {
+		this.statusCode = statusCode;
+	}
+
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
 	public ErrandEventEntity withId(final String id) {
 		this.id = id;
 		return this;
@@ -205,5 +266,36 @@ public class ErrandEventEntity {
 	public ErrandEventEntity withCreated(final OffsetDateTime created) {
 		this.created = created;
 		return this;
+	}
+
+	@Override
+	public boolean equals(final Object obj) {
+		if (this == obj)
+			return true;
+		if (!(obj instanceof final ErrandEventEntity other))
+			return false;
+		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
+			&& Objects.equals(municipalityId, other.municipalityId) && Objects.equals(namespace, other.namespace)
+			&& Objects.equals(source, other.source) && Objects.equals(action, other.action)
+			&& Objects.equals(target, other.target) && Objects.equals(description, other.description)
+			&& Objects.equals(httpMethod, other.httpMethod) && Objects.equals(requestPath, other.requestPath)
+			&& Objects.equals(actor, other.actor) && Objects.equals(actorType, other.actorType)
+			&& Objects.equals(requestId, other.requestId) && Objects.equals(statusCode, other.statusCode)
+			&& Objects.equals(created, other.created);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, errandId, municipalityId, namespace, source, action, target, description, httpMethod,
+			requestPath, actor, actorType, requestId, statusCode, created);
+	}
+
+	@Override
+	public String toString() {
+		return "ErrandEventEntity{id='" + id + "', errandId='" + errandId + "', municipalityId='" + municipalityId
+			+ "', namespace='" + namespace + "', source='" + source + "', action='" + action + "', target='" + target
+			+ "', description='" + description + "', httpMethod='" + httpMethod + "', requestPath='" + requestPath
+			+ "', actor='" + actor + "', actorType='" + actorType + "', requestId='" + requestId + "', statusCode="
+			+ statusCode + ", created=" + created + '}';
 	}
 }

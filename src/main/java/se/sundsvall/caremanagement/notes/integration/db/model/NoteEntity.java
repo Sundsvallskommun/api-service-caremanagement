@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -77,6 +78,34 @@ public class NoteEntity {
 		return modified;
 	}
 
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public void setBody(final String body) {
+		this.body = body;
+	}
+
+	public void setAuthor(final String author) {
+		this.author = author;
+	}
+
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
+	public void setModifiedBy(final String modifiedBy) {
+		this.modifiedBy = modifiedBy;
+	}
+
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
+	}
+
 	public NoteEntity withId(final String id) {
 		this.id = id;
 		return this;
@@ -110,5 +139,28 @@ public class NoteEntity {
 	public NoteEntity withModified(final OffsetDateTime modified) {
 		this.modified = modified;
 		return this;
+	}
+
+	@Override
+	public boolean equals(final Object obj) {
+		if (this == obj)
+			return true;
+		if (!(obj instanceof final NoteEntity other))
+			return false;
+		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
+			&& Objects.equals(body, other.body) && Objects.equals(author, other.author)
+			&& Objects.equals(created, other.created) && Objects.equals(modifiedBy, other.modifiedBy)
+			&& Objects.equals(modified, other.modified);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, errandId, body, author, created, modifiedBy, modified);
+	}
+
+	@Override
+	public String toString() {
+		return "NoteEntity{id='" + id + "', errandId='" + errandId + "', body='" + body + "', author='" + author
+			+ "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified=" + modified + '}';
 	}
 }
