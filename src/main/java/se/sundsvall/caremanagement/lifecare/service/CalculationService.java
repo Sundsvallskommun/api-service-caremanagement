@@ -54,6 +54,11 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMap
  * whether this month's calculation covers every income type the previous month's did — the financial assistance process
  * polls SSBTEK
  * daily until it does.
+ *
+ * <p>
+ * <strong>WIP</strong>: {@code buildAndPostFromClassified}, {@code buildDraft} and {@code postDraftRows} are not yet
+ * wired into a production caller — they are currently only exercised by tests. TODO: complete the draft / post-back
+ * flow (or drop the unused entry points) in a following sprint.
  */
 @Service
 public class CalculationService {
