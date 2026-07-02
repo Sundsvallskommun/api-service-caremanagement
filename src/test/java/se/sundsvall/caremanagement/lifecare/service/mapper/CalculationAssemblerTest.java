@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationSections;
 
-import static java.time.Month.*;
+import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class CalculationAssemblerTest {

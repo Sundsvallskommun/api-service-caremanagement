@@ -34,7 +34,7 @@ public class ReferralEntity implements Auditable {
 	@Column(name = "authority", length = 64)
 	private String authority;
 
-	@Column(name = "recipient", length = 32)
+	@Column(name = "recipient", length = 255)
 	private String recipient;
 
 	@Column(name = "sent_at")

@@ -16,7 +16,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaMo
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaMonitoringEntity;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
-import static java.time.Month.*;
+import static java.time.Month.JULY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

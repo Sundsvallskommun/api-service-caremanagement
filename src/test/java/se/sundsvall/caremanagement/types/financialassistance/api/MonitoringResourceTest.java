@@ -16,7 +16,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Monitorin
 import se.sundsvall.caremanagement.types.financialassistance.api.model.MonitoringRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.MonitoringService;
 
-import static java.time.Month.*;
+import static java.time.Month.JULY;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;

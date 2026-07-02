@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:58838
+- url: http://localhost:62777
   description: Generated server url
 tags:
 - name: Statistics
@@ -525,7 +525,6 @@ paths:
           - ROLE
           - CONTACT_REASON
           - JOURNAL_ENTRY_TYPE
-          - DOCUMENT_TYPE
       responses:
         "200":
           description: Successful Operation
@@ -579,7 +578,6 @@ paths:
           - ROLE
           - CONTACT_REASON
           - JOURNAL_ENTRY_TYPE
-          - DOCUMENT_TYPE
       requestBody:
         content:
           application/json:
@@ -2861,7 +2859,6 @@ paths:
           - ROLE
           - CONTACT_REASON
           - JOURNAL_ENTRY_TYPE
-          - DOCUMENT_TYPE
       responses:
         "200":
           description: Successful Operation
@@ -2925,7 +2922,6 @@ paths:
           - ROLE
           - CONTACT_REASON
           - JOURNAL_ENTRY_TYPE
-          - DOCUMENT_TYPE
       responses:
         "204":
           description: Successful operation
@@ -2985,7 +2981,6 @@ paths:
           - ROLE
           - CONTACT_REASON
           - JOURNAL_ENTRY_TYPE
-          - DOCUMENT_TYPE
       requestBody:
         content:
           application/json:

@@ -76,7 +76,9 @@ class MetadataResource {
 	ResponseEntity<Void> createLookup(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@Parameter(description = KIND_DESCRIPTION, schema = @Schema(implementation = LookupKind.class)) @MemberOf(LookupKind.class) @RequestParam final String kind,
+		@Parameter(description = KIND_DESCRIPTION, schema = @Schema(allowableValues = {
+			"CATEGORY", "STATUS", "TYPE", "ROLE", "CONTACT_REASON", "JOURNAL_ENTRY_TYPE"
+		})) @MemberOf(LookupKind.class) @RequestParam final String kind,
 		@Valid @NotNull @RequestBody final Lookup lookup) {
 
 		final var name = service.create(municipalityId, namespace, LookupKind.valueOf(kind), lookup);
@@ -94,7 +96,9 @@ class MetadataResource {
 	ResponseEntity<List<Lookup>> readLookups(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@Parameter(description = KIND_DESCRIPTION, schema = @Schema(implementation = LookupKind.class)) @MemberOf(LookupKind.class) @RequestParam final String kind) {
+		@Parameter(description = KIND_DESCRIPTION, schema = @Schema(allowableValues = {
+			"CATEGORY", "STATUS", "TYPE", "ROLE", "CONTACT_REASON", "JOURNAL_ENTRY_TYPE"
+		})) @MemberOf(LookupKind.class) @RequestParam final String kind) {
 
 		return ok(service.readAll(municipalityId, namespace, LookupKind.valueOf(kind)));
 	}
@@ -108,7 +112,9 @@ class MetadataResource {
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@NotBlank @PathVariable final String name,
-		@Parameter(description = KIND_DESCRIPTION, schema = @Schema(implementation = LookupKind.class)) @MemberOf(LookupKind.class) @RequestParam final String kind) {
+		@Parameter(description = KIND_DESCRIPTION, schema = @Schema(allowableValues = {
+			"CATEGORY", "STATUS", "TYPE", "ROLE", "CONTACT_REASON", "JOURNAL_ENTRY_TYPE"
+		})) @MemberOf(LookupKind.class) @RequestParam final String kind) {
 
 		return ok(service.read(municipalityId, namespace, LookupKind.valueOf(kind), name));
 	}
@@ -122,7 +128,9 @@ class MetadataResource {
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@NotBlank @PathVariable final String name,
-		@Parameter(description = KIND_DESCRIPTION, schema = @Schema(implementation = LookupKind.class)) @MemberOf(LookupKind.class) @RequestParam final String kind,
+		@Parameter(description = KIND_DESCRIPTION, schema = @Schema(allowableValues = {
+			"CATEGORY", "STATUS", "TYPE", "ROLE", "CONTACT_REASON", "JOURNAL_ENTRY_TYPE"
+		})) @MemberOf(LookupKind.class) @RequestParam final String kind,
 		@Valid @NotNull @RequestBody final Lookup lookup) {
 
 		service.update(municipalityId, namespace, LookupKind.valueOf(kind), name, lookup);
@@ -138,7 +146,9 @@ class MetadataResource {
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@NotBlank @PathVariable final String name,
-		@Parameter(description = KIND_DESCRIPTION, schema = @Schema(implementation = LookupKind.class)) @MemberOf(LookupKind.class) @RequestParam final String kind) {
+		@Parameter(description = KIND_DESCRIPTION, schema = @Schema(allowableValues = {
+			"CATEGORY", "STATUS", "TYPE", "ROLE", "CONTACT_REASON", "JOURNAL_ENTRY_TYPE"
+		})) @MemberOf(LookupKind.class) @RequestParam final String kind) {
 
 		service.delete(municipalityId, namespace, LookupKind.valueOf(kind), name);
 		return noContent().header(CONTENT_TYPE, ALL_VALUE).build();

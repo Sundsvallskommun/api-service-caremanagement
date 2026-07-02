@@ -11,7 +11,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 
-import static java.time.Month.*;
+import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.APPLICANT;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;

@@ -10,7 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 
-import static java.time.Month.*;
+import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.APPLICANT;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;

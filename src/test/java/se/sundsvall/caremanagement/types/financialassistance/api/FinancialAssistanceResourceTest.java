@@ -53,7 +53,8 @@ import se.sundsvall.caremanagement.types.financialassistance.service.Eligibility
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
 
-import static java.time.Month.*;
+import static java.time.Month.JANUARY;
+import static java.time.Month.JUNE;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;

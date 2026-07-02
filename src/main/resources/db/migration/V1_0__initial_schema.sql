@@ -596,7 +596,7 @@ CREATE TABLE `referral` (
   `id` varchar(36) NOT NULL,
   `errand_id` varchar(36) NOT NULL,
   `authority` varchar(64) DEFAULT NULL,
-  `recipient` varchar(32) DEFAULT NULL,
+  `recipient` varchar(255) DEFAULT NULL,
   `sent_at` date DEFAULT NULL,
   `due_at` date DEFAULT NULL,
   `response_text` varchar(4096) DEFAULT NULL,

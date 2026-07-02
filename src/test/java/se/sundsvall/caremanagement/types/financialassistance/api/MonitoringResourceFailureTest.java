@@ -13,7 +13,7 @@ import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.MonitoringRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.MonitoringService;
 
-import static java.time.Month.*;
+import static java.time.Month.JULY;
 import static java.util.UUID.randomUUID;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;

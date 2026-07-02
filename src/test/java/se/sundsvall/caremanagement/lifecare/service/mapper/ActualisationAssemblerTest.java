@@ -12,7 +12,7 @@ import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsWorkingStatusD
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 
-import static java.time.Month.*;
+import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ActualisationAssemblerTest {

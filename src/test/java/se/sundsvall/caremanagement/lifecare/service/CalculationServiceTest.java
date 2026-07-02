@@ -29,7 +29,8 @@ import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 import tools.jackson.databind.ObjectMapper;
 
-import static java.time.Month.*;
+import static java.time.Month.JUNE;
+import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
