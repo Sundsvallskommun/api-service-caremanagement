@@ -78,8 +78,6 @@ class FormSnapshotServiceTest {
 
 	@Test
 	void captureRejectsMalformedJson() {
-		when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(false);
-
 		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{not json"))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
@@ -88,8 +86,6 @@ class FormSnapshotServiceTest {
 
 	@Test
 	void captureRejectsMissingSchemaVersion() {
-		when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(false);
-
 		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{\"sections\":[{\"id\":\"x\"}]}"))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
@@ -98,8 +94,6 @@ class FormSnapshotServiceTest {
 
 	@Test
 	void captureRejectsEmptySections() {
-		when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(false);
-
 		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{\"schemaVersion\":\"form-snapshot/1\",\"sections\":[]}"))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);

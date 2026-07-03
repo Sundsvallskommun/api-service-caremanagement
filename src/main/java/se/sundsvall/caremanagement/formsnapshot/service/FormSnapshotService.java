@@ -52,12 +52,14 @@ public class FormSnapshotService {
 		if (!StringUtils.hasText(payload)) {
 			throw Problem.valueOf(BAD_REQUEST, "formSnapshot is blank");
 		}
+
+		// Fail fast: reject a malformed or structurally-invalid snapshot on its own merits, before any DB round-trip.
+		final var snapshot = parse(payload);
+		validate(snapshot);
+
 		if (repository.existsByErrandId(errandId)) {
 			throw Problem.valueOf(BAD_REQUEST, "A form snapshot already exists on errand '%s'".formatted(errandId));
 		}
-
-		final var snapshot = parse(payload);
-		validate(snapshot);
 
 		final var entity = FormSnapshotMapper.toEntity(municipalityId, namespace, errandId, typeSlug, payload, snapshot, OffsetDateTime.now(ZoneId.systemDefault()));
 		final var saved = repository.save(entity);
