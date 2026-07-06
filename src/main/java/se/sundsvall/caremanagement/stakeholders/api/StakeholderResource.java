@@ -51,6 +51,7 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
 		Problem.class, ConstraintViolationProblem.class
 	}))),
+	@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
 	@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 })
 class StakeholderResource {
@@ -95,8 +96,7 @@ class StakeholderResource {
 
 	@GetMapping(path = "/{stakeholderId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read stakeholder", responses = {
-		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 	})
 	ResponseEntity<Stakeholder> readStakeholder(
 		@Parameter(name = "municipalityId", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,
@@ -109,8 +109,7 @@ class StakeholderResource {
 
 	@PatchMapping(path = "/{stakeholderId}", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Update stakeholder", responses = {
-		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
-		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true)
 	})
 	ResponseEntity<Void> updateStakeholder(
 		@Parameter(name = "municipalityId", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,
@@ -125,8 +124,7 @@ class StakeholderResource {
 
 	@DeleteMapping(path = "/{stakeholderId}", produces = ALL_VALUE)
 	@Operation(summary = "Delete stakeholder", responses = {
-		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
-		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true)
 	})
 	ResponseEntity<Void> deleteStakeholder(
 		@Parameter(name = "municipalityId", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,

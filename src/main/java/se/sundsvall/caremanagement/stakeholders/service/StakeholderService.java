@@ -80,6 +80,10 @@ public class StakeholderService {
 	}
 
 	private void validateRole(final String typeSlug, final String role) {
+		// Only enforce the role catalogue for types that declared one (via a StakeholderRoleContribution bean). A type
+		// with no contribution is absent from knownTypes(), so its roles are intentionally unconstrained (open by
+		// default) rather than all-rejected — this lets a type module accept stakeholders before it declares a role
+		// catalogue. Covered by StakeholderServiceTest#createWithUnconstrainedTypeSkipsRoleValidation.
 		if (roleRegistry.knownTypes().contains(typeSlug) && !roleRegistry.isValidRole(typeSlug, role)) {
 			throw Problem.valueOf(BAD_REQUEST, INVALID_ROLE_MESSAGE.formatted(role, typeSlug));
 		}

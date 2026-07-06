@@ -259,6 +259,8 @@ public class DocumentEntity {
 		return this;
 	}
 
+	// 'text' (the document body, a LONG32 column) is deliberately excluded from equals/hashCode and toString — it can
+	// be large, it is not part of the document's identity, and hashing it on every lookup would be wasteful.
 	@Override
 	public boolean equals(final Object obj) {
 		if (this == obj)
@@ -267,7 +269,7 @@ public class DocumentEntity {
 			return false;
 		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
 			&& Objects.equals(type, other.type) && Objects.equals(heading, other.heading)
-			&& Objects.equals(text, other.text) && Objects.equals(documentDate, other.documentDate)
+			&& Objects.equals(documentDate, other.documentDate)
 			&& Objects.equals(documentTime, other.documentTime) && status == other.status
 			&& Objects.equals(createdBy, other.createdBy) && Objects.equals(created, other.created)
 			&& Objects.equals(modifiedBy, other.modifiedBy) && Objects.equals(modified, other.modified)
@@ -276,7 +278,7 @@ public class DocumentEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, heading, text, documentDate, documentTime, status, createdBy, created,
+		return Objects.hash(id, errandId, type, heading, documentDate, documentTime, status, createdBy, created,
 			modifiedBy, modified, lockedBy, locked);
 	}
 
