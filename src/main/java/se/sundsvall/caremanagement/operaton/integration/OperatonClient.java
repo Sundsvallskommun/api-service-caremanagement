@@ -103,9 +103,9 @@ public interface OperatonClient {
 	 * @param  request        the input variables to evaluate the decision against
 	 * @return                the decision result rows (one map of output name → value per matched rule)
 	 */
-	@PostMapping(path = "/{municipalityId}/decision-definitions/{key}/evaluate", produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
+	@PostMapping(path = "/{municipalityId}/decision-definitions/evaluate", produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
 	EvaluateDecisionResponse evaluateDecision(
 		@PathVariable final String municipalityId,
-		@PathVariable final String key,
+		@RequestParam final String key,
 		@RequestBody final EvaluateDecisionRequest request);
 }

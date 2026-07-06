@@ -4,7 +4,7 @@ import java.util.Map;
 
 /**
  * Request body for operaton's decision-evaluate endpoint
- * ({@code POST /{municipalityId}/decision-definitions/{key}/evaluate}):
+ * ({@code POST /{municipalityId}/decision-definitions/evaluate?key=...}):
  * the input variables the DMN is evaluated against. Defined here (not generated) because the endpoint is not in
  * caremanagement's operaton OpenAPI surface.
  */
