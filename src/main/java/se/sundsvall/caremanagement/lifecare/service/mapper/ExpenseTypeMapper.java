@@ -42,7 +42,7 @@ public final class ExpenseTypeMapper {
 	 * previous calculation's amounts back per cost type.
 	 */
 	private static final Map<String, String> COST_TYPE_BY_FC_NAME = FC_NAME_BY_COST_TYPE.entrySet().stream()
-		.collect(toMap(entry -> normalize(entry.getValue()), Map.Entry::getKey, (first, second) -> first));
+		.collect(toMap(entry -> MapperUtil.normalize(entry.getValue()), Map.Entry::getKey, (first, second) -> first));
 
 	private ExpenseTypeMapper() {}
 
@@ -51,12 +51,7 @@ public final class ExpenseTypeMapper {
 	 * Best-effort, case/space-insensitive — used to read a previous Lifecare calculation's per-type approved amounts.
 	 */
 	public static Optional<String> costTypeForFcName(final String fcName) {
-		return ofNullable(fcName).map(ExpenseTypeMapper::normalize).map(COST_TYPE_BY_FC_NAME::get);
-	}
-
-	/** Resolve against the regular (UTGIFTER) expense-type catalogue. */
-	public static Optional<Integer> resolveExpenseTypeId(final String costType, final PersonBasedCalculationProposalDTO proposal) {
-		return resolveExpenseTypeId(costType, proposal, null);
+		return ofNullable(fcName).map(MapperUtil::normalize).map(COST_TYPE_BY_FC_NAME::get);
 	}
 
 	/**
@@ -79,7 +74,7 @@ public final class ExpenseTypeMapper {
 		} else {
 			catalogue = idByName(proposal);
 		}
-		return ofNullable(catalogue.get(normalize(fcName)));
+		return ofNullable(catalogue.get(MapperUtil.normalize(fcName)));
 	}
 
 	private static Map<String, Integer> idByName(final PersonBasedCalculationProposalDTO proposal) {
@@ -87,7 +82,7 @@ public final class ExpenseTypeMapper {
 			.map(PersonBasedCalculationProposalDTO::getCalculationExpenseTypes)
 			.orElseGet(List::of).stream()
 			.filter(type -> (type.getName() != null) && (type.getId() != null))
-			.collect(toMap(type -> normalize(type.getName()), PersonBasedCalculationExpenseTypeDTO::getId, (first, second) -> first));
+			.collect(toMap(type -> MapperUtil.normalize(type.getName()), PersonBasedCalculationExpenseTypeDTO::getId, (first, second) -> first));
 	}
 
 	private static Map<String, Integer> specialIdByName(final PersonBasedCalculationProposalDTO proposal) {
@@ -95,10 +90,6 @@ public final class ExpenseTypeMapper {
 			.map(PersonBasedCalculationProposalDTO::getCalculationSpecialExpenseTypes)
 			.orElseGet(List::of).stream()
 			.filter(type -> (type.getName() != null) && (type.getId() != null))
-			.collect(toMap(type -> normalize(type.getName()), PersonBasedCalculationSpecialExpenseTypeDTO::getId, (first, second) -> first));
-	}
-
-	private static String normalize(final String value) {
-		return ofNullable(value).map(v -> v.trim().toLowerCase()).orElse("");
+			.collect(toMap(type -> MapperUtil.normalize(type.getName()), PersonBasedCalculationSpecialExpenseTypeDTO::getId, (first, second) -> first));
 	}
 }

@@ -5,8 +5,6 @@ import generated.se.sundsvall.lifecarefc.PersonBasedCalculationIncomePostDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,6 +55,9 @@ public final class ClassifiedIncomeToFcMapper {
 			.filter(ClassifiedIncomeToFcMapper::isTransferable)
 			.map(income -> resolve(income, typeIdByName))
 			.filter(Objects::nonNull)
+			// Drop role-less incomes — they can't be attributed to the applicant or co-applicant amount, so (consistent
+			// with toIncomeLines) they must not leak into the note either.
+			.filter(resolved -> resolved.income().role() != null)
 			.collect(groupingBy(Resolved::typeId, LinkedHashMap::new, toList()))
 			.entrySet().stream()
 			.map(entry -> toDto(entry.getKey(), entry.getValue()))
@@ -96,7 +97,7 @@ public final class ClassifiedIncomeToFcMapper {
 		final var typeId = group.getFirst().typeId();
 		final var role = group.getFirst().income().role();
 		return new FcIncomeLine(typeId, nameById.get(typeId), role.name(),
-			sumByRole(group, role), toOffsetDateTime(latestDateByRole(group, role)), noteFor(group));
+			sumByRole(group, role), MapperUtil.toOffsetDateTime(latestDateByRole(group, role)), noteFor(group));
 	}
 
 	private static Map<Integer, String> indexIncomeTypeNamesById(final PersonBasedCalculationProposalDTO proposal) {
@@ -126,7 +127,7 @@ public final class ClassifiedIncomeToFcMapper {
 		return ofNullable(previousTypeNames).orElseGet(List::of).stream()
 			.filter(name -> (name != null) && !name.isBlank())
 			.distinct()
-			.filter(name -> !covered.contains(normalize(name)))
+			.filter(name -> !covered.contains(MapperUtil.normalize(name)))
 			.toList();
 	}
 
@@ -136,7 +137,7 @@ public final class ClassifiedIncomeToFcMapper {
 		return ofNullable(classified).orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
 			.filter(ClassifiedIncomeToFcMapper::isTransferable)
-			.map(income -> normalize(income.calculation()))
+			.map(income -> MapperUtil.normalize(income.calculation()))
 			.filter(typeIdByName::containsKey)
 			.collect(toSet());
 	}
@@ -147,7 +148,7 @@ public final class ClassifiedIncomeToFcMapper {
 	}
 
 	private static Resolved resolve(final ClassifiedIncome classified, final Map<String, Integer> typeIdByName) {
-		final var typeId = typeIdByName.get(normalize(classified.calculation()));
+		final var typeId = typeIdByName.get(MapperUtil.normalize(classified.calculation()));
 		if (typeId == null) {
 			return null;
 		}
@@ -159,30 +160,27 @@ public final class ClassifiedIncomeToFcMapper {
 			.map(PersonBasedCalculationProposalDTO::getCalculationIncomeTypes)
 			.orElseGet(List::of).stream()
 			.filter(type -> (type.getName() != null) && (type.getId() != null))
-			.collect(toMap(type -> normalize(type.getName()), PersonBasedCalculationCalculationIncomeTypeDTO::getId, (first, second) -> first, LinkedHashMap::new));
+			.collect(toMap(type -> MapperUtil.normalize(type.getName()), PersonBasedCalculationCalculationIncomeTypeDTO::getId, (first, second) -> first, LinkedHashMap::new));
 	}
 
 	private static PersonBasedCalculationIncomePostDTO toDto(final Integer typeId, final List<Resolved> group) {
 		return new PersonBasedCalculationIncomePostDTO()
 			.id(typeId)
 			.applicantAmount(toDouble(sumByRole(group, APPLICANT)))
-			.applicantAmountDate(toOffsetDateTime(latestDateByRole(group, APPLICANT)))
+			.applicantAmountDate(MapperUtil.toOffsetDateTime(latestDateByRole(group, APPLICANT)))
 			.coApplicantAmount(toDouble(sumByRole(group, CO_APPLICANT)))
-			.coApplicantAmountDate(toOffsetDateTime(latestDateByRole(group, CO_APPLICANT)))
+			.coApplicantAmountDate(MapperUtil.toOffsetDateTime(latestDateByRole(group, CO_APPLICANT)))
 			.note(noteFor(group));
 	}
 
 	private static BigDecimal sumByRole(final List<Resolved> group, final ApplicantRole role) {
-		final var amounts = group.stream()
+		return group.stream()
 			.map(Resolved::income)
 			.filter(income -> income.role() == role)
 			.map(SsbtekIncome::netAmount)
 			.filter(Objects::nonNull)
-			.toList();
-		if (amounts.isEmpty()) {
-			return null;
-		}
-		return amounts.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+			.reduce(BigDecimal::add)
+			.orElse(null);
 	}
 
 	private static LocalDate latestDateByRole(final List<Resolved> group, final ApplicantRole role) {
@@ -212,14 +210,6 @@ public final class ClassifiedIncomeToFcMapper {
 
 	private static Double toDouble(final BigDecimal value) {
 		return ofNullable(value).map(BigDecimal::doubleValue).orElse(null);
-	}
-
-	private static OffsetDateTime toOffsetDateTime(final LocalDate date) {
-		return ofNullable(date).map(value -> value.atStartOfDay().atOffset(ZoneOffset.UTC)).orElse(null);
-	}
-
-	private static String normalize(final String value) {
-		return ofNullable(value).map(v -> v.trim().toLowerCase()).orElse("");
 	}
 
 	/** An income that resolved to a concrete FC income-type id, pending aggregation. */

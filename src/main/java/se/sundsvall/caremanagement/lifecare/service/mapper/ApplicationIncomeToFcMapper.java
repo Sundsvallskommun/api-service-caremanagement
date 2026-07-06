@@ -2,8 +2,6 @@ package se.sundsvall.caremanagement.lifecare.service.mapper;
 
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationCalculationIncomeTypeDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -66,7 +64,7 @@ public final class ApplicationIncomeToFcMapper {
 		if (fcName == null) {
 			return null;
 		}
-		final var typeId = typeIdByName.get(normalize(fcName));
+		final var typeId = typeIdByName.get(MapperUtil.normalize(fcName));
 		if (typeId == null) {
 			return null;
 		}
@@ -74,7 +72,7 @@ public final class ApplicationIncomeToFcMapper {
 			// Without a recipient the line can't be posted to FC — skip it rather than NPE on role().name().
 			return null;
 		}
-		return new FcIncomeLine(typeId, fcName, income.role().name(), income.amount(), toOffsetDateTime(income), "Ansökan");
+		return new FcIncomeLine(typeId, fcName, income.role().name(), income.amount(), MapperUtil.toOffsetDateTime(income.date()), "Ansökan");
 	}
 
 	private static Map<String, Integer> indexIncomeTypeIds(final PersonBasedCalculationProposalDTO proposal) {
@@ -82,14 +80,6 @@ public final class ApplicationIncomeToFcMapper {
 			.map(PersonBasedCalculationProposalDTO::getCalculationIncomeTypes)
 			.orElseGet(List::of).stream()
 			.filter(type -> (type.getName() != null) && (type.getId() != null))
-			.collect(toMap(type -> normalize(type.getName()), PersonBasedCalculationCalculationIncomeTypeDTO::getId));
-	}
-
-	private static OffsetDateTime toOffsetDateTime(final ApplicationIncome income) {
-		return ofNullable(income.date()).map(value -> value.atStartOfDay().atOffset(ZoneOffset.UTC)).orElse(null);
-	}
-
-	private static String normalize(final String value) {
-		return ofNullable(value).map(v -> v.trim().toLowerCase()).orElse("");
+			.collect(toMap(type -> MapperUtil.normalize(type.getName()), PersonBasedCalculationCalculationIncomeTypeDTO::getId));
 	}
 }

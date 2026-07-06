@@ -116,11 +116,11 @@ public class MessageService {
 		final var data = attachmentDataRepository.findByMessageAttachmentId(attachmentId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, DATA_NOT_FOUND_MESSAGE.formatted(attachmentId)));
 
-		try {
+		try (final var in = data.getFile().getBinaryStream()) {
 			response.addHeader(CONTENT_TYPE, attachment.getMimeType());
 			response.addHeader(CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getFileName() + "\"");
 			ofNullable(attachment.getFileSize()).ifPresent(response::setContentLength);
-			StreamUtils.copy(data.getFile().getBinaryStream(), response.getOutputStream());
+			StreamUtils.copy(in, response.getOutputStream());
 		} catch (final IOException | SQLException exception) {
 			throw Problem.valueOf(INTERNAL_SERVER_ERROR, STREAM_ERROR_MESSAGE.formatted(exception.getClass().getSimpleName(), attachmentId, exception.getMessage()));
 		}
