@@ -85,8 +85,7 @@ public class DocumentService {
 	public Document update(final String municipalityId, final String namespace, final String errandId, final String documentId, final UpdateDocument request) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
-		final var entity = requireWorking(findForUpdate(errandId, documentId), "edited");
-		entity
+		final var entity = requireWorking(findForUpdate(errandId, documentId), "edited")
 			.withType(request.type())
 			.withHeading(request.heading())
 			.withText(request.text())
