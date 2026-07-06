@@ -38,6 +38,9 @@ public class FormSnapshotField {
 	@Schema(description = "The answer given, when the field has a single answer")
 	private FormSnapshotAnswer answer;
 
+	// TODO (future, breaking change): replace the anonymous List<List<FormSnapshotField>> with a named
+	// List<FormSnapshotGroup> wrapper — easier to consume and room for per-group metadata. Deferred because it changes
+	// the citizen-authored / Draken wire contract (PR #12 review).
 	@Schema(description = "For REPEATING_GROUP fields, one entry per repeated instance; each is the list of nested fields")
 	private List<List<FormSnapshotField>> items;
 
