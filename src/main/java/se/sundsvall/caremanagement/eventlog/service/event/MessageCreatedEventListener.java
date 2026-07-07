@@ -35,8 +35,15 @@ class MessageCreatedEventListener {
 			.withSource(SOURCE)
 			.withAction("CREATE")
 			.withTarget("message")
-			.withDescription(OUTBOUND.equals(event.direction()) ? "Meddelande skickat" : "Meddelande mottaget")
+			.withDescription(description(event))
 			.withActor(Optional.ofNullable(event.author()).filter(value -> !value.isBlank()).orElse(SYSTEM_ACTOR))
 			.withCreated(event.timestamp()));
+	}
+
+	private static String description(final MessageCreated event) {
+		if (OUTBOUND.equals(event.direction())) {
+			return "Meddelande skickat";
+		}
+		return "Meddelande mottaget";
 	}
 }
