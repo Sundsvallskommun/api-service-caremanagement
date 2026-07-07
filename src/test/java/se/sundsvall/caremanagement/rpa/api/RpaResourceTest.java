@@ -10,6 +10,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.rpa.api.model.RpaTaskRequest;
+import se.sundsvall.caremanagement.rpa.service.RpaAction;
 import se.sundsvall.caremanagement.rpa.service.RpaService;
 
 import static java.util.UUID.randomUUID;
@@ -43,6 +44,6 @@ class RpaResourceTest {
 			.exchange()
 			.expectStatus().isAccepted();
 
-		verify(serviceMock).enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "FETCH_SUPPLEMENTS", Map.of("k", "v"));
+		verify(serviceMock).enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.FETCH_SUPPLEMENTS, Map.of("k", "v"));
 	}
 }

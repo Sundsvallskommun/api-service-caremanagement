@@ -56,7 +56,7 @@ class RpaServiceTest {
 		assertThat(data.reference()).isEqualTo(NAMESPACE + ":" + ERRAND_ID + ":" + RpaAction.WRITE_NORMBERAKNING);
 		assertThat(data.priority()).isEqualTo("Normal");
 		assertThat(data.specificContent())
-			.containsEntry("action", RpaAction.WRITE_NORMBERAKNING)
+			.containsEntry("action", RpaAction.WRITE_NORMBERAKNING.name())
 			.containsEntry("errandId", ERRAND_ID)
 			.containsEntry("municipalityId", MUNICIPALITY_ID)
 			.containsEntry("namespace", NAMESPACE)

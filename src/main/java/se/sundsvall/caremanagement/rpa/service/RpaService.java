@@ -57,9 +57,9 @@ public class RpaService {
 	 *
 	 * @param municipalityId the municipality whose Orchestrator folder the item is added to
 	 * @param errandId       the errand the robot acts on (becomes the queue item reference)
-	 * @param action         one of {@link RpaAction}
+	 * @param action         the {@link RpaAction} to enqueue
 	 */
-	public void enqueue(final String municipalityId, final String errandId, final String action) {
+	public void enqueue(final String municipalityId, final String errandId, final RpaAction action) {
 		enqueue(municipalityId, null, errandId, action, Map.of());
 	}
 
@@ -70,17 +70,20 @@ public class RpaService {
 	 * @param namespace       the namespace the errand lives in — placed in the queue item's {@code SpecificContent} so the
 	 *                        robot can reconstruct the namespace-scoped errand API path to write back (may be {@code null})
 	 * @param errandId        the errand the robot acts on (becomes the queue item reference)
-	 * @param action          one of {@link RpaAction}
+	 * @param action          the {@link RpaAction} to enqueue
 	 * @param specificContent additional key/values placed in the queue item's {@code SpecificContent}
 	 */
-	public void enqueue(final String municipalityId, final String namespace, final String errandId, final String action, final Map<String, String> specificContent) {
+	public void enqueue(final String municipalityId, final String namespace, final String errandId, final RpaAction action, final Map<String, String> specificContent) {
 		// Inbound enqueues (via RpaResource) carry a namespace — assert the errand exists in that tenant so a caller cannot
 		// enqueue a robot job against a foreign/unknown errandId. Internal callers pass a null namespace and skip the check
 		// (they act on an errand already resolved in the current flow).
 		ofNullable(namespace).ifPresent(value -> errandGuard.verifyExistingErrand(municipalityId, value, errandId));
 
+		// The action travels to the robot as its constant name — the wire value the SpecificContent and reference carry.
+		final var actionName = action.name();
+
 		if (!properties.enabled()) {
-			LOG.info("RPA disabled — skipping {} for errand {}", sanitizeForLogging(action), sanitizeForLogging(errandId));
+			LOG.info("RPA disabled — skipping {} for errand {}", sanitizeForLogging(actionName), sanitizeForLogging(errandId));
 			return;
 		}
 
@@ -88,7 +91,7 @@ public class RpaService {
 			.orElseThrow(() -> new IllegalStateException("No RPA folder id configured for municipality " + municipalityId));
 
 		final var content = new HashMap<String, String>(ofNullable(specificContent).orElse(Map.of()));
-		content.put(KEY_ACTION, action);
+		content.put(KEY_ACTION, actionName);
 		content.put(KEY_ERRAND_ID, errandId);
 		content.put(KEY_MUNICIPALITY_ID, municipalityId);
 		ofNullable(namespace).ifPresent(value -> content.put(KEY_NAMESPACE, value));
@@ -96,15 +99,15 @@ public class RpaService {
 		// Reference is per-(namespace, errand, action) so the Orchestrator's unique-reference dedup only collapses re-runs
 		// of the same action — distinct actions on the same errand remain separate queue items, and the same action on the
 		// same errandId in different namespaces stays distinct too.
-		final var reference = ofNullable(namespace).map(value -> value + ":").orElse("") + errandId + ":" + action;
+		final var reference = ofNullable(namespace).map(value -> value + ":").orElse("") + errandId + ":" + actionName;
 		final var item = new AddQueueItemParameters(new QueueItemData(properties.queue(), reference, NORMAL_PRIORITY, content));
 
 		try {
 			rpaClient.addQueueItem(folderId, item);
-			LOG.info("Enqueued RPA task {} for errand {}", sanitizeForLogging(action), sanitizeForLogging(errandId));
+			LOG.info("Enqueued RPA task {} for errand {}", sanitizeForLogging(actionName), sanitizeForLogging(errandId));
 		} catch (final ThrowableProblem e) {
 			if (isDuplicate(e)) {
-				LOG.info("RPA task {} for errand {} already queued — skipping", sanitizeForLogging(action), sanitizeForLogging(errandId));
+				LOG.info("RPA task {} for errand {} already queued — skipping", sanitizeForLogging(actionName), sanitizeForLogging(errandId));
 				return;
 			}
 			throw e;

@@ -40,6 +40,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
+import se.sundsvall.caremanagement.rpa.service.RpaAction;
 import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Actualisation;
@@ -429,11 +430,11 @@ public class FinancialAssistanceService {
 	}
 
 	/** Enqueue an RPA write, swallowing any failure — RPA mirroring must never roll back a successful Lifecare write. */
-	private void triggerRpaWrite(final String municipalityId, final String errandId, final String action) {
+	private void triggerRpaWrite(final String municipalityId, final String errandId, final RpaAction action) {
 		try {
 			rpaService.enqueue(municipalityId, errandId, action);
 		} catch (final Exception e) {
-			LOG.warn("RPA enqueue {} failed for errand {} — Lifecare write already committed, continuing", sanitizeForLogging(action), sanitizeForLogging(errandId), e);
+			LOG.warn("RPA enqueue {} failed for errand {} — Lifecare write already committed, continuing", sanitizeForLogging(action.name()), sanitizeForLogging(errandId), e);
 		}
 	}
 

@@ -4,7 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import java.util.Map;
 import java.util.Objects;
-import se.sundsvall.dept44.common.validators.annotation.OneOf;
+import se.sundsvall.caremanagement.rpa.service.RpaAction;
+import se.sundsvall.dept44.common.validators.annotation.MemberOf;
 
 /**
  * Request to enqueue an RPA task on an errand. {@code action} selects the Lifecare GUI flow the robot runs (see
@@ -17,9 +18,7 @@ public class RpaTaskRequest {
 		"FETCH_SUPPLEMENTS", "WRITE_NORMBERAKNING", "WRITE_DECISION", "WRITE_JOURNAL", "WRITE_DOCUMENT", "WRITE_MONITORING", "REGISTER_PAYMENT"
 	})
 	@NotBlank
-	@OneOf({
-		"FETCH_SUPPLEMENTS", "WRITE_NORMBERAKNING", "WRITE_DECISION", "WRITE_JOURNAL", "WRITE_DOCUMENT", "WRITE_MONITORING", "REGISTER_PAYMENT"
-	})
+	@MemberOf(RpaAction.class)
 	private String action;
 
 	@Schema(description = "Optional extra hints for the robot, merged into the queue item SpecificContent")

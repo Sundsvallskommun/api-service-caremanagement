@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.rpa.api.model.RpaTaskRequest;
+import se.sundsvall.caremanagement.rpa.service.RpaAction;
 import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
@@ -61,7 +62,8 @@ class RpaResource {
 		@ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final RpaTaskRequest request) {
 
-		service.enqueue(municipalityId, namespace, errandId, request.getAction(), request.getParameters());
+		// action is @MemberOf(RpaAction.class)-validated on the request, so valueOf can't throw here.
+		service.enqueue(municipalityId, namespace, errandId, RpaAction.valueOf(request.getAction()), request.getParameters());
 		return accepted().build();
 	}
 }
