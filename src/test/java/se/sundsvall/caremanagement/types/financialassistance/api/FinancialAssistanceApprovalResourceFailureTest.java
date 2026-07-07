@@ -14,7 +14,7 @@ class FinancialAssistanceApprovalResourceFailureTest extends AbstractFinancialAs
 		webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.contentType(APPLICATION_JSON)
-			.bodyValue(SectionApprovalRequest.create().withApprovedBy("jane02doe")) // approved is required
+			.bodyValue(SectionApprovalRequest.create()) // approved is required
 			.exchange()
 			.expectStatus().isBadRequest();
 
@@ -26,7 +26,7 @@ class FinancialAssistanceApprovalResourceFailureTest extends AbstractFinancialAs
 		webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
 			.contentType(APPLICATION_JSON)
-			.bodyValue(SectionApprovalRequest.create().withApproved(true).withApprovedBy("jane02doe"))
+			.bodyValue(SectionApprovalRequest.create().withApproved(true))
 			.exchange()
 			.expectStatus().isBadRequest();
 

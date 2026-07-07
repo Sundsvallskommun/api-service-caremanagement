@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import java.util.Optional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +26,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAs
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
+import se.sundsvall.dept44.support.Identifier;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
@@ -82,6 +84,8 @@ class FinancialAssistanceApprovalResource {
 		})) @PathVariable final String section,
 		@Valid @NotNull @RequestBody final SectionApprovalRequest request) {
 
-		return ok(service.setSectionApproval(municipalityId, namespace, errandId, section, request.getApproved(), request.getApprovedBy()));
+		// The approver is the authenticated caseworker (X-Sent-By), not a client-supplied field, so it can't be spoofed.
+		final var approvedBy = Optional.ofNullable(Identifier.get()).map(Identifier::getValue).orElse(null);
+		return ok(service.setSectionApproval(municipalityId, namespace, errandId, section, request.getApproved(), approvedBy));
 	}
 }

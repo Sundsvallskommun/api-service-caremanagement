@@ -26,11 +26,9 @@ class SectionApprovalRequestTest {
 	@Test
 	void builderMethods() {
 		final var request = SectionApprovalRequest.create()
-			.withApproved(true)
-			.withApprovedBy("jane02doe");
+			.withApproved(true);
 
 		assertThat(request.getApproved()).isTrue();
-		assertThat(request.getApprovedBy()).isEqualTo("jane02doe");
 		assertThat(request).hasNoNullFieldsOrProperties();
 	}
 

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovalRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
+import se.sundsvall.dept44.support.Identifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -40,7 +41,8 @@ class FinancialAssistanceApprovalResourceTest extends AbstractFinancialAssistanc
 
 		final var response = webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(base()))
-			.bodyValue(SectionApprovalRequest.create().withApproved(true).withApprovedBy("jane02doe"))
+			.header(Identifier.HEADER_NAME, "jane02doe; type=adAccount") // approver comes from X-Sent-By, not the body
+			.bodyValue(SectionApprovalRequest.create().withApproved(true))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(SectionApproval.class)

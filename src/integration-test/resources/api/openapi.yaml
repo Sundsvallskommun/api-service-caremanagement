@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:53145
+- url: http://localhost:54047
   description: Generated server url
 tags:
 - name: Statistics
@@ -7216,10 +7216,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -10000,12 +10000,6 @@ components:
             (false)
           examples:
           - "true"
-        approvedBy:
-          type: string
-          description: "The caseworker approving the section (stored when approving,\
-            \ ignored when withdrawing)"
-          examples:
-          - jane02doe
       required:
       - approved
     SectionApproval:
