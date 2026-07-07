@@ -108,10 +108,15 @@ public class MessageArchiveService {
 			final var fileName = fileName(errand.getErrandNumber(), thread);
 			final var title = fileName.substring(0, fileName.length() - PDF_EXTENSION.length());
 
+			// Record the local message-history marker FIRST — it is the idempotency guard checked at the top of this
+			// method. Ordering it before the (non-idempotent) Lifecare upload means: if the marker write fails, nothing
+			// has been pushed to Lifecare yet and the next run retries cleanly; if the Lifecare upload fails, the marker
+			// is already set so the job won't re-run and upload a duplicate Lifecare document. Nothing after the upload
+			// throws, so a "Failed to archive" log can no longer coincide with a document actually created in Lifecare.
+			attachmentService.createMessageHistoryAttachment(errand.getMunicipalityId(), errand.getNamespace(), errand.getId(), fileName, pdf);
+
 			actualisationService.uploadAttachment(actualisationId.get(), fileName, pdf,
 				properties.lifecareDocumentType(), properties.lifecareDocumentSenderType(), title, properties.lifecareSenderName());
-
-			attachmentService.createMessageHistoryAttachment(errand.getMunicipalityId(), errand.getNamespace(), errand.getId(), fileName, pdf);
 
 			LOG.info("Archived message history for errand {} ({} message(s)) to Lifecare actualisation {}", errand.getErrandNumber(), thread.size(), actualisationId.get());
 		} catch (final Exception e) {
