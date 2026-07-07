@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.document.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -13,7 +14,7 @@ import java.util.Objects;
 @Schema(description = "Document metadata — the catalogue of selectable document types.")
 public class DocumentMetadata {
 
-	@Schema(description = "Selectable document types")
+	@ArraySchema(arraySchema = @Schema(description = "Selectable document types"), schema = @Schema(implementation = DocumentType.class))
 	private List<DocumentType> types;
 
 	public static DocumentMetadata create() {

@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.formsnapshot.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -44,7 +45,7 @@ public class FormSnapshot {
 
 	@Valid
 	@NotEmpty
-	@Schema(description = "The sections of the form, in render order", requiredMode = Schema.RequiredMode.REQUIRED)
+	@ArraySchema(arraySchema = @Schema(description = "The sections of the form, in render order", requiredMode = Schema.RequiredMode.REQUIRED), schema = @Schema(implementation = FormSnapshotSection.class))
 	private List<FormSnapshotSection> sections;
 
 	@Valid

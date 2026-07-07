@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -14,10 +15,10 @@ import java.util.Objects;
 @Schema(description = "Financial assistance type catalogue for the frontend dropdowns: income and cost types with labels, groups and the citizen flag.")
 public class FinancialAssistanceMetadata {
 
-	@Schema(description = "The income types")
+	@ArraySchema(arraySchema = @Schema(description = "The income types"), schema = @Schema(implementation = TypeOption.class))
 	private List<TypeOption> incomeTypes;
 
-	@Schema(description = "The cost types, grouped by their Mina-sidor form section")
+	@ArraySchema(arraySchema = @Schema(description = "The cost types, grouped by their Mina-sidor form section"), schema = @Schema(implementation = TypeOption.class))
 	private List<TypeOption> costTypes;
 
 	public static FinancialAssistanceMetadata create() {

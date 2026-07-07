@@ -126,7 +126,6 @@ class FinancialAssistanceIntakeResource {
 		description = "Binds an uploaded document (e.g. a supplementary application) as an attachment to a specific Lifecare actualisation. The target actualisation must belong to the given applicant (partyId) — a foreign actualisation id yields 404 before anything is uploaded. Multipart request: the 'file' part carries the document; the optional 'request' part carries the metadata (errandId, title, documentType, documentSenderType, senderName) — title/documentType/documentSenderType/senderName each fall back to a server default, and the title defaults to the uploaded file name. caremanagement only forwards the bytes to Lifecare. When 'request.errandId' is set, the target actualisation id is recorded on that errand as a Decision(ACTUALISATION), setting the errand's Lifecare actualisation to the one archived to.",
 		responses = {
 			@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "400", description = "Bad Request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
 	ResponseEntity<Void> archiveToActualisation(

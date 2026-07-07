@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.formsnapshot.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -29,10 +30,10 @@ public class FormSnapshotField {
 	@Schema(description = "Info texts shown for the field, in order")
 	private List<String> infoTexts;
 
-	@Schema(description = "Info / warning / error notices rendered for the field, in order")
+	@ArraySchema(arraySchema = @Schema(description = "Info / warning / error notices rendered for the field, in order"), schema = @Schema(implementation = FormSnapshotNotice.class))
 	private List<FormSnapshotNotice> notices;
 
-	@Schema(description = "All options as presented (for RADIO/CHECKBOX/SELECT), in order")
+	@ArraySchema(arraySchema = @Schema(description = "All options as presented (for RADIO/CHECKBOX/SELECT), in order"), schema = @Schema(implementation = FormSnapshotOption.class))
 	private List<FormSnapshotOption> options;
 
 	@Schema(description = "The answer given, when the field has a single answer")

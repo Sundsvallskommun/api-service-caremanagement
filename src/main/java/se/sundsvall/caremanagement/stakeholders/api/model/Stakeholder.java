@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.stakeholders.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -60,7 +61,7 @@ public class Stakeholder {
 	@Schema(description = "Country", examples = "Sweden")
 	private String country;
 
-	@Schema(description = "Contact channels for the stakeholder")
+	@ArraySchema(arraySchema = @Schema(description = "Contact channels for the stakeholder"), schema = @Schema(implementation = ContactChannel.class))
 	@Valid
 	private List<ContactChannel> contactChannels;
 

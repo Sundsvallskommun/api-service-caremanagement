@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.errandtypes.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -22,16 +23,16 @@ public class ErrandTypeSchema {
 	@Schema(description = "Human-readable display name of the type", examples = "Financial assistance – återansökan")
 	private String displayName;
 
-	@Schema(description = "Allowed statuses for the type — code plus human-readable display name, in lifecycle order")
+	@ArraySchema(arraySchema = @Schema(description = "Allowed statuses for the type — code plus human-readable display name, in lifecycle order"), schema = @Schema(implementation = StatusDefinition.class))
 	private List<StatusDefinition> statuses;
 
-	@Schema(description = "Stakeholder roles valid for the type")
+	@ArraySchema(arraySchema = @Schema(description = "Stakeholder roles valid for the type"), schema = @Schema(implementation = RoleDefinition.class))
 	private List<RoleDefinition> roles;
 
-	@Schema(description = "The fields the type's data payload should carry, as form guidance")
+	@ArraySchema(arraySchema = @Schema(description = "The fields the type's data payload should carry, as form guidance"), schema = @Schema(implementation = FieldDescriptor.class))
 	private List<FieldDescriptor> fields;
 
-	@Schema(description = "The allowed decision outcomes (decision alternatives) a caseworker may record on the type; empty when the type defines none")
+	@ArraySchema(arraySchema = @Schema(description = "The allowed decision outcomes (decision alternatives) a caseworker may record on the type; empty when the type defines none"), schema = @Schema(implementation = DecisionOption.class))
 	private List<DecisionOption> decisionOptions;
 
 	public static ErrandTypeSchema create() {
