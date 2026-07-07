@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.stakeholders.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.Objects;
 import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
 
@@ -10,6 +11,7 @@ public class ContactChannel {
 
 	@Schema(description = "The key of the contact channel", examples = "Email")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 64)
 	private String key;
 
 	@Schema(description = "The value of the contact channel", examples = "joe.doe@example.com")

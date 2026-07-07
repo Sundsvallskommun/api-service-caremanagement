@@ -107,39 +107,39 @@ public class FinancialAssistanceData {
 	@Schema(description = "When the application was attested", examples = "2026-06-01T09:30:00Z")
 	private OffsetDateTime attestedAt;
 
-	@Schema(description = "Children included in the application")
+	@ArraySchema(arraySchema = @Schema(description = "Children included in the application"), schema = @Schema(implementation = Child.class))
 	@Valid
 	private List<Child> children;
 
-	@Schema(description = "Costs applied for")
+	@ArraySchema(arraySchema = @Schema(description = "Costs applied for"), schema = @Schema(implementation = Cost.class))
 	@Valid
 	private List<Cost> costs;
 
-	@Schema(description = "Incomes reported")
+	@ArraySchema(arraySchema = @Schema(description = "Incomes reported"), schema = @Schema(implementation = Income.class))
 	@Valid
 	private List<Income> incomes;
 
-	@Schema(description = "Pending benefits")
+	@ArraySchema(arraySchema = @Schema(description = "Pending benefits"), schema = @Schema(implementation = PendingBenefit.class))
 	@Valid
 	private List<PendingBenefit> pendingBenefits;
 
-	@Schema(description = "Assets owned")
+	@ArraySchema(arraySchema = @Schema(description = "Assets owned"), schema = @Schema(implementation = Asset.class))
 	@Valid
 	private List<Asset> assets;
 
-	@Schema(description = "Persons on the application")
+	@ArraySchema(arraySchema = @Schema(description = "Persons on the application"), schema = @Schema(implementation = Person.class))
 	@Valid
 	private List<Person> persons;
 
-	@Schema(description = "Plannings towards self-sufficiency")
+	@ArraySchema(arraySchema = @Schema(description = "Plannings towards self-sufficiency"), schema = @Schema(implementation = Planning.class))
 	@Valid
 	private List<Planning> plannings;
 
-	@Schema(description = "Planned activities")
+	@ArraySchema(arraySchema = @Schema(description = "Planned activities"), schema = @Schema(implementation = PlannedActivity.class))
 	@Valid
 	private List<PlannedActivity> plannedActivities;
 
-	@Schema(description = "Job applications")
+	@ArraySchema(arraySchema = @Schema(description = "Job applications"), schema = @Schema(implementation = JobApplication.class))
 	@Valid
 	private List<JobApplication> jobApplications;
 

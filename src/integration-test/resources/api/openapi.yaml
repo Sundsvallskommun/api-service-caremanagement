@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:57921
+- url: http://localhost:53145
   description: Generated server url
 tags:
 - name: Statistics
@@ -7216,10 +7216,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -8092,6 +8092,8 @@ components:
           description: Status of the errand
           examples:
           - NEW
+          maxLength: 64
+          minLength: 0
         description:
           type: string
           description: Description of the errand
@@ -8102,6 +8104,8 @@ components:
           description: Priority of the errand
           examples:
           - HIGH
+          maxLength: 16
+          minLength: 0
         reporterUserId:
           type: string
           description: User id of the reporter
@@ -8112,6 +8116,8 @@ components:
           description: User id of the assignee
           examples:
           - jane02doe
+          maxLength: 64
+          minLength: 0
         applicantName:
           type: string
           description: "Denormalized display name of the errand's applicant, maintained\
@@ -8190,6 +8196,8 @@ components:
           description: The key of the contact channel
           examples:
           - Email
+          maxLength: 64
+          minLength: 0
         value:
           type: string
           description: The value of the contact channel
@@ -8215,6 +8223,8 @@ components:
           description: Type of external id
           examples:
           - PRIVATE
+          maxLength: 32
+          minLength: 0
         role:
           type: string
           description: Role of the stakeholder on the errand
@@ -8225,11 +8235,15 @@ components:
           description: First name
           examples:
           - Joe
+          maxLength: 100
+          minLength: 0
         lastName:
           type: string
           description: Last name
           examples:
           - Doe
+          maxLength: 100
+          minLength: 0
         organizationName:
           type: string
           description: Organization name
@@ -8250,6 +8264,8 @@ components:
           description: Zip code
           examples:
           - "85248"
+          maxLength: 10
+          minLength: 0
         city:
           type: string
           description: City
@@ -8863,6 +8879,8 @@ components:
             \ decisions, but namespaces are encouraged to define their own."
           examples:
           - PAYMENT
+          maxLength: 32
+          minLength: 0
         value:
           type: string
           description: Decision value. For binary outcomes use `APPROVED`/`REJECTED`;
@@ -8916,6 +8934,8 @@ components:
             \ `dmn-engine`) for automated ones."
           examples:
           - jane01doe
+          maxLength: 64
+          minLength: 0
         created:
           type: string
           format: date-time

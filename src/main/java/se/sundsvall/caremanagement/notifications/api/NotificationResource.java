@@ -76,9 +76,9 @@ class NotificationResource {
 		Default.class, OnCreate.class
 	})
 	ResponseEntity<Void> createNotification(
-		@Parameter(name = "municipalityId", example = "2281") @ValidMunicipalityId(groups = OnCreate.class) @PathVariable final String municipalityId,
-		@Parameter(name = "namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE, groups = OnCreate.class) @PathVariable final String namespace,
-		@Parameter(name = "errandId") @ValidUuid(groups = OnCreate.class) @PathVariable final String errandId,
+		@Parameter(name = "municipalityId", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,
+		@Parameter(name = "namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Parameter(name = "errandId") @ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final Notification notification) {
 
 		final var id = service.create(municipalityId, namespace, errandId, notification);

@@ -361,6 +361,8 @@ class AttachmentServiceTest {
 
 	@Test
 	void regenerateClientAttachmentPdfIsNoOpWhenNoClientAttachments() {
+		// The errand row is locked up front (before the read), so it must exist even for the no-op path.
+		when(errandRepositoryMock.existsWithLockingByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
 		when(conversationAttachmentQueryServiceMock.clientAttachmentContentsForErrand(ERRAND_ID)).thenReturn(List.of());
 
 		service.regenerateClientAttachmentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);

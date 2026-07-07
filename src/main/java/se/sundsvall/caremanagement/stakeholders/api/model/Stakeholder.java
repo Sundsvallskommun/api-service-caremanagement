@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Null;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.Objects;
 import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
@@ -25,6 +26,7 @@ public class Stakeholder {
 	private String externalId;
 
 	@Schema(description = "Type of external id", examples = "PRIVATE")
+	@Size(max = 32)
 	private String externalIdType;
 
 	@Schema(description = "Role of the stakeholder on the errand", examples = "FOSTER_PARENT")
@@ -32,9 +34,11 @@ public class Stakeholder {
 	private String role;
 
 	@Schema(description = "First name", examples = "Joe")
+	@Size(max = 100)
 	private String firstName;
 
 	@Schema(description = "Last name", examples = "Doe")
+	@Size(max = 100)
 	private String lastName;
 
 	@Schema(description = "Organization name", examples = "Sundsvalls kommun")
@@ -47,6 +51,7 @@ public class Stakeholder {
 	private String careOf;
 
 	@Schema(description = "Zip code", examples = "85248")
+	@Size(max = 10)
 	private String zipCode;
 
 	@Schema(description = "City", examples = "Sundsvall")

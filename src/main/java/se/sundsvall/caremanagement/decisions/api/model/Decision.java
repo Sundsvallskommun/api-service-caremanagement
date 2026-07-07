@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.decisions.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Null;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -23,6 +24,7 @@ public class Decision {
 
 	@Schema(description = "Decision category. Free-form string; conventionally `RECOMMENDATION` for DMN-produced suggestions and `PAYMENT` for caseworker APPROVE/REJECT decisions, but namespaces are encouraged to define their own.", examples = "PAYMENT")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 32)
 	private String decisionType;
 
 	@Schema(description = "Decision value. For binary outcomes use `APPROVED`/`REJECTED`; for richer outputs (e.g. a calculated amount) use the value itself or a short label.", examples = "APPROVED")
@@ -52,6 +54,7 @@ public class Decision {
 	private LocalDate periodTo;
 
 	@Schema(description = "Identifier of the actor that produced the decision. Use the caseworker userId for human decisions or a system identifier (e.g. `operaton`, `dmn-engine`) for automated ones.", examples = "jane01doe")
+	@Size(max = 64)
 	private String createdBy;
 
 	@Schema(description = "Timestamp the decision was recorded (server-assigned)", accessMode = READ_ONLY)

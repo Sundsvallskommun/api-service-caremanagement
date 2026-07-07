@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.core.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Null;
+import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -45,18 +46,21 @@ public class Errand {
 	private String title;
 
 	@Schema(description = "Status of the errand", examples = "NEW")
+	@Size(max = 64)
 	private String status;
 
 	@Schema(description = "Description of the errand", examples = "Long description text")
 	private String description;
 
 	@Schema(description = "Priority of the errand", examples = "HIGH")
+	@Size(max = 16)
 	private String priority;
 
 	@Schema(description = "User id of the reporter", examples = "joe01doe")
 	private String reporterUserId;
 
 	@Schema(description = "User id of the assignee", examples = "jane02doe")
+	@Size(max = 64)
 	private String assignedUserId;
 
 	@Schema(description = """

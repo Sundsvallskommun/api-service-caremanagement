@@ -180,14 +180,15 @@ public class AttachmentService {
 	 * re-delivery). No-op when the client has not sent any attachments yet.
 	 */
 	public void regenerateClientAttachmentPdf(final String municipalityId, final String namespace, final String errandId) {
+		// Take the errand lock up front — before the read — so two near-simultaneous conversation events can't both read
+		// the client attachments and each insert a fresh consolidation. The second blocks here, then reads the content
+		// and the row the first already wrote and overwrites it in place (same id/URL) from a consistent snapshot.
+		lockErrand(municipalityId, namespace, errandId);
+
 		final var contents = conversationAttachmentQueryService.clientAttachmentContentsForErrand(errandId);
 		if (contents.isEmpty()) {
 			return;
 		}
-
-		// Lock the errand row so two near-simultaneous conversation events can't both insert a fresh consolidation —
-		// the second blocks here, then finds the row written by the first and overwrites in place (same id/URL).
-		lockErrand(municipalityId, namespace, errandId);
 
 		final var sources = contents.stream()
 			.map(content -> new SourceFile(content.fileName(), content.mimeType(), content.content()))

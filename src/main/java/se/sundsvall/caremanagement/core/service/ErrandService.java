@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.core.service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -20,6 +21,7 @@ import se.sundsvall.caremanagement.core.service.registry.ErrandTypeRegistry;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.caremanagement.shared.NotificationRequest;
 import se.sundsvall.dept44.problem.Problem;
+import se.sundsvall.dept44.support.Identifier;
 
 import static java.time.OffsetDateTime.now;
 import static java.time.ZoneId.systemDefault;
@@ -199,8 +201,10 @@ public class ErrandService implements ErrandAccessGuard {
 		final var typeSlug = entity.getTypeSlug();
 		errandRepository.delete(entity);
 
-		publisher.publishEvent(new ErrandDeleted(
-			errandId, typeSlug, municipalityId, namespace, /* deletedBy */ null, nowTs()));
+		// Capture the acting user from the X-Sent-By Identifier here on the request thread — the async ErrandDeleted
+		// listener runs on a different thread where the Identifier is no longer bound.
+		final var deletedBy = Optional.ofNullable(Identifier.get()).map(Identifier::getValue).orElse(null);
+		publisher.publishEvent(new ErrandDeleted(errandId, typeSlug, municipalityId, namespace, deletedBy, nowTs()));
 	}
 
 	private ErrandEntity findEntity(final String municipalityId, final String namespace, final String errandId) {
