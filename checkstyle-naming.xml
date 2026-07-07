@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+	"-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+	"https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!--
+	Project-specific naming checks, layered on top of the dept44 formatting standard
+	(dept44-formatting-plugin handles layout/imports; this handles naming intent).
+
+	Rule: a setter parameter must be named after its field, not a bare single letter
+	(e.g. setId(final String id), NOT setId(final String v)). The pattern only matches
+	set<Name>(final <Type> <single-lowercase-letter>) declarations, so the idiomatic
+	equals(final Object o) and mapper (final Entity e) parameters are deliberately untouched.
+-->
+<module name="Checker">
+	<property name="charset" value="UTF-8"/>
+	<property name="severity" value="error"/>
+
+	<module name="TreeWalker">
+		<module name="RegexpSinglelineJava">
+			<property name="format" value="\bset[A-Z]\w*\(final [^)]+ [a-z]\)"/>
+			<property name="message" value="Setter parameter must be named after its field, not a single letter (e.g. setId(final String id), not v)."/>
+			<property name="ignoreComments" value="true"/>
+		</module>
+	</module>
+</module>
