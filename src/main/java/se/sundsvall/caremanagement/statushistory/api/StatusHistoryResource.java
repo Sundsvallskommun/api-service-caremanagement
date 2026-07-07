@@ -1,6 +1,10 @@
 package se.sundsvall.caremanagement.statushistory.api;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Pattern;
 import java.util.List;
@@ -14,8 +18,11 @@ import se.sundsvall.caremanagement.statushistory.api.model.StatusHistoryEntry;
 import se.sundsvall.caremanagement.statushistory.service.StatusHistoryService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
+import se.sundsvall.dept44.problem.Problem;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
 import static org.springframework.http.ResponseEntity.ok;
 import static se.sundsvall.caremanagement.Constants.NAMESPACE_REGEXP;
 import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE;
@@ -24,6 +31,12 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands/{errandId}/status-history")
 @Tag(name = "Status History", description = "Status transition log for an errand")
+@ApiResponses(value = {
+	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
+		Problem.class, ConstraintViolationProblem.class
+	}))),
+	@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+})
 class StatusHistoryResource {
 
 	private final StatusHistoryService service;
@@ -33,7 +46,9 @@ class StatusHistoryResource {
 	}
 
 	@GetMapping(produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "List status transitions for errand")
+	@Operation(summary = "List status transitions for errand", responses = {
+		@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true)
+	})
 	ResponseEntity<List<StatusHistoryEntry>> list(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,

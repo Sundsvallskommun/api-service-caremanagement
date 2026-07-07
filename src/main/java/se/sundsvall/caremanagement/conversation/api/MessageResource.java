@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -32,6 +33,7 @@ import se.sundsvall.caremanagement.conversation.service.MessageService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 import se.sundsvall.dept44.support.Identifier;
 
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
@@ -51,6 +53,12 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands/{errandId}/messages")
 @Tag(name = "Conversation", description = "Messages between caseworker and applicant on an errand")
+@ApiResponses(value = {
+	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
+		Problem.class, ConstraintViolationProblem.class
+	}))),
+	@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+})
 class MessageResource {
 
 	private final MessageService service;
@@ -86,7 +94,9 @@ class MessageResource {
 	}
 
 	@GetMapping(produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "List the errand's messages (chronological)")
+	@Operation(summary = "List the errand's messages (chronological)", responses = {
+		@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true)
+	})
 	ResponseEntity<List<Message>> list(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
@@ -98,7 +108,10 @@ class MessageResource {
 	@GetMapping(path = "/unread-count", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Count unread messages for the calling side",
 		description = "Returns how many messages addressed to the caller are unread. The caller's side is derived from the '" + Identifier.HEADER_NAME
-			+ "' header (type=adAccount → caseworker, type=partyId → applicant). A read-only poll that is not recorded in the event log.")
+			+ "' header (type=adAccount → caseworker, type=partyId → applicant). A read-only poll that is not recorded in the event log.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true)
+		})
 	ResponseEntity<UnreadCount> unreadCount(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
@@ -129,7 +142,9 @@ class MessageResource {
 	}
 
 	@GetMapping(path = "/{messageId}", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Read a message")
+	@Operation(summary = "Read a message", responses = {
+		@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true)
+	})
 	ResponseEntity<Message> read(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,

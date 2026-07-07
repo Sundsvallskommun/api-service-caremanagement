@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -25,6 +26,7 @@ import se.sundsvall.caremanagement.permit.service.PermitService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.HttpHeaders.LOCATION;
@@ -42,6 +44,12 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands/{errandId}/permits")
 @Tag(name = "Permits", description = "Permits issued on an errand: validity period, conditions and status. Revoking sets the status to REVOKED.")
+@ApiResponses(value = {
+	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
+		Problem.class, ConstraintViolationProblem.class
+	}))),
+	@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+})
 class PermitResource {
 
 	private final PermitService service;
@@ -69,7 +77,9 @@ class PermitResource {
 	}
 
 	@GetMapping(produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "List permits")
+	@Operation(summary = "List permits", responses = {
+		@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true)
+	})
 	ResponseEntity<List<Permit>> readPermits(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
@@ -93,7 +103,9 @@ class PermitResource {
 	}
 
 	@PostMapping(path = "/{permitId}/revoke", produces = ALL_VALUE)
-	@Operation(summary = "Revoke permit")
+	@Operation(summary = "Revoke permit", responses = {
+		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true)
+	})
 	ResponseEntity<Void> revokePermit(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
@@ -105,7 +117,9 @@ class PermitResource {
 	}
 
 	@PostMapping(path = "/revoke", produces = ALL_VALUE)
-	@Operation(summary = "Revoke all permits on the errand")
+	@Operation(summary = "Revoke all permits on the errand", responses = {
+		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true)
+	})
 	ResponseEntity<Void> revokeAllPermits(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
@@ -116,7 +130,9 @@ class PermitResource {
 	}
 
 	@DeleteMapping(path = "/{permitId}", produces = ALL_VALUE)
-	@Operation(summary = "Delete permit")
+	@Operation(summary = "Delete permit", responses = {
+		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true)
+	})
 	ResponseEntity<Void> deletePermit(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
