@@ -50,24 +50,14 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateWarningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareCalculation;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDocument;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeInput;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonInput;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
@@ -343,113 +333,6 @@ public class FinancialAssistanceService {
 	public CalculationDraft patchDraftHeader(final String municipalityId, final String namespace, final String errandId, final NormHeaderInput input) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		return draftService.patchHeader(errandId, input);
-	}
-
-	// --- per-row caseworker edits on the draft (scoped to the errand; touch only caseworker columns / soft-delete) ---
-
-	public NormIncomeRow addDraftIncome(final String municipalityId, final String namespace, final String errandId, final NormIncomeInput input) {
-		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return draftService.addIncome(errandId, input);
-	}
-
-	public NormIncomeRow patchDraftIncome(final String municipalityId, final String namespace, final String errandId, final String rowId, final NormIncomeInput input) {
-		errandService.readErrand(municipalityId, namespace, errandId);
-		return draftService.patchIncome(errandId, rowId, input);
-	}
-
-	public NormIncomeRow setDraftIncomeDeleted(final String municipalityId, final String namespace, final String errandId, final String rowId, final boolean deleted) {
-		errandService.readErrand(municipalityId, namespace, errandId);
-		return draftService.setIncomeDeleted(errandId, rowId, deleted);
-	}
-
-	public NormExpenseRow addDraftExpense(final String municipalityId, final String namespace, final String errandId, final NormExpenseInput input) {
-		errandService.readErrand(municipalityId, namespace, errandId);
-		return draftService.addExpense(errandId, input);
-	}
-
-	public NormExpenseRow patchDraftExpense(final String municipalityId, final String namespace, final String errandId, final String rowId, final NormExpenseInput input) {
-		errandService.readErrand(municipalityId, namespace, errandId);
-		return draftService.patchExpense(errandId, rowId, input);
-	}
-
-	public NormExpenseRow setDraftExpenseDeleted(final String municipalityId, final String namespace, final String errandId, final String rowId, final boolean deleted) {
-		errandService.readErrand(municipalityId, namespace, errandId);
-		return draftService.setExpenseDeleted(errandId, rowId, deleted);
-	}
-
-	public NormPersonRow addDraftPerson(final String municipalityId, final String namespace, final String errandId, final NormPersonInput input) {
-		errandService.readErrand(municipalityId, namespace, errandId);
-		return draftService.addPerson(errandId, input);
-	}
-
-	public NormPersonRow patchDraftPerson(final String municipalityId, final String namespace, final String errandId, final String rowId, final NormPersonInput input) {
-		errandService.readErrand(municipalityId, namespace, errandId);
-		return draftService.patchPerson(errandId, rowId, input);
-	}
-
-	public NormPersonRow setDraftPersonDeleted(final String municipalityId, final String namespace, final String errandId, final String rowId, final boolean deleted) {
-		errandService.readErrand(municipalityId, namespace, errandId);
-		return draftService.setPersonDeleted(errandId, rowId, deleted);
-	}
-
-	/**
-	 * Create a warning on an errand directly — the careM temp stage, with no Lifecare round-trip. Scoped: throws
-	 * {@code 404} when the errand is missing in this namespace/municipality.
-	 */
-	public Warning createWarning(final String municipalityId, final String namespace, final String errandId, final CreateWarningRequest request) {
-		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return warningService.create(errandId, request.getType(), request.getSourceKey(), request.getMessage());
-	}
-
-	/**
-	 * The financial assistance income warnings on an errand — the acknowledgeable objects a caseworker reviews in Draken.
-	 * Scoped: throws
-	 * {@code 404} when the errand is missing in this namespace/municipality.
-	 */
-	@Transactional(readOnly = true)
-	public List<Warning> listWarnings(final String municipalityId, final String namespace, final String errandId) {
-		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return warningService.list(errandId);
-	}
-
-	/**
-	 * How many active (OPEN/ACKNOWLEDGED, not CLOSED) income warnings are on an errand — the badge count. Scoped: throws
-	 * {@code 404} when the errand is missing in this namespace/municipality.
-	 */
-	@Transactional(readOnly = true)
-	public long countActiveWarnings(final String municipalityId, final String namespace, final String errandId) {
-		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return warningService.countActive(errandId);
-	}
-
-	/**
-	 * Acknowledge or close a warning on an errand. Scoped: throws {@code 404} when the errand or warning is missing,
-	 * {@code 400} when the target status is not {@code ACKNOWLEDGED}/{@code CLOSED}.
-	 */
-	public Warning updateWarning(final String municipalityId, final String namespace, final String errandId, final String warningId, final String status) {
-		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return warningService.updateStatus(errandId, warningId, status);
-	}
-
-	/**
-	 * The caseworker approval state of the three financial assistance view sections (calculation / payment / decision).
-	 * Scoped: throws
-	 * {@code 404} when the errand is missing in this namespace/municipality.
-	 */
-	@Transactional(readOnly = true)
-	public SectionApprovals getSectionApprovals(final String municipalityId, final String namespace, final String errandId) {
-		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return sectionApprovalService.approvals(errandId);
-	}
-
-	/**
-	 * Set a section's approval — a caseworker verifies it as approved (or withdraws the approval). Scoped: throws
-	 * {@code 404} when the errand is missing, {@code 400} when the section is not CALCULATION/PAYMENT/DECISION.
-	 */
-	public SectionApproval setSectionApproval(final String municipalityId, final String namespace, final String errandId, final String section,
-		final boolean approved, final String approvedBy) {
-		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return sectionApprovalService.setApproval(errandId, section, approved, approvedBy);
 	}
 
 	/**

@@ -50,13 +50,10 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeInput;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Person;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCalculationDraftEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
@@ -625,73 +622,6 @@ class FinancialAssistanceServiceTest {
 
 		assertThat(service.patchDraftHeader(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new NormHeaderInput().withHouseholdSize(1))).isSameAs(draft);
 		verify(draftServiceMock).patchHeader(eq(ERRAND_ID), any(NormHeaderInput.class));
-	}
-
-	@Test
-	void perRowDraftEditsScopeCheckThenDelegate() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
-		final var row = NormIncomeRow.create().withId("r1");
-		final var input = new NormIncomeInput().withTypeId(20);
-		when(draftServiceMock.addIncome(eq(ERRAND_ID), any())).thenReturn(row);
-		when(draftServiceMock.patchIncome(eq(ERRAND_ID), eq("r1"), any())).thenReturn(row);
-		when(draftServiceMock.setIncomeDeleted(ERRAND_ID, "r1", true)).thenReturn(row);
-		when(draftServiceMock.setIncomeDeleted(ERRAND_ID, "r1", false)).thenReturn(row);
-
-		assertThat(service.addDraftIncome(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, input)).isSameAs(row);
-		assertThat(service.patchDraftIncome(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "r1", input)).isSameAs(row);
-		assertThat(service.setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "r1", true)).isSameAs(row);
-		assertThat(service.setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "r1", false)).isSameAs(row);
-		verify(errandServiceMock, times(4)).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-	}
-
-	@Test
-	void listWarningsReturnsWarningsAfterScopeCheck() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
-		final var warnings = List.of(Warning.create().withId("w-1").withType("NEW_INCOME").withStatus("UNHANDLED"));
-		when(warningServiceMock.list(ERRAND_ID)).thenReturn(warnings);
-
-		assertThat(service.listWarnings(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(warnings);
-		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-	}
-
-	@Test
-	void countActiveWarningsDelegatesAfterScopeCheck() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
-		when(warningServiceMock.countActive(ERRAND_ID)).thenReturn(3L);
-
-		assertThat(service.countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(3L);
-		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-		verify(warningServiceMock).countActive(ERRAND_ID);
-	}
-
-	@Test
-	void updateWarningDelegatesAfterScopeCheck() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
-		final var warning = Warning.create().withId("w-1").withStatus("ACKNOWLEDGED");
-		when(warningServiceMock.updateStatus(ERRAND_ID, "w-1", "ACKNOWLEDGED")).thenReturn(warning);
-
-		assertThat(service.updateWarning(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "w-1", "ACKNOWLEDGED")).isSameAs(warning);
-		verify(warningServiceMock).updateStatus(ERRAND_ID, "w-1", "ACKNOWLEDGED");
-	}
-
-	@Test
-	void getSectionApprovalsReturnsBundleAfterScopeCheck() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
-		final var approvals = SectionApprovals.create().withPayment(SectionApproval.create().withSection("PAYMENT").withApproved(false));
-		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals);
-
-		assertThat(service.getSectionApprovals(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isSameAs(approvals);
-		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-	}
-
-	@Test
-	void setSectionApprovalDelegatesAfterScopeCheck() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
-		final var approval = SectionApproval.create().withSection("DECISION").withApproved(true).withApprovedBy("jane02doe");
-		when(sectionApprovalServiceMock.setApproval(ERRAND_ID, "DECISION", true, "jane02doe")).thenReturn(approval);
-
-		assertThat(service.setSectionApproval(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "DECISION", true, "jane02doe")).isSameAs(approval);
-		verify(sectionApprovalServiceMock).setApproval(ERRAND_ID, "DECISION", true, "jane02doe");
 	}
 
 	@Test

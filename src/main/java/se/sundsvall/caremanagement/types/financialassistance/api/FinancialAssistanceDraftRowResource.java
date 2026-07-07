@@ -24,7 +24,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncom
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
-import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceDraftRowService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
@@ -51,9 +51,9 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 })
 class FinancialAssistanceDraftRowResource {
 
-	private final FinancialAssistanceService service;
+	private final FinancialAssistanceDraftRowService service;
 
-	FinancialAssistanceDraftRowResource(final FinancialAssistanceService service) {
+	FinancialAssistanceDraftRowResource(final FinancialAssistanceDraftRowService service) {
 		this.service = service;
 	}
 

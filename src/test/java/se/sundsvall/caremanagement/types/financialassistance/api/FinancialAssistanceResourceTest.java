@@ -51,7 +51,10 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionAp
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.WarningCount;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceApprovalService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceDraftRowService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceWarningService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
 
 import static java.time.Month.JANUARY;
@@ -83,6 +86,15 @@ class FinancialAssistanceResourceTest {
 
 	@MockitoBean
 	private FinancialAssistanceService serviceMock;
+
+	@MockitoBean
+	private FinancialAssistanceWarningService warningServiceMock;
+
+	@MockitoBean
+	private FinancialAssistanceApprovalService approvalServiceMock;
+
+	@MockitoBean
+	private FinancialAssistanceDraftRowService draftRowServiceMock;
 
 	@MockitoBean
 	private EligibilityService eligibilityServiceMock;
@@ -318,7 +330,7 @@ class FinancialAssistanceResourceTest {
 
 	@Test
 	void createWarning() {
-		when(serviceMock.createWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(CreateWarningRequest.class)))
+		when(warningServiceMock.createWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(CreateWarningRequest.class)))
 			.thenReturn(Warning.create().withId("w1").withType("MISSING_SSBTEK").withStatus("OPEN"));
 
 		final var response = webTestClient.post()
@@ -333,12 +345,12 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(response).isNotNull();
 		assertThat(response.getId()).isEqualTo("w1");
-		verify(serviceMock).createWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(CreateWarningRequest.class));
+		verify(warningServiceMock).createWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(CreateWarningRequest.class));
 	}
 
 	@Test
 	void listWarnings() {
-		when(serviceMock.listWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1"))
+		when(warningServiceMock.listWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1"))
 			.thenReturn(List.of(Warning.create().withId("w1").withType("MISSING_SSBTEK").withStatus("OPEN")));
 
 		final var response = webTestClient.get()
@@ -351,12 +363,12 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(response).hasSize(1);
 		assertThat(response.getFirst().getType()).isEqualTo("MISSING_SSBTEK");
-		verify(serviceMock).listWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1");
+		verify(warningServiceMock).listWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1");
 	}
 
 	@Test
 	void countWarnings() {
-		when(serviceMock.countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1")).thenReturn(3L);
+		when(warningServiceMock.countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1")).thenReturn(3L);
 
 		final var body = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/errand-1/warnings/count").build(base()))
@@ -368,12 +380,12 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(body).isNotNull();
 		assertThat(body.count()).isEqualTo(3L);
-		verify(serviceMock).countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1");
+		verify(warningServiceMock).countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1");
 	}
 
 	@Test
 	void updateWarning() {
-		when(serviceMock.updateWarning(MUNICIPALITY_ID, NAMESPACE, "errand-1", "w1", "CLOSED"))
+		when(warningServiceMock.updateWarning(MUNICIPALITY_ID, NAMESPACE, "errand-1", "w1", "CLOSED"))
 			.thenReturn(Warning.create().withId("w1").withStatus("CLOSED"));
 
 		final var response = webTestClient.patch()
@@ -386,7 +398,7 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(response).isNotNull();
 		assertThat(response.getStatus()).isEqualTo("CLOSED");
-		verify(serviceMock).updateWarning(MUNICIPALITY_ID, NAMESPACE, "errand-1", "w1", "CLOSED");
+		verify(warningServiceMock).updateWarning(MUNICIPALITY_ID, NAMESPACE, "errand-1", "w1", "CLOSED");
 	}
 
 	@Test
@@ -395,7 +407,7 @@ class FinancialAssistanceResourceTest {
 			.withCalculation(SectionApproval.create().withSection("CALCULATION").withApproved(true))
 			.withPayment(SectionApproval.create().withSection("PAYMENT").withApproved(false))
 			.withDecision(SectionApproval.create().withSection("DECISION").withApproved(false));
-		when(serviceMock.getSectionApprovals(MUNICIPALITY_ID, NAMESPACE, "errand-1")).thenReturn(approvals);
+		when(approvalServiceMock.getSectionApprovals(MUNICIPALITY_ID, NAMESPACE, "errand-1")).thenReturn(approvals);
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/errand-1/sections/approvals").build(base()))
@@ -408,12 +420,12 @@ class FinancialAssistanceResourceTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getCalculation().isApproved()).isTrue();
 		assertThat(response.getPayment().isApproved()).isFalse();
-		verify(serviceMock).getSectionApprovals(MUNICIPALITY_ID, NAMESPACE, "errand-1");
+		verify(approvalServiceMock).getSectionApprovals(MUNICIPALITY_ID, NAMESPACE, "errand-1");
 	}
 
 	@Test
 	void setSectionApproval() {
-		when(serviceMock.setSectionApproval(MUNICIPALITY_ID, NAMESPACE, "errand-1", "CALCULATION", true, "jane02doe"))
+		when(approvalServiceMock.setSectionApproval(MUNICIPALITY_ID, NAMESPACE, "errand-1", "CALCULATION", true, "jane02doe"))
 			.thenReturn(SectionApproval.create().withSection("CALCULATION").withApproved(true).withApprovedBy("jane02doe"));
 
 		final var response = webTestClient.patch()
@@ -429,7 +441,7 @@ class FinancialAssistanceResourceTest {
 		assertThat(response.getSection()).isEqualTo("CALCULATION");
 		assertThat(response.isApproved()).isTrue();
 		assertThat(response.getApprovedBy()).isEqualTo("jane02doe");
-		verify(serviceMock).setSectionApproval(MUNICIPALITY_ID, NAMESPACE, "errand-1", "CALCULATION", true, "jane02doe");
+		verify(approvalServiceMock).setSectionApproval(MUNICIPALITY_ID, NAMESPACE, "errand-1", "CALCULATION", true, "jane02doe");
 	}
 
 	@Test
@@ -473,7 +485,7 @@ class FinancialAssistanceResourceTest {
 
 	@Test
 	void addDraftIncome() {
-		when(serviceMock.addDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormIncomeInput.class)))
+		when(draftRowServiceMock.addDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormIncomeInput.class)))
 			.thenReturn(NormIncomeRow.create().withId("r1").withOrigin("CASEWORKER"));
 
 		final var response = webTestClient.post()
@@ -487,12 +499,12 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(response).isNotNull();
 		assertThat(response.getId()).isEqualTo("r1");
-		verify(serviceMock).addDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormIncomeInput.class));
+		verify(draftRowServiceMock).addDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormIncomeInput.class));
 	}
 
 	@Test
 	void patchDraftPerson() {
-		when(serviceMock.patchDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r2"), any(NormPersonInput.class)))
+		when(draftRowServiceMock.patchDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r2"), any(NormPersonInput.class)))
 			.thenReturn(NormPersonRow.create().withId("r2").withCaseworkerDays(15));
 
 		final var response = webTestClient.patch()
@@ -506,12 +518,12 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(response).isNotNull();
 		assertThat(response.getCaseworkerDays()).isEqualTo(15);
-		verify(serviceMock).patchDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r2"), any(NormPersonInput.class));
+		verify(draftRowServiceMock).patchDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r2"), any(NormPersonInput.class));
 	}
 
 	@Test
 	void deleteDraftExpense() {
-		when(serviceMock.setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r9", true))
+		when(draftRowServiceMock.setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r9", true))
 			.thenReturn(NormExpenseRow.create().withId("r9").withDeleted(true));
 
 		final var response = webTestClient.delete()
@@ -524,30 +536,30 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(response).isNotNull();
 		assertThat(response.isDeleted()).isTrue();
-		verify(serviceMock).setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r9", true);
+		verify(draftRowServiceMock).setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r9", true);
 	}
 
 	@Test
 	void incomeRowRemainingEndpoints() {
-		when(serviceMock.patchDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r1"), any(NormIncomeInput.class))).thenReturn(NormIncomeRow.create().withId("r1"));
-		when(serviceMock.setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", true)).thenReturn(NormIncomeRow.create().withId("r1").withDeleted(true));
-		when(serviceMock.setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", false)).thenReturn(NormIncomeRow.create().withId("r1").withDeleted(false));
+		when(draftRowServiceMock.patchDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r1"), any(NormIncomeInput.class))).thenReturn(NormIncomeRow.create().withId("r1"));
+		when(draftRowServiceMock.setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", true)).thenReturn(NormIncomeRow.create().withId("r1").withDeleted(true));
+		when(draftRowServiceMock.setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", false)).thenReturn(NormIncomeRow.create().withId("r1").withDeleted(false));
 
 		webTestClient.patch().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/incomes/r1").build(base()))
 			.bodyValue(new NormIncomeInput().withApplicantCaseworkerAmount(new BigDecimal("1000"))).exchange().expectStatus().isOk();
 		webTestClient.delete().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/incomes/r1").build(base())).exchange().expectStatus().isOk();
 		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/incomes/r1/restore").build(base())).exchange().expectStatus().isOk();
 
-		verify(serviceMock).patchDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r1"), any(NormIncomeInput.class));
-		verify(serviceMock).setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", true);
-		verify(serviceMock).setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", false);
+		verify(draftRowServiceMock).patchDraftIncome(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("r1"), any(NormIncomeInput.class));
+		verify(draftRowServiceMock).setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", true);
+		verify(draftRowServiceMock).setDraftIncomeDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "r1", false);
 	}
 
 	@Test
 	void expenseRowRemainingEndpoints() {
-		when(serviceMock.addDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormExpenseInput.class))).thenReturn(NormExpenseRow.create().withId("e1"));
-		when(serviceMock.patchDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("e1"), any(NormExpenseInput.class))).thenReturn(NormExpenseRow.create().withId("e1"));
-		when(serviceMock.setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "e1", false)).thenReturn(NormExpenseRow.create().withId("e1"));
+		when(draftRowServiceMock.addDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormExpenseInput.class))).thenReturn(NormExpenseRow.create().withId("e1"));
+		when(draftRowServiceMock.patchDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("e1"), any(NormExpenseInput.class))).thenReturn(NormExpenseRow.create().withId("e1"));
+		when(draftRowServiceMock.setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "e1", false)).thenReturn(NormExpenseRow.create().withId("e1"));
 
 		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/expenses").build(base()))
 			.bodyValue(new NormExpenseInput().withCostType("RENT")).exchange().expectStatus().isOk();
@@ -555,25 +567,25 @@ class FinancialAssistanceResourceTest {
 			.bodyValue(new NormExpenseInput().withCaseworkerAmount(new BigDecimal("8000"))).exchange().expectStatus().isOk();
 		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/expenses/e1/restore").build(base())).exchange().expectStatus().isOk();
 
-		verify(serviceMock).addDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormExpenseInput.class));
-		verify(serviceMock).patchDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("e1"), any(NormExpenseInput.class));
-		verify(serviceMock).setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "e1", false);
+		verify(draftRowServiceMock).addDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormExpenseInput.class));
+		verify(draftRowServiceMock).patchDraftExpense(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("e1"), any(NormExpenseInput.class));
+		verify(draftRowServiceMock).setDraftExpenseDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "e1", false);
 	}
 
 	@Test
 	void personRowRemainingEndpoints() {
-		when(serviceMock.addDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormPersonInput.class))).thenReturn(NormPersonRow.create().withId("p1"));
-		when(serviceMock.setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", true)).thenReturn(NormPersonRow.create().withId("p1").withDeleted(true));
-		when(serviceMock.setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", false)).thenReturn(NormPersonRow.create().withId("p1"));
+		when(draftRowServiceMock.addDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormPersonInput.class))).thenReturn(NormPersonRow.create().withId("p1"));
+		when(draftRowServiceMock.setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", true)).thenReturn(NormPersonRow.create().withId("p1").withDeleted(true));
+		when(draftRowServiceMock.setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", false)).thenReturn(NormPersonRow.create().withId("p1"));
 
 		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/persons").build(base()))
 			.bodyValue(new NormPersonInput().withPartyId("party-1").withRole("CHILD")).exchange().expectStatus().isOk();
 		webTestClient.delete().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/persons/p1").build(base())).exchange().expectStatus().isOk();
 		webTestClient.post().uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/persons/p1/restore").build(base())).exchange().expectStatus().isOk();
 
-		verify(serviceMock).addDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormPersonInput.class));
-		verify(serviceMock).setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", true);
-		verify(serviceMock).setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", false);
+		verify(draftRowServiceMock).addDraftPerson(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormPersonInput.class));
+		verify(draftRowServiceMock).setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", true);
+		verify(draftRowServiceMock).setDraftPersonDeleted(MUNICIPALITY_ID, NAMESPACE, "errand-1", "p1", false);
 	}
 
 	@Test

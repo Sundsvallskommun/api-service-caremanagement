@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovalRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
-import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceApprovalService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
@@ -44,9 +44,9 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 })
 class FinancialAssistanceApprovalResource {
 
-	private final FinancialAssistanceService service;
+	private final FinancialAssistanceApprovalService service;
 
-	FinancialAssistanceApprovalResource(final FinancialAssistanceService service) {
+	FinancialAssistanceApprovalResource(final FinancialAssistanceApprovalService service) {
 		this.service = service;
 	}
 

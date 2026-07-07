@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateWarningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.WarningCount;
-import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceWarningService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
@@ -51,9 +51,9 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 })
 class FinancialAssistanceWarningResource {
 
-	private final FinancialAssistanceService service;
+	private final FinancialAssistanceWarningService service;
 
-	FinancialAssistanceWarningResource(final FinancialAssistanceService service) {
+	FinancialAssistanceWarningResource(final FinancialAssistanceWarningService service) {
 		this.service = service;
 	}
 
