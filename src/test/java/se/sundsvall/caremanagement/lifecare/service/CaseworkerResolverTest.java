@@ -58,7 +58,7 @@ class CaseworkerResolverTest {
 
 	@Test
 	void queriesServicesOverTheLookbackWindow() {
-		when(lifecareFcIntegrationMock.getServices(eq(PERSON_ID), eq("2023-06-01"), eq("2026-06-01")))
+		when(lifecareFcIntegrationMock.getServices(PERSON_ID, "2023-06-01", "2026-06-01"))
 			.thenReturn(new ApiPaginationCompositePersonBasedServiceDTO());
 
 		resolver.resolve(PERSON_ID, DATE);

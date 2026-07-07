@@ -18,8 +18,6 @@ import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
 import generated.se.sundsvall.lifecarefc.User;
 import java.util.List;
 import java.util.function.Supplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -29,15 +27,12 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 
 /**
  * Thin wrapper over {@link LifecareFcClient}. Every call goes through {@link #call(String, Supplier)}, which translates
- * any transport/FC failure into a {@code BAD_GATEWAY} problem carrying the upstream status into the log and problem
- * detail. Deliberately
- * logs no {@code personId} or request/response payloads — FC carries personal identity number and income data (sprint
- * privacy rule, vof-ekonomiskt-bistand/CLAUDE.md).
+ * any transport/FC failure into a {@code BAD_GATEWAY} problem carrying the upstream status into the problem detail.
+ * Deliberately logs no {@code personId} or request/response payloads — FC carries personal identity number and income
+ * data (sprint privacy rule, vof-ekonomiskt-bistand/CLAUDE.md).
  */
 @Component
 public class LifecareFcIntegration {
-
-	private static final Logger LOG = LoggerFactory.getLogger(LifecareFcIntegration.class);
 
 	private final LifecareFcClient lifecareFcClient;
 
@@ -151,7 +146,8 @@ public class LifecareFcIntegration {
 		try {
 			return operation.get();
 		} catch (final Exception e) {
-			LOG.error("Error {} in Lifecare FC: {}", action, describe(e), e);
+			// Do not log the raw exception: transport failures embed the request URL, which carries the personId. The
+			// thrown Problem's detail carries the (payload-free) upstream descriptor and is logged by the framework.
 			throw Problem.valueOf(BAD_GATEWAY, "Error %s in Lifecare FC: %s".formatted(action, describe(e)));
 		}
 	}

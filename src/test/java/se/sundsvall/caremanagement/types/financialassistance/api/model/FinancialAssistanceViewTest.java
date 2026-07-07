@@ -110,9 +110,9 @@ class FinancialAssistanceViewTest {
 		final var b = FinancialAssistanceView.create().withId("1").withTitle("T").withData(DATA);
 		final var c = FinancialAssistanceView.create().withId("2");
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string");
 	}
 }

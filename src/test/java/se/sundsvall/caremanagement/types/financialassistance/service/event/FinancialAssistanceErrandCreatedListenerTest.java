@@ -88,8 +88,9 @@ class FinancialAssistanceErrandCreatedListenerTest {
 	@Test
 	void givesUpAfterMaxAttemptsAndRethrows() {
 		when(processorMock.assignAndClassify(any())).thenThrow(snapshotConflict());
+		final var event = event();
 
-		assertThatExceptionOfType(JpaSystemException.class).isThrownBy(() -> listener.on(event()));
+		assertThatExceptionOfType(JpaSystemException.class).isThrownBy(() -> listener.on(event));
 
 		verify(processorMock, times(MAX_ATTEMPTS)).assignAndClassify(any());
 		verify(processorMock, never()).startProcess(any());
@@ -99,8 +100,9 @@ class FinancialAssistanceErrandCreatedListenerTest {
 	void doesNotRetryNonSnapshotDataAccessException() {
 		final var unrelated = new JpaSystemException(new RuntimeException(new SQLException("deadlock", "40001", 1213)));
 		when(processorMock.assignAndClassify(any())).thenThrow(unrelated);
+		final var event = event();
 
-		assertThatExceptionOfType(JpaSystemException.class).isThrownBy(() -> listener.on(event()));
+		assertThatExceptionOfType(JpaSystemException.class).isThrownBy(() -> listener.on(event));
 
 		verify(processorMock, times(1)).assignAndClassify(any());
 		verify(processorMock, never()).startProcess(any());

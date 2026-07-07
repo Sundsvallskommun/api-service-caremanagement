@@ -52,8 +52,8 @@ class CalculationFeederTest {
 
 		final var rows = feeder.incomeRows(ERRAND_ID, lines);
 
-		assertThat(rows).hasSize(2);
-		assertThat(rows).allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
+		assertThat(rows).hasSize(2)
+			.allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
 		final var first = rows.getFirst();
 		assertThat(first.getTypeId()).isEqualTo(20);
 		assertThat(first.getTypeName()).isEqualTo("Bostadsbidrag");
@@ -299,8 +299,8 @@ class CalculationFeederTest {
 
 		final var rows = feeder.personRows(ERRAND_ID, errand);
 
-		assertThat(rows).hasSize(3);
-		assertThat(rows).allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
+		assertThat(rows).hasSize(3)
+			.allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
 
 		final var personRow = rows.getFirst();
 		assertThat(personRow.getPartyId()).isEqualTo("p-1");
@@ -374,7 +374,7 @@ class CalculationFeederTest {
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6600"))));
 
 		// same household → only the housing delta is consulted; (6600-5000)/5000 = +32%
-		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSING_COST"), eq(0), eq(new BigDecimal("32"))))
+		when(renewalDeltaServiceMock.classify(MUNICIPALITY_ID, "HOUSING_COST", 0, new BigDecimal("32")))
 			.thenReturn(new RenewalDeltaService.DeltaVerdict(true, "Väsentlig ökning – kontrollera hyresunderlag"));
 
 		final var warnings = feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous);
@@ -397,7 +397,7 @@ class CalculationFeederTest {
 
 		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSEHOLD_SIZE"), eq(-1), any()))
 			.thenReturn(new RenewalDeltaService.DeltaVerdict(true, "Kontrollera"));
-		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSING_COST"), eq(0), eq(new BigDecimal("-50"))))
+		when(renewalDeltaServiceMock.classify(MUNICIPALITY_ID, "HOUSING_COST", 0, new BigDecimal("-50")))
 			.thenReturn(new RenewalDeltaService.DeltaVerdict(true, "Väsentlig minskning"));
 
 		final var warnings = feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous);

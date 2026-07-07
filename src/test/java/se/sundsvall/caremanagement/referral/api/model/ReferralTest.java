@@ -57,9 +57,9 @@ class ReferralTest {
 		final var b = Referral.create().withId("1").withAuthority("A").withStatus("SENT");
 		final var c = Referral.create().withId("2");
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string");
 	}
 }

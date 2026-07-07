@@ -48,8 +48,8 @@ class ActualisationAttachmentTest {
 	void hashCodeAndToString() {
 		final var base = base();
 
-		assertThat(base).hasSameHashCodeAs(base());
-		assertThat(base).hasToString("ActualisationAttachment[documentType=DOC, documentSenderType=SENDER, title=Title, senderName=Sender Name, fileName=intyg.pdf, mimeType=application/pdf, content=3 bytes]");
+		assertThat(base).hasSameHashCodeAs(base())
+			.hasToString("ActualisationAttachment[documentType=DOC, documentSenderType=SENDER, title=Title, senderName=Sender Name, fileName=intyg.pdf, mimeType=application/pdf, content=3 bytes]");
 		assertThat(new ActualisationAttachment(null, null, null, null, null, null, null))
 			.hasToString("ActualisationAttachment[documentType=null, documentSenderType=null, title=null, senderName=null, fileName=null, mimeType=null, content=0 bytes]");
 	}

@@ -35,10 +35,10 @@ class DocumentTypeTest {
 		final var b = DocumentType.create().withCode("C").withDisplayName("D");
 		final var c = DocumentType.create().withCode("X").withDisplayName("D");
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
-		assertThat(a).hasToString("DocumentType{code='C', displayName='D'}");
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string")
+			.hasToString("DocumentType{code='C', displayName='D'}");
 	}
 }

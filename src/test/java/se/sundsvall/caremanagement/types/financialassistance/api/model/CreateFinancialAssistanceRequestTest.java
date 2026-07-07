@@ -56,9 +56,9 @@ class CreateFinancialAssistanceRequestTest {
 		final var b = CreateFinancialAssistanceRequest.create().withTitle("T").withData(DATA);
 		final var c = CreateFinancialAssistanceRequest.create().withTitle("X");
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string");
 	}
 }

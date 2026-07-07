@@ -708,6 +708,15 @@ public class FinancialAssistanceService {
 	 */
 	@Transactional(readOnly = true)
 	public List<Actualisation> listActualisations(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
+		return actualisationsFor(municipalityId, partyId, from, to);
+	}
+
+	/**
+	 * The applicant's Lifecare actualisations — a non-proxied worker so an in-class scope check
+	 * ({@link #archiveToActualisation}) can reuse it without a self-call to the {@code @Transactional} public method
+	 * (which would bypass the Spring proxy — Sonar S6809).
+	 */
+	private List<Actualisation> actualisationsFor(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
 		final var applicant = personalNumber(municipalityId, partyId);
 		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
 		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
@@ -758,6 +767,15 @@ public class FinancialAssistanceService {
 	 */
 	@Transactional(readOnly = true)
 	public List<LifecareDocument> listDocuments(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
+		return documentsFor(municipalityId, partyId, from, to);
+	}
+
+	/**
+	 * The applicant's Lifecare documents — a non-proxied worker so the in-class ownership check
+	 * ({@link #readDocumentContent}) can reuse it without a self-call to the {@code @Transactional} public method (which
+	 * would bypass the Spring proxy — Sonar S6809).
+	 */
+	private List<LifecareDocument> documentsFor(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
 		final var applicant = personalNumber(municipalityId, partyId);
 		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
 		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
@@ -775,7 +793,7 @@ public class FinancialAssistanceService {
 	 */
 	@Transactional(readOnly = true)
 	public byte[] readDocumentContent(final String municipalityId, final String partyId, final String documentId, final LocalDate from, final LocalDate to) {
-		final var owned = listDocuments(municipalityId, partyId, from, to).stream()
+		final var owned = documentsFor(municipalityId, partyId, from, to).stream()
 			.anyMatch(document -> documentId.equals(document.getId()));
 		if (!owned) {
 			throw Problem.valueOf(NOT_FOUND, DOCUMENT_NOT_FOUND_MESSAGE.formatted(documentId));
@@ -797,7 +815,7 @@ public class FinancialAssistanceService {
 	 * (sequential) Lifecare-global id — a foreign id yields 404 before anything is uploaded.
 	 */
 	public void archiveToActualisation(final String municipalityId, final String namespace, final String partyId, final Integer actualisationId, final MultipartFile file, final ArchiveActualisationRequest request) {
-		final var owned = listActualisations(municipalityId, partyId, null, null).stream()
+		final var owned = actualisationsFor(municipalityId, partyId, null, null).stream()
 			.anyMatch(actualisation -> actualisationId.equals(actualisation.getId()));
 		if (!owned) {
 			throw Problem.valueOf(NOT_FOUND, ACTUALISATION_NOT_FOUND_MESSAGE.formatted(actualisationId));

@@ -201,10 +201,10 @@ class FinancialAssistanceEntityTest {
 		final var b = FinancialAssistanceEntity.create().withErrandId("errand-1").withApplicationType("NEW").withPeriodYear(2026);
 		final var c = FinancialAssistanceEntity.create().withErrandId("errand-2");
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string");
 	}
 
 	@Test

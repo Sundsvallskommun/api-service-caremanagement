@@ -40,14 +40,14 @@ class MessageHistoryPdfRendererTest {
 		assertThat(new String(pdf, 0, 4)).isEqualTo("%PDF");
 
 		final var text = textOf(pdf);
-		assertThat(text).contains("Meddelandehistorik");
-		assertThat(text).contains(ERRAND_NUMBER);
-		assertThat(text).contains("Period: 2026-06-01");
-		assertThat(text).contains("Antal meddelanden: 2");
-		assertThat(text).contains("Antal bilagor: 2");
-		assertThat(text).contains("Sökande");
-		assertThat(text).contains("Handläggare");
-		assertThat(text).contains("Bilagor: [1] intyg.pdf, [2] kvitto.pdf");
+		assertThat(text).contains("Meddelandehistorik")
+			.contains(ERRAND_NUMBER)
+			.contains("Period: 2026-06-01")
+			.contains("Antal meddelanden: 2")
+			.contains("Antal bilagor: 2")
+			.contains("Sökande")
+			.contains("Handläggare")
+			.contains("Bilagor: [1] intyg.pdf, [2] kvitto.pdf");
 	}
 
 	@Test
@@ -61,9 +61,9 @@ class MessageHistoryPdfRendererTest {
 		assertThat(attachments).hasSize(1);
 
 		final var text = textOf(MessageHistoryPdfRenderer.renderMessages(ERRAND_NUMBER, thread, attachments));
-		assertThat(text).contains("Antal bilagor: 1");
-		assertThat(text).contains("Bilagor: [1] underlag.pdf");
-		assertThat(text).contains("Bilagor (finns i Lifecare): beslut.pdf");
+		assertThat(text).contains("Antal bilagor: 1")
+			.contains("Bilagor: [1] underlag.pdf")
+			.contains("Bilagor (finns i Lifecare): beslut.pdf");
 	}
 
 	@Test
@@ -75,9 +75,9 @@ class MessageHistoryPdfRendererTest {
 
 		final var text = textOf(MessageHistoryPdfRenderer.renderSeparator(attachment));
 
-		assertThat(text).contains("Bilaga 1");
-		assertThat(text).contains("kontoutdrag.pdf");
-		assertThat(text).contains("Bifogad av Sökande");
+		assertThat(text).contains("Bilaga 1")
+			.contains("kontoutdrag.pdf")
+			.contains("Bifogad av Sökande");
 	}
 
 	@Test

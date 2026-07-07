@@ -27,8 +27,8 @@ class AttachmentDataEntityTest {
 		assertThat(entity.equals(entity)).isTrue();               // same instance
 		assertThat(entity.equals(null)).isFalse();                // null
 		assertThat(entity.equals("not an entity")).isFalse();     // different class
-		assertThat(entity).isEqualTo(sameIdDifferentBlob);        // same id, blob excluded
-		assertThat(entity).isNotEqualTo(differentId);             // different id
+		assertThat(entity).isEqualTo(sameIdDifferentBlob)        // same id, blob excluded
+			.isNotEqualTo(differentId);             // different id
 		assertThat(AttachmentDataEntity.create()).isNotEqualTo(AttachmentDataEntity.create()); // two transient rows (id 0)
 	}
 
@@ -38,8 +38,8 @@ class AttachmentDataEntityTest {
 		final var transientEntity = AttachmentDataEntity.create();
 
 		// constant across instances and lifecycle (transient/persisted), never reads the blob
-		assertThat(withBlob.hashCode()).isEqualTo(AttachmentDataEntity.class.hashCode());
-		assertThat(transientEntity.hashCode()).isEqualTo(AttachmentDataEntity.class.hashCode());
+		assertThat(withBlob).hasSameHashCodeAs(AttachmentDataEntity.class);
+		assertThat(transientEntity).hasSameHashCodeAs(AttachmentDataEntity.class);
 	}
 
 	@Test

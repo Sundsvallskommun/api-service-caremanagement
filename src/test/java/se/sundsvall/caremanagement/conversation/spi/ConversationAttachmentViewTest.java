@@ -38,8 +38,7 @@ class ConversationAttachmentViewTest {
 
 		assertThat(base).hasSameHashCodeAs(new ConversationAttachmentView("intyg.pdf", "application/pdf", new byte[] {
 			1, 2, 3
-		}));
-		assertThat(base).hasToString("ConversationAttachmentView[fileName=intyg.pdf, mimeType=application/pdf, content=3 bytes]");
+		})).hasToString("ConversationAttachmentView[fileName=intyg.pdf, mimeType=application/pdf, content=3 bytes]");
 		assertThat(new ConversationAttachmentView(null, null, null)).hasToString("ConversationAttachmentView[fileName=null, mimeType=null, content=0 bytes]");
 	}
 }

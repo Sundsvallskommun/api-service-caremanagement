@@ -42,9 +42,9 @@ class RenewalPrefillTest {
 		final var b = RenewalPrefill.create().withChildren(CHILDREN).withLifecareChecked(true);
 		final var c = RenewalPrefill.create().withLifecareChecked(false);
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string");
 	}
 }

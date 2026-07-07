@@ -37,12 +37,12 @@ class DecisionOptionTest {
 		final var b = DecisionOption.create().withCode("BIFALL").withDisplayName("Bifall").withCarriesAmount(true);
 		final var c = DecisionOption.create().withCode("AVSLAG").withDisplayName("Avslag").withCarriesAmount(false);
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
-		assertThat(a).isEqualTo(a);
-		assertThat(a).hasToString(b.toString());
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string")
+			.isEqualTo(a)
+			.hasToString(b.toString());
 		assertThat(a.toString()).contains("BIFALL", "Bifall");
 	}
 }

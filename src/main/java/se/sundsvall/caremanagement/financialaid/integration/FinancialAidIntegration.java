@@ -43,7 +43,8 @@ public class FinancialAidIntegration {
 			LOG.debug("Financial-aid basis fetched");
 			return basis;
 		} catch (final Exception e) {
-			LOG.error("Error fetching financial-aid basis: {}", describe(e), e);
+			// Do not log the raw exception: transport failures embed the request URL, which carries the personalNumber.
+			// The thrown Problem's detail carries the (payload-free) upstream descriptor and is logged by the framework.
 			throw Problem.valueOf(BAD_GATEWAY, "Error fetching financial-aid basis: %s".formatted(describe(e)));
 		}
 	}

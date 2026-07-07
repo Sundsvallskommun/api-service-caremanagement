@@ -157,9 +157,9 @@ class FinancialAssistanceDataTest {
 		final var b = FinancialAssistanceData.create().withApplicationType("NEW").withPeriodMonth(6).withChildren(CHILDREN);
 		final var c = FinancialAssistanceData.create().withApplicationType("RENEWAL");
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string");
 	}
 }

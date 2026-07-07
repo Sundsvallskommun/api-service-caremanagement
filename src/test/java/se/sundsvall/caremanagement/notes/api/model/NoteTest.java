@@ -70,10 +70,10 @@ class NoteTest {
 		final var c = Note.create().withId("2");
 		final var d = Note.create().withId("1").withErrandId("e").withBody("b").withAuthor("u").withCreated(ts).withModifiedBy("other").withModified(ts);
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(d);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(d)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string");
 	}
 }

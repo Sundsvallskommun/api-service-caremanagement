@@ -60,7 +60,7 @@ class ErrandEventResourceTest {
 
 	@Test
 	void listWithFilters() {
-		when(serviceMock.listForErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("UPDATE"), eq("joe001doe"), eq("EVENT"), eq(false))).thenReturn(List.of());
+		when(serviceMock.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "UPDATE", "joe001doe", "EVENT", false)).thenReturn(List.of());
 
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH)

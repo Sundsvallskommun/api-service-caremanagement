@@ -80,7 +80,9 @@ class DatabaseCleanupScheduler {
 				var totalRows = 0;
 				for (var i = 0; i < deletedPerTable.length; i++) {
 					totalRows += deletedPerTable[i];
-					LOG.info("Wiped {} row(s) from {}", deletedPerTable[i], tables.get(i));
+					if (LOG.isInfoEnabled()) {
+						LOG.info("Wiped {} row(s) from {}", deletedPerTable[i], tables.get(i));
+					}
 				}
 				LOG.info("Nightly demo reset complete: removed {} row(s) from {} table(s); preserved {}",
 					totalRows, tables.size(), PRESERVED_TABLES);

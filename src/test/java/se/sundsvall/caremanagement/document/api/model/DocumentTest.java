@@ -95,10 +95,10 @@ class DocumentTest {
 		final var d = Document.create().withId("1").withErrandId("e").withType("T").withHeading("H").withText("b")
 			.withDocumentDate(DOCUMENT_DATE).withDocumentTime(DOCUMENT_TIME).withStatus("LOCKED").withCreatedBy("u").withCreated(FIXED_TIMESTAMP);
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(d);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(d)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string");
 	}
 }

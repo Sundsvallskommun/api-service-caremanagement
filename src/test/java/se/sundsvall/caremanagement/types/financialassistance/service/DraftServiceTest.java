@@ -98,7 +98,7 @@ class DraftServiceTest {
 
 		service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(refreshedFresh, newFresh), List.of());
 
-		assertThat(existing.getPosition()).isEqualTo(0);  // a refreshed row keeps the position it already had
+		assertThat(existing.getPosition()).isZero();  // a refreshed row keeps the position it already had
 		assertThat(newFresh.getPosition()).isEqualTo(1);  // a genuinely new row is appended at the next free position
 	}
 

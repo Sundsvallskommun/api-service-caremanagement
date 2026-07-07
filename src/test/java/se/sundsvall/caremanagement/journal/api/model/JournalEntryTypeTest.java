@@ -35,10 +35,10 @@ class JournalEntryTypeTest {
 		final var b = JournalEntryType.create().withCode("C").withDisplayName("D");
 		final var c = JournalEntryType.create().withCode("X").withDisplayName("D");
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
-		assertThat(a).hasToString("JournalEntryType{code='C', displayName='D'}");
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string")
+			.hasToString("JournalEntryType{code='C', displayName='D'}");
 	}
 }

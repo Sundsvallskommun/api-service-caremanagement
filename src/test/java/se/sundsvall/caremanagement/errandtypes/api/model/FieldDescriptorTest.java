@@ -59,12 +59,12 @@ class FieldDescriptorTest {
 			.withAppliesTo(List.of("NEW", "RENEWAL"));
 		final var c = FieldDescriptor.create().withName("hasAssets").withType("BOOLEAN").withRequired(false);
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
-		assertThat(a).isEqualTo(a);
-		assertThat(a).hasToString(b.toString());
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string")
+			.isEqualTo(a)
+			.hasToString(b.toString());
 		assertThat(a.toString()).contains("hasIncomes", "BOOLEAN");
 	}
 }

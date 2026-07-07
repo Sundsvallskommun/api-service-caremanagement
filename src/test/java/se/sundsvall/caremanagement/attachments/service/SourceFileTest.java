@@ -38,8 +38,7 @@ class SourceFileTest {
 
 		assertThat(base).hasSameHashCodeAs(new SourceFile("intyg.pdf", "application/pdf", new byte[] {
 			1, 2, 3
-		}));
-		assertThat(base).hasToString("SourceFile[fileName=intyg.pdf, contentType=application/pdf, content=3 bytes]");
+		})).hasToString("SourceFile[fileName=intyg.pdf, contentType=application/pdf, content=3 bytes]");
 		assertThat(new SourceFile(null, null, null)).hasToString("SourceFile[fileName=null, contentType=null, content=0 bytes]");
 	}
 }

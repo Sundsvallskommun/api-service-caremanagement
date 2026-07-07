@@ -41,12 +41,12 @@ class FinancialAssistanceTypesTest {
 	@Test
 	void handlaggareOnlyTypesHaveInternalNameNoExternalNoGroup() {
 		final var handlaggareOnly = allOptions().stream().filter(option -> !option.isCitizenReportable()).toList();
-		assertThat(handlaggareOnly).isNotEmpty();
-		assertThat(handlaggareOnly).allSatisfy(option -> {
-			assertThat(option.getInternalDisplayName()).isNotBlank();
-			assertThat(option.getExternalDisplayName()).isNull();
-			assertThat(option.getGroup()).isNull();
-		});
+		assertThat(handlaggareOnly).isNotEmpty()
+			.allSatisfy(option -> {
+				assertThat(option.getInternalDisplayName()).isNotBlank();
+				assertThat(option.getExternalDisplayName()).isNull();
+				assertThat(option.getGroup()).isNull();
+			});
 	}
 
 	@Test

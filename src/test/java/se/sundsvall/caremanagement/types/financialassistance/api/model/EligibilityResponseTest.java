@@ -84,9 +84,9 @@ class EligibilityResponseTest {
 		final var b = EligibilityResponse.create().withReasonCode("NO_EXISTING_CASE").withWindowDays(90).withSuggestions(SUGGESTIONS);
 		final var c = EligibilityResponse.create().withReasonCode("MARITAL_STATUS_CHANGED");
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string");
 	}
 }

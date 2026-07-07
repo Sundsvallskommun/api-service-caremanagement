@@ -63,12 +63,12 @@ class ErrandTypeSchemaTest {
 		final var b = ErrandTypeSchema.create().withTypeSlug("slug").withApplicationType("NEW").withStatuses(STATUSES);
 		final var c = ErrandTypeSchema.create().withTypeSlug("other");
 
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
-		assertThat(a).isEqualTo(a);
-		assertThat(a).hasToString(b.toString());
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
+			.isNotEqualTo(c)
+			.isNotEqualTo(null)
+			.isNotEqualTo("string")
+			.isEqualTo(a)
+			.hasToString(b.toString());
 		assertThat(a.toString()).contains("slug", "NEW");
 	}
 }
