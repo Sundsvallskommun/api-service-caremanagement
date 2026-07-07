@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:54047
+- url: http://localhost:58495
   description: Generated server url
 tags:
 - name: Statistics
@@ -4710,7 +4710,7 @@ paths:
                 - $ref: "#/components/schemas/Problem"
                 - $ref: "#/components/schemas/ConstraintViolationProblem"
         "404":
-          description: Not Found
+          description: Not found
           content:
             application/problem+json:
               schema:
@@ -6302,12 +6302,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SectionApprovals"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
         "400":
           description: Bad request
           content:
@@ -6316,6 +6310,12 @@ paths:
                 oneOf:
                 - $ref: "#/components/schemas/Problem"
                 - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "500":
           description: Internal server error
           content:

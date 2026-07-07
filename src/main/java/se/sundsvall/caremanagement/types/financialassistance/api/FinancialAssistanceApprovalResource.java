@@ -42,6 +42,7 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
 		Problem.class, ConstraintViolationProblem.class
 	}))),
+	@ApiResponse(responseCode = "404", description = "Not found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
 	@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 })
 class FinancialAssistanceApprovalResource {
@@ -55,10 +56,7 @@ class FinancialAssistanceApprovalResource {
 	@GetMapping(path = "/financial-assistance/{errandId}/sections/approvals", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read the section approvals on an errand",
 		description = "The caseworker approval state of the three financial assistance view sections (CALCULATION = calculation, PAYMENT = payment, DECISION = decision). Always returns all three — a section never approved is present with approved=false. The same object is embedded in the errand view.",
-		responses = {
-			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
-		})
+		responses = @ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true))
 	ResponseEntity<SectionApprovals> getSectionApprovals(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
@@ -70,11 +68,7 @@ class FinancialAssistanceApprovalResource {
 	@PatchMapping(path = "/financial-assistance/{errandId}/sections/{section}/approval", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Set a section's approval (caseworker)",
 		description = "A caseworker verifies one of the financial assistance view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them.",
-		responses = {
-			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "400", description = "Bad Request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
-			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
-		})
+		responses = @ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true))
 	ResponseEntity<SectionApproval> setSectionApproval(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
