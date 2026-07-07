@@ -46,6 +46,15 @@ class ErrandEventServiceTest {
 	}
 
 	@Test
+	void deleteForErrandDisposesTheTenantScopedLog() {
+		when(repositoryMock.deleteByErrandIdAndMunicipalityIdAndNamespace("e1", "2281", "ns")).thenReturn(4);
+
+		service.deleteForErrand("2281", "ns", "e1");
+
+		verify(repositoryMock).deleteByErrandIdAndMunicipalityIdAndNamespace("e1", "2281", "ns");
+	}
+
+	@Test
 	void listForErrandMapsRepositoryResultsAndForwardsNoFilters() {
 		when(repositoryMock.findFiltered("2281", "ns", "e1", null, null, null, true)).thenReturn(List.of(
 			event("ev2", "READ", "joe001doe", FIXED_TIMESTAMP),

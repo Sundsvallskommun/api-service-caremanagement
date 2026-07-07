@@ -2,6 +2,8 @@ package se.sundsvall.caremanagement.eventlog.service;
 
 import java.time.ZoneId;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.eventlog.api.model.ErrandEventEntry;
@@ -13,6 +15,8 @@ import static java.time.OffsetDateTime.now;
 @Service
 @Transactional
 public class ErrandEventService {
+
+	private static final Logger LOG = LoggerFactory.getLogger(ErrandEventService.class);
 
 	private final ErrandEventRepository repository;
 
@@ -34,6 +38,16 @@ public class ErrandEventService {
 	 */
 	public void recordDomainEvent(final ErrandEventEntity entity) {
 		repository.save(entity);
+	}
+
+	/**
+	 * Disposes an errand's entire activity log when the errand itself is deleted (gallrat). The event log is a legal
+	 * who/what/when record kept for the life of the errand, so it is removed only here — never on a time or size basis —
+	 * matching how the other modules clean up their errand-scoped data on {@code ErrandDeleted}.
+	 */
+	public void deleteForErrand(final String municipalityId, final String namespace, final String errandId) {
+		final var deleted = repository.deleteByErrandIdAndMunicipalityIdAndNamespace(errandId, municipalityId, namespace);
+		LOG.info("Disposed {} event(s) for deleted errand {}", deleted, errandId);
 	}
 
 	/**

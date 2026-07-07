@@ -15,6 +15,8 @@ import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEnti
 import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -72,13 +74,12 @@ class ErrandEventDomainListenerTest {
 	}
 
 	@Test
-	void recordsDeletion() {
+	void disposesLogOnDeletionInsteadOfRecording() {
 		listener.on(new ErrandDeleted(ERRAND_ID, "FINANCIAL_ASSISTANCE", "2281", "EB", "edwmol", TS));
 
-		final var entity = capture();
-		assertThat(entity.getAction()).isEqualTo("DELETE");
-		assertThat(entity.getTarget()).isEqualTo("errand");
-		assertThat(entity.getActor()).isEqualTo("edwmol");
+		// The errand is gallrat: its whole log is disposed, not appended to.
+		verify(serviceMock).deleteForErrand("2281", "EB", ERRAND_ID);
+		verify(serviceMock, never()).recordDomainEvent(any());
 	}
 
 	@Test
