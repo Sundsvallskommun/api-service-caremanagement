@@ -3,9 +3,13 @@ package se.sundsvall.caremanagement.eventlog.web;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -16,6 +20,7 @@ import se.sundsvall.dept44.support.Identifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
@@ -140,58 +145,26 @@ class ErrandEventInterceptorTest {
 		assertThat(capture().getRequestId()).isEqualTo("rid-123");
 	}
 
-	@Test
-	void skipsEligibilityRouteWithNoErrandId() {
-		stubMethodAndUri("POST", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/eligibility");
+	@ParameterizedTest(name = "skips {0} {1}")
+	@MethodSource
+	void skipsNonRecordableRoute(final String method, final String uri) {
+		stubMethodAndUri(method, uri);
 
 		interceptor().afterCompletion(request, response, new Object(), null);
 
 		verifyNoInteractions(serviceMock);
 	}
 
-	@Test
-	void skipsErrandCollectionRoute() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
-	void skipsNonErrandRoute() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/metadata");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
-	void skipsReadsOfTheEventLogItself() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/events");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
-	void skipsUnreadCountPolls() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/unread-count");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
-	void skipsMarkAsReadCalls() {
-		stubMethodAndUri("POST", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/read");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
+	static Stream<Arguments> skipsNonRecordableRoute() {
+		return Stream.of(
+			arguments("POST", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/eligibility"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/metadata"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/events"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/unread-count"),
+			arguments("POST", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/read"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/notes/count"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/" + ERRAND_ID + "/warnings/count"));
 	}
 
 	@Test
@@ -201,24 +174,6 @@ class ErrandEventInterceptorTest {
 		interceptor().afterCompletion(request, response, new Object(), null);
 
 		assertThat(capture().getTarget()).isEqualTo("messages");
-	}
-
-	@Test
-	void skipsBadgeCountReads() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/notes/count");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
-	void skipsFinancialAssistanceCountReads() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/" + ERRAND_ID + "/warnings/count");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
 	}
 
 	@Test

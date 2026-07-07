@@ -88,6 +88,45 @@ class FinancialAssistanceDataTest {
 		assertThat(data.getHasAssets()).isFalse();
 		assertThat(data.getStaysInMunicipality()).isTrue();
 		assertThat(data.getStayDescription()).isEqualTo("Lives at the registered address");
+	}
+
+	@Test
+	void builderMethods2() {
+		final var data = FinancialAssistanceData.create()
+			.withApplicationType("NEW")
+			.withMaritalStatus("SINGLE")
+			.withPeriodMonth(6)
+			.withPeriodYear(2026)
+			.withPeriodChoice("CURRENT_MONTH")
+			.withNormType(List.of("NATIONAL_NORM"))
+			.withOtherBenefitDescription("Establishment benefit")
+			.withLivelihoodDescription("Söker arbete")
+			.withHasChildrenUnder21(true)
+			.withChildrenResidenceChanged(false)
+			.withChildrenResidenceChangeDescription("Barnen bor växelvis")
+			.withHousingForm("RENTAL")
+			.withHousingPersonCount(3)
+			.withHousingRoomsPlusKitchen(3)
+			.withHousingDescription("Trerumslägenhet")
+			.withHousingChanged(false)
+			.withHousingChangeDescription("Flyttade i maj")
+			.withHasIncomes(true)
+			.withHasPendingBenefits(false)
+			.withHasAssets(false)
+			.withStaysInMunicipality(true)
+			.withStayDescription("Lives at the registered address")
+			.withAttestation(true)
+			.withAttestedAt(ATTESTED_AT)
+			.withChildren(CHILDREN)
+			.withCosts(COSTS)
+			.withIncomes(INCOMES)
+			.withPendingBenefits(PENDING_BENEFITS)
+			.withAssets(ASSETS)
+			.withPersons(PERSONS)
+			.withPlannings(PLANNINGS)
+			.withPlannedActivities(PLANNED_ACTIVITIES)
+			.withJobApplications(JOB_APPLICATIONS);
+
 		assertThat(data.getAttestation()).isTrue();
 		assertThat(data.getAttestedAt()).isEqualTo(ATTESTED_AT);
 		assertThat(data.getChildren()).isEqualTo(CHILDREN);

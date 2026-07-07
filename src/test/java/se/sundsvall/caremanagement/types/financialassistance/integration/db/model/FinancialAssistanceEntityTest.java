@@ -24,7 +24,6 @@ class FinancialAssistanceEntityTest {
 		final var plannings = List.of(FaPlanning.create().withPerson("Anna").withPlanningType("WORK"));
 		final var plannedActivities = List.of(FaPlannedActivity.create().withPerson("Anna").withActivity("Jobbsökning"));
 		final var jobApplications = List.of(FaJobApplication.create().withPerson("Anna").withJobTitle("Snickare"));
-
 		final var entity = FinancialAssistanceEntity.create()
 			.withErrandId("errand-1")
 			.withApplicationType("NEW")
@@ -85,6 +84,57 @@ class FinancialAssistanceEntityTest {
 		assertThat(entity.getHasPendingBenefits()).isFalse();
 		assertThat(entity.getHasAssets()).isTrue();
 		assertThat(entity.getStaysInMunicipality()).isTrue();
+	}
+
+	@Test
+	void builderMethods2() {
+		final var children = List.of(FaChild.create().withPartyId("20180101-1234").withFirstName("Kid"));
+		final var costs = List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("5000.00")));
+		final var incomes = List.of(FaIncome.create().withIncomeType("SALARY").withAmount(new BigDecimal("12000.00")));
+		final var pendingBenefits = List.of(FaPendingBenefit.create().withBenefitName("BOSTADSBIDRAG").withApplicantName("Anna"));
+		final var assets = List.of(FaAsset.create().withAssetCategory("VEHICLE").withValue(new BigDecimal("80000.00")));
+		final var persons = List.of(FaPerson.create().withRole("APPLICANT").withPartyId("19900101-1234"));
+		final var plannings = List.of(FaPlanning.create().withPerson("Anna").withPlanningType("WORK"));
+		final var plannedActivities = List.of(FaPlannedActivity.create().withPerson("Anna").withActivity("Jobbsökning"));
+		final var jobApplications = List.of(FaJobApplication.create().withPerson("Anna").withJobTitle("Snickare"));
+		final var entity = FinancialAssistanceEntity.create()
+			.withErrandId("errand-1")
+			.withApplicationType("NEW")
+			.withMaritalStatus("SINGLE")
+			.withPeriodMonth(6)
+			.withPeriodYear(2026)
+			.withPeriodChoice("CURRENT_MONTH")
+			.withNormType(List.of("NATIONAL_NORM"))
+			.withOtherBenefitDescription("Establishment benefit")
+			.withLivelihoodDescription("Söker arbete")
+			.withHasChildrenUnder21(true)
+			.withChildrenResidenceChanged(false)
+			.withChildrenResidenceChangeDescription("Bor växelvis")
+			.withHousingForm("RENTAL")
+			.withHousingPersonCount(3)
+			.withHousingRoomsPlusKitchen(3)
+			.withHousingDescription("Trerumslägenhet")
+			.withHousingChanged(false)
+			.withHousingChangeDescription("Flyttade i maj")
+			.withHasIncomes(true)
+			.withHasPendingBenefits(false)
+			.withHasAssets(true)
+			.withStaysInMunicipality(true)
+			.withStayDescription("Lives at the registered address")
+			.withAttestation(true)
+			.withAttestedAt(ATTESTED_AT)
+			.withChildren(children)
+			.withCosts(costs)
+			.withIncomes(incomes)
+			.withPendingBenefits(pendingBenefits)
+			.withAssets(assets)
+			.withPersons(persons)
+			.withPlannings(plannings)
+			.withPlannedActivities(plannedActivities)
+			.withJobApplications(jobApplications)
+			.withCreated(CREATED)
+			.withModified(MODIFIED);
+
 		assertThat(entity.getStayDescription()).isEqualTo("Lives at the registered address");
 		assertThat(entity.getAttestation()).isTrue();
 		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);
@@ -112,7 +162,6 @@ class FinancialAssistanceEntityTest {
 		final var plannings = List.of(FaPlanning.create().withPlanningType("WORK"));
 		final var plannedActivities = List.of(FaPlannedActivity.create().withActivity("Jobbsökning"));
 		final var jobApplications = List.of(FaJobApplication.create().withJobTitle("Snickare"));
-
 		final var entity = new FinancialAssistanceEntity();
 		entity.setErrandId("errand-2");
 		entity.setApplicationType("RENEWAL");
@@ -173,6 +222,57 @@ class FinancialAssistanceEntityTest {
 		assertThat(entity.getHasPendingBenefits()).isTrue();
 		assertThat(entity.getHasAssets()).isFalse();
 		assertThat(entity.getStaysInMunicipality()).isFalse();
+	}
+
+	@Test
+	void settersWork2() {
+		final var children = List.of(FaChild.create().withFirstName("Kid"));
+		final var costs = List.of(FaCost.create().withCostType("RENT"));
+		final var incomes = List.of(FaIncome.create().withIncomeType("SALARY"));
+		final var pendingBenefits = List.of(FaPendingBenefit.create().withBenefitName("BOSTADSBIDRAG"));
+		final var assets = List.of(FaAsset.create().withAssetCategory("VEHICLE"));
+		final var persons = List.of(FaPerson.create().withRole("APPLICANT"));
+		final var plannings = List.of(FaPlanning.create().withPlanningType("WORK"));
+		final var plannedActivities = List.of(FaPlannedActivity.create().withActivity("Jobbsökning"));
+		final var jobApplications = List.of(FaJobApplication.create().withJobTitle("Snickare"));
+		final var entity = new FinancialAssistanceEntity();
+		entity.setErrandId("errand-2");
+		entity.setApplicationType("RENEWAL");
+		entity.setMaritalStatus("COHABITING");
+		entity.setPeriodMonth(5);
+		entity.setPeriodYear(2026);
+		entity.setPeriodChoice("NEXT_MONTH");
+		entity.setNormType(List.of("OTHER_NORM"));
+		entity.setOtherBenefitDescription("Skuld");
+		entity.setLivelihoodDescription("Arbetslös");
+		entity.setHasChildrenUnder21(false);
+		entity.setChildrenResidenceChanged(true);
+		entity.setChildrenResidenceChangeDescription("Flytt");
+		entity.setHousingForm("SUBLET");
+		entity.setHousingPersonCount(3);
+		entity.setHousingRoomsPlusKitchen(2);
+		entity.setHousingDescription("Andrahand");
+		entity.setHousingChanged(true);
+		entity.setHousingChangeDescription("Ny adress");
+		entity.setHasIncomes(true);
+		entity.setHasPendingBenefits(true);
+		entity.setHasAssets(false);
+		entity.setStaysInMunicipality(false);
+		entity.setStayDescription("Utomlands del av månaden");
+		entity.setAttestation(true);
+		entity.setAttestedAt(ATTESTED_AT);
+		entity.setChildren(children);
+		entity.setCosts(costs);
+		entity.setIncomes(incomes);
+		entity.setPendingBenefits(pendingBenefits);
+		entity.setAssets(assets);
+		entity.setPersons(persons);
+		entity.setPlannings(plannings);
+		entity.setPlannedActivities(plannedActivities);
+		entity.setJobApplications(jobApplications);
+		entity.setCreated(CREATED);
+		entity.setModified(MODIFIED);
+
 		assertThat(entity.getStayDescription()).isEqualTo("Utomlands del av månaden");
 		assertThat(entity.getAttestation()).isTrue();
 		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);

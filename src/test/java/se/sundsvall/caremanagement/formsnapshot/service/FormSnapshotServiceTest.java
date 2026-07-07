@@ -1,9 +1,13 @@
 package se.sundsvall.caremanagement.formsnapshot.service;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -14,6 +18,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -58,38 +63,25 @@ class FormSnapshotServiceTest {
 		assertThat(entity.getCreated()).isNotNull();
 	}
 
-	@Test
-	void captureRejectsBlankPayload() {
-		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "  "))
+	@ParameterizedTest(name = "rejects {2}")
+	@MethodSource
+	void captureRejects(final String payload, final boolean alreadyExists, final String reason) {
+		if (alreadyExists) {
+			when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(true);
+		}
+
+		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, payload))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 		verify(repositoryMock, never()).save(any());
 	}
 
-	@Test
-	void captureRejectsWhenSnapshotAlreadyExists() {
-		when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(true);
-
-		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, VALID_PAYLOAD))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
-		verify(repositoryMock, never()).save(any());
-	}
-
-	@Test
-	void captureRejectsMalformedJson() {
-		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{not json"))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
-		verify(repositoryMock, never()).save(any());
-	}
-
-	@Test
-	void captureRejectsMissingSchemaVersion() {
-		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{\"sections\":[{\"id\":\"x\"}]}"))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
-		verify(repositoryMock, never()).save(any());
+	static Stream<Arguments> captureRejects() {
+		return Stream.of(
+			arguments("  ", false, "a blank payload"),
+			arguments("{not json", false, "malformed JSON"),
+			arguments("{\"sections\":[{\"id\":\"x\"}]}", false, "a missing schema version"),
+			arguments(VALID_PAYLOAD, true, "a snapshot that already exists"));
 	}
 
 	@Test

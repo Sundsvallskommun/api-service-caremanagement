@@ -43,7 +43,6 @@ class FinancialAssistanceMapperTest {
 	@Test
 	void toEntityMapsEverything() {
 		final var data = fullData();
-
 		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
 
 		assertThat(entity).isNotNull();
@@ -68,11 +67,17 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getHasIncomes()).isTrue();
 		assertThat(entity.getHasPendingBenefits()).isTrue();
 		assertThat(entity.getHasAssets()).isTrue();
+	}
+
+	@Test
+	void toEntityMapsEverything2() {
+		final var data = fullData();
+		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
+
 		assertThat(entity.getStaysInMunicipality()).isTrue();
 		assertThat(entity.getStayDescription()).isEqualTo("Lives at the registered address");
 		assertThat(entity.getAttestation()).isTrue();
 		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);
-
 		assertThat(entity.getChildren()).hasSize(1);
 		assertThat(entity.getChildren().getFirst().getPartyId()).isEqualTo("20180101-1234");
 		assertThat(entity.getChildren().getFirst().getFirstName()).isEqualTo("Kid");
@@ -80,24 +85,27 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getChildren().getFirst().getSchoolName()).isEqualTo("Skolan");
 		assertThat(entity.getChildren().getFirst().getResidenceExtent()).isEqualTo("FULL");
 		assertThat(entity.getChildren().getFirst().getDaysInHome()).isEqualTo(30);
-
 		assertThat(entity.getCosts()).hasSize(1);
 		assertThat(entity.getCosts().getFirst().getCostType()).isEqualTo("RENT");
 		assertThat(entity.getCosts().getFirst().getAppliedAmount()).isEqualByComparingTo("5000.00");
 		assertThat(entity.getCosts().getFirst().getOtherSubType()).isEqualTo("OTHER_SUB");
 		assertThat(entity.getCosts().getFirst().getSpecification()).isEqualTo("Spec");
 		assertThat(entity.getCosts().getFirst().getRecipientOrPeriod()).isEqualTo("Juni");
-
 		assertThat(entity.getIncomes()).hasSize(1);
 		assertThat(entity.getIncomes().getFirst().getIncomeType()).isEqualTo("SALARY");
 		assertThat(entity.getIncomes().getFirst().getAmount()).isEqualByComparingTo("12000.00");
 		assertThat(entity.getIncomes().getFirst().getIncomeDate()).isEqualTo(DATE);
 		assertThat(entity.getIncomes().getFirst().getRecipient()).isEqualTo("Anna");
+	}
+
+	@Test
+	void toEntityMapsEverything3() {
+		final var data = fullData();
+		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
 
 		assertThat(entity.getPendingBenefits()).hasSize(1);
 		assertThat(entity.getPendingBenefits().getFirst().getBenefitName()).isEqualTo("BOSTADSBIDRAG");
 		assertThat(entity.getPendingBenefits().getFirst().getApplicantName()).isEqualTo("Anna");
-
 		assertThat(entity.getAssets()).hasSize(1);
 		assertThat(entity.getAssets().getFirst().getAssetCategory()).isEqualTo("VEHICLE");
 		assertThat(entity.getAssets().getFirst().getDescription()).isEqualTo("Bil");
@@ -110,7 +118,6 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getAssets().getFirst().getVehicleType()).isEqualTo("CAR");
 		assertThat(entity.getAssets().getFirst().getRegistrationNumber()).isEqualTo("ABC123");
 		assertThat(entity.getAssets().getFirst().getPurchaseDate()).isEqualTo(DATE);
-
 		assertThat(entity.getPersons()).hasSize(1);
 		assertThat(entity.getPersons().getFirst().getRole()).isEqualTo("APPLICANT");
 		assertThat(entity.getPersons().getFirst().getPartyId()).isEqualTo("19900101-1234");
@@ -118,6 +125,13 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getPersons().getFirst().getInterpreterLanguage()).isEqualTo("Arabiska");
 		assertThat(entity.getPersons().getFirst().getHadWorkLast12Months()).isFalse();
 		assertThat(entity.getPersons().getFirst().getHadWorkDescription()).isEqualTo("Inget arbete");
+	}
+
+	@Test
+	void toEntityMapsEverything4() {
+		final var data = fullData();
+		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
+
 		assertThat(entity.getPersons().getFirst().getPaymentMethod()).isEqualTo("BANK");
 		assertThat(entity.getPersons().getFirst().getClearingNumber()).isEqualTo("1234");
 		assertThat(entity.getPersons().getFirst().getAccountNumber()).isEqualTo("567890");
@@ -127,7 +141,6 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getPersons().getFirst().getPhone()).isEqualTo("+46701234567");
 		assertThat(entity.getPersons().getFirst().getNotifyByEmail()).isTrue();
 		assertThat(entity.getPersons().getFirst().getNotifyBySms()).isFalse();
-
 		assertThat(entity.getPlannings()).hasSize(1);
 		assertThat(entity.getPlannings().getFirst().getPerson()).isEqualTo("Anna");
 		assertThat(entity.getPlannings().getFirst().getPlanningType()).isEqualTo("WORK");
@@ -137,13 +150,18 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getPlannings().getFirst().getSfiStudyPath()).isEqualTo("PATH_1");
 		assertThat(entity.getPlannings().getFirst().getSfiCourse()).isEqualTo("KURS_A");
 		assertThat(entity.getPlannings().getFirst().getOtherDescription()).isEqualTo("Other");
-
 		assertThat(entity.getPlannedActivities()).hasSize(1);
 		assertThat(entity.getPlannedActivities().getFirst().getPerson()).isEqualTo("Anna");
 		assertThat(entity.getPlannedActivities().getFirst().getActivity()).isEqualTo("Jobbsökning");
 		assertThat(entity.getPlannedActivities().getFirst().getPeriodFrom()).isEqualTo(DATE);
-		assertThat(entity.getPlannedActivities().getFirst().getPeriodTo()).isEqualTo(DATE.plusMonths(1));
+	}
 
+	@Test
+	void toEntityMapsEverything5() {
+		final var data = fullData();
+		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
+
+		assertThat(entity.getPlannedActivities().getFirst().getPeriodTo()).isEqualTo(DATE.plusMonths(1));
 		assertThat(entity.getJobApplications()).hasSize(1);
 		assertThat(entity.getJobApplications().getFirst().getPerson()).isEqualTo("Anna");
 		assertThat(entity.getJobApplications().getFirst().getApplicationDate()).isEqualTo(DATE);
@@ -154,7 +172,6 @@ class FinancialAssistanceMapperTest {
 	@Test
 	void toDataMapsEverything() {
 		final var entity = fullEntity();
-
 		final var data = FinancialAssistanceMapper.toData(entity);
 
 		assertThat(data).isNotNull();
@@ -179,10 +196,16 @@ class FinancialAssistanceMapperTest {
 		assertThat(data.getHasPendingBenefits()).isFalse();
 		assertThat(data.getHasAssets()).isFalse();
 		assertThat(data.getStaysInMunicipality()).isFalse();
+	}
+
+	@Test
+	void toDataMapsEverything2() {
+		final var entity = fullEntity();
+		final var data = FinancialAssistanceMapper.toData(entity);
+
 		assertThat(data.getStayDescription()).isEqualTo("Bor utomlands");
 		assertThat(data.getAttestation()).isFalse();
 		assertThat(data.getAttestedAt()).isEqualTo(ATTESTED_AT);
-
 		assertThat(data.getChildren()).hasSize(1);
 		assertThat(data.getChildren().getFirst().getFirstName()).isEqualTo("Kid");
 		assertThat(data.getCosts()).hasSize(1);
@@ -202,6 +225,13 @@ class FinancialAssistanceMapperTest {
 		assertThat(data.getPlannings()).hasSize(1);
 		assertThat(data.getPlannings().getFirst().getPlanningType()).isEqualTo("WORK");
 		assertThat(data.getPlannedActivities()).hasSize(1);
+	}
+
+	@Test
+	void toDataMapsEverything3() {
+		final var entity = fullEntity();
+		final var data = FinancialAssistanceMapper.toData(entity);
+
 		assertThat(data.getPlannedActivities().getFirst().getActivity()).isEqualTo("Jobbsökning");
 		assertThat(data.getJobApplications()).hasSize(1);
 		assertThat(data.getJobApplications().getFirst().getJobTitle()).isEqualTo("Snickare");
