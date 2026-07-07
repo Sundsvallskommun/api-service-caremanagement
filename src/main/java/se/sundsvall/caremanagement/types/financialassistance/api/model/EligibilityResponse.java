@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -14,7 +15,7 @@ import java.util.Objects;
 @Schema(description = "Eligibility result: which application(s) the citizen should be offered, plus the supporting facts.")
 public class EligibilityResponse {
 
-	@Schema(description = "Suggested applications, ordered with the recommended one first.")
+	@ArraySchema(arraySchema = @Schema(description = "Suggested applications, ordered with the recommended one first."), schema = @Schema(implementation = ApplicationSuggestion.class))
 	private List<ApplicationSuggestion> suggestions;
 
 	@Schema(description = "Machine-readable code for the gate that drove the suggestion",

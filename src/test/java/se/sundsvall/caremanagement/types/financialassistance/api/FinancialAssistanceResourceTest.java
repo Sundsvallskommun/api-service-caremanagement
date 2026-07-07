@@ -26,6 +26,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateWarningRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
@@ -316,8 +317,28 @@ class FinancialAssistanceResourceTest {
 	}
 
 	@Test
+	void createWarning() {
+		when(serviceMock.createWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(CreateWarningRequest.class)))
+			.thenReturn(Warning.create().withId("w1").withType("MISSING_SSBTEK").withStatus("OPEN"));
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/errand-1/warnings").build(base()))
+			.contentType(APPLICATION_JSON)
+			.bodyValue(CreateWarningRequest.create().withType("MISSING_SSBTEK").withMessage("Inkomst saknas"))
+			.exchange()
+			.expectStatus().isCreated()
+			.expectBody(Warning.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getId()).isEqualTo("w1");
+		verify(serviceMock).createWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(CreateWarningRequest.class));
+	}
+
+	@Test
 	void listWarnings() {
-		when(serviceMock.listWarnings(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1")))
+		when(serviceMock.listWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1"))
 			.thenReturn(List.of(Warning.create().withId("w1").withType("MISSING_SSBTEK").withStatus("OPEN")));
 
 		final var response = webTestClient.get()
@@ -330,7 +351,7 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(response).hasSize(1);
 		assertThat(response.getFirst().getType()).isEqualTo("MISSING_SSBTEK");
-		verify(serviceMock).listWarnings(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"));
+		verify(serviceMock).listWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1");
 	}
 
 	@Test
@@ -352,7 +373,7 @@ class FinancialAssistanceResourceTest {
 
 	@Test
 	void updateWarning() {
-		when(serviceMock.updateWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("w1"), eq("CLOSED")))
+		when(serviceMock.updateWarning(MUNICIPALITY_ID, NAMESPACE, "errand-1", "w1", "CLOSED"))
 			.thenReturn(Warning.create().withId("w1").withStatus("CLOSED"));
 
 		final var response = webTestClient.patch()
@@ -365,7 +386,7 @@ class FinancialAssistanceResourceTest {
 
 		assertThat(response).isNotNull();
 		assertThat(response.getStatus()).isEqualTo("CLOSED");
-		verify(serviceMock).updateWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), eq("w1"), eq("CLOSED"));
+		verify(serviceMock).updateWarning(MUNICIPALITY_ID, NAMESPACE, "errand-1", "w1", "CLOSED");
 	}
 
 	@Test
@@ -413,7 +434,7 @@ class FinancialAssistanceResourceTest {
 
 	@Test
 	void getDraft() {
-		when(serviceMock.getDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1")))
+		when(serviceMock.getDraft(MUNICIPALITY_ID, NAMESPACE, "errand-1"))
 			.thenReturn(CalculationDraft.create().withErrandId("errand-1")
 				.withIncomes(List.of(NormIncomeRow.create().withTypeName("Bostadsbidrag").withApplicantProcessAmount(new BigDecimal("1850")))));
 
@@ -428,7 +449,7 @@ class FinancialAssistanceResourceTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getIncomes()).hasSize(1);
 		assertThat(response.getIncomes().getFirst().getTypeName()).isEqualTo("Bostadsbidrag");
-		verify(serviceMock).getDraft(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"));
+		verify(serviceMock).getDraft(MUNICIPALITY_ID, NAMESPACE, "errand-1");
 	}
 
 	@Test
