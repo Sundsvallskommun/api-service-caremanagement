@@ -1,0 +1,117 @@
+package se.sundsvall.caremanagement.types.financialassistance.api;
+
+import java.math.BigDecimal;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssistanceResourceTest {
+
+	@Test
+	void prepareCalculation() {
+		when(serviceMock.prepareCalculation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class)))
+			.thenReturn(CalculationResponse.create().withInformationComplete(false).withMissingIncomeTypes(List.of("Dagersättning")));
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/calculation/prepare").build(base()))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(CalculationResponse.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.isInformationComplete()).isFalse();
+		assertThat(response.getMissingIncomeTypes()).containsExactly("Dagersättning");
+		verify(serviceMock).prepareCalculation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class));
+	}
+
+	@Test
+	void getDraft() {
+		when(serviceMock.getDraft(MUNICIPALITY_ID, NAMESPACE, "errand-1"))
+			.thenReturn(CalculationDraft.create().withErrandId("errand-1")
+				.withIncomes(List.of(NormIncomeRow.create().withTypeName("Bostadsbidrag").withApplicantProcessAmount(new BigDecimal("1850")))));
+
+		final var response = webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft").build(base()))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(CalculationDraft.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getIncomes()).hasSize(1);
+		assertThat(response.getIncomes().getFirst().getTypeName()).isEqualTo("Bostadsbidrag");
+		verify(serviceMock).getDraft(MUNICIPALITY_ID, NAMESPACE, "errand-1");
+	}
+
+	@Test
+	void patchDraftHeader() {
+		when(serviceMock.patchDraftHeader(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormHeaderInput.class)))
+			.thenReturn(CalculationDraft.create().withNormId(5).withHouseholdSize(1));
+
+		final var response = webTestClient.patch()
+			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/header").build(base()))
+			.bodyValue(new NormHeaderInput().withNormId(5).withHasCustomHouseholdSize(true).withHouseholdSize(1))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(CalculationDraft.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getNormId()).isEqualTo(5);
+		verify(serviceMock).patchDraftHeader(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormHeaderInput.class));
+	}
+
+	@Test
+	void commitCalculation() {
+		when(serviceMock.commitCalculation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class)))
+			.thenReturn(CalculationResponse.create().withCalculationId(4711));
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/calculation/commit").build(base()))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(CalculationResponse.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getCalculationId()).isEqualTo(4711);
+		verify(serviceMock).commitCalculation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class));
+	}
+
+	@Test
+	void commitFromApplication() {
+		when(serviceMock.commitFromApplication(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class)))
+			.thenReturn(CalculationResponse.create().withCalculationId(5001));
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/calculation/from-application").build(base()))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(CalculationResponse.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getCalculationId()).isEqualTo(5001);
+		verify(serviceMock).commitFromApplication(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class));
+	}
+
+}
