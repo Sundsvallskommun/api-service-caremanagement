@@ -11,8 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseSummary;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ApplicationSuggestion;
@@ -53,7 +53,7 @@ class EligibilityServiceTest {
 	private static final YearMonth NEXT = CURRENT.plusMonths(1);
 
 	@Mock
-	private ErrandRepository errandRepositoryMock;
+	private ErrandQueryService errandQueryServiceMock;
 
 	@Mock
 	private FinancialAssistanceRepository financialAssistanceRepositoryMock;
@@ -68,7 +68,7 @@ class EligibilityServiceTest {
 	private RecentlyClosedErrandService recentlyClosedErrandServiceMock;
 
 	private EligibilityService service() {
-		return new EligibilityService(errandRepositoryMock, financialAssistanceRepositoryMock, lifecareEbCaseServiceMock,
+		return new EligibilityService(errandQueryServiceMock, financialAssistanceRepositoryMock, lifecareEbCaseServiceMock,
 			citizenServiceMock, recentlyClosedErrandServiceMock, 90, false);
 	}
 
@@ -98,8 +98,8 @@ class EligibilityServiceTest {
 	private void cmErrandWithPeriod(final YearMonth period, final OffsetDateTime created, final FaPerson... persons) {
 		when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(APPLICANT)).thenReturn(List.of(ERRAND_ID));
 		lenient().when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(CO_APPLICANT)).thenReturn(List.of(ERRAND_ID));
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL)
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL)
 				.withCreated(created != null ? created : OffsetDateTime.now())));
 		final var fa = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withPersons(List.of(persons));
 		Optional.ofNullable(period).ifPresent(p -> fa.withPeriodMonth(p.getMonthValue()).withPeriodYear(p.getYear()));
@@ -256,8 +256,8 @@ class EligibilityServiceTest {
 		// exists (Lifecare footprint) → same household size, new person → new constellation → NY.
 		when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(APPLICANT)).thenReturn(List.of(ERRAND_ID));
 		when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(otherCo)).thenReturn(List.of());
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL).withCreated(OffsetDateTime.now())));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL).withCreated(OffsetDateTime.now())));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(
 			FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)
 				.withPersons(List.of(person(ROLE_APPLICANT, APPLICANT), person(ROLE_CO_APPLICANT, CO_APPLICANT)))));

@@ -16,7 +16,7 @@ import static se.sundsvall.caremanagement.rpa.integration.configuration.RpaConfi
  * RPA task. The {@code X-UIPATH-OrganizationUnitId} header selects the Orchestrator folder (per municipality). OAuth2
  * is applied globally by {@link RpaConfiguration}.
  */
-@FeignClient(name = CLIENT_ID, url = "${integration.rpa.url:http://localhost}", configuration = RpaConfiguration.class)
+@FeignClient(name = CLIENT_ID, url = "${integration.rpa.url}", configuration = RpaConfiguration.class)
 @CircuitBreaker(name = CLIENT_ID)
 public interface RpaClient {
 

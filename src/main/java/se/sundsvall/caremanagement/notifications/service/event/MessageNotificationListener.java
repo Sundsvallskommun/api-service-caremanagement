@@ -7,7 +7,7 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.conversation.service.event.MessageCreated;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.notifications.api.model.Notification;
 import se.sundsvall.caremanagement.notifications.service.NotificationService;
 
@@ -30,11 +30,11 @@ class MessageNotificationListener {
 	private static final String INBOUND = "INBOUND";
 	private static final String DESCRIPTION = "Nytt meddelande från sökanden";
 
-	private final ErrandRepository errandRepository;
+	private final ErrandQueryService errandQueryService;
 	private final NotificationService notificationService;
 
-	MessageNotificationListener(final ErrandRepository errandRepository, final NotificationService notificationService) {
-		this.errandRepository = errandRepository;
+	MessageNotificationListener(final ErrandQueryService errandQueryService, final NotificationService notificationService) {
+		this.errandQueryService = errandQueryService;
 		this.notificationService = notificationService;
 	}
 
@@ -44,7 +44,7 @@ class MessageNotificationListener {
 			return;
 		}
 
-		errandRepository.findByIdAndNamespaceAndMunicipalityId(event.errandId(), event.namespace(), event.municipalityId())
+		errandQueryService.findErrand(event.municipalityId(), event.namespace(), event.errandId())
 			.ifPresent(errand -> {
 				final var ownerId = Optional.ofNullable(errand.getAssignedUserId())
 					.filter(StringUtils::hasText)

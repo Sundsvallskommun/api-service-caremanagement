@@ -60,32 +60,32 @@ public class Note {
 		return modified;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setErrandId(final String v) {
-		this.errandId = v;
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
 	}
 
-	public void setBody(final String v) {
-		this.body = v;
+	public void setBody(final String body) {
+		this.body = body;
 	}
 
-	public void setAuthor(final String v) {
-		this.author = v;
+	public void setAuthor(final String author) {
+		this.author = author;
 	}
 
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
 	}
 
-	public void setModifiedBy(final String v) {
-		this.modifiedBy = v;
+	public void setModifiedBy(final String modifiedBy) {
+		this.modifiedBy = modifiedBy;
 	}
 
-	public void setModified(final OffsetDateTime v) {
-		this.modified = v;
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
 	}
 
 	public Note withId(final String id) {

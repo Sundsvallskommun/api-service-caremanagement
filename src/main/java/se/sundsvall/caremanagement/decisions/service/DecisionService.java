@@ -6,8 +6,8 @@ import java.util.Set;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
@@ -32,13 +32,13 @@ public class DecisionService {
 	private static final String ERRAND_NOT_FOUND_MESSAGE = "No errand with id '%s' found in namespace '%s' for municipality id '%s'";
 	private static final String DECISION_NOT_FOUND_MESSAGE = "No decision with id '%s' found on errand '%s' in namespace '%s' for municipality id '%s'";
 
-	private final ErrandRepository errandRepository;
+	private final ErrandQueryService errandQueryService;
 	private final DecisionRepository decisionRepository;
 	private final ApplicationEventPublisher publisher;
 	private final ErrandAccessGuard errandGuard;
 
-	DecisionService(final ErrandRepository errandRepository, final DecisionRepository decisionRepository, final ApplicationEventPublisher publisher, final ErrandAccessGuard errandGuard) {
-		this.errandRepository = errandRepository;
+	DecisionService(final ErrandQueryService errandQueryService, final DecisionRepository decisionRepository, final ApplicationEventPublisher publisher, final ErrandAccessGuard errandGuard) {
+		this.errandQueryService = errandQueryService;
 		this.decisionRepository = decisionRepository;
 		this.publisher = publisher;
 		this.errandGuard = errandGuard;
@@ -69,8 +69,8 @@ public class DecisionService {
 		decisionRepository.delete(entity);
 	}
 
-	private ErrandEntity findErrand(final String municipalityId, final String namespace, final String errandId) {
-		return errandRepository.findByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)
+	private Errand findErrand(final String municipalityId, final String namespace, final String errandId) {
+		return errandQueryService.findErrand(municipalityId, namespace, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERRAND_NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId)));
 	}
 
@@ -80,7 +80,7 @@ public class DecisionService {
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, DECISION_NOT_FOUND_MESSAGE.formatted(decisionId, errandId, namespace, municipalityId)));
 	}
 
-	private void publishDecisionNotifications(final String municipalityId, final String namespace, final ErrandEntity errand, final Decision decision) {
+	private void publishDecisionNotifications(final String municipalityId, final String namespace, final Errand errand, final Decision decision) {
 		final Set<String> recipients = new LinkedHashSet<>();
 		if (hasText(errand.getReporterUserId())) {
 			recipients.add(errand.getReporterUserId());

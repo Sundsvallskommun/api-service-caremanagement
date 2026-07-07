@@ -7,9 +7,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.event.ErrandStatusChanged;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
@@ -34,7 +34,7 @@ class FinancialAssistanceReleaseListenerTest {
 	private FinancialAssistanceRepository repositoryMock;
 
 	@Mock
-	private ErrandRepository errandRepositoryMock;
+	private ErrandQueryService errandQueryServiceMock;
 
 	@Mock
 	private FinancialAssistanceProcessStarter processStarterMock;
@@ -49,8 +49,8 @@ class FinancialAssistanceReleaseListenerTest {
 
 	@Test
 	void startsProcessOnManualReviewRelease() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID))); // no process instance yet
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID))); // no process instance yet
 		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
 
@@ -64,13 +64,13 @@ class FinancialAssistanceReleaseListenerTest {
 		// A normal renewal moves RECEIVED → UNDER_REVIEW (process worker) — must NOT re-trigger a start.
 		listener.on(event(STATUS_RECEIVED, STATUS_UNDER_REVIEW));
 
-		verifyNoInteractions(errandRepositoryMock, repositoryMock, processStarterMock);
+		verifyNoInteractions(errandQueryServiceMock, repositoryMock, processStarterMock);
 	}
 
 	@Test
 	void skipsWhenErrandAlreadyHasProcessInstance() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID).withProcessInstanceId("already-running")));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withProcessInstanceId("already-running")));
 
 		listener.on(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
 
@@ -79,7 +79,7 @@ class FinancialAssistanceReleaseListenerTest {
 
 	@Test
 	void noopWhenErrandEnvelopeMissing() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(Optional.empty());
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Optional.empty());
 
 		listener.on(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
 
@@ -89,8 +89,8 @@ class FinancialAssistanceReleaseListenerTest {
 
 	@Test
 	void noopWhenTypedDataMissing() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID)));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
 
 		listener.on(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));

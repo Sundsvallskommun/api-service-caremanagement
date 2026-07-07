@@ -386,7 +386,11 @@ public class DraftService {
 	}
 
 	private static String personKey(final FaNormPersonEntity e) {
-		return e.getPartyId() + "|" + e.getRole();
+		// partyId is the identity when present (applicants always carry one); children may have none, so fall back to the
+		// name. Without the fallback several partyId-less children collapse onto one "null|<role>" key and only the last
+		// listed is counted/reconciled.
+		final var identity = ofNullable(e.getPartyId()).filter(StringUtils::hasText).orElseGet(e::getName);
+		return identity + "|" + e.getRole();
 	}
 
 	// --- process-column copy (refresh) ---

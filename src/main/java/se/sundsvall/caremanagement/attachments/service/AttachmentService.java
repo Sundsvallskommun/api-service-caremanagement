@@ -17,8 +17,8 @@ import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEn
 import se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentQueryService;
 import se.sundsvall.caremanagement.conversation.spi.Direction;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Comparator.nullsLast;
@@ -61,13 +61,13 @@ public class AttachmentService {
 	/** Sender-role facet — the application files and the consolidated client PDF are the applicant's. */
 	private static final String SENDER_CLIENT = Direction.INBOUND.role();
 
-	private final ErrandRepository errandRepository;
+	private final ErrandQueryService errandQueryService;
 	private final AttachmentRepository attachmentRepository;
 	private final ConversationAttachmentQueryService conversationAttachmentQueryService;
 
-	AttachmentService(final ErrandRepository errandRepository, final AttachmentRepository attachmentRepository,
+	AttachmentService(final ErrandQueryService errandQueryService, final AttachmentRepository attachmentRepository,
 		final ConversationAttachmentQueryService conversationAttachmentQueryService) {
-		this.errandRepository = errandRepository;
+		this.errandQueryService = errandQueryService;
 		this.attachmentRepository = attachmentRepository;
 		this.conversationAttachmentQueryService = conversationAttachmentQueryService;
 	}
@@ -268,13 +268,13 @@ public class AttachmentService {
 	 * block here rather than both passing the existence check and inserting duplicates.
 	 */
 	private void lockErrand(final String municipalityId, final String namespace, final String errandId) {
-		if (!errandRepository.existsWithLockingByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)) {
+		if (!errandQueryService.existsWithLock(municipalityId, namespace, errandId)) {
 			throw Problem.valueOf(NOT_FOUND, ERRAND_NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId));
 		}
 	}
 
-	private ErrandEntity getErrand(final String municipalityId, final String namespace, final String errandId) {
-		return errandRepository.findByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)
+	private Errand getErrand(final String municipalityId, final String namespace, final String errandId) {
+		return errandQueryService.findErrand(municipalityId, namespace, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERRAND_NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId)));
 	}
 

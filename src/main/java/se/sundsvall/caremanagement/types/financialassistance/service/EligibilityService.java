@@ -13,8 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseSummary;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ApplicationSuggestion;
@@ -78,7 +78,7 @@ public class EligibilityService {
 		"januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"
 	};
 
-	private final ErrandRepository errandRepository;
+	private final ErrandQueryService errandQueryService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final LifecareEbCaseService lifecareEbCaseService;
 	private final CitizenService citizenService;
@@ -86,12 +86,12 @@ public class EligibilityService {
 	private final int windowDays;
 	private final boolean returnAllTypes;
 
-	EligibilityService(final ErrandRepository errandRepository, final FinancialAssistanceRepository financialAssistanceRepository,
+	EligibilityService(final ErrandQueryService errandQueryService, final FinancialAssistanceRepository financialAssistanceRepository,
 		final LifecareEbCaseService lifecareEbCaseService, final CitizenService citizenService,
 		final RecentlyClosedErrandService recentlyClosedErrandService,
 		@Value("${financial-assistance.eligibility.duplicate-window-days:90}") final int windowDays,
 		@Value("${financial-assistance.eligibility.return-all-types:false}") final boolean returnAllTypes) {
-		this.errandRepository = errandRepository;
+		this.errandQueryService = errandQueryService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.lifecareEbCaseService = lifecareEbCaseService;
 		this.citizenService = citizenService;
@@ -399,7 +399,7 @@ public class EligibilityService {
 			ids.addAll(financialAssistanceRepository.findErrandIdsByPartyId(request.getCoApplicant()));
 		}
 		return ids.stream()
-			.map(id -> errandRepository.findByIdAndNamespaceAndMunicipalityId(id, namespace, municipalityId))
+			.map(id -> errandQueryService.findErrand(municipalityId, namespace, id))
 			.flatMap(Optional::stream)
 			.filter(errand -> SLUGS.contains(errand.getTypeSlug()))
 			.map(errand -> new CmRecord(errand, financialAssistanceRepository.findByErrandId(errand.getId()).orElse(null)))
@@ -431,7 +431,7 @@ public class EligibilityService {
 			&& ofNullable(fa.getPeriodYear()).map(y -> y == month.getYear()).orElse(false);
 	}
 
-	private static boolean createdWithin(final ErrandEntity errand, final OffsetDateTime cutoff) {
+	private static boolean createdWithin(final Errand errand, final OffsetDateTime cutoff) {
 		return errand.getCreated() != null && !errand.getCreated().isBefore(cutoff);
 	}
 
@@ -466,6 +466,6 @@ public class EligibilityService {
 	}
 
 	/** A financial assistance errand envelope paired with its typed financial-assistance row. */
-	private record CmRecord(ErrandEntity errand, FinancialAssistanceEntity fa) {
+	private record CmRecord(Errand errand, FinancialAssistanceEntity fa) {
 	}
 }

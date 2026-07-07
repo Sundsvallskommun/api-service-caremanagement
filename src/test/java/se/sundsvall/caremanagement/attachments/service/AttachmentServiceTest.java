@@ -22,8 +22,8 @@ import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEn
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachment;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentContent;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentQueryService;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,7 +49,7 @@ class AttachmentServiceTest {
 	private static final String CLIENT_PDF_FILE_NAME = "klientbilagor.pdf";
 
 	@Mock
-	private ErrandRepository errandRepositoryMock;
+	private ErrandQueryService errandQueryServiceMock;
 
 	@Mock
 	private AttachmentRepository attachmentRepositoryMock;
@@ -62,8 +62,8 @@ class AttachmentServiceTest {
 
 	@Test
 	void createAttachmentDefaultsDocumentTypeToErrand() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
 		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
 			.thenReturn(AttachmentEntity.create().withId(ATTACHMENT_ID));
 		final var file = new MockMultipartFile("file", "f.pdf", "application/pdf", "x".getBytes());
@@ -78,11 +78,10 @@ class AttachmentServiceTest {
 
 	@Test
 	void createAttachmentWithCaseDataRenamesFileToErrandNumberPdf() {
-		final var errand = mock(ErrandEntity.class);
-		when(errand.getErrandNumber()).thenReturn("EB-2024-000123");
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		final var errand = Errand.create().withErrandNumber("EB-2024-000123");
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(errand));
-		when(errandRepositoryMock.existsWithLockingByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
+		when(errandQueryServiceMock.existsWithLock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
 		when(attachmentRepositoryMock.existsByErrandIdAndDocumentType(ERRAND_ID, "CASE_DATA")).thenReturn(false);
 		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
 			.thenReturn(AttachmentEntity.create().withId(ATTACHMENT_ID));
@@ -100,11 +99,10 @@ class AttachmentServiceTest {
 
 	@Test
 	void createCaseDataAttachmentStoresAsCaseDataRenamedToErrandNumberPdf() {
-		final var errand = mock(ErrandEntity.class);
-		when(errand.getErrandNumber()).thenReturn("EB-2024-000999");
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		final var errand = Errand.create().withErrandNumber("EB-2024-000999");
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(errand));
-		when(errandRepositoryMock.existsWithLockingByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
+		when(errandQueryServiceMock.existsWithLock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
 		when(attachmentRepositoryMock.existsByErrandIdAndDocumentType(ERRAND_ID, "CASE_DATA")).thenReturn(false);
 		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
 			.thenReturn(AttachmentEntity.create().withId(ATTACHMENT_ID));
@@ -121,9 +119,9 @@ class AttachmentServiceTest {
 
 	@Test
 	void createAttachmentWithCaseDataThrowsBadRequestWhenOneAlreadyExists() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(mock(ErrandEntity.class)));
-		when(errandRepositoryMock.existsWithLockingByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
+		when(errandQueryServiceMock.existsWithLock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
 		when(attachmentRepositoryMock.existsByErrandIdAndDocumentType(ERRAND_ID, "CASE_DATA")).thenReturn(true);
 		final var file = new MockMultipartFile("file", "arendeuppgifter.pdf", "application/pdf", "x".getBytes());
 
@@ -145,7 +143,7 @@ class AttachmentServiceTest {
 	@Test
 	void createMessageHistoryAttachmentStoresUnderGivenFileName() {
 		final var fileName = "Meddelanden och bilagor från Draken_EB-2024-000777_2026-05-12--2026-05-20.pdf";
-		when(errandRepositoryMock.existsWithLockingByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
+		when(errandQueryServiceMock.existsWithLock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
 		when(attachmentRepositoryMock.existsByErrandIdAndDocumentType(ERRAND_ID, "MESSAGE_HISTORY")).thenReturn(false);
 		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
 			.thenReturn(AttachmentEntity.create().withId(ATTACHMENT_ID));
@@ -162,7 +160,7 @@ class AttachmentServiceTest {
 
 	@Test
 	void createMessageHistoryAttachmentThrowsBadRequestWhenOneAlreadyExists() {
-		when(errandRepositoryMock.existsWithLockingByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
+		when(errandQueryServiceMock.existsWithLock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
 		when(attachmentRepositoryMock.existsByErrandIdAndDocumentType(ERRAND_ID, "MESSAGE_HISTORY")).thenReturn(true);
 
 		assertThatThrownBy(() -> service.createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "name.pdf", "%PDF".getBytes()))
@@ -174,8 +172,8 @@ class AttachmentServiceTest {
 
 	@Test
 	void storeAndCombinePersistsEachSourceAndACombinedPdf() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
 		when(attachmentRepositoryMock.save(any(AttachmentEntity.class)))
 			.thenReturn(AttachmentEntity.create().withId(ATTACHMENT_ID));
 
@@ -194,8 +192,8 @@ class AttachmentServiceTest {
 
 	@Test
 	void storeAndCombineWrapsUnreadableFileAsBadRequest() throws IOException {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
 
 		final var unreadable = mock(MultipartFile.class);
 		when(unreadable.getBytes()).thenThrow(new IOException("disk gone"));
@@ -230,8 +228,8 @@ class AttachmentServiceTest {
 		final var t1 = OffsetDateTime.parse("2024-01-01T10:00:00Z");
 		final var t2 = OffsetDateTime.parse("2024-01-01T11:00:00Z");
 		final var t3 = OffsetDateTime.parse("2024-01-01T12:00:00Z");
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
 		when(attachmentRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			AttachmentEntity.create().withId("app").withFileName("ansokan.pdf").withDocumentType("APPLICATION").withSenderRole("CLIENT").withCreated(t1),
 			AttachmentEntity.create().withId("gen").withFileName("sammanstallning.pdf").withDocumentType("GENERATED").withSenderRole("CLIENT").withCreated(t3)));
@@ -248,8 +246,8 @@ class AttachmentServiceTest {
 
 	@Test
 	void readAttachmentsWithoutConversationAttachmentsReturnsOnlyErrandAttachments() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
 		when(attachmentRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			AttachmentEntity.create().withId("app").withDocumentType("APPLICATION").withCreated(OffsetDateTime.parse("2024-01-01T10:00:00Z"))));
 		when(conversationAttachmentQueryServiceMock.listForErrand(ERRAND_ID)).thenReturn(List.of());
@@ -261,8 +259,8 @@ class AttachmentServiceTest {
 
 	@Test
 	void readAttachmentsSortsNullCreatedLast() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
 		when(attachmentRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			AttachmentEntity.create().withId("no-date"),
 			AttachmentEntity.create().withId("dated").withCreated(OffsetDateTime.parse("2024-01-01T10:00:00Z"))));
@@ -277,8 +275,8 @@ class AttachmentServiceTest {
 	void readAttachmentsFilteredByDocumentTypeReturnsOnlyMatching() {
 		final var t1 = OffsetDateTime.parse("2024-01-01T10:00:00Z");
 		final var t2 = OffsetDateTime.parse("2024-01-01T11:00:00Z");
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
 		when(attachmentRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			AttachmentEntity.create().withId("app").withDocumentType("APPLICATION").withSenderRole("CLIENT").withCreated(t1)));
 		when(conversationAttachmentQueryServiceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(
@@ -294,8 +292,8 @@ class AttachmentServiceTest {
 	void readAttachmentsFilteredBySenderRoleReturnsOnlyMatching() {
 		final var t1 = OffsetDateTime.parse("2024-01-01T10:00:00Z");
 		final var t2 = OffsetDateTime.parse("2024-01-01T11:00:00Z");
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(mock(ErrandEntity.class)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
 		when(attachmentRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			AttachmentEntity.create().withId("upload").withDocumentType("ERRAND").withSenderRole("CASEWORKER").withCreated(t1)));
 		when(conversationAttachmentQueryServiceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(
@@ -309,7 +307,7 @@ class AttachmentServiceTest {
 
 	@Test
 	void readAttachmentsErrandNotFound() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, null))
@@ -323,7 +321,7 @@ class AttachmentServiceTest {
 	void regenerateClientAttachmentPdfInsertsWhenAbsent() {
 		when(conversationAttachmentQueryServiceMock.clientAttachmentContentsForErrand(ERRAND_ID)).thenReturn(List.of(
 			new ConversationAttachmentContent("intyg.pdf", "application/pdf", "%PDF-1.4 minimal".getBytes())));
-		when(errandRepositoryMock.existsWithLockingByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
+		when(errandQueryServiceMock.existsWithLock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
 		when(attachmentRepositoryMock.findFirstByErrandIdAndFileNameAndDocumentType(ERRAND_ID, CLIENT_PDF_FILE_NAME, "CONVERSATION"))
 			.thenReturn(Optional.empty());
 
@@ -346,7 +344,7 @@ class AttachmentServiceTest {
 			.withAttachmentData(AttachmentDataEntity.create().withFile(originalBlob));
 		when(conversationAttachmentQueryServiceMock.clientAttachmentContentsForErrand(ERRAND_ID)).thenReturn(List.of(
 			new ConversationAttachmentContent("intyg.pdf", "application/pdf", "%PDF-1.4 minimal".getBytes())));
-		when(errandRepositoryMock.existsWithLockingByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
+		when(errandQueryServiceMock.existsWithLock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
 		when(attachmentRepositoryMock.findFirstByErrandIdAndFileNameAndDocumentType(ERRAND_ID, CLIENT_PDF_FILE_NAME, "CONVERSATION"))
 			.thenReturn(Optional.of(existing));
 
@@ -362,7 +360,7 @@ class AttachmentServiceTest {
 	@Test
 	void regenerateClientAttachmentPdfIsNoOpWhenNoClientAttachments() {
 		// The errand row is locked up front (before the read), so it must exist even for the no-op path.
-		when(errandRepositoryMock.existsWithLockingByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
+		when(errandQueryServiceMock.existsWithLock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
 		when(conversationAttachmentQueryServiceMock.clientAttachmentContentsForErrand(ERRAND_ID)).thenReturn(List.of());
 
 		service.regenerateClientAttachmentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);

@@ -4,8 +4,8 @@ import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.integration.db.StakeholderRepository;
 import se.sundsvall.caremanagement.stakeholders.integration.db.model.StakeholderEntity;
@@ -27,14 +27,14 @@ public class StakeholderService {
 	private static final String STAKEHOLDER_NOT_FOUND_MESSAGE = "No stakeholder with id '%s' found on errand '%s' in namespace '%s' for municipality id '%s'";
 	private static final String INVALID_ROLE_MESSAGE = "Role '%s' is not valid for errand type '%s'";
 
-	private final ErrandRepository errandRepository;
+	private final ErrandQueryService errandQueryService;
 	private final StakeholderRepository stakeholderRepository;
 	private final StakeholderRoleRegistry roleRegistry;
 	private final ApplicationEventPublisher publisher;
 
-	StakeholderService(final ErrandRepository errandRepository, final StakeholderRepository stakeholderRepository,
+	StakeholderService(final ErrandQueryService errandQueryService, final StakeholderRepository stakeholderRepository,
 		final StakeholderRoleRegistry roleRegistry, final ApplicationEventPublisher publisher) {
-		this.errandRepository = errandRepository;
+		this.errandQueryService = errandQueryService;
 		this.stakeholderRepository = stakeholderRepository;
 		this.roleRegistry = roleRegistry;
 		this.publisher = publisher;
@@ -74,8 +74,8 @@ public class StakeholderService {
 		publisher.publishEvent(new StakeholderMutated(municipalityId, namespace, errandId));
 	}
 
-	private ErrandEntity ensureErrandExists(final String municipalityId, final String namespace, final String errandId) {
-		return errandRepository.findByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)
+	private Errand ensureErrandExists(final String municipalityId, final String namespace, final String errandId) {
+		return errandQueryService.findErrand(municipalityId, namespace, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERRAND_NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId)));
 	}
 

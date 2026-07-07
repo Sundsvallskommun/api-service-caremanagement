@@ -196,6 +196,16 @@ public class ErrandService implements ErrandAccessGuard {
 		}
 	}
 
+	/**
+	 * Refreshes the denormalized {@code applicantName} read-model field on the errand envelope. A targeted bulk update on
+	 * purpose: it bypasses the {@code @PreUpdate} lifecycle callback so refreshing the applicant name does <b>not</b> bump
+	 * {@code touched} (the default errand-list sort) — a stakeholder edit must not resurface an errand as recently
+	 * touched. Maintained asynchronously by the financial assistance applicant-name sync listener.
+	 */
+	public void updateApplicantName(final String errandId, final String applicantName) {
+		errandRepository.updateApplicantName(errandId, applicantName);
+	}
+
 	public void deleteErrand(final String municipalityId, final String namespace, final String errandId) {
 		final var entity = findEntity(municipalityId, namespace, errandId);
 		final var typeSlug = entity.getTypeSlug();

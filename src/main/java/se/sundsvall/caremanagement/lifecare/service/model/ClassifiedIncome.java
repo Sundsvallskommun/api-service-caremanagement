@@ -13,7 +13,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public record ClassifiedIncome(
 	SsbtekIncome income,
 	@JsonProperty("atgard") String action,
-	String calculation,
+	@JsonProperty("normberakning") String calculation,
 	@JsonProperty("varning") boolean warning,
 	@JsonProperty("regel") String rule) {
 }

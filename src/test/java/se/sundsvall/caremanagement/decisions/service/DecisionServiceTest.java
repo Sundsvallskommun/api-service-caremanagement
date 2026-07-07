@@ -9,8 +9,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
@@ -39,7 +39,7 @@ class DecisionServiceTest {
 	private static final String DECISION_ID = "22222222-2222-2222-2222-222222222222";
 
 	@Mock
-	private ErrandRepository errandRepositoryMock;
+	private ErrandQueryService errandQueryServiceMock;
 
 	@Mock
 	private DecisionRepository decisionRepositoryMock;
@@ -55,9 +55,9 @@ class DecisionServiceTest {
 
 	@Test
 	void createPublishesNotificationsAndReturnsId() {
-		final var errand = ErrandEntity.create().withId(ERRAND_ID).withReporterUserId("reporter").withAssignedUserId("assignee");
+		final var errand = Errand.create().withId(ERRAND_ID).withReporterUserId("reporter").withAssignedUserId("assignee");
 		final var saved = DecisionEntity.create().withId(DECISION_ID);
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(errand));
 		when(decisionRepositoryMock.save(any(DecisionEntity.class))).thenReturn(saved);
 
@@ -81,8 +81,8 @@ class DecisionServiceTest {
 
 	@Test
 	void createWithoutAnyRecipientsSkipsNotifications() {
-		final var errand = ErrandEntity.create().withId(ERRAND_ID);
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		final var errand = Errand.create().withId(ERRAND_ID);
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(errand));
 		when(decisionRepositoryMock.save(any(DecisionEntity.class)))
 			.thenReturn(DecisionEntity.create().withId(DECISION_ID));
@@ -95,8 +95,8 @@ class DecisionServiceTest {
 
 	@Test
 	void createWhenReporterEqualsAssigneeDedupesRecipients() {
-		final var errand = ErrandEntity.create().withId(ERRAND_ID).withReporterUserId("u").withAssignedUserId("u");
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		final var errand = Errand.create().withId(ERRAND_ID).withReporterUserId("u").withAssignedUserId("u");
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(errand));
 		when(decisionRepositoryMock.save(any(DecisionEntity.class)))
 			.thenReturn(DecisionEntity.create().withId(DECISION_ID));
@@ -109,7 +109,7 @@ class DecisionServiceTest {
 
 	@Test
 	void createWhenErrandMissingThrowsNotFound() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Decision.create()))

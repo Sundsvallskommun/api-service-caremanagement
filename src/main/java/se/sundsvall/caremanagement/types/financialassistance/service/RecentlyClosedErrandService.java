@@ -9,8 +9,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 
 import static java.util.Comparator.comparing;
@@ -44,14 +44,14 @@ public class RecentlyClosedErrandService {
 	}
 
 	private final FinancialAssistanceRepository financialAssistanceRepository;
-	private final ErrandRepository errandRepository;
+	private final ErrandQueryService errandQueryService;
 	private final int windowDays;
 
 	RecentlyClosedErrandService(final FinancialAssistanceRepository financialAssistanceRepository,
-		final ErrandRepository errandRepository,
+		final ErrandQueryService errandQueryService,
 		@Value("${financial-assistance.eligibility.recently-closed-window-days:30}") final int windowDays) {
 		this.financialAssistanceRepository = financialAssistanceRepository;
-		this.errandRepository = errandRepository;
+		this.errandQueryService = errandQueryService;
 		this.windowDays = windowDays;
 	}
 
@@ -68,7 +68,7 @@ public class RecentlyClosedErrandService {
 			.collect(toCollection(LinkedHashSet::new));
 
 		return errandIds.stream()
-			.map(id -> errandRepository.findByIdAndNamespaceAndMunicipalityId(id, namespace, municipalityId))
+			.map(id -> errandQueryService.findErrand(municipalityId, namespace, id))
 			.flatMap(Optional::stream)
 			.filter(errand -> SLUGS.contains(errand.getTypeSlug()))
 			.filter(errand -> STATUS_CLOSED.equals(errand.getStatus()))
@@ -76,14 +76,14 @@ public class RecentlyClosedErrandService {
 			.max(comparing(RecentlyClosed::closedAt));
 	}
 
-	private static Optional<RecentlyClosed> recentlyClosed(final ErrandEntity errand, final OffsetDateTime cutoff) {
+	private static Optional<RecentlyClosed> recentlyClosed(final Errand errand, final OffsetDateTime cutoff) {
 		return closedAt(errand)
 			.filter(closedAt -> !closedAt.isBefore(cutoff))
 			.map(closedAt -> new RecentlyClosed(errand.getId(), closedAt));
 	}
 
 	/** The close time of a CLOSED errand — its last-touched timestamp, falling back to modified, then created. */
-	private static Optional<OffsetDateTime> closedAt(final ErrandEntity errand) {
+	private static Optional<OffsetDateTime> closedAt(final Errand errand) {
 		return ofNullable(errand.getTouched())
 			.or(() -> ofNullable(errand.getModified()))
 			.or(() -> ofNullable(errand.getCreated()));

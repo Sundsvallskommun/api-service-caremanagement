@@ -5,7 +5,8 @@ import java.util.stream.Stream;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
+import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.stakeholders.service.event.StakeholderMutated;
@@ -31,21 +32,23 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 @Component
 class ApplicantNameSyncListener {
 
-	private final ErrandRepository errandRepository;
+	private final ErrandQueryService errandQueryService;
+	private final ErrandService errandService;
 	private final StakeholderService stakeholderService;
 
-	ApplicantNameSyncListener(final ErrandRepository errandRepository, final StakeholderService stakeholderService) {
-		this.errandRepository = errandRepository;
+	ApplicantNameSyncListener(final ErrandQueryService errandQueryService, final ErrandService errandService, final StakeholderService stakeholderService) {
+		this.errandQueryService = errandQueryService;
+		this.errandService = errandService;
 		this.stakeholderService = stakeholderService;
 	}
 
 	@ApplicationModuleListener
 	void on(final StakeholderMutated event) {
-		errandRepository.findByIdAndNamespaceAndMunicipalityId(event.errandId(), event.namespace(), event.municipalityId())
+		errandQueryService.findErrand(event.municipalityId(), event.namespace(), event.errandId())
 			.ifPresent(errand -> {
 				final var applicantName = resolveApplicantName(event);
 				if (!Objects.equals(errand.getApplicantName(), applicantName)) {
-					errandRepository.updateApplicantName(event.errandId(), applicantName);
+					errandService.updateApplicantName(event.errandId(), applicantName);
 				}
 			});
 	}

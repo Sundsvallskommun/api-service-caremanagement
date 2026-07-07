@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,15 +31,15 @@ class RecentlyClosedErrandServiceTest {
 	private FinancialAssistanceRepository financialAssistanceRepositoryMock;
 
 	@Mock
-	private ErrandRepository errandRepositoryMock;
+	private ErrandQueryService errandQueryServiceMock;
 
 	private RecentlyClosedErrandService service() {
-		return new RecentlyClosedErrandService(financialAssistanceRepositoryMock, errandRepositoryMock, WINDOW_DAYS);
+		return new RecentlyClosedErrandService(financialAssistanceRepositoryMock, errandQueryServiceMock, WINDOW_DAYS);
 	}
 
 	private void errand(final String errandId, final String typeSlug, final String status, final OffsetDateTime touched) {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(errandId, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(errandId).withTypeSlug(typeSlug).withStatus(status).withTouched(touched)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, errandId))
+			.thenReturn(Optional.of(Errand.create().withId(errandId).withTypeSlug(typeSlug).withStatus(status).withTouched(touched)));
 	}
 
 	@Test
@@ -82,8 +82,8 @@ class RecentlyClosedErrandServiceTest {
 	@Test
 	void closedErrandWithoutTimestampIsIgnored() {
 		when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(APPLICANT)).thenReturn(List.of(ERRAND_ID));
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL).withStatus(STATUS_CLOSED)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL).withStatus(STATUS_CLOSED)));
 
 		assertThat(service().findRecentlyClosed(MUNICIPALITY_ID, NAMESPACE, List.of(APPLICANT))).isEmpty();
 	}
@@ -92,8 +92,8 @@ class RecentlyClosedErrandServiceTest {
 	void fallsBackToCreatedWhenNotTouched() {
 		final var created = OffsetDateTime.now().minusDays(4);
 		when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(APPLICANT)).thenReturn(List.of(ERRAND_ID));
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL).withStatus(STATUS_CLOSED).withCreated(created)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL).withStatus(STATUS_CLOSED).withCreated(created)));
 
 		final var result = service().findRecentlyClosed(MUNICIPALITY_ID, NAMESPACE, List.of(APPLICANT));
 
@@ -119,7 +119,7 @@ class RecentlyClosedErrandServiceTest {
 	@Test
 	void blankPartiesYieldEmpty() {
 		assertThat(service().findRecentlyClosed(MUNICIPALITY_ID, NAMESPACE, List.of(" "))).isEmpty();
-		verifyNoInteractions(errandRepositoryMock);
+		verifyNoInteractions(errandQueryServiceMock);
 	}
 
 	@Test

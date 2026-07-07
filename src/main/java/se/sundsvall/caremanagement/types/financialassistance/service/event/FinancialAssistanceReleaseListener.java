@@ -3,8 +3,8 @@ package se.sundsvall.caremanagement.types.financialassistance.service.event;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.core.service.event.ErrandStatusChanged;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_NEEDS_MANUAL_REVIEW;
@@ -27,13 +27,13 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 class FinancialAssistanceReleaseListener {
 
 	private final FinancialAssistanceRepository repository;
-	private final ErrandRepository errandRepository;
+	private final ErrandQueryService errandQueryService;
 	private final FinancialAssistanceProcessStarter processStarter;
 
-	FinancialAssistanceReleaseListener(final FinancialAssistanceRepository repository, final ErrandRepository errandRepository,
+	FinancialAssistanceReleaseListener(final FinancialAssistanceRepository repository, final ErrandQueryService errandQueryService,
 		final FinancialAssistanceProcessStarter processStarter) {
 		this.repository = repository;
-		this.errandRepository = errandRepository;
+		this.errandQueryService = errandQueryService;
 		this.processStarter = processStarter;
 	}
 
@@ -42,7 +42,7 @@ class FinancialAssistanceReleaseListener {
 		if (!isReleaseTransition(event)) {
 			return;
 		}
-		errandRepository.findByIdAndNamespaceAndMunicipalityId(event.errandId(), event.namespace(), event.municipalityId())
+		errandQueryService.findErrand(event.municipalityId(), event.namespace(), event.errandId())
 			.filter(errand -> !StringUtils.hasText(errand.getProcessInstanceId())) // defensive: never start a second instance
 			.flatMap(errand -> repository.findByErrandId(event.errandId()))
 			.ifPresent(entity -> processStarter.start(event.municipalityId(), event.namespace(), event.errandId(), entity));

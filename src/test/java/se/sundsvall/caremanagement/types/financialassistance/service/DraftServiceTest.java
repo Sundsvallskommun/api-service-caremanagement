@@ -84,6 +84,24 @@ class DraftServiceTest {
 	}
 
 	@Test
+	void refreshDoesNotCollapseChildrenWithoutPartyId() {
+		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
+		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+
+		// Three children, none carrying a partyId. Keyed on partyId alone they all collapse to "null|CHILD" and only the
+		// last is counted; keyed with the name fallback they stay three distinct rows.
+		final var child1 = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withName("Alva Alvsson").withProcessDays(30).withIncluded(true);
+		final var child2 = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withName("Bo Bosson").withProcessDays(30).withIncluded(true);
+		final var child3 = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withName("Cecilia Cederlund").withProcessDays(30).withIncluded(true);
+
+		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(child1, child2, child3), List.of(), List.of());
+
+		assertThat(changes.addedPersons()).hasSize(3);
+	}
+
+	@Test
 	void refreshKeepsExistingRowPositionAndAppendsNewRow() {
 		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
 		final var existing = FaNormIncomeEntity.create().withId("inc-0").withErrandId(ERRAND_ID).withOrigin(ORIGIN_SYSTEM).withPosition(0).withTypeId(20)

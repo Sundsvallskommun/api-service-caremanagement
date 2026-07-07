@@ -9,8 +9,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.integration.db.StakeholderRepository;
 import se.sundsvall.caremanagement.stakeholders.integration.db.model.StakeholderEntity;
@@ -37,7 +37,7 @@ class StakeholderServiceTest {
 	private static final String TYPE_SLUG = "fostercare";
 
 	@Mock
-	private ErrandRepository errandRepositoryMock;
+	private ErrandQueryService errandQueryServiceMock;
 
 	@Mock
 	private StakeholderRepository stakeholderRepositoryMock;
@@ -53,8 +53,8 @@ class StakeholderServiceTest {
 
 	@Test
 	void createSavesAndPublishesStakeholderMutated() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(new ErrandEntity().withTypeSlug(TYPE_SLUG)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withTypeSlug(TYPE_SLUG)));
 		when(roleRegistryMock.knownTypes()).thenReturn(Set.of(TYPE_SLUG));
 		when(roleRegistryMock.isValidRole(TYPE_SLUG, "APPLICANT")).thenReturn(true);
 		when(stakeholderRepositoryMock.save(any(StakeholderEntity.class)))
@@ -70,8 +70,8 @@ class StakeholderServiceTest {
 
 	@Test
 	void createWithUnconstrainedTypeSkipsRoleValidation() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(new ErrandEntity().withTypeSlug("uncontributed")));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withTypeSlug("uncontributed")));
 		when(roleRegistryMock.knownTypes()).thenReturn(Set.of(TYPE_SLUG));
 		when(stakeholderRepositoryMock.save(any(StakeholderEntity.class)))
 			.thenAnswer(invocation -> ((StakeholderEntity) invocation.getArgument(0)).withId(STAKEHOLDER_ID));
@@ -86,8 +86,8 @@ class StakeholderServiceTest {
 
 	@Test
 	void createWithInvalidRoleForTypeThrowsBadRequest() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(new ErrandEntity().withTypeSlug(TYPE_SLUG)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withTypeSlug(TYPE_SLUG)));
 		when(roleRegistryMock.knownTypes()).thenReturn(Set.of(TYPE_SLUG));
 		when(roleRegistryMock.isValidRole(TYPE_SLUG, "BOGUS_ROLE")).thenReturn(false);
 
@@ -103,7 +103,7 @@ class StakeholderServiceTest {
 
 	@Test
 	void createOnMissingErrandThrowsAndPublishesNothing() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Stakeholder.create()))
@@ -115,8 +115,8 @@ class StakeholderServiceTest {
 
 	@Test
 	void updateSavesAndPublishesStakeholderMutated() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(new ErrandEntity().withTypeSlug(TYPE_SLUG)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withTypeSlug(TYPE_SLUG)));
 		when(roleRegistryMock.knownTypes()).thenReturn(Set.of(TYPE_SLUG));
 		when(roleRegistryMock.isValidRole(TYPE_SLUG, "APPLICANT")).thenReturn(true);
 		when(stakeholderRepositoryMock.findByErrandIdAndId(ERRAND_ID, STAKEHOLDER_ID))
@@ -131,8 +131,8 @@ class StakeholderServiceTest {
 
 	@Test
 	void updateWithInvalidRoleForTypeThrowsBadRequest() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(new ErrandEntity().withTypeSlug(TYPE_SLUG)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withTypeSlug(TYPE_SLUG)));
 		when(roleRegistryMock.knownTypes()).thenReturn(Set.of(TYPE_SLUG));
 		when(roleRegistryMock.isValidRole(TYPE_SLUG, "BOGUS_ROLE")).thenReturn(false);
 
@@ -149,8 +149,8 @@ class StakeholderServiceTest {
 
 	@Test
 	void deleteRemovesAndPublishesStakeholderMutated() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(new ErrandEntity()));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
 		final var entity = StakeholderEntity.create().withId(STAKEHOLDER_ID).withErrandId(ERRAND_ID);
 		when(stakeholderRepositoryMock.findByErrandIdAndId(ERRAND_ID, STAKEHOLDER_ID)).thenReturn(Optional.of(entity));
 
@@ -162,8 +162,8 @@ class StakeholderServiceTest {
 
 	@Test
 	void readReturnsStakeholderWithoutPublishing() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(new ErrandEntity()));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
 		when(stakeholderRepositoryMock.findByErrandIdAndId(ERRAND_ID, STAKEHOLDER_ID))
 			.thenReturn(Optional.of(StakeholderEntity.create().withId(STAKEHOLDER_ID).withErrandId(ERRAND_ID).withRole("APPLICANT")));
 
@@ -176,8 +176,8 @@ class StakeholderServiceTest {
 
 	@Test
 	void readAllReturnsStakeholdersWithoutPublishing() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(new ErrandEntity()));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create()));
 		when(stakeholderRepositoryMock.findByErrandId(ERRAND_ID))
 			.thenReturn(List.of(StakeholderEntity.create().withId(STAKEHOLDER_ID).withErrandId(ERRAND_ID).withRole("APPLICANT")));
 

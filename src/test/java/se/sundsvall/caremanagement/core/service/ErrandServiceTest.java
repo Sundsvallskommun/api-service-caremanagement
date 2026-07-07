@@ -319,6 +319,14 @@ class ErrandServiceTest {
 	}
 
 	@Test
+	void updateApplicantNameDelegatesTargetedUpdateAndPublishesNothing() {
+		service.updateApplicantName(ERRAND_ID, "Anna Andersson");
+
+		verify(repositoryMock).updateApplicantName(ERRAND_ID, "Anna Andersson");
+		verify(eventPublisherMock, never()).publishEvent(any());
+	}
+
+	@Test
 	void verifyExistingErrandDoesNothingWhenErrandExists() {
 		when(repositoryMock.existsByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
 
