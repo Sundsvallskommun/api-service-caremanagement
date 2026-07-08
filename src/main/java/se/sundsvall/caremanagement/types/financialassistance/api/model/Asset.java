@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -38,6 +39,7 @@ public class Asset {
 	private BigDecimal purchasePrice;
 
 	@Schema(description = "Name of the company asset", examples = "Andersson Bygg AB")
+	@Size(max = 255)
 	private String companyName;
 
 	@Schema(description = "Total sum of the company's assets", examples = "350000.00")
@@ -52,6 +54,7 @@ public class Asset {
 	private String vehicleType;
 
 	@Schema(description = "Vehicle registration number", examples = "ABC123")
+	@Size(max = 16)
 	private String registrationNumber;
 
 	@Schema(description = "The date the asset was purchased", examples = "2018-04-12")

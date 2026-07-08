@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.core.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.util.Objects;
 
 /**
@@ -12,21 +13,26 @@ import java.util.Objects;
 public class PatchErrand {
 
 	@Schema(description = "Title for the errand", examples = "Title of the errand")
+	@Size(max = 255)
 	private String title;
 
 	@Schema(description = "Status of the errand", examples = "NEW")
+	@Size(max = 64)
 	private String status;
 
 	@Schema(description = "Description of the errand")
 	private String description;
 
 	@Schema(description = "Priority of the errand", examples = "HIGH")
+	@Size(max = 16)
 	private String priority;
 
 	@Schema(description = "User id of the reporter", examples = "joe01doe")
+	@Size(max = 64)
 	private String reporterUserId;
 
 	@Schema(description = "User id of the assignee", examples = "jane02doe")
+	@Size(max = 64)
 	private String assignedUserId;
 
 	public static PatchErrand create() {

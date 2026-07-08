@@ -39,10 +39,12 @@ public class Errand {
 	@Schema(description = "Errand type slug. Types whose module owns a dedicated create endpoint (e.g. financial-assistance) are rejected on this generic endpoint and must be created through that endpoint; any other slug is accepted as-is.",
 		examples = "case-type-slug")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 64)
 	private String typeSlug;
 
 	@Schema(description = "Title for the errand", examples = "Title of the errand")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 255)
 	private String title;
 
 	@Schema(description = "Status of the errand", examples = "NEW")
@@ -57,6 +59,7 @@ public class Errand {
 	private String priority;
 
 	@Schema(description = "User id of the reporter", examples = "joe01doe")
+	@Size(max = 64)
 	private String reporterUserId;
 
 	@Schema(description = "User id of the assignee", examples = "jane02doe")
@@ -74,6 +77,7 @@ public class Errand {
 	@Schema(
 		description = "Name of the Operaton process definition associated with the errand. Recorded on the errand; the core create endpoint does not itself start a process — process start, when applicable, is handled per errand type by a type module reacting to the errand-created domain event.",
 		examples = "Handläggning av ärende")
+	@Size(max = 128)
 	private String processDefinitionName;
 
 	@Schema(description = "Id of the Operaton process instance started for this errand", examples = "a-process-instance-id", accessMode = READ_ONLY)

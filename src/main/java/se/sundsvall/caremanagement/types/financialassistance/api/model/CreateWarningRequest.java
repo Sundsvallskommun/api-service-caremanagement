@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
@@ -27,6 +28,7 @@ public class CreateWarningRequest {
 	private String message;
 
 	@Schema(description = "A stable key for the income the warning concerns (benefit/incomeType) — the dedup key. Derived from the message when omitted.", examples = "Swish deposits")
+	@Size(max = 255)
 	private String sourceKey;
 
 	public static CreateWarningRequest create() {

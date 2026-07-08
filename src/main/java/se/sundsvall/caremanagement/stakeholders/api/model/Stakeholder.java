@@ -24,6 +24,7 @@ public class Stakeholder {
 	private String id;
 
 	@Schema(description = "External id for the stakeholder", examples = "81471222-5798-11e9-ae24-57fa13b361e1")
+	@Size(max = 255)
 	private String externalId;
 
 	@Schema(description = "Type of external id", examples = "PRIVATE")
@@ -43,12 +44,15 @@ public class Stakeholder {
 	private String lastName;
 
 	@Schema(description = "Organization name", examples = "Sundsvalls kommun")
+	@Size(max = 255)
 	private String organizationName;
 
 	@Schema(description = "Address", examples = "Storgatan 1")
+	@Size(max = 255)
 	private String address;
 
 	@Schema(description = "Care of", examples = "c/o Doe")
+	@Size(max = 255)
 	private String careOf;
 
 	@Schema(description = "Zip code", examples = "85248")
@@ -56,9 +60,11 @@ public class Stakeholder {
 	private String zipCode;
 
 	@Schema(description = "City", examples = "Sundsvall")
+	@Size(max = 100)
 	private String city;
 
 	@Schema(description = "Country", examples = "Sweden")
+	@Size(max = 100)
 	private String country;
 
 	@ArraySchema(arraySchema = @Schema(description = "Contact channels for the stakeholder"), schema = @Schema(implementation = ContactChannel.class))

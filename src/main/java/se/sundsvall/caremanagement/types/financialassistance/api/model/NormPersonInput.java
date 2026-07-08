@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -16,6 +17,7 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 public class NormPersonInput {
 
 	@Schema(description = "The party id of the household member")
+	@Size(max = 36)
 	private String partyId;
 
 	@Schema(description = "The role of the household member", allowableValues = {
@@ -24,6 +26,7 @@ public class NormPersonInput {
 	private String role;
 
 	@Schema(description = "The name of the household member")
+	@Size(max = 255)
 	private String name;
 
 	@Schema(description = "The number of days the caseworker decided", examples = "15")
@@ -41,6 +44,7 @@ public class NormPersonInput {
 	private LocalDate deviationToDate;
 
 	@Schema(description = "The norm interval applied to the member")
+	@Size(max = 64)
 	private String normInterval;
 
 	@Schema(description = "The job stimulus amount applied to the member", examples = "1000.00")

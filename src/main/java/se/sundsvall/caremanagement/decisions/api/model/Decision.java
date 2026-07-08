@@ -29,9 +29,11 @@ public class Decision {
 
 	@Schema(description = "Decision value. For binary outcomes use `APPROVED`/`REJECTED`; for richer outputs (e.g. a calculated amount) use the value itself or a short label.", examples = "APPROVED")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 255)
 	private String value;
 
 	@Schema(description = "Optional human-readable description or motivation for the decision", examples = "Decision proposal per ruleset: 7900 kr, no warning")
+	@Size(max = 4096)
 	private String description;
 
 	@Schema(description = "Optional decision amount, in SEK. For a financial-assistance decision this is the granted amount (0 for a rejection); for a recommendation it is the recommended amount when the pipeline has computed one.", examples = "7900.00")
@@ -39,6 +41,7 @@ public class Decision {
 
 	@Schema(description = "Optional decision message communicated to the applicant — the free-text justification shown on the decision letter, kept separate from the internal `description`.",
 		examples = "Du beviljas financial assistance för juni 2026 enligt riksnorm.")
+	@Size(max = 8192)
 	private String decisionMessage;
 
 	@Schema(description = "Optional date the decision applies (the caseworker-chosen decision date), distinct from the server-assigned `created` audit timestamp.", examples = "2026-06-18")

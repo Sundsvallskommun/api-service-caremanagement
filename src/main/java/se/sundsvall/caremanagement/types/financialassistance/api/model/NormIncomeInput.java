@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Objects;
@@ -19,6 +20,7 @@ public class NormIncomeInput {
 	private Integer typeId;
 
 	@Schema(description = "The FC income-type name", examples = "Bostadsbidrag")
+	@Size(max = 255)
 	private String typeName;
 
 	@Schema(description = "The amount the caseworker decided for the applicant", examples = "1900.00")

@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.Objects;
 
@@ -14,9 +15,11 @@ public class JobApplication {
 	private LocalDate applicationDate;
 
 	@Schema(description = "The job title applied for", examples = "Lagerarbetare")
+	@Size(max = 255)
 	private String jobTitle;
 
 	@Schema(description = "Employer and place of work", examples = "PostNord, Sundsvall")
+	@Size(max = 255)
 	private String employerAndPlace;
 
 	public static JobApplication create() {

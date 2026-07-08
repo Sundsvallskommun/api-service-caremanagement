@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.Objects;
 
@@ -12,6 +13,7 @@ import java.util.Objects;
 public class NormExpenseInput {
 
 	@Schema(description = "The cost type")
+	@Size(max = 64)
 	private String costType;
 
 	@Schema(description = "Which Lifecare bucket the expense posts to", allowableValues = {
@@ -20,6 +22,7 @@ public class NormExpenseInput {
 	private String bucket;
 
 	@Schema(description = "The other sub-type (when the cost type is 'other')")
+	@Size(max = 32)
 	private String otherSubType;
 
 	@Schema(description = "The cost specification")

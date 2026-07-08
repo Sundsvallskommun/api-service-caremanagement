@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
@@ -16,12 +17,14 @@ public class Person {
 	private String role;
 
 	@Schema(description = "Party id (personId GUID) of the person", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479")
+	@Size(max = 36)
 	private String partyId;
 
 	@Schema(description = "Whether the person needs an interpreter", examples = "true")
 	private Boolean needsInterpreter;
 
 	@Schema(description = "Language the interpreter should use", examples = "Arabiska")
+	@Size(max = 64)
 	private String interpreterLanguage;
 
 	@Schema(description = "Whether the person had work during the last 12 months", examples = "false")
@@ -39,9 +42,11 @@ public class Person {
 	private String paymentMethod;
 
 	@Schema(description = "Clearing number of the bank account", examples = "8327-9")
+	@Size(max = 16)
 	private String clearingNumber;
 
 	@Schema(description = "Bank account number", examples = "123456789")
+	@Size(max = 32)
 	private String accountNumber;
 
 	@Schema(description = "Description of the payment method when OTHER", examples = "Paymentskort")
@@ -51,9 +56,11 @@ public class Person {
 	private Boolean paymentSameAsPrevious;
 
 	@Schema(description = "Email address used for notifications about the application", examples = "anna.andersson@example.com")
+	@Size(max = 128)
 	private String email;
 
 	@Schema(description = "Phone number used for SMS notifications about the application", examples = "+46701234567")
+	@Size(max = 32)
 	private String phone;
 
 	@Schema(description = "Whether the person wants notifications about the application by email", examples = "true")
