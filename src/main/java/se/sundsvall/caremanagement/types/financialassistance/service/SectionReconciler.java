@@ -120,8 +120,9 @@ class SectionReconciler {
 	 * A save consumer that stamps a stable position on any row that doesn't have one yet, handing out consecutive
 	 * positions from {@code start} (the next free position for the errand) so new rows append after the existing ones.
 	 */
-	// S4276: getPosition must return a nullable Integer (null = "no position yet", the condition this method keys on);
-	// ToIntFunction's primitive int cannot represent that null, so the general Function is required here.
+	// The position accessor is typed as a general Function returning a nullable Integer rather than a primitive
+	// ToIntFunction on purpose: a row without a position yet reports null — the very condition this method keys on — and
+	// a primitive int cannot carry that null. That nullable return is what trips java:S4276, hence the suppression.
 	@SuppressWarnings("java:S4276")
 	private static <E> Consumer<E> positioningSaver(final int start, final Function<E, Integer> getPosition, final ObjIntConsumer<E> setPosition, final Consumer<E> save) {
 		final var next = new AtomicInteger(start);
