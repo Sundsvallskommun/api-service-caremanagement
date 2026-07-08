@@ -49,96 +49,38 @@ class DraftServiceTest {
 	private FaNormExpenseRepository expenseRepository;
 	@Mock
 	private FaNormPersonRepository personRepository;
+	@Mock
+	private SectionReconciler sectionReconciler;
 
 	@InjectMocks
 	private DraftService service;
 
 	@Test
-	void effectiveValueHelpersPreferCaseworker() {
-		assertThat(DraftService.effectiveAmount(new BigDecimal("5"), new BigDecimal("9"))).isEqualByComparingTo("5");
-		assertThat(DraftService.effectiveAmount(null, new BigDecimal("9"))).isEqualByComparingTo("9");
-		assertThat(DraftService.effectiveDays(12, 30)).isEqualTo(12);
-		assertThat(DraftService.effectiveDays(null, 30)).isEqualTo(30);
-	}
-
-	@Test
-	void refreshUpsertsHeaderAndReportsAddedRows() {
+	void refreshUpsertsHeaderThenDelegatesEachSectionAndAssemblesChanges() {
 		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
-		final var income = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag");
+		final var freshPersons = List.of(FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD));
+		final var freshIncomes = List.of(FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20));
+		final var freshExpenses = List.<FaNormExpenseEntity>of();
+		when(sectionReconciler.reconcilePersons(ERRAND_ID, freshPersons)).thenReturn(new SectionReconciler.Diff(List.of(), List.of("Gone child")));
+		when(sectionReconciler.reconcileIncomes(ERRAND_ID, freshIncomes)).thenReturn(new SectionReconciler.Diff(List.of("Bostadsbidrag"), List.of()));
+		when(sectionReconciler.reconcileExpenses(ERRAND_ID, freshExpenses)).thenReturn(new SectionReconciler.Diff(List.of("Rent"), List.of("Old rent")));
 
-		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(income), List.of());
+		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), freshPersons, freshIncomes, freshExpenses);
 
+		// each section's Diff is assembled into DraftChanges in section order
 		assertThat(changes.addedIncomes()).containsExactly("Bostadsbidrag");
+		assertThat(changes.droppedIncomes()).isEmpty();
+		assertThat(changes.addedExpenses()).containsExactly("Rent");
+		assertThat(changes.droppedExpenses()).containsExactly("Old rent");
+		assertThat(changes.addedPersons()).isEmpty();
+		assertThat(changes.droppedPersons()).containsExactly("Gone child");
+
+		// the header is upserted with the norm before the sections are reconciled
 		final var header = ArgumentCaptor.forClass(FaCalculationDraftEntity.class);
-		verifySaved(header);
+		verify(headerRepository).save(header.capture());
 		assertThat(header.getValue().getNormId()).isEqualTo(7);
 		assertThat(header.getValue().getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
-	}
-
-	private void verifySaved(final ArgumentCaptor<FaCalculationDraftEntity> captor) {
-		verify(headerRepository).save(captor.capture());
-	}
-
-	@Test
-	void refreshDoesNotCollapseChildrenWithoutPartyId() {
-		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-
-		// Three children, none carrying a partyId. Keyed on partyId alone they all collapse to "null|CHILD" and only the
-		// last is counted; keyed with the name fallback they stay three distinct rows.
-		final var child1 = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withName("Alva Alvsson").withProcessDays(30).withIncluded(true);
-		final var child2 = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withName("Bo Bosson").withProcessDays(30).withIncluded(true);
-		final var child3 = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withName("Cecilia Cederlund").withProcessDays(30).withIncluded(true);
-
-		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(child1, child2, child3), List.of(), List.of());
-
-		assertThat(changes.addedPersons()).hasSize(3);
-	}
-
-	@Test
-	void refreshKeepsExistingRowPositionAndAppendsNewRow() {
-		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
-		final var existing = FaNormIncomeEntity.create().withId("inc-0").withErrandId(ERRAND_ID).withOrigin(ORIGIN_SYSTEM).withPosition(0).withTypeId(20)
-			.withTypeName("Bostadsbidrag");
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(existing));
-		when(incomeRepository.nextPositionForErrand(ERRAND_ID)).thenReturn(1);
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-
-		final var refreshedFresh = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag");
-		final var newFresh = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(99).withTypeName("Underhållsstöd");
-
-		service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(refreshedFresh, newFresh), List.of());
-
-		assertThat(existing.getPosition()).isZero();  // a refreshed row keeps the position it already had
-		assertThat(newFresh.getPosition()).isEqualTo(1);  // a genuinely new row is appended at the next free position
-	}
-
-	@Test
-	void refreshPreservesCaseworkerEditedAppliedAmountOnSystemExpenseRow() {
-		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-
-		// a system expense row whose appliedAmount a caseworker has corrected (9999) since the last loop
-		final var existing = FaNormExpenseEntity.create().withId("exp-0").withErrandId(ERRAND_ID).withOrigin(ORIGIN_SYSTEM).withPosition(0)
-			.withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9999")).withProcessAmount(new BigDecimal("8000"));
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(existing));
-
-		// the freshly computed row for the same expense carries the original applied amount (9000) and a new process cap
-		final var fresh = FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM)
-			.withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8500"));
-
-		service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(), List.of(fresh));
-
-		assertThat(existing.getAppliedAmount()).isEqualByComparingTo("9999"); // caseworker edit survives the daily refresh
-		assertThat(existing.getProcessAmount()).isEqualByComparingTo("8500"); // process column is still refreshed
 	}
 
 	@Test

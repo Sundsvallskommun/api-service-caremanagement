@@ -17,36 +17,36 @@ public class JournalEntry {
 	@Schema(description = "Errand id this journal entry belongs to")
 	private String errandId;
 
-	@Schema(description = "Journal entry type (Lifecare 'Typ'/Journaltyp). A municipality-configured value; see the metadata catalogue for a provisional set.", example = "Journalfört meddelande")
+	@Schema(description = "Journal entry type (Lifecare 'Typ'/Journaltyp). A municipality-configured value; see the metadata catalogue for a provisional set.", examples = "Journalfört meddelande")
 	private String type;
 
-	@Schema(description = "Heading (Lifecare 'Rubrik')", example = "Journalfört meddelande: 2025-05-30 Info")
+	@Schema(description = "Heading (Lifecare 'Rubrik')", examples = "Journalfört meddelande: 2025-05-30 Info")
 	private String heading;
 
-	@Schema(description = "Free-text body of the journal entry", example = "Hej! Vill bara informera att jag fått jobb på Mejeriet.")
+	@Schema(description = "Free-text body of the journal entry", examples = "Hej! Vill bara informera att jag fått jobb på Mejeriet.")
 	private String text;
 
-	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid'), distinct from the system created timestamp", example = "2025-05-30T14:30:00+02:00")
+	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid'), distinct from the system created timestamp", examples = "2025-05-30T14:30:00+02:00")
 	private OffsetDateTime entryDateTime;
 
 	@Schema(description = "Write-protection status — WORKING is an editable working note, LOCKED is a finalised record", allowableValues = {
 		"WORKING", "LOCKED"
-	}, example = "WORKING")
+	}, examples = "WORKING")
 	private String status;
 
-	@Schema(description = "User id of the author (Lifecare 'Upprättad av'/'Ägare')", example = "carola01winberg")
+	@Schema(description = "User id of the author (Lifecare 'Upprättad av'/'Ägare')", examples = "carola01winberg")
 	private String createdBy;
 
 	@Schema(description = "Created timestamp")
 	private OffsetDateTime created;
 
-	@Schema(description = "User id of the last editor (Lifecare 'Ändrat av'); null until the entry has been edited", example = "ebb14eri")
+	@Schema(description = "User id of the last editor (Lifecare 'Ändrat av'); null until the entry has been edited", examples = "ebb14eri")
 	private String modifiedBy;
 
 	@Schema(description = "Last modified timestamp; null until the entry has been edited")
 	private OffsetDateTime modified;
 
-	@Schema(description = "User id of whoever locked the entry; null while WORKING", example = "carola01winberg")
+	@Schema(description = "User id of whoever locked the entry; null while WORKING", examples = "carola01winberg")
 	private String lockedBy;
 
 	@Schema(description = "Timestamp when the entry was locked (became an upprättad handling); null while WORKING")

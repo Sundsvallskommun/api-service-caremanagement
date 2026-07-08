@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:55330
+- url: http://localhost:52305
   description: Generated server url
 tags:
 - name: Statistics
@@ -8743,30 +8743,35 @@ components:
         type:
           type: string
           description: Journal entry type (Lifecare 'Typ'/Journaltyp)
-          example: Journalfört meddelande
+          examples:
+          - Journalfört meddelande
           maxLength: 255
           minLength: 0
         heading:
           type: string
           description: Heading (Lifecare 'Rubrik')
-          example: "Journalfört meddelande: 2025-05-30 Info"
+          examples:
+          - "Journalfört meddelande: 2025-05-30 Info"
           maxLength: 255
           minLength: 0
         text:
           type: string
           description: Free-text body of the journal entry; optional
-          example: Hej! Vill bara informera att jag fått jobb på Mejeriet.
+          examples:
+          - Hej! Vill bara informera att jag fått jobb på Mejeriet.
           maxLength: 1048576
           minLength: 0
         entryDateTime:
           type: string
           format: date-time
           description: Documented date and time (Lifecare 'Datum'/'Tid')
-          example: 2025-05-30T14:30:00+02:00
+          examples:
+          - 2025-05-30T14:30:00+02:00
         createdBy:
           type: string
           description: User id of the author (Lifecare 'Upprättad av'); optional
-          example: carola01winberg
+          examples:
+          - carola01winberg
           maxLength: 64
           minLength: 0
       required:
@@ -8779,7 +8784,8 @@ components:
         lockedBy:
           type: string
           description: User id of whoever locks the entry; optional
-          example: carola01winberg
+          examples:
+          - carola01winberg
           maxLength: 64
           minLength: 0
     JournalEntry:
@@ -8796,21 +8802,25 @@ components:
           type: string
           description: Journal entry type (Lifecare 'Typ'/Journaltyp). A municipality-configured
             value; see the metadata catalogue for a provisional set.
-          example: Journalfört meddelande
+          examples:
+          - Journalfört meddelande
         heading:
           type: string
           description: Heading (Lifecare 'Rubrik')
-          example: "Journalfört meddelande: 2025-05-30 Info"
+          examples:
+          - "Journalfört meddelande: 2025-05-30 Info"
         text:
           type: string
           description: Free-text body of the journal entry
-          example: Hej! Vill bara informera att jag fått jobb på Mejeriet.
+          examples:
+          - Hej! Vill bara informera att jag fått jobb på Mejeriet.
         entryDateTime:
           type: string
           format: date-time
           description: "Documented date and time (Lifecare 'Datum'/'Tid'), distinct\
             \ from the system created timestamp"
-          example: 2025-05-30T14:30:00+02:00
+          examples:
+          - 2025-05-30T14:30:00+02:00
         status:
           type: string
           description: "Write-protection status — WORKING is an editable working note,\
@@ -8818,11 +8828,13 @@ components:
           enum:
           - WORKING
           - LOCKED
-          example: WORKING
+          examples:
+          - WORKING
         createdBy:
           type: string
           description: User id of the author (Lifecare 'Upprättad av'/'Ägare')
-          example: carola01winberg
+          examples:
+          - carola01winberg
         created:
           type: string
           format: date-time
@@ -8831,7 +8843,8 @@ components:
           type: string
           description: User id of the last editor (Lifecare 'Ändrat av'); null until
             the entry has been edited
-          example: ebb14eri
+          examples:
+          - ebb14eri
         modified:
           type: string
           format: date-time
@@ -8839,7 +8852,8 @@ components:
         lockedBy:
           type: string
           description: User id of whoever locked the entry; null while WORKING
-          example: carola01winberg
+          examples:
+          - carola01winberg
         locked:
           type: string
           format: date-time
@@ -10074,11 +10088,13 @@ components:
         body:
           type: string
           description: Note body
-          example: "Spoke to family today, awaiting docs."
+          examples:
+          - "Spoke to family today, awaiting docs."
         author:
           type: string
           description: Author user id
-          example: jane01doe
+          examples:
+          - jane01doe
         created:
           type: string
           format: date-time
@@ -10086,7 +10102,8 @@ components:
         modifiedBy:
           type: string
           description: User id of the last editor
-          example: jane01doe
+          examples:
+          - jane01doe
         modified:
           type: string
           format: date-time
@@ -10097,30 +10114,35 @@ components:
         type:
           type: string
           description: Journal entry type (Lifecare 'Typ'/Journaltyp)
-          example: Journalfört meddelande
+          examples:
+          - Journalfört meddelande
           maxLength: 255
           minLength: 0
         heading:
           type: string
           description: Heading (Lifecare 'Rubrik')
-          example: "Journalfört meddelande: 2025-05-30 Info"
+          examples:
+          - "Journalfört meddelande: 2025-05-30 Info"
           maxLength: 255
           minLength: 0
         text:
           type: string
           description: Free-text body of the journal entry; optional
-          example: Hej! Vill bara informera att jag fått jobb på Mejeriet.
+          examples:
+          - Hej! Vill bara informera att jag fått jobb på Mejeriet.
           maxLength: 1048576
           minLength: 0
         entryDateTime:
           type: string
           format: date-time
           description: Documented date and time (Lifecare 'Datum'/'Tid')
-          example: 2025-05-30T14:30:00+02:00
+          examples:
+          - 2025-05-30T14:30:00+02:00
         modifiedBy:
           type: string
           description: User id of the editor (Lifecare 'Ändrat av'); optional
-          example: ebb14eri
+          examples:
+          - ebb14eri
           maxLength: 64
           minLength: 0
       required:
@@ -10737,11 +10759,13 @@ components:
         code:
           type: string
           description: The type code
-          example: JOURNALED_MESSAGE
+          examples:
+          - JOURNALED_MESSAGE
         displayName:
           type: string
           description: Human-readable Swedish label (the Lifecare 'Typ' value)
-          example: Journalfört meddelande
+          examples:
+          - Journalfört meddelande
     FinancialAssistanceView:
       type: object
       description: A financial assistance errand with its typed application payload.

@@ -13,16 +13,16 @@ public class Note {
 	@Schema(description = "Errand id this note belongs to")
 	private String errandId;
 
-	@Schema(description = "Note body", example = "Spoke to family today, awaiting docs.")
+	@Schema(description = "Note body", examples = "Spoke to family today, awaiting docs.")
 	private String body;
 
-	@Schema(description = "Author user id", example = "jane01doe")
+	@Schema(description = "Author user id", examples = "jane01doe")
 	private String author;
 
 	@Schema(description = "Created timestamp")
 	private OffsetDateTime created;
 
-	@Schema(description = "User id of the last editor", example = "jane01doe")
+	@Schema(description = "User id of the last editor", examples = "jane01doe")
 	private String modifiedBy;
 
 	@Schema(description = "Last modified timestamp; null until the note has been edited")

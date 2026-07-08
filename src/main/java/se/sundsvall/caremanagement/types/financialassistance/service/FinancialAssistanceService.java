@@ -65,6 +65,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.caremanagement.types.financialassistance.service.mapper.CalculationDraftMapper;
 import se.sundsvall.caremanagement.types.financialassistance.service.mapper.LifecareHistoryMapper;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -454,12 +455,12 @@ public class FinancialAssistanceService {
 	}
 
 	private static EffectivePerson toEffectivePerson(final FaNormPersonEntity row) {
-		return new EffectivePerson(row.getPartyId(), DraftService.effectiveDays(row.getCaseworkerDays(), row.getProcessDays()),
+		return new EffectivePerson(row.getPartyId(), CalculationDraftMapper.effectiveDays(row.getCaseworkerDays(), row.getProcessDays()),
 			row.getDeviationFromDate(), row.getDeviationToDate());
 	}
 
 	private static Double effectiveDouble(final BigDecimal caseworkerAmount, final BigDecimal processAmount) {
-		return ofNullable(DraftService.effectiveAmount(caseworkerAmount, processAmount)).map(BigDecimal::doubleValue).orElse(null);
+		return ofNullable(CalculationDraftMapper.effectiveAmount(caseworkerAmount, processAmount)).map(BigDecimal::doubleValue).orElse(null);
 	}
 
 	private static String requireErrandId(final CalculationRequest request) {

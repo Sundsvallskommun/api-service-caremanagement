@@ -12,12 +12,12 @@ import java.time.OffsetDateTime;
  */
 public record CreateJournalEntry(
 
-	@Schema(description = "Journal entry type (Lifecare 'Typ'/Journaltyp)", example = "Journalfört meddelande", requiredMode = Schema.RequiredMode.REQUIRED) @NotBlank @Size(max = 255) String type,
+	@Schema(description = "Journal entry type (Lifecare 'Typ'/Journaltyp)", examples = "Journalfört meddelande", requiredMode = Schema.RequiredMode.REQUIRED) @NotBlank @Size(max = 255) String type,
 
-	@Schema(description = "Heading (Lifecare 'Rubrik')", example = "Journalfört meddelande: 2025-05-30 Info", requiredMode = Schema.RequiredMode.REQUIRED) @NotBlank @Size(max = 255) String heading,
+	@Schema(description = "Heading (Lifecare 'Rubrik')", examples = "Journalfört meddelande: 2025-05-30 Info", requiredMode = Schema.RequiredMode.REQUIRED) @NotBlank @Size(max = 255) String heading,
 
-	@Schema(description = "Free-text body of the journal entry; optional", example = "Hej! Vill bara informera att jag fått jobb på Mejeriet.") @Size(max = 1_048_576) String text,
+	@Schema(description = "Free-text body of the journal entry; optional", examples = "Hej! Vill bara informera att jag fått jobb på Mejeriet.") @Size(max = 1_048_576) String text,
 
-	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid')", example = "2025-05-30T14:30:00+02:00", requiredMode = Schema.RequiredMode.REQUIRED) @NotNull OffsetDateTime entryDateTime,
+	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid')", examples = "2025-05-30T14:30:00+02:00", requiredMode = Schema.RequiredMode.REQUIRED) @NotNull OffsetDateTime entryDateTime,
 
-	@Schema(description = "User id of the author (Lifecare 'Upprättad av'); optional", example = "carola01winberg") @Size(max = 64) String createdBy) {}
+	@Schema(description = "User id of the author (Lifecare 'Upprättad av'); optional", examples = "carola01winberg") @Size(max = 64) String createdBy) {}

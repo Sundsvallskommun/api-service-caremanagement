@@ -12,10 +12,10 @@ import java.util.Objects;
 @Schema(description = "A selectable journal entry type — the code and the Swedish Lifecare label.")
 public class JournalEntryType {
 
-	@Schema(description = "The type code", example = "JOURNALED_MESSAGE")
+	@Schema(description = "The type code", examples = "JOURNALED_MESSAGE")
 	private String code;
 
-	@Schema(description = "Human-readable Swedish label (the Lifecare 'Typ' value)", example = "Journalfört meddelande")
+	@Schema(description = "Human-readable Swedish label (the Lifecare 'Typ' value)", examples = "Journalfört meddelande")
 	private String displayName;
 
 	public static JournalEntryType create() {
