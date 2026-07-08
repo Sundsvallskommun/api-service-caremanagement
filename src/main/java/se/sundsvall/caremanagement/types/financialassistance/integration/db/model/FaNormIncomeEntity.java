@@ -310,6 +310,8 @@ public class FaNormIncomeEntity {
 		return this;
 	}
 
+	// 'note' (a LONG32 column) is deliberately excluded from equals/hashCode/toString — it can be large and is not part of
+	// the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -321,13 +323,13 @@ public class FaNormIncomeEntity {
 			&& Objects.equals(applicantProcessAmount, that.applicantProcessAmount) && Objects.equals(applicantCaseworkerAmount, that.applicantCaseworkerAmount)
 			&& Objects.equals(applicantAmountDate, that.applicantAmountDate) && Objects.equals(coapplicantProcessAmount, that.coapplicantProcessAmount)
 			&& Objects.equals(coapplicantCaseworkerAmount, that.coapplicantCaseworkerAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate)
-			&& Objects.equals(note, that.note) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
+			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, origin, position, typeId, typeName, applicantProcessAmount, applicantCaseworkerAmount, applicantAmountDate,
-			coapplicantProcessAmount, coapplicantCaseworkerAmount, coapplicantAmountDate, deleted, note, created, updated);
+			coapplicantProcessAmount, coapplicantCaseworkerAmount, coapplicantAmountDate, deleted, created, updated);
 	}
 
 	@Override
@@ -346,7 +348,6 @@ public class FaNormIncomeEntity {
 			", coapplicantCaseworkerAmount=" + coapplicantCaseworkerAmount +
 			", coapplicantAmountDate=" + coapplicantAmountDate +
 			", deleted=" + deleted +
-			", note='" + note + '\'' +
 			", created=" + created +
 			", updated=" + updated +
 			'}';

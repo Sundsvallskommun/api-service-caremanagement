@@ -342,6 +342,8 @@ public class FaNormPersonEntity {
 		return this;
 	}
 
+	// 'note' (a LONG32 column) is deliberately excluded from equals/hashCode/toString — it can be large and is not part of
+	// the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -352,14 +354,14 @@ public class FaNormPersonEntity {
 			&& Objects.equals(name, that.name)
 			&& Objects.equals(processDays, that.processDays) && Objects.equals(caseworkerDays, that.caseworkerDays)
 			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
-			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount) && Objects.equals(note, that.note)
+			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, origin, position, partyId, role, name, processDays, caseworkerDays, included, deviationFromDate, deviationToDate, normInterval,
-			jobStimulusAmount, deleted, note, created, updated);
+			jobStimulusAmount, deleted, created, updated);
 	}
 
 	@Override
@@ -380,7 +382,6 @@ public class FaNormPersonEntity {
 			", normInterval='" + normInterval + '\'' +
 			", jobStimulusAmount=" + jobStimulusAmount +
 			", deleted=" + deleted +
-			", note='" + note + '\'' +
 			", created=" + created +
 			", updated=" + updated +
 			'}';

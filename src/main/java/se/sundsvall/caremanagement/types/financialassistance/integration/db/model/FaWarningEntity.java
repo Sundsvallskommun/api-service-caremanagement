@@ -191,19 +191,21 @@ public class FaWarningEntity {
 		return this;
 	}
 
+	// 'message' (a LONG32 column) is deliberately excluded from equals/hashCode/toString — it can be large and is not part
+	// of the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FaWarningEntity that = (FaWarningEntity) o;
 		return autoResolved == that.autoResolved && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(type, that.type)
-			&& Objects.equals(sourceKey, that.sourceKey) && Objects.equals(message, that.message) && Objects.equals(status, that.status)
+			&& Objects.equals(sourceKey, that.sourceKey) && Objects.equals(status, that.status)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, sourceKey, message, status, autoResolved, created, updated);
+		return Objects.hash(id, errandId, type, sourceKey, status, autoResolved, created, updated);
 	}
 
 	@Override
@@ -213,7 +215,6 @@ public class FaWarningEntity {
 			", errandId='" + errandId + '\'' +
 			", type='" + type + '\'' +
 			", sourceKey='" + sourceKey + '\'' +
-			", message='" + message + '\'' +
 			", status='" + status + '\'' +
 			", autoResolved=" + autoResolved +
 			", created=" + created +

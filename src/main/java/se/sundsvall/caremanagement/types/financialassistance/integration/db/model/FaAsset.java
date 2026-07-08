@@ -191,12 +191,14 @@ public class FaAsset {
 		return this;
 	}
 
+	// 'description' (a LONG32 column) is deliberately excluded from equals/hashCode/toString — it can be large and is not
+	// part of the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FaAsset that = (FaAsset) o;
-		return Objects.equals(assetCategory, that.assetCategory) && Objects.equals(description, that.description)
+		return Objects.equals(assetCategory, that.assetCategory)
 			&& Objects.equals(value, that.value) && Objects.equals(propertyType, that.propertyType)
 			&& Objects.equals(purchaseYear, that.purchaseYear) && Objects.equals(purchasePrice, that.purchasePrice)
 			&& Objects.equals(companyName, that.companyName) && Objects.equals(companyAssetSum, that.companyAssetSum)
@@ -206,13 +208,13 @@ public class FaAsset {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(assetCategory, description, value, propertyType, purchaseYear, purchasePrice, companyName,
+		return Objects.hash(assetCategory, value, propertyType, purchaseYear, purchasePrice, companyName,
 			companyAssetSum, vehicleType, registrationNumber, purchaseDate);
 	}
 
 	@Override
 	public String toString() {
-		return "FaAsset{assetCategory='" + assetCategory + "', description='" + description + "', value=" + value
+		return "FaAsset{assetCategory='" + assetCategory + "', value=" + value
 			+ ", propertyType='" + propertyType + "', purchaseYear=" + purchaseYear + ", purchasePrice=" + purchasePrice
 			+ ", companyName='" + companyName + "', companyAssetSum=" + companyAssetSum + ", vehicleType='" + vehicleType
 			+ "', registrationNumber='" + registrationNumber + "', purchaseDate=" + purchaseDate + '}';

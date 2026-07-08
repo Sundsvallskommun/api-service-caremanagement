@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.conversation.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ public class Message {
 	@Schema(description = "Created timestamp")
 	private OffsetDateTime created;
 
-	@Schema(description = "Files attached to the message", accessMode = READ_ONLY)
+	@ArraySchema(arraySchema = @Schema(description = "Files attached to the message", accessMode = READ_ONLY), schema = @Schema(implementation = MessageAttachment.class))
 	private List<MessageAttachment> attachments = new ArrayList<>();
 
 	public static Message create() {

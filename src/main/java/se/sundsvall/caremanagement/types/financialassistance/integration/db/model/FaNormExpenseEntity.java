@@ -292,6 +292,8 @@ public class FaNormExpenseEntity {
 		return this;
 	}
 
+	// 'specification' and 'note' (LONG32 columns) are deliberately excluded from equals/hashCode/toString — they can be
+	// large and are not part of the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -300,15 +302,14 @@ public class FaNormExpenseEntity {
 		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(origin, that.origin)
 			&& Objects.equals(position, that.position)
 			&& Objects.equals(bucket, that.bucket) && Objects.equals(costType, that.costType) && Objects.equals(otherSubType, that.otherSubType)
-			&& Objects.equals(specification, that.specification)
 			&& Objects.equals(appliedAmount, that.appliedAmount) && Objects.equals(processAmount, that.processAmount)
-			&& Objects.equals(caseworkerAmount, that.caseworkerAmount) && Objects.equals(note, that.note) && Objects.equals(created, that.created)
+			&& Objects.equals(caseworkerAmount, that.caseworkerAmount) && Objects.equals(created, that.created)
 			&& Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, origin, position, bucket, costType, otherSubType, specification, appliedAmount, processAmount, caseworkerAmount, deleted, note,
+		return Objects.hash(id, errandId, origin, position, bucket, costType, otherSubType, appliedAmount, processAmount, caseworkerAmount, deleted,
 			created, updated);
 	}
 
@@ -322,12 +323,10 @@ public class FaNormExpenseEntity {
 			", bucket='" + bucket + '\'' +
 			", costType='" + costType + '\'' +
 			", otherSubType='" + otherSubType + '\'' +
-			", specification='" + specification + '\'' +
 			", appliedAmount=" + appliedAmount +
 			", processAmount=" + processAmount +
 			", caseworkerAmount=" + caseworkerAmount +
 			", deleted=" + deleted +
-			", note='" + note + '\'' +
 			", created=" + created +
 			", updated=" + updated +
 			'}';

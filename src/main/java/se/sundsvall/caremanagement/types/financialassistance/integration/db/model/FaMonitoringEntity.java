@@ -232,6 +232,8 @@ public class FaMonitoringEntity {
 		return this;
 	}
 
+	// 'description' (a LONG32 column) is deliberately excluded from equals/hashCode/toString — it can be large and is not
+	// part of the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -239,13 +241,13 @@ public class FaMonitoringEntity {
 		final FaMonitoringEntity that = (FaMonitoringEntity) o;
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(source, that.source)
 			&& Objects.equals(lifecareId, that.lifecareId) && Objects.equals(title, that.title)
-			&& Objects.equals(description, that.description) && Objects.equals(startDate, that.startDate) && Objects.equals(endDate, that.endDate)
+			&& Objects.equals(startDate, that.startDate) && Objects.equals(endDate, that.endDate)
 			&& Objects.equals(createdBy, that.createdBy) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, source, lifecareId, title, description, startDate, endDate, createdBy, created, updated);
+		return Objects.hash(id, errandId, source, lifecareId, title, startDate, endDate, createdBy, created, updated);
 	}
 
 	@Override
@@ -256,7 +258,6 @@ public class FaMonitoringEntity {
 			", source='" + source + '\'' +
 			", lifecareId='" + lifecareId + '\'' +
 			", title='" + title + '\'' +
-			", description='" + description + '\'' +
 			", startDate=" + startDate +
 			", endDate=" + endDate +
 			", createdBy='" + createdBy + '\'' +

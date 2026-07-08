@@ -227,6 +227,8 @@ public class FormSnapshotEntity {
 		return this;
 	}
 
+	// 'payload' (a LONG32 column) is deliberately excluded from equals/hashCode — it can be large, and 'contentHash'
+	// (a hash of the payload) already stands in for it as an identity/equality proxy, so hashing it too is wasteful.
 	@Override
 	public boolean equals(final Object obj) {
 		if (this == obj)
@@ -237,14 +239,14 @@ public class FormSnapshotEntity {
 			&& Objects.equals(municipalityId, other.municipalityId) && Objects.equals(namespace, other.namespace)
 			&& Objects.equals(typeSlug, other.typeSlug) && Objects.equals(schemaVersion, other.schemaVersion)
 			&& Objects.equals(formDefinitionVersion, other.formDefinitionVersion) && Objects.equals(locale, other.locale)
-			&& Objects.equals(contentHash, other.contentHash) && Objects.equals(payload, other.payload)
+			&& Objects.equals(contentHash, other.contentHash)
 			&& Objects.equals(capturedAt, other.capturedAt) && Objects.equals(created, other.created);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, municipalityId, namespace, typeSlug, schemaVersion, formDefinitionVersion,
-			locale, contentHash, payload, capturedAt, created);
+			locale, contentHash, capturedAt, created);
 	}
 
 	/**

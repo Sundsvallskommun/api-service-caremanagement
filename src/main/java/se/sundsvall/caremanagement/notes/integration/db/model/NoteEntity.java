@@ -141,6 +141,8 @@ public class NoteEntity {
 		return this;
 	}
 
+	// 'body' (a LONG32 column) is deliberately excluded from equals/hashCode/toString — it can be large and is not part of
+	// the entity's identity.
 	@Override
 	public boolean equals(final Object obj) {
 		if (this == obj)
@@ -148,19 +150,19 @@ public class NoteEntity {
 		if (!(obj instanceof final NoteEntity other))
 			return false;
 		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
-			&& Objects.equals(body, other.body) && Objects.equals(author, other.author)
+			&& Objects.equals(author, other.author)
 			&& Objects.equals(created, other.created) && Objects.equals(modifiedBy, other.modifiedBy)
 			&& Objects.equals(modified, other.modified);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, body, author, created, modifiedBy, modified);
+		return Objects.hash(id, errandId, author, created, modifiedBy, modified);
 	}
 
 	@Override
 	public String toString() {
-		return "NoteEntity{id='" + id + "', errandId='" + errandId + "', body='" + body + "', author='" + author
+		return "NoteEntity{id='" + id + "', errandId='" + errandId + "', author='" + author
 			+ "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified=" + modified + '}';
 	}
 }

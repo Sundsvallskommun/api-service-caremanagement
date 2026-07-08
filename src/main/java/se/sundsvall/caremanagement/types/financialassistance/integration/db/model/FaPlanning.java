@@ -141,27 +141,29 @@ public class FaPlanning {
 		return this;
 	}
 
+	// 'workDescription' and 'otherDescription' (LONG32 columns) are deliberately excluded from equals/hashCode/toString —
+	// they can be large and are not part of the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FaPlanning that = (FaPlanning) o;
 		return Objects.equals(person, that.person) && Objects.equals(planningType, that.planningType)
-			&& Objects.equals(workExtent, that.workExtent) && Objects.equals(workDescription, that.workDescription)
+			&& Objects.equals(workExtent, that.workExtent)
 			&& Objects.equals(sickLeaveLevel, that.sickLeaveLevel) && Objects.equals(sfiStudyPath, that.sfiStudyPath)
-			&& Objects.equals(sfiCourse, that.sfiCourse) && Objects.equals(otherDescription, that.otherDescription);
+			&& Objects.equals(sfiCourse, that.sfiCourse);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(person, planningType, workExtent, workDescription, sickLeaveLevel,
-			sfiStudyPath, sfiCourse, otherDescription);
+		return Objects.hash(person, planningType, workExtent, sickLeaveLevel,
+			sfiStudyPath, sfiCourse);
 	}
 
 	@Override
 	public String toString() {
 		return "FaPlanning{person='" + person + "', planningType='" + planningType + "', workExtent='" + workExtent
-			+ "', workDescription='" + workDescription + "', sickLeaveLevel='" + sickLeaveLevel + "', sfiStudyPath='" + sfiStudyPath
-			+ "', sfiCourse='" + sfiCourse + "', otherDescription='" + otherDescription + "'}";
+			+ "', sickLeaveLevel='" + sickLeaveLevel + "', sfiStudyPath='" + sfiStudyPath
+			+ "', sfiCourse='" + sfiCourse + "'}";
 	}
 }

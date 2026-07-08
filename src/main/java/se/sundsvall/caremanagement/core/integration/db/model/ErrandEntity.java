@@ -343,6 +343,8 @@ public class ErrandEntity implements Auditable {
 		return this;
 	}
 
+	// 'description' (a LONG32 column) is deliberately excluded from equals/hashCode/toString — it can be large and is not
+	// part of the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (this == o)
@@ -352,7 +354,7 @@ public class ErrandEntity implements Auditable {
 		final ErrandEntity that = (ErrandEntity) o;
 		return Objects.equals(id, that.id) && Objects.equals(municipalityId, that.municipalityId) && Objects.equals(namespace, that.namespace)
 			&& Objects.equals(errandNumber, that.errandNumber) && Objects.equals(typeSlug, that.typeSlug) && Objects.equals(title, that.title)
-			&& Objects.equals(status, that.status) && Objects.equals(description, that.description) && Objects.equals(priority, that.priority)
+			&& Objects.equals(status, that.status) && Objects.equals(priority, that.priority)
 			&& Objects.equals(reporterUserId, that.reporterUserId) && Objects.equals(assignedUserId, that.assignedUserId)
 			&& Objects.equals(applicantName, that.applicantName)
 			&& Objects.equals(processDefinitionName, that.processDefinitionName) && Objects.equals(processInstanceId, that.processInstanceId)
@@ -361,7 +363,7 @@ public class ErrandEntity implements Auditable {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, municipalityId, namespace, errandNumber, typeSlug, title, status, description, priority,
+		return Objects.hash(id, municipalityId, namespace, errandNumber, typeSlug, title, status, priority,
 			reporterUserId, assignedUserId, applicantName, processDefinitionName, processInstanceId, created, modified, touched);
 	}
 
@@ -375,7 +377,6 @@ public class ErrandEntity implements Auditable {
 			", typeSlug='" + typeSlug + '\'' +
 			", title='" + title + '\'' +
 			", status='" + status + '\'' +
-			", description='" + description + '\'' +
 			", priority='" + priority + '\'' +
 			", reporterUserId='" + reporterUserId + '\'' +
 			", assignedUserId='" + assignedUserId + '\'' +

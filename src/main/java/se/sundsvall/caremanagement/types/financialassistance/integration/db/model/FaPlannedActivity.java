@@ -78,23 +78,25 @@ public class FaPlannedActivity {
 		return this;
 	}
 
+	// 'activity' (a LONG32 column) is deliberately excluded from equals/hashCode/toString — it can be large and is not part
+	// of the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FaPlannedActivity that = (FaPlannedActivity) o;
-		return Objects.equals(person, that.person) && Objects.equals(activity, that.activity)
+		return Objects.equals(person, that.person)
 			&& Objects.equals(periodFrom, that.periodFrom) && Objects.equals(periodTo, that.periodTo);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(person, activity, periodFrom, periodTo);
+		return Objects.hash(person, periodFrom, periodTo);
 	}
 
 	@Override
 	public String toString() {
-		return "FaPlannedActivity{person='" + person + "', activity='" + activity + "', periodFrom=" + periodFrom
+		return "FaPlannedActivity{person='" + person + "', periodFrom=" + periodFrom
 			+ ", periodTo=" + periodTo + '}';
 	}
 }
