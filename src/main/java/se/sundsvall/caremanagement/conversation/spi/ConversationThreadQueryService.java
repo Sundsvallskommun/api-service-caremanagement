@@ -65,8 +65,8 @@ public class ConversationThreadQueryService {
 	private ConversationAttachmentView toView(final MessageAttachmentEntity attachment) {
 		return attachmentDataRepository.findByMessageAttachmentId(attachment.getId())
 			.map(data -> {
-				try {
-					final var content = data.getFile().getBinaryStream().readAllBytes();
+				try (final var in = data.getFile().getBinaryStream()) {
+					final var content = in.readAllBytes();
 					return new ConversationAttachmentView(attachment.getFileName(), attachment.getMimeType(), content);
 				} catch (final SQLException | IOException exception) {
 					throw Problem.valueOf(INTERNAL_SERVER_ERROR, READ_ERROR_MESSAGE.formatted(attachment.getId(), exception.getMessage()));

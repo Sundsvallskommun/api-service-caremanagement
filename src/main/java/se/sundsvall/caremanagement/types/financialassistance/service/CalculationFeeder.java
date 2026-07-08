@@ -276,12 +276,12 @@ public class CalculationFeeder {
 	private Optional<WarningService.WarningInput> householdSizeWarning(final String municipalityId,
 		final List<FaNormPersonEntity> currentPersons, final PreviousHousehold previous) {
 
-		final var currentIds = ofNullable(currentPersons).orElseGet(List::of).stream()
-			.map(FaNormPersonEntity::getPartyId).filter(id -> (id != null) && !id.isBlank()).collect(Collectors.toSet());
-		final var missing = previous.personIds().stream().filter(id -> !currentIds.contains(id)).toList();
-		final var sizeDelta = currentIds.size() - previous.memberCount();
+		final var currentPartyIds = ofNullable(currentPersons).orElseGet(List::of).stream()
+			.map(FaNormPersonEntity::getPartyId).filter(partyId -> (partyId != null) && !partyId.isBlank()).collect(Collectors.toSet());
+		final var missingPartyIds = previous.personIds().stream().filter(partyId -> !currentPartyIds.contains(partyId)).toList();
+		final var sizeDelta = currentPartyIds.size() - previous.memberCount();
 
-		if ((sizeDelta == 0) && missing.isEmpty()) {
+		if ((sizeDelta == 0) && missingPartyIds.isEmpty()) {
 			return Optional.empty();
 		}
 
@@ -290,9 +290,9 @@ public class CalculationFeeder {
 			return Optional.empty();
 		}
 
-		var detail = "Antal hushållsmedlemmar har ändrats sedan föregående beräkning (tidigare " + previous.memberCount() + ", nu " + currentIds.size() + ")";
-		if (!missing.isEmpty()) {
-			detail += " — saknas nu: " + String.join(", ", missing);
+		var detail = "Antal hushållsmedlemmar har ändrats sedan föregående beräkning (tidigare " + previous.memberCount() + ", nu " + currentPartyIds.size() + ")";
+		if (!missingPartyIds.isEmpty()) {
+			detail += " — saknas nu: " + String.join(", ", missingPartyIds);
 		}
 		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSEHOLD_CHANGE, "hushall-storlek", withRegel(detail, verdict.regel())));
 	}

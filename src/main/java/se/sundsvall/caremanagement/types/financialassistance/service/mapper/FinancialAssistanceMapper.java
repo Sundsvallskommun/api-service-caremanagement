@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
@@ -44,6 +45,14 @@ public final class FinancialAssistanceMapper {
 	private static final String CONTACT_CHANNEL_PHONE = "PHONE";
 
 	private FinancialAssistanceMapper() {}
+
+	private static <S, T> List<T> mapList(final List<S> source, final Function<S, T> mapper) {
+		return ofNullable(source)
+			.map(list -> list.stream()
+				.map(item -> ofNullable(item).map(mapper).orElse(null))
+				.toList())
+			.orElse(null);
+	}
 
 	public static FinancialAssistanceEntity toEntity(final FinancialAssistanceData data, final String errandId) {
 		return ofNullable(data)
@@ -149,195 +158,219 @@ public final class FinancialAssistanceMapper {
 	// ---- Child --------------------------------------------------------------------------------------------------------
 
 	static List<FaChild> toFaChildren(final List<Child> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toFaChild).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toFaChild);
 	}
 
-	static FaChild toFaChild(final Child c) {
-		return FaChild.create()
-			.withPartyId(c.getPartyId())
-			.withFirstName(c.getFirstName())
-			.withLastName(c.getLastName())
-			.withSchoolName(c.getSchoolName())
-			.withResidenceExtent(c.getResidenceExtent())
-			.withDaysInHome(c.getDaysInHome());
+	static FaChild toFaChild(final Child child) {
+		return ofNullable(child)
+			.map(source -> FaChild.create()
+				.withPartyId(source.getPartyId())
+				.withFirstName(source.getFirstName())
+				.withLastName(source.getLastName())
+				.withSchoolName(source.getSchoolName())
+				.withResidenceExtent(source.getResidenceExtent())
+				.withDaysInHome(source.getDaysInHome()))
+			.orElse(null);
 	}
 
 	static List<Child> toChildren(final List<FaChild> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toChild).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toChild);
 	}
 
-	static Child toChild(final FaChild e) {
-		return Child.create()
-			.withPartyId(e.getPartyId())
-			.withFirstName(e.getFirstName())
-			.withLastName(e.getLastName())
-			.withSchoolName(e.getSchoolName())
-			.withResidenceExtent(e.getResidenceExtent())
-			.withDaysInHome(e.getDaysInHome());
+	static Child toChild(final FaChild entity) {
+		return ofNullable(entity)
+			.map(source -> Child.create()
+				.withPartyId(source.getPartyId())
+				.withFirstName(source.getFirstName())
+				.withLastName(source.getLastName())
+				.withSchoolName(source.getSchoolName())
+				.withResidenceExtent(source.getResidenceExtent())
+				.withDaysInHome(source.getDaysInHome()))
+			.orElse(null);
 	}
 
 	// ---- Cost ---------------------------------------------------------------------------------------------------------
 
 	static List<FaCost> toFaCosts(final List<Cost> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toFaCost).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toFaCost);
 	}
 
-	static FaCost toFaCost(final Cost c) {
-		return FaCost.create()
-			.withCostType(c.getCostType())
-			.withAppliedAmount(c.getAppliedAmount())
-			.withOtherSubType(c.getOtherSubType())
-			.withSpecification(c.getSpecification())
-			.withRecipientOrPeriod(c.getRecipientOrPeriod());
+	static FaCost toFaCost(final Cost cost) {
+		return ofNullable(cost)
+			.map(source -> FaCost.create()
+				.withCostType(source.getCostType())
+				.withAppliedAmount(source.getAppliedAmount())
+				.withOtherSubType(source.getOtherSubType())
+				.withSpecification(source.getSpecification())
+				.withRecipientOrPeriod(source.getRecipientOrPeriod()))
+			.orElse(null);
 	}
 
 	static List<Cost> toCosts(final List<FaCost> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toCost).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toCost);
 	}
 
-	static Cost toCost(final FaCost e) {
-		return Cost.create()
-			.withCostType(e.getCostType())
-			.withAppliedAmount(e.getAppliedAmount())
-			.withOtherSubType(e.getOtherSubType())
-			.withSpecification(e.getSpecification())
-			.withRecipientOrPeriod(e.getRecipientOrPeriod());
+	static Cost toCost(final FaCost entity) {
+		return ofNullable(entity)
+			.map(source -> Cost.create()
+				.withCostType(source.getCostType())
+				.withAppliedAmount(source.getAppliedAmount())
+				.withOtherSubType(source.getOtherSubType())
+				.withSpecification(source.getSpecification())
+				.withRecipientOrPeriod(source.getRecipientOrPeriod()))
+			.orElse(null);
 	}
 
 	// ---- Income -------------------------------------------------------------------------------------------------------
 
 	static List<FaIncome> toFaIncomes(final List<Income> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toFaIncome).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toFaIncome);
 	}
 
-	static FaIncome toFaIncome(final Income c) {
-		return FaIncome.create()
-			.withIncomeType(c.getIncomeType())
-			.withAmount(c.getAmount())
-			.withIncomeDate(c.getIncomeDate())
-			.withRecipient(c.getRecipient());
+	static FaIncome toFaIncome(final Income income) {
+		return ofNullable(income)
+			.map(source -> FaIncome.create()
+				.withIncomeType(source.getIncomeType())
+				.withAmount(source.getAmount())
+				.withIncomeDate(source.getIncomeDate())
+				.withRecipient(source.getRecipient()))
+			.orElse(null);
 	}
 
 	static List<Income> toIncomes(final List<FaIncome> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toIncome).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toIncome);
 	}
 
-	static Income toIncome(final FaIncome e) {
-		return Income.create()
-			.withIncomeType(e.getIncomeType())
-			.withAmount(e.getAmount())
-			.withIncomeDate(e.getIncomeDate())
-			.withRecipient(e.getRecipient());
+	static Income toIncome(final FaIncome entity) {
+		return ofNullable(entity)
+			.map(source -> Income.create()
+				.withIncomeType(source.getIncomeType())
+				.withAmount(source.getAmount())
+				.withIncomeDate(source.getIncomeDate())
+				.withRecipient(source.getRecipient()))
+			.orElse(null);
 	}
 
 	// ---- Pending benefit ----------------------------------------------------------------------------------------------
 
 	static List<FaPendingBenefit> toFaPendingBenefits(final List<PendingBenefit> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toFaPendingBenefit).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toFaPendingBenefit);
 	}
 
-	static FaPendingBenefit toFaPendingBenefit(final PendingBenefit c) {
-		return FaPendingBenefit.create()
-			.withBenefitName(c.getBenefitName())
-			.withApplicantName(c.getApplicantName());
+	static FaPendingBenefit toFaPendingBenefit(final PendingBenefit pendingBenefit) {
+		return ofNullable(pendingBenefit)
+			.map(source -> FaPendingBenefit.create()
+				.withBenefitName(source.getBenefitName())
+				.withApplicantName(source.getApplicantName()))
+			.orElse(null);
 	}
 
 	static List<PendingBenefit> toPendingBenefits(final List<FaPendingBenefit> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toPendingBenefit).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toPendingBenefit);
 	}
 
-	static PendingBenefit toPendingBenefit(final FaPendingBenefit e) {
-		return PendingBenefit.create()
-			.withBenefitName(e.getBenefitName())
-			.withApplicantName(e.getApplicantName());
+	static PendingBenefit toPendingBenefit(final FaPendingBenefit entity) {
+		return ofNullable(entity)
+			.map(source -> PendingBenefit.create()
+				.withBenefitName(source.getBenefitName())
+				.withApplicantName(source.getApplicantName()))
+			.orElse(null);
 	}
 
 	// ---- Asset --------------------------------------------------------------------------------------------------------
 
 	static List<FaAsset> toFaAssets(final List<Asset> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toFaAsset).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toFaAsset);
 	}
 
-	static FaAsset toFaAsset(final Asset c) {
-		return FaAsset.create()
-			.withAssetCategory(c.getAssetCategory())
-			.withDescription(c.getDescription())
-			.withValue(c.getValue())
-			.withPropertyType(c.getPropertyType())
-			.withPurchaseYear(c.getPurchaseYear())
-			.withPurchasePrice(c.getPurchasePrice())
-			.withCompanyName(c.getCompanyName())
-			.withCompanyAssetSum(c.getCompanyAssetSum())
-			.withVehicleType(c.getVehicleType())
-			.withRegistrationNumber(c.getRegistrationNumber())
-			.withPurchaseDate(c.getPurchaseDate());
+	static FaAsset toFaAsset(final Asset asset) {
+		return ofNullable(asset)
+			.map(source -> FaAsset.create()
+				.withAssetCategory(source.getAssetCategory())
+				.withDescription(source.getDescription())
+				.withValue(source.getValue())
+				.withPropertyType(source.getPropertyType())
+				.withPurchaseYear(source.getPurchaseYear())
+				.withPurchasePrice(source.getPurchasePrice())
+				.withCompanyName(source.getCompanyName())
+				.withCompanyAssetSum(source.getCompanyAssetSum())
+				.withVehicleType(source.getVehicleType())
+				.withRegistrationNumber(source.getRegistrationNumber())
+				.withPurchaseDate(source.getPurchaseDate()))
+			.orElse(null);
 	}
 
 	static List<Asset> toAssets(final List<FaAsset> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toAsset).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toAsset);
 	}
 
-	static Asset toAsset(final FaAsset e) {
-		return Asset.create()
-			.withAssetCategory(e.getAssetCategory())
-			.withDescription(e.getDescription())
-			.withValue(e.getValue())
-			.withPropertyType(e.getPropertyType())
-			.withPurchaseYear(e.getPurchaseYear())
-			.withPurchasePrice(e.getPurchasePrice())
-			.withCompanyName(e.getCompanyName())
-			.withCompanyAssetSum(e.getCompanyAssetSum())
-			.withVehicleType(e.getVehicleType())
-			.withRegistrationNumber(e.getRegistrationNumber())
-			.withPurchaseDate(e.getPurchaseDate());
+	static Asset toAsset(final FaAsset entity) {
+		return ofNullable(entity)
+			.map(source -> Asset.create()
+				.withAssetCategory(source.getAssetCategory())
+				.withDescription(source.getDescription())
+				.withValue(source.getValue())
+				.withPropertyType(source.getPropertyType())
+				.withPurchaseYear(source.getPurchaseYear())
+				.withPurchasePrice(source.getPurchasePrice())
+				.withCompanyName(source.getCompanyName())
+				.withCompanyAssetSum(source.getCompanyAssetSum())
+				.withVehicleType(source.getVehicleType())
+				.withRegistrationNumber(source.getRegistrationNumber())
+				.withPurchaseDate(source.getPurchaseDate()))
+			.orElse(null);
 	}
 
 	// ---- Person -------------------------------------------------------------------------------------------------------
 
 	static List<FaPerson> toFaPersons(final List<Person> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toFaPerson).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toFaPerson);
 	}
 
-	static FaPerson toFaPerson(final Person c) {
-		return FaPerson.create()
-			.withRole(c.getRole())
-			.withPartyId(c.getPartyId())
-			.withNeedsInterpreter(c.getNeedsInterpreter())
-			.withInterpreterLanguage(c.getInterpreterLanguage())
-			.withHadWorkLast12Months(c.getHadWorkLast12Months())
-			.withHadWorkDescription(c.getHadWorkDescription())
-			.withPaymentMethod(c.getPaymentMethod())
-			.withClearingNumber(c.getClearingNumber())
-			.withAccountNumber(c.getAccountNumber())
-			.withOtherPaymentDescription(c.getOtherPaymentDescription())
-			.withPaymentSameAsPrevious(c.getPaymentSameAsPrevious())
-			.withEmail(c.getEmail())
-			.withPhone(c.getPhone())
-			.withNotifyByEmail(c.getNotifyByEmail())
-			.withNotifyBySms(c.getNotifyBySms());
+	static FaPerson toFaPerson(final Person person) {
+		return ofNullable(person)
+			.map(source -> FaPerson.create()
+				.withRole(source.getRole())
+				.withPartyId(source.getPartyId())
+				.withNeedsInterpreter(source.getNeedsInterpreter())
+				.withInterpreterLanguage(source.getInterpreterLanguage())
+				.withHadWorkLast12Months(source.getHadWorkLast12Months())
+				.withHadWorkDescription(source.getHadWorkDescription())
+				.withPaymentMethod(source.getPaymentMethod())
+				.withClearingNumber(source.getClearingNumber())
+				.withAccountNumber(source.getAccountNumber())
+				.withOtherPaymentDescription(source.getOtherPaymentDescription())
+				.withPaymentSameAsPrevious(source.getPaymentSameAsPrevious())
+				.withEmail(source.getEmail())
+				.withPhone(source.getPhone())
+				.withNotifyByEmail(source.getNotifyByEmail())
+				.withNotifyBySms(source.getNotifyBySms()))
+			.orElse(null);
 	}
 
 	static List<Person> toPersons(final List<FaPerson> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toPerson).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toPerson);
 	}
 
-	static Person toPerson(final FaPerson e) {
-		return Person.create()
-			.withRole(e.getRole())
-			.withPartyId(e.getPartyId())
-			.withNeedsInterpreter(e.getNeedsInterpreter())
-			.withInterpreterLanguage(e.getInterpreterLanguage())
-			.withHadWorkLast12Months(e.getHadWorkLast12Months())
-			.withHadWorkDescription(e.getHadWorkDescription())
-			.withPaymentMethod(e.getPaymentMethod())
-			.withClearingNumber(e.getClearingNumber())
-			.withAccountNumber(e.getAccountNumber())
-			.withOtherPaymentDescription(e.getOtherPaymentDescription())
-			.withPaymentSameAsPrevious(e.getPaymentSameAsPrevious())
-			.withEmail(e.getEmail())
-			.withPhone(e.getPhone())
-			.withNotifyByEmail(e.getNotifyByEmail())
-			.withNotifyBySms(e.getNotifyBySms());
+	static Person toPerson(final FaPerson entity) {
+		return ofNullable(entity)
+			.map(source -> Person.create()
+				.withRole(source.getRole())
+				.withPartyId(source.getPartyId())
+				.withNeedsInterpreter(source.getNeedsInterpreter())
+				.withInterpreterLanguage(source.getInterpreterLanguage())
+				.withHadWorkLast12Months(source.getHadWorkLast12Months())
+				.withHadWorkDescription(source.getHadWorkDescription())
+				.withPaymentMethod(source.getPaymentMethod())
+				.withClearingNumber(source.getClearingNumber())
+				.withAccountNumber(source.getAccountNumber())
+				.withOtherPaymentDescription(source.getOtherPaymentDescription())
+				.withPaymentSameAsPrevious(source.getPaymentSameAsPrevious())
+				.withEmail(source.getEmail())
+				.withPhone(source.getPhone())
+				.withNotifyByEmail(source.getNotifyByEmail())
+				.withNotifyBySms(source.getNotifyBySms()))
+			.orElse(null);
 	}
 
 	// ---- Person → core Stakeholder ------------------------------------------------------------------------------------
@@ -352,17 +385,20 @@ public final class FinancialAssistanceMapper {
 	 */
 	public static List<Stakeholder> toStakeholders(final List<Person> source) {
 		return ofNullable(source).orElseGet(List::of).stream()
+			.filter(person -> person != null)
 			.filter(person -> StringUtils.hasText(person.getRole()))
 			.map(FinancialAssistanceMapper::toStakeholder)
 			.toList();
 	}
 
 	static Stakeholder toStakeholder(final Person person) {
-		return Stakeholder.create()
-			.withRole(person.getRole())
-			.withExternalId(person.getPartyId())
-			.withExternalIdType(ofNullable(person.getPartyId()).filter(StringUtils::hasText).map(_ -> EXTERNAL_ID_TYPE_PRIVATE).orElse(null))
-			.withContactChannels(toContactChannels(person));
+		return ofNullable(person)
+			.map(source -> Stakeholder.create()
+				.withRole(source.getRole())
+				.withExternalId(source.getPartyId())
+				.withExternalIdType(ofNullable(source.getPartyId()).filter(StringUtils::hasText).map(_ -> EXTERNAL_ID_TYPE_PRIVATE).orElse(null))
+				.withContactChannels(toContactChannels(source)))
+			.orElse(null);
 	}
 
 	private static List<ContactChannel> toContactChannels(final Person person) {
@@ -377,86 +413,98 @@ public final class FinancialAssistanceMapper {
 	// ---- Planning -----------------------------------------------------------------------------------------------------
 
 	static List<FaPlanning> toFaPlannings(final List<Planning> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toFaPlanning).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toFaPlanning);
 	}
 
-	static FaPlanning toFaPlanning(final Planning c) {
-		return FaPlanning.create()
-			.withPerson(c.getPerson())
-			.withPlanningType(c.getPlanningType())
-			.withWorkExtent(c.getWorkExtent())
-			.withWorkDescription(c.getWorkDescription())
-			.withSickLeaveLevel(c.getSickLeaveLevel())
-			.withSfiStudyPath(c.getSfiStudyPath())
-			.withSfiCourse(c.getSfiCourse())
-			.withOtherDescription(c.getOtherDescription());
+	static FaPlanning toFaPlanning(final Planning planning) {
+		return ofNullable(planning)
+			.map(source -> FaPlanning.create()
+				.withPerson(source.getPerson())
+				.withPlanningType(source.getPlanningType())
+				.withWorkExtent(source.getWorkExtent())
+				.withWorkDescription(source.getWorkDescription())
+				.withSickLeaveLevel(source.getSickLeaveLevel())
+				.withSfiStudyPath(source.getSfiStudyPath())
+				.withSfiCourse(source.getSfiCourse())
+				.withOtherDescription(source.getOtherDescription()))
+			.orElse(null);
 	}
 
 	static List<Planning> toPlannings(final List<FaPlanning> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toPlanning).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toPlanning);
 	}
 
-	static Planning toPlanning(final FaPlanning e) {
-		return Planning.create()
-			.withPerson(e.getPerson())
-			.withPlanningType(e.getPlanningType())
-			.withWorkExtent(e.getWorkExtent())
-			.withWorkDescription(e.getWorkDescription())
-			.withSickLeaveLevel(e.getSickLeaveLevel())
-			.withSfiStudyPath(e.getSfiStudyPath())
-			.withSfiCourse(e.getSfiCourse())
-			.withOtherDescription(e.getOtherDescription());
+	static Planning toPlanning(final FaPlanning entity) {
+		return ofNullable(entity)
+			.map(source -> Planning.create()
+				.withPerson(source.getPerson())
+				.withPlanningType(source.getPlanningType())
+				.withWorkExtent(source.getWorkExtent())
+				.withWorkDescription(source.getWorkDescription())
+				.withSickLeaveLevel(source.getSickLeaveLevel())
+				.withSfiStudyPath(source.getSfiStudyPath())
+				.withSfiCourse(source.getSfiCourse())
+				.withOtherDescription(source.getOtherDescription()))
+			.orElse(null);
 	}
 
 	// ---- Planned activity ---------------------------------------------------------------------------------------------
 
 	static List<FaPlannedActivity> toFaPlannedActivities(final List<PlannedActivity> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toFaPlannedActivity).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toFaPlannedActivity);
 	}
 
-	static FaPlannedActivity toFaPlannedActivity(final PlannedActivity c) {
-		return FaPlannedActivity.create()
-			.withPerson(c.getPerson())
-			.withActivity(c.getActivity())
-			.withPeriodFrom(c.getPeriodFrom())
-			.withPeriodTo(c.getPeriodTo());
+	static FaPlannedActivity toFaPlannedActivity(final PlannedActivity plannedActivity) {
+		return ofNullable(plannedActivity)
+			.map(source -> FaPlannedActivity.create()
+				.withPerson(source.getPerson())
+				.withActivity(source.getActivity())
+				.withPeriodFrom(source.getPeriodFrom())
+				.withPeriodTo(source.getPeriodTo()))
+			.orElse(null);
 	}
 
 	static List<PlannedActivity> toPlannedActivities(final List<FaPlannedActivity> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toPlannedActivity).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toPlannedActivity);
 	}
 
-	static PlannedActivity toPlannedActivity(final FaPlannedActivity e) {
-		return PlannedActivity.create()
-			.withPerson(e.getPerson())
-			.withActivity(e.getActivity())
-			.withPeriodFrom(e.getPeriodFrom())
-			.withPeriodTo(e.getPeriodTo());
+	static PlannedActivity toPlannedActivity(final FaPlannedActivity entity) {
+		return ofNullable(entity)
+			.map(source -> PlannedActivity.create()
+				.withPerson(source.getPerson())
+				.withActivity(source.getActivity())
+				.withPeriodFrom(source.getPeriodFrom())
+				.withPeriodTo(source.getPeriodTo()))
+			.orElse(null);
 	}
 
 	// ---- Job application ----------------------------------------------------------------------------------------------
 
 	static List<FaJobApplication> toFaJobApplications(final List<JobApplication> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toFaJobApplication).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toFaJobApplication);
 	}
 
-	static FaJobApplication toFaJobApplication(final JobApplication c) {
-		return FaJobApplication.create()
-			.withPerson(c.getPerson())
-			.withApplicationDate(c.getApplicationDate())
-			.withJobTitle(c.getJobTitle())
-			.withEmployerAndPlace(c.getEmployerAndPlace());
+	static FaJobApplication toFaJobApplication(final JobApplication jobApplication) {
+		return ofNullable(jobApplication)
+			.map(source -> FaJobApplication.create()
+				.withPerson(source.getPerson())
+				.withApplicationDate(source.getApplicationDate())
+				.withJobTitle(source.getJobTitle())
+				.withEmployerAndPlace(source.getEmployerAndPlace()))
+			.orElse(null);
 	}
 
 	static List<JobApplication> toJobApplications(final List<FaJobApplication> source) {
-		return ofNullable(source).map(list -> list.stream().map(FinancialAssistanceMapper::toJobApplication).toList()).orElse(null);
+		return mapList(source, FinancialAssistanceMapper::toJobApplication);
 	}
 
-	static JobApplication toJobApplication(final FaJobApplication e) {
-		return JobApplication.create()
-			.withPerson(e.getPerson())
-			.withApplicationDate(e.getApplicationDate())
-			.withJobTitle(e.getJobTitle())
-			.withEmployerAndPlace(e.getEmployerAndPlace());
+	static JobApplication toJobApplication(final FaJobApplication entity) {
+		return ofNullable(entity)
+			.map(source -> JobApplication.create()
+				.withPerson(source.getPerson())
+				.withApplicationDate(source.getApplicationDate())
+				.withJobTitle(source.getJobTitle())
+				.withEmployerAndPlace(source.getEmployerAndPlace()))
+			.orElse(null);
 	}
 }

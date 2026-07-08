@@ -15,7 +15,6 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -41,38 +40,16 @@ class WarningServiceTest {
 	}
 
 	@Test
-	void reconcileIncomeWarningsCreatesTypedWarningsWithSourceKeys() {
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-
-		service.reconcileIncomeWarnings(ERRAND_ID,
-			List.of("Bostadstillägg (NOT_ON_WHITELIST)"),
-			List.of("Bostadsbidrag: -23%"),
-			List.of("Dagersättning"),
-			List.of("Lön"));
-
-		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
-		verify(repositoryMock, times(4)).save(captor.capture());
-		final var saved = captor.getAllValues();
-		assertThat(saved).allMatch(w -> "OPEN".equals(w.getStatus()) && !w.isAutoResolved());
-		assertThat(saved).extracting(FaWarningEntity::getType, FaWarningEntity::getSourceKey)
-			.containsExactlyInAnyOrder(
-				tuple("UNHANDLED_INCOME", "Bostadstillägg"),
-				tuple("INCOME_CHANGE", "Bostadsbidrag"),
-				tuple("MISSING_SSBTEK", "Dagersättning"),
-				tuple("NEW_INCOME", "Lön"));
-	}
-
-	@Test
 	void reconcileUpdatesOpenWarningButNeverReopensClosed() {
 		final var open = warning("UNHANDLED_INCOME", "Bostadstillägg", "OPEN");
 		final var closed = warning("INCOME_CHANGE", "Bostadsbidrag", "CLOSED");
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(open, closed));
 
-		service.reconcileIncomeWarnings(ERRAND_ID,
+		service.reconcileCalculationWarnings(ERRAND_ID,
 			List.of("Bostadstillägg (NOT_ON_WHITELIST)"), // matches the OPEN one → update
 			List.of("Bostadsbidrag: -23%"), // matches the CLOSED one → must NOT re-open
 			List.of(),
-			List.of());
+			null, null);
 
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
 		verify(repositoryMock).save(captor.capture()); // exactly one save — the open one
@@ -88,7 +65,7 @@ class WarningServiceTest {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(open, acknowledged, alreadyClosed));
 
 		// nothing computed this round → all causes resolved
-		service.reconcileIncomeWarnings(ERRAND_ID, List.of(), List.of(), List.of(), List.of());
+		service.reconcileCalculationWarnings(ERRAND_ID, List.of(), List.of(), List.of(), null, null);
 
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
 		verify(repositoryMock, times(2)).save(captor.capture()); // open + acknowledged auto-close; closed untouched

@@ -28,8 +28,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * <p>
  * The errand-envelope writes here ({@link #assignAndClassify} — default-caseworker assignment and the recently-closed
  * freeze) race the {@link ApplicantNameSyncListener}, which updates the same {@code errand} row from a sibling
- * {@code StakeholderMutated} event the moment the errand is created. On MariaDB 11 (InnoDB snapshot isolation) that
- * concurrency surfaces as a hard {@code 1020 "Record has changed since last read"} on the losing writer rather than a
+ * {@code StakeholderMutated} event the moment the errand is created. MariaDB/InnoDB can surface that concurrency as a
+ * hard {@code 1020 "Record has changed since last read"} on the losing writer rather than a
  * silent last-writer-wins. Running in a fresh transaction lets the listener simply retry: the next attempt reads the
  * row
  * after the sibling write committed and proceeds cleanly. The process start lives in its own method so a retry of the

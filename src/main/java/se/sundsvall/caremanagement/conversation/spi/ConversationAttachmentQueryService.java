@@ -59,9 +59,8 @@ public class ConversationAttachmentQueryService {
 	private ConversationAttachmentContent toContent(final MessageAttachmentEntity attachment) {
 		return attachmentDataRepository.findByMessageAttachmentId(attachment.getId())
 			.map(data -> {
-				try {
-					final var blob = data.getFile();
-					final var content = blob.getBinaryStream().readAllBytes();
+				try (final var in = data.getFile().getBinaryStream()) {
+					final var content = in.readAllBytes();
 					return new ConversationAttachmentContent(attachment.getFileName(), attachment.getMimeType(), content);
 				} catch (final SQLException | IOException exception) {
 					throw Problem.valueOf(INTERNAL_SERVER_ERROR, READ_ERROR_MESSAGE.formatted(attachment.getId(), exception.getMessage()));

@@ -355,7 +355,8 @@ CREATE TABLE `errand_financial_assistance_calculation_draft` (
   `calculation_date` date DEFAULT NULL,
   `has_custom_household_size` bit(1) DEFAULT NULL,
   `household_size` int(11) DEFAULT NULL,
-  PRIMARY KEY (`errand_id`)
+  PRIMARY KEY (`errand_id`),
+  CONSTRAINT `fk_fa_calculation_draft_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `errand_financial_assistance_monitoring` (
   `id` varchar(36) NOT NULL,
@@ -370,8 +371,8 @@ CREATE TABLE `errand_financial_assistance_monitoring` (
   `source` varchar(16) NOT NULL DEFAULT 'CASEWORKER',
   `lifecare_id` varchar(64) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_fa_monitoring_errand` (`errand_id`),
-  KEY `idx_fa_monitoring_lifecare` (`errand_id`,`lifecare_id`)
+  KEY `idx_fa_monitoring_lifecare` (`errand_id`,`lifecare_id`),
+  CONSTRAINT `fk_fa_monitoring_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `errand_financial_assistance_section_approval` (
   `id` varchar(36) NOT NULL,
@@ -384,7 +385,7 @@ CREATE TABLE `errand_financial_assistance_section_approval` (
   `updated` datetime(6) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_fa_section_approval` (`errand_id`,`section`),
-  KEY `idx_fa_section_approval_errand` (`errand_id`)
+  CONSTRAINT `fk_fa_section_approval_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `errand_financial_assistance_warning` (
   `id` varchar(36) NOT NULL,
@@ -397,8 +398,8 @@ CREATE TABLE `errand_financial_assistance_warning` (
   `created` datetime(6) DEFAULT NULL,
   `updated` datetime(6) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_fa_warning_errand` (`errand_id`),
-  KEY `idx_fa_warning_dedup` (`errand_id`,`type`,`source_key`)
+  KEY `idx_fa_warning_dedup` (`errand_id`,`type`,`source_key`),
+  CONSTRAINT `fk_fa_warning_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `errand_form_snapshot` (
   `id` varchar(36) NOT NULL,

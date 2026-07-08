@@ -28,10 +28,8 @@ spring:
       hibernate:
         type:
           # Store java.util.UUID as binary(16), not the native MariaDB UUID type.
-          # MariaDB 11 (prod) has a native UUID type, MariaDB 10.6 (tests) does not,
-          # so Hibernate would otherwise bind the Spring Modulith event_publication.id
-          # as a 36-char string on prod and overflow the binary(16) column. Pinning to
-          # BINARY keeps the same representation on every engine version.
+          # Spring Modulith's event_publication.id follows that representation, matching our
+          # MariaDB 10.6 environments and avoiding Hibernate's native UUID binding.
           preferred_uuid_jdbc_type: BINARY
       jakarta:
         persistence:

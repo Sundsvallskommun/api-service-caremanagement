@@ -163,17 +163,20 @@ public class ErrandService implements ErrandAccessGuard {
 		final var newAssignee = entity.getAssignedUserId();
 		final var newStatus = entity.getStatus();
 		final var timestamp = nowTs();
+		// Capture the acting user from the X-Sent-By Identifier here on the request thread — the async event-log listener
+		// runs on a different thread where the Identifier is no longer bound, so it would otherwise record "system".
+		final var changedBy = Optional.ofNullable(Identifier.get()).map(Identifier::getValue).orElse(null);
 
 		ofNullable(newStatus)
 			.filter(s -> !s.equals(previousStatus))
 			.ifPresent(s -> publisher.publishEvent(new ErrandStatusChanged(
 				entity.getId(), entity.getTypeSlug(), municipalityId, namespace,
-				previousStatus, s, /* changedBy */ null, timestamp)));
+				previousStatus, s, changedBy, timestamp)));
 
 		if (hasText(newAssignee) && !newAssignee.equals(previousAssignee)) {
 			publisher.publishEvent(new ErrandAssigned(
 				entity.getId(), entity.getTypeSlug(), municipalityId, namespace,
-				previousAssignee, newAssignee, /* changedBy */ null, timestamp));
+				previousAssignee, newAssignee, changedBy, timestamp));
 
 			publishAssignmentNotification(municipalityId, namespace, entity.getId(), newAssignee, entity.getReporterUserId(),
 				"UPDATE", "Errand reassigned to you");

@@ -401,7 +401,7 @@ public class EligibilityService {
 		return ids.stream()
 			.map(id -> errandQueryService.findErrand(municipalityId, namespace, id))
 			.flatMap(Optional::stream)
-			.filter(errand -> SLUGS.contains(errand.getTypeSlug()))
+			.filter(errand -> errand.getTypeSlug() != null && SLUGS.contains(errand.getTypeSlug()))
 			.map(errand -> new CmRecord(errand, financialAssistanceRepository.findByErrandId(errand.getId()).orElse(null)))
 			.filter(cm -> cm.fa() != null)
 			.sorted(comparing((CmRecord cm) -> cm.errand().getCreated(), nullsFirst(naturalOrder())).reversed())

@@ -232,11 +232,11 @@ public class AttachmentService {
 
 	public void streamAttachmentFile(final String municipalityId, final String namespace, final String errandId, final String attachmentId, final HttpServletResponse response) {
 		final var attachment = findAttachment(municipalityId, namespace, errandId, attachmentId);
-		try {
+		try (final var in = attachment.getAttachmentData().getFile().getBinaryStream()) {
 			response.addHeader(CONTENT_TYPE, attachment.getMimeType());
 			response.addHeader(CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getFileName() + "\"");
 			ofNullable(attachment.getFileSize()).ifPresent(response::setContentLength);
-			StreamUtils.copy(attachment.getAttachmentData().getFile().getBinaryStream(), response.getOutputStream());
+			StreamUtils.copy(in, response.getOutputStream());
 		} catch (final IOException | SQLException exception) {
 			throw Problem.valueOf(INTERNAL_SERVER_ERROR, STREAM_ERROR_MESSAGE.formatted(exception.getClass().getSimpleName(), attachment.getId(), exception.getMessage()));
 		}

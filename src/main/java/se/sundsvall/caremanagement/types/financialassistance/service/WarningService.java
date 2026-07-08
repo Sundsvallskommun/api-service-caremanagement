@@ -76,27 +76,10 @@ public class WarningService {
 	}
 
 	/**
-	 * Reconcile the income warnings produced by the rules + completeness + draft checks into the errand's warning
-	 * objects: unhandled / changed / still-missing incomes, plus income that has newly arrived in SSBTEK but is not in the
-	 * caseworker's edited draft calculation.
-	 */
-	@Transactional
-	public void reconcileIncomeWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
-		final List<String> missing, final List<String> newIncome) {
-		final List<WarningInput> inputs = new ArrayList<>();
-		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
-		ofList(changes).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_CHANGE, sourceKey(text), text)));
-		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Saknas fortfarande i SSBTEK: " + text)));
-		ofList(newIncome).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, text, "Ny inkomst i SSBTEK, ej införd i beräkningen: " + text)));
-		reconcile(errandId, inputs);
-	}
-
-	/**
 	 * Reconcile the full calculation warnings into the errand's warning objects: the rules income warnings
 	 * (unhandled / changed / still-missing), the rows the daily refresh newly added (NEW_*) or saw disappear, and the
 	 * section warnings the feeder pre-typed and DMN-classified — the expense rules (reasonableness review + cap) and the
-	 * renewal delta (household-size + housing drift). Supersedes {@link #reconcileIncomeWarnings} once the three-section
-	 * draft is in play.
+	 * renewal delta (household-size + housing drift).
 	 */
 	@Transactional
 	public void reconcileCalculationWarnings(final String errandId, final List<String> unhandled, final List<String> changes,

@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.core.api.model.Errand;
@@ -291,10 +292,49 @@ class FinancialAssistanceMapperTest {
 	}
 
 	@Test
+	void collectionElementMappersAreNullSafe() {
+		final var data = FinancialAssistanceData.create()
+			.withChildren(Arrays.asList(Child.create().withPartyId("child-1"), null))
+			.withCosts(Arrays.asList(Cost.create().withCostType("RENT"), null))
+			.withIncomes(Arrays.asList(Income.create().withIncomeType("SALARY"), null))
+			.withPendingBenefits(Arrays.asList(PendingBenefit.create().withBenefitName("BOSTADSBIDRAG"), null))
+			.withAssets(Arrays.asList(Asset.create().withAssetCategory("VEHICLE"), null))
+			.withPersons(Arrays.asList(Person.create().withRole("APPLICANT"), null))
+			.withPlannings(Arrays.asList(Planning.create().withPlanningType("WORK"), null))
+			.withPlannedActivities(Arrays.asList(PlannedActivity.create().withActivity("Jobbsökning"), null))
+			.withJobApplications(Arrays.asList(JobApplication.create().withJobTitle("Snickare"), null));
+
+		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
+
+		assertThat(entity.getChildren()).hasSize(2).last().isNull();
+		assertThat(entity.getCosts()).hasSize(2).last().isNull();
+		assertThat(entity.getIncomes()).hasSize(2).last().isNull();
+		assertThat(entity.getPendingBenefits()).hasSize(2).last().isNull();
+		assertThat(entity.getAssets()).hasSize(2).last().isNull();
+		assertThat(entity.getPersons()).hasSize(2).last().isNull();
+		assertThat(entity.getPlannings()).hasSize(2).last().isNull();
+		assertThat(entity.getPlannedActivities()).hasSize(2).last().isNull();
+		assertThat(entity.getJobApplications()).hasSize(2).last().isNull();
+
+		final var roundTripped = FinancialAssistanceMapper.toData(entity);
+
+		assertThat(roundTripped.getChildren()).hasSize(2).last().isNull();
+		assertThat(roundTripped.getCosts()).hasSize(2).last().isNull();
+		assertThat(roundTripped.getIncomes()).hasSize(2).last().isNull();
+		assertThat(roundTripped.getPendingBenefits()).hasSize(2).last().isNull();
+		assertThat(roundTripped.getAssets()).hasSize(2).last().isNull();
+		assertThat(roundTripped.getPersons()).hasSize(2).last().isNull();
+		assertThat(roundTripped.getPlannings()).hasSize(2).last().isNull();
+		assertThat(roundTripped.getPlannedActivities()).hasSize(2).last().isNull();
+		assertThat(roundTripped.getJobApplications()).hasSize(2).last().isNull();
+	}
+
+	@Test
 	void toStakeholdersMapsRolePartyIdAndContactChannels() {
-		final var persons = List.of(
+		final var persons = Arrays.asList(
 			Person.create().withRole("APPLICANT").withPartyId("pid-1").withEmail("a@b.se").withPhone("070"),
 			Person.create().withRole("CO_APPLICANT").withPartyId("pid-2"),
+			null,
 			Person.create().withPartyId("pid-3")); // no role → filtered out
 
 		final var result = FinancialAssistanceMapper.toStakeholders(persons);
@@ -314,6 +354,7 @@ class FinancialAssistanceMapperTest {
 	@Test
 	void toStakeholdersNullSafe() {
 		assertThat(FinancialAssistanceMapper.toStakeholders(null)).isEmpty();
+		assertThat(FinancialAssistanceMapper.toStakeholder(null)).isNull();
 	}
 
 	@Test

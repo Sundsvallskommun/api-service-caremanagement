@@ -3,7 +3,6 @@ package se.sundsvall.caremanagement.types.financialassistance.integration.db.mod
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -23,9 +22,7 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  * and are cleared when the approval is withdrawn.
  */
 @Entity
-@Table(name = "errand_financial_assistance_section_approval", indexes = {
-	@Index(name = "idx_fa_section_approval_errand", columnList = "errand_id")
-}, uniqueConstraints = {
+@Table(name = "errand_financial_assistance_section_approval", uniqueConstraints = {
 	@UniqueConstraint(name = "uq_fa_section_approval", columnNames = {
 		"errand_id", "section"
 	})

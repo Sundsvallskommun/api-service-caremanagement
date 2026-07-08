@@ -37,8 +37,8 @@ import se.sundsvall.caremanagement.types.financialassistance.service.event.Finan
  *
  * <p>
  * The classification step writes the {@code errand} row and so races {@link ApplicantNameSyncListener}, which updates
- * the same row from a sibling {@code StakeholderMutated} event. On MariaDB 11 (InnoDB snapshot isolation) the loser of
- * that race fails with {@code 1020 "Record has changed since last read"}; the work runs in a fresh transaction
+ * the same row from a sibling {@code StakeholderMutated} event. MariaDB/InnoDB can surface the losing writer of
+ * that race as {@code 1020 "Record has changed since last read"}; the work runs in a fresh transaction
  * ({@link FinancialAssistanceErrandCreatedProcessor}) so we simply retry it — the next attempt reads the row after the
  * sibling write committed. Process start stays outside the retry so it can never run twice.
  */

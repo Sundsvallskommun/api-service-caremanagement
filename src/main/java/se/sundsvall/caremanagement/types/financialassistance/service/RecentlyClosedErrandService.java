@@ -70,7 +70,7 @@ public class RecentlyClosedErrandService {
 		return errandIds.stream()
 			.map(id -> errandQueryService.findErrand(municipalityId, namespace, id))
 			.flatMap(Optional::stream)
-			.filter(errand -> SLUGS.contains(errand.getTypeSlug()))
+			.filter(errand -> errand.getTypeSlug() != null && SLUGS.contains(errand.getTypeSlug()))
 			.filter(errand -> STATUS_CLOSED.equals(errand.getStatus()))
 			.flatMap(errand -> recentlyClosed(errand, cutoff).stream())
 			.max(comparing(RecentlyClosed::closedAt));
