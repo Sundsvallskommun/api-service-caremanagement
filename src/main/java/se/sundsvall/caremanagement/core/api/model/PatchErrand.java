@@ -20,7 +20,7 @@ public class PatchErrand {
 	@Size(max = 64)
 	private String status;
 
-	@Schema(description = "Description of the errand")
+	@Schema(description = "Description of the errand", examples = "Long description text")
 	private String description;
 
 	@Schema(description = "Priority of the errand", examples = "HIGH")

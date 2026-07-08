@@ -20,20 +20,20 @@ public class NormHeaderInput {
 	@Schema(description = "The selected FC norm id (Norm)", examples = "5")
 	private Integer normId;
 
-	@ArraySchema(schema = @Schema(description = "The norm type", allowableValues = {
+	@ArraySchema(schema = @Schema(description = "The norm type", examples = "NATIONAL_NORM", allowableValues = {
 		"NATIONAL_NORM", "OTHER_NORM"
 	}))
 	private List<String> normType;
 
-	@Schema(description = "Calculation period start (from)")
+	@Schema(description = "Calculation period start (from)", examples = "2026-06-01")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate calculationFromDate;
 
-	@Schema(description = "Calculation period end (to)")
+	@Schema(description = "Calculation period end (to)", examples = "2026-06-30")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate calculationToDate;
 
-	@Schema(description = "Calculation date (calculation date)")
+	@Schema(description = "Calculation date (calculation date)", examples = "2026-06-15")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate calculationDate;
 

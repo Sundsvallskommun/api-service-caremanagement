@@ -26,18 +26,18 @@ public class NormIncomeInput {
 	@Schema(description = "The amount the caseworker decided for the applicant", examples = "1900.00")
 	private BigDecimal applicantCaseworkerAmount;
 
-	@Schema(description = "The date the applicant amount is attributed to")
+	@Schema(description = "The date the applicant amount is attributed to", examples = "2026-06-01T00:00:00Z")
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime applicantAmountDate;
 
 	@Schema(description = "The amount the caseworker decided for the co-applicant", examples = "1900.00")
 	private BigDecimal coapplicantCaseworkerAmount;
 
-	@Schema(description = "The date the co-applicant amount is attributed to")
+	@Schema(description = "The date the co-applicant amount is attributed to", examples = "2026-06-01T00:00:00Z")
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime coapplicantAmountDate;
 
-	@Schema(description = "Free-text note")
+	@Schema(description = "Free-text note", examples = "Justerat belopp enligt underlag")
 	private String note;
 
 	public static NormIncomeInput create() {

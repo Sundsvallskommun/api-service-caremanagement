@@ -67,7 +67,7 @@ public class Notification {
 	})
 	private String description;
 
-	@Schema(description = "Optional longer content / body")
+	@Schema(description = "Optional longer content / body", examples = "You have been assigned a new errand regarding financial assistance.")
 	@Size(max = 2048, groups = {
 		OnCreate.class, OnUpdate.class
 	})

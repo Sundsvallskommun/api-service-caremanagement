@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:50084
+- url: http://localhost:55330
   description: Generated server url
 tags:
 - name: Statistics
@@ -8646,6 +8646,8 @@ components:
         content:
           type: string
           description: Optional longer content / body
+          examples:
+          - You have been assigned a new errand regarding financial assistance.
         acknowledged:
           type: boolean
           description: "Acknowledgement state. On PATCH, null leaves the value unchanged;\
@@ -9187,6 +9189,8 @@ components:
         partyId:
           type: string
           description: The party id of the household member
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
           maxLength: 36
           minLength: 0
         role:
@@ -9196,9 +9200,13 @@ components:
           - APPLICANT
           - CO_APPLICANT
           - CHILD
+          examples:
+          - APPLICANT
         name:
           type: string
           description: The name of the household member
+          examples:
+          - Anna Andersson
           maxLength: 255
           minLength: 0
         caseworkerDays:
@@ -9210,17 +9218,25 @@ components:
         included:
           type: boolean
           description: Whether the household member is included in the norm
+          examples:
+          - "true"
         deviationFromDate:
           type: string
           format: date
           description: The start date of the member's deviation from the household
+          examples:
+          - 2026-06-01
         deviationToDate:
           type: string
           format: date
           description: The end date of the member's deviation from the household
+          examples:
+          - 2026-06-30
         normInterval:
           type: string
           description: The norm interval applied to the member
+          examples:
+          - 4-6 år
           maxLength: 64
           minLength: 0
         jobStimulusAmount:
@@ -9231,6 +9247,8 @@ components:
         note:
           type: string
           description: Free-text note
+          examples:
+          - Justerat efter inlämnat underlag
     NormPersonRow:
       type: object
       description: "One person row of the calculation draft (household member, process\
@@ -9355,6 +9373,8 @@ components:
           type: string
           format: date-time
           description: The date the applicant amount is attributed to
+          examples:
+          - 2026-06-01T00:00:00Z
         coapplicantCaseworkerAmount:
           type: number
           description: The amount the caseworker decided for the co-applicant
@@ -9364,9 +9384,13 @@ components:
           type: string
           format: date-time
           description: The date the co-applicant amount is attributed to
+          examples:
+          - 2026-06-01T00:00:00Z
         note:
           type: string
           description: Free-text note
+          examples:
+          - Justerat belopp enligt underlag
     NormIncomeRow:
       type: object
       description: "One income row of the calculation draft (FC income type with applicant/co-applicant\
@@ -9476,6 +9500,8 @@ components:
         costType:
           type: string
           description: The cost type
+          examples:
+          - Hyra
           maxLength: 64
           minLength: 0
         bucket:
@@ -9484,14 +9510,20 @@ components:
           enum:
           - EXPENSE
           - SPECIAL_EXPENSE
+          examples:
+          - EXPENSE
         otherSubType:
           type: string
           description: The other sub-type (when the cost type is 'other')
+          examples:
+          - Övrigt
           maxLength: 32
           minLength: 0
         specification:
           type: string
           description: The cost specification
+          examples:
+          - Hyra för juni 2026
         appliedAmount:
           type: number
           description: The amount applied for (ansökt). Honoured on both create and
@@ -9506,6 +9538,8 @@ components:
         note:
           type: string
           description: Free-text note
+          examples:
+          - Godkänd enligt underlag
     NormExpenseRow:
       type: object
       description: "One expense row of the calculation draft (applied cost, process\
@@ -9991,6 +10025,8 @@ components:
         description:
           type: string
           description: Description of the errand
+          examples:
+          - Long description text
         priority:
           type: string
           description: Priority of the errand
@@ -10198,18 +10234,26 @@ components:
             enum:
             - NATIONAL_NORM
             - OTHER_NORM
+            examples:
+            - NATIONAL_NORM
         calculationFromDate:
           type: string
           format: date
           description: Calculation period start (from)
+          examples:
+          - 2026-06-01
         calculationToDate:
           type: string
           format: date
           description: Calculation period end (to)
+          examples:
+          - 2026-06-30
         calculationDate:
           type: string
           format: date
           description: Calculation date (calculation date)
+          examples:
+          - 2026-06-15
         hasCustomHouseholdSize:
           type: boolean
           description: Whether a custom household size is used
