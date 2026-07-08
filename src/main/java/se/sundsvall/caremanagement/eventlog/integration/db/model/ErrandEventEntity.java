@@ -15,7 +15,6 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 @Entity
 @Table(name = "errand_event",
 	indexes = {
-		@Index(name = "idx_errand_event_errand_id", columnList = "errand_id"),
 		@Index(name = "idx_errand_event_errand_id_created", columnList = "errand_id, created"),
 		@Index(name = "idx_errand_event_created", columnList = "created")
 	})

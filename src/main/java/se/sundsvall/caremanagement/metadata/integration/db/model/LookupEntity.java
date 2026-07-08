@@ -7,7 +7,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
@@ -27,9 +26,6 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  */
 @Entity
 @Table(name = "lookup",
-	indexes = {
-		@Index(name = "idx_lookup_kind_namespace_municipality_id", columnList = "kind, namespace, municipality_id")
-	},
 	uniqueConstraints = {
 		@UniqueConstraint(name = "uq_lookup_kind_namespace_municipality_id_name", columnNames = {
 			"kind", "namespace", "municipality_id", "name"

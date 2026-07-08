@@ -48,7 +48,7 @@ public final class ClassifiedIncomeToFcMapper {
 	 * @return            the FC income rows (incomes resolving to the same type id are merged)
 	 */
 	public static List<PersonBasedCalculationIncomePostDTO> toCalculationIncomes(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
-		final var typeIdByName = indexIncomeTypeIds(proposal);
+		final var typeIdByName = MapperUtil.indexIncomeTypeIds(proposal);
 
 		return ofNullable(classified).orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
@@ -76,7 +76,7 @@ public final class ClassifiedIncomeToFcMapper {
 	 * @return            one income line per (type id, recipient), amounts summed within the pair
 	 */
 	public static List<FcIncomeLine> toIncomeLines(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
-		final var typeIdByName = indexIncomeTypeIds(proposal);
+		final var typeIdByName = MapperUtil.indexIncomeTypeIds(proposal);
 		final var nameById = indexIncomeTypeNamesById(proposal);
 
 		return ofNullable(classified).orElseGet(List::of).stream()
@@ -133,7 +133,7 @@ public final class ClassifiedIncomeToFcMapper {
 
 	/** The normalised FC income-type names this month's transferable classified incomes resolve to. */
 	private static Set<String> coveredTypeNames(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
-		final var typeIdByName = indexIncomeTypeIds(proposal);
+		final var typeIdByName = MapperUtil.indexIncomeTypeIds(proposal);
 		return ofNullable(classified).orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
 			.filter(ClassifiedIncomeToFcMapper::isTransferable)
@@ -153,14 +153,6 @@ public final class ClassifiedIncomeToFcMapper {
 			return null;
 		}
 		return new Resolved(typeId, classified.income());
-	}
-
-	private static Map<String, Integer> indexIncomeTypeIds(final PersonBasedCalculationProposalDTO proposal) {
-		return ofNullable(proposal)
-			.map(PersonBasedCalculationProposalDTO::getCalculationIncomeTypes)
-			.orElseGet(List::of).stream()
-			.filter(type -> (type.getName() != null) && (type.getId() != null))
-			.collect(toMap(type -> MapperUtil.normalize(type.getName()), PersonBasedCalculationCalculationIncomeTypeDTO::getId, (first, second) -> first, LinkedHashMap::new));
 	}
 
 	private static PersonBasedCalculationIncomePostDTO toDto(final Integer typeId, final List<Resolved> group) {

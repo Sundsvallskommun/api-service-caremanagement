@@ -104,7 +104,8 @@ class NoteResource {
 
 	@GetMapping(path = "/{noteId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read note", responses = {
-		@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true)
+		@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true),
+		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
 	ResponseEntity<Note> read(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -117,7 +118,8 @@ class NoteResource {
 
 	@PatchMapping(path = "/{noteId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Update note", responses = {
-		@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true)
+		@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true),
+		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
 	ResponseEntity<Note> update(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -131,7 +133,8 @@ class NoteResource {
 
 	@DeleteMapping(path = "/{noteId}", produces = ALL_VALUE)
 	@Operation(summary = "Delete note", responses = {
-		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true)
+		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
+		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
 	ResponseEntity<Void> delete(
 		@ValidMunicipalityId @PathVariable final String municipalityId,

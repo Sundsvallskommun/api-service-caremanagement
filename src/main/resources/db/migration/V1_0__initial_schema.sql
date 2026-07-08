@@ -57,7 +57,6 @@ CREATE TABLE `decision` (
   `period_from` date DEFAULT NULL,
   `period_to` date DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_decision_errand_id` (`errand_id`),
   KEY `idx_decision_decision_type` (`decision_type`),
   KEY `idx_decision_errand_id_created` (`errand_id`,`created`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -128,7 +127,6 @@ CREATE TABLE `errand_event` (
   `created` datetime(6) NOT NULL,
   `source` varchar(16) NOT NULL DEFAULT 'HTTP',
   PRIMARY KEY (`id`),
-  KEY `idx_errand_event_errand_id` (`errand_id`),
   KEY `idx_errand_event_errand_id_created` (`errand_id`,`created`),
   KEY `idx_errand_event_created` (`created`),
   KEY `idx_errand_event_source` (`source`)
@@ -416,7 +414,6 @@ CREATE TABLE `errand_form_snapshot` (
   `created` datetime(6) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_form_snapshot_errand` (`errand_id`),
-  KEY `idx_form_snapshot_errand_id` (`errand_id`),
   CONSTRAINT `fk_form_snapshot_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `errand_journal_entry` (
@@ -511,8 +508,7 @@ CREATE TABLE `lookup` (
   `municipality_id` varchar(8) NOT NULL,
   `namespace` varchar(32) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_lookup_kind_namespace_municipality_id_name` (`kind`,`namespace`,`municipality_id`,`name`),
-  KEY `idx_lookup_kind_namespace_municipality_id` (`kind`,`namespace`,`municipality_id`)
+  UNIQUE KEY `uq_lookup_kind_namespace_municipality_id_name` (`kind`,`namespace`,`municipality_id`,`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `message_attachment` (
   `id` varchar(36) NOT NULL,
@@ -542,7 +538,6 @@ CREATE TABLE `message_read_receipt` (
   `read_at` datetime(6) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_message_read_receipt_message_side` (`message_id`,`reader_side`),
-  KEY `idx_message_read_receipt_message_id` (`message_id`),
   CONSTRAINT `fk_message_read_receipt_message_id` FOREIGN KEY (`message_id`) REFERENCES `errand_message` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `namespace_config` (
@@ -555,7 +550,6 @@ CREATE TABLE `namespace_config` (
   `short_code` varchar(16) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_namespace_config_namespace_municipality_id` (`namespace`,`municipality_id`),
-  KEY `idx_namespace_config_namespace_municipality_id` (`namespace`,`municipality_id`),
   KEY `idx_namespace_config_municipality_id` (`municipality_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `notification` (

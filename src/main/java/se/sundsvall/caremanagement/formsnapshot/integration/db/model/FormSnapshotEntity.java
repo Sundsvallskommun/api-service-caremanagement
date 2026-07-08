@@ -3,7 +3,6 @@ package se.sundsvall.caremanagement.formsnapshot.integration.db.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
@@ -23,8 +22,7 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  */
 @Entity
 @Table(name = "errand_form_snapshot",
-	uniqueConstraints = @UniqueConstraint(name = "uq_form_snapshot_errand", columnNames = "errand_id"),
-	indexes = @Index(name = "idx_form_snapshot_errand_id", columnList = "errand_id"))
+	uniqueConstraints = @UniqueConstraint(name = "uq_form_snapshot_errand", columnNames = "errand_id"))
 public class FormSnapshotEntity {
 
 	@Id

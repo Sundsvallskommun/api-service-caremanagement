@@ -3,7 +3,6 @@ package se.sundsvall.caremanagement.conversation.integration.db.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
@@ -22,10 +21,7 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 @Table(name = "message_read_receipt",
 	uniqueConstraints = @UniqueConstraint(name = "uk_message_read_receipt_message_side", columnNames = {
 		"message_id", "reader_side"
-	}),
-	indexes = {
-		@Index(name = "idx_message_read_receipt_message_id", columnList = "message_id")
-	})
+	}))
 public class MessageReadReceiptEntity {
 
 	@Id

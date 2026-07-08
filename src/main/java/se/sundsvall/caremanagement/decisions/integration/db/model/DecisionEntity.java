@@ -3,7 +3,6 @@ package se.sundsvall.caremanagement.decisions.integration.db.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
@@ -14,10 +13,7 @@ import java.util.Objects;
 import org.hibernate.annotations.UuidGenerator;
 
 @Entity
-@Table(name = "decision",
-	indexes = {
-		@Index(name = "idx_decision_errand_id", columnList = "errand_id")
-	})
+@Table(name = "decision")
 public class DecisionEntity {
 
 	@Id

@@ -143,7 +143,8 @@ class MessageResource {
 
 	@GetMapping(path = "/{messageId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read a message", responses = {
-		@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true)
+		@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true),
+		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
 	ResponseEntity<Message> read(
 		@ValidMunicipalityId @PathVariable final String municipalityId,

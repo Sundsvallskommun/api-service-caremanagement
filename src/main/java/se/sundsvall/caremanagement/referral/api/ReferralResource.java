@@ -105,7 +105,8 @@ class ReferralResource {
 
 	@PostMapping(path = "/{referralId}/response", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Register response on referral", responses = {
-		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true)
+		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
+		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
 	ResponseEntity<Void> registerResponse(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -120,7 +121,8 @@ class ReferralResource {
 
 	@DeleteMapping(path = "/{referralId}", produces = ALL_VALUE)
 	@Operation(summary = "Delete referral", responses = {
-		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true)
+		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
+		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
 	ResponseEntity<Void> deleteReferral(
 		@ValidMunicipalityId @PathVariable final String municipalityId,

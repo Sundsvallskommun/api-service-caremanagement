@@ -104,7 +104,8 @@ class PermitResource {
 
 	@PostMapping(path = "/{permitId}/revoke", produces = ALL_VALUE)
 	@Operation(summary = "Revoke permit", responses = {
-		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true)
+		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
+		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
 	ResponseEntity<Void> revokePermit(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -131,7 +132,8 @@ class PermitResource {
 
 	@DeleteMapping(path = "/{permitId}", produces = ALL_VALUE)
 	@Operation(summary = "Delete permit", responses = {
-		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true)
+		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
+		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 	})
 	ResponseEntity<Void> deletePermit(
 		@ValidMunicipalityId @PathVariable final String municipalityId,

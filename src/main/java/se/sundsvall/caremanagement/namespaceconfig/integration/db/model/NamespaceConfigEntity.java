@@ -19,7 +19,6 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 @Entity
 @Table(name = "namespace_config", indexes = {
-	@Index(name = "idx_namespace_config_namespace_municipality_id", columnList = "namespace, municipality_id"),
 	@Index(name = "idx_namespace_config_municipality_id", columnList = "municipality_id")
 }, uniqueConstraints = {
 	@UniqueConstraint(name = "uq_namespace_config_namespace_municipality_id", columnNames = {

@@ -49,6 +49,7 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
 		Problem.class, ConstraintViolationProblem.class
 	}))),
+	@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
 	@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 })
 class MonitoringResource {
@@ -63,8 +64,7 @@ class MonitoringResource {
 	@Operation(summary = "Create a monitoring on an errand",
 		description = "Creates a date-bound monitoring on the errand. Returns the created monitoring and its Location.",
 		responses = {
-			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
 		})
 	ResponseEntity<Monitoring> createMonitoring(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -80,8 +80,7 @@ class MonitoringResource {
 
 	@GetMapping(produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "List the monitorings on an errand", responses = {
-		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 	})
 	ResponseEntity<List<Monitoring>> listMonitorings(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -95,8 +94,7 @@ class MonitoringResource {
 	@Operation(summary = "Count the monitorings on an errand",
 		description = "How many monitorings are on the errand. Not recorded in the event log.",
 		responses = {
-			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 		})
 	ResponseEntity<MonitoringCount> countMonitorings(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -108,8 +106,7 @@ class MonitoringResource {
 
 	@GetMapping(path = "/{monitoringId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read a monitoring on an errand", responses = {
-		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 	})
 	ResponseEntity<Monitoring> getMonitoring(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -122,8 +119,7 @@ class MonitoringResource {
 
 	@PutMapping(path = "/{monitoringId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Replace a monitoring on an errand", responses = {
-		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 	})
 	ResponseEntity<Monitoring> updateMonitoring(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -137,8 +133,7 @@ class MonitoringResource {
 
 	@DeleteMapping(path = "/{monitoringId}")
 	@Operation(summary = "Delete a monitoring on an errand", responses = {
-		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
-		@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true)
 	})
 	ResponseEntity<Void> deleteMonitoring(
 		@ValidMunicipalityId @PathVariable final String municipalityId,

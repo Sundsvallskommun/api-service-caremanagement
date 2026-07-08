@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
 import se.sundsvall.caremanagement.attachments.service.SourceFile;
 import se.sundsvall.caremanagement.conversation.spi.ConversationMessageView;
@@ -21,7 +22,6 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 
 import static java.time.OffsetDateTime.now;
 import static java.time.ZoneId.systemDefault;
-import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_CLOSED;
 
 /**
@@ -154,7 +154,7 @@ public class MessageArchiveService {
 		return decisionService.readAll(errand.getMunicipalityId(), errand.getNamespace(), errand.getId()).stream()
 			.filter(decision -> ACTUALISATION_DECISION_TYPE.equals(decision.getDecisionType()))
 			.map(Decision::getValue)
-			.filter(value -> hasText(value))
+			.filter(StringUtils::hasText)
 			.map(MessageArchiveService::parseId)
 			.flatMap(Optional::stream)
 			.findFirst();

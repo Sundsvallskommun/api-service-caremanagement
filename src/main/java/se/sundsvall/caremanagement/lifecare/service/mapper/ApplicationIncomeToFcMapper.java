@@ -1,6 +1,5 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationCalculationIncomeTypeDTO;
 import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +9,6 @@ import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
 
 import static java.util.Collections.emptyList;
 import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.toMap;
 
 /**
  * Translates the incomes a citizen declared in a financial-assistance application into the same {@link FcIncomeLine}
@@ -50,7 +48,7 @@ public final class ApplicationIncomeToFcMapper {
 	 * @return          one income line per resolved declared income (unresolved types skipped)
 	 */
 	public static List<FcIncomeLine> toIncomeLines(final List<ApplicationIncome> incomes, final PersonBasedCalculationProposalDTO proposal) {
-		final var typeIdByName = indexIncomeTypeIds(proposal);
+		final var typeIdByName = MapperUtil.indexIncomeTypeIds(proposal);
 
 		return ofNullable(incomes).orElse(emptyList()).stream()
 			.filter(Objects::nonNull)
@@ -73,13 +71,5 @@ public final class ApplicationIncomeToFcMapper {
 			return null;
 		}
 		return new FcIncomeLine(typeId, fcName, income.role().name(), income.amount(), MapperUtil.toOffsetDateTime(income.date()), "Ansökan");
-	}
-
-	private static Map<String, Integer> indexIncomeTypeIds(final PersonBasedCalculationProposalDTO proposal) {
-		return ofNullable(proposal)
-			.map(PersonBasedCalculationProposalDTO::getCalculationIncomeTypes)
-			.orElseGet(List::of).stream()
-			.filter(type -> (type.getName() != null) && (type.getId() != null))
-			.collect(toMap(type -> MapperUtil.normalize(type.getName()), PersonBasedCalculationCalculationIncomeTypeDTO::getId));
 	}
 }
