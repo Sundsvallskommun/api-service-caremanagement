@@ -50,7 +50,7 @@ class FormSnapshotServiceTest {
 		when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(false);
 		when(repositoryMock.save(any(FormSnapshotEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, VALID_PAYLOAD);
+		service.captureSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, VALID_PAYLOAD);
 
 		final ArgumentCaptor<FormSnapshotEntity> captor = ArgumentCaptor.forClass(FormSnapshotEntity.class);
 		verify(repositoryMock).save(captor.capture());
@@ -70,7 +70,7 @@ class FormSnapshotServiceTest {
 			when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(true);
 		}
 
-		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, payload))
+		assertThatThrownBy(() -> service.captureSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, payload))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 		verify(repositoryMock, never()).save(any());
@@ -86,7 +86,7 @@ class FormSnapshotServiceTest {
 
 	@Test
 	void captureRejectsEmptySections() {
-		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{\"schemaVersion\":\"form-snapshot/1\",\"sections\":[]}"))
+		assertThatThrownBy(() -> service.captureSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{\"schemaVersion\":\"form-snapshot/1\",\"sections\":[]}"))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 		verify(repositoryMock, never()).save(any());

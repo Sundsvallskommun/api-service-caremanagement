@@ -281,7 +281,7 @@ class FinancialAssistanceServiceTest {
 		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, null, null, payload);
 
 		assertThat(result).isEqualTo(ERRAND_ID);
-		verify(formSnapshotServiceMock).capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG_NEW, payload);
+		verify(formSnapshotServiceMock).captureSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG_NEW, payload);
 	}
 
 	@Test

@@ -48,7 +48,7 @@ public class FormSnapshotService {
 	 * the {@code contentHash} stays reproducible. Rejects with {@code 400} when the payload is blank, malformed, or
 	 * structurally invalid, or when a snapshot already exists for the errand.
 	 */
-	public void capture(final String municipalityId, final String namespace, final String errandId, final String typeSlug, final String payload) {
+	public void captureSnapshot(final String municipalityId, final String namespace, final String errandId, final String typeSlug, final String payload) {
 		if (!StringUtils.hasText(payload)) {
 			throw Problem.valueOf(BAD_REQUEST, "formSnapshot is blank");
 		}

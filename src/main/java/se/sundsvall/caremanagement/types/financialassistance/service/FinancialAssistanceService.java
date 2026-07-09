@@ -197,7 +197,7 @@ public class FinancialAssistanceService {
 
 		ofNullable(formSnapshot)
 			.filter(StringUtils::hasText)
-			.ifPresent(payload -> formSnapshotService.capture(municipalityId, namespace, errandId, typeSlug, payload));
+			.ifPresent(payload -> formSnapshotService.captureSnapshot(municipalityId, namespace, errandId, typeSlug, payload));
 
 		return errandId;
 	}
