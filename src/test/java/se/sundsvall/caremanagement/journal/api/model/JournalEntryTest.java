@@ -94,4 +94,18 @@ class JournalEntryTest {
 			.isNotEqualTo(null)
 			.isNotEqualTo("string");
 	}
+
+	@Test
+	void toStringContainsFields() {
+		final var entry = JournalEntry.create()
+			.withId("je1")
+			.withErrandId("e1")
+			.withType("Journalfört meddelande")
+			.withHeading("Rubrik")
+			.withText("body")
+			.withStatus("WORKING")
+			.withCreatedBy("carola");
+
+		assertThat(entry.toString()).contains("je1", "e1", "Journalfört meddelande", "Rubrik", "body", "WORKING", "carola");
+	}
 }

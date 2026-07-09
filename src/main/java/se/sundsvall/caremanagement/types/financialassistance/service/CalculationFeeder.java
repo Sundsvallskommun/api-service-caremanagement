@@ -115,7 +115,7 @@ public class CalculationFeeder {
 		}
 		return lines.stream()
 			.map(FcIncomeLine::amount)
-			.filter(amount -> amount != null)
+			.filter(Objects::nonNull)
 			.reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 

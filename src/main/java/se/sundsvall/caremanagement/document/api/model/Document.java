@@ -267,4 +267,12 @@ public class Document {
 	public int hashCode() {
 		return Objects.hash(id, errandId, type, heading, text, documentDate, documentTime, status, createdBy, created, modifiedBy, modified, lockedBy, locked);
 	}
+
+	@Override
+	public String toString() {
+		return "Document{id='" + id + "', errandId='" + errandId + "', type='" + type + "', heading='" + heading
+			+ "', text='" + text + "', documentDate=" + documentDate + ", documentTime=" + documentTime + ", status='"
+			+ status + "', createdBy='" + createdBy + "', created=" + created + ", modifiedBy='" + modifiedBy
+			+ "', modified=" + modified + ", lockedBy='" + lockedBy + "', locked=" + locked + "}";
+	}
 }

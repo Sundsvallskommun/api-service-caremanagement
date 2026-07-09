@@ -46,32 +46,32 @@ public final class FinancialAssistanceTypes {
 		income("CHILD_SUPPORT", "Underhållsbidrag från den andra föräldern", null),
 		income("RENT_SHARE_FROM_CHILD", "Hyresdel från barn", null),
 		// Handläggare-only Lifecare incomes (no Mina-sidor counterpart — SSBTEK delivers these)
-		handlaggareOnly("UNEMPLOYMENT_BENEFIT", "A-kassa"),
-		handlaggareOnly("UNEMPLOYMENT_OR_ALPHA_BENEFIT", "A-kassa/Alfaersättning"),
-		handlaggareOnly("ACTIVITY_COMPENSATION", "Aktivitetsersättning"),
-		handlaggareOnly("ACTIVITY_SUPPORT", "Aktivitetsstöd"),
-		handlaggareOnly("ALPHA_BENEFIT", "Alfaersättning"),
-		handlaggareOnly("CHILD_ALLOWANCE", "Barnbidrag/Flerbarnstillägg"),
-		handlaggareOnly("CHILD_PENSION", "Barnpension"),
-		handlaggareOnly("HOUSING_ALLOWANCE", "Bostadsbidrag"),
-		handlaggareOnly("HOUSING_SUPPLEMENT", "Bostadstillägg"),
-		handlaggareOnly("CSN_GRANT", "CSN Bidrag"),
-		handlaggareOnly("CSN_LOAN", "CSN Lån"),
-		handlaggareOnly("DAILY_ALLOWANCE_FK", "Dagersättning från FK"),
-		handlaggareOnly("SURVIVOR_SUPPORT", "Efterlevandestöd"),
-		handlaggareOnly("ESTABLISHMENT_BENEFIT", "Etableringsersättning"),
-		handlaggareOnly("PARENTAL_BENEFIT", "Föräldrapenning"),
-		handlaggareOnly("LODGING_ALLOWANCE", "Inackorderingstillägg"),
-		handlaggareOnly("CAPITAL_INCOME", "Inkomst av kapital"),
-		handlaggareOnly("PENSION", "Pension"),
-		handlaggareOnly("PENSION_ANNUITY_CARE", "Pension/SA/Livränta/Omvårdnadsbidrag"),
-		handlaggareOnly("SICKNESS_COMPENSATION", "Sjukersättning"),
-		handlaggareOnly("SICKNESS_BENEFIT", "Sjukpenning"),
-		handlaggareOnly("TAX_REFUND", "Skatteåterbäring"),
-		handlaggareOnly("MAINTENANCE_SUPPORT", "Underhållsstöd"),
-		handlaggareOnly("CARE_ALLOWANCE", "Vårdbidrag/Omvårdnadsbidrag"),
-		handlaggareOnly("ELDERLY_SUPPORT", "Äldreförsörjningsstöd"),
-		handlaggareOnly("SURPLUS_FROM_PREVIOUS_MONTH", "Överskjutande inkomst från föregående månad"));
+		caseworkerOnly("UNEMPLOYMENT_BENEFIT", "A-kassa"),
+		caseworkerOnly("UNEMPLOYMENT_OR_ALPHA_BENEFIT", "A-kassa/Alfaersättning"),
+		caseworkerOnly("ACTIVITY_COMPENSATION", "Aktivitetsersättning"),
+		caseworkerOnly("ACTIVITY_SUPPORT", "Aktivitetsstöd"),
+		caseworkerOnly("ALPHA_BENEFIT", "Alfaersättning"),
+		caseworkerOnly("CHILD_ALLOWANCE", "Barnbidrag/Flerbarnstillägg"),
+		caseworkerOnly("CHILD_PENSION", "Barnpension"),
+		caseworkerOnly("HOUSING_ALLOWANCE", "Bostadsbidrag"),
+		caseworkerOnly("HOUSING_SUPPLEMENT", "Bostadstillägg"),
+		caseworkerOnly("CSN_GRANT", "CSN Bidrag"),
+		caseworkerOnly("CSN_LOAN", "CSN Lån"),
+		caseworkerOnly("DAILY_ALLOWANCE_FK", "Dagersättning från FK"),
+		caseworkerOnly("SURVIVOR_SUPPORT", "Efterlevandestöd"),
+		caseworkerOnly("ESTABLISHMENT_BENEFIT", "Etableringsersättning"),
+		caseworkerOnly("PARENTAL_BENEFIT", "Föräldrapenning"),
+		caseworkerOnly("LODGING_ALLOWANCE", "Inackorderingstillägg"),
+		caseworkerOnly("CAPITAL_INCOME", "Inkomst av kapital"),
+		caseworkerOnly("PENSION", "Pension"),
+		caseworkerOnly("PENSION_ANNUITY_CARE", "Pension/SA/Livränta/Omvårdnadsbidrag"),
+		caseworkerOnly("SICKNESS_COMPENSATION", "Sjukersättning"),
+		caseworkerOnly("SICKNESS_BENEFIT", "Sjukpenning"),
+		caseworkerOnly("TAX_REFUND", "Skatteåterbäring"),
+		caseworkerOnly("MAINTENANCE_SUPPORT", "Underhållsstöd"),
+		caseworkerOnly("CARE_ALLOWANCE", "Vårdbidrag/Omvårdnadsbidrag"),
+		caseworkerOnly("ELDERLY_SUPPORT", "Äldreförsörjningsstöd"),
+		caseworkerOnly("SURPLUS_FROM_PREVIOUS_MONTH", "Överskjutande inkomst från föregående månad"));
 
 	/** Cost types (kostnader) — the citizen Mina-sidor list (grouped), then the handläggare-only Lifecare list. */
 	public static final List<TypeOption> COST_TYPES = List.of(
@@ -88,11 +88,11 @@ public final class FinancialAssistanceTypes {
 		cost("MEDICINE", "Medicin (inom högkostnadsskydd/förmån/egenavgift)", "Medicin", GROUP_HEALTH),
 		cost(GROUP_OTHER, "Övrigt bistånd", "Övriga utgifter", GROUP_OTHER),
 		// Handläggare-only Lifecare costs (no Mina-sidor counterpart)
-		handlaggareOnly("ELECTRICITY_2", "El 2"),
-		handlaggareOnly("CHILDCARE_FEE", "Barnomsorgsavgift"),
-		handlaggareOnly("GLASSES", "Glasögon"),
-		handlaggareOnly("VISITATION_COST", "Kostnad i samband med umgänge"),
-		handlaggareOnly("DENTAL_CARE", "Tandvård"));
+		caseworkerOnly("ELECTRICITY_2", "El 2"),
+		caseworkerOnly("CHILDCARE_FEE", "Barnomsorgsavgift"),
+		caseworkerOnly("GLASSES", "Glasögon"),
+		caseworkerOnly("VISITATION_COST", "Kostnad i samband med umgänge"),
+		caseworkerOnly("DENTAL_CARE", "Tandvård"));
 
 	/** The assembled metadata response — the income + cost catalogues the metadata endpoint returns. */
 	public static FinancialAssistanceMetadata metadata() {
@@ -110,7 +110,7 @@ public final class FinancialAssistanceTypes {
 	}
 
 	/** A Lifecare type with no Mina-sidor counterpart — internal label only, not on the citizen form. */
-	private static TypeOption handlaggareOnly(final String code, final String internalDisplayName) {
+	private static TypeOption caseworkerOnly(final String code, final String internalDisplayName) {
 		return option(code, null, internalDisplayName, null, false);
 	}
 

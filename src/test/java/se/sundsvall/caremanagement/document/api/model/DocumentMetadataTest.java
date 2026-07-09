@@ -41,4 +41,12 @@ class DocumentMetadataTest {
 			.isNotEqualTo(null)
 			.isNotEqualTo("string");
 	}
+
+	@Test
+	void toStringContainsFields() {
+		final var types = List.of(DocumentType.create().withCode("C").withDisplayName("D"));
+		final var metadata = DocumentMetadata.create().withTypes(types);
+
+		assertThat(metadata.toString()).contains("DocumentMetadata", "types");
+	}
 }

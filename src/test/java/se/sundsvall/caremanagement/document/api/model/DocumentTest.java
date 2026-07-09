@@ -101,4 +101,18 @@ class DocumentTest {
 			.isNotEqualTo(null)
 			.isNotEqualTo("string");
 	}
+
+	@Test
+	void toStringContainsFields() {
+		final var document = Document.create()
+			.withId("d1")
+			.withErrandId("e1")
+			.withType("Brev")
+			.withHeading("Rubrik")
+			.withText("body")
+			.withStatus("WORKING")
+			.withCreatedBy("carola");
+
+		assertThat(document.toString()).contains("d1", "e1", "Brev", "Rubrik", "body", "WORKING", "carola");
+	}
 }

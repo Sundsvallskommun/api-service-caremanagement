@@ -41,4 +41,12 @@ class JournalEntryMetadataTest {
 			.isNotEqualTo(null)
 			.isNotEqualTo("string");
 	}
+
+	@Test
+	void toStringContainsFields() {
+		final var types = List.of(JournalEntryType.create().withCode("C").withDisplayName("D"));
+		final var metadata = JournalEntryMetadata.create().withTypes(types);
+
+		assertThat(metadata.toString()).contains("JournalEntryMetadata", "types");
+	}
 }

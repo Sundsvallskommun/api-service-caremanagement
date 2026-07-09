@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
@@ -73,7 +74,7 @@ final class PdfCombiner {
 	static byte[] combine(final List<SourceFile> sources) {
 		final var totalBytes = sources.stream()
 			.map(SourceFile::content)
-			.filter(content -> content != null)
+			.filter(Objects::nonNull)
 			.mapToLong(content -> content.length)
 			.sum();
 		if (totalBytes > MAX_TOTAL_INPUT_BYTES) {

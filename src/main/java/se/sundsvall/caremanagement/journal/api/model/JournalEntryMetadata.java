@@ -45,4 +45,9 @@ public class JournalEntryMetadata {
 	public int hashCode() {
 		return Objects.hash(types);
 	}
+
+	@Override
+	public String toString() {
+		return "JournalEntryMetadata{types=" + types + "}";
+	}
 }

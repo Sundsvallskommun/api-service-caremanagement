@@ -46,4 +46,9 @@ public class DocumentMetadata {
 	public int hashCode() {
 		return Objects.hash(types);
 	}
+
+	@Override
+	public String toString() {
+		return "DocumentMetadata{types=" + types + "}";
+	}
 }

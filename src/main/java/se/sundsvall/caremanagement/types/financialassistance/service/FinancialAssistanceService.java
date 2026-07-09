@@ -257,9 +257,9 @@ public class FinancialAssistanceService {
 		// Compute the fresh process rows for the three sections, then merge them into the editable draft (the merge keeps
 		// the caseworker's values + soft-deletes; only the process columns are refreshed).
 		final var incomeRows = calculationFeeder.incomeRows(errandId, calculationService.incomeLines(applicant, classifiedIncomes));
-		final var sokandeAlder = ageFromPnr(applicant);
+		final var applicantAge = ageFromPnr(applicant);
 		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, errandId, errand,
-			previousExpenseAmounts(applicant, applicationMonth), sokandeAlder);
+			previousExpenseAmounts(applicant, applicationMonth), applicantAge);
 		final var personRows = calculationFeeder.personRows(errandId, errand);
 		final var normId = calculationService.selectNormId(applicant, applicationMonth);
 		final var draftChanges = draftService.refresh(errandId, request.getApplicationMonth(), normId, errand.getNormType(), personRows, incomeRows, expenseFeed.rows());

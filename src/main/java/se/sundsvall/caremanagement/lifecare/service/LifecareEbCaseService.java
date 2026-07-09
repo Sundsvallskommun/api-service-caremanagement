@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -216,7 +217,7 @@ public class LifecareEbCaseService {
 			.orElseGet(List::of).stream()
 			.filter(expense -> isHousing(expense.getType()))
 			.map(LifecareEbCaseService::expenseAmount)
-			.filter(amount -> amount != null)
+			.filter(Objects::nonNull)
 			.reduce(Double::sum)
 			.orElse(null);
 
