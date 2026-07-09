@@ -43,13 +43,13 @@ public final class CalculationDraftMapper {
 	public static CalculationDraft toCalculationDraft(final FaCalculationDraftEntity header,
 		final List<FaNormIncomeEntity> incomeEntities, final List<FaNormExpenseEntity> expenseEntities, final List<FaNormPersonEntity> personEntities) {
 
-		final var incomes = incomeEntities.stream()
+		final var incomes = incomeEntities.stream().filter(Objects::nonNull)
 			.sorted(comparing(FaNormIncomeEntity::getPosition, nullsLast(naturalOrder()))).map(CalculationDraftMapper::toIncomeRow).toList();
-		final var allExpenses = expenseEntities.stream()
+		final var allExpenses = expenseEntities.stream().filter(Objects::nonNull)
 			.sorted(comparing(FaNormExpenseEntity::getPosition, nullsLast(naturalOrder()))).map(CalculationDraftMapper::toExpenseRow).toList();
 		final var expenses = allExpenses.stream().filter(row -> !BUCKET_SPECIAL_EXPENSE.equals(row.getBucket())).toList();
 		final var specialExpenses = allExpenses.stream().filter(row -> BUCKET_SPECIAL_EXPENSE.equals(row.getBucket())).toList();
-		final var persons = personEntities.stream()
+		final var persons = personEntities.stream().filter(Objects::nonNull)
 			.sorted(comparing(FaNormPersonEntity::getPosition, nullsLast(naturalOrder()))).map(CalculationDraftMapper::toPersonRow).toList();
 
 		return CalculationDraft.create()

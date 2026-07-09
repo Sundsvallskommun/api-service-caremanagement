@@ -306,27 +306,27 @@ class FinancialAssistanceMapperTest {
 
 		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
 
-		assertThat(entity.getChildren()).hasSize(2).last().isNull();
-		assertThat(entity.getCosts()).hasSize(2).last().isNull();
-		assertThat(entity.getIncomes()).hasSize(2).last().isNull();
-		assertThat(entity.getPendingBenefits()).hasSize(2).last().isNull();
-		assertThat(entity.getAssets()).hasSize(2).last().isNull();
-		assertThat(entity.getPersons()).hasSize(2).last().isNull();
-		assertThat(entity.getPlannings()).hasSize(2).last().isNull();
-		assertThat(entity.getPlannedActivities()).hasSize(2).last().isNull();
-		assertThat(entity.getJobApplications()).hasSize(2).last().isNull();
+		assertThat(entity.getChildren()).hasSize(1);
+		assertThat(entity.getCosts()).hasSize(1);
+		assertThat(entity.getIncomes()).hasSize(1);
+		assertThat(entity.getPendingBenefits()).hasSize(1);
+		assertThat(entity.getAssets()).hasSize(1);
+		assertThat(entity.getPersons()).hasSize(1);
+		assertThat(entity.getPlannings()).hasSize(1);
+		assertThat(entity.getPlannedActivities()).hasSize(1);
+		assertThat(entity.getJobApplications()).hasSize(1);
 
 		final var roundTripped = FinancialAssistanceMapper.toData(entity);
 
-		assertThat(roundTripped.getChildren()).hasSize(2).last().isNull();
-		assertThat(roundTripped.getCosts()).hasSize(2).last().isNull();
-		assertThat(roundTripped.getIncomes()).hasSize(2).last().isNull();
-		assertThat(roundTripped.getPendingBenefits()).hasSize(2).last().isNull();
-		assertThat(roundTripped.getAssets()).hasSize(2).last().isNull();
-		assertThat(roundTripped.getPersons()).hasSize(2).last().isNull();
-		assertThat(roundTripped.getPlannings()).hasSize(2).last().isNull();
-		assertThat(roundTripped.getPlannedActivities()).hasSize(2).last().isNull();
-		assertThat(roundTripped.getJobApplications()).hasSize(2).last().isNull();
+		assertThat(roundTripped.getChildren()).hasSize(1);
+		assertThat(roundTripped.getCosts()).hasSize(1);
+		assertThat(roundTripped.getIncomes()).hasSize(1);
+		assertThat(roundTripped.getPendingBenefits()).hasSize(1);
+		assertThat(roundTripped.getAssets()).hasSize(1);
+		assertThat(roundTripped.getPersons()).hasSize(1);
+		assertThat(roundTripped.getPlannings()).hasSize(1);
+		assertThat(roundTripped.getPlannedActivities()).hasSize(1);
+		assertThat(roundTripped.getJobApplications()).hasSize(1);
 	}
 
 	@Test

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -134,19 +135,19 @@ public class CalculationFeeder {
 	 * evaluated once per cost; the verdict feeds both the row and its warnings.
 	 */
 	public ExpenseFeed expenseFeed(final String municipalityId, final String errandId, final FinancialAssistanceEntity errand,
-		final Map<String, Double> previousAmounts, final Integer sokandeAlder) {
+		final Map<String, Double> previousAmounts, final Integer applicantAge) {
 
-		final var antalBarn = ofNullable(errand.getChildren()).orElseGet(List::of).size();
-		final var antalIHushallet = householdSize(errand);
+		final var childCount = ofNullable(errand.getChildren()).orElseGet(List::of).size();
+		final var householdCount = householdSize(errand);
 		final var previous = ofNullable(previousAmounts).orElseGet(Map::of);
 
 		final var rows = new ArrayList<FaNormExpenseEntity>();
 		final var warnings = new ArrayList<WarningService.WarningInput>();
 
 		ofNullable(errand.getCosts()).orElseGet(List::of).forEach(cost -> {
-			final var godkandForra = ofNullable(previous.get(cost.getCostType())).map(BigDecimal::valueOf).orElse(null);
+			final var previousApproved = ofNullable(previous.get(cost.getCostType())).map(BigDecimal::valueOf).orElse(null);
 			final var verdict = expenseRulesService.verdict(municipalityId, cost.getCostType(), cost.getAppliedAmount(),
-				godkandForra, sokandeAlder, antalBarn, antalIHushallet);
+				previousApproved, applicantAge, childCount, householdCount);
 			rows.add(FaNormExpenseEntity.create()
 				.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
 				.withCostType(cost.getCostType()).withOtherSubType(cost.getOtherSubType()).withSpecification(cost.getSpecification())
@@ -330,7 +331,7 @@ public class CalculationFeeder {
 		return ofNullable(errand.getCosts()).orElseGet(List::of).stream()
 			.filter(cost -> COST_TYPE_RENT.equals(cost.getCostType()))
 			.map(FaCost::getAppliedAmount)
-			.filter(amount -> amount != null)
+			.filter(Objects::nonNull)
 			.reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 

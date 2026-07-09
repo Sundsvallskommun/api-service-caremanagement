@@ -45,15 +45,15 @@ public class DraftService {
 
 	private static final String NO_DRAFT_FOR_ERRAND = "No draft calculation for errand";
 
-	private final FaCalculationDraftRepository headerRepository;
+	private final FaCalculationDraftRepository calculationDraftRepository;
 	private final FaNormIncomeRepository incomeRepository;
 	private final FaNormExpenseRepository expenseRepository;
 	private final FaNormPersonRepository personRepository;
 	private final SectionReconciler sectionReconciler;
 
-	DraftService(final FaCalculationDraftRepository headerRepository, final FaNormIncomeRepository incomeRepository,
+	DraftService(final FaCalculationDraftRepository calculationDraftRepository, final FaNormIncomeRepository incomeRepository,
 		final FaNormExpenseRepository expenseRepository, final FaNormPersonRepository personRepository, final SectionReconciler sectionReconciler) {
-		this.headerRepository = headerRepository;
+		this.calculationDraftRepository = calculationDraftRepository;
 		this.incomeRepository = incomeRepository;
 		this.expenseRepository = expenseRepository;
 		this.personRepository = personRepository;
@@ -84,7 +84,7 @@ public class DraftService {
 	}
 
 	private void upsertHeader(final String errandId, final String applicationMonth, final Integer normId, final List<String> normType) {
-		final var header = headerRepository.findById(errandId).orElseGet(() -> FaCalculationDraftEntity.create().withErrandId(errandId));
+		final var header = calculationDraftRepository.findById(errandId).orElseGet(() -> FaCalculationDraftEntity.create().withErrandId(errandId));
 		ofNullable(applicationMonth).filter(StringUtils::hasText).ifPresent(month -> {
 			header.setApplicationMonth(month);
 			final var parsed = YearMonth.parse(month);
@@ -94,13 +94,13 @@ public class DraftService {
 		ofNullable(normId).ifPresent(header::setNormId);
 		ofNullable(normType).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
 		header.setCalculationDate(LocalDate.now(ZoneId.systemDefault()));
-		headerRepository.save(header);
+		calculationDraftRepository.save(header);
 	}
 
 	/** Caseworker edit of the header — the norm, the calculation date window and the custom household size. */
 	@Transactional
 	public CalculationDraft patchHeader(final String errandId, final NormHeaderInput input) {
-		final var header = headerRepository.findById(errandId)
+		final var header = calculationDraftRepository.findById(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND));
 		ofNullable(input.getNormId()).ifPresent(header::setNormId);
 		ofNullable(input.getNormType()).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
@@ -109,7 +109,7 @@ public class DraftService {
 		ofNullable(input.getCalculationDate()).ifPresent(header::setCalculationDate);
 		ofNullable(input.getHasCustomHouseholdSize()).ifPresent(header::setHasCustomHouseholdSize);
 		ofNullable(input.getHouseholdSize()).ifPresent(header::setHouseholdSize);
-		headerRepository.save(header);
+		calculationDraftRepository.save(header);
 		return loadDraft(errandId);
 	}
 
@@ -125,7 +125,7 @@ public class DraftService {
 	// Shared read used by both the public read endpoint and the write methods. Kept out of @Transactional self-invocation:
 	// a write method calling the readOnly get() via 'this' would bypass the proxy and ignore the readOnly hint anyway.
 	private CalculationDraft loadDraft(final String errandId) {
-		final var header = headerRepository.findById(errandId)
+		final var header = calculationDraftRepository.findById(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND));
 		return CalculationDraftMapper.toCalculationDraft(header,
 			incomeRepository.findByErrandId(errandId), expenseRepository.findByErrandId(errandId), personRepository.findByErrandId(errandId));
@@ -217,7 +217,7 @@ public class DraftService {
 
 	@Transactional(readOnly = true)
 	public Optional<FaCalculationDraftEntity> header(final String errandId) {
-		return headerRepository.findById(errandId);
+		return calculationDraftRepository.findById(errandId);
 	}
 
 	@Transactional(readOnly = true)
@@ -240,7 +240,7 @@ public class DraftService {
 	// ------------------------------------------------------------------------------------------------------------------
 
 	private void requireHeader(final String errandId) {
-		if (!headerRepository.existsById(errandId)) {
+		if (!calculationDraftRepository.existsById(errandId)) {
 			throw Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND);
 		}
 	}

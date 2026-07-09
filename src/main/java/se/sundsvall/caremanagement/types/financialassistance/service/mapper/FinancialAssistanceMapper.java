@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.core.api.model.Errand;
@@ -49,7 +50,9 @@ public final class FinancialAssistanceMapper {
 	private static <S, T> List<T> mapList(final List<S> source, final Function<S, T> mapper) {
 		return ofNullable(source)
 			.map(list -> list.stream()
-				.map(item -> ofNullable(item).map(mapper).orElse(null))
+				.filter(Objects::nonNull)
+				.map(mapper)
+				.filter(Objects::nonNull)
 				.toList())
 			.orElse(null);
 	}
@@ -385,7 +388,7 @@ public final class FinancialAssistanceMapper {
 	 */
 	public static List<Stakeholder> toStakeholders(final List<Person> source) {
 		return ofNullable(source).orElseGet(List::of).stream()
-			.filter(person -> person != null)
+			.filter(Objects::nonNull)
 			.filter(person -> StringUtils.hasText(person.getRole()))
 			.map(FinancialAssistanceMapper::toStakeholder)
 			.toList();
