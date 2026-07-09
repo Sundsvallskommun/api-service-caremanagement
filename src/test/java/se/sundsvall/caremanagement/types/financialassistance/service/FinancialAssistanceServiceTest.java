@@ -281,7 +281,7 @@ class FinancialAssistanceServiceTest {
 		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, SLUG_NEW, request, null, null, payload);
 
 		assertThat(result).isEqualTo(ERRAND_ID);
-		verify(formSnapshotServiceMock).captureSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG_NEW, payload);
+		verify(formSnapshotServiceMock).saveErrandFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG_NEW, payload);
 	}
 
 	@Test
@@ -300,13 +300,13 @@ class FinancialAssistanceServiceTest {
 		final var snapshot = se.sundsvall.caremanagement.formsnapshot.api.model.FormSnapshot.create().withSchemaVersion("form-snapshot/1");
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_NEW).withStatus("RECEIVED"));
-		when(formSnapshotServiceMock.read(ERRAND_ID)).thenReturn(snapshot);
+		when(formSnapshotServiceMock.readErrandFormSnapshot(ERRAND_ID)).thenReturn(snapshot);
 
 		final var result = service.readFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		assertThat(result).isSameAs(snapshot);
 		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID); // scope check
-		verify(formSnapshotServiceMock).read(ERRAND_ID);
+		verify(formSnapshotServiceMock).readErrandFormSnapshot(ERRAND_ID);
 	}
 
 	@Test

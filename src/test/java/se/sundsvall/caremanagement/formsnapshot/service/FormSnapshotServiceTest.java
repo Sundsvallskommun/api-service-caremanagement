@@ -50,7 +50,7 @@ class FormSnapshotServiceTest {
 		when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(false);
 		when(repositoryMock.save(any(FormSnapshotEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		service.captureSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, VALID_PAYLOAD);
+		service.saveErrandFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, VALID_PAYLOAD);
 
 		final ArgumentCaptor<FormSnapshotEntity> captor = ArgumentCaptor.forClass(FormSnapshotEntity.class);
 		verify(repositoryMock).save(captor.capture());
@@ -70,7 +70,7 @@ class FormSnapshotServiceTest {
 			when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(true);
 		}
 
-		assertThatThrownBy(() -> service.captureSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, payload))
+		assertThatThrownBy(() -> service.saveErrandFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, payload))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 		verify(repositoryMock, never()).save(any());
@@ -86,7 +86,7 @@ class FormSnapshotServiceTest {
 
 	@Test
 	void captureRejectsEmptySections() {
-		assertThatThrownBy(() -> service.captureSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{\"schemaVersion\":\"form-snapshot/1\",\"sections\":[]}"))
+		assertThatThrownBy(() -> service.saveErrandFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{\"schemaVersion\":\"form-snapshot/1\",\"sections\":[]}"))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 		verify(repositoryMock, never()).save(any());
@@ -97,7 +97,7 @@ class FormSnapshotServiceTest {
 		when(repositoryMock.findByErrandId(ERRAND_ID))
 			.thenReturn(Optional.of(FormSnapshotEntity.create().withErrandId(ERRAND_ID).withPayload(VALID_PAYLOAD)));
 
-		final var snapshot = service.read(ERRAND_ID);
+		final var snapshot = service.readErrandFormSnapshot(ERRAND_ID);
 
 		assertThat(snapshot.getSchemaVersion()).isEqualTo("form-snapshot/1");
 		assertThat(snapshot.getTitle()).isEqualTo("Ansökan");
@@ -109,7 +109,7 @@ class FormSnapshotServiceTest {
 	void readThrowsNotFoundWhenMissing() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.read(ERRAND_ID))
+		assertThatThrownBy(() -> service.readErrandFormSnapshot(ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 	}

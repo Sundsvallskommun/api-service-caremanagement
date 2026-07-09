@@ -197,7 +197,7 @@ public class FinancialAssistanceService {
 
 		ofNullable(formSnapshot)
 			.filter(StringUtils::hasText)
-			.ifPresent(payload -> formSnapshotService.captureSnapshot(municipalityId, namespace, errandId, typeSlug, payload));
+			.ifPresent(payload -> formSnapshotService.saveErrandFormSnapshot(municipalityId, namespace, errandId, typeSlug, payload));
 
 		return errandId;
 	}
@@ -210,7 +210,7 @@ public class FinancialAssistanceService {
 	@Transactional(readOnly = true)
 	public FormSnapshot readFormSnapshot(final String municipalityId, final String namespace, final String errandId) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return formSnapshotService.read(errandId);
+		return formSnapshotService.readErrandFormSnapshot(errandId);
 	}
 
 	@Transactional(readOnly = true)

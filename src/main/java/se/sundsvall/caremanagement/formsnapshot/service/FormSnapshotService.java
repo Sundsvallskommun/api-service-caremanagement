@@ -48,14 +48,14 @@ public class FormSnapshotService {
 	 * the {@code contentHash} stays reproducible. Rejects with {@code 400} when the payload is blank, malformed, or
 	 * structurally invalid, or when a snapshot already exists for the errand.
 	 */
-	public void captureSnapshot(final String municipalityId, final String namespace, final String errandId, final String typeSlug, final String payload) {
+	public void saveErrandFormSnapshot(final String municipalityId, final String namespace, final String errandId, final String typeSlug, final String payload) {
 		if (!StringUtils.hasText(payload)) {
 			throw Problem.valueOf(BAD_REQUEST, "formSnapshot is blank");
 		}
 
 		// Fail fast: reject a malformed or structurally-invalid snapshot on its own merits, before any DB round-trip.
-		final var snapshot = parse(payload);
-		validate(snapshot);
+		final var snapshot = toFormSnapshot(payload);
+		validateFormSnapshot(snapshot);
 
 		if (repository.existsByErrandId(errandId)) {
 			throw Problem.valueOf(BAD_REQUEST, "A form snapshot already exists on errand '%s'".formatted(errandId));
@@ -72,13 +72,13 @@ public class FormSnapshotService {
 	 * are responsible for the municipality/namespace scope check before calling this.
 	 */
 	@Transactional(readOnly = true)
-	public FormSnapshot read(final String errandId) {
+	public FormSnapshot readErrandFormSnapshot(final String errandId) {
 		return repository.findByErrandId(errandId)
-			.map(entity -> parse(entity.getPayload()))
+			.map(entity -> toFormSnapshot(entity.getPayload()))
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No form snapshot for errand '%s'".formatted(errandId)));
 	}
 
-	private FormSnapshot parse(final String payload) {
+	private FormSnapshot toFormSnapshot(final String payload) {
 		try {
 			return objectMapper.readValue(payload, FormSnapshot.class);
 		} catch (final JacksonException e) {
@@ -87,7 +87,7 @@ public class FormSnapshotService {
 		}
 	}
 
-	private static void validate(final FormSnapshot snapshot) {
+	private static void validateFormSnapshot(final FormSnapshot snapshot) {
 		if (!StringUtils.hasText(snapshot.getSchemaVersion())) {
 			throw Problem.valueOf(BAD_REQUEST, "formSnapshot.schemaVersion is required");
 		}
