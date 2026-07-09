@@ -40,7 +40,6 @@ import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
-import se.sundsvall.caremanagement.rpa.service.RpaAction;
 import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Actualisation;
@@ -70,7 +69,6 @@ import se.sundsvall.caremanagement.types.financialassistance.service.mapper.Life
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.toList;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_NORMBERAKNING;
@@ -367,7 +365,7 @@ public class FinancialAssistanceService {
 
 		// The calculation is now in Lifecare via the FC API; ask RPA to mirror the rest of the decision surface that has no
 		// FC endpoint. Best-effort — the Lifecare write already succeeded, so a queue hiccup must not fail the commit.
-		triggerRpaWrite(municipalityId, errandId, WRITE_NORMBERAKNING);
+		triggerRpaWrite(municipalityId, errandId);
 
 		return CalculationResponse.create()
 			.withCalculationId(calculationId)
@@ -410,7 +408,7 @@ public class FinancialAssistanceService {
 		final var header = new CalculationHeader(normId, applicationMonth.atDay(1), applicationMonth.atEndOfMonth(), LocalDate.now(ZoneId.systemDefault()), false, null);
 
 		final var calculationId = calculationService.commitEffective(applicant, applicationMonth, header, incomes, expenses, persons);
-		triggerRpaWrite(municipalityId, errandId, WRITE_NORMBERAKNING);
+		triggerRpaWrite(municipalityId, errandId);
 
 		return CalculationResponse.create().withCalculationId(calculationId);
 	}
@@ -431,11 +429,11 @@ public class FinancialAssistanceService {
 	}
 
 	/** Enqueue an RPA write, swallowing any failure — RPA mirroring must never roll back a successful Lifecare write. */
-	private void triggerRpaWrite(final String municipalityId, final String errandId, final RpaAction action) {
+	private void triggerRpaWrite(final String municipalityId, final String errandId) {
 		try {
-			rpaService.enqueue(municipalityId, errandId, action);
+			rpaService.enqueue(municipalityId, errandId, WRITE_NORMBERAKNING);
 		} catch (final Exception e) {
-			LOG.warn("RPA enqueue {} failed for errand {} — Lifecare write already committed, continuing", sanitizeForLogging(action.name()), sanitizeForLogging(errandId), e);
+			LOG.warn("RPA enqueue {} failed for errand {} — Lifecare write already committed, continuing", sanitizeForLogging(WRITE_NORMBERAKNING.name()), sanitizeForLogging(errandId), e);
 		}
 	}
 
