@@ -44,7 +44,7 @@ class DecisionTest {
 		final var value = "APPROVED";
 		final var description = "desc";
 		final var amount = new BigDecimal("7900.00");
-		final var decisionMessage = "Du beviljas financial assistance för juni 2026.";
+		final var decisionMessage = "Du beviljas ekonomiskt bistånd för juni 2026.";
 		final var decisionDate = LocalDate.parse("2026-06-18");
 		final var periodFrom = LocalDate.parse("2026-06-01");
 		final var periodTo = LocalDate.parse("2026-06-30");

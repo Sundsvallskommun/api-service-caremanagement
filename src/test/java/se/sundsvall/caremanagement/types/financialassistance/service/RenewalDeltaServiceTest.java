@@ -28,14 +28,14 @@ class RenewalDeltaServiceTest {
 	private RenewalDeltaService service;
 
 	@Test
-	void classifyReturnsVarningAndRegelWhenPresent() {
+	void classifyReturnsWarningAndRuleWhenPresent() {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY), anyMap()))
 			.thenReturn(List.of(Map.of("varning", true, "regel", "Kontrollera hyresunderlag")));
 
 		final var result = service.classify(MUNICIPALITY_ID, "HOUSING_COST", 0, new BigDecimal("32"));
 
-		assertThat(result.varning()).isTrue();
-		assertThat(result.regel()).isEqualTo("Kontrollera hyresunderlag");
+		assertThat(result.warning()).isTrue();
+		assertThat(result.rule()).isEqualTo("Kontrollera hyresunderlag");
 	}
 
 	@Test
@@ -44,19 +44,19 @@ class RenewalDeltaServiceTest {
 
 		final var result = service.classify(MUNICIPALITY_ID, "HOUSEHOLD_SIZE", -1, BigDecimal.ZERO);
 
-		assertThat(result.varning()).isFalse();
-		assertThat(result.regel()).isNull();
+		assertThat(result.warning()).isFalse();
+		assertThat(result.rule()).isNull();
 	}
 
 	@Test
-	void classifyReturnsUnflaggedWhenRowHasNoVarning() {
+	void classifyReturnsUnflaggedWhenRowHasNoWarning() {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY), anyMap()))
 			.thenReturn(List.of(Map.of("regel", "Inom tröskel")));
 
 		final var result = service.classify(MUNICIPALITY_ID, "HOUSING_COST", 0, new BigDecimal("5"));
 
-		assertThat(result.varning()).isFalse();
-		assertThat(result.regel()).isEqualTo("Inom tröskel");
+		assertThat(result.warning()).isFalse();
+		assertThat(result.rule()).isEqualTo("Inom tröskel");
 	}
 
 	@Test
@@ -67,7 +67,7 @@ class RenewalDeltaServiceTest {
 		// a null change kind + null percent exercise the nz()/null-coalescing variable building before the failure
 		final var result = service.classify(MUNICIPALITY_ID, null, 0, null);
 
-		assertThat(result.varning()).isFalse();
-		assertThat(result.regel()).isNull();
+		assertThat(result.warning()).isFalse();
+		assertThat(result.rule()).isNull();
 	}
 }

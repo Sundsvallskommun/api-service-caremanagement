@@ -39,7 +39,7 @@ class FaWarningEntityTest {
 			.withErrandId("errand")
 			.withType("MISSING_SSBTEK")
 			.withSourceKey("Dagersättning")
-			.withMessage("Still missing in SSBTEK: Dagersättning")
+			.withMessage("Saknas fortfarande i SSBTEK: Dagersättning")
 			.withStatus("OPEN")
 			.withAutoResolved(true)
 			.withCreated(created)

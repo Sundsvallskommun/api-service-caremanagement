@@ -82,10 +82,10 @@ public class ExpenseRulesService {
 
 	/**
 	 * The rules verdict for a cost — the process (reasonable) amount, the FC bucket it posts to, and the manual-review
-	 * flag: {@code varning} true when the cost needs a reasonableness assessment, with {@code regel} the human-readable
+	 * flag: {@code warning} true when the cost needs a reasonableness assessment, with {@code rule} the human-readable
 	 * reason.
 	 */
-	public record ExpenseVerdict(BigDecimal processAmount, String bucket, boolean varning, String regel) {}
+	public record ExpenseVerdict(BigDecimal processAmount, String bucket, boolean warning, String rule) {}
 
 	/** The FC array a cost type posts to (best-effort {@code EXPENSE} for an unmapped type). */
 	public static String bucketForCostType(final String costType) {

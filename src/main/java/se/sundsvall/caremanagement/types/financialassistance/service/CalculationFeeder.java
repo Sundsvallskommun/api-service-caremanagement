@@ -191,8 +191,8 @@ public class CalculationFeeder {
 		final var sourceKey = expenseSourceKey(cost);
 		final var label = expenseLabel(cost);
 
-		if (verdict.varning()) {
-			final var reason = ofNullable(verdict.regel()).filter(text -> !text.isBlank()).orElse("Utgiften kräver en manuell skälighetsbedömning");
+		if (verdict.warning()) {
+			final var reason = ofNullable(verdict.rule()).filter(text -> !text.isBlank()).orElse("Utgiften kräver en manuell skälighetsbedömning");
 			warnings.add(new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, sourceKey, label + ": " + reason));
 		}
 		if (isCapped(cost.getAppliedAmount(), verdict.processAmount())) {
@@ -287,7 +287,7 @@ public class CalculationFeeder {
 		}
 
 		final var verdict = renewalDeltaService.classify(municipalityId, CHANGE_HOUSEHOLD_SIZE, sizeDelta, BigDecimal.ZERO);
-		if (!verdict.varning()) {
+		if (!verdict.warning()) {
 			return Optional.empty();
 		}
 
@@ -295,7 +295,7 @@ public class CalculationFeeder {
 		if (!missingPartyIds.isEmpty()) {
 			detail += " — saknas nu: " + String.join(", ", missingPartyIds);
 		}
-		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSEHOLD_CHANGE, "hushall-storlek", withRegel(detail, verdict.regel())));
+		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSEHOLD_CHANGE, "household-size", withRule(detail, verdict.rule())));
 	}
 
 	/** The housing-cost delta (previous Rent vs current applied RENT, as a signed percent), classified by the DMN. */
@@ -312,7 +312,7 @@ public class CalculationFeeder {
 		final var percent = currentRent.subtract(previousBd).multiply(HUNDRED).divide(previousBd, 0, RoundingMode.HALF_UP);
 
 		final var verdict = renewalDeltaService.classify(municipalityId, CHANGE_HOUSING_COST, 0, percent);
-		if (!verdict.varning()) {
+		if (!verdict.warning()) {
 			return Optional.empty();
 		}
 
@@ -323,7 +323,7 @@ public class CalculationFeeder {
 			sign = "";
 		}
 		final var detail = "Boendekostnaden har ändrats " + sign + percent + "% (tidigare " + plain(previousBd) + " kr → nu " + plain(currentRent) + " kr)";
-		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "housing-kostnad", withRegel(detail, verdict.regel())));
+		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "housing-cost", withRule(detail, verdict.rule())));
 	}
 
 	/** Sum of the application's reported RENT costs (0 when none). */
@@ -335,11 +335,11 @@ public class CalculationFeeder {
 			.reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 
-	private static String withRegel(final String detail, final String regel) {
-		if ((regel == null) || regel.isBlank()) {
+	private static String withRule(final String detail, final String rule) {
+		if ((rule == null) || rule.isBlank()) {
 			return detail;
 		}
-		return detail + " — " + regel;
+		return detail + " — " + rule;
 	}
 
 	/** A full-time child is a CHILD; a part-time / other child is an visitation child. */

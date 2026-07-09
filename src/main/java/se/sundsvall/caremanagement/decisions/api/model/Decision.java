@@ -41,7 +41,7 @@ public class Decision {
 	private BigDecimal amount;
 
 	@Schema(description = "Optional decision message communicated to the applicant — the free-text justification shown on the decision letter, kept separate from the internal `description`.",
-		examples = "Du beviljas financial assistance för juni 2026 enligt riksnorm.")
+		examples = "Du beviljas ekonomiskt bistånd för juni 2026 enligt riksnorm.")
 	@Size(max = 8192)
 	private String decisionMessage;
 

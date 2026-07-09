@@ -57,7 +57,7 @@ class EligibilityResponseTest {
 		final var response = EligibilityResponse.create();
 		response.setSuggestions(SUGGESTIONS);
 		response.setReasonCode("NO_EXISTING_CASE");
-		response.setMessage("Föreslår new application");
+		response.setMessage("Föreslår nyansökan");
 		response.setExistsInCm(false);
 		response.setExistsInLc(false);
 		response.setMaritalStatusMatches(null);
@@ -72,7 +72,7 @@ class EligibilityResponseTest {
 		response.setHasCoApplicant(false);
 
 		assertThat(response.getReasonCode()).isEqualTo("NO_EXISTING_CASE");
-		assertThat(response.getMessage()).isEqualTo("Föreslår new application");
+		assertThat(response.getMessage()).isEqualTo("Föreslår nyansökan");
 		assertThat(response.getWindowDays()).isEqualTo(30);
 		assertThat(response.getMaritalStatusMatches()).isNull();
 		assertThat(response.isLifecareChecked()).isFalse();

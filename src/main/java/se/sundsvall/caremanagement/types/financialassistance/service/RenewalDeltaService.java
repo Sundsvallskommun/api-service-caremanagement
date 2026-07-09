@@ -14,7 +14,7 @@ import se.sundsvall.caremanagement.operaton.service.ProcessService;
  * evaluates the modeler-editable {@code Decision_ateransokanDelta} DMN in the operaton engine (the same place the
  * income
  * raw list and the expense rules live) for a change kind and its magnitude, and returns whether the change is worth
- * flagging ({@code varning}) plus the human-readable note ({@code regel}). The delta itself (what changed, by how
+ * flagging ({@code warning}) plus the human-readable note ({@code rule}). The delta itself (what changed, by how
  * much) is computed care-side; this only decides severity/whether to surface — so a small change can pass silently
  * while
  * a large one is flagged. Best-effort: when the decision is unavailable or returns nothing, nothing is flagged so the
@@ -36,7 +36,7 @@ public class RenewalDeltaService {
 	}
 
 	/** The delta verdict — whether to flag the change and the note describing it. */
-	public record DeltaVerdict(boolean varning, String regel) {}
+	public record DeltaVerdict(boolean warning, String rule) {}
 
 	/**
 	 * Classify a household/housing change against the previous calculation.

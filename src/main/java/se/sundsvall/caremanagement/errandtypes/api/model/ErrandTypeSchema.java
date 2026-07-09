@@ -20,7 +20,7 @@ public class ErrandTypeSchema {
 	@Schema(description = "The application-type variant the slug maps to, when the type exposes one; null otherwise", examples = "RENEWAL")
 	private String applicationType;
 
-	@Schema(description = "Human-readable display name of the type", examples = "Financial assistance – återansökan")
+	@Schema(description = "Human-readable display name of the type", examples = "Ekonomiskt bistånd – återansökan")
 	private String displayName;
 
 	@ArraySchema(arraySchema = @Schema(description = "Allowed statuses for the type — code plus human-readable display name, in lifecycle order"), schema = @Schema(implementation = StatusDefinition.class))

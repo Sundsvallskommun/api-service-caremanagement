@@ -9043,7 +9043,7 @@ components:
             \ the free-text justification shown on the decision letter, kept separate\
             \ from the internal `description`."
           examples:
-          - Du beviljas financial assistance för juni 2026 enligt riksnorm.
+          - Du beviljas ekonomiskt bistånd för juni 2026 enligt riksnorm.
           maxLength: 8192
           minLength: 0
         decisionDate:
@@ -11664,7 +11664,7 @@ components:
           type: string
           description: Human-readable display name of the type
           examples:
-          - Financial assistance – återansökan
+          - Ekonomiskt bistånd – återansökan
         statuses:
           type: array
           description: "Allowed statuses for the type — code plus human-readable display\

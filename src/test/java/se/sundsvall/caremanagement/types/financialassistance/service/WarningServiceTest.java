@@ -139,9 +139,9 @@ class WarningServiceTest {
 			List.of("Dagersättning"),
 			changes,
 			List.of(
-				new WarningService.WarningInput(WarningService.TYPE_HOUSEHOLD_CHANGE, "hushall-storlek", "Antal household members ändrat"),
-				new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "housing-kostnad", "Housing cost changed +32%"),
-				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, "OTHER", "OTHER: reasonableness bedöms manuellt"),
+				new WarningService.WarningInput(WarningService.TYPE_HOUSEHOLD_CHANGE, "household-size", "Antal hushållsmedlemmar ändrat"),
+				new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "housing-cost", "Housing cost changed +32%"),
+				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, "OTHER", "OTHER: skälighet bedöms manuellt"),
 				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, "RENT", "Capped cost: RENT")));
 
 		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);

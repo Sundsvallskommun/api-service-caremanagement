@@ -141,7 +141,7 @@ class CalculationFeederTest {
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(other));
 
 		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("OTHER"), any(), any(), any(), any(), any()))
-			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("5000"), "SPECIAL_EXPENSE", true, "Other bistånd – reasonableness bedöms manuellt"));
+			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("5000"), "SPECIAL_EXPENSE", true, "Övrigt bistånd – skälighet bedöms manuellt"));
 
 		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
@@ -149,7 +149,7 @@ class CalculationFeederTest {
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
 		final var warning = feed.warnings().getFirst();
 		assertThat(warning.sourceKey()).isEqualTo("OTHER:BEGRAVNING");
-		assertThat(warning.message()).isEqualTo("Övrigt bistånd (BEGRAVNING): Other bistånd – reasonableness bedöms manuellt");
+		assertThat(warning.message()).isEqualTo("Övrigt bistånd (BEGRAVNING): Övrigt bistånd – skälighet bedöms manuellt");
 	}
 
 	@Test
@@ -345,7 +345,7 @@ class CalculationFeederTest {
 
 		assertThat(warnings).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_HOUSEHOLD_CHANGE);
 		final var warning = warnings.getFirst();
-		assertThat(warning.sourceKey()).isEqualTo("hushall-storlek");
+		assertThat(warning.sourceKey()).isEqualTo("household-size");
 		assertThat(warning.message())
 			.contains("tidigare 2, nu 1")
 			.contains("saknas nu: p-2")
@@ -381,7 +381,7 @@ class CalculationFeederTest {
 
 		assertThat(warnings).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_HOUSING_COST_CHANGE);
 		final var warning = warnings.getFirst();
-		assertThat(warning.sourceKey()).isEqualTo("housing-kostnad");
+		assertThat(warning.sourceKey()).isEqualTo("housing-cost");
 		assertThat(warning.message())
 			.contains("Boendekostnaden har ändrats +32%")
 			.contains("tidigare 5000 kr → nu 6600 kr")

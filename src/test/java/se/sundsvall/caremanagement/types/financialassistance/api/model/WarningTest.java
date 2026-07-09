@@ -40,7 +40,7 @@ class WarningTest {
 			.withId("id")
 			.withType("MISSING_SSBTEK")
 			.withSourceKey("Dagersättning")
-			.withMessage("Still missing in SSBTEK: Dagersättning")
+			.withMessage("Saknas fortfarande i SSBTEK: Dagersättning")
 			.withStatus("OPEN")
 			.withAutoResolved(false)
 			.withCreated(created)
@@ -49,7 +49,7 @@ class WarningTest {
 		assertThat(warning.getId()).isEqualTo("id");
 		assertThat(warning.getType()).isEqualTo("MISSING_SSBTEK");
 		assertThat(warning.getStatus()).isEqualTo("OPEN");
-		assertThat(warning.getMessage()).isEqualTo("Still missing in SSBTEK: Dagersättning");
+		assertThat(warning.getMessage()).isEqualTo("Saknas fortfarande i SSBTEK: Dagersättning");
 	}
 
 	@Test
