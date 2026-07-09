@@ -92,7 +92,8 @@ class JournalEntryServiceTest {
 
 		assertThatThrownBy(() -> service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateJournalEntry("T", "H", null, ENTRY_DATE_TIME, "carola")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: no errand");
 
 		verifyNoInteractions(repositoryMock);
 		verifyNoInteractions(eventsMock);
@@ -135,7 +136,8 @@ class JournalEntryServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No journal entry with id 'missing'");
 	}
 
 	@Test
@@ -144,7 +146,8 @@ class JournalEntryServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "je1"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: no errand");
 
 		verifyNoInteractions(repositoryMock);
 	}
@@ -159,7 +162,8 @@ class JournalEntryServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "je-from-other-errand"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No journal entry with id 'je-from-other-errand'");
 
 		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(repositoryMock).findByIdAndErrandId("je-from-other-errand", ERRAND_ID);
@@ -191,7 +195,8 @@ class JournalEntryServiceTest {
 
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing", new UpdateJournalEntry("t", "h", null, ENTRY_DATE_TIME, "editor")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No journal entry with id 'missing'");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -203,7 +208,8 @@ class JournalEntryServiceTest {
 
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "je1", new UpdateJournalEntry("t", "h", null, ENTRY_DATE_TIME, "editor")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT);
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: Journal entry is locked and cannot be edited");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -225,7 +231,8 @@ class JournalEntryServiceTest {
 
 		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No journal entry with id 'missing'");
 
 		verify(repositoryMock, never()).delete(any());
 	}
@@ -237,7 +244,8 @@ class JournalEntryServiceTest {
 
 		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "je1"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT);
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: Journal entry is locked and cannot be deleted");
 
 		verify(repositoryMock, never()).delete(any());
 	}
@@ -275,7 +283,8 @@ class JournalEntryServiceTest {
 
 		assertThatThrownBy(() -> service.lock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing", new LockJournalEntry("carola")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No journal entry with id 'missing'");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -287,7 +296,8 @@ class JournalEntryServiceTest {
 
 		assertThatThrownBy(() -> service.lock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "je1", new LockJournalEntry("carola")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT);
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: Journal entry is already locked");
 
 		verify(repositoryMock, never()).save(any());
 	}

@@ -10,10 +10,11 @@ import org.junit.jupiter.api.Test;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEqualsExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCodeExcluding;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToStringExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class AttachmentEntityTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
@@ -29,14 +30,8 @@ class AttachmentEntityTest {
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCodeExcluding("attachmentData"),
-			hasValidBeanEqualsExcluding("attachmentData")));
-	}
-
-	@Test
-	void testToString() {
-		final var entity = AttachmentEntity.create().withId("id").withErrandId("e1").withFileName("f.txt");
-		assertThat(entity.toString())
-			.contains("AttachmentEntity{").contains("id='id'").contains("errandId='e1'").contains("fileName='f.txt'");
+			hasValidBeanEqualsExcluding("attachmentData"),
+			hasValidBeanToStringExcluding("attachmentData")));
 	}
 
 	@Test

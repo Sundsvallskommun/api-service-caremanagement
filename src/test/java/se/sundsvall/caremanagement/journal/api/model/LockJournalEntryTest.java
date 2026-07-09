@@ -7,12 +7,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 class LockJournalEntryTest {
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		assertThat(new LockJournalEntry("carola").lockedBy()).isEqualTo("carola");
 	}
 
 	@Test
-	void lockedByMayBeNull() {
+	void testLockedByMayBeNull() {
 		assertThat(new LockJournalEntry(null).lockedBy()).isNull();
 	}
 }

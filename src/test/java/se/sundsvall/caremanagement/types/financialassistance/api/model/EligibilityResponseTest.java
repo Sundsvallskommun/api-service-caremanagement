@@ -2,17 +2,42 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Random;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static com.google.code.beanmatchers.BeanMatchers.registerValueGenerator;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class EligibilityResponseTest {
 
 	private static final List<ApplicationSuggestion> SUGGESTIONS = List.of(
 		ApplicationSuggestion.create().withTypeSlug("financial-assistance-renewal").withRecommended(true));
 
+	@BeforeAll
+	static void setup() {
+		registerValueGenerator(() -> OffsetDateTime.now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+	}
+
 	@Test
-	void builderMethods() {
+	void testBean() {
+		MatcherAssert.assertThat(EligibilityResponse.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
 		final var response = EligibilityResponse.create()
 			.withSuggestions(SUGGESTIONS)
 			.withReasonCode("EXISTING_CASE")
@@ -53,7 +78,7 @@ class EligibilityResponseTest {
 	}
 
 	@Test
-	void settersWork() {
+	void testSettersWork() {
 		final var response = EligibilityResponse.create();
 		response.setSuggestions(SUGGESTIONS);
 		response.setReasonCode("NO_EXISTING_CASE");
@@ -79,7 +104,17 @@ class EligibilityResponseTest {
 	}
 
 	@Test
-	void equalsAndHashCode() {
+	void testNoDirtOnCreatedBean() {
+		assertThat(EligibilityResponse.create()).hasAllNullFieldsOrPropertiesExcept(
+			"existsInCm", "existsInLc", "windowDays", "applicationExistsThisMonth", "applicationExistsNextMonth", "currentMonthDecided",
+			"hasPreviousCalculation", "lifecareChecked", "hasCoApplicant");
+		assertThat(new EligibilityResponse()).hasAllNullFieldsOrPropertiesExcept(
+			"existsInCm", "existsInLc", "windowDays", "applicationExistsThisMonth", "applicationExistsNextMonth", "currentMonthDecided",
+			"hasPreviousCalculation", "lifecareChecked", "hasCoApplicant");
+	}
+
+	@Test
+	void testEqualsAndHashCode() {
 		final var a = EligibilityResponse.create().withReasonCode("NO_EXISTING_CASE").withWindowDays(90).withSuggestions(SUGGESTIONS);
 		final var b = EligibilityResponse.create().withReasonCode("NO_EXISTING_CASE").withWindowDays(90).withSuggestions(SUGGESTIONS);
 		final var c = EligibilityResponse.create().withReasonCode("MARITAL_STATUS_CHANGED");

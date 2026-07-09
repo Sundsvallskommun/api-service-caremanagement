@@ -108,7 +108,8 @@ class ErrandServiceTest {
 		assertThatThrownBy(() -> service.createErrand(MUNICIPALITY_ID, NAMESPACE,
 			Errand.create().withTypeSlug("financial-assistance-renewal")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: Errands of type 'financial-assistance-renewal' must be created via the type's own endpoint (which seeds the type data and starts its process), not the generic POST /errands");
 
 		verifyNoInteractions(repositoryMock, eventPublisherMock);
 	}
@@ -146,7 +147,8 @@ class ErrandServiceTest {
 
 		assertThatThrownBy(() -> service.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand with id '11111111-1111-1111-1111-111111111111' found in namespace 'MY_NAMESPACE' for municipality id '2281'");
 	}
 
 	@Test
@@ -296,7 +298,8 @@ class ErrandServiceTest {
 
 		assertThatThrownBy(() -> service.deleteErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand with id '11111111-1111-1111-1111-111111111111' found in namespace 'MY_NAMESPACE' for municipality id '2281'");
 	}
 
 	@Test
@@ -315,7 +318,8 @@ class ErrandServiceTest {
 
 		assertThatThrownBy(() -> service.linkProcessInstance(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "proc-1"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand with id '11111111-1111-1111-1111-111111111111' found in namespace 'MY_NAMESPACE' for municipality id '2281'");
 	}
 
 	@Test
@@ -343,6 +347,6 @@ class ErrandServiceTest {
 		assertThatThrownBy(() -> service.verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
-			.hasMessageContaining("No errand with id '%s' found in namespace '%s' for municipality id '%s'".formatted(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID));
+			.hasMessage("Not Found: No errand with id '11111111-1111-1111-1111-111111111111' found in namespace 'MY_NAMESPACE' for municipality id '2281'");
 	}
 }

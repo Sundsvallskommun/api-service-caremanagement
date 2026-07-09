@@ -26,6 +26,8 @@ class FinancialAssistanceWarningResourceTest extends AbstractFinancialAssistance
 			.bodyValue(CreateWarningRequest.create().withType("MISSING_SSBTEK").withMessage("Inkomst saknas"))
 			.exchange()
 			.expectStatus().isCreated()
+			.expectHeader().contentType(APPLICATION_JSON)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/errand-1/warnings/w1")
 			.expectBody(Warning.class)
 			.returnResult()
 			.getResponseBody();

@@ -14,7 +14,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class WarningTest {
 
@@ -34,7 +34,7 @@ class WarningTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var created = OffsetDateTime.parse("2026-06-01T12:00:00Z");
 		final var warning = Warning.create()
 			.withId("id")
@@ -53,7 +53,7 @@ class WarningTest {
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
+	void testCreateReturnsEmptyInstance() {
 		assertThat(Warning.create()).hasAllNullFieldsOrPropertiesExcept("autoResolved");
 	}
 }

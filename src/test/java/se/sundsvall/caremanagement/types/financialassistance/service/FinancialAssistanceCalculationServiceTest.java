@@ -131,7 +131,9 @@ class FinancialAssistanceCalculationServiceTest {
 		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
 
 		assertThatThrownBy(() -> service.commitCalculation(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No draft calculation to commit for errand errand-1");
 	}
 
 	@Test
@@ -140,7 +142,9 @@ class FinancialAssistanceCalculationServiceTest {
 		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
 
 		assertThatThrownBy(() -> service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No citizen found for partyId f47ac10b-58cc-4372-a567-0e02b2c3d479");
 	}
 
 	@Test
@@ -149,7 +153,9 @@ class FinancialAssistanceCalculationServiceTest {
 		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
 
 		assertThatThrownBy(() -> service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: classifiedIncomes is required — the SSBTEK rules is evaluated in the process, not caremanagement");
 	}
 
 	@Test
@@ -159,7 +165,9 @@ class FinancialAssistanceCalculationServiceTest {
 		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
 
 		assertThatThrownBy(() -> service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No financial-assistance errand for id errand-1");
 	}
 
 	@Test
@@ -292,7 +300,9 @@ class FinancialAssistanceCalculationServiceTest {
 		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
 
 		assertThatThrownBy(() -> service.commitFromApplication(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No financial-assistance errand for id errand-1");
 	}
 
 	@Test

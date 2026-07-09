@@ -1,20 +1,15 @@
 package se.sundsvall.caremanagement.core.spi;
 
-import jakarta.persistence.criteria.Predicate;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 import se.sundsvall.caremanagement.core.service.mapper.ErrandMapper;
 
-import static java.util.Optional.ofNullable;
-import static org.springframework.util.StringUtils.hasText;
+import static se.sundsvall.caremanagement.core.integration.db.specification.ErrandSpecification.selection;
 
 /**
  * Core-owned, read-side query facade over the errand envelope, exposed via the {@code spi} named interface so other
@@ -62,23 +57,8 @@ public class ErrandQueryService {
 	@Transactional(readOnly = true)
 	public List<ErrandStatusView> findStatusViews(final String municipalityId, final String namespace, final String typeSlug,
 		final OffsetDateTime from, final OffsetDateTime to) {
-		return errandRepository.findAll(selection(municipalityId, namespace, typeSlug, from, to)).stream()
+		return errandRepository.findAll(selection(namespace, municipalityId, typeSlug, from, to)).stream()
 			.map(errand -> new ErrandStatusView(errand.getStatus(), errand.getAssignedUserId()))
 			.toList();
-	}
-
-	private static Specification<ErrandEntity> selection(final String municipalityId, final String namespace,
-		final String typeSlug, final OffsetDateTime from, final OffsetDateTime to) {
-		return (root, _, cb) -> {
-			final var predicates = new ArrayList<Predicate>();
-			predicates.add(cb.equal(root.get("namespace"), namespace));
-			predicates.add(cb.equal(root.get("municipalityId"), municipalityId));
-			if (hasText(typeSlug)) {
-				predicates.add(cb.equal(root.get("typeSlug"), typeSlug));
-			}
-			ofNullable(from).ifPresent(value -> predicates.add(cb.greaterThanOrEqualTo(root.get("created"), value)));
-			ofNullable(to).ifPresent(value -> predicates.add(cb.lessThanOrEqualTo(root.get("created"), value)));
-			return cb.and(predicates.toArray(Predicate[]::new));
-		};
 	}
 }

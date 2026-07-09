@@ -67,7 +67,8 @@ class PermitServiceTest {
 
 		assertThatThrownBy(() -> service.issue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Permit.create().withPermitType("X")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand");
 		verify(permitRepositoryMock, never()).save(any());
 	}
 
@@ -87,7 +88,8 @@ class PermitServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No permit with id 'missing' found on errand 'errand-1' in namespace 'my-namespace' for municipality id '2281'");
 	}
 
 	@Test

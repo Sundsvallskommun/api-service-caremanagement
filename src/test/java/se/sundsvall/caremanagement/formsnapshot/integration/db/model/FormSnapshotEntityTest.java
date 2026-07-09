@@ -10,10 +10,11 @@ import org.junit.jupiter.api.Test;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEqualsExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCodeExcluding;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToStringExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class FormSnapshotEntityTest {
 
@@ -31,16 +32,8 @@ class FormSnapshotEntityTest {
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCodeExcluding("payload"),
-			hasValidBeanEqualsExcluding("payload")));
-	}
-
-	@Test
-	void testToStringOmitsPayload() {
-		final var entity = FormSnapshotEntity.create().withId("fs1").withErrandId("e1").withPayload("SENSITIVE-PERSONAL-DATA");
-
-		assertThat(entity.toString())
-			.contains("FormSnapshotEntity{").contains("id='fs1'").contains("errandId='e1'")
-			.doesNotContain("SENSITIVE-PERSONAL-DATA");
+			hasValidBeanEqualsExcluding("payload"),
+			hasValidBeanToStringExcluding("payload")));
 	}
 
 	@Test

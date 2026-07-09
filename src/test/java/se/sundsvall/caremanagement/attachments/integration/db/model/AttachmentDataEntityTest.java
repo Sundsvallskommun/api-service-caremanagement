@@ -4,10 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.mariadb.jdbc.MariaDbBlob;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEqualsExcluding;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToStringExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
 
 class AttachmentDataEntityTest {
 
@@ -15,7 +17,9 @@ class AttachmentDataEntityTest {
 	void testBean() {
 		assertThat(AttachmentDataEntity.class, allOf(
 			hasValidBeanConstructor(),
-			hasValidGettersAndSetters()));
+			hasValidGettersAndSetters(),
+			hasValidBeanEqualsExcluding("file"),
+			hasValidBeanToStringExcluding("file")));
 	}
 
 	@Test

@@ -292,7 +292,8 @@ class FinancialAssistanceErrandServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: x");
 
 		verify(repositoryMock, never()).findByErrandId(any());
 	}

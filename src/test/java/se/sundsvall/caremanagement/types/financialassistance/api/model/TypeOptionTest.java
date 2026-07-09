@@ -9,7 +9,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class TypeOptionTest {
 
@@ -24,7 +24,7 @@ class TypeOptionTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var option = TypeOption.create()
 			.withCode("RENT")
 			.withExternalDisplayName("Hyra (inte parkering/garage)")
@@ -41,7 +41,7 @@ class TypeOptionTest {
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
+	void testCreateReturnsEmptyInstance() {
 		assertThat(TypeOption.create()).hasAllNullFieldsOrPropertiesExcept("citizenReportable");
 	}
 }

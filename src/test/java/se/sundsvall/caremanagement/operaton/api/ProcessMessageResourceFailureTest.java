@@ -11,10 +11,13 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.operaton.api.model.ProcessMessageRequest;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
 import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -38,7 +41,10 @@ class ProcessMessageResourceFailureTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(ProcessMessageRequest.create().withMessageName("PaymentDecisionReceived"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("sendProcessMessage.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(processServiceMock);
 	}
@@ -49,7 +55,10 @@ class ProcessMessageResourceFailureTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.bodyValue(ProcessMessageRequest.create().withMessageName("PaymentDecisionReceived"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("sendProcessMessage.namespace", "can only contain A-Z, a-z, 0-9, - and _")));
 
 		verifyNoInteractions(processServiceMock);
 	}
@@ -60,7 +69,10 @@ class ProcessMessageResourceFailureTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.bodyValue(ProcessMessageRequest.create().withMessageName("PaymentDecisionReceived"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("sendProcessMessage.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(processServiceMock);
 	}
@@ -71,7 +83,10 @@ class ProcessMessageResourceFailureTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(ProcessMessageRequest.create().withMessageName(" "))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("messageName", "must not be blank")));
 
 		verifyNoInteractions(processServiceMock);
 	}
@@ -82,7 +97,10 @@ class ProcessMessageResourceFailureTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(ProcessMessageRequest.create().withVariables(Map.of("paymentDecision", "APPROVED")))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("messageName", "must not be blank")));
 
 		verifyNoInteractions(processServiceMock);
 	}

@@ -65,30 +65,32 @@ class FormSnapshotServiceTest {
 
 	@ParameterizedTest(name = "rejects {2}")
 	@MethodSource
-	void captureRejects(final String payload, final boolean alreadyExists, final String reason) {
+	void captureRejects(final String payload, final boolean alreadyExists, final String expectedMessage) {
 		if (alreadyExists) {
 			when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(true);
 		}
 
 		assertThatThrownBy(() -> service.saveErrandFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, payload))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage(expectedMessage);
 		verify(repositoryMock, never()).save(any());
 	}
 
 	static Stream<Arguments> captureRejects() {
 		return Stream.of(
-			arguments("  ", false, "a blank payload"),
-			arguments("{not json", false, "malformed JSON"),
-			arguments("{\"sections\":[{\"id\":\"x\"}]}", false, "a missing schema version"),
-			arguments(VALID_PAYLOAD, true, "a snapshot that already exists"));
+			arguments("  ", false, "Bad Request: formSnapshot is blank"),
+			arguments("{not json", false, "Bad Request: formSnapshot is not valid JSON"),
+			arguments("{\"sections\":[{\"id\":\"x\"}]}", false, "Bad Request: formSnapshot.schemaVersion is required"),
+			arguments(VALID_PAYLOAD, true, "Bad Request: A form snapshot already exists on errand 'errand-1'"));
 	}
 
 	@Test
 	void captureRejectsEmptySections() {
 		assertThatThrownBy(() -> service.saveErrandFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{\"schemaVersion\":\"form-snapshot/1\",\"sections\":[]}"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: formSnapshot.sections must not be empty");
 		verify(repositoryMock, never()).save(any());
 	}
 
@@ -111,6 +113,7 @@ class FormSnapshotServiceTest {
 
 		assertThatThrownBy(() -> service.readErrandFormSnapshot(ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No form snapshot for errand 'errand-1'");
 	}
 }

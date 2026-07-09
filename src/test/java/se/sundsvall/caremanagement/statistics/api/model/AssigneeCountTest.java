@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AssigneeCountTest {
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		final var assigneeCount = new AssigneeCount("joe01doe", 5L);
 
 		assertThat(assigneeCount.assignedUserId()).isEqualTo("joe01doe");

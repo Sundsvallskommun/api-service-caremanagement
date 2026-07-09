@@ -1,10 +1,17 @@
 package se.sundsvall.caremanagement.errandtypes.api.model;
 
 import java.util.List;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.stakeholders.api.model.RoleDefinition;
 
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class ErrandTypeSchemaTest {
 
@@ -17,7 +24,17 @@ class ErrandTypeSchemaTest {
 		DecisionOption.create().withCode("BIFALL").withDisplayName("Bifall").withCarriesAmount(true));
 
 	@Test
-	void builderMethods() {
+	void testBean() {
+		MatcherAssert.assertThat(ErrandTypeSchema.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
 		final var schema = ErrandTypeSchema.create()
 			.withTypeSlug("financial-assistance-renewal")
 			.withApplicationType("RENEWAL")
@@ -38,7 +55,7 @@ class ErrandTypeSchemaTest {
 	}
 
 	@Test
-	void settersWork() {
+	void testSettersWork() {
 		final var schema = ErrandTypeSchema.create();
 		schema.setTypeSlug("financial-assistance-new");
 		schema.setApplicationType(null);
@@ -58,7 +75,13 @@ class ErrandTypeSchemaTest {
 	}
 
 	@Test
-	void equalsHashCodeAndToString() {
+	void testNoDirtOnCreatedBean() {
+		assertThat(ErrandTypeSchema.create()).hasAllNullFieldsOrProperties();
+		assertThat(new ErrandTypeSchema()).hasAllNullFieldsOrProperties();
+	}
+
+	@Test
+	void testEqualsHashCodeAndToString() {
 		final var a = ErrandTypeSchema.create().withTypeSlug("slug").withApplicationType("NEW").withStatuses(STATUSES);
 		final var b = ErrandTypeSchema.create().withTypeSlug("slug").withApplicationType("NEW").withStatuses(STATUSES);
 		final var c = ErrandTypeSchema.create().withTypeSlug("other");

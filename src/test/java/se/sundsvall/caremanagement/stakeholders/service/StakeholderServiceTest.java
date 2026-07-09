@@ -95,8 +95,7 @@ class StakeholderServiceTest {
 			Stakeholder.create().withRole("BOGUS_ROLE")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
-			.hasMessageContaining("BOGUS_ROLE")
-			.hasMessageContaining(TYPE_SLUG);
+			.hasMessage("Bad Request: Role 'BOGUS_ROLE' is not valid for errand type 'fostercare'");
 
 		verifyNoInteractions(stakeholderRepositoryMock, eventPublisherMock);
 	}
@@ -108,7 +107,8 @@ class StakeholderServiceTest {
 
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Stakeholder.create()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand with id '11111111-1111-1111-1111-111111111111' found in namespace 'MY_NAMESPACE' for municipality id '2281'");
 
 		verifyNoInteractions(stakeholderRepositoryMock, eventPublisherMock);
 	}
@@ -140,8 +140,7 @@ class StakeholderServiceTest {
 			Stakeholder.create().withRole("BOGUS_ROLE")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
-			.hasMessageContaining("BOGUS_ROLE")
-			.hasMessageContaining(TYPE_SLUG);
+			.hasMessage("Bad Request: Role 'BOGUS_ROLE' is not valid for errand type 'fostercare'");
 
 		verify(stakeholderRepositoryMock, never()).save(any(StakeholderEntity.class));
 		verifyNoInteractions(eventPublisherMock);

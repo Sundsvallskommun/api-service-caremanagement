@@ -28,6 +28,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.ALL;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 
@@ -65,7 +66,9 @@ class MessageResourceTest {
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/" + ERRAND_ID + "/messages/" + MESSAGE_ID);
 
 		verify(serviceMock).post(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(CreateMessage.class), any());
 	}
@@ -85,7 +88,9 @@ class MessageResourceTest {
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/" + ERRAND_ID + "/messages/" + MESSAGE_ID);
 
 		verify(serviceMock).post(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(CreateMessage.class), any());
 	}

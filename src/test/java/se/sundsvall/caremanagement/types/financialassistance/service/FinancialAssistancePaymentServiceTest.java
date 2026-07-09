@@ -72,7 +72,8 @@ class FinancialAssistancePaymentServiceTest {
 
 		assertThatThrownBy(() -> service.checkPaymentStatus(MUNICIPALITY_ID, request))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No citizen found for partyId f47ac10b-58cc-4372-a567-0e02b2c3d479");
 
 		verify(paymentStatusServiceMock, never()).read(any(), any());
 	}

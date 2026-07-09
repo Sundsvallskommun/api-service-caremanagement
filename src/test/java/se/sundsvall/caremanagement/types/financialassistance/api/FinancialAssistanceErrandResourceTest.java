@@ -17,6 +17,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.ALL;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 import static org.springframework.http.MediaType.TEXT_PLAIN;
@@ -35,7 +36,9 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/" + ERRAND_ID);
 
 		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
@@ -55,7 +58,9 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/" + ERRAND_ID);
 
 		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
@@ -74,7 +79,9 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/" + ERRAND_ID);
 
 		final var captor = ArgumentCaptor.forClass(CreateFinancialAssistanceRequest.class);
 		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), captor.capture(), any(), any(), any());
@@ -94,7 +101,9 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/" + ERRAND_ID);
 
 		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
@@ -113,7 +122,9 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/" + ERRAND_ID);
 
 		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
@@ -131,7 +142,9 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/" + ERRAND_ID);
 
 		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}

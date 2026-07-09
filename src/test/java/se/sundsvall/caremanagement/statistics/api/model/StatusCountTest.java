@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class StatusCountTest {
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		final var statusCount = new StatusCount("DECIDED", 12L);
 
 		assertThat(statusCount.status()).isEqualTo("DECIDED");

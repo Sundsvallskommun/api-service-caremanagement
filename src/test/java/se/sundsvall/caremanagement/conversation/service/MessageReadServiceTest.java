@@ -88,7 +88,8 @@ class MessageReadServiceTest {
 
 		assertThatThrownBy(() -> service.unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CASEWORKER))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand");
 
 		verifyNoInteractions(receiptRepositoryMock);
 	}
@@ -99,7 +100,8 @@ class MessageReadServiceTest {
 
 		assertThatThrownBy(() -> service.unreadCount(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, custom))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: Cannot determine conversation side from header 'X-Sent-By' — expected type=adAccount (caseworker) or type=partyId (applicant)");
 
 		verifyNoInteractions(receiptRepositoryMock);
 	}
@@ -124,7 +126,8 @@ class MessageReadServiceTest {
 
 		assertThatThrownBy(() -> service.markRead(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CASEWORKER, List.of("m1")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand");
 
 		verifyNoInteractions(messageRepositoryMock, receiptRepositoryMock);
 	}
@@ -175,7 +178,7 @@ class MessageReadServiceTest {
 		assertThatThrownBy(() -> service.markRead(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CASEWORKER, ids))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
-			.hasMessageContaining("missing");
+			.hasMessage("Not Found: Message ids [missing] were not found on errand 'errand-1'");
 
 		verify(receiptRepositoryMock, never()).insertIgnore(any(), any(), any(), any(), any());
 	}

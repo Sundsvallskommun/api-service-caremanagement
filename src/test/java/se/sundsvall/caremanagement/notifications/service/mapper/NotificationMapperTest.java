@@ -34,7 +34,7 @@ class NotificationMapperTest {
 
 		final var entity = NotificationMapper.toEntity(notification, "2281", "FINANCIAL_ASSISTANCE", "errand-123", expires);
 
-		assertThat(entity).isNotNull();
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "modified");
 		// path/argument-supplied fields, not from the source notification
 		assertThat(entity.getErrandId()).isEqualTo("errand-123");
 		assertThat(entity.getMunicipalityId()).isEqualTo("2281");
@@ -134,7 +134,7 @@ class NotificationMapperTest {
 
 		final var dto = NotificationMapper.toDto(entity);
 
-		assertThat(dto).isNotNull();
+		assertThat(dto).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(dto.getId()).isEqualTo("notif-id");
 		assertThat(dto.getErrandId()).isEqualTo("errand-123");
 		assertThat(dto.getOwnerId()).isEqualTo("jane01doe");

@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.ALL;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -47,7 +48,9 @@ class NoteResourceTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(new CreateNote("body", "author"))
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/" + ERRAND_ID + "/notes/" + NOTE_ID);
 
 		verify(serviceMock).add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateNote("body", "author"));
 	}

@@ -97,6 +97,7 @@ class ConversationAttachmentQueryServiceTest {
 
 		assertThatThrownBy(() -> service.clientAttachmentContentsForErrand(ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", INTERNAL_SERVER_ERROR);
+			.hasFieldOrPropertyWithValue("status", INTERNAL_SERVER_ERROR)
+			.hasMessage("Internal Server Error: Could not read conversation attachment content for attachment id 'a1': boom");
 	}
 }

@@ -12,10 +12,13 @@ import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.referral.api.model.Referral;
 import se.sundsvall.caremanagement.referral.api.model.ReferralResponseRequest;
 import se.sundsvall.caremanagement.referral.service.ReferralService;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
 import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -40,7 +43,10 @@ class ReferralResourceFailureTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Referral.create().withAuthority(" "))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("createReferral.referral.authority", "must not be blank")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -51,7 +57,10 @@ class ReferralResourceFailureTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Referral.create().withAuthority("ENVIRONMENTAL_OFFICE").withStatus("PENDING"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("status", "must be one of: [SENT, RESPONDED]")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -62,7 +71,10 @@ class ReferralResourceFailureTest {
 			.uri(uri -> uri.path(PATH + "/{referralId}/response").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "referralId", REFERRAL_ID)))
 			.bodyValue(new ReferralResponseRequest(" "))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("responseText", "must not be blank")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -72,7 +84,10 @@ class ReferralResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("readReferrals.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}

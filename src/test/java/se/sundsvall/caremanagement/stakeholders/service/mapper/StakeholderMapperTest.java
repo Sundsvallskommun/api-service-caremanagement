@@ -47,7 +47,7 @@ class StakeholderMapperTest {
 
 		final var stakeholder = StakeholderMapper.toStakeholder(entity);
 
-		assertThat(stakeholder).isNotNull();
+		assertThat(stakeholder).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(stakeholder.getId()).isEqualTo(ID);
 		assertThat(stakeholder.getExternalId()).isEqualTo(EXTERNAL_ID);
 		assertThat(stakeholder.getExternalIdType()).isEqualTo(EXTERNAL_ID_TYPE);
@@ -94,7 +94,7 @@ class StakeholderMapperTest {
 
 		final var entity = StakeholderMapper.toStakeholderEntity(stakeholder, ERRAND_ID);
 
-		assertThat(entity).isNotNull();
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "modified");
 		// errandId comes from the argument; id/created/modified are JPA-assigned and not carried over
 		assertThat(entity.getErrandId()).isEqualTo(ERRAND_ID);
 		assertThat(entity.getId()).isNull();
@@ -170,7 +170,7 @@ class StakeholderMapperTest {
 		final var result = StakeholderMapper.updateStakeholderEntity(entity, source);
 
 		// updates in place and returns the same instance
-		assertThat(result).isSameAs(entity);
+		assertThat(result).isSameAs(entity).hasNoNullFieldsOrPropertiesExcept("created", "modified");
 		// untouched identity fields preserved
 		assertThat(result.getId()).isEqualTo(ID);
 		assertThat(result.getErrandId()).isEqualTo(ERRAND_ID);

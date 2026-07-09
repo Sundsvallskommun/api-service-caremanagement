@@ -42,7 +42,7 @@ class ErrandMapperTest {
 	void toErrandMapsEveryField() {
 		final var result = ErrandMapper.toErrand(fullEntity());
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(result.getId()).isEqualTo("cb20c51f-fcf3-42c0-b613-de563634a8ec");
 		assertThat(result.getMunicipalityId()).isEqualTo("2281");
 		assertThat(result.getNamespace()).isEqualTo("FINANCIAL_ASSISTANCE");
@@ -90,7 +90,8 @@ class ErrandMapperTest {
 
 		final var result = ErrandMapper.toErrandEntity(source, "FINANCIAL_ASSISTANCE", "2281");
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull()
+			.hasNoNullFieldsOrPropertiesExcept("id", "applicantName", "processInstanceId", "created", "modified", "touched");
 		// namespace + municipalityId come from the method args, NOT from the source DTO.
 		assertThat(result.getMunicipalityId()).isEqualTo("2281");
 		assertThat(result.getNamespace()).isEqualTo("FINANCIAL_ASSISTANCE");
@@ -146,11 +147,11 @@ class ErrandMapperTest {
 
 		final var result = ErrandMapper.toFindErrandsResponse(page);
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(result.getErrands()).hasSize(1);
 		assertThat(result.getErrands().getFirst().getId()).isEqualTo("id-1");
 		assertThat(result.getErrands().getFirst().getTitle()).isEqualTo("First");
-		assertThat(result.getMetaData()).isNotNull();
+		assertThat(result.getMetaData()).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(result.getMetaData().getPage()).isEqualTo(2);
 		assertThat(result.getMetaData().getLimit()).isEqualTo(5);
 		assertThat(result.getMetaData().getCount()).isEqualTo(1);

@@ -9,7 +9,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class SectionApprovalRequestTest {
 
@@ -24,7 +24,7 @@ class SectionApprovalRequestTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var request = SectionApprovalRequest.create()
 			.withApproved(true);
 
@@ -33,7 +33,7 @@ class SectionApprovalRequestTest {
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
+	void testCreateReturnsEmptyInstance() {
 		assertThat(SectionApprovalRequest.create()).hasAllNullFieldsOrProperties();
 	}
 }

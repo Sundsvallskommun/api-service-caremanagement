@@ -11,7 +11,7 @@ class UpdateDocumentTest {
 	private static final LocalTime DOCUMENT_TIME = LocalTime.of(14, 30);
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		final var request = new UpdateDocument("Brev", "Rubrik", "body", DOCUMENT_DATE, DOCUMENT_TIME, "editor");
 
 		assertThat(request.type()).isEqualTo("Brev");
@@ -23,7 +23,7 @@ class UpdateDocumentTest {
 	}
 
 	@Test
-	void optionalFieldsMayBeNull() {
+	void testOptionalFieldsMayBeNull() {
 		final var request = new UpdateDocument("T", "H", null, DOCUMENT_DATE, null, null);
 
 		assertThat(request.text()).isNull();

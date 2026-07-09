@@ -3,9 +3,12 @@ package se.sundsvall.caremanagement.types.financialassistance.api;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovalRequest;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
 
 class FinancialAssistanceApprovalResourceFailureTest extends AbstractFinancialAssistanceResourceTest {
 
@@ -16,7 +19,10 @@ class FinancialAssistanceApprovalResourceFailureTest extends AbstractFinancialAs
 			.contentType(APPLICATION_JSON)
 			.bodyValue(SectionApprovalRequest.create()) // approved is required
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("approved", "must not be null")));
 
 		verifyNoInteractions(approvalServiceMock);
 	}
@@ -28,7 +34,10 @@ class FinancialAssistanceApprovalResourceFailureTest extends AbstractFinancialAs
 			.contentType(APPLICATION_JSON)
 			.bodyValue(SectionApprovalRequest.create().withApproved(true))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("setSectionApproval.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(approvalServiceMock);
 	}

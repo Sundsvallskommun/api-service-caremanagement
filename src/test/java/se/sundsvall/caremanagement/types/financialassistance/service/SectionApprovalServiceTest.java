@@ -102,7 +102,8 @@ class SectionApprovalServiceTest {
 	void setApprovalRejectsUnknownSection() {
 		assertThatThrownBy(() -> service.setApproval(ERRAND_ID, "NONSENSE", true, "jane02doe"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: section must be CALCULATION, PAYMENT or DECISION");
 
 		verify(repositoryMock, never()).save(any());
 	}

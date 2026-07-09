@@ -2,15 +2,40 @@ package se.sundsvall.caremanagement.conversation.api.model;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Random;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static com.google.code.beanmatchers.BeanMatchers.registerValueGenerator;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class MessageTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
+	@BeforeAll
+	static void setup() {
+		registerValueGenerator(() -> OffsetDateTime.now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+	}
+
 	@Test
-	void builderMethods() {
+	void testBean() {
+		MatcherAssert.assertThat(Message.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
 		final var id = "m1";
 		final var errandId = "e1";
 		final var direction = "OUTBOUND";
@@ -41,7 +66,7 @@ class MessageTest {
 	}
 
 	@Test
-	void setters() {
+	void testSetters() {
 		final var message = Message.create();
 		message.setId("id");
 		message.setErrandId("eid");
@@ -65,14 +90,18 @@ class MessageTest {
 	}
 
 	@Test
-	void createReturnsBlankInstanceWithEmptyAttachments() {
+	void testNoDirtOnCreatedBeanWithEmptyAttachments() {
 		final var message = Message.create();
 		assertThat(message).hasAllNullFieldsOrPropertiesExcept("attachments");
 		assertThat(message.getAttachments()).isEmpty();
+
+		final var newMessage = new Message();
+		assertThat(newMessage).hasAllNullFieldsOrPropertiesExcept("attachments");
+		assertThat(newMessage.getAttachments()).isEmpty();
 	}
 
 	@Test
-	void equalsAndHashCode() {
+	void testEqualsAndHashCode() {
 		final var ts = FIXED_TIMESTAMP;
 		final var a = Message.create().withId("1").withErrandId("e").withDirection("OUTBOUND").withBody("b").withAuthor("u").withCreated(ts);
 		final var b = Message.create().withId("1").withErrandId("e").withDirection("OUTBOUND").withBody("b").withAuthor("u").withCreated(ts);

@@ -66,7 +66,8 @@ class ReferralServiceTest {
 
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Referral.create().withAuthority("X")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand");
 		verify(referralRepositoryMock, never()).save(any());
 	}
 
@@ -86,7 +87,8 @@ class ReferralServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No referral with id 'missing' found on errand 'errand-1' in namespace 'my-namespace' for municipality id '2281'");
 	}
 
 	@Test

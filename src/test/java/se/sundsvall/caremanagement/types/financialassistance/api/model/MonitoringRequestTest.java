@@ -14,7 +14,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.Month.JULY;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class MonitoringRequestTest {
 
@@ -34,7 +34,7 @@ class MonitoringRequestTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var startDate = LocalDate.of(2026, JULY, 1);
 		final var endDate = LocalDate.of(2026, JULY, 31);
 		final var request = MonitoringRequest.create()
@@ -56,7 +56,7 @@ class MonitoringRequestTest {
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
+	void testCreateReturnsEmptyInstance() {
 		assertThat(MonitoringRequest.create()).hasAllNullFieldsOrProperties();
 	}
 }

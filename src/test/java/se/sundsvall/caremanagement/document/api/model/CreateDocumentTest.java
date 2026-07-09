@@ -11,7 +11,7 @@ class CreateDocumentTest {
 	private static final LocalTime DOCUMENT_TIME = LocalTime.of(14, 30);
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		final var request = new CreateDocument("Brev", "Rubrik", "body", DOCUMENT_DATE, DOCUMENT_TIME, "carola");
 
 		assertThat(request.type()).isEqualTo("Brev");
@@ -23,7 +23,7 @@ class CreateDocumentTest {
 	}
 
 	@Test
-	void optionalFieldsMayBeNull() {
+	void testOptionalFieldsMayBeNull() {
 		final var request = new CreateDocument("T", "H", null, DOCUMENT_DATE, null, null);
 
 		assertThat(request.text()).isNull();

@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.ALL;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -51,7 +52,9 @@ class ErrandResourceTest {
 			.uri(builder -> builder.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(Errand.create().withTypeSlug("test-type").withTitle("title"))
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/" + ERRAND_ID);
 
 		verify(serviceMock).createErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Errand.class));
 		verifyNoMoreInteractions(serviceMock);

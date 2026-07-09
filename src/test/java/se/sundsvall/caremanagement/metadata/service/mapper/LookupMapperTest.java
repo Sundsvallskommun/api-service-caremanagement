@@ -27,7 +27,7 @@ class LookupMapperTest {
 
 		final var result = LookupMapper.toLookup(entity);
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(result.getName()).isEqualTo("NEW");
 		assertThat(result.getDisplayName()).isEqualTo("New case");
 		assertThat(result.getCreated()).isEqualTo(created);
@@ -45,7 +45,7 @@ class LookupMapperTest {
 
 		final var result = LookupMapper.toLookupEntity(lookup, LookupKind.STATUS, "ns", "2281");
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "modified");
 		assertThat(result.getKind()).isEqualTo(LookupKind.STATUS);
 		assertThat(result.getName()).isEqualTo("NEW");
 		assertThat(result.getDisplayName()).isEqualTo("New case");

@@ -12,10 +12,11 @@ import org.junit.jupiter.api.Test;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEqualsExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCodeExcluding;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToStringExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 import static se.sundsvall.caremanagement.document.integration.db.model.DocumentStatus.WORKING;
 
 class DocumentEntityTest {
@@ -34,7 +35,8 @@ class DocumentEntityTest {
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCodeExcluding("text"),
-			hasValidBeanEqualsExcluding("text")));
+			hasValidBeanEqualsExcluding("text"),
+			hasValidBeanToStringExcluding("text")));
 	}
 
 	@Test

@@ -43,7 +43,7 @@ class DecisionMapperTest {
 
 		final var decision = DecisionMapper.toDecision(entity);
 
-		assertThat(decision).isNotNull();
+		assertThat(decision).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(decision.getId()).isEqualTo(ID);
 		assertThat(decision.getDecisionType()).isEqualTo(DECISION_TYPE);
 		assertThat(decision.getValue()).isEqualTo(VALUE);
@@ -79,7 +79,7 @@ class DecisionMapperTest {
 
 		final var entity = DecisionMapper.toDecisionEntity(decision, ERRAND_ID);
 
-		assertThat(entity).isNotNull();
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created");
 		// errandId comes from the argument, not the source DTO
 		assertThat(entity.getErrandId()).isEqualTo(ERRAND_ID);
 		assertThat(entity.getDecisionType()).isEqualTo(DECISION_TYPE);

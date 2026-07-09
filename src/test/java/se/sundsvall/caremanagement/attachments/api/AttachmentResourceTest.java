@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.ALL;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
@@ -57,7 +58,9 @@ class AttachmentResourceTest {
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(body)
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/" + ERRAND_ID + "/attachments/" + ATTACHMENT_ID);
 
 		verify(serviceMock).createAttachment(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), any(MultipartFile.class));
 	}
@@ -75,7 +78,9 @@ class AttachmentResourceTest {
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(body)
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/" + ERRAND_ID + "/attachments/" + ATTACHMENT_ID);
 
 		verify(serviceMock).createAttachment(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CASE_DATA"), any(MultipartFile.class));
 	}

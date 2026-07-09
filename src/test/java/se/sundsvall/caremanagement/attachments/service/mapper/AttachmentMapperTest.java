@@ -37,7 +37,7 @@ class AttachmentMapperTest {
 
 		final var attachment = AttachmentMapper.toAttachment(entity);
 
-		assertThat(attachment).isNotNull();
+		assertThat(attachment).isNotNull().hasNoNullFieldsOrPropertiesExcept("messageId");
 		assertThat(attachment.getId()).isEqualTo("id");
 		assertThat(attachment.getFileName()).isEqualTo("f.txt");
 		assertThat(attachment.getMimeType()).isEqualTo("text/plain");
@@ -60,7 +60,7 @@ class AttachmentMapperTest {
 
 		final var attachment = AttachmentMapper.toAttachment(source);
 
-		assertThat(attachment).isNotNull();
+		assertThat(attachment).isNotNull().hasNoNullFieldsOrPropertiesExcept("modified");
 		assertThat(attachment.getId()).isEqualTo("a1");
 		assertThat(attachment.getMessageId()).isEqualTo("m1");
 		assertThat(attachment.getFileName()).isEqualTo("intyg.pdf");
@@ -130,7 +130,7 @@ class AttachmentMapperTest {
 		// Either we get a real entity (when running in an integration setup) or an exception.
 		try {
 			final AttachmentEntity entity = AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "ERRAND", "CASEWORKER", file);
-			assertThat(entity).isNotNull();
+			assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "modified");
 			assertThat(entity.getErrandId()).isEqualTo("eid");
 			assertThat(entity.getNamespace()).isEqualTo("ns");
 			assertThat(entity.getMunicipalityId()).isEqualTo("mid");
@@ -156,7 +156,7 @@ class AttachmentMapperTest {
 	void toAttachmentEntityFromBytesBuildsEntity() {
 		final var entity = AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "GENERATED", "CLIENT", new SourceFile("sammanstallning.pdf", "application/pdf", "%PDF".getBytes()));
 
-		assertThat(entity).isNotNull();
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "modified");
 		assertThat(entity.getErrandId()).isEqualTo("eid");
 		assertThat(entity.getNamespace()).isEqualTo("ns");
 		assertThat(entity.getMunicipalityId()).isEqualTo("mid");

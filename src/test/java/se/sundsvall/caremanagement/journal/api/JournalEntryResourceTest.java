@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.ALL;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -51,6 +52,7 @@ class JournalEntryResourceTest {
 			.bodyValue(request)
 			.exchange()
 			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
 			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/" + ERRAND_ID + "/journal-entries/" + JOURNAL_ENTRY_ID);
 
 		verify(serviceMock).add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request);

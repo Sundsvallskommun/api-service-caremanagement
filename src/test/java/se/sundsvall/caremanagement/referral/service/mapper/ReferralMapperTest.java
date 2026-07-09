@@ -20,6 +20,7 @@ class ReferralMapperTest {
 
 		final var referral = ReferralMapper.toReferral(entity);
 
+		assertThat(referral).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(referral.getId()).isEqualTo("r1");
 		assertThat(referral.getAuthority()).isEqualTo("ENVIRONMENTAL_OFFICE");
 		assertThat(referral.getRecipient()).isEqualTo("Env Office");
@@ -36,6 +37,8 @@ class ReferralMapperTest {
 		final var entity = ReferralMapper.toReferralEntity(
 			Referral.create().withAuthority("POLICE").withRecipient("Local police").withStatus("SENT"), "errand-1");
 
+		assertThat(entity).isNotNull()
+			.hasNoNullFieldsOrPropertiesExcept("id", "sentAt", "dueAt", "responseText", "created", "modified");
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
 		assertThat(entity.getAuthority()).isEqualTo("POLICE");
 		assertThat(entity.getRecipient()).isEqualTo("Local police");

@@ -5,10 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.client.MultipartBodyBuilder;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
+import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
 
 class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssistanceResourceTest {
 
@@ -22,7 +25,10 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("title", "must not be blank")));
 
 		verifyNoInteractions(errandServiceMock);
 	}
@@ -37,7 +43,10 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("data", "must not be null")));
 
 		verifyNoInteractions(errandServiceMock);
 	}
@@ -52,7 +61,11 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody()
+			.jsonPath("$.title").isEqualTo("Bad Request")
+			.jsonPath("$.status").isEqualTo(400)
+			.jsonPath("$.detail").isEqualTo("The 'request' part could not be read as a financial-assistance application — check that it is valid JSON matching the schema.");
 
 		verifyNoInteractions(errandServiceMock);
 	}
@@ -67,7 +80,10 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("data.applicationType", "must be one of: [NEW, RENEWAL, SUPPLEMENTARY]")));
 
 		verifyNoInteractions(errandServiceMock);
 	}
@@ -77,7 +93,10 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{errandId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("readErrand.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(errandServiceMock);
 	}

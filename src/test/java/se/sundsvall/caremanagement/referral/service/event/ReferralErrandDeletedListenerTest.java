@@ -10,6 +10,7 @@ import se.sundsvall.caremanagement.core.service.event.ErrandDeleted;
 import se.sundsvall.caremanagement.referral.integration.db.ReferralRepository;
 
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class ReferralErrandDeletedListenerTest {
@@ -25,5 +26,6 @@ class ReferralErrandDeletedListenerTest {
 		listener.on(new ErrandDeleted("errand-1", "TYPE-1", "2281", "my-namespace", "user", OffsetDateTime.parse("2026-06-03T10:00:00Z")));
 
 		verify(repositoryMock).deleteByErrandId("errand-1");
+		verifyNoMoreInteractions(repositoryMock);
 	}
 }

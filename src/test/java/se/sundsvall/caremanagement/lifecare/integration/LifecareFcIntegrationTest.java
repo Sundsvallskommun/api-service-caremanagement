@@ -158,7 +158,9 @@ class LifecareFcIntegrationTest {
 
 		assertThatThrownBy(() -> integration.getUsers(1000, null, null, null))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Error fetching users in Lifecare FC: 404 Not Found: boom");
 	}
 
 	@Test
@@ -177,7 +179,9 @@ class LifecareFcIntegrationTest {
 
 		assertThatThrownBy(() -> integration.getDecisions(PERSON_ID, START, END))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Error fetching decision in Lifecare FC: RuntimeException");
 
 		verify(clientMock).getDecisions(PERSON_ID, START, END, null, null, false);
 	}
@@ -200,7 +204,9 @@ class LifecareFcIntegrationTest {
 
 		assertThatThrownBy(() -> integration.getActualisationProposal(PERSON_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Error fetching actualisation proposal in Lifecare FC: 404 Not Found: boom");
 
 		verify(clientMock).getActualisationProposal(PERSON_ID);
 	}
@@ -222,7 +228,9 @@ class LifecareFcIntegrationTest {
 
 		assertThatThrownBy(() -> integration.createActualisation(body))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Error creating actualisation in Lifecare FC: RuntimeException");
 
 		verify(clientMock).createActualisation(body);
 	}
@@ -254,7 +262,9 @@ class LifecareFcIntegrationTest {
 
 		assertThatThrownBy(() -> integration.createCalculation(body))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Error creating calculation in Lifecare FC: 502 Bad Gateway: upstream down");
 
 		verify(clientMock).createCalculation(body);
 	}
@@ -287,7 +297,9 @@ class LifecareFcIntegrationTest {
 				1
 			})))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Error uploading actualisation attachment in Lifecare FC: RuntimeException");
 	}
 
 	// ---- describe(): transport-failure messages must not reach the problem detail ------------------------------------

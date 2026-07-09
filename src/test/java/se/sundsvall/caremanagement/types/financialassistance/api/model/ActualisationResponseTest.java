@@ -8,8 +8,8 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
 
 class ActualisationResponseTest {
 
@@ -24,14 +24,14 @@ class ActualisationResponseTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var response = ActualisationResponse.create().withActualisationId(5012);
 
 		assertThat(response.getActualisationId()).isEqualTo(5012);
 	}
 
 	@Test
-	void createReturnsBlankInstance() {
+	void testCreateReturnsBlankInstance() {
 		assertThat(ActualisationResponse.create()).hasAllNullFieldsOrProperties();
 	}
 }

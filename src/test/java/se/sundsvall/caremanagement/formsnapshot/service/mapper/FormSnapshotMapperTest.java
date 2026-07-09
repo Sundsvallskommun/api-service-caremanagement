@@ -35,6 +35,7 @@ class FormSnapshotMapperTest {
 
 		final var entity = FormSnapshotMapper.toEntity("2281", "EB", "errand-1", "financial-assistance-new", payload, snapshot, created);
 
+		assertThat(entity).hasNoNullFieldsOrPropertiesExcept("id");
 		assertThat(entity.getMunicipalityId()).isEqualTo("2281");
 		assertThat(entity.getNamespace()).isEqualTo("EB");
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");

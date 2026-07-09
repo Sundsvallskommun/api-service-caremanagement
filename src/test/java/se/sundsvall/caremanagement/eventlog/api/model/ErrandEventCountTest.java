@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ErrandEventCountTest {
 
 	@Test
-	void accessor() {
+	void testAccessor() {
 		assertThat(new ErrandEventCount(12).count()).isEqualTo(12);
 	}
 }

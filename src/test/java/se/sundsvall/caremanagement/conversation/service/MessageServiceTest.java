@@ -107,7 +107,8 @@ class MessageServiceTest {
 
 		assertThatThrownBy(() -> service.post(MUNICIPALITY_ID, NAMESPACE, "errand-1", new CreateMessage("OUTBOUND", "body", "author", null), null))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand");
 
 		verify(repositoryMock, never()).save(any());
 		verifyNoInteractions(eventsMock);
@@ -168,7 +169,8 @@ class MessageServiceTest {
 
 		assertThatThrownBy(() -> service.post(MUNICIPALITY_ID, NAMESPACE, "errand-1", new CreateMessage("OUTBOUND", "body", "author", "missing-parent"), null))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: Cannot reply to message 'missing-parent' - no such message on errand 'errand-1'");
 
 		verify(repositoryMock, never()).save(any());
 		verifyNoInteractions(eventsMock);
@@ -197,7 +199,8 @@ class MessageServiceTest {
 
 		assertThatThrownBy(() -> service.listForErrand(MUNICIPALITY_ID, NAMESPACE, "errand-1"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand");
 
 		verifyNoInteractions(repositoryMock);
 	}
@@ -223,7 +226,8 @@ class MessageServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, "e1", "m1"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No message with id 'm1'");
 	}
 
 	@Test
@@ -232,7 +236,8 @@ class MessageServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, "e1", "m1"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand");
 
 		verifyNoInteractions(repositoryMock);
 	}
@@ -260,7 +265,8 @@ class MessageServiceTest {
 
 		assertThatThrownBy(() -> service.streamAttachmentFile(MUNICIPALITY_ID, NAMESPACE, "e1", "m1", "att-1", response))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No message with id 'm1'");
 
 		verifyNoInteractions(attachmentRepositoryMock, attachmentDataRepositoryMock);
 	}
@@ -273,7 +279,8 @@ class MessageServiceTest {
 
 		assertThatThrownBy(() -> service.streamAttachmentFile(MUNICIPALITY_ID, NAMESPACE, "e1", "m1", "att-1", response))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No attachment with id 'att-1' found on message 'm1'");
 
 		verifyNoInteractions(attachmentDataRepositoryMock);
 	}
@@ -288,7 +295,8 @@ class MessageServiceTest {
 
 		assertThatThrownBy(() -> service.streamAttachmentFile(MUNICIPALITY_ID, NAMESPACE, "e1", "m1", "att-1", response))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No file content found for attachment with id 'att-1'");
 	}
 
 	@Test
@@ -304,6 +312,7 @@ class MessageServiceTest {
 
 		assertThatThrownBy(() -> service.streamAttachmentFile(MUNICIPALITY_ID, NAMESPACE, "e1", "m1", "att-1", response))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", INTERNAL_SERVER_ERROR);
+			.hasFieldOrPropertyWithValue("status", INTERNAL_SERVER_ERROR)
+			.hasMessage("Internal Server Error: SQLException occurred when copying file with attachment id 'att-1' to response: boom");
 	}
 }

@@ -92,7 +92,8 @@ class WarningServiceTest {
 
 		assertThatThrownBy(() -> service.updateStatus(ERRAND_ID, "missing", "CLOSED"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: Warning not found on errand");
 	}
 
 	@Test
@@ -119,7 +120,8 @@ class WarningServiceTest {
 	void updateStatusInvalidTargetYields400() {
 		assertThatThrownBy(() -> service.updateStatus(ERRAND_ID, "w-1", "BOGUS"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: status must be OPEN, ACKNOWLEDGED or CLOSED");
 
 		verify(repositoryMock, never()).findByIdAndErrandId(any(), any());
 	}

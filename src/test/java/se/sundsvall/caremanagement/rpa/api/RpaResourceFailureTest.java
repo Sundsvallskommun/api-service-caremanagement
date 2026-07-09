@@ -10,10 +10,13 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.rpa.api.model.RpaTaskRequest;
 import se.sundsvall.caremanagement.rpa.service.RpaService;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
 import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
 
 @SpringBootTest(classes = Application.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -38,7 +41,10 @@ class RpaResourceFailureTest {
 			.contentType(APPLICATION_JSON)
 			.bodyValue(RpaTaskRequest.create().withAction("NOT_A_REAL_ACTION"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("action", "must be one of: [REGISTER_PAYMENT, WRITE_DECISION, FETCH_SUPPLEMENTS, WRITE_DOCUMENT, WRITE_JOURNAL, WRITE_NORMBERAKNING, WRITE_MONITORING]")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -50,7 +56,11 @@ class RpaResourceFailureTest {
 			.contentType(APPLICATION_JSON)
 			.bodyValue(RpaTaskRequest.create().withAction(" "))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("action", "must not be blank"),
+				tuple("action", "must be one of: [REGISTER_PAYMENT, WRITE_DECISION, FETCH_SUPPLEMENTS, WRITE_DOCUMENT, WRITE_JOURNAL, WRITE_NORMBERAKNING, WRITE_MONITORING]")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -62,7 +72,10 @@ class RpaResourceFailureTest {
 			.contentType(APPLICATION_JSON)
 			.bodyValue(RpaTaskRequest.create().withAction("FETCH_SUPPLEMENTS"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("enqueue.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -74,7 +87,10 @@ class RpaResourceFailureTest {
 			.contentType(APPLICATION_JSON)
 			.bodyValue(RpaTaskRequest.create().withAction("FETCH_SUPPLEMENTS"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("enqueue.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(serviceMock);
 	}

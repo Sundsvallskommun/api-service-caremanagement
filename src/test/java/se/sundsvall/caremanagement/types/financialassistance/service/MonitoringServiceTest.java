@@ -89,7 +89,8 @@ class MonitoringServiceTest {
 
 		assertThatThrownBy(() -> service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: Monitoring not found on errand");
 	}
 
 	@Test
@@ -206,7 +207,8 @@ class MonitoringServiceTest {
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
 			request().withStartDate(LocalDate.of(2026, JULY, 31)).withEndDate(LocalDate.of(2026, JULY, 1))))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: endDate must not be before startDate");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -230,7 +232,8 @@ class MonitoringServiceTest {
 
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing", request()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: Monitoring not found on errand");
 	}
 
 	@Test
@@ -238,7 +241,8 @@ class MonitoringServiceTest {
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
 			request().withStartDate(LocalDate.of(2026, JULY, 31)).withEndDate(LocalDate.of(2026, JULY, 1))))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: endDate must not be before startDate");
 
 		verify(repositoryMock, never()).findByIdAndErrandId(any(), any());
 	}
@@ -260,7 +264,8 @@ class MonitoringServiceTest {
 
 		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: Monitoring not found on errand");
 
 		verify(repositoryMock, never()).delete(any());
 	}
@@ -272,7 +277,8 @@ class MonitoringServiceTest {
 
 		assertThatThrownBy(() -> service.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: Errand not found");
 
 		verify(repositoryMock, never()).findByErrandId(any());
 	}

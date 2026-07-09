@@ -11,10 +11,13 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.permit.api.model.Permit;
 import se.sundsvall.caremanagement.permit.service.PermitService;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
 import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -38,7 +41,10 @@ class PermitResourceFailureTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Permit.create().withPermitType(" "))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("issuePermit.permit.permitType", "must not be blank")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -49,7 +55,10 @@ class PermitResourceFailureTest {
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Permit.create().withPermitType("PARKING_PERMIT").withStatus("PENDING"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("status", "must be one of: [ACTIVE, REVOKED]")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -59,7 +68,10 @@ class PermitResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("readPermits.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}

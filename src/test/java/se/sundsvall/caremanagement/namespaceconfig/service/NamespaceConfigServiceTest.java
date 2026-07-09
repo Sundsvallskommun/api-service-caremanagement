@@ -62,7 +62,8 @@ class NamespaceConfigServiceTest {
 
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, NamespaceConfig.create()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT);
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: A namespace config already exists for namespace 'ns' and municipality id '2281'");
 
 		verify(repositoryMock).existsByNamespaceAndMunicipalityId(NAMESPACE, MUNICIPALITY_ID);
 		verify(repositoryMock, never()).save(any());
@@ -86,7 +87,8 @@ class NamespaceConfigServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No namespace config found for namespace 'ns' and municipality id '2281'");
 	}
 
 	@Test
@@ -107,7 +109,8 @@ class NamespaceConfigServiceTest {
 
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, NamespaceConfig.create()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No namespace config found for namespace 'ns' and municipality id '2281'");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -127,7 +130,8 @@ class NamespaceConfigServiceTest {
 
 		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No namespace config found for namespace 'ns' and municipality id '2281'");
 
 		verify(repositoryMock, never()).deleteByNamespaceAndMunicipalityId(any(), any());
 	}

@@ -13,7 +13,7 @@ class ContactChannelMapperTest {
 	void toContactChannel_maps() {
 		final var result = ContactChannelMapper.toContactChannel(TagEmbeddable.create().withKey("PHONE").withValue("0701234567"));
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(result.getKey()).isEqualTo("PHONE");
 		assertThat(result.getValue()).isEqualTo("0701234567");
 	}
@@ -27,7 +27,7 @@ class ContactChannelMapperTest {
 	void toTagEmbeddable_maps() {
 		final var result = ContactChannelMapper.toTagEmbeddable(ContactChannel.create().withKey("EMAIL").withValue("a@b.c"));
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(result.getKey()).isEqualTo("EMAIL");
 		assertThat(result.getValue()).isEqualTo("a@b.c");
 	}

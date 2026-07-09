@@ -50,7 +50,9 @@ class FinancialAidIntegrationTest {
 
 		assertThatThrownBy(() -> integration.getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, FROM_DATE, TO_DATE))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Error fetching financial-aid basis: 504 Gateway Timeout: upstream timeout");
 
 		verify(clientMock).getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, FROM_DATE, TO_DATE);
 	}
@@ -62,7 +64,9 @@ class FinancialAidIntegrationTest {
 
 		assertThatThrownBy(() -> integration.getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, FROM_DATE, TO_DATE))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Error fetching financial-aid basis: RuntimeException");
 
 		verify(clientMock).getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, FROM_DATE, TO_DATE);
 	}

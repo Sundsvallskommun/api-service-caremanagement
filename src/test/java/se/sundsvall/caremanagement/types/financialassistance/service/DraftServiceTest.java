@@ -89,7 +89,8 @@ class DraftServiceTest {
 
 		assertThatThrownBy(() -> service.get(ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No draft calculation for errand");
 	}
 
 	@Test
@@ -135,7 +136,8 @@ class DraftServiceTest {
 
 		assertThatThrownBy(() -> service.addIncome(ERRAND_ID, new NormIncomeInput()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No draft calculation for errand");
 	}
 
 	@Test
@@ -157,7 +159,8 @@ class DraftServiceTest {
 
 		assertThatThrownBy(() -> service.patchIncome(ERRAND_ID, ROW_ID, new NormIncomeInput()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No such income row on the errand's draft");
 	}
 
 	@Test
@@ -250,6 +253,7 @@ class DraftServiceTest {
 
 		assertThatThrownBy(() -> service.patchHeader(ERRAND_ID, new NormHeaderInput()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No draft calculation for errand");
 	}
 }

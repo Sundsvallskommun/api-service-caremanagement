@@ -14,8 +14,8 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
 
 class FormSnapshotModelTest {
 
@@ -33,7 +33,7 @@ class FormSnapshotModelTest {
 	}
 
 	@Test
-	void beansAreWellFormed() {
+	void testBeansAreWellFormed() {
 		for (final var type : List.of(FormSnapshotAnswer.class, FormSnapshotOption.class, FormSnapshotNotice.class,
 			FormSnapshotField.class, FormSnapshotGroup.class, FormSnapshotSection.class, FormSnapshotAttestation.class, FormSnapshot.class)) {
 			assertThat(type, allOf(
@@ -46,7 +46,7 @@ class FormSnapshotModelTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var capturedAt = OffsetDateTime.parse("2026-06-24T10:15:30+02:00");
 		final var answer = FormSnapshotAnswer.create().withCode("SINGLE").withDisplay("Ensamstående");
 		final var option = FormSnapshotOption.create().withCode("SINGLE").withLabel("Ensamstående").withSelected(true);

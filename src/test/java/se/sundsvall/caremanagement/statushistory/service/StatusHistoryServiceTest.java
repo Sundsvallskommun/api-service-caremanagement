@@ -73,7 +73,7 @@ class StatusHistoryServiceTest {
 		assertThatThrownBy(() -> service.listForErrand(MUNICIPALITY_ID, NAMESPACE, "missing"))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
-			.hasMessageContaining("No errand with id 'missing' found in namespace 'my-namespace' for municipality id '2281'");
+			.hasMessage("Not Found: No errand with id 'missing' found in namespace 'my-namespace' for municipality id '2281'");
 
 		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, "missing");
 		verifyNoInteractions(repositoryMock);

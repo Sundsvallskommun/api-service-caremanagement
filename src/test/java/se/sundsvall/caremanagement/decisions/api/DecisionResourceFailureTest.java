@@ -11,10 +11,13 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
 import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -39,7 +42,10 @@ class DecisionResourceFailureTest {
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Decision.create().withValue("APPROVED"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("createDecision.decision.decisionType", "must not be blank")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -50,7 +56,10 @@ class DecisionResourceFailureTest {
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Decision.create().withDecisionType("PAYMENT"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("createDecision.decision.value", "must not be blank")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -61,7 +70,11 @@ class DecisionResourceFailureTest {
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Decision.create())
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("createDecision.decision.decisionType", "must not be blank"),
+				tuple("createDecision.decision.value", "must not be blank")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -72,7 +85,10 @@ class DecisionResourceFailureTest {
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Decision.create().withDecisionType("PAYMENT").withValue("APPROVED"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("createDecision.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -83,7 +99,10 @@ class DecisionResourceFailureTest {
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.bodyValue(Decision.create().withDecisionType("PAYMENT").withValue("APPROVED"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("createDecision.namespace", "can only contain A-Z, a-z, 0-9, - and _")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -94,7 +113,10 @@ class DecisionResourceFailureTest {
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.bodyValue(Decision.create().withDecisionType("PAYMENT").withValue("APPROVED"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("createDecision.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -104,7 +126,10 @@ class DecisionResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("readDecisions.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -114,7 +139,10 @@ class DecisionResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("readDecisions.namespace", "can only contain A-Z, a-z, 0-9, - and _")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -124,7 +152,10 @@ class DecisionResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("readDecisions.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -135,7 +166,10 @@ class DecisionResourceFailureTest {
 			.uri(uri -> uri.path(ERRAND_BASE + "/{decisionId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid", "decisionId", DECISION_ID)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("readDecision.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -146,7 +180,10 @@ class DecisionResourceFailureTest {
 			.uri(uri -> uri.path(ERRAND_BASE + "/{decisionId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "decisionId", "not-a-uuid")))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("readDecision.decisionId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -157,7 +194,10 @@ class DecisionResourceFailureTest {
 			.uri(uri -> uri.path(ERRAND_BASE + "/{decisionId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid", "decisionId", DECISION_ID)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("deleteDecision.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -168,7 +208,10 @@ class DecisionResourceFailureTest {
 			.uri(uri -> uri.path(ERRAND_BASE + "/{decisionId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "decisionId", "not-a-uuid")))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("deleteDecision.decisionId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -179,7 +222,10 @@ class DecisionResourceFailureTest {
 			.uri(uri -> uri.path(ERRAND_BASE + "/{decisionId}").build(Map.of(
 				"municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID, "decisionId", DECISION_ID)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("deleteDecision.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(serviceMock);
 	}

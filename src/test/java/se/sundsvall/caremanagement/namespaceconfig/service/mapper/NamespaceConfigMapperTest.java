@@ -25,7 +25,7 @@ class NamespaceConfigMapperTest {
 
 		final var result = NamespaceConfigMapper.toNamespaceConfig(entity);
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(result.getId()).isEqualTo(42L);
 		assertThat(result.getDisplayName()).isEqualTo("display");
 		assertThat(result.getShortCode()).isEqualTo("sc");
@@ -44,7 +44,7 @@ class NamespaceConfigMapperTest {
 
 		final var result = NamespaceConfigMapper.toNamespaceConfigEntity(config, "ns", "2281");
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "modified");
 		assertThat(result.getNamespace()).isEqualTo("ns");
 		assertThat(result.getMunicipalityId()).isEqualTo("2281");
 		assertThat(result.getDisplayName()).isEqualTo("display");

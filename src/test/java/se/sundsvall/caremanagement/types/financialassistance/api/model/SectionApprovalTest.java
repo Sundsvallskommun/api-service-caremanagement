@@ -14,7 +14,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class SectionApprovalTest {
 
@@ -34,7 +34,7 @@ class SectionApprovalTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var when = OffsetDateTime.parse("2026-06-18T09:00:00Z");
 		final var approval = SectionApproval.create()
 			.withSection("CALCULATION")
@@ -50,7 +50,7 @@ class SectionApprovalTest {
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
+	void testCreateReturnsEmptyInstance() {
 		assertThat(SectionApproval.create()).hasAllNullFieldsOrPropertiesExcept("approved");
 	}
 }

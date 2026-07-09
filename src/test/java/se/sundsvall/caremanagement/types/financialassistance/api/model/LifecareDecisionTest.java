@@ -11,8 +11,8 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
 
 class LifecareDecisionTest {
 
@@ -34,7 +34,7 @@ class LifecareDecisionTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var decision = LifecareDecision.create()
 			.withId(9900)
 			.withDate("2026-06-02")
@@ -64,7 +64,7 @@ class LifecareDecisionTest {
 	}
 
 	@Test
-	void createReturnsBlankInstance() {
+	void testCreateReturnsBlankInstance() {
 		assertThat(LifecareDecision.create()).hasAllNullFieldsOrProperties();
 	}
 }

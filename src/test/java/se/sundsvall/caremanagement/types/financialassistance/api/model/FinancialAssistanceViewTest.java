@@ -29,7 +29,7 @@ class FinancialAssistanceViewTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var view = FinancialAssistanceView.create()
 			.withId("cb20c51f-fcf3-42c0-b613-de563634a8ec")
 			.withErrandNumber("EB-26060042")
@@ -72,7 +72,7 @@ class FinancialAssistanceViewTest {
 	}
 
 	@Test
-	void settersWork() {
+	void testSettersWork() {
 		final var view = FinancialAssistanceView.create();
 		view.setId("id");
 		view.setErrandNumber("EB-26060001");
@@ -100,12 +100,12 @@ class FinancialAssistanceViewTest {
 	}
 
 	@Test
-	void createReturnsBlankInstance() {
+	void testCreateReturnsBlankInstance() {
 		assertThat(FinancialAssistanceView.create()).hasAllNullFieldsOrProperties();
 	}
 
 	@Test
-	void equalsAndHashCode() {
+	void testEqualsAndHashCode() {
 		final var a = FinancialAssistanceView.create().withId("1").withTitle("T").withData(DATA);
 		final var b = FinancialAssistanceView.create().withId("1").withTitle("T").withData(DATA);
 		final var c = FinancialAssistanceView.create().withId("2");

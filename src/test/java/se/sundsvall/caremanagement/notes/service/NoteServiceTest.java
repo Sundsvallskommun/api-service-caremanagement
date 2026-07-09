@@ -86,7 +86,8 @@ class NoteServiceTest {
 
 		assertThatThrownBy(() -> service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateNote("body", "author")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand");
 
 		verify(repositoryMock, never()).save(any());
 		verify(eventsMock, never()).publishEvent(any());
@@ -126,7 +127,8 @@ class NoteServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No note with id 'n1' found on errand 'errand-1' in namespace 'my-namespace' for municipality id '2281'");
 	}
 
 	@Test
@@ -135,7 +137,8 @@ class NoteServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand");
 
 		verify(repositoryMock, never()).findByErrandIdAndId(any(), any());
 	}
@@ -167,7 +170,8 @@ class NoteServiceTest {
 
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID, new UpdateNote("b", "editor")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No note with id 'n1' found on errand 'errand-1' in namespace 'my-namespace' for municipality id '2281'");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -188,7 +192,8 @@ class NoteServiceTest {
 
 		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, NOTE_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No note with id 'n1' found on errand 'errand-1' in namespace 'my-namespace' for municipality id '2281'");
 
 		verify(repositoryMock, never()).delete(any());
 	}

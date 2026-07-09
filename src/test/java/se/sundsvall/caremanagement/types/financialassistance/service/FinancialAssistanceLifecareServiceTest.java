@@ -82,7 +82,8 @@ class FinancialAssistanceLifecareServiceTest {
 
 		assertThatThrownBy(() -> service.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No citizen found for partyId f47ac10b-58cc-4372-a567-0e02b2c3d479");
 
 		verify(lifecareCaseHistoryServiceMock, never()).listCalculations(any(), any(), any());
 	}
@@ -143,7 +144,8 @@ class FinancialAssistanceLifecareServiceTest {
 
 		assertThatThrownBy(() -> service.readDocumentContent(MUNICIPALITY_ID, APPLICANT_PARTY_ID, "doc-OTHER", null, null))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No Lifecare document 'doc-OTHER' found for the given applicant");
 
 		verify(lifecareCaseHistoryServiceMock, never()).documentContent(any());
 	}

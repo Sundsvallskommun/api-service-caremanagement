@@ -5,11 +5,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.client.MultipartBodyBuilder;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
 import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
+import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
 
 class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssistanceResourceTest {
 
@@ -19,7 +22,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.uri(uri -> uri.path(PATH + "/eligibility").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(EligibilityRequest.create())
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("applicant", "not a valid UUID")));
 
 		verifyNoInteractions(eligibilityServiceMock);
 	}
@@ -30,7 +36,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.uri(uri -> uri.path(PATH + "/eligibility").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(EligibilityRequest.create().withApplicant("123"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("applicant", "not a valid UUID")));
 
 		verifyNoInteractions(eligibilityServiceMock);
 	}
@@ -41,7 +50,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.uri(uri -> uri.path(PATH + "/eligibility").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(EligibilityRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withCoApplicant("nope"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("coApplicant", "not a valid UUID")));
 
 		verifyNoInteractions(eligibilityServiceMock);
 	}
@@ -52,7 +64,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.uri(uri -> uri.path(PATH + "/actualisation").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(ActualisationRequest.create().withApplicant("123").withApplicationMonth("2026-06"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("applicant", "not a valid UUID")));
 
 		verifyNoInteractions(actualisationServiceMock);
 	}
@@ -63,7 +78,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.uri(uri -> uri.path(PATH + "/actualisation").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(ActualisationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-13"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("applicationMonth", "must be an ISO year-month (yyyy-MM)")));
 
 		verifyNoInteractions(actualisationServiceMock);
 	}
@@ -73,7 +91,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/prefill").queryParam("partyId", "not-a-uuid").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("prefill.partyId", "not a valid UUID")));
 
 		verifyNoInteractions(prefillServiceMock);
 	}
@@ -83,7 +104,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/actualisations").queryParam("partyId", "not-a-uuid").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("listActualisations.partyId", "not a valid UUID")));
 
 		verifyNoInteractions(actualisationServiceMock);
 	}
@@ -93,7 +117,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/actualisations").queryParam("partyId", randomUUID().toString()).build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("listActualisations.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(actualisationServiceMock);
 	}
@@ -108,7 +135,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("archiveToActualisation.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(actualisationServiceMock);
 	}
@@ -123,7 +153,11 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody()
+			.jsonPath("$.title").isEqualTo("Bad Request")
+			.jsonPath("$.status").isEqualTo(400)
+			.jsonPath("$.detail").isEqualTo("Required part 'file' is not present.");
 
 		verifyNoInteractions(actualisationServiceMock);
 	}
@@ -139,7 +173,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("errandId", "not a valid UUID")));
 
 		verifyNoInteractions(actualisationServiceMock);
 	}
@@ -154,7 +191,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("archiveToActualisation.partyId", "not a valid UUID")));
 
 		verifyNoInteractions(actualisationServiceMock);
 	}

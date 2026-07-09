@@ -127,7 +127,8 @@ class AttachmentServiceTest {
 
 		assertThatThrownBy(() -> service.createAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CASE_DATA", file))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: A case-data (ärendeuppgifter) attachment already exists on errand '11111111-1111-1111-1111-111111111111' in namespace 'MY_NAMESPACE' for municipality id '2281'");
 
 		verify(attachmentRepositoryMock, never()).save(any(AttachmentEntity.class));
 	}
@@ -165,7 +166,8 @@ class AttachmentServiceTest {
 
 		assertThatThrownBy(() -> service.createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "name.pdf", "%PDF".getBytes()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: A message-history attachment already exists on errand '11111111-1111-1111-1111-111111111111' in namespace 'MY_NAMESPACE' for municipality id '2281'");
 
 		verify(attachmentRepositoryMock, never()).save(any(AttachmentEntity.class));
 	}
@@ -200,7 +202,8 @@ class AttachmentServiceTest {
 
 		assertThatThrownBy(() -> service.storeAndCombine(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, List.of(unreadable)))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: Could not read input stream: disk gone");
 	}
 
 	@Test
@@ -220,7 +223,8 @@ class AttachmentServiceTest {
 
 		assertThatThrownBy(() -> service.streamAttachmentFile(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, ATTACHMENT_ID, response))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", INTERNAL_SERVER_ERROR);
+			.hasFieldOrPropertyWithValue("status", INTERNAL_SERVER_ERROR)
+			.hasMessage("Internal Server Error: SQLException occurred when copying file with attachment id 'dddddddd-dddd-dddd-dddd-dddddddddddd' to response: blob boom");
 	}
 
 	@Test
@@ -312,7 +316,8 @@ class AttachmentServiceTest {
 
 		assertThatThrownBy(() -> service.readAttachments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, null))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand with id '11111111-1111-1111-1111-111111111111' found in namespace 'MY_NAMESPACE' for municipality id '2281'");
 
 		verifyNoInteractions(conversationAttachmentQueryServiceMock);
 	}

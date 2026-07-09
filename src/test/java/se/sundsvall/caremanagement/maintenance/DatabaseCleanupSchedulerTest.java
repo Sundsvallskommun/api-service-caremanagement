@@ -13,7 +13,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -57,5 +59,23 @@ class DatabaseCleanupSchedulerTest {
 		verify(statementMock).addBatch("DELETE FROM `errand_note`");
 		verify(statementMock, never()).addBatch("DELETE FROM `namespace_config`");
 		verify(statementMock).executeBatch();
+	}
+
+	@Test
+	void resetDemoDataRestoresForeignKeyChecksWhenBatchFails() throws SQLException {
+		when(jdbcTemplateMock.execute(ArgumentMatchers.<ConnectionCallback<Void>>any()))
+			.thenAnswer(invocation -> invocation.<ConnectionCallback<Void>>getArgument(0).doInConnection(connectionMock));
+		when(connectionMock.createStatement()).thenReturn(statementMock);
+		when(statementMock.executeQuery(anyString())).thenReturn(resultSetMock);
+		when(resultSetMock.next()).thenReturn(true, false);
+		when(resultSetMock.getString(1)).thenReturn("errand");
+		doThrow(new SQLException("batch failed")).when(statementMock).executeBatch();
+
+		assertThatThrownBy(scheduler::resetDemoData).isInstanceOf(SQLException.class);
+
+		verify(statementMock).execute("SET FOREIGN_KEY_CHECKS = 0");
+		verify(statementMock).addBatch("DELETE FROM `errand`");
+		verify(statementMock).executeBatch();
+		verify(statementMock).execute("SET FOREIGN_KEY_CHECKS = 1");
 	}
 }

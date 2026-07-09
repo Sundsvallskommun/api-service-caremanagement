@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UnreadCountTest {
 
 	@Test
-	void accessor() {
+	void testAccessor() {
 		final var unreadCount = new UnreadCount(3);
 
 		assertThat(unreadCount.unreadCount()).isEqualTo(3);

@@ -10,9 +10,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.statistics.service.StatisticsService;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -33,7 +36,10 @@ class StatisticsResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "invalid", "namespace", NAMESPACE)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("getStatistics.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -43,7 +49,10 @@ class StatisticsResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "2281", "namespace", "invalid namespace")))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("getStatistics.namespace", "can only contain A-Z, a-z, 0-9, - and _")));
 
 		verifyNoInteractions(serviceMock);
 	}

@@ -114,7 +114,8 @@ class DecisionServiceTest {
 
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Decision.create()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand with id '11111111-1111-1111-1111-111111111111' found in namespace 'MY_NAMESPACE' for municipality id '2281'");
 
 		verifyNoInteractions(decisionRepositoryMock, eventPublisherMock);
 	}
@@ -137,7 +138,8 @@ class DecisionServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No decision with id '22222222-2222-2222-2222-222222222222' found on errand '11111111-1111-1111-1111-111111111111' in namespace 'MY_NAMESPACE' for municipality id '2281'");
 	}
 
 	@Test

@@ -96,7 +96,8 @@ class DocumentServiceTest {
 
 		assertThatThrownBy(() -> service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateDocument("T", "H", null, DOCUMENT_DATE, null, "carola")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: no errand");
 
 		verifyNoInteractions(repositoryMock);
 		verifyNoInteractions(eventsMock);
@@ -139,7 +140,8 @@ class DocumentServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No document with id 'missing'");
 	}
 
 	@Test
@@ -148,7 +150,8 @@ class DocumentServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "d1"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: no errand");
 
 		verifyNoInteractions(repositoryMock);
 	}
@@ -163,7 +166,8 @@ class DocumentServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "doc-from-other-errand"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No document with id 'doc-from-other-errand'");
 
 		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(repositoryMock).findByIdAndErrandId("doc-from-other-errand", ERRAND_ID);
@@ -196,7 +200,8 @@ class DocumentServiceTest {
 
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing", new UpdateDocument("t", "h", null, DOCUMENT_DATE, null, "editor")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No document with id 'missing'");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -208,7 +213,8 @@ class DocumentServiceTest {
 
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "d1", new UpdateDocument("t", "h", null, DOCUMENT_DATE, null, "editor")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT);
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: Document is locked and cannot be edited");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -230,7 +236,8 @@ class DocumentServiceTest {
 
 		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No document with id 'missing'");
 
 		verify(repositoryMock, never()).delete(any());
 	}
@@ -242,7 +249,8 @@ class DocumentServiceTest {
 
 		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "d1"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT);
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: Document is locked and cannot be deleted");
 
 		verify(repositoryMock, never()).delete(any());
 	}
@@ -280,7 +288,8 @@ class DocumentServiceTest {
 
 		assertThatThrownBy(() -> service.lock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing", new LockDocument("carola")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No document with id 'missing'");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -292,7 +301,8 @@ class DocumentServiceTest {
 
 		assertThatThrownBy(() -> service.lock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "d1", new LockDocument("carola")))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT);
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: Document is already locked");
 
 		verify(repositoryMock, never()).save(any());
 	}

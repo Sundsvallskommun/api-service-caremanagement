@@ -46,7 +46,7 @@ class FinancialAssistanceMapperTest {
 		final var data = fullData();
 		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
 
-		assertThat(entity).isNotNull();
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("lastDailyRunAt", "created", "modified");
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
 		assertThat(entity.getApplicationType()).isEqualTo("NEW");
 		assertThat(entity.getMaritalStatus()).isEqualTo("SINGLE");
@@ -175,7 +175,7 @@ class FinancialAssistanceMapperTest {
 		final var entity = fullEntity();
 		final var data = FinancialAssistanceMapper.toData(entity);
 
-		assertThat(data).isNotNull();
+		assertThat(data).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(data.getApplicationType()).isEqualTo("RENEWAL");
 		assertThat(data.getMaritalStatus()).isEqualTo("COHABITING");
 		assertThat(data.getPeriodMonth()).isEqualTo(7);
@@ -259,7 +259,7 @@ class FinancialAssistanceMapperTest {
 
 		final var view = FinancialAssistanceMapper.toView(envelope, entity);
 
-		assertThat(view).isNotNull();
+		assertThat(view).isNotNull().hasNoNullFieldsOrPropertiesExcept("applicantName", "recommendation", "sectionApprovals");
 		assertThat(view.getId()).isEqualTo("errand-1");
 		assertThat(view.getErrandNumber()).isEqualTo("EB-26060042");
 		assertThat(view.getMunicipalityId()).isEqualTo("2281");
@@ -275,7 +275,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(view.getModified()).isEqualTo(MODIFIED);
 		assertThat(view.getTouched()).isEqualTo(TOUCHED);
 		assertThat(view.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
-		assertThat(view.getData()).isNotNull();
+		assertThat(view.getData()).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(view.getData().getApplicationType()).isEqualTo("RENEWAL");
 	}
 

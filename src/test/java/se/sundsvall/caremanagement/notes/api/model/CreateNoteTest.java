@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CreateNoteTest {
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		final var note = new CreateNote("body content", "author-1");
 
 		assertThat(note.body()).isEqualTo("body content");
@@ -15,7 +15,7 @@ class CreateNoteTest {
 	}
 
 	@Test
-	void authorIsOptional() {
+	void testAuthorIsOptional() {
 		final var note = new CreateNote("body content", null);
 		assertThat(note.body()).isEqualTo("body content");
 		assertThat(note.author()).isNull();

@@ -9,7 +9,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class SectionApprovalsTest {
 
@@ -24,7 +24,7 @@ class SectionApprovalsTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var calculation = SectionApproval.create().withSection("CALCULATION").withApproved(true);
 		final var payment = SectionApproval.create().withSection("PAYMENT").withApproved(false);
 		final var decision = SectionApproval.create().withSection("DECISION").withApproved(false);
@@ -41,7 +41,7 @@ class SectionApprovalsTest {
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
+	void testCreateReturnsEmptyInstance() {
 		assertThat(SectionApprovals.create()).hasAllNullFieldsOrProperties();
 	}
 }

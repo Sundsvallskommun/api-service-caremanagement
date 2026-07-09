@@ -10,7 +10,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class FinancialAssistanceMetadataTest {
 
@@ -25,7 +25,7 @@ class FinancialAssistanceMetadataTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var income = List.of(TypeOption.create().withCode("SALARY").withExternalDisplayName("Lön"));
 		final var cost = List.of(TypeOption.create().withCode("RENT").withExternalDisplayName("Hyra (inte parkering/garage)"));
 
@@ -39,7 +39,7 @@ class FinancialAssistanceMetadataTest {
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
+	void testCreateReturnsEmptyInstance() {
 		assertThat(FinancialAssistanceMetadata.create()).hasAllNullFieldsOrProperties();
 	}
 }

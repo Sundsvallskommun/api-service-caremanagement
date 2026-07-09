@@ -10,10 +10,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
 import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -36,7 +39,10 @@ class ErrandEventResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("list.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -46,7 +52,10 @@ class ErrandEventResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("list.namespace", "can only contain A-Z, a-z, 0-9, - and _")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -56,7 +65,10 @@ class ErrandEventResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("list.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -66,7 +78,10 @@ class ErrandEventResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/count").build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("count.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -76,7 +91,10 @@ class ErrandEventResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("count.namespace", "can only contain A-Z, a-z, 0-9, - and _")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -86,7 +104,10 @@ class ErrandEventResourceFailureTest {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("count.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}

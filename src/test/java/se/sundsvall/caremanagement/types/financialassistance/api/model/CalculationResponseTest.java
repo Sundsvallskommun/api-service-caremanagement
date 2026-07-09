@@ -9,8 +9,8 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
 
 class CalculationResponseTest {
 
@@ -25,7 +25,7 @@ class CalculationResponseTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var response = CalculationResponse.create()
 			.withCalculationId(4711)
 			.withUnhandledIncomes(List.of("Bostadstillägg (NOT_ON_WHITELIST)"))
@@ -37,7 +37,7 @@ class CalculationResponseTest {
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
+	void testCreateReturnsEmptyInstance() {
 		final var response = CalculationResponse.create();
 
 		assertThat(response.getCalculationId()).isNull();

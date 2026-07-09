@@ -130,7 +130,8 @@ class FinancialAssistanceActualisationServiceTest {
 
 		assertThatThrownBy(() -> service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No citizen found for partyId f47ac10b-58cc-4372-a567-0e02b2c3d479");
 
 		verify(actualisationServiceMock, never()).create(any(), any());
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
@@ -185,7 +186,8 @@ class FinancialAssistanceActualisationServiceTest {
 
 		assertThatThrownBy(() -> service.listActualisations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No citizen found for partyId f47ac10b-58cc-4372-a567-0e02b2c3d479");
 
 		verify(actualisationServiceMock, never()).list(any(), any(), any());
 	}
@@ -262,7 +264,8 @@ class FinancialAssistanceActualisationServiceTest {
 
 		assertThatThrownBy(() -> service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, APPLICANT_PARTY_ID, 5012, file, null))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: Could not read the uploaded file: stream closed");
 
 		verify(actualisationServiceMock, never()).uploadAttachment(any(), any(), any(), any(), any(), any(), any());
 	}
@@ -276,7 +279,8 @@ class FinancialAssistanceActualisationServiceTest {
 
 		assertThatThrownBy(() -> service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, APPLICANT_PARTY_ID, 9999, file, null))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No Lifecare actualisation '9999' found for the given applicant");
 
 		verify(actualisationServiceMock, never()).uploadAttachment(any(), any(), any(), any(), any(), any(), any());
 	}

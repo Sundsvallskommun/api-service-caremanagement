@@ -90,7 +90,8 @@ class ProcessServiceTest {
 
 		assertThatThrownBy(() -> service.startProcess(MUNICIPALITY_ID, "Unknown", "biz", Map.of()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: No Operaton process definition found with name 'Unknown'");
 	}
 
 	@Test
@@ -99,7 +100,8 @@ class ProcessServiceTest {
 
 		assertThatThrownBy(() -> service.startProcess(MUNICIPALITY_ID, "X", "biz", Map.of()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: No Operaton process definition found with name 'X'");
 	}
 
 	@Test

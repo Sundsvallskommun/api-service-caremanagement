@@ -16,7 +16,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static java.time.Month.JULY;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class MonitoringTest {
 
@@ -37,7 +37,7 @@ class MonitoringTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var created = OffsetDateTime.parse("2026-06-01T12:00:00Z");
 		final var startDate = LocalDate.of(2026, JULY, 1);
 		final var endDate = LocalDate.of(2026, JULY, 31);
@@ -63,7 +63,7 @@ class MonitoringTest {
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
+	void testCreateReturnsEmptyInstance() {
 		assertThat(Monitoring.create()).hasAllNullFieldsOrProperties();
 	}
 }

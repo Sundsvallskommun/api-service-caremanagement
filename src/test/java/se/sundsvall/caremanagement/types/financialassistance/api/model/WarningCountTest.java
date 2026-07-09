@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class WarningCountTest {
 
 	@Test
-	void accessor() {
+	void testAccessor() {
 		assertThat(new WarningCount(3).count()).isEqualTo(3);
 	}
 }

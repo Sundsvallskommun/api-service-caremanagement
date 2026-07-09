@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -64,7 +65,8 @@ class MonitoringResourceTest {
 			.bodyValue(request())
 			.exchange()
 			.expectStatus().isCreated()
-			.expectHeader().exists("Location")
+			.expectHeader().contentType(APPLICATION_JSON)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/" + ERRAND_ID + "/monitorings/" + MONITORING_ID)
 			.expectBody(Monitoring.class)
 			.returnResult()
 			.getResponseBody();

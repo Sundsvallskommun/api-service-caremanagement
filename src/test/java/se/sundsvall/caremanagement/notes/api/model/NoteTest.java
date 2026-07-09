@@ -1,15 +1,40 @@
 package se.sundsvall.caremanagement.notes.api.model;
 
 import java.time.OffsetDateTime;
+import java.util.Random;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static com.google.code.beanmatchers.BeanMatchers.registerValueGenerator;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class NoteTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
+	@BeforeAll
+	static void setup() {
+		registerValueGenerator(() -> OffsetDateTime.now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+	}
+
 	@Test
-	void builderMethods() {
+	void testBean() {
+		MatcherAssert.assertThat(Note.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
 		final var id = "n1";
 		final var errandId = "e1";
 		final var body = "body";
@@ -37,7 +62,7 @@ class NoteTest {
 	}
 
 	@Test
-	void setters() {
+	void testSetters() {
 		final var note = Note.create();
 		note.setId("id");
 		note.setErrandId("eid");
@@ -58,12 +83,13 @@ class NoteTest {
 	}
 
 	@Test
-	void createReturnsBlankInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(Note.create()).hasAllNullFieldsOrProperties();
+		assertThat(new Note()).hasAllNullFieldsOrProperties();
 	}
 
 	@Test
-	void equalsAndHashCode() {
+	void testEqualsAndHashCode() {
 		final var ts = FIXED_TIMESTAMP;
 		final var a = Note.create().withId("1").withErrandId("e").withBody("b").withAuthor("u").withCreated(ts).withModifiedBy("ed").withModified(ts);
 		final var b = Note.create().withId("1").withErrandId("e").withBody("b").withAuthor("u").withCreated(ts).withModifiedBy("ed").withModified(ts);
@@ -78,7 +104,7 @@ class NoteTest {
 	}
 
 	@Test
-	void toStringContainsFields() {
+	void testToStringContainsFields() {
 		final var note = Note.create().withId("n1").withErrandId("e1").withBody("body").withAuthor("author")
 			.withCreated(FIXED_TIMESTAMP).withModifiedBy("editor").withModified(FIXED_TIMESTAMP);
 

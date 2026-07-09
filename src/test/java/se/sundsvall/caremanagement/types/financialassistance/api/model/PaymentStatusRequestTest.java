@@ -8,8 +8,8 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
 
 class PaymentStatusRequestTest {
 
@@ -24,7 +24,7 @@ class PaymentStatusRequestTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var request = PaymentStatusRequest.create()
 			.withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479")
 			.withApplicationMonth("2026-06");
@@ -34,7 +34,7 @@ class PaymentStatusRequestTest {
 	}
 
 	@Test
-	void createReturnsBlankInstance() {
+	void testCreateReturnsBlankInstance() {
 		assertThat(PaymentStatusRequest.create()).hasAllNullFieldsOrProperties();
 	}
 }

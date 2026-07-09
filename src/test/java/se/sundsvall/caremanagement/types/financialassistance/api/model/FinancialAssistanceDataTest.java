@@ -30,7 +30,7 @@ class FinancialAssistanceDataTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var data = FinancialAssistanceData.create()
 			.withApplicationType("NEW")
 			.withMaritalStatus("SINGLE")
@@ -91,7 +91,7 @@ class FinancialAssistanceDataTest {
 	}
 
 	@Test
-	void builderMethods2() {
+	void testBuilderMethods2() {
 		final var data = FinancialAssistanceData.create()
 			.withApplicationType("NEW")
 			.withMaritalStatus("SINGLE")
@@ -142,7 +142,7 @@ class FinancialAssistanceDataTest {
 	}
 
 	@Test
-	void settersWork() {
+	void testSettersWork() {
 		final var data = FinancialAssistanceData.create();
 		data.setApplicationType("RENEWAL");
 		data.setMaritalStatus("COHABITING");
@@ -186,12 +186,12 @@ class FinancialAssistanceDataTest {
 	}
 
 	@Test
-	void createReturnsBlankInstance() {
+	void testCreateReturnsBlankInstance() {
 		assertThat(FinancialAssistanceData.create()).hasAllNullFieldsOrProperties();
 	}
 
 	@Test
-	void equalsAndHashCode() {
+	void testEqualsAndHashCode() {
 		final var a = FinancialAssistanceData.create().withApplicationType("NEW").withPeriodMonth(6).withChildren(CHILDREN);
 		final var b = FinancialAssistanceData.create().withApplicationType("NEW").withPeriodMonth(6).withChildren(CHILDREN);
 		final var c = FinancialAssistanceData.create().withApplicationType("RENEWAL");
