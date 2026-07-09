@@ -125,14 +125,6 @@ class FinancialAssistanceCalculationServiceTest {
 	}
 
 	@Test
-	void commitRequiresErrandId() {
-		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
-
-		assertThatThrownBy(() -> service.commitCalculation(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", BAD_REQUEST);
-	}
-
-	@Test
 	void commitYields404WhenNoDraftHeader() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.empty());
@@ -140,14 +132,6 @@ class FinancialAssistanceCalculationServiceTest {
 
 		assertThatThrownBy(() -> service.commitCalculation(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", NOT_FOUND);
-	}
-
-	@Test
-	void prepareRequiresErrandId() {
-		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withClassifiedIncomes("[]");
-
-		assertThatThrownBy(() -> service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 	}
 
 	@Test
@@ -299,14 +283,6 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(calculationServiceMock).commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), effectiveCaptor.capture(), any(), any());
 		assertThat(effectiveCaptor.getValue()).singleElement().satisfies(income -> assertThat(income.typeId()).isEqualTo(11));
 		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any());
-	}
-
-	@Test
-	void commitFromApplicationRequiresErrandId() {
-		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
-
-		assertThatThrownBy(() -> service.commitFromApplication(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class).hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 	}
 
 	@Test

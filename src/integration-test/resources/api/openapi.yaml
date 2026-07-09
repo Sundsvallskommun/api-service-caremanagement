@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:62272
+- url: http://localhost:57616
   description: Generated server url
 tags:
 - name: Statistics
@@ -7264,10 +7264,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -9876,10 +9876,9 @@ components:
           pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
         errandId:
           type: string
-          description: "The id of the caremanagement errand the calculation concerns.\
-            \ When present, a Decision(RECOMMENDATION) summarising the income warnings\
-            \ is recorded on the errand for the caseworker to review; when omitted,\
-            \ the calculation is built without recording a recommendation."
+          description: "The id of the caremanagement errand the calculation concerns\
+            \ — used to load the errand and, on the daily prepare, to record the Decision(RECOMMENDATION)\
+            \ the caseworker reviews."
           examples:
           - cb20c51f-fcf3-42c0-b613-de563634a8ec
         classifiedIncomes:
@@ -9903,6 +9902,7 @@ components:
       required:
       - applicant
       - applicationMonth
+      - errandId
     CalculationResponse:
       type: object
       description: The created Lifecare calculation id plus the income warnings to

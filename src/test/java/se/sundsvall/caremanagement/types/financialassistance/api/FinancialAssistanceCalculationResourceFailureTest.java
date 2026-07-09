@@ -30,4 +30,37 @@ class FinancialAssistanceCalculationResourceFailureTest extends AbstractFinancia
 		verifyNoInteractions(calculationServiceMock);
 	}
 
+	@Test
+	void prepareCalculation_missingErrandId() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/calculation/prepare").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(calculationServiceMock);
+	}
+
+	@Test
+	void commitCalculation_missingErrandId() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/calculation/commit").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(calculationServiceMock);
+	}
+
+	@Test
+	void commitFromApplication_missingErrandId() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/calculation/from-application").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isBadRequest();
+
+		verifyNoInteractions(calculationServiceMock);
+	}
+
 }

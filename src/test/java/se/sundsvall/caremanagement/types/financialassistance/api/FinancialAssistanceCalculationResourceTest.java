@@ -24,7 +24,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 
 		final var response = webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/calculation/prepare").build(base()))
-			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06").withErrandId("cb20c51f-fcf3-42c0-b613-de563634a8ec"))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(CalculationResponse.class)
@@ -83,7 +83,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 
 		final var response = webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/calculation/commit").build(base()))
-			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06").withErrandId("cb20c51f-fcf3-42c0-b613-de563634a8ec"))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(CalculationResponse.class)
@@ -102,7 +102,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 
 		final var response = webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/calculation/from-application").build(base()))
-			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06").withErrandId("cb20c51f-fcf3-42c0-b613-de563634a8ec"))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(CalculationResponse.class)

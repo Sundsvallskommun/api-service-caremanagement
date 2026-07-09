@@ -29,9 +29,10 @@ public class CalculationRequest {
 	private String applicationMonth;
 
 	@Schema(
-		description = "The id of the caremanagement errand the calculation concerns. When present, a Decision(RECOMMENDATION) summarising the income warnings is recorded on the errand for the caseworker to review; when omitted, the calculation is built without recording a recommendation.",
-		examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec")
-	@ValidUuid(nullable = true)
+		description = "The id of the caremanagement errand the calculation concerns — used to load the errand and, on the daily prepare, to record the Decision(RECOMMENDATION) the caseworker reviews.",
+		examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec",
+		requiredMode = Schema.RequiredMode.REQUIRED)
+	@ValidUuid
 	private String errandId;
 
 	@Schema(description = "The incomes classified by the operaton rules (the evaluate-income-rules worker output), as JSON. When present, caremanagement maps these to FC income rows instead of fetching SSBTEK and evaluating the raw list itself.")

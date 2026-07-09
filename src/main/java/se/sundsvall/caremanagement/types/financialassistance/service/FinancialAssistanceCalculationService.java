@@ -102,7 +102,7 @@ public class FinancialAssistanceCalculationService {
 	 * No Lifecare calculation is created here — that happens only after a decision, via {@link #commitCalculation}.
 	 */
 	public CalculationResponse prepareCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
-		final var errandId = requireErrandId(request);
+		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 		final var classifiedIncomes = requireClassifiedIncomes(request);
@@ -186,7 +186,7 @@ public class FinancialAssistanceCalculationService {
 	 */
 	@SuppressWarnings("java:S1172") // namespace retained for controller-facing signature symmetry; see Javadoc
 	public CalculationResponse commitCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
-		final var errandId = requireErrandId(request);
+		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 
@@ -226,7 +226,7 @@ public class FinancialAssistanceCalculationService {
 	 */
 	@SuppressWarnings("java:S1172") // namespace retained for controller-facing signature symmetry; see Javadoc
 	public CalculationResponse commitFromApplication(final String municipalityId, final String namespace, final CalculationRequest request) {
-		final var errandId = requireErrandId(request);
+		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 		final var errand = repository.findByErrandId(errandId)
@@ -290,11 +290,6 @@ public class FinancialAssistanceCalculationService {
 		} catch (final Exception e) {
 			LOG.warn("RPA enqueue {} failed for errand {} — Lifecare write already committed, continuing", sanitizeForLogging(WRITE_NORMBERAKNING.name()), sanitizeForLogging(errandId), e);
 		}
-	}
-
-	private static String requireErrandId(final CalculationRequest request) {
-		return ofNullable(request.getErrandId()).filter(StringUtils::hasText)
-			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, "errandId is required for the calculation"));
 	}
 
 	private static String requireClassifiedIncomes(final CalculationRequest request) {
