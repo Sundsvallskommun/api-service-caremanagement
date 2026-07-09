@@ -66,7 +66,7 @@ public class FinancialAssistanceCalculationService {
 	private static final String VALUE_OK = "OK";
 
 	private final ErrandService errandService;
-	private final FinancialAssistanceRepository repository;
+	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final CalculationService calculationService;
 	private final LifecareEbCaseService lifecareEbCaseService;
 	private final CitizenService citizenService;
@@ -76,11 +76,11 @@ public class FinancialAssistanceCalculationService {
 	private final CalculationFeeder calculationFeeder;
 	private final RpaService rpaService;
 
-	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository repository, final CalculationService calculationService,
+	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareEbCaseService lifecareEbCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final RpaService rpaService) {
 		this.errandService = errandService;
-		this.repository = repository;
+		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
 		this.lifecareEbCaseService = lifecareEbCaseService;
 		this.citizenService = citizenService;
@@ -106,7 +106,7 @@ public class FinancialAssistanceCalculationService {
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 		final var classifiedIncomes = requireClassifiedIncomes(request);
-		final var errand = repository.findByErrandId(errandId)
+		final var errand = financialAssistanceRepository.findByErrandId(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No financial-assistance errand for id " + errandId));
 
 		// Compute the fresh process rows for the three sections, then merge them into the editable draft (the merge keeps
@@ -136,7 +136,7 @@ public class FinancialAssistanceCalculationService {
 
 		// Stamp the errand with this daily-loop run so Draken can show "last checked" and ops can spot stale loops.
 		errand.setLastDailyRunAt(OffsetDateTime.now(ZoneId.systemDefault()));
-		repository.save(errand);
+		financialAssistanceRepository.save(errand);
 		return response;
 	}
 
@@ -229,7 +229,7 @@ public class FinancialAssistanceCalculationService {
 		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
-		final var errand = repository.findByErrandId(errandId)
+		final var errand = financialAssistanceRepository.findByErrandId(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No financial-assistance errand for id " + errandId));
 
 		// Incomes straight from the application, but folded + converted through the same pipeline as the SSBTEK path

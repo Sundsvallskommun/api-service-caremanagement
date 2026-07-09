@@ -26,13 +26,13 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 @Component
 class FinancialAssistanceReleaseListener {
 
-	private final FinancialAssistanceRepository repository;
+	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final ErrandQueryService errandQueryService;
 	private final FinancialAssistanceProcessStarter processStarter;
 
-	FinancialAssistanceReleaseListener(final FinancialAssistanceRepository repository, final ErrandQueryService errandQueryService,
+	FinancialAssistanceReleaseListener(final FinancialAssistanceRepository financialAssistanceRepository, final ErrandQueryService errandQueryService,
 		final FinancialAssistanceProcessStarter processStarter) {
-		this.repository = repository;
+		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.errandQueryService = errandQueryService;
 		this.processStarter = processStarter;
 	}
@@ -44,7 +44,7 @@ class FinancialAssistanceReleaseListener {
 		}
 		errandQueryService.findErrand(event.municipalityId(), event.namespace(), event.errandId())
 			.filter(errand -> !StringUtils.hasText(errand.getProcessInstanceId())) // defensive: never start a second instance
-			.flatMap(errand -> repository.findByErrandId(event.errandId()))
+			.flatMap(errand -> financialAssistanceRepository.findByErrandId(event.errandId()))
 			.ifPresent(entity -> processStarter.start(event.municipalityId(), event.namespace(), event.errandId(), entity));
 	}
 

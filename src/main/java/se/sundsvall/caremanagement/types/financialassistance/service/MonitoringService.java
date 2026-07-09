@@ -41,18 +41,18 @@ public class MonitoringService {
 	static final String SOURCE_LIFECARE = "LIFECARE";
 
 	private final ErrandService errandService;
-	private final FaMonitoringRepository repository;
+	private final FaMonitoringRepository monitoringRepository;
 
-	MonitoringService(final ErrandService errandService, final FaMonitoringRepository repository) {
+	MonitoringService(final ErrandService errandService, final FaMonitoringRepository monitoringRepository) {
 		this.errandService = errandService;
-		this.repository = repository;
+		this.monitoringRepository = monitoringRepository;
 	}
 
 	/** The monitorings on an errand, oldest first. Scoped: throws {@code 404} when the errand is missing here. */
 	@Transactional(readOnly = true)
 	public List<Monitoring> list(final String municipalityId, final String namespace, final String errandId) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return repository.findByErrandId(errandId).stream()
+		return monitoringRepository.findByErrandId(errandId).stream()
 			.sorted(comparing(FaMonitoringEntity::getCreated, nullsLast(naturalOrder())))
 			.map(MonitoringService::toMonitoring)
 			.toList();
@@ -62,14 +62,14 @@ public class MonitoringService {
 	@Transactional(readOnly = true)
 	public long count(final String municipalityId, final String namespace, final String errandId) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return repository.countByErrandId(errandId);
+		return monitoringRepository.countByErrandId(errandId);
 	}
 
 	/** A single monitoring on an errand. Scoped: throws {@code 404} when the errand or monitoring is missing here. */
 	@Transactional(readOnly = true)
 	public Monitoring get(final String municipalityId, final String namespace, final String errandId, final String monitoringId) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return toMonitoring(require(errandId, monitoringId));
+		return toMonitoring(requireMonitoring(errandId, monitoringId));
 	}
 
 	/**
@@ -83,12 +83,12 @@ public class MonitoringService {
 
 		final FaMonitoringEntity entity;
 		if (hasText(request.getLifecareId())) {
-			entity = repository.findByErrandIdAndLifecareId(errandId, request.getLifecareId()).orElseGet(FaMonitoringEntity::create);
+			entity = monitoringRepository.findByErrandIdAndLifecareId(errandId, request.getLifecareId()).orElseGet(FaMonitoringEntity::create);
 		} else {
 			entity = FaMonitoringEntity.create();
 		}
 
-		return toMonitoring(repository.save(entity
+		return toMonitoring(monitoringRepository.save(entity
 			.withErrandId(errandId)
 			.withSource(resolveSource(request.getSource()))
 			.withLifecareId(request.getLifecareId())
@@ -107,7 +107,7 @@ public class MonitoringService {
 	public Monitoring update(final String municipalityId, final String namespace, final String errandId, final String monitoringId, final MonitoringRequest request) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		validateDates(request.getStartDate(), request.getEndDate());
-		final var entity = require(errandId, monitoringId)
+		final var entity = requireMonitoring(errandId, monitoringId)
 			.withTitle(request.getTitle())
 			.withDescription(request.getDescription())
 			.withStartDate(request.getStartDate())
@@ -120,18 +120,18 @@ public class MonitoringService {
 		if (hasText(request.getLifecareId())) {
 			entity.setLifecareId(request.getLifecareId());
 		}
-		return toMonitoring(repository.save(entity));
+		return toMonitoring(monitoringRepository.save(entity));
 	}
 
 	/** Remove a monitoring from an errand. Scoped: throws {@code 404} when the errand or monitoring is missing here. */
 	@Transactional
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String monitoringId) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		repository.delete(require(errandId, monitoringId));
+		monitoringRepository.delete(requireMonitoring(errandId, monitoringId));
 	}
 
-	private FaMonitoringEntity require(final String errandId, final String monitoringId) {
-		return repository.findByIdAndErrandId(monitoringId, errandId)
+	private FaMonitoringEntity requireMonitoring(final String errandId, final String monitoringId) {
+		return monitoringRepository.findByIdAndErrandId(monitoringId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "Monitoring not found on errand"));
 	}
 

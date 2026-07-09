@@ -27,16 +27,16 @@ public class SectionApprovalService {
 	public static final String SECTION_PAYMENT = "PAYMENT";
 	public static final String SECTION_DECISION = "DECISION";
 
-	private final FaSectionApprovalRepository repository;
+	private final FaSectionApprovalRepository sectionApprovalRepository;
 
-	SectionApprovalService(final FaSectionApprovalRepository repository) {
-		this.repository = repository;
+	SectionApprovalService(final FaSectionApprovalRepository sectionApprovalRepository) {
+		this.sectionApprovalRepository = sectionApprovalRepository;
 	}
 
 	/** The three sections' approval state bundled into one object — sections never touched default to not-approved. */
 	@Transactional(readOnly = true)
 	public SectionApprovals approvals(final String errandId) {
-		final var bySection = repository.findByErrandId(errandId).stream()
+		final var bySection = sectionApprovalRepository.findByErrandId(errandId).stream()
 			.collect(toMap(FaSectionApprovalEntity::getSection, entity -> entity, (a, _) -> a));
 		return SectionApprovals.create()
 			.withCalculation(toApproval(SECTION_CALCULATION, bySection.get(SECTION_CALCULATION)))
@@ -52,7 +52,7 @@ public class SectionApprovalService {
 	@Transactional
 	public SectionApproval setApproval(final String errandId, final String section, final boolean approved, final String approvedBy) {
 		final var target = validateSection(section);
-		final var entity = repository.findByErrandIdAndSection(errandId, target)
+		final var entity = sectionApprovalRepository.findByErrandIdAndSection(errandId, target)
 			.orElseGet(() -> FaSectionApprovalEntity.create().withErrandId(errandId).withSection(target));
 
 		entity.setApproved(approved);
@@ -68,7 +68,7 @@ public class SectionApprovalService {
 		entity.setApprovedBy(resolvedApprovedBy);
 		entity.setApprovedAt(resolvedApprovedAt);
 
-		return toApproval(target, repository.save(entity));
+		return toApproval(target, sectionApprovalRepository.save(entity));
 	}
 
 	private static String validateSection(final String section) {

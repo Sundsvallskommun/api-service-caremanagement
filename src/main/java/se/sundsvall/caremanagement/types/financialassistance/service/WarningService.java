@@ -65,10 +65,10 @@ public class WarningService {
 		Map.entry(STATUS_ACKNOWLEDGED, "Kvitterad"),
 		Map.entry(STATUS_CLOSED, "Stängd"));
 
-	private final FaWarningRepository repository;
+	private final FaWarningRepository warningRepository;
 
-	WarningService(final FaWarningRepository repository) {
-		this.repository = repository;
+	WarningService(final FaWarningRepository warningRepository) {
+		this.warningRepository = warningRepository;
 	}
 
 	/** A computed warning before persistence — the dedup key is {@code type + sourceKey}. */
@@ -112,7 +112,7 @@ public class WarningService {
 	 * method would bypass the Spring proxy and silently run without one.
 	 */
 	void reconcile(final String errandId, final List<WarningInput> current) {
-		final var existing = repository.findByErrandId(errandId);
+		final var existing = warningRepository.findByErrandId(errandId);
 		final var currentKeys = current.stream().map(input -> key(input.type(), input.sourceKey())).collect(toSet());
 
 		for (final var input : current) {
@@ -120,7 +120,7 @@ public class WarningService {
 				.filter(entity -> key(entity.getType(), entity.getSourceKey()).equals(key(input.type(), input.sourceKey())))
 				.findFirst();
 			if (match.isEmpty()) {
-				repository.save(FaWarningEntity.create()
+				warningRepository.save(FaWarningEntity.create()
 					.withErrandId(errandId)
 					.withType(input.type())
 					.withSourceKey(input.sourceKey())
@@ -128,7 +128,7 @@ public class WarningService {
 					.withStatus(STATUS_OPEN)
 					.withAutoResolved(false));
 			} else if (!STATUS_CLOSED.equals(match.get().getStatus())) { // never re-open a closed warning
-				repository.save(match.get().withMessage(input.message()));
+				warningRepository.save(match.get().withMessage(input.message()));
 			}
 		}
 
@@ -136,12 +136,12 @@ public class WarningService {
 		existing.stream()
 			.filter(entity -> !currentKeys.contains(key(entity.getType(), entity.getSourceKey())))
 			.filter(entity -> !STATUS_CLOSED.equals(entity.getStatus()))
-			.forEach(entity -> repository.save(entity.withStatus(STATUS_CLOSED).withAutoResolved(true)));
+			.forEach(entity -> warningRepository.save(entity.withStatus(STATUS_CLOSED).withAutoResolved(true)));
 	}
 
 	@Transactional(readOnly = true)
 	public List<Warning> list(final String errandId) {
-		return repository.findByErrandId(errandId).stream()
+		return warningRepository.findByErrandId(errandId).stream()
 			.sorted(comparing(FaWarningEntity::getCreated, nullsLast(naturalOrder())))
 			.map(WarningService::toWarning)
 			.toList();
@@ -150,7 +150,7 @@ public class WarningService {
 	/** How many warnings on the errand are still active (OPEN or ACKNOWLEDGED — i.e. not CLOSED). */
 	@Transactional(readOnly = true)
 	public long countActive(final String errandId) {
-		return repository.countByErrandIdAndStatusNot(errandId, STATUS_CLOSED);
+		return warningRepository.countByErrandIdAndStatusNot(errandId, STATUS_CLOSED);
 	}
 
 	/**
@@ -159,7 +159,7 @@ public class WarningService {
 	 */
 	@Transactional
 	public Warning create(final String errandId, final String type, final String sourceKey, final String message) {
-		return toWarning(repository.save(FaWarningEntity.create()
+		return toWarning(warningRepository.save(FaWarningEntity.create()
 			.withErrandId(errandId)
 			.withType(type)
 			.withSourceKey(ofNullable(sourceKey).filter(StringUtils::hasText).orElseGet(() -> sourceKey(message)))
@@ -175,9 +175,9 @@ public class WarningService {
 	@Transactional
 	public Warning updateStatus(final String errandId, final String warningId, final String status) {
 		final var target = validateTargetStatus(status);
-		final var entity = repository.findByIdAndErrandId(warningId, errandId)
+		final var entity = warningRepository.findByIdAndErrandId(warningId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "Warning not found on errand"));
-		return toWarning(repository.save(entity.withStatus(target).withAutoResolved(false)));
+		return toWarning(warningRepository.save(entity.withStatus(target).withAutoResolved(false)));
 	}
 
 	private static String validateTargetStatus(final String status) {

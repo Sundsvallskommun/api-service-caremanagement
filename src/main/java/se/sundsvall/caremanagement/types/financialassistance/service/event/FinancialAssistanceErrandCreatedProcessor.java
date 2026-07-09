@@ -48,16 +48,16 @@ class FinancialAssistanceErrandCreatedProcessor {
 		PROCEED
 	}
 
-	private final FinancialAssistanceRepository repository;
+	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final ErrandService errandService;
 	private final DefaultAssigneeService defaultAssigneeService;
 	private final RecentlyClosedErrandService recentlyClosedErrandService;
 	private final FinancialAssistanceProcessStarter processStarter;
 
-	FinancialAssistanceErrandCreatedProcessor(final FinancialAssistanceRepository repository, final ErrandService errandService,
+	FinancialAssistanceErrandCreatedProcessor(final FinancialAssistanceRepository financialAssistanceRepository, final ErrandService errandService,
 		final DefaultAssigneeService defaultAssigneeService, final RecentlyClosedErrandService recentlyClosedErrandService,
 		final FinancialAssistanceProcessStarter processStarter) {
-		this.repository = repository;
+		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.errandService = errandService;
 		this.defaultAssigneeService = defaultAssigneeService;
 		this.recentlyClosedErrandService = recentlyClosedErrandService;
@@ -70,7 +70,7 @@ class FinancialAssistanceErrandCreatedProcessor {
 	 */
 	@Transactional(propagation = REQUIRES_NEW)
 	Outcome assignAndClassify(final ErrandCreated event) {
-		return repository.findByErrandId(event.errandId())
+		return financialAssistanceRepository.findByErrandId(event.errandId())
 			.map(entity -> {
 				assignDefaultHandlaggare(event);
 
@@ -90,7 +90,7 @@ class FinancialAssistanceErrandCreatedProcessor {
 	 */
 	@Transactional(propagation = REQUIRES_NEW)
 	void startProcess(final ErrandCreated event) {
-		repository.findByErrandId(event.errandId()).ifPresent(entity -> {
+		financialAssistanceRepository.findByErrandId(event.errandId()).ifPresent(entity -> {
 			if (SLUG_RENEWAL.equals(event.typeSlug())) {
 				processStarter.start(event.municipalityId(), event.namespace(), event.errandId(), entity); // renewal starts the full decision-support process
 			} else if (SLUG_SUPPLEMENTARY.equals(event.typeSlug())) {

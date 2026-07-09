@@ -46,18 +46,18 @@ public class FinancialAssistanceErrandService {
 	private static final String RECOMMENDATION_TYPE = "RECOMMENDATION";
 
 	private final ErrandService errandService;
-	private final FinancialAssistanceRepository repository;
+	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final StakeholderService stakeholderService;
 	private final AttachmentService attachmentService;
 	private final FormSnapshotService formSnapshotService;
 	private final DecisionService decisionService;
 	private final SectionApprovalService sectionApprovalService;
 
-	FinancialAssistanceErrandService(final ErrandService errandService, final FinancialAssistanceRepository repository, final StakeholderService stakeholderService,
+	FinancialAssistanceErrandService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final StakeholderService stakeholderService,
 		final AttachmentService attachmentService, final FormSnapshotService formSnapshotService, final DecisionService decisionService,
 		final SectionApprovalService sectionApprovalService) {
 		this.errandService = errandService;
-		this.repository = repository;
+		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.stakeholderService = stakeholderService;
 		this.attachmentService = attachmentService;
 		this.formSnapshotService = formSnapshotService;
@@ -91,12 +91,7 @@ public class FinancialAssistanceErrandService {
 		final var entity = ofNullable(toEntity(request.getData(), errandId))
 			.orElseGet(() -> FinancialAssistanceEntity.create().withErrandId(errandId));
 		entity.setApplicationType(applicationTypeForSlug(typeSlug)); // slug is authoritative — overrides any client-sent value
-		repository.save(entity);
-
-		// Promote the application's persons to stakeholders so the errand carries its applicant/co-applicant in the shared
-		// collection.
-		toStakeholders(ofNullable(request.getData()).map(FinancialAssistanceData::getPersons).orElse(null))
-			.forEach(stakeholder -> stakeholderService.create(municipalityId, namespace, errandId, stakeholder));
+		financialAssistanceRepository.save(entity);
 
 		ofNullable(attachments)
 			.filter(files -> !files.isEmpty())
@@ -108,6 +103,12 @@ public class FinancialAssistanceErrandService {
 		ofNullable(formSnapshot)
 			.filter(StringUtils::hasText)
 			.ifPresent(payload -> formSnapshotService.saveErrandFormSnapshot(municipalityId, namespace, errandId, typeSlug, payload));
+
+		// Promote the application's persons to stakeholders last: stakeholderService.create publishes an event, so keep it
+		// after the other persistence steps to shrink the window where a later failure rolls back the row while the event
+		// has already been published.
+		toStakeholders(ofNullable(request.getData()).map(FinancialAssistanceData::getPersons).orElse(null))
+			.forEach(stakeholder -> stakeholderService.create(municipalityId, namespace, errandId, stakeholder));
 
 		return errandId;
 	}
@@ -126,7 +127,7 @@ public class FinancialAssistanceErrandService {
 	@Transactional(readOnly = true)
 	public FinancialAssistanceView read(final String municipalityId, final String namespace, final String errandId) {
 		final var envelope = errandService.readErrand(municipalityId, namespace, errandId);
-		final var entity = repository.findByErrandId(errandId).orElse(null);
+		final var entity = financialAssistanceRepository.findByErrandId(errandId).orElse(null);
 		return toView(envelope, entity)
 			.withRecommendation(latestRecommendation(municipalityId, namespace, errandId))
 			.withSectionApprovals(sectionApprovalService.approvals(errandId));
@@ -143,6 +144,6 @@ public class FinancialAssistanceErrandService {
 	public void updateData(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceData data) {
 		// Scope check — throws 404 when the errand is missing in this namespace/municipality.
 		errandService.readErrand(municipalityId, namespace, errandId);
-		repository.save(toEntity(data, errandId));
+		financialAssistanceRepository.save(toEntity(data, errandId));
 	}
 }
