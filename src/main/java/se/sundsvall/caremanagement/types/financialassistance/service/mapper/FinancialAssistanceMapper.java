@@ -85,15 +85,15 @@ public final class FinancialAssistanceMapper {
 				.withStayDescription(d.getStayDescription())
 				.withAttestation(d.getAttestation())
 				.withAttestedAt(d.getAttestedAt())
-				.withChildren(toFaChildren(d.getChildren()))
-				.withCosts(toFaCosts(d.getCosts()))
-				.withIncomes(toFaIncomes(d.getIncomes()))
-				.withPendingBenefits(toFaPendingBenefits(d.getPendingBenefits()))
-				.withAssets(toFaAssets(d.getAssets()))
-				.withPersons(toFaPersons(d.getPersons()))
-				.withPlannings(toFaPlannings(d.getPlannings()))
-				.withPlannedActivities(toFaPlannedActivities(d.getPlannedActivities()))
-				.withJobApplications(toFaJobApplications(d.getJobApplications())))
+				.withChildren(mapList(d.getChildren(), FinancialAssistanceMapper::toFaChild))
+				.withCosts(mapList(d.getCosts(), FinancialAssistanceMapper::toFaCost))
+				.withIncomes(mapList(d.getIncomes(), FinancialAssistanceMapper::toFaIncome))
+				.withPendingBenefits(mapList(d.getPendingBenefits(), FinancialAssistanceMapper::toFaPendingBenefit))
+				.withAssets(mapList(d.getAssets(), FinancialAssistanceMapper::toFaAsset))
+				.withPersons(mapList(d.getPersons(), FinancialAssistanceMapper::toFaPerson))
+				.withPlannings(mapList(d.getPlannings(), FinancialAssistanceMapper::toFaPlanning))
+				.withPlannedActivities(mapList(d.getPlannedActivities(), FinancialAssistanceMapper::toFaPlannedActivity))
+				.withJobApplications(mapList(d.getJobApplications(), FinancialAssistanceMapper::toFaJobApplication)))
 			.orElse(null);
 	}
 
@@ -124,15 +124,15 @@ public final class FinancialAssistanceMapper {
 				.withStayDescription(e.getStayDescription())
 				.withAttestation(e.getAttestation())
 				.withAttestedAt(e.getAttestedAt())
-				.withChildren(toChildren(e.getChildren()))
-				.withCosts(toCosts(e.getCosts()))
-				.withIncomes(toIncomes(e.getIncomes()))
-				.withPendingBenefits(toPendingBenefits(e.getPendingBenefits()))
-				.withAssets(toAssets(e.getAssets()))
-				.withPersons(toPersons(e.getPersons()))
-				.withPlannings(toPlannings(e.getPlannings()))
-				.withPlannedActivities(toPlannedActivities(e.getPlannedActivities()))
-				.withJobApplications(toJobApplications(e.getJobApplications())))
+				.withChildren(mapList(e.getChildren(), FinancialAssistanceMapper::toChild))
+				.withCosts(mapList(e.getCosts(), FinancialAssistanceMapper::toCost))
+				.withIncomes(mapList(e.getIncomes(), FinancialAssistanceMapper::toIncome))
+				.withPendingBenefits(mapList(e.getPendingBenefits(), FinancialAssistanceMapper::toPendingBenefit))
+				.withAssets(mapList(e.getAssets(), FinancialAssistanceMapper::toAsset))
+				.withPersons(mapList(e.getPersons(), FinancialAssistanceMapper::toPerson))
+				.withPlannings(mapList(e.getPlannings(), FinancialAssistanceMapper::toPlanning))
+				.withPlannedActivities(mapList(e.getPlannedActivities(), FinancialAssistanceMapper::toPlannedActivity))
+				.withJobApplications(mapList(e.getJobApplications(), FinancialAssistanceMapper::toJobApplication)))
 			.orElse(null);
 	}
 
@@ -160,10 +160,6 @@ public final class FinancialAssistanceMapper {
 
 	// ---- Child --------------------------------------------------------------------------------------------------------
 
-	static List<FaChild> toFaChildren(final List<Child> source) {
-		return mapList(source, FinancialAssistanceMapper::toFaChild);
-	}
-
 	static FaChild toFaChild(final Child child) {
 		return ofNullable(child)
 			.map(source -> FaChild.create()
@@ -174,10 +170,6 @@ public final class FinancialAssistanceMapper {
 				.withResidenceExtent(source.getResidenceExtent())
 				.withDaysInHome(source.getDaysInHome()))
 			.orElse(null);
-	}
-
-	static List<Child> toChildren(final List<FaChild> source) {
-		return mapList(source, FinancialAssistanceMapper::toChild);
 	}
 
 	static Child toChild(final FaChild entity) {
@@ -194,10 +186,6 @@ public final class FinancialAssistanceMapper {
 
 	// ---- Cost ---------------------------------------------------------------------------------------------------------
 
-	static List<FaCost> toFaCosts(final List<Cost> source) {
-		return mapList(source, FinancialAssistanceMapper::toFaCost);
-	}
-
 	static FaCost toFaCost(final Cost cost) {
 		return ofNullable(cost)
 			.map(source -> FaCost.create()
@@ -207,10 +195,6 @@ public final class FinancialAssistanceMapper {
 				.withSpecification(source.getSpecification())
 				.withRecipientOrPeriod(source.getRecipientOrPeriod()))
 			.orElse(null);
-	}
-
-	static List<Cost> toCosts(final List<FaCost> source) {
-		return mapList(source, FinancialAssistanceMapper::toCost);
 	}
 
 	static Cost toCost(final FaCost entity) {
@@ -226,10 +210,6 @@ public final class FinancialAssistanceMapper {
 
 	// ---- Income -------------------------------------------------------------------------------------------------------
 
-	static List<FaIncome> toFaIncomes(final List<Income> source) {
-		return mapList(source, FinancialAssistanceMapper::toFaIncome);
-	}
-
 	static FaIncome toFaIncome(final Income income) {
 		return ofNullable(income)
 			.map(source -> FaIncome.create()
@@ -238,10 +218,6 @@ public final class FinancialAssistanceMapper {
 				.withIncomeDate(source.getIncomeDate())
 				.withRecipient(source.getRecipient()))
 			.orElse(null);
-	}
-
-	static List<Income> toIncomes(final List<FaIncome> source) {
-		return mapList(source, FinancialAssistanceMapper::toIncome);
 	}
 
 	static Income toIncome(final FaIncome entity) {
@@ -256,20 +232,12 @@ public final class FinancialAssistanceMapper {
 
 	// ---- Pending benefit ----------------------------------------------------------------------------------------------
 
-	static List<FaPendingBenefit> toFaPendingBenefits(final List<PendingBenefit> source) {
-		return mapList(source, FinancialAssistanceMapper::toFaPendingBenefit);
-	}
-
 	static FaPendingBenefit toFaPendingBenefit(final PendingBenefit pendingBenefit) {
 		return ofNullable(pendingBenefit)
 			.map(source -> FaPendingBenefit.create()
 				.withBenefitName(source.getBenefitName())
 				.withApplicantName(source.getApplicantName()))
 			.orElse(null);
-	}
-
-	static List<PendingBenefit> toPendingBenefits(final List<FaPendingBenefit> source) {
-		return mapList(source, FinancialAssistanceMapper::toPendingBenefit);
 	}
 
 	static PendingBenefit toPendingBenefit(final FaPendingBenefit entity) {
@@ -281,10 +249,6 @@ public final class FinancialAssistanceMapper {
 	}
 
 	// ---- Asset --------------------------------------------------------------------------------------------------------
-
-	static List<FaAsset> toFaAssets(final List<Asset> source) {
-		return mapList(source, FinancialAssistanceMapper::toFaAsset);
-	}
 
 	static FaAsset toFaAsset(final Asset asset) {
 		return ofNullable(asset)
@@ -301,10 +265,6 @@ public final class FinancialAssistanceMapper {
 				.withRegistrationNumber(source.getRegistrationNumber())
 				.withPurchaseDate(source.getPurchaseDate()))
 			.orElse(null);
-	}
-
-	static List<Asset> toAssets(final List<FaAsset> source) {
-		return mapList(source, FinancialAssistanceMapper::toAsset);
 	}
 
 	static Asset toAsset(final FaAsset entity) {
@@ -326,10 +286,6 @@ public final class FinancialAssistanceMapper {
 
 	// ---- Person -------------------------------------------------------------------------------------------------------
 
-	static List<FaPerson> toFaPersons(final List<Person> source) {
-		return mapList(source, FinancialAssistanceMapper::toFaPerson);
-	}
-
 	static FaPerson toFaPerson(final Person person) {
 		return ofNullable(person)
 			.map(source -> FaPerson.create()
@@ -349,10 +305,6 @@ public final class FinancialAssistanceMapper {
 				.withNotifyByEmail(source.getNotifyByEmail())
 				.withNotifyBySms(source.getNotifyBySms()))
 			.orElse(null);
-	}
-
-	static List<Person> toPersons(final List<FaPerson> source) {
-		return mapList(source, FinancialAssistanceMapper::toPerson);
 	}
 
 	static Person toPerson(final FaPerson entity) {
@@ -415,10 +367,6 @@ public final class FinancialAssistanceMapper {
 
 	// ---- Planning -----------------------------------------------------------------------------------------------------
 
-	static List<FaPlanning> toFaPlannings(final List<Planning> source) {
-		return mapList(source, FinancialAssistanceMapper::toFaPlanning);
-	}
-
 	static FaPlanning toFaPlanning(final Planning planning) {
 		return ofNullable(planning)
 			.map(source -> FaPlanning.create()
@@ -431,10 +379,6 @@ public final class FinancialAssistanceMapper {
 				.withSfiCourse(source.getSfiCourse())
 				.withOtherDescription(source.getOtherDescription()))
 			.orElse(null);
-	}
-
-	static List<Planning> toPlannings(final List<FaPlanning> source) {
-		return mapList(source, FinancialAssistanceMapper::toPlanning);
 	}
 
 	static Planning toPlanning(final FaPlanning entity) {
@@ -453,10 +397,6 @@ public final class FinancialAssistanceMapper {
 
 	// ---- Planned activity ---------------------------------------------------------------------------------------------
 
-	static List<FaPlannedActivity> toFaPlannedActivities(final List<PlannedActivity> source) {
-		return mapList(source, FinancialAssistanceMapper::toFaPlannedActivity);
-	}
-
 	static FaPlannedActivity toFaPlannedActivity(final PlannedActivity plannedActivity) {
 		return ofNullable(plannedActivity)
 			.map(source -> FaPlannedActivity.create()
@@ -465,10 +405,6 @@ public final class FinancialAssistanceMapper {
 				.withPeriodFrom(source.getPeriodFrom())
 				.withPeriodTo(source.getPeriodTo()))
 			.orElse(null);
-	}
-
-	static List<PlannedActivity> toPlannedActivities(final List<FaPlannedActivity> source) {
-		return mapList(source, FinancialAssistanceMapper::toPlannedActivity);
 	}
 
 	static PlannedActivity toPlannedActivity(final FaPlannedActivity entity) {
@@ -483,10 +419,6 @@ public final class FinancialAssistanceMapper {
 
 	// ---- Job application ----------------------------------------------------------------------------------------------
 
-	static List<FaJobApplication> toFaJobApplications(final List<JobApplication> source) {
-		return mapList(source, FinancialAssistanceMapper::toFaJobApplication);
-	}
-
 	static FaJobApplication toFaJobApplication(final JobApplication jobApplication) {
 		return ofNullable(jobApplication)
 			.map(source -> FaJobApplication.create()
@@ -495,10 +427,6 @@ public final class FinancialAssistanceMapper {
 				.withJobTitle(source.getJobTitle())
 				.withEmployerAndPlace(source.getEmployerAndPlace()))
 			.orElse(null);
-	}
-
-	static List<JobApplication> toJobApplications(final List<FaJobApplication> source) {
-		return mapList(source, FinancialAssistanceMapper::toJobApplication);
 	}
 
 	static JobApplication toJobApplication(final FaJobApplication entity) {
