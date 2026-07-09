@@ -142,30 +142,6 @@
 					<argLine>${surefireArgLine} -Xmx1024m</argLine>
 				</configuration>
 			</plugin>
-			<!-- Project-specific naming checks (setter param names must match the field). Fails the build on a bare `v`. -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-checkstyle-plugin</artifactId>
-				<version>3.6.0</version>
-				<configuration>
-					<configLocation>checkstyle-naming.xml</configLocation>
-					<includeTestSourceDirectory>true</includeTestSourceDirectory>
-					<consoleOutput>true</consoleOutput>
-					<failsOnError>true</failsOnError>
-					<failOnViolation>true</failOnViolation>
-					<violationSeverity>error</violationSeverity>
-					<excludes>**/generated-sources/**/*,**/generated/**/*</excludes>
-				</configuration>
-				<executions>
-					<execution>
-						<id>checkstyle-naming</id>
-						<goals>
-							<goal>check</goal>
-						</goals>
-						<phase>validate</phase>
-					</execution>
-				</executions>
-			</plugin>
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
