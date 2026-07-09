@@ -344,8 +344,8 @@ public class FinancialAssistanceService {
 	 * <p>
 	 * {@code namespace} is currently unused by the commit itself (the errand is resolved by id and the Lifecare write is
 	 * keyed on personnummer), but is kept to match the uniform {@code (municipalityId, namespace, request)} signature the
-	 * {@link se.sundsvall.caremanagement.types.financialassistance.api.FinancialAssistanceResource} passes for every
-	 * scoped endpoint — and so a later scope check can be added without changing the controller contract.
+	 * {@link se.sundsvall.caremanagement.types.financialassistance.api.FinancialAssistanceCalculationResource} passes for
+	 * every scoped endpoint — and so a later scope check can be added without changing the controller contract.
 	 */
 	@SuppressWarnings("java:S1172") // namespace retained for controller-facing signature symmetry; see Javadoc
 	public CalculationResponse commitCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {

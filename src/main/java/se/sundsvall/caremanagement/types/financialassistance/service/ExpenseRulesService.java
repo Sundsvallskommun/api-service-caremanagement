@@ -102,13 +102,13 @@ public class ExpenseRulesService {
 	 * @param  appliedAmount    what the citizen applied for — the fallback and, in the rule tree, the upper bound
 	 * @param  previousApproved the approved amount for this cost type on the previous month's calculation (may be
 	 *                          {@code null} → treated as "history missing")
-	 * @param  sokandeAlder     the applicant's age (rent threshold input; ignored by other types, may be {@code null})
-	 * @param  antalBarn        number of children in the household (rent threshold input, may be {@code null})
-	 * @param  antalIHushallet  number of persons in the household (home-insurance threshold input, may be {@code null})
+	 * @param  applicantAge     the applicant's age (rent threshold input; ignored by other types, may be {@code null})
+	 * @param  childCount       number of children in the household (rent threshold input, may be {@code null})
+	 * @param  householdCount   number of persons in the household (home-insurance threshold input, may be {@code null})
 	 * @return                  the verdict (process amount + bucket + review flag + reason), best-effort
 	 */
 	public ExpenseVerdict verdict(final String municipalityId, final String costType, final BigDecimal appliedAmount,
-		final BigDecimal previousApproved, final Integer sokandeAlder, final Integer antalBarn, final Integer antalIHushallet) {
+		final BigDecimal previousApproved, final Integer applicantAge, final Integer childCount, final Integer householdCount) {
 
 		final var decisionKey = DECISION_KEY_BY_COST_TYPE.get(costType);
 		if (decisionKey == null) {
@@ -119,9 +119,9 @@ public class ExpenseRulesService {
 			final var variables = new HashMap<String, Object>();
 			variables.put("ansoktBelopp", Optional.ofNullable(appliedAmount).orElse(BigDecimal.ZERO));
 			variables.put("godkandForra", Optional.ofNullable(previousApproved).orElse(NO_HISTORY));
-			variables.put("sokandeAlder", Optional.ofNullable(sokandeAlder).orElse(0));
-			variables.put("antalBarn", Optional.ofNullable(antalBarn).orElse(0));
-			variables.put("antalIHushallet", Optional.ofNullable(antalIHushallet).orElse(1));
+			variables.put("sokandeAlder", Optional.ofNullable(applicantAge).orElse(0));
+			variables.put("antalBarn", Optional.ofNullable(childCount).orElse(0));
+			variables.put("antalIHushallet", Optional.ofNullable(householdCount).orElse(1));
 
 			final var rows = processService.evaluateDecision(municipalityId, decisionKey, variables);
 			if (rows.isEmpty()) {

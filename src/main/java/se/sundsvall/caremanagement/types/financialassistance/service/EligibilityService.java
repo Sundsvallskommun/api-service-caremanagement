@@ -157,12 +157,11 @@ public class EligibilityService {
 		// window. Recommend
 		// a renewal and surface the closed errand so a caseworker can reopen it (in Lifecare) and release it for processing.
 		final var recentlyClosed = recentlyClosedErrandService.findRecentlyClosed(municipalityId, namespace, parties(request));
-		if (recentlyClosed.isPresent()) {
-			return recentlyClosedResponse(response, recentlyClosed.get(), currentMonth);
-		}
 
-		// 3) Per-month — application/decision already present for this/next month?
-		return perMonthResponse(response, cmRecords, lifecare.applicant(), currentMonth, nextMonth, cutoff);
+		// 3) Per-month (when not recently closed) — application/decision already present for this/next month?
+		return recentlyClosed
+			.map(closed -> recentlyClosedResponse(response, closed, currentMonth))
+			.orElseGet(() -> perMonthResponse(response, cmRecords, lifecare.applicant(), currentMonth, nextMonth, cutoff));
 	}
 
 	/** Protected-identity gate across both parties (best-effort per source). */
