@@ -25,6 +25,7 @@ import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationResult;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
+import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
@@ -100,6 +101,9 @@ class FinancialAssistanceServiceTest {
 
 	@Mock
 	private CalculationService calculationServiceMock;
+
+	@Mock
+	private LifecareEbCaseService lifecareEbCaseServiceMock;
 
 	@Mock
 	private ActualisationService actualisationServiceMock;

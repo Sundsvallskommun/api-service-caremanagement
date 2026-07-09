@@ -30,6 +30,7 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationResult;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
+import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseService;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
@@ -118,6 +119,7 @@ public class FinancialAssistanceService {
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository repository;
 	private final CalculationService calculationService;
+	private final LifecareEbCaseService lifecareEbCaseService;
 	private final ActualisationService actualisationService;
 	private final PaymentStatusService paymentStatusService;
 	private final CitizenService citizenService;
@@ -133,6 +135,7 @@ public class FinancialAssistanceService {
 	private final LifecareCaseHistoryService lifecareCaseHistoryService;
 
 	FinancialAssistanceService(final ErrandService errandService, final FinancialAssistanceRepository repository, final CalculationService calculationService,
+		final LifecareEbCaseService lifecareEbCaseService,
 		final ActualisationService actualisationService, final PaymentStatusService paymentStatusService, final CitizenService citizenService, final DecisionService decisionService,
 		final AttachmentService attachmentService, final StakeholderService stakeholderService, final WarningService warningService, final SectionApprovalService sectionApprovalService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final RpaService rpaService, final FormSnapshotService formSnapshotService,
@@ -140,6 +143,7 @@ public class FinancialAssistanceService {
 		this.errandService = errandService;
 		this.repository = repository;
 		this.calculationService = calculationService;
+		this.lifecareEbCaseService = lifecareEbCaseService;
 		this.actualisationService = actualisationService;
 		this.paymentStatusService = paymentStatusService;
 		this.citizenService = citizenService;
@@ -288,7 +292,7 @@ public class FinancialAssistanceService {
 	/** The previous calculation household, best-effort — a failed Lifecare read degrades to "no previous household". */
 	private PreviousHousehold previousHousehold(final String applicant, final YearMonth applicationMonth) {
 		try {
-			return calculationService.previousHousehold(applicant, applicationMonth);
+			return lifecareEbCaseService.previousHousehold(applicant, applicationMonth);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation household — skipping the household drift check", e);
 			return PreviousHousehold.empty();
@@ -298,7 +302,7 @@ public class FinancialAssistanceService {
 	/** The previous calculation's per-cost-type approved amounts, best-effort — a failed Lifecare read degrades to none. */
 	private Map<String, Double> previousExpenseAmounts(final String applicant, final YearMonth applicationMonth) {
 		try {
-			return calculationService.previousExpenseAmounts(applicant, applicationMonth);
+			return lifecareEbCaseService.previousExpenseAmounts(applicant, applicationMonth);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation expense amounts — expense history treated as missing", e);
 			return Map.of();

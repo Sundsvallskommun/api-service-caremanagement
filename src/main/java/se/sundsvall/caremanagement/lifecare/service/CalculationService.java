@@ -36,7 +36,6 @@ import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
-import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.dept44.problem.Problem;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -162,19 +161,6 @@ public class CalculationService {
 		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
 		final var missing = missingPreviousIncomeTypes(applicantPersonId, applicationMonth, parse(classifiedIncomesJson), proposal);
 		return new Completeness(missing.isEmpty(), missing);
-	}
-
-	/** The household on the applicant's previous calculation in Lifecare — the baseline for the household drift check. */
-	public PreviousHousehold previousHousehold(final String applicantPersonId, final YearMonth applicationMonth) {
-		return lifecareEbCaseService.previousHousehold(applicantPersonId, applicationMonth);
-	}
-
-	/**
-	 * Approved amount per financial assistance cost type on the applicant's previous calculation — the expense rule tree's
-	 * history input.
-	 */
-	public Map<String, Double> previousExpenseAmounts(final String applicantPersonId, final YearMonth applicationMonth) {
-		return lifecareEbCaseService.previousExpenseAmounts(applicantPersonId, applicationMonth);
 	}
 
 	/** The norm id the FC proposal offers for the application month (covering window, else first), or {@code null}. */

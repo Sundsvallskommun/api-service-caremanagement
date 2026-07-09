@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -25,7 +24,6 @@ import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
-import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 import tools.jackson.databind.ObjectMapper;
 
@@ -209,14 +207,6 @@ class CalculationServiceTest {
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(99).fromDate("2026-01-01").toDate("2026-12-31")));
 
 		assertThat(service.selectNormId(APPLICANT, MONTH)).isEqualTo(99);
-	}
-
-	@Test
-	void previousHouseholdDelegatesToLifecare() {
-		final var household = new PreviousHousehold(Set.of("p1", "p2"), 2, 9000.0, 4500.0);
-		when(lifecareEbCaseServiceMock.previousHousehold(APPLICANT, MONTH)).thenReturn(household);
-
-		assertThat(service.previousHousehold(APPLICANT, MONTH)).isSameAs(household);
 	}
 
 	@Test
