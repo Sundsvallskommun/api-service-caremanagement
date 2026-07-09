@@ -53,15 +53,15 @@ public class MessageService {
 	private static final String STREAM_ERROR_MESSAGE = "%s occurred when copying file with attachment id '%s' to response: %s";
 
 	private final ErrandAccessGuard errandGuard;
-	private final MessageRepository repository;
+	private final MessageRepository messageRepository;
 	private final MessageAttachmentRepository attachmentRepository;
 	private final MessageAttachmentDataRepository attachmentDataRepository;
 	private final ApplicationEventPublisher publisher;
 
-	MessageService(final ErrandAccessGuard errandGuard, final MessageRepository repository, final MessageAttachmentRepository attachmentRepository,
+	MessageService(final ErrandAccessGuard errandGuard, final MessageRepository messageRepository, final MessageAttachmentRepository attachmentRepository,
 		final MessageAttachmentDataRepository attachmentDataRepository, final ApplicationEventPublisher publisher) {
 		this.errandGuard = errandGuard;
-		this.repository = repository;
+		this.messageRepository = messageRepository;
 		this.attachmentRepository = attachmentRepository;
 		this.attachmentDataRepository = attachmentDataRepository;
 		this.publisher = publisher;
@@ -71,7 +71,7 @@ public class MessageService {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		validateInReplyTo(errandId, request.inReplyToId());
 
-		final var saved = repository.save(MessageEntity.create()
+		final var saved = messageRepository.save(MessageEntity.create()
 			.withErrandId(errandId)
 			.withDirection(request.direction())
 			.withBody(request.body())
@@ -90,7 +90,7 @@ public class MessageService {
 	@Transactional(readOnly = true)
 	public List<Message> listForErrand(final String municipalityId, final String namespace, final String errandId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
-		final var messages = repository.findByErrandIdOrderByCreatedAsc(errandId);
+		final var messages = messageRepository.findByErrandIdOrderByCreatedAsc(errandId);
 		final var attachmentsByMessageId = attachmentRepository
 			.findByMessageIdIn(messages.stream().map(MessageEntity::getId).toList()).stream()
 			.collect(Collectors.groupingBy(MessageAttachmentEntity::getMessageId));
@@ -103,7 +103,7 @@ public class MessageService {
 	@Transactional(readOnly = true)
 	public Message read(final String municipalityId, final String namespace, final String errandId, final String messageId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
-		final var message = repository.findByIdAndErrandId(messageId, errandId)
+		final var message = messageRepository.findByIdAndErrandId(messageId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, MESSAGE_NOT_FOUND_MESSAGE.formatted(messageId)));
 		return toMessage(message, attachmentRepository.findByMessageId(messageId));
 	}
@@ -132,7 +132,7 @@ public class MessageService {
 	}
 
 	private void ensureMessageBelongsToErrand(final String errandId, final String messageId) {
-		repository.findByIdAndErrandId(messageId, errandId)
+		messageRepository.findByIdAndErrandId(messageId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, MESSAGE_NOT_FOUND_MESSAGE.formatted(messageId)));
 	}
 
@@ -144,7 +144,7 @@ public class MessageService {
 		if (inReplyToId == null) {
 			return;
 		}
-		repository.findByIdAndErrandId(inReplyToId, errandId)
+		messageRepository.findByIdAndErrandId(inReplyToId, errandId)
 			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, IN_REPLY_TO_NOT_FOUND_MESSAGE.formatted(inReplyToId, errandId)));
 	}
 }

@@ -37,12 +37,12 @@ import static se.sundsvall.caremanagement.document.integration.db.model.Document
 @Transactional
 public class DocumentService {
 
-	private final DocumentRepository repository;
+	private final DocumentRepository documentRepository;
 	private final ApplicationEventPublisher publisher;
 	private final ErrandAccessGuard errandGuard;
 
-	DocumentService(final DocumentRepository repository, final ApplicationEventPublisher publisher, final ErrandAccessGuard errandGuard) {
-		this.repository = repository;
+	DocumentService(final DocumentRepository documentRepository, final ApplicationEventPublisher publisher, final ErrandAccessGuard errandGuard) {
+		this.documentRepository = documentRepository;
 		this.publisher = publisher;
 		this.errandGuard = errandGuard;
 	}
@@ -51,7 +51,7 @@ public class DocumentService {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
-		final var saved = repository.save(DocumentEntity.create()
+		final var saved = documentRepository.save(DocumentEntity.create()
 			.withErrandId(errandId)
 			.withType(request.type())
 			.withHeading(request.heading())
@@ -70,7 +70,7 @@ public class DocumentService {
 	public List<Document> listForErrand(final String municipalityId, final String namespace, final String errandId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
-		return repository.findByErrandIdOrderByDocumentDateDescDocumentTimeDescCreatedDesc(errandId).stream()
+		return documentRepository.findByErrandIdOrderByDocumentDateDescDocumentTimeDescCreatedDesc(errandId).stream()
 			.map(DocumentService::toDocument)
 			.toList();
 	}
@@ -94,13 +94,13 @@ public class DocumentService {
 			.withModifiedBy(request.modifiedBy())
 			.withModified(now(systemDefault()).truncatedTo(MILLIS));
 
-		return toDocument(repository.save(entity));
+		return toDocument(documentRepository.save(entity));
 	}
 
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String documentId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
-		repository.delete(requireWorking(findForUpdate(errandId, documentId), "deleted"));
+		documentRepository.delete(requireWorking(findForUpdate(errandId, documentId), "deleted"));
 	}
 
 	/** Lock the document (write-protection) — it becomes an immutable finalised record. Already-locked documents 409. */
@@ -116,11 +116,11 @@ public class DocumentService {
 			.withLockedBy(ofNullable(request).map(LockDocument::lockedBy).orElse(null))
 			.withLocked(now(systemDefault()).truncatedTo(MILLIS));
 
-		return toDocument(repository.save(entity));
+		return toDocument(documentRepository.save(entity));
 	}
 
 	private DocumentEntity find(final String errandId, final String documentId) {
-		return repository.findByIdAndErrandId(documentId, errandId)
+		return documentRepository.findByIdAndErrandId(documentId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No document with id '" + documentId + "'"));
 	}
 
@@ -130,7 +130,7 @@ public class DocumentService {
 	 * (possibly LOCKED) status. A document belonging to another errand resolves to {@code 404}.
 	 */
 	private DocumentEntity findForUpdate(final String errandId, final String documentId) {
-		return repository.findByIdAndErrandIdForUpdate(documentId, errandId)
+		return documentRepository.findByIdAndErrandIdForUpdate(documentId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No document with id '" + documentId + "'"));
 	}
 

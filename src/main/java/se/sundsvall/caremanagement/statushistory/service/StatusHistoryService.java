@@ -12,17 +12,17 @@ import se.sundsvall.caremanagement.statushistory.integration.db.StatusHistoryRep
 public class StatusHistoryService {
 
 	private final ErrandAccessGuard errandGuard;
-	private final StatusHistoryRepository repository;
+	private final StatusHistoryRepository statusHistoryRepository;
 
-	StatusHistoryService(final ErrandAccessGuard errandGuard, final StatusHistoryRepository repository) {
+	StatusHistoryService(final ErrandAccessGuard errandGuard, final StatusHistoryRepository statusHistoryRepository) {
 		this.errandGuard = errandGuard;
-		this.repository = repository;
+		this.statusHistoryRepository = statusHistoryRepository;
 	}
 
 	@Transactional(readOnly = true)
 	public List<StatusHistoryEntry> listForErrand(final String municipalityId, final String namespace, final String errandId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
-		return repository.findByErrandIdOrderByChangedAtDesc(errandId).stream()
+		return statusHistoryRepository.findByErrandIdOrderByChangedAtDesc(errandId).stream()
 			.map(e -> new StatusHistoryEntry(
 				e.getId(), e.getErrandId(), e.getFromStatus(), e.getToStatus(),
 				e.getChangedBy(), e.getChangedAt()))

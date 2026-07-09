@@ -14,14 +14,14 @@ import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 @Component
 class DecisionErrandDeletedListener {
 
-	private final DecisionRepository repository;
+	private final DecisionRepository decisionRepository;
 
-	DecisionErrandDeletedListener(final DecisionRepository repository) {
-		this.repository = repository;
+	DecisionErrandDeletedListener(final DecisionRepository decisionRepository) {
+		this.decisionRepository = decisionRepository;
 	}
 
 	@ApplicationModuleListener
 	void on(final ErrandDeleted event) {
-		repository.deleteByErrandId(event.errandId());
+		decisionRepository.deleteByErrandId(event.errandId());
 	}
 }

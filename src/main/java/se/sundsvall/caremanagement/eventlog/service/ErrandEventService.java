@@ -18,10 +18,10 @@ public class ErrandEventService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ErrandEventService.class);
 
-	private final ErrandEventRepository repository;
+	private final ErrandEventRepository errandEventRepository;
 
-	ErrandEventService(final ErrandEventRepository repository) {
-		this.repository = repository;
+	ErrandEventService(final ErrandEventRepository errandEventRepository) {
+		this.errandEventRepository = errandEventRepository;
 	}
 
 	/**
@@ -29,7 +29,7 @@ public class ErrandEventService {
 	 * truth for the {@code created} timestamp, so the interceptor need not carry a clock.
 	 */
 	public void recordEvent(final ErrandEventEntity entity) {
-		repository.save(entity.withCreated(now(ZoneId.systemDefault())));
+		errandEventRepository.save(entity.withCreated(now(ZoneId.systemDefault())));
 	}
 
 	/**
@@ -37,7 +37,7 @@ public class ErrandEventService {
 	 * event's own timestamp.
 	 */
 	public void recordDomainEvent(final ErrandEventEntity entity) {
-		repository.save(entity);
+		errandEventRepository.save(entity);
 	}
 
 	/**
@@ -46,7 +46,7 @@ public class ErrandEventService {
 	 * matching how the other modules clean up their errand-scoped data on {@code ErrandDeleted}.
 	 */
 	public void deleteForErrand(final String municipalityId, final String namespace, final String errandId) {
-		final var deleted = repository.deleteByErrandIdAndMunicipalityIdAndNamespace(errandId, municipalityId, namespace);
+		final var deleted = errandEventRepository.deleteByErrandIdAndMunicipalityIdAndNamespace(errandId, municipalityId, namespace);
 		LOG.info("Disposed {} event(s) for deleted errand {}", deleted, errandId);
 	}
 
@@ -65,7 +65,7 @@ public class ErrandEventService {
 	 */
 	@Transactional(readOnly = true)
 	public List<ErrandEventEntry> listForErrand(final String municipalityId, final String namespace, final String errandId, final String action, final String actor, final String source, final boolean includeReads) {
-		return repository.findFiltered(municipalityId, namespace, errandId, action, actor, source, includeReads).stream()
+		return errandEventRepository.findFiltered(municipalityId, namespace, errandId, action, actor, source, includeReads).stream()
 			.map(ErrandEventService::toEvent)
 			.toList();
 	}
@@ -77,7 +77,7 @@ public class ErrandEventService {
 	 */
 	@Transactional(readOnly = true)
 	public long countForErrand(final String municipalityId, final String namespace, final String errandId, final String action, final String actor, final String source, final boolean includeReads) {
-		return repository.countFiltered(municipalityId, namespace, errandId, action, actor, source, includeReads);
+		return errandEventRepository.countFiltered(municipalityId, namespace, errandId, action, actor, source, includeReads);
 	}
 
 	private static ErrandEventEntry toEvent(final ErrandEventEntity e) {

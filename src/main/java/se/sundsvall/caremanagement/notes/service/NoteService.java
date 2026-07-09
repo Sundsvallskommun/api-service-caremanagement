@@ -25,19 +25,19 @@ public class NoteService {
 	private static final String NOTE_NOT_FOUND_MESSAGE = "No note with id '%s' found on errand '%s' in namespace '%s' for municipality id '%s'";
 
 	private final ErrandAccessGuard errandGuard;
-	private final NoteRepository repository;
+	private final NoteRepository noteRepository;
 	private final ApplicationEventPublisher publisher;
 
-	NoteService(final ErrandAccessGuard errandGuard, final NoteRepository repository, final ApplicationEventPublisher publisher) {
+	NoteService(final ErrandAccessGuard errandGuard, final NoteRepository noteRepository, final ApplicationEventPublisher publisher) {
 		this.errandGuard = errandGuard;
-		this.repository = repository;
+		this.noteRepository = noteRepository;
 		this.publisher = publisher;
 	}
 
 	public String add(final String municipalityId, final String namespace, final String errandId, final CreateNote request) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
-		final var saved = repository.save(NoteEntity.create()
+		final var saved = noteRepository.save(NoteEntity.create()
 			.withErrandId(errandId)
 			.withBody(request.body())
 			.withAuthor(request.author())
@@ -50,7 +50,7 @@ public class NoteService {
 	@Transactional(readOnly = true)
 	public List<Note> listForErrand(final String municipalityId, final String namespace, final String errandId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
-		return repository.findByErrandIdOrderByCreatedDesc(errandId).stream()
+		return noteRepository.findByErrandIdOrderByCreatedDesc(errandId).stream()
 			.map(NoteService::toNote)
 			.toList();
 	}
@@ -58,7 +58,7 @@ public class NoteService {
 	@Transactional(readOnly = true)
 	public long countForErrand(final String municipalityId, final String namespace, final String errandId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
-		return repository.countByErrandId(errandId);
+		return noteRepository.countByErrandId(errandId);
 	}
 
 	@Transactional(readOnly = true)
@@ -72,16 +72,16 @@ public class NoteService {
 			.withModifiedBy(request.modifiedBy())
 			.withModified(now(systemDefault()).truncatedTo(MILLIS));
 
-		return toNote(repository.save(entity));
+		return toNote(noteRepository.save(entity));
 	}
 
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String noteId) {
-		repository.delete(findNote(municipalityId, namespace, errandId, noteId));
+		noteRepository.delete(findNote(municipalityId, namespace, errandId, noteId));
 	}
 
 	private NoteEntity findNote(final String municipalityId, final String namespace, final String errandId, final String noteId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
-		return repository.findByErrandIdAndId(errandId, noteId)
+		return noteRepository.findByErrandIdAndId(errandId, noteId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NOTE_NOT_FOUND_MESSAGE.formatted(noteId, errandId, namespace, municipalityId)));
 	}
 

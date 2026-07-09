@@ -15,15 +15,15 @@ import se.sundsvall.caremanagement.statushistory.integration.db.model.StatusHist
 @Component
 class StatusHistoryListener {
 
-	private final StatusHistoryRepository repository;
+	private final StatusHistoryRepository statusHistoryRepository;
 
-	StatusHistoryListener(final StatusHistoryRepository repository) {
-		this.repository = repository;
+	StatusHistoryListener(final StatusHistoryRepository statusHistoryRepository) {
+		this.statusHistoryRepository = statusHistoryRepository;
 	}
 
 	@ApplicationModuleListener
 	void on(final ErrandStatusChanged event) {
-		repository.save(StatusHistoryEntity.create()
+		statusHistoryRepository.save(StatusHistoryEntity.create()
 			.withErrandId(event.errandId())
 			.withFromStatus(event.fromStatus())
 			.withToStatus(event.toStatus())

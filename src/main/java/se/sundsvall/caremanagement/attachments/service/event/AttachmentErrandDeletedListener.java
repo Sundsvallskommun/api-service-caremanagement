@@ -24,14 +24,14 @@ import se.sundsvall.caremanagement.core.service.event.ErrandDeleted;
 @Component
 class AttachmentErrandDeletedListener {
 
-	private final AttachmentRepository repository;
+	private final AttachmentRepository attachmentRepository;
 
-	AttachmentErrandDeletedListener(final AttachmentRepository repository) {
-		this.repository = repository;
+	AttachmentErrandDeletedListener(final AttachmentRepository attachmentRepository) {
+		this.attachmentRepository = attachmentRepository;
 	}
 
 	@ApplicationModuleListener
 	void on(final ErrandDeleted event) {
-		repository.deleteAll(repository.findByErrandId(event.errandId()));
+		attachmentRepository.deleteAll(attachmentRepository.findByErrandId(event.errandId()));
 	}
 }

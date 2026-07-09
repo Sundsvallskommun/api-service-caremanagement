@@ -14,14 +14,14 @@ import se.sundsvall.caremanagement.stakeholders.integration.db.StakeholderReposi
 @Component
 class StakeholderErrandDeletedListener {
 
-	private final StakeholderRepository repository;
+	private final StakeholderRepository stakeholderRepository;
 
-	StakeholderErrandDeletedListener(final StakeholderRepository repository) {
-		this.repository = repository;
+	StakeholderErrandDeletedListener(final StakeholderRepository stakeholderRepository) {
+		this.stakeholderRepository = stakeholderRepository;
 	}
 
 	@ApplicationModuleListener
 	void on(final ErrandDeleted event) {
-		repository.deleteByErrandId(event.errandId());
+		stakeholderRepository.deleteByErrandId(event.errandId());
 	}
 }

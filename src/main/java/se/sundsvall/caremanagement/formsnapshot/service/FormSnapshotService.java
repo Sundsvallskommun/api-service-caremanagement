@@ -34,11 +34,11 @@ public class FormSnapshotService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(FormSnapshotService.class);
 
-	private final FormSnapshotRepository repository;
+	private final FormSnapshotRepository formSnapshotRepository;
 	private final ObjectMapper objectMapper;
 
-	FormSnapshotService(final FormSnapshotRepository repository, final ObjectMapper objectMapper) {
-		this.repository = repository;
+	FormSnapshotService(final FormSnapshotRepository formSnapshotRepository, final ObjectMapper objectMapper) {
+		this.formSnapshotRepository = formSnapshotRepository;
 		this.objectMapper = objectMapper;
 	}
 
@@ -57,12 +57,12 @@ public class FormSnapshotService {
 		final var snapshot = toFormSnapshot(payload);
 		validateFormSnapshot(snapshot);
 
-		if (repository.existsByErrandId(errandId)) {
+		if (formSnapshotRepository.existsByErrandId(errandId)) {
 			throw Problem.valueOf(BAD_REQUEST, "A form snapshot already exists on errand '%s'".formatted(errandId));
 		}
 
 		final var entity = FormSnapshotMapper.toEntity(municipalityId, namespace, errandId, typeSlug, payload, snapshot, OffsetDateTime.now(ZoneId.systemDefault()));
-		final var saved = repository.save(entity);
+		final var saved = formSnapshotRepository.save(entity);
 		LOG.info("Captured form snapshot for errand {} (typeSlug={}, sections={}, hash={})",
 			sanitizeForLogging(errandId), sanitizeForLogging(typeSlug), snapshot.getSections().size(), abbreviate(saved.getContentHash()));
 	}
@@ -73,7 +73,7 @@ public class FormSnapshotService {
 	 */
 	@Transactional(readOnly = true)
 	public FormSnapshot readErrandFormSnapshot(final String errandId) {
-		return repository.findByErrandId(errandId)
+		return formSnapshotRepository.findByErrandId(errandId)
 			.map(entity -> toFormSnapshot(entity.getPayload()))
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No form snapshot for errand '%s'".formatted(errandId)));
 	}

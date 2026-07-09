@@ -37,12 +37,12 @@ import static se.sundsvall.caremanagement.journal.integration.db.model.JournalEn
 @Transactional
 public class JournalEntryService {
 
-	private final JournalEntryRepository repository;
+	private final JournalEntryRepository journalEntryRepository;
 	private final ApplicationEventPublisher publisher;
 	private final ErrandAccessGuard errandGuard;
 
-	JournalEntryService(final JournalEntryRepository repository, final ApplicationEventPublisher publisher, final ErrandAccessGuard errandGuard) {
-		this.repository = repository;
+	JournalEntryService(final JournalEntryRepository journalEntryRepository, final ApplicationEventPublisher publisher, final ErrandAccessGuard errandGuard) {
+		this.journalEntryRepository = journalEntryRepository;
 		this.publisher = publisher;
 		this.errandGuard = errandGuard;
 	}
@@ -51,7 +51,7 @@ public class JournalEntryService {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
-		final var saved = repository.save(JournalEntryEntity.create()
+		final var saved = journalEntryRepository.save(JournalEntryEntity.create()
 			.withErrandId(errandId)
 			.withType(request.type())
 			.withHeading(request.heading())
@@ -69,7 +69,7 @@ public class JournalEntryService {
 	public List<JournalEntry> listForErrand(final String municipalityId, final String namespace, final String errandId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
-		return repository.findByErrandIdOrderByEntryDateTimeDescCreatedDesc(errandId).stream()
+		return journalEntryRepository.findByErrandIdOrderByEntryDateTimeDescCreatedDesc(errandId).stream()
 			.map(JournalEntryService::toJournalEntry)
 			.toList();
 	}
@@ -93,13 +93,13 @@ public class JournalEntryService {
 			.withModifiedBy(request.modifiedBy())
 			.withModified(now(systemDefault()).truncatedTo(MILLIS));
 
-		return toJournalEntry(repository.save(entity));
+		return toJournalEntry(journalEntryRepository.save(entity));
 	}
 
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String journalEntryId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
-		repository.delete(requireWorking(findForUpdate(errandId, journalEntryId), "deleted"));
+		journalEntryRepository.delete(requireWorking(findForUpdate(errandId, journalEntryId), "deleted"));
 	}
 
 	/** Lock the entry (write-protection) — it becomes an immutable finalised record. Already-locked entries 409. */
@@ -115,11 +115,11 @@ public class JournalEntryService {
 			.withLockedBy(ofNullable(request).map(LockJournalEntry::lockedBy).orElse(null))
 			.withLocked(now(systemDefault()).truncatedTo(MILLIS));
 
-		return toJournalEntry(repository.save(entity));
+		return toJournalEntry(journalEntryRepository.save(entity));
 	}
 
 	private JournalEntryEntity find(final String errandId, final String journalEntryId) {
-		return repository.findByIdAndErrandId(journalEntryId, errandId)
+		return journalEntryRepository.findByIdAndErrandId(journalEntryId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No journal entry with id '" + journalEntryId + "'"));
 	}
 
@@ -129,7 +129,7 @@ public class JournalEntryService {
 	 * (possibly LOCKED) status. An entry belonging to another errand resolves to {@code 404}.
 	 */
 	private JournalEntryEntity findForUpdate(final String errandId, final String journalEntryId) {
-		return repository.findByIdAndErrandIdForUpdate(journalEntryId, errandId)
+		return journalEntryRepository.findByIdAndErrandIdForUpdate(journalEntryId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No journal entry with id '" + journalEntryId + "'"));
 	}
 
