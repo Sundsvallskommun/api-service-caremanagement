@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:52305
+- url: http://localhost:64788
   description: Generated server url
 tags:
 - name: Statistics
@@ -11043,12 +11043,9 @@ components:
           description: "The answer given, when the field has a single answer"
         items:
           type: array
-          description: "For REPEATING_GROUP fields, one entry per repeated instance;\
-            \ each is the list of nested fields"
+          description: "For REPEATING_GROUP fields, one entry per repeated instance"
           items:
-            type: array
-            items:
-              $ref: "#/components/schemas/FormSnapshotField"
+            $ref: "#/components/schemas/FormSnapshotGroup"
         required:
           type: boolean
           description: Whether the field was required as rendered
@@ -11064,6 +11061,16 @@ components:
           description: "The visibility rule that was active, human-readable"
           examples:
           - always
+    FormSnapshotGroup:
+      type: object
+      description: "One repeated instance of a REPEATING_GROUP field — its nested\
+        \ fields, in render order."
+      properties:
+        fields:
+          type: array
+          description: "The nested fields for this repeated instance, in render order"
+          items:
+            $ref: "#/components/schemas/FormSnapshotField"
     FormSnapshotNotice:
       type: object
       description: An info / warning / error notice shown to the applicant.
