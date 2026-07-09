@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
  * Request to update a journalanteckning. Replaces the editable fields (Typ, Rubrik, text, Datum, Tid) and records the
@@ -19,6 +22,6 @@ public record UpdateJournalEntry(
 
 	@Schema(description = "Free-text body of the journal entry; optional", examples = "Hej! Vill bara informera att jag fått jobb på Mejeriet.") @Size(max = 1_048_576) String text,
 
-	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid')", examples = "2025-05-30T14:30:00+02:00", requiredMode = Schema.RequiredMode.REQUIRED) @NotNull OffsetDateTime entryDateTime,
+	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid')", examples = "2025-05-30T14:30:00+02:00", requiredMode = Schema.RequiredMode.REQUIRED) @NotNull @DateTimeFormat(iso = DATE_TIME) OffsetDateTime entryDateTime,
 
 	@Schema(description = "User id of the editor (Lifecare 'Ändrat av'); optional", examples = "ebb14eri") @Size(max = 64) String modifiedBy) {}

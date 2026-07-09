@@ -5,6 +5,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
  * Result of the application-eligibility check (common entry point). Carries the ordered {@link ApplicationSuggestion}s
@@ -68,6 +71,7 @@ public class EligibilityResponse {
 	private String reopenableErrandId;
 
 	@Schema(description = "When reasonCode is RECENTLY_CLOSED: when the reopenable errand was closed. Null otherwise.", examples = "2026-06-20T10:15:30Z")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime closedAt;
 
 	public static EligibilityResponse create() {

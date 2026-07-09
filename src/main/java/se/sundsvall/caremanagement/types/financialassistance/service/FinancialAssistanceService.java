@@ -494,9 +494,12 @@ public class FinancialAssistanceService {
 			.flatMap(stream -> stream)
 			.toList();
 		final var header = "Inkomstunderlag förberett (preliminärt – normberäkningen skapas i Lifecare efter beslut). ";
-		final var description = warnings.isEmpty()
-			? header + "Inga varningar – inkomsterna kunde överföras utan anmärkning."
-			: header + warnings.size() + " varning(ar) att granska:\n" + String.join("\n", warnings);
+		final String description;
+		if (warnings.isEmpty()) {
+			description = header + "Inga varningar – inkomsterna kunde överföras utan anmärkning.";
+		} else {
+			description = header + warnings.size() + " varning(ar) att granska:\n" + String.join("\n", warnings);
+		}
 
 		final String value;
 		if (warnings.isEmpty()) {

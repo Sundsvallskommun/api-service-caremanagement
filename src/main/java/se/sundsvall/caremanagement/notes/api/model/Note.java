@@ -3,6 +3,9 @@ package se.sundsvall.caremanagement.notes.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 @Schema(description = "Note attached to an errand")
 public class Note {
@@ -20,12 +23,14 @@ public class Note {
 	private String author;
 
 	@Schema(description = "Created timestamp")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
 	@Schema(description = "User id of the last editor", examples = "jane01doe")
 	private String modifiedBy;
 
 	@Schema(description = "Last modified timestamp; null until the note has been edited")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime modified;
 
 	public static Note create() {

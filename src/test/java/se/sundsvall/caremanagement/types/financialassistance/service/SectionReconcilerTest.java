@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -188,6 +189,6 @@ class SectionReconcilerTest {
 			.withOrigin(ORIGIN_SYSTEM)
 			.withTypeId(typeId)
 			.withTypeName(typeName)
-			.withApplicantProcessAmount(processAmount == null ? null : new BigDecimal(processAmount));
+			.withApplicantProcessAmount(Optional.ofNullable(processAmount).map(BigDecimal::new).orElse(null));
 	}
 }

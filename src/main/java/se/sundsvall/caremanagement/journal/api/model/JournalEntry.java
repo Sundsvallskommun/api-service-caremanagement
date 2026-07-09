@@ -3,6 +3,9 @@ package se.sundsvall.caremanagement.journal.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
  * A journalanteckning (case-journal entry) attached to an errand — the Lifecare journal shape, captured so it can later
@@ -27,6 +30,7 @@ public class JournalEntry {
 	private String text;
 
 	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid'), distinct from the system created timestamp", examples = "2025-05-30T14:30:00+02:00")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime entryDateTime;
 
 	@Schema(description = "Write-protection status — WORKING is an editable working note, LOCKED is a finalised record", allowableValues = {
@@ -38,18 +42,21 @@ public class JournalEntry {
 	private String createdBy;
 
 	@Schema(description = "Created timestamp")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
 	@Schema(description = "User id of the last editor (Lifecare 'Ändrat av'); null until the entry has been edited", examples = "ebb14eri")
 	private String modifiedBy;
 
 	@Schema(description = "Last modified timestamp; null until the entry has been edited")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime modified;
 
 	@Schema(description = "User id of whoever locked the entry; null while WORKING", examples = "carola01winberg")
 	private String lockedBy;
 
 	@Schema(description = "Timestamp when the entry was locked (became an upprättad handling); null while WORKING")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime locked;
 
 	public static JournalEntry create() {

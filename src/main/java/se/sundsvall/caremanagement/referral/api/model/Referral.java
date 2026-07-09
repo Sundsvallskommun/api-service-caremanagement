@@ -13,6 +13,7 @@ import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
  * A referral/consultation sent on an errand to an external authority, and its response. Type-agnostic:
@@ -58,10 +59,12 @@ public class Referral {
 
 	@Schema(description = "Created", accessMode = READ_ONLY)
 	@Null(groups = OnCreate.class)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
 	@Schema(description = "Modified", accessMode = READ_ONLY)
 	@Null(groups = OnCreate.class)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime modified;
 
 	public static Referral create() {

@@ -6,8 +6,10 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 @Schema(description = "A message in the errand's conversation")
 public class Message {
@@ -33,6 +35,7 @@ public class Message {
 	private String inReplyToId;
 
 	@Schema(description = "Created timestamp")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
 	@ArraySchema(arraySchema = @Schema(description = "Files attached to the message", accessMode = READ_ONLY), schema = @Schema(implementation = MessageAttachment.class))

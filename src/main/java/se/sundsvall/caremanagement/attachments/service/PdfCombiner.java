@@ -157,9 +157,12 @@ final class PdfCombiner {
 		// wide wallpaper and a portrait scan end up the same page size in the combined PDF rather than each keeping its own
 		// pixel dimensions. The image is scaled to fit within the page margins, preserving aspect ratio, and centred;
 		// images already smaller than that are left at their natural size (never upscaled).
-		final var pageSize = image.getWidth() > image.getHeight()
-			? new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth())
-			: PDRectangle.A4;
+		final PDRectangle pageSize;
+		if (image.getWidth() > image.getHeight()) {
+			pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
+		} else {
+			pageSize = PDRectangle.A4;
+		}
 		final var page = new PDPage(pageSize);
 		document.addPage(page);
 

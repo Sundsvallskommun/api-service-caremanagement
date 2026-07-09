@@ -6,7 +6,10 @@ import jakarta.validation.Valid;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 @Schema(description = "The typed financial assistance application payload.")
 public class FinancialAssistanceData {
@@ -105,6 +108,7 @@ public class FinancialAssistanceData {
 	private Boolean attestation;
 
 	@Schema(description = "When the application was attested", examples = "2026-06-01T09:30:00Z")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime attestedAt;
 
 	@ArraySchema(arraySchema = @Schema(description = "Children included in the application"), schema = @Schema(implementation = Child.class))

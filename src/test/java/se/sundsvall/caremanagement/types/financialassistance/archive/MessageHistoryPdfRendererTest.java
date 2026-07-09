@@ -97,7 +97,13 @@ class MessageHistoryPdfRendererTest {
 	void flowsAcrossMultiplePagesForLongThreads() throws IOException {
 		final var thread = new ArrayList<ConversationMessageView>();
 		for (var i = 0; i < 120; i++) {
-			thread.add(new ConversationMessageView(i % 2 == 0 ? "INBOUND" : "OUTBOUND", "Meddelande nummer " + i, "user" + i, OffsetDateTime.now(), emptyList()));
+			final String direction;
+			if (i % 2 == 0) {
+				direction = "INBOUND";
+			} else {
+				direction = "OUTBOUND";
+			}
+			thread.add(new ConversationMessageView(direction, "Meddelande nummer " + i, "user" + i, OffsetDateTime.now(), emptyList()));
 		}
 
 		final var pdf = MessageHistoryPdfRenderer.renderMessages(ERRAND_NUMBER, thread, ThreadAttachments.flatten(thread));

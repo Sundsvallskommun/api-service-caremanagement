@@ -100,7 +100,7 @@ class EligibilityServiceTest {
 		lenient().when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(CO_APPLICANT)).thenReturn(List.of(ERRAND_ID));
 		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL)
-				.withCreated(created != null ? created : OffsetDateTime.now())));
+				.withCreated(Optional.ofNullable(created).orElseGet(OffsetDateTime::now))));
 		final var fa = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withPersons(List.of(persons));
 		Optional.ofNullable(period).ifPresent(p -> fa.withPeriodMonth(p.getMonthValue()).withPeriodYear(p.getYear()));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(fa));

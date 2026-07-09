@@ -81,9 +81,12 @@ public class MonitoringService {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		validateDates(request.getStartDate(), request.getEndDate());
 
-		final var entity = hasText(request.getLifecareId())
-			? repository.findByErrandIdAndLifecareId(errandId, request.getLifecareId()).orElseGet(FaMonitoringEntity::create)
-			: FaMonitoringEntity.create();
+		final FaMonitoringEntity entity;
+		if (hasText(request.getLifecareId())) {
+			entity = repository.findByErrandIdAndLifecareId(errandId, request.getLifecareId()).orElseGet(FaMonitoringEntity::create);
+		} else {
+			entity = FaMonitoringEntity.create();
+		}
 
 		return toMonitoring(repository.save(entity
 			.withErrandId(errandId)

@@ -160,12 +160,16 @@ final class MessageHistoryPdfRenderer {
 	 */
 	private static Optional<String> attachmentLine(final ConversationMessageView message, final List<NumberedAttachment> numbered) {
 		if (ThreadAttachments.INBOUND.equals(message.direction())) {
-			return numbered.isEmpty() ? Optional.empty()
-				: Optional.of("Bilagor: " + numbered.stream().map(a -> "[%d] %s".formatted(a.number(), a.fileName())).collect(joining(", ")));
+			if (numbered.isEmpty()) {
+				return Optional.empty();
+			}
+			return Optional.of("Bilagor: " + numbered.stream().map(a -> "[%d] %s".formatted(a.number(), a.fileName())).collect(joining(", ")));
 		}
 		final var files = message.attachments();
-		return files.isEmpty() ? Optional.empty()
-			: Optional.of("Bilagor (finns i Lifecare): " + files.stream().map(ConversationAttachmentView::fileName).collect(joining(", ")));
+		if (files.isEmpty()) {
+			return Optional.empty();
+		}
+		return Optional.of("Bilagor (finns i Lifecare): " + files.stream().map(ConversationAttachmentView::fileName).collect(joining(", ")));
 	}
 
 	private static String date(final OffsetDateTime timestamp) {

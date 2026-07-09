@@ -3,9 +3,11 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 @Schema(description = "A financial assistance errand with its typed application payload.")
 public class FinancialAssistanceView {
@@ -44,15 +46,19 @@ public class FinancialAssistanceView {
 	private String processInstanceId;
 
 	@Schema(description = "Created", accessMode = READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
 	@Schema(description = "Modified", accessMode = READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime modified;
 
 	@Schema(description = "Touched", accessMode = READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime touched;
 
 	@Schema(description = "When the financial assistance process last ran its daily loop for this errand (the calculation /prepare step). Null until the first loop has run.", accessMode = READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime lastDailyRunAt;
 
 	@Schema(description = "The typed financial assistance application payload")

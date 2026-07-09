@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.eventlog.service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -114,7 +115,7 @@ class ErrandEventServiceTest {
 			.withHttpMethod("GET")
 			.withRequestPath("/2281/FINANCIAL_ASSISTANCE/errands/e1")
 			.withActor(actor)
-			.withActorType(actor == null ? null : "adAccount")
+			.withActorType(Optional.ofNullable(actor).map(_ -> "adAccount").orElse(null))
 			.withRequestId("req")
 			.withStatusCode(200)
 			.withCreated(created);

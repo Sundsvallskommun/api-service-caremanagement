@@ -3,8 +3,10 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
  * One section of the Draken financial assistance view as an acknowledgeable object — whether a caseworker has verified
@@ -27,6 +29,7 @@ public class SectionApproval {
 	private String approvedBy;
 
 	@Schema(description = "When the section was approved (null while not approved)", accessMode = READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime approvedAt;
 
 	public static SectionApproval create() {

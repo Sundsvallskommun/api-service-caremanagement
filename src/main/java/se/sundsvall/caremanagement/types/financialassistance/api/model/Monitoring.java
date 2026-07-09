@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
  * A financial assistance monitoring on an errand — a date-bound watch/reminder the caseworker manages in Draken. Unlike
@@ -44,9 +47,11 @@ public class Monitoring {
 	private String createdBy;
 
 	@Schema(description = "When the monitoring was created", accessMode = Schema.AccessMode.READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
 	@Schema(description = "When the monitoring was last updated", accessMode = Schema.AccessMode.READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime updated;
 
 	public static Monitoring create() {

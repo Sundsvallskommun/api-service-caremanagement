@@ -1,6 +1,9 @@
 package se.sundsvall.caremanagement.eventlog.api.model;
 
 import java.time.OffsetDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
  * One recorded activity on an errand — who did what, when, and with what outcome.
@@ -39,4 +42,4 @@ public record ErrandEventEntry(
 	String actorType,
 	String requestId,
 	Integer statusCode,
-	OffsetDateTime created) {}
+	@DateTimeFormat(iso = DATE_TIME) OffsetDateTime created) {}

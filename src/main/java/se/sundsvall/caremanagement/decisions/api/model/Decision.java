@@ -13,6 +13,7 @@ import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
 
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 @Schema(
 	description = "Decision recorded against an errand. Both system-generated decisions (e.g. a DMN-evaluated recommendation produced by a BPMN process) and human decisions (e.g. a caseworker approving a payment) are stored here, distinguished by `decisionType`. The list on the errand grows over time and is the audit trail of every decision made on the case.")
@@ -62,6 +63,7 @@ public class Decision {
 
 	@Schema(description = "Timestamp the decision was recorded (server-assigned)", accessMode = READ_ONLY)
 	@Null(groups = OnCreate.class)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
 	public static Decision create() {

@@ -3,6 +3,9 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
  * A financial assistance income warning on an errand — an acknowledgeable object the caseworker reviews in Draken.
@@ -42,9 +45,11 @@ public class Warning {
 	private boolean autoResolved;
 
 	@Schema(description = "When the warning was created", accessMode = Schema.AccessMode.READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
 	@Schema(description = "When the warning was last updated", accessMode = Schema.AccessMode.READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime updated;
 
 	public static Warning create() {
