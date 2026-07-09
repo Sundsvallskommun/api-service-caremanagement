@@ -16,7 +16,7 @@ class FinancialAssistanceLifecareResourceFailureTest extends AbstractFinancialAs
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(lifecareServiceMock);
 	}
 
 	@Test
@@ -27,7 +27,7 @@ class FinancialAssistanceLifecareResourceFailureTest extends AbstractFinancialAs
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(lifecareServiceMock);
 	}
 
 }

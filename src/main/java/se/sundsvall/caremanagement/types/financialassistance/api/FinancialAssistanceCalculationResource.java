@@ -23,7 +23,6 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceCalculationService;
-import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
@@ -46,11 +45,9 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 })
 class FinancialAssistanceCalculationResource {
 
-	private final FinancialAssistanceService service;
 	private final FinancialAssistanceCalculationService calculationService;
 
-	FinancialAssistanceCalculationResource(final FinancialAssistanceService service, final FinancialAssistanceCalculationService calculationService) {
-		this.service = service;
+	FinancialAssistanceCalculationResource(final FinancialAssistanceCalculationService calculationService) {
 		this.calculationService = calculationService;
 	}
 
@@ -96,7 +93,7 @@ class FinancialAssistanceCalculationResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Valid @NotNull @RequestBody final CalculationRequest request) {
 
-		return ok(service.commitFromApplication(municipalityId, namespace, request));
+		return ok(calculationService.commitFromApplication(municipalityId, namespace, request));
 	}
 
 	@GetMapping(path = "/financial-assistance/{errandId}/calculation/draft", produces = APPLICATION_JSON_VALUE)
@@ -111,7 +108,7 @@ class FinancialAssistanceCalculationResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@PathVariable final String errandId) {
 
-		return ok(service.getDraft(municipalityId, namespace, errandId));
+		return ok(calculationService.getDraft(municipalityId, namespace, errandId));
 	}
 
 	@PatchMapping(path = "/financial-assistance/{errandId}/calculation/draft/header", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
@@ -127,6 +124,6 @@ class FinancialAssistanceCalculationResource {
 		@PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final NormHeaderInput input) {
 
-		return ok(service.patchDraftHeader(municipalityId, namespace, errandId, input));
+		return ok(calculationService.patchDraftHeader(municipalityId, namespace, errandId, input));
 	}
 }

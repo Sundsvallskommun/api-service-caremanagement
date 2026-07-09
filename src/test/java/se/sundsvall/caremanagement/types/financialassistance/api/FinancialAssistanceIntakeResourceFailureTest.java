@@ -54,7 +54,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(actualisationServiceMock);
 	}
 
 	@Test
@@ -65,7 +65,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(actualisationServiceMock);
 	}
 
 	@Test
@@ -85,7 +85,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(actualisationServiceMock);
 	}
 
 	@Test
@@ -95,7 +95,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(actualisationServiceMock);
 	}
 
 	@Test
@@ -110,7 +110,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(actualisationServiceMock);
 	}
 
 	@Test
@@ -125,7 +125,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(actualisationServiceMock);
 	}
 
 	@Test
@@ -141,7 +141,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(actualisationServiceMock);
 	}
 
 	@Test
@@ -156,7 +156,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(actualisationServiceMock);
 	}
 
 }

@@ -22,7 +22,7 @@ class FinancialAssistanceLifecareResourceTest extends AbstractFinancialAssistanc
 	@Test
 	void listCalculations() {
 		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-		when(serviceMock.listCalculations(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
+		when(lifecareServiceMock.listCalculations(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
 			.thenReturn(List.of(LifecareCalculation.create().withId(7001).withNormSum(10500.0)));
 
 		final var result = webTestClient.get()
@@ -34,13 +34,13 @@ class FinancialAssistanceLifecareResourceTest extends AbstractFinancialAssistanc
 			.getResponseBody();
 
 		assertThat(result).singleElement().satisfies(calculation -> assertThat(calculation.getId()).isEqualTo(7001));
-		verify(serviceMock).listCalculations(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull());
+		verify(lifecareServiceMock).listCalculations(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull());
 	}
 
 	@Test
 	void listCalculationsWithExplicitPeriod() {
 		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-		when(serviceMock.listCalculations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30)))
+		when(lifecareServiceMock.listCalculations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30)))
 			.thenReturn(List.of());
 
 		webTestClient.get()
@@ -48,13 +48,13 @@ class FinancialAssistanceLifecareResourceTest extends AbstractFinancialAssistanc
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(serviceMock).listCalculations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
+		verify(lifecareServiceMock).listCalculations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 	}
 
 	@Test
 	void listDecisions() {
 		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-		when(serviceMock.listDecisions(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
+		when(lifecareServiceMock.listDecisions(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
 			.thenReturn(List.of(LifecareDecision.create().withId(9900).withType("Bifall")));
 
 		final var result = webTestClient.get()
@@ -66,13 +66,13 @@ class FinancialAssistanceLifecareResourceTest extends AbstractFinancialAssistanc
 			.getResponseBody();
 
 		assertThat(result).singleElement().satisfies(decision -> assertThat(decision.getId()).isEqualTo(9900));
-		verify(serviceMock).listDecisions(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull());
+		verify(lifecareServiceMock).listDecisions(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull());
 	}
 
 	@Test
 	void listDocuments() {
 		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-		when(serviceMock.listDocuments(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
+		when(lifecareServiceMock.listDocuments(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
 			.thenReturn(List.of(LifecareDocument.create().withId("doc-1").withTitle("Beslut")));
 
 		final var result = webTestClient.get()
@@ -84,14 +84,14 @@ class FinancialAssistanceLifecareResourceTest extends AbstractFinancialAssistanc
 			.getResponseBody();
 
 		assertThat(result).singleElement().satisfies(document -> assertThat(document.getId()).isEqualTo("doc-1"));
-		verify(serviceMock).listDocuments(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull());
+		verify(lifecareServiceMock).listDocuments(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull());
 	}
 
 	@Test
 	void readDocumentContent() {
 		final var documentId = "a3f1c2d4-0000-1111-2222-333344445555";
 		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-		when(serviceMock.readDocumentContent(eq(MUNICIPALITY_ID), eq(partyId), eq(documentId), isNull(), isNull())).thenReturn("%PDF-1.4".getBytes());
+		when(lifecareServiceMock.readDocumentContent(eq(MUNICIPALITY_ID), eq(partyId), eq(documentId), isNull(), isNull())).thenReturn("%PDF-1.4".getBytes());
 
 		final var body = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/documents/{documentId}/content").queryParam("partyId", partyId).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "documentId", documentId)))
@@ -104,7 +104,7 @@ class FinancialAssistanceLifecareResourceTest extends AbstractFinancialAssistanc
 			.getResponseBody();
 
 		assertThat(body).isEqualTo("%PDF-1.4".getBytes());
-		verify(serviceMock).readDocumentContent(MUNICIPALITY_ID, partyId, documentId, null, null);
+		verify(lifecareServiceMock).readDocumentContent(MUNICIPALITY_ID, partyId, documentId, null, null);
 	}
 
 }

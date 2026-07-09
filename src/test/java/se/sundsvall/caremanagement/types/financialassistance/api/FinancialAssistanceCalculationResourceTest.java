@@ -39,7 +39,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 
 	@Test
 	void getDraft() {
-		when(serviceMock.getDraft(MUNICIPALITY_ID, NAMESPACE, "errand-1"))
+		when(calculationServiceMock.getDraft(MUNICIPALITY_ID, NAMESPACE, "errand-1"))
 			.thenReturn(CalculationDraft.create().withErrandId("errand-1")
 				.withIncomes(List.of(NormIncomeRow.create().withTypeName("Bostadsbidrag").withApplicantProcessAmount(new BigDecimal("1850")))));
 
@@ -54,12 +54,12 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 		assertThat(response).isNotNull();
 		assertThat(response.getIncomes()).hasSize(1);
 		assertThat(response.getIncomes().getFirst().getTypeName()).isEqualTo("Bostadsbidrag");
-		verify(serviceMock).getDraft(MUNICIPALITY_ID, NAMESPACE, "errand-1");
+		verify(calculationServiceMock).getDraft(MUNICIPALITY_ID, NAMESPACE, "errand-1");
 	}
 
 	@Test
 	void patchDraftHeader() {
-		when(serviceMock.patchDraftHeader(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormHeaderInput.class)))
+		when(calculationServiceMock.patchDraftHeader(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormHeaderInput.class)))
 			.thenReturn(CalculationDraft.create().withNormId(5).withHouseholdSize(1));
 
 		final var response = webTestClient.patch()
@@ -73,7 +73,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 
 		assertThat(response).isNotNull();
 		assertThat(response.getNormId()).isEqualTo(5);
-		verify(serviceMock).patchDraftHeader(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormHeaderInput.class));
+		verify(calculationServiceMock).patchDraftHeader(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(NormHeaderInput.class));
 	}
 
 	@Test
@@ -97,7 +97,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 
 	@Test
 	void commitFromApplication() {
-		when(serviceMock.commitFromApplication(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class)))
+		when(calculationServiceMock.commitFromApplication(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class)))
 			.thenReturn(CalculationResponse.create().withCalculationId(5001));
 
 		final var response = webTestClient.post()
@@ -111,7 +111,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 
 		assertThat(response).isNotNull();
 		assertThat(response.getCalculationId()).isEqualTo(5001);
-		verify(serviceMock).commitFromApplication(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class));
+		verify(calculationServiceMock).commitFromApplication(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(CalculationRequest.class));
 	}
 
 }

@@ -9,10 +9,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceActualisationService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceApprovalService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceCalculationService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceDraftRowService;
-import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceErrandService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceLifecareService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistancePaymentService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceWarningService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
 
@@ -39,7 +42,16 @@ abstract class AbstractFinancialAssistanceResourceTest {
 	protected static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance";
 
 	@MockitoBean
-	protected FinancialAssistanceService serviceMock;
+	protected FinancialAssistanceErrandService errandServiceMock;
+
+	@MockitoBean
+	protected FinancialAssistanceLifecareService lifecareServiceMock;
+
+	@MockitoBean
+	protected FinancialAssistanceActualisationService actualisationServiceMock;
+
+	@MockitoBean
+	protected FinancialAssistancePaymentService paymentServiceMock;
 
 	@MockitoBean
 	protected FinancialAssistanceCalculationService calculationServiceMock;

@@ -79,7 +79,7 @@ class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceR
 
 	@Test
 	void createActualisation() {
-		when(serviceMock.createActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(ActualisationRequest.class)))
+		when(actualisationServiceMock.createActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(ActualisationRequest.class)))
 			.thenReturn(ActualisationResponse.create().withActualisationId(5012));
 
 		final var response = webTestClient.post()
@@ -93,13 +93,13 @@ class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceR
 
 		assertThat(response).isNotNull();
 		assertThat(response.getActualisationId()).isEqualTo(5012);
-		verify(serviceMock).createActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(ActualisationRequest.class));
+		verify(actualisationServiceMock).createActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(ActualisationRequest.class));
 	}
 
 	@Test
 	void listActualisations() {
 		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-		when(serviceMock.listActualisations(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
+		when(actualisationServiceMock.listActualisations(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
 			.thenReturn(List.of(Actualisation.create().withId(5012).withName("Ekonomiskt bistånd")));
 
 		final var result = webTestClient.get()
@@ -111,13 +111,13 @@ class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceR
 			.getResponseBody();
 
 		assertThat(result).singleElement().satisfies(actualisation -> assertThat(actualisation.getId()).isEqualTo(5012));
-		verify(serviceMock).listActualisations(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull());
+		verify(actualisationServiceMock).listActualisations(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull());
 	}
 
 	@Test
 	void listActualisationsWithExplicitPeriod() {
 		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-		when(serviceMock.listActualisations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30)))
+		when(actualisationServiceMock.listActualisations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30)))
 			.thenReturn(List.of());
 
 		webTestClient.get()
@@ -125,7 +125,7 @@ class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceR
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(serviceMock).listActualisations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
+		verify(actualisationServiceMock).listActualisations(MUNICIPALITY_ID, partyId, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 	}
 
 	@Test
@@ -142,7 +142,7 @@ class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceR
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(serviceMock).archiveToActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(partyId), eq(5012), any(MultipartFile.class), any(ArchiveActualisationRequest.class));
+		verify(actualisationServiceMock).archiveToActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(partyId), eq(5012), any(MultipartFile.class), any(ArchiveActualisationRequest.class));
 	}
 
 	@Test
@@ -158,7 +158,7 @@ class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceR
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(serviceMock).archiveToActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(partyId), eq(5012), any(MultipartFile.class), isNull());
+		verify(actualisationServiceMock).archiveToActualisation(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(partyId), eq(5012), any(MultipartFile.class), isNull());
 	}
 
 	@Test

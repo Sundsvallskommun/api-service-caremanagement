@@ -33,7 +33,7 @@ import se.sundsvall.caremanagement.formsnapshot.api.model.FormSnapshot;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
-import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceErrandService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
@@ -76,11 +76,11 @@ class FinancialAssistanceErrandResource {
 	 */
 	private static final String SLUG_REGEXP = "financial-assistance-new|financial-assistance-renewal|financial-assistance-supplementary";
 
-	private final FinancialAssistanceService service;
+	private final FinancialAssistanceErrandService service;
 	private final ObjectMapper objectMapper;
 	private final Validator validator;
 
-	FinancialAssistanceErrandResource(final FinancialAssistanceService service, final ObjectMapper objectMapper, final Validator validator) {
+	FinancialAssistanceErrandResource(final FinancialAssistanceErrandService service, final ObjectMapper objectMapper, final Validator validator) {
 		this.service = service;
 		this.objectMapper = objectMapper;
 		this.validator = validator;

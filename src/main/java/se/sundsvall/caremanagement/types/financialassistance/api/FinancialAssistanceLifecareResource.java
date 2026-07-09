@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareCalculation;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDocument;
-import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceLifecareService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
@@ -47,9 +47,9 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 })
 class FinancialAssistanceLifecareResource {
 
-	private final FinancialAssistanceService service;
+	private final FinancialAssistanceLifecareService service;
 
-	FinancialAssistanceLifecareResource(final FinancialAssistanceService service) {
+	FinancialAssistanceLifecareResource(final FinancialAssistanceLifecareService service) {
 		this.service = service;
 	}
 

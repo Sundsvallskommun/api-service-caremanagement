@@ -14,7 +14,7 @@ class FinancialAssistancePaymentResourceTest extends AbstractFinancialAssistance
 
 	@Test
 	void checkPaymentStatus() {
-		when(serviceMock.checkPaymentStatus(eq(MUNICIPALITY_ID), any(PaymentStatusRequest.class)))
+		when(paymentServiceMock.checkPaymentStatus(eq(MUNICIPALITY_ID), any(PaymentStatusRequest.class)))
 			.thenReturn(PaymentStatusResponse.create().withEffectuated(true).withPaymentDate("2026-05-27"));
 
 		final var response = webTestClient.post()
@@ -29,7 +29,7 @@ class FinancialAssistancePaymentResourceTest extends AbstractFinancialAssistance
 		assertThat(response).isNotNull();
 		assertThat(response.getEffectuated()).isTrue();
 		assertThat(response.getPaymentDate()).isEqualTo("2026-05-27");
-		verify(serviceMock).checkPaymentStatus(eq(MUNICIPALITY_ID), any(PaymentStatusRequest.class));
+		verify(paymentServiceMock).checkPaymentStatus(eq(MUNICIPALITY_ID), any(PaymentStatusRequest.class));
 	}
 
 }

@@ -18,7 +18,7 @@ class FinancialAssistanceDraftRowResourceFailureTest extends AbstractFinancialAs
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(draftRowServiceMock);
 	}
 
 	@Test
@@ -28,6 +28,6 @@ class FinancialAssistanceDraftRowResourceFailureTest extends AbstractFinancialAs
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(draftRowServiceMock);
 	}
 }

@@ -18,7 +18,7 @@ class FinancialAssistanceApprovalResourceFailureTest extends AbstractFinancialAs
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(approvalServiceMock);
 	}
 
 	@Test
@@ -30,7 +30,7 @@ class FinancialAssistanceApprovalResourceFailureTest extends AbstractFinancialAs
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(approvalServiceMock);
 	}
 
 }

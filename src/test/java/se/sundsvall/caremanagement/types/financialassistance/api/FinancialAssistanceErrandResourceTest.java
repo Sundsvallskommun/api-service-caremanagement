@@ -25,7 +25,7 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 
 	@Test
 	void createErrand() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
+		when(errandServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Min application").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
@@ -37,12 +37,12 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
+		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
 
 	@Test
 	void createErrandToleratesRequestPartWithoutJsonContentType() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
+		when(errandServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
 
 		// Reproduces an axios FormData client that appends the JSON 'request' part without a 'Content-Type:
 		// application/json' (the part arrives as text/plain). The endpoint must still bind and create.
@@ -57,12 +57,12 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
+		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
 
 	@Test
 	void createErrandAcceptsScalarWhereModelExpectsList() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
+		when(errandServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
 
 		// Mirrors the Mina sidor client: normType is a List<String> in the model but is sent as a single scalar.
 		final var requestJson = "{\"title\":\"Återansökan\",\"data\":{\"normType\":\"NATIONAL_NORM\"}}";
@@ -77,13 +77,13 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.expectStatus().isCreated();
 
 		final var captor = ArgumentCaptor.forClass(CreateFinancialAssistanceRequest.class);
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), captor.capture(), any(), any(), any());
+		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), captor.capture(), any(), any(), any());
 		assertThat(captor.getValue().getData().getNormType()).containsExactly("NATIONAL_NORM"); // scalar coerced to a single-element list
 	}
 
 	@Test
 	void createErrandWithCaseDataSnapshot() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
+		when(errandServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Med ärendeuppgifter").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
@@ -96,12 +96,12 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
+		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
 
 	@Test
 	void createErrandWithAttachments() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
+		when(errandServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Med bilagor").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
@@ -115,12 +115,12 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
+		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
 
 	@Test
 	void createErrandWithFormSnapshot() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
+		when(errandServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
 
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Med formulärsnapshot").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
@@ -133,12 +133,12 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.exchange()
 			.expectStatus().isCreated();
 
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
+		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
 	}
 
 	@Test
 	void readErrand() {
-		when(serviceMock.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(FinancialAssistanceView.create().withId(ERRAND_ID));
+		when(errandServiceMock.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(FinancialAssistanceView.create().withId(ERRAND_ID));
 
 		final var view = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{errandId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -150,12 +150,12 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 
 		assertThat(view).isNotNull();
 		assertThat(view.getId()).isEqualTo(ERRAND_ID);
-		verify(serviceMock).read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandServiceMock).read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
 	void readFormSnapshot() {
-		when(serviceMock.readFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+		when(errandServiceMock.readFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(FormSnapshot.create().withSchemaVersion("form-snapshot/1").withTitle("Ansökan")
 				.withSections(List.of(FormSnapshotSection.create().withId("household").withTitle("Hushåll"))));
 
@@ -170,7 +170,7 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 		assertThat(snapshot).isNotNull();
 		assertThat(snapshot.getSchemaVersion()).isEqualTo("form-snapshot/1");
 		assertThat(snapshot.getSections()).hasSize(1);
-		verify(serviceMock).readFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(errandServiceMock).readFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
@@ -181,6 +181,6 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(serviceMock).updateData(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(FinancialAssistanceData.class));
+		verify(errandServiceMock).updateData(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(FinancialAssistanceData.class));
 	}
 }

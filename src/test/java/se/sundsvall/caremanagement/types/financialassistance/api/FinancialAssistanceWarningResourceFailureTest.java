@@ -18,7 +18,7 @@ class FinancialAssistanceWarningResourceFailureTest extends AbstractFinancialAss
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(warningServiceMock);
 	}
 
 	@Test
@@ -28,6 +28,6 @@ class FinancialAssistanceWarningResourceFailureTest extends AbstractFinancialAss
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(warningServiceMock);
 	}
 }

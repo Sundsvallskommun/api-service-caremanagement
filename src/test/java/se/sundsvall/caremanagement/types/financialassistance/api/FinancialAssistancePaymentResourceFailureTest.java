@@ -18,6 +18,6 @@ class FinancialAssistancePaymentResourceFailureTest extends AbstractFinancialAss
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(paymentServiceMock);
 	}
 }

@@ -24,7 +24,7 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(errandServiceMock);
 	}
 
 	@Test
@@ -39,7 +39,7 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(errandServiceMock);
 	}
 
 	@Test
@@ -54,7 +54,7 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(errandServiceMock);
 	}
 
 	@Test
@@ -69,7 +69,7 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(errandServiceMock);
 	}
 
 	@Test
@@ -79,6 +79,6 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(errandServiceMock);
 	}
 }

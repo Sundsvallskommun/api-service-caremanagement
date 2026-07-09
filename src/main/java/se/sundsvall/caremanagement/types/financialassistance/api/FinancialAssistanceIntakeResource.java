@@ -34,7 +34,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Financial
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
 import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceTypes;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
-import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceActualisationService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
@@ -63,13 +63,13 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 })
 class FinancialAssistanceIntakeResource {
 
-	private final FinancialAssistanceService service;
+	private final FinancialAssistanceActualisationService actualisationService;
 	private final EligibilityService eligibilityService;
 	private final RenewalPrefillService renewalPrefillService;
 
-	FinancialAssistanceIntakeResource(final FinancialAssistanceService service, final EligibilityService eligibilityService,
+	FinancialAssistanceIntakeResource(final FinancialAssistanceActualisationService actualisationService, final EligibilityService eligibilityService,
 		final RenewalPrefillService renewalPrefillService) {
-		this.service = service;
+		this.actualisationService = actualisationService;
 		this.eligibilityService = eligibilityService;
 		this.renewalPrefillService = renewalPrefillService;
 	}
@@ -100,7 +100,7 @@ class FinancialAssistanceIntakeResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Valid @NotNull @RequestBody final ActualisationRequest request) {
 
-		return ok(service.createActualisation(municipalityId, namespace, request));
+		return ok(actualisationService.createActualisation(municipalityId, namespace, request));
 	}
 
 	@GetMapping(path = "/financial-assistance/actualisations", produces = APPLICATION_JSON_VALUE)
@@ -118,7 +118,7 @@ class FinancialAssistanceIntakeResource {
 		@Parameter(description = "Inclusive start of the listing period (ISO date). Defaults to 24 months before 'to'.") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
 		@Parameter(description = "Inclusive end of the listing period (ISO date). Defaults to today.") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to) {
 
-		return ok(service.listActualisations(municipalityId, partyId, from, to));
+		return ok(actualisationService.listActualisations(municipalityId, partyId, from, to));
 	}
 
 	@PostMapping(path = "/financial-assistance/actualisations/{actualisationId}/archive", consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
@@ -136,7 +136,7 @@ class FinancialAssistanceIntakeResource {
 		@RequestPart("file") final MultipartFile file,
 		@Valid @RequestPart(value = "request", required = false) final ArchiveActualisationRequest request) {
 
-		service.archiveToActualisation(municipalityId, namespace, partyId, actualisationId, file, request);
+		actualisationService.archiveToActualisation(municipalityId, namespace, partyId, actualisationId, file, request);
 		return noContent().header(CONTENT_TYPE, ALL_VALUE).build();
 	}
 
