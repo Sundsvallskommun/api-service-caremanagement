@@ -61,7 +61,7 @@ public class FinancialAssistanceView {
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime lastDailyRunAt;
 
-	@Schema(description = "The typed financial assistance application payload")
+	@Schema(description = "The typed financial assistance application payload", implementation = FinancialAssistanceData.class)
 	private FinancialAssistanceData data;
 
 	@Schema(

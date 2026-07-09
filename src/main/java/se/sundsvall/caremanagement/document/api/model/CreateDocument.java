@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
- * Request to create a Dokument. Mirrors the Lifecare document form — Typ, Rubrik and Datum are required, Tid and the
+ * Request to create a document. Mirrors the Lifecare document form — Typ, Rubrik and Datum are required, Tid and the
  * body text are optional. The document is created in the editable WORKING state.
  */
 public record CreateDocument(

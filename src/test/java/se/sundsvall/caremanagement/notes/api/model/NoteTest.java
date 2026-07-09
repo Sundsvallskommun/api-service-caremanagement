@@ -76,4 +76,12 @@ class NoteTest {
 			.isNotEqualTo(null)
 			.isNotEqualTo("string");
 	}
+
+	@Test
+	void toStringContainsFields() {
+		final var note = Note.create().withId("n1").withErrandId("e1").withBody("body").withAuthor("author")
+			.withCreated(FIXED_TIMESTAMP).withModifiedBy("editor").withModified(FIXED_TIMESTAMP);
+
+		assertThat(note.toString()).contains("n1", "e1", "body", "author", "editor");
+	}
 }

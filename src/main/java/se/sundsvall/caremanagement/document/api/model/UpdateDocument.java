@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
- * Request to update a Dokument. Replaces the editable fields (Typ, Rubrik, text, Datum, Tid) and records the editor.
+ * Request to update a document. Replaces the editable fields (Typ, Rubrik, text, Datum, Tid) and records the editor.
  * Only allowed while the document is WORKING — a LOCKED document (upprättad handling) is immutable and rejects this
  * with
  * {@code 409 Conflict}.

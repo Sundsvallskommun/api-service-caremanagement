@@ -143,4 +143,10 @@ public class Note {
 	public int hashCode() {
 		return Objects.hash(id, errandId, body, author, created, modifiedBy, modified);
 	}
+
+	@Override
+	public String toString() {
+		return "Note{id='" + id + "', errandId='" + errandId + "', body='" + body + "', author='" + author
+			+ "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified=" + modified + "}";
+	}
 }

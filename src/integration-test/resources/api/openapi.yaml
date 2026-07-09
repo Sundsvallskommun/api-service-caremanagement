@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:64788
+- url: http://localhost:62272
   description: Generated server url
 tags:
 - name: Statistics
@@ -8917,7 +8917,7 @@ components:
           minLength: 0
     Document:
       type: object
-      description: A Dokument (formal case document) attached to an errand
+      description: A document (formal case document) attached to an errand
       properties:
         id:
           type: string

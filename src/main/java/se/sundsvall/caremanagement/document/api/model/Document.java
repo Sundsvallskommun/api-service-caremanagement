@@ -10,10 +10,10 @@ import org.springframework.format.annotation.DateTimeFormat;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
- * A Dokument (formal case document) attached to an errand — the Lifecare document shape, captured so it can later be
+ * A document (formal case document) attached to an errand — the Lifecare document shape, captured so it can later be
  * RPA:ed into Lifecare.
  */
-@Schema(description = "A Dokument (formal case document) attached to an errand")
+@Schema(description = "A document (formal case document) attached to an errand")
 public class Document {
 
 	@Schema(description = "Unique identifier")
