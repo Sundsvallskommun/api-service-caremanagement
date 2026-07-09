@@ -16,7 +16,7 @@ class FinancialAssistanceCalculationResourceFailureTest extends AbstractFinancia
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(calculationServiceMock);
 	}
 
 	@Test
@@ -27,7 +27,7 @@ class FinancialAssistanceCalculationResourceFailureTest extends AbstractFinancia
 			.exchange()
 			.expectStatus().isBadRequest();
 
-		verifyNoInteractions(serviceMock);
+		verifyNoInteractions(calculationServiceMock);
 	}
 
 }

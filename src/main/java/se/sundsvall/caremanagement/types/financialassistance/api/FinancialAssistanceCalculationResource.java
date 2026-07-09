@@ -22,6 +22,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceCalculationService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.problem.Problem;
@@ -46,9 +47,11 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 class FinancialAssistanceCalculationResource {
 
 	private final FinancialAssistanceService service;
+	private final FinancialAssistanceCalculationService calculationService;
 
-	FinancialAssistanceCalculationResource(final FinancialAssistanceService service) {
+	FinancialAssistanceCalculationResource(final FinancialAssistanceService service, final FinancialAssistanceCalculationService calculationService) {
 		this.service = service;
+		this.calculationService = calculationService;
 	}
 
 	@PostMapping(path = "/financial-assistance/calculation/prepare", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
@@ -63,7 +66,7 @@ class FinancialAssistanceCalculationResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Valid @NotNull @RequestBody final CalculationRequest request) {
 
-		return ok(service.prepareCalculation(municipalityId, namespace, request));
+		return ok(calculationService.prepareCalculation(municipalityId, namespace, request));
 	}
 
 	@PostMapping(path = "/financial-assistance/calculation/commit", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
@@ -78,7 +81,7 @@ class FinancialAssistanceCalculationResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Valid @NotNull @RequestBody final CalculationRequest request) {
 
-		return ok(service.commitCalculation(municipalityId, namespace, request));
+		return ok(calculationService.commitCalculation(municipalityId, namespace, request));
 	}
 
 	@PostMapping(path = "/financial-assistance/calculation/from-application", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)

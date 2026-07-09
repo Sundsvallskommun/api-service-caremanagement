@@ -10,6 +10,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceApprovalService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceCalculationService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceDraftRowService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceWarningService;
@@ -39,6 +40,9 @@ abstract class AbstractFinancialAssistanceResourceTest {
 
 	@MockitoBean
 	protected FinancialAssistanceService serviceMock;
+
+	@MockitoBean
+	protected FinancialAssistanceCalculationService calculationServiceMock;
 
 	@MockitoBean
 	protected EligibilityService eligibilityServiceMock;
