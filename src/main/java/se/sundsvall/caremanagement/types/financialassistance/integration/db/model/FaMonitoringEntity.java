@@ -32,7 +32,8 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  */
 @Entity
 @Table(name = "errand_financial_assistance_monitoring", indexes = {
-	@Index(name = "idx_fa_monitoring_lifecare", columnList = "errand_id, lifecare_id")
+	// Unique: lifecareId is the idempotency key RPA upserts on — a duplicate pair would break the upsert lookup.
+	@Index(name = "uq_fa_monitoring_errand_id_lifecare_id", columnList = "errand_id, lifecare_id", unique = true)
 })
 public class FaMonitoringEntity {
 

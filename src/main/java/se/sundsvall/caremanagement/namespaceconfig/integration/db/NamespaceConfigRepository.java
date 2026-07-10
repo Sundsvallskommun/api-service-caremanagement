@@ -12,6 +12,8 @@ public interface NamespaceConfigRepository extends JpaRepository<NamespaceConfig
 
 	Optional<NamespaceConfigEntity> findByNamespaceAndMunicipalityId(String namespace, String municipalityId);
 
+	Optional<NamespaceConfigEntity> findByMunicipalityIdAndShortCode(String municipalityId, String shortCode);
+
 	boolean existsByNamespaceAndMunicipalityId(String namespace, String municipalityId);
 
 	void deleteByNamespaceAndMunicipalityId(String namespace, String municipalityId);
