@@ -24,6 +24,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceCalculationService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
+import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
@@ -106,7 +107,7 @@ class FinancialAssistanceCalculationResource {
 	ResponseEntity<CalculationDraft> getDraft(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId) {
+		@ValidUuid @PathVariable final String errandId) {
 
 		return ok(calculationService.getDraft(municipalityId, namespace, errandId));
 	}
@@ -121,7 +122,7 @@ class FinancialAssistanceCalculationResource {
 	ResponseEntity<CalculationDraft> patchDraftHeader(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
+		@ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final NormHeaderInput input) {
 
 		return ok(calculationService.patchDraftHeader(municipalityId, namespace, errandId, input));

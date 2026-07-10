@@ -15,6 +15,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAs
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 import se.sundsvall.dept44.problem.violations.Violation;
 
+import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -29,6 +30,7 @@ class FinancialAssistanceApprovalResourceFailureTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
+	private static final String ERRAND_ID = randomUUID().toString();
 	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance";
 
 	@Autowired
@@ -53,7 +55,7 @@ class FinancialAssistanceApprovalResourceFailureTest {
 	@Test
 	void setSectionApprovalMissingApproved() {
 		webTestClient.patch()
-			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/" + ERRAND_ID + "/sections/CALCULATION/approval").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.contentType(APPLICATION_JSON)
 			.bodyValue(SectionApprovalRequest.create()) // approved is required
 			.exchange()
@@ -68,7 +70,7 @@ class FinancialAssistanceApprovalResourceFailureTest {
 	@Test
 	void setSectionApprovalInvalidMunicipalityId() {
 		webTestClient.patch()
-			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/" + ERRAND_ID + "/sections/CALCULATION/approval").build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
 			.contentType(APPLICATION_JSON)
 			.bodyValue(SectionApprovalRequest.create().withApproved(true))
 			.exchange()
@@ -76,6 +78,21 @@ class FinancialAssistanceApprovalResourceFailureTest {
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
 				tuple("setSectionApproval.municipalityId", "not a valid municipality ID")));
+
+		verifyNoInteractions(approvalServiceMock);
+	}
+
+	@Test
+	void setSectionApprovalInvalidErrandId() {
+		webTestClient.patch()
+			.uri(uri -> uri.path(PATH + "/not-a-uuid/sections/CALCULATION/approval").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.contentType(APPLICATION_JSON)
+			.bodyValue(SectionApprovalRequest.create().withApproved(true))
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("setSectionApproval.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(approvalServiceMock);
 	}

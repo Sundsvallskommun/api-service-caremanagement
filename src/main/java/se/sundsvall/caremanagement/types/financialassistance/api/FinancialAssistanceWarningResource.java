@@ -27,6 +27,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.WarningCount;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceWarningService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
+import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
@@ -67,7 +68,7 @@ class FinancialAssistanceWarningResource {
 	ResponseEntity<Warning> createWarning(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
+		@ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final CreateWarningRequest request) {
 
 		final var warning = service.createWarning(municipalityId, namespace, errandId, request);
@@ -86,7 +87,7 @@ class FinancialAssistanceWarningResource {
 	ResponseEntity<List<Warning>> listWarnings(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId) {
+		@ValidUuid @PathVariable final String errandId) {
 
 		return ok(service.listWarnings(municipalityId, namespace, errandId));
 	}
@@ -101,7 +102,7 @@ class FinancialAssistanceWarningResource {
 	ResponseEntity<WarningCount> countWarnings(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId) {
+		@ValidUuid @PathVariable final String errandId) {
 
 		return ok(new WarningCount(service.countActiveWarnings(municipalityId, namespace, errandId)));
 	}
@@ -116,8 +117,8 @@ class FinancialAssistanceWarningResource {
 	ResponseEntity<Warning> updateWarning(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
-		@PathVariable final String warningId,
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String warningId,
 		@Parameter(description = "The target status", schema = @Schema(allowableValues = {
 			"OPEN", "ACKNOWLEDGED", "CLOSED"
 		})) @RequestParam final String status) {

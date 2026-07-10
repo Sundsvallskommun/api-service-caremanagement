@@ -213,9 +213,9 @@ class FinancialAssistanceErrandResourceTest {
 
 	@Test
 	void updateData() {
-		webTestClient.put()
+		webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/{errandId}/data").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
-			.bodyValue(FinancialAssistanceData.create().withApplicationType("NEW"))
+			.bodyValue(FinancialAssistanceData.create().withMaritalStatus("SINGLE"))
 			.exchange()
 			.expectStatus().isNoContent();
 

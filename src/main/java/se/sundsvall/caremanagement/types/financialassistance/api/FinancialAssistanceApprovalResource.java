@@ -24,6 +24,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionAp
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceApprovalService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
+import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 import se.sundsvall.dept44.support.Identifier;
@@ -60,7 +61,7 @@ class FinancialAssistanceApprovalResource {
 	ResponseEntity<SectionApprovals> getSectionApprovals(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId) {
+		@ValidUuid @PathVariable final String errandId) {
 
 		return ok(service.getSectionApprovals(municipalityId, namespace, errandId));
 	}
@@ -72,7 +73,7 @@ class FinancialAssistanceApprovalResource {
 	ResponseEntity<SectionApproval> setSectionApproval(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
+		@ValidUuid @PathVariable final String errandId,
 		@Parameter(description = "The section to approve", schema = @Schema(allowableValues = {
 			"CALCULATION", "PAYMENT", "DECISION"
 		})) @PathVariable final String section,

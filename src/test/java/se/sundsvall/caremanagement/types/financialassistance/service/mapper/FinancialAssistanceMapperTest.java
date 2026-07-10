@@ -171,6 +171,85 @@ class FinancialAssistanceMapperTest {
 	}
 
 	@Test
+	void updateEntityAppliesClientFieldsAndKeepsServerOwned() {
+		final var entity = FinancialAssistanceEntity.create()
+			.withErrandId("errand-1")
+			.withApplicationType("RENEWAL")
+			.withMaritalStatus("MARRIED")
+			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withCreated(CREATED)
+			.withModified(MODIFIED);
+
+		final var result = FinancialAssistanceMapper.updateEntity(entity, fullData());
+
+		assertThat(result).isSameAs(entity);
+		// server-owned fields untouched (fullData carries applicationType NEW — must be ignored)
+		assertThat(result.getErrandId()).isEqualTo("errand-1");
+		assertThat(result.getApplicationType()).isEqualTo("RENEWAL");
+		assertThat(result.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
+		assertThat(result.getCreated()).isEqualTo(CREATED);
+		assertThat(result.getModified()).isEqualTo(MODIFIED);
+		// client fields replaced
+		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getMaritalStatus()).isEqualTo("SINGLE");
+		assertThat(result.getPeriodMonth()).isEqualTo(6);
+		assertThat(result.getPeriodYear()).isEqualTo(2026);
+		assertThat(result.getPeriodChoice()).isEqualTo("CURRENT_MONTH");
+		assertThat(result.getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
+		assertThat(result.getOtherBenefitDescription()).isEqualTo("Establishment benefit");
+		assertThat(result.getLivelihoodDescription()).isEqualTo("Söker arbete");
+		assertThat(result.getHasChildrenUnder21()).isTrue();
+		assertThat(result.getChildrenResidenceChanged()).isFalse();
+		assertThat(result.getChildrenResidenceChangeDescription()).isEqualTo("Bor växelvis");
+		assertThat(result.getHousingForm()).isEqualTo("RENTAL");
+		assertThat(result.getHousingPersonCount()).isEqualTo(3);
+		assertThat(result.getHousingRoomsPlusKitchen()).isEqualTo(3);
+		assertThat(result.getHousingDescription()).isEqualTo("Trerumslägenhet");
+		assertThat(result.getHousingChanged()).isFalse();
+		assertThat(result.getHousingChangeDescription()).isEqualTo("Flyttade i maj");
+		assertThat(result.getHasIncomes()).isTrue();
+		assertThat(result.getHasPendingBenefits()).isTrue();
+		assertThat(result.getHasAssets()).isTrue();
+		assertThat(result.getStaysInMunicipality()).isTrue();
+		assertThat(result.getStayDescription()).isEqualTo("Lives at the registered address");
+		assertThat(result.getAttestation()).isTrue();
+		assertThat(result.getAttestedAt()).isEqualTo(ATTESTED_AT);
+		assertThat(result.getChildren()).hasSize(1);
+		assertThat(result.getCosts()).hasSize(1);
+		assertThat(result.getIncomes()).hasSize(1);
+		assertThat(result.getPendingBenefits()).hasSize(1);
+		assertThat(result.getAssets()).hasSize(1);
+		assertThat(result.getPersons()).hasSize(1);
+		assertThat(result.getPlannings()).hasSize(1);
+		assertThat(result.getPlannedActivities()).hasSize(1);
+		assertThat(result.getJobApplications()).hasSize(1);
+	}
+
+	@Test
+	void updateEntityLeavesEverythingUntouchedWhenSourceIsEmpty() {
+		final var entity = FinancialAssistanceMapper.toEntity(fullData(), "errand-1")
+			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withCreated(CREATED)
+			.withModified(MODIFIED);
+		final var expected = FinancialAssistanceMapper.toEntity(fullData(), "errand-1")
+			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withCreated(CREATED)
+			.withModified(MODIFIED);
+
+		final var result = FinancialAssistanceMapper.updateEntity(entity, FinancialAssistanceData.create());
+
+		assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+	}
+
+	@Test
+	void updateEntityNullSafe() {
+		final var entity = FinancialAssistanceEntity.create().withErrandId("errand-1");
+
+		assertThat(FinancialAssistanceMapper.updateEntity(null, fullData())).isNull();
+		assertThat(FinancialAssistanceMapper.updateEntity(entity, null)).isSameAs(entity);
+	}
+
+	@Test
 	void toDataMapsEverything() {
 		final var entity = fullEntity();
 		final var data = FinancialAssistanceMapper.toData(entity);

@@ -26,6 +26,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPerso
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceDraftRowService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
+import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
@@ -65,7 +66,7 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormIncomeRow> addDraftIncome(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
+		@ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final NormIncomeInput input) {
 
 		return ok(service.addDraftIncome(municipalityId, namespace, errandId, input));
@@ -79,8 +80,8 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormIncomeRow> patchDraftIncome(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
-		@PathVariable final String rowId,
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String rowId,
 		@Valid @NotNull @RequestBody final NormIncomeInput input) {
 
 		return ok(service.patchDraftIncome(municipalityId, namespace, errandId, rowId, input));
@@ -94,8 +95,8 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormIncomeRow> deleteDraftIncome(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
-		@PathVariable final String rowId) {
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String rowId) {
 
 		return ok(service.setDraftIncomeDeleted(municipalityId, namespace, errandId, rowId, true));
 	}
@@ -108,8 +109,8 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormIncomeRow> restoreDraftIncome(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
-		@PathVariable final String rowId) {
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String rowId) {
 
 		return ok(service.setDraftIncomeDeleted(municipalityId, namespace, errandId, rowId, false));
 	}
@@ -122,7 +123,7 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormExpenseRow> addDraftExpense(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
+		@ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final NormExpenseInput input) {
 
 		return ok(service.addDraftExpense(municipalityId, namespace, errandId, input));
@@ -136,8 +137,8 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormExpenseRow> patchDraftExpense(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
-		@PathVariable final String rowId,
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String rowId,
 		@Valid @NotNull @RequestBody final NormExpenseInput input) {
 
 		return ok(service.patchDraftExpense(municipalityId, namespace, errandId, rowId, input));
@@ -151,8 +152,8 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormExpenseRow> deleteDraftExpense(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
-		@PathVariable final String rowId) {
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String rowId) {
 
 		return ok(service.setDraftExpenseDeleted(municipalityId, namespace, errandId, rowId, true));
 	}
@@ -165,8 +166,8 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormExpenseRow> restoreDraftExpense(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
-		@PathVariable final String rowId) {
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String rowId) {
 
 		return ok(service.setDraftExpenseDeleted(municipalityId, namespace, errandId, rowId, false));
 	}
@@ -179,7 +180,7 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormPersonRow> addDraftPerson(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
+		@ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final NormPersonInput input) {
 
 		return ok(service.addDraftPerson(municipalityId, namespace, errandId, input));
@@ -193,8 +194,8 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormPersonRow> patchDraftPerson(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
-		@PathVariable final String rowId,
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String rowId,
 		@Valid @NotNull @RequestBody final NormPersonInput input) {
 
 		return ok(service.patchDraftPerson(municipalityId, namespace, errandId, rowId, input));
@@ -208,8 +209,8 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormPersonRow> deleteDraftPerson(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
-		@PathVariable final String rowId) {
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String rowId) {
 
 		return ok(service.setDraftPersonDeleted(municipalityId, namespace, errandId, rowId, true));
 	}
@@ -222,8 +223,8 @@ class FinancialAssistanceDraftRowResource {
 	ResponseEntity<NormPersonRow> restoreDraftPerson(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@PathVariable final String errandId,
-		@PathVariable final String rowId) {
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String rowId) {
 
 		return ok(service.setDraftPersonDeleted(municipalityId, namespace, errandId, rowId, false));
 	}

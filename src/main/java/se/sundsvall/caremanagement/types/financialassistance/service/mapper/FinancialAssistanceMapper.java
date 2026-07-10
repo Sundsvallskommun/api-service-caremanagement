@@ -97,6 +97,50 @@ public final class FinancialAssistanceMapper {
 			.orElse(null);
 	}
 
+	/**
+	 * Applies non-null fields from {@code source} onto {@code entity} (PATCH semantics — null fields on the source leave
+	 * the existing value untouched). The server-owned fields are never written from client data: {@code errandId},
+	 * {@code applicationType} (derived from the type slug), {@code lastDailyRunAt}, {@code created} and {@code modified}.
+	 */
+	public static FinancialAssistanceEntity updateEntity(final FinancialAssistanceEntity entity, final FinancialAssistanceData source) {
+		if (entity == null || source == null) {
+			return entity;
+		}
+		ofNullable(source.getMaritalStatus()).ifPresent(entity::setMaritalStatus);
+		ofNullable(source.getPeriodMonth()).ifPresent(entity::setPeriodMonth);
+		ofNullable(source.getPeriodYear()).ifPresent(entity::setPeriodYear);
+		ofNullable(source.getPeriodChoice()).ifPresent(entity::setPeriodChoice);
+		ofNullable(source.getNormType()).ifPresent(value -> entity.setNormType(new ArrayList<>(value)));
+		ofNullable(source.getOtherBenefitDescription()).ifPresent(entity::setOtherBenefitDescription);
+		ofNullable(source.getLivelihoodDescription()).ifPresent(entity::setLivelihoodDescription);
+		ofNullable(source.getHasChildrenUnder21()).ifPresent(entity::setHasChildrenUnder21);
+		ofNullable(source.getChildrenResidenceChanged()).ifPresent(entity::setChildrenResidenceChanged);
+		ofNullable(source.getChildrenResidenceChangeDescription()).ifPresent(entity::setChildrenResidenceChangeDescription);
+		ofNullable(source.getHousingForm()).ifPresent(entity::setHousingForm);
+		ofNullable(source.getHousingPersonCount()).ifPresent(entity::setHousingPersonCount);
+		ofNullable(source.getHousingRoomsPlusKitchen()).ifPresent(entity::setHousingRoomsPlusKitchen);
+		ofNullable(source.getHousingDescription()).ifPresent(entity::setHousingDescription);
+		ofNullable(source.getHousingChanged()).ifPresent(entity::setHousingChanged);
+		ofNullable(source.getHousingChangeDescription()).ifPresent(entity::setHousingChangeDescription);
+		ofNullable(source.getHasIncomes()).ifPresent(entity::setHasIncomes);
+		ofNullable(source.getHasPendingBenefits()).ifPresent(entity::setHasPendingBenefits);
+		ofNullable(source.getHasAssets()).ifPresent(entity::setHasAssets);
+		ofNullable(source.getStaysInMunicipality()).ifPresent(entity::setStaysInMunicipality);
+		ofNullable(source.getStayDescription()).ifPresent(entity::setStayDescription);
+		ofNullable(source.getAttestation()).ifPresent(entity::setAttestation);
+		ofNullable(source.getAttestedAt()).ifPresent(entity::setAttestedAt);
+		ofNullable(mapList(source.getChildren(), FinancialAssistanceMapper::toFaChild)).ifPresent(value -> entity.setChildren(new ArrayList<>(value)));
+		ofNullable(mapList(source.getCosts(), FinancialAssistanceMapper::toFaCost)).ifPresent(value -> entity.setCosts(new ArrayList<>(value)));
+		ofNullable(mapList(source.getIncomes(), FinancialAssistanceMapper::toFaIncome)).ifPresent(value -> entity.setIncomes(new ArrayList<>(value)));
+		ofNullable(mapList(source.getPendingBenefits(), FinancialAssistanceMapper::toFaPendingBenefit)).ifPresent(value -> entity.setPendingBenefits(new ArrayList<>(value)));
+		ofNullable(mapList(source.getAssets(), FinancialAssistanceMapper::toFaAsset)).ifPresent(value -> entity.setAssets(new ArrayList<>(value)));
+		ofNullable(mapList(source.getPersons(), FinancialAssistanceMapper::toFaPerson)).ifPresent(value -> entity.setPersons(new ArrayList<>(value)));
+		ofNullable(mapList(source.getPlannings(), FinancialAssistanceMapper::toFaPlanning)).ifPresent(value -> entity.setPlannings(new ArrayList<>(value)));
+		ofNullable(mapList(source.getPlannedActivities(), FinancialAssistanceMapper::toFaPlannedActivity)).ifPresent(value -> entity.setPlannedActivities(new ArrayList<>(value)));
+		ofNullable(mapList(source.getJobApplications(), FinancialAssistanceMapper::toFaJobApplication)).ifPresent(value -> entity.setJobApplications(new ArrayList<>(value)));
+		return entity;
+	}
+
 	public static FinancialAssistanceData toData(final FinancialAssistanceEntity entity) {
 		return ofNullable(entity)
 			.map(e -> FinancialAssistanceData.create()

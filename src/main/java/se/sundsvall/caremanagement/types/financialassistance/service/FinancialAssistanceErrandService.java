@@ -25,6 +25,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toEntity;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toStakeholders;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toView;
+import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.updateEntity;
 
 /**
  * Creates and reads financial-assistance errands. The envelope is owned by the exposed core {@link ErrandService};
@@ -141,9 +142,16 @@ public class FinancialAssistanceErrandService {
 			.orElse(null);
 	}
 
+	/**
+	 * Applies the non-null fields of {@code data} onto the errand's stored application data (PATCH semantics — null
+	 * fields leave the existing values untouched). The server-owned fields ({@code applicationType},
+	 * {@code lastDailyRunAt}, timestamps) are never written from client data.
+	 */
 	public void updateData(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceData data) {
 		// Scope check — throws 404 when the errand is missing in this namespace/municipality.
 		errandService.readErrand(municipalityId, namespace, errandId);
-		financialAssistanceRepository.save(toEntity(data, errandId));
+		final var entity = financialAssistanceRepository.findByErrandId(errandId)
+			.orElseGet(() -> FinancialAssistanceEntity.create().withErrandId(errandId));
+		financialAssistanceRepository.save(updateEntity(entity, data));
 	}
 }

@@ -15,6 +15,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAs
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 import se.sundsvall.dept44.problem.violations.Violation;
 
+import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -27,7 +28,10 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 @ActiveProfiles("junit")
 class FinancialAssistanceDraftRowResourceFailureTest {
 
+	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
+	private static final String ERRAND_ID = randomUUID().toString();
+	private static final String ROW_ID = randomUUID().toString();
 	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance";
 
 	@MockitoBean
@@ -52,7 +56,7 @@ class FinancialAssistanceDraftRowResourceFailureTest {
 	@Test
 	void addDraftIncomeInvalidMunicipalityId() {
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/incomes").build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/" + ERRAND_ID + "/calculation/draft/incomes").build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
 			.contentType(APPLICATION_JSON)
 			.bodyValue(new NormIncomeInput().withTypeId(20))
 			.exchange()
@@ -67,12 +71,26 @@ class FinancialAssistanceDraftRowResourceFailureTest {
 	@Test
 	void deleteDraftIncomeInvalidMunicipalityId() {
 		webTestClient.delete()
-			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/incomes/r1").build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/" + ERRAND_ID + "/calculation/draft/incomes/" + ROW_ID).build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
 				tuple("deleteDraftIncome.municipalityId", "not a valid municipality ID")));
+
+		verifyNoInteractions(draftRowServiceMock);
+	}
+
+	@Test
+	void deleteDraftIncomeInvalidErrandIdAndRowId() {
+		webTestClient.delete()
+			.uri(uri -> uri.path(PATH + "/not-a-uuid/calculation/draft/incomes/also-not-a-uuid").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("deleteDraftIncome.errandId", "not a valid UUID"),
+				tuple("deleteDraftIncome.rowId", "not a valid UUID")));
 
 		verifyNoInteractions(draftRowServiceMock);
 	}

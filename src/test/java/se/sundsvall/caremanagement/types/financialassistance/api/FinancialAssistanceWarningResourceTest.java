@@ -15,6 +15,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.WarningCount;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceWarningService;
 
+import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -29,6 +30,8 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 class FinancialAssistanceWarningResourceTest {
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
+	private static final String ERRAND_ID = randomUUID().toString();
+	private static final String WARNING_ID = randomUUID().toString();
 	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance";
 
 	@MockitoBean
@@ -38,33 +41,33 @@ class FinancialAssistanceWarningResourceTest {
 
 	@Test
 	void createWarning() {
-		when(warningServiceMock.createWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(CreateWarningRequest.class)))
+		when(warningServiceMock.createWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(CreateWarningRequest.class)))
 			.thenReturn(Warning.create().withId("w1").withType("MISSING_SSBTEK").withStatus("OPEN"));
 
 		final var response = webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/errand-1/warnings").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/" + ERRAND_ID + "/warnings").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.contentType(APPLICATION_JSON)
 			.bodyValue(CreateWarningRequest.create().withType("MISSING_SSBTEK").withMessage("Inkomst saknas"))
 			.exchange()
 			.expectStatus().isCreated()
 			.expectHeader().contentType(APPLICATION_JSON)
-			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/errand-1/warnings/w1")
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/" + ERRAND_ID + "/warnings/w1")
 			.expectBody(Warning.class)
 			.returnResult()
 			.getResponseBody();
 
 		assertThat(response).isNotNull();
 		assertThat(response.getId()).isEqualTo("w1");
-		verify(warningServiceMock).createWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("errand-1"), any(CreateWarningRequest.class));
+		verify(warningServiceMock).createWarning(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(CreateWarningRequest.class));
 	}
 
 	@Test
 	void listWarnings() {
-		when(warningServiceMock.listWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1"))
+		when(warningServiceMock.listWarnings(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(List.of(Warning.create().withId("w1").withType("MISSING_SSBTEK").withStatus("OPEN")));
 
 		final var response = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/errand-1/warnings").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/" + ERRAND_ID + "/warnings").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBodyList(Warning.class)
@@ -73,15 +76,15 @@ class FinancialAssistanceWarningResourceTest {
 
 		assertThat(response).hasSize(1);
 		assertThat(response.getFirst().getType()).isEqualTo("MISSING_SSBTEK");
-		verify(warningServiceMock).listWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1");
+		verify(warningServiceMock).listWarnings(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
 	void countWarnings() {
-		when(warningServiceMock.countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1")).thenReturn(3L);
+		when(warningServiceMock.countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(3L);
 
 		final var body = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/errand-1/warnings/count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/" + ERRAND_ID + "/warnings/count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(WarningCount.class)
@@ -90,16 +93,16 @@ class FinancialAssistanceWarningResourceTest {
 
 		assertThat(body).isNotNull();
 		assertThat(body.count()).isEqualTo(3L);
-		verify(warningServiceMock).countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, "errand-1");
+		verify(warningServiceMock).countActiveWarnings(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
 	void updateWarning() {
-		when(warningServiceMock.updateWarning(MUNICIPALITY_ID, NAMESPACE, "errand-1", "w1", "CLOSED"))
-			.thenReturn(Warning.create().withId("w1").withStatus("CLOSED"));
+		when(warningServiceMock.updateWarning(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, WARNING_ID, "CLOSED"))
+			.thenReturn(Warning.create().withId(WARNING_ID).withStatus("CLOSED"));
 
 		final var response = webTestClient.patch()
-			.uri(uri -> uri.path(PATH + "/errand-1/warnings/w1").queryParam("status", "CLOSED").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/" + ERRAND_ID + "/warnings/" + WARNING_ID).queryParam("status", "CLOSED").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(Warning.class)
@@ -108,7 +111,7 @@ class FinancialAssistanceWarningResourceTest {
 
 		assertThat(response).isNotNull();
 		assertThat(response.getStatus()).isEqualTo("CLOSED");
-		verify(warningServiceMock).updateWarning(MUNICIPALITY_ID, NAMESPACE, "errand-1", "w1", "CLOSED");
+		verify(warningServiceMock).updateWarning(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, WARNING_ID, "CLOSED");
 	}
 
 }

@@ -1,5 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -299,15 +301,46 @@ class FinancialAssistanceErrandServiceTest {
 	}
 
 	@Test
-	void updateDataSavesWhenErrandExists() {
+	void updateDataPatchesExistingEntityAndKeepsServerOwnedFields() {
+		final var lastDailyRunAt = OffsetDateTime.now(ZoneId.systemDefault()).minusDays(1);
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Errand.create().withId(ERRAND_ID));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()
+			.withErrandId(ERRAND_ID)
+			.withApplicationType("NEW")
+			.withMaritalStatus("MARRIED")
+			.withLivelihoodDescription("keep me")
+			.withLastDailyRunAt(lastDailyRunAt)));
 
 		service.updateData(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			FinancialAssistanceData.create().withApplicationType("RENEWAL"));
+			FinancialAssistanceData.create()
+				.withApplicationType("RENEWAL") // server-owned — must be ignored
+				.withMaritalStatus("SINGLE"));
 
 		final ArgumentCaptor<FinancialAssistanceEntity> entityCaptor = ArgumentCaptor.forClass(FinancialAssistanceEntity.class);
 		verify(repositoryMock).save(entityCaptor.capture());
-		assertThat(entityCaptor.getValue().getApplicationType()).isEqualTo("RENEWAL");
+		final var saved = entityCaptor.getValue();
+		assertThat(saved.getErrandId()).isEqualTo(ERRAND_ID);
+		assertThat(saved.getApplicationType()).isEqualTo("NEW");
+		assertThat(saved.getMaritalStatus()).isEqualTo("SINGLE");
+		assertThat(saved.getLivelihoodDescription()).isEqualTo("keep me");
+		assertThat(saved.getLastDailyRunAt()).isEqualTo(lastDailyRunAt);
+	}
+
+	@Test
+	void updateDataCreatesEntityWhenMissing() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Errand.create().withId(ERRAND_ID));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
+
+		service.updateData(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			FinancialAssistanceData.create().withMaritalStatus("SINGLE"));
+
+		final ArgumentCaptor<FinancialAssistanceEntity> entityCaptor = ArgumentCaptor.forClass(FinancialAssistanceEntity.class);
+		verify(repositoryMock).save(entityCaptor.capture());
+		final var saved = entityCaptor.getValue();
+		assertThat(saved.getErrandId()).isEqualTo(ERRAND_ID);
+		assertThat(saved.getApplicationType()).isNull();
+		assertThat(saved.getMaritalStatus()).isEqualTo("SINGLE");
 	}
 }
