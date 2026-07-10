@@ -103,6 +103,7 @@ public class FinancialAssistanceCalculationService {
 	 */
 	public CalculationResponse prepareCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
 		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 		final var classifiedIncomes = requireClassifiedIncomes(request);
@@ -177,16 +178,10 @@ public class FinancialAssistanceCalculationService {
 	/**
 	 * Create the calculation in Lifecare FC from the classified incomes — called once a decision is taken, never during
 	 * the daily SSBTEK loop. Returns the created calculation id (plus the completeness verdict for reference).
-	 *
-	 * <p>
-	 * {@code namespace} is currently unused by the commit itself (the errand is resolved by id and the Lifecare write is
-	 * keyed on personnummer), but is kept to match the uniform {@code (municipalityId, namespace, request)} signature the
-	 * {@link se.sundsvall.caremanagement.types.financialassistance.api.FinancialAssistanceCalculationResource} passes for
-	 * every scoped endpoint — and so a later scope check can be added without changing the controller contract.
 	 */
-	@SuppressWarnings("java:S1172") // namespace retained for controller-facing signature symmetry; see Javadoc
 	public CalculationResponse commitCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
 		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 
@@ -219,14 +214,10 @@ public class FinancialAssistanceCalculationService {
 	 * own declared incomes (resolved to FC types by name), expenses and persons from the same feeder the renewal path uses
 	 * (both already application-sourced), and the norm from the proposal for the application month. Posts in one shot and
 	 * returns the created calculation id.
-	 *
-	 * <p>
-	 * {@code namespace} is currently unused by the commit itself (see {@link #commitCalculation}); it is kept for the same
-	 * controller-facing signature symmetry.
 	 */
-	@SuppressWarnings("java:S1172") // namespace retained for controller-facing signature symmetry; see Javadoc
 	public CalculationResponse commitFromApplication(final String municipalityId, final String namespace, final CalculationRequest request) {
 		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 		final var errand = financialAssistanceRepository.findByErrandId(errandId)
