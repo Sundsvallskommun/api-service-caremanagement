@@ -12,6 +12,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEqualsExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCodeExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
 
@@ -43,7 +44,7 @@ class FaAssetTest {
 		final var companyAssetSum = BigDecimal.valueOf(50000);
 		final var vehicleType = "CAR";
 		final var registrationNumber = "ABC123";
-		final var purchaseDate = LocalDate.of(2026, 5, 25);
+		final var purchaseDate = LocalDate.of(2026, MAY, 25);
 
 		final var result = FaAsset.create()
 			.withAssetCategory(assetCategory)

@@ -10,7 +10,6 @@ import org.hibernate.Hibernate;
 import org.hibernate.LobHelper;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentDataEntity;
@@ -23,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -134,10 +135,10 @@ class AttachmentMapperTest {
 	@Test
 	void toAttachmentEntityFromMultipartFileBuildsEntity() {
 		final var file = new MockMultipartFile("file", "hello.txt", "text/plain", new ByteArrayInputStream("hello".getBytes()).readAllBytes());
-		final var blob = Mockito.mock(Blob.class);
-		final var lobHelper = Mockito.mock(LobHelper.class);
+		final var blob = mock(Blob.class);
+		final var lobHelper = mock(LobHelper.class);
 
-		try (MockedStatic<Hibernate> hibernateMock = Mockito.mockStatic(Hibernate.class)) {
+		try (MockedStatic<Hibernate> hibernateMock = mockStatic(Hibernate.class)) {
 			hibernateMock.when(Hibernate::getLobHelper).thenReturn(lobHelper);
 			when(lobHelper.createBlob(any(InputStream.class), eq(5L))).thenReturn(blob);
 

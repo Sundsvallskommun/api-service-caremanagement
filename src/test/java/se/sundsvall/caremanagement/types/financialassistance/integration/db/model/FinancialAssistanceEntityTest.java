@@ -98,43 +98,83 @@ class FinancialAssistanceEntityTest {
 			.withModified(MODIFIED);
 
 		assertThat(entity).hasNoNullFieldsOrProperties();
-		assertThat(entity.getErrandId()).isEqualTo("errand-1");
-		assertThat(entity.getApplicationType()).isEqualTo("NEW");
-		assertThat(entity.getMaritalStatus()).isEqualTo("SINGLE");
-		assertThat(entity.getPeriodMonth()).isEqualTo(6);
-		assertThat(entity.getPeriodYear()).isEqualTo(2026);
-		assertThat(entity.getPeriodChoice()).isEqualTo("CURRENT_MONTH");
-		assertThat(entity.getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
-		assertThat(entity.getOtherBenefitDescription()).isEqualTo("Establishment benefit");
-		assertThat(entity.getLivelihoodDescription()).isEqualTo("Soker arbete");
-		assertThat(entity.getHasChildrenUnder21()).isTrue();
-		assertThat(entity.getChildrenResidenceChanged()).isFalse();
-		assertThat(entity.getChildrenResidenceChangeDescription()).isEqualTo("Bor vaxelvis");
-		assertThat(entity.getHousingForm()).isEqualTo("RENTAL");
-		assertThat(entity.getHousingPersonCount()).isEqualTo(3);
-		assertThat(entity.getHousingRoomsPlusKitchen()).isEqualTo(3);
-		assertThat(entity.getHousingDescription()).isEqualTo("Trerumslagenhet");
-		assertThat(entity.getHousingChanged()).isFalse();
-		assertThat(entity.getHousingChangeDescription()).isEqualTo("Flyttade i maj");
-		assertThat(entity.getHasIncomes()).isTrue();
-		assertThat(entity.getHasPendingBenefits()).isFalse();
-		assertThat(entity.getHasAssets()).isTrue();
-		assertThat(entity.getStaysInMunicipality()).isTrue();
-		assertThat(entity.getStayDescription()).isEqualTo("Lives at the registered address");
-		assertThat(entity.getAttestation()).isTrue();
-		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);
-		assertThat(entity.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
-		assertThat(entity.getChildren()).isSameAs(children);
-		assertThat(entity.getCosts()).isSameAs(costs);
-		assertThat(entity.getIncomes()).isSameAs(incomes);
-		assertThat(entity.getPendingBenefits()).isSameAs(pendingBenefits);
-		assertThat(entity.getAssets()).isSameAs(assets);
-		assertThat(entity.getPersons()).isSameAs(persons);
-		assertThat(entity.getPlannings()).isSameAs(plannings);
-		assertThat(entity.getPlannedActivities()).isSameAs(plannedActivities);
-		assertThat(entity.getJobApplications()).isSameAs(jobApplications);
-		assertThat(entity.getCreated()).isEqualTo(CREATED);
-		assertThat(entity.getModified()).isEqualTo(MODIFIED);
+		assertThat(entity)
+			.extracting(
+				FinancialAssistanceEntity::getErrandId,
+				FinancialAssistanceEntity::getApplicationType,
+				FinancialAssistanceEntity::getMaritalStatus,
+				FinancialAssistanceEntity::getPeriodMonth,
+				FinancialAssistanceEntity::getPeriodYear,
+				FinancialAssistanceEntity::getPeriodChoice,
+				FinancialAssistanceEntity::getNormType,
+				FinancialAssistanceEntity::getOtherBenefitDescription,
+				FinancialAssistanceEntity::getLivelihoodDescription,
+				FinancialAssistanceEntity::getHasChildrenUnder21,
+				FinancialAssistanceEntity::getChildrenResidenceChanged,
+				FinancialAssistanceEntity::getChildrenResidenceChangeDescription,
+				FinancialAssistanceEntity::getHousingForm,
+				FinancialAssistanceEntity::getHousingPersonCount,
+				FinancialAssistanceEntity::getHousingRoomsPlusKitchen,
+				FinancialAssistanceEntity::getHousingDescription,
+				FinancialAssistanceEntity::getHousingChanged,
+				FinancialAssistanceEntity::getHousingChangeDescription,
+				FinancialAssistanceEntity::getHasIncomes,
+				FinancialAssistanceEntity::getHasPendingBenefits,
+				FinancialAssistanceEntity::getHasAssets,
+				FinancialAssistanceEntity::getStaysInMunicipality,
+				FinancialAssistanceEntity::getStayDescription,
+				FinancialAssistanceEntity::getAttestation,
+				FinancialAssistanceEntity::getAttestedAt,
+				FinancialAssistanceEntity::getLastDailyRunAt,
+				FinancialAssistanceEntity::getChildren,
+				FinancialAssistanceEntity::getCosts,
+				FinancialAssistanceEntity::getIncomes,
+				FinancialAssistanceEntity::getPendingBenefits,
+				FinancialAssistanceEntity::getAssets,
+				FinancialAssistanceEntity::getPersons,
+				FinancialAssistanceEntity::getPlannings,
+				FinancialAssistanceEntity::getPlannedActivities,
+				FinancialAssistanceEntity::getJobApplications,
+				FinancialAssistanceEntity::getCreated,
+				FinancialAssistanceEntity::getModified)
+			.containsExactly(
+				"errand-1",
+				"NEW",
+				"SINGLE",
+				6,
+				2026,
+				"CURRENT_MONTH",
+				List.of("NATIONAL_NORM"),
+				"Establishment benefit",
+				"Soker arbete",
+				true,
+				false,
+				"Bor vaxelvis",
+				"RENTAL",
+				3,
+				3,
+				"Trerumslagenhet",
+				false,
+				"Flyttade i maj",
+				true,
+				false,
+				true,
+				true,
+				"Lives at the registered address",
+				true,
+				ATTESTED_AT,
+				LAST_DAILY_RUN_AT,
+				children,
+				costs,
+				incomes,
+				pendingBenefits,
+				assets,
+				persons,
+				plannings,
+				plannedActivities,
+				jobApplications,
+				CREATED,
+				MODIFIED);
 	}
 
 	@Test

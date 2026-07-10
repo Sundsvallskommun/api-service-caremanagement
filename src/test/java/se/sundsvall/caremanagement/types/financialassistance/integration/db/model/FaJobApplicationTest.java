@@ -12,6 +12,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
 
@@ -35,7 +36,7 @@ class FaJobApplicationTest {
 	@Test
 	void testBuilderMethods() {
 		final var person = "APPLICANT";
-		final var applicationDate = LocalDate.of(2026, 5, 25);
+		final var applicationDate = LocalDate.of(2026, MAY, 25);
 		final var jobTitle = "Care assistant";
 		final var employerAndPlace = "Sundsvall kommun";
 

@@ -13,6 +13,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
 
@@ -37,7 +38,7 @@ class IncomeTest {
 	void testBuilderMethods() {
 		final var incomeType = "SALARY";
 		final var amount = BigDecimal.valueOf(18500);
-		final var incomeDate = LocalDate.of(2026, 5, 25);
+		final var incomeDate = LocalDate.of(2026, MAY, 25);
 		final var recipient = "APPLICANT";
 
 		final var result = Income.create()
