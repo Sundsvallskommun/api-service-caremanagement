@@ -29,7 +29,6 @@ class MonitoringResourceFailureTest {
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = randomUUID().toString();
-	private static final String MONITORING_ID = randomUUID().toString();
 	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/monitorings";
 
 	@MockitoBean
@@ -43,7 +42,7 @@ class MonitoringResourceFailureTest {
 	}
 
 	@Test
-	void createMonitoring_blankTitle() {
+	void createMonitoringBlankTitle() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(base()))
 			.bodyValue(MonitoringRequest.create().withTitle(" ").withStartDate(LocalDate.of(2026, JULY, 1)))
@@ -57,7 +56,7 @@ class MonitoringResourceFailureTest {
 	}
 
 	@Test
-	void createMonitoring_missingStartDate() {
+	void createMonitoringMissingStartDate() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(base()))
 			.bodyValue(MonitoringRequest.create().withTitle("Följ upp"))
@@ -71,7 +70,7 @@ class MonitoringResourceFailureTest {
 	}
 
 	@Test
-	void createMonitoring_invalidSource() {
+	void createMonitoringInvalidSource() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(base()))
 			.bodyValue(MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, JULY, 1)).withSource("SOMETHING_ELSE"))
@@ -85,7 +84,7 @@ class MonitoringResourceFailureTest {
 	}
 
 	@Test
-	void createMonitoring_invalidErrandId() {
+	void createMonitoringInvalidErrandId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.bodyValue(MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, JULY, 1)))
@@ -99,7 +98,7 @@ class MonitoringResourceFailureTest {
 	}
 
 	@Test
-	void getMonitoring_invalidMonitoringId() {
+	void getMonitoringInvalidMonitoringId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{monitoringId}").build(
 				Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "monitoringId", "not-a-uuid")))
@@ -113,7 +112,7 @@ class MonitoringResourceFailureTest {
 	}
 
 	@Test
-	void createMonitoring_invalidMunicipalityId() {
+	void createMonitoringInvalidMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "abc", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, JULY, 1)))

@@ -70,7 +70,7 @@ class MetadataServiceTest {
 	}
 
 	@Test
-	void createConflict_contactReasonKindLabel() {
+	void createConflictContactReasonKindLabel() {
 		when(repositoryMock.existsByKindAndNamespaceAndMunicipalityIdAndName(CONTACT_REASON, NAMESPACE, MUNICIPALITY_ID, NAME)).thenReturn(true);
 
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, CONTACT_REASON, Lookup.create().withName(NAME)))

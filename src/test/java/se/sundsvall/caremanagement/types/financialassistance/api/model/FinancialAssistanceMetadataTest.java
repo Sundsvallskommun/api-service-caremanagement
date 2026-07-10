@@ -39,7 +39,7 @@ class FinancialAssistanceMetadataTest {
 	}
 
 	@Test
-	void testCreateReturnsEmptyInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(FinancialAssistanceMetadata.create()).hasAllNullFieldsOrProperties();
 	}
 }

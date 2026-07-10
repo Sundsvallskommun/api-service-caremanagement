@@ -46,7 +46,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void createAttachment_badMunicipalityId() {
+	void createAttachmentBadMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.contentType(MULTIPART_FORM_DATA)
@@ -61,7 +61,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void createAttachment_badNamespace() {
+	void createAttachmentBadNamespace() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.contentType(MULTIPART_FORM_DATA)
@@ -76,7 +76,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void createAttachment_badErrandIdUuid() {
+	void createAttachmentBadErrandIdUuid() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.contentType(MULTIPART_FORM_DATA)
@@ -91,7 +91,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void createAttachment_invalidDocumentType() {
+	void createAttachmentInvalidDocumentType() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).queryParam("documentType", "NOT_A_TYPE").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.contentType(MULTIPART_FORM_DATA)
@@ -106,7 +106,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void readAttachments_badMunicipalityId() {
+	void readAttachmentsBadMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
@@ -119,7 +119,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void readAttachments_badNamespace() {
+	void readAttachmentsBadNamespace() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.exchange()
@@ -132,7 +132,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void readAttachments_badErrandIdUuid() {
+	void readAttachmentsBadErrandIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()
@@ -145,7 +145,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void readAttachments_invalidDocumentType() {
+	void readAttachmentsInvalidDocumentType() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).queryParam("documentType", "NOT_A_TYPE").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
@@ -158,7 +158,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void readAttachments_invalidSenderRole() {
+	void readAttachmentsInvalidSenderRole() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).queryParam("senderRole", "NOT_A_ROLE").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
@@ -171,7 +171,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void readAttachment_badMunicipalityId() {
+	void readAttachmentBadMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{attachmentId}").build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID, "attachmentId", ATTACHMENT_ID)))
 			.exchange()
@@ -184,7 +184,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void readAttachment_badNamespace() {
+	void readAttachmentBadNamespace() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{attachmentId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID, "attachmentId", ATTACHMENT_ID)))
 			.exchange()
@@ -197,7 +197,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void readAttachment_badErrandIdUuid() {
+	void readAttachmentBadErrandIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{attachmentId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid", "attachmentId", ATTACHMENT_ID)))
 			.exchange()
@@ -210,7 +210,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void readAttachment_badAttachmentIdUuid() {
+	void readAttachmentBadAttachmentIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{attachmentId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "attachmentId", "not-a-uuid")))
 			.exchange()
@@ -223,7 +223,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void streamAttachmentFile_badAttachmentIdUuid() {
+	void streamAttachmentFileBadAttachmentIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{attachmentId}/file").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "attachmentId", "not-a-uuid")))
 			.exchange()
@@ -236,7 +236,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void streamAttachmentFile_badErrandIdUuid() {
+	void streamAttachmentFileBadErrandIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{attachmentId}/file").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid", "attachmentId", ATTACHMENT_ID)))
 			.exchange()
@@ -249,7 +249,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void deleteAttachment_badMunicipalityId() {
+	void deleteAttachmentBadMunicipalityId() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(PATH + "/{attachmentId}").build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID, "attachmentId", ATTACHMENT_ID)))
 			.exchange()
@@ -262,7 +262,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void deleteAttachment_badNamespace() {
+	void deleteAttachmentBadNamespace() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(PATH + "/{attachmentId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID, "attachmentId", ATTACHMENT_ID)))
 			.exchange()
@@ -275,7 +275,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void deleteAttachment_badErrandIdUuid() {
+	void deleteAttachmentBadErrandIdUuid() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(PATH + "/{attachmentId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid", "attachmentId", ATTACHMENT_ID)))
 			.exchange()
@@ -288,7 +288,7 @@ class AttachmentResourceFailureTest {
 	}
 
 	@Test
-	void deleteAttachment_badAttachmentIdUuid() {
+	void deleteAttachmentBadAttachmentIdUuid() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(PATH + "/{attachmentId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "attachmentId", "not-a-uuid")))
 			.exchange()

@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 
 import static java.time.Month.MAY;
@@ -24,7 +25,7 @@ class ApplicationIncomeToFcMapperTest {
 			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(13).name("Övriga inkomster"));
 	}
 
-	private static ApplicationIncome income(final String type, final String amount, final LocalDate date, final se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole role) {
+	private static ApplicationIncome income(final String type, final String amount, final LocalDate date, final ApplicantRole role) {
 		return new ApplicationIncome(type, new BigDecimal(amount), date, role);
 	}
 

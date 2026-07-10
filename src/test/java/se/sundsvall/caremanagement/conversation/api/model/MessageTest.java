@@ -90,7 +90,7 @@ class MessageTest {
 	}
 
 	@Test
-	void testNoDirtOnCreatedBeanWithEmptyAttachments() {
+	void testNoDirtOnCreatedBean() {
 		final var message = Message.create();
 		assertThat(message).hasAllNullFieldsOrPropertiesExcept("attachments");
 		assertThat(message.getAttachments()).isEmpty();

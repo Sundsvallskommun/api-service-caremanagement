@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.conversation.integration.db.model;
 
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 import org.mariadb.jdbc.MariaDbBlob;
 
@@ -10,13 +11,12 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToStringExcl
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 class MessageAttachmentDataEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(MessageAttachmentDataEntity.class, allOf(
+		MatcherAssert.assertThat(MessageAttachmentDataEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCodeExcluding("file"),
@@ -25,7 +25,7 @@ class MessageAttachmentDataEntityTest {
 	}
 
 	@Test
-	void hasValidBuilderMethods() {
+	void testBuilderMethods() {
 		final var id = 1;
 		final var messageAttachmentId = "attachment-1";
 		final var file = new MariaDbBlob("file".getBytes());

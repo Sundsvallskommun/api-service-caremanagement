@@ -100,7 +100,7 @@ class FinancialAssistanceViewTest {
 	}
 
 	@Test
-	void testCreateReturnsBlankInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(FinancialAssistanceView.create()).hasAllNullFieldsOrProperties();
 	}
 

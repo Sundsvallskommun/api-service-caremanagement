@@ -104,7 +104,7 @@ class DecisionServiceTest {
 		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Decision.create().withDecisionType("X").withValue("Y"));
 
 		verify(eventPublisherMock).publishEvent(isA(DecisionCreated.class));
-		verify(eventPublisherMock, times(1)).publishEvent(any(NotificationRequest.class));
+		verify(eventPublisherMock).publishEvent(any(NotificationRequest.class));
 	}
 
 	@Test

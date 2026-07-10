@@ -13,7 +13,7 @@ import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.
 class FinancialAssistanceApprovalResourceFailureTest extends AbstractFinancialAssistanceResourceTest {
 
 	@Test
-	void setSectionApproval_missingApproved() {
+	void setSectionApprovalMissingApproved() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.contentType(APPLICATION_JSON)
@@ -28,7 +28,7 @@ class FinancialAssistanceApprovalResourceFailureTest extends AbstractFinancialAs
 	}
 
 	@Test
-	void setSectionApproval_invalidMunicipalityId() {
+	void setSectionApprovalInvalidMunicipalityId() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/errand-1/sections/CALCULATION/approval").build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
 			.contentType(APPLICATION_JSON)

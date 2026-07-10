@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.referral.integration.db.model;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static com.google.code.beanmatchers.BeanMatchers.registerValueGenerator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 class ReferralEntityTest {
 
@@ -26,7 +26,7 @@ class ReferralEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(ReferralEntity.class, allOf(
+		MatcherAssert.assertThat(ReferralEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -35,7 +35,7 @@ class ReferralEntityTest {
 	}
 
 	@Test
-	void hasValidBuilderMethods() {
+	void testBuilderMethods() {
 		final var sent = LocalDate.parse("2026-06-03");
 		final var created = OffsetDateTime.parse("2026-06-03T10:00:00Z");
 
@@ -57,7 +57,7 @@ class ReferralEntityTest {
 	}
 
 	@Test
-	void hasNoDirtOnCreatedBean() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(ReferralEntity.create()).hasAllNullFieldsOrProperties();
 		assertThat(new ReferralEntity()).hasAllNullFieldsOrProperties();
 	}

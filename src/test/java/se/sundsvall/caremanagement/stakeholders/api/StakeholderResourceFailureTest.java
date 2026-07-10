@@ -39,7 +39,7 @@ class StakeholderResourceFailureTest {
 	private WebTestClient webTestClient;
 
 	@Test
-	void createStakeholder_blankRole() {
+	void createStakeholderBlankRole() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Stakeholder.create().withRole(" "))
@@ -53,7 +53,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void createStakeholder_missingRole() {
+	void createStakeholderMissingRole() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Stakeholder.create().withFirstName("Joe"))
@@ -67,7 +67,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void createStakeholder_idMustBeNull() {
+	void createStakeholderIdMustBeNull() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Stakeholder.create().withId(randomUUID().toString()).withRole("APPLICANT"))
@@ -81,7 +81,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void createStakeholder_blankContactChannelKey() {
+	void createStakeholderBlankContactChannelKey() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Stakeholder.create().withRole("APPLICANT").withContactChannels(List.of(ContactChannel.create().withValue("joe.doe@example.com"))))
@@ -95,7 +95,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void createStakeholder_badMunicipalityId() {
+	void createStakeholderBadMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Stakeholder.create().withRole("APPLICANT"))
@@ -109,7 +109,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void createStakeholder_badNamespace() {
+	void createStakeholderBadNamespace() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.bodyValue(Stakeholder.create().withRole("APPLICANT"))
@@ -123,7 +123,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void createStakeholder_badErrandIdUuid() {
+	void createStakeholderBadErrandIdUuid() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.bodyValue(Stakeholder.create().withRole("APPLICANT"))
@@ -137,7 +137,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void readStakeholders_badMunicipalityId() {
+	void readStakeholdersBadMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
@@ -150,7 +150,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void readStakeholders_badNamespace() {
+	void readStakeholdersBadNamespace() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.exchange()
@@ -163,7 +163,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void readStakeholders_badErrandIdUuid() {
+	void readStakeholdersBadErrandIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()
@@ -176,7 +176,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void readStakeholder_badStakeholderIdUuid() {
+	void readStakeholderBadStakeholderIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{stakeholderId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "stakeholderId", "not-a-uuid")))
@@ -190,7 +190,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void updateStakeholder_badStakeholderIdUuid() {
+	void updateStakeholderBadStakeholderIdUuid() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/{stakeholderId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "stakeholderId", "not-a-uuid")))
@@ -205,7 +205,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void updateStakeholder_badErrandIdUuid() {
+	void updateStakeholderBadErrandIdUuid() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(PATH + "/{stakeholderId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid", "stakeholderId", STAKEHOLDER_ID)))
@@ -220,7 +220,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void deleteStakeholder_badStakeholderIdUuid() {
+	void deleteStakeholderBadStakeholderIdUuid() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(PATH + "/{stakeholderId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "stakeholderId", "not-a-uuid")))
@@ -234,7 +234,7 @@ class StakeholderResourceFailureTest {
 	}
 
 	@Test
-	void deleteStakeholder_badMunicipalityId() {
+	void deleteStakeholderBadMunicipalityId() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(PATH + "/{stakeholderId}").build(Map.of(
 				"municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID, "stakeholderId", STAKEHOLDER_ID)))

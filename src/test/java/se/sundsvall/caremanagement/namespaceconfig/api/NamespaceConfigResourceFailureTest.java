@@ -34,7 +34,7 @@ class NamespaceConfigResourceFailureTest {
 	private WebTestClient webTestClient;
 
 	@Test
-	void createNamespaceConfig_badMunicipalityId() {
+	void createNamespaceConfigBadMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE)))
 			.bodyValue(NamespaceConfig.create().withDisplayName("d"))
@@ -48,7 +48,7 @@ class NamespaceConfigResourceFailureTest {
 	}
 
 	@Test
-	void createNamespaceConfig_badNamespace() {
+	void createNamespaceConfigBadNamespace() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace")))
 			.bodyValue(NamespaceConfig.create().withDisplayName("d"))
@@ -62,7 +62,7 @@ class NamespaceConfigResourceFailureTest {
 	}
 
 	@Test
-	void createNamespaceConfig_blankDisplayName() {
+	void createNamespaceConfigBlankDisplayName() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(NamespaceConfig.create().withDisplayName(" "))
@@ -76,7 +76,7 @@ class NamespaceConfigResourceFailureTest {
 	}
 
 	@Test
-	void createNamespaceConfig_missingDisplayName() {
+	void createNamespaceConfigMissingDisplayName() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(NamespaceConfig.create().withShortCode("sc"))
@@ -90,7 +90,7 @@ class NamespaceConfigResourceFailureTest {
 	}
 
 	@Test
-	void createNamespaceConfig_nonNullId() {
+	void createNamespaceConfigNonNullId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(NamespaceConfig.create().withId(1L).withDisplayName("d"))
@@ -104,7 +104,7 @@ class NamespaceConfigResourceFailureTest {
 	}
 
 	@Test
-	void readNamespaceConfig_badMunicipalityId() {
+	void readNamespaceConfigBadMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE)))
 			.exchange()
@@ -117,7 +117,7 @@ class NamespaceConfigResourceFailureTest {
 	}
 
 	@Test
-	void readNamespaceConfig_badNamespace() {
+	void readNamespaceConfigBadNamespace() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace")))
 			.exchange()
@@ -130,7 +130,7 @@ class NamespaceConfigResourceFailureTest {
 	}
 
 	@Test
-	void updateNamespaceConfig_badMunicipalityId() {
+	void updateNamespaceConfigBadMunicipalityId() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE)))
 			.bodyValue(NamespaceConfig.create().withDisplayName("d"))
@@ -144,7 +144,7 @@ class NamespaceConfigResourceFailureTest {
 	}
 
 	@Test
-	void updateNamespaceConfig_badNamespace() {
+	void updateNamespaceConfigBadNamespace() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace")))
 			.bodyValue(NamespaceConfig.create().withDisplayName("d"))
@@ -158,7 +158,7 @@ class NamespaceConfigResourceFailureTest {
 	}
 
 	@Test
-	void deleteNamespaceConfig_badMunicipalityId() {
+	void deleteNamespaceConfigBadMunicipalityId() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE)))
 			.exchange()
@@ -171,7 +171,7 @@ class NamespaceConfigResourceFailureTest {
 	}
 
 	@Test
-	void deleteNamespaceConfig_badNamespace() {
+	void deleteNamespaceConfigBadNamespace() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace")))
 			.exchange()

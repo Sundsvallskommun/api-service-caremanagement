@@ -38,7 +38,7 @@ class ReferralResourceFailureTest {
 	private WebTestClient webTestClient;
 
 	@Test
-	void createReferral_blankAuthority() {
+	void createReferralBlankAuthority() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Referral.create().withAuthority(" "))
@@ -52,7 +52,7 @@ class ReferralResourceFailureTest {
 	}
 
 	@Test
-	void createReferral_invalidStatus() {
+	void createReferralInvalidStatus() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Referral.create().withAuthority("ENVIRONMENTAL_OFFICE").withStatus("PENDING"))
@@ -66,7 +66,7 @@ class ReferralResourceFailureTest {
 	}
 
 	@Test
-	void registerResponse_blankResponseText() {
+	void registerResponseBlankResponseText() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/{referralId}/response").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "referralId", REFERRAL_ID)))
 			.bodyValue(new ReferralResponseRequest(" "))
@@ -80,7 +80,7 @@ class ReferralResourceFailureTest {
 	}
 
 	@Test
-	void readReferrals_invalidErrandId() {
+	void readReferralsInvalidErrandId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()

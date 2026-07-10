@@ -50,7 +50,7 @@ class SectionApprovalTest {
 	}
 
 	@Test
-	void testCreateReturnsEmptyInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(SectionApproval.create()).hasAllNullFieldsOrPropertiesExcept("approved");
 	}
 }

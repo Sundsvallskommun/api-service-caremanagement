@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
@@ -176,7 +177,7 @@ class CalculationServiceTest {
 			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(11).name("Lön efter skatt")));
 
 		final var lines = service.applicationIncomeLines(APPLICANT, List.of(
-			new se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome("SALARY", new BigDecimal("18500"), LocalDate.of(2026, MAY, 25), ApplicantRole.APPLICANT)));
+			new ApplicationIncome("SALARY", new BigDecimal("18500"), LocalDate.of(2026, MAY, 25), ApplicantRole.APPLICANT)));
 
 		assertThat(lines).singleElement().satisfies(line -> {
 			assertThat(line.typeId()).isEqualTo(11);

@@ -166,7 +166,7 @@ class MessageReadServiceTest {
 
 		service.markRead(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, CASEWORKER, ids);
 
-		verify(receiptRepositoryMock, times(1)).insertIgnore(anyString(), eq("m1"), eq("CASEWORKER"), eq("joe001doe"), any());
+		verify(receiptRepositoryMock).insertIgnore(anyString(), eq("m1"), eq("CASEWORKER"), eq("joe001doe"), any());
 	}
 
 	@Test

@@ -186,7 +186,7 @@ class FinancialAssistanceDataTest {
 	}
 
 	@Test
-	void testCreateReturnsBlankInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(FinancialAssistanceData.create()).hasAllNullFieldsOrProperties();
 	}
 

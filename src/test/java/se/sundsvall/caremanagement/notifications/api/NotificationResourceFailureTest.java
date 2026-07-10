@@ -37,7 +37,7 @@ class NotificationResourceFailureTest {
 	private WebTestClient webTestClient;
 
 	@Test
-	void createNotification_blankOwnerId() {
+	void createNotificationBlankOwnerId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Notification.create().withType("CREATE").withDescription("d"))
@@ -51,7 +51,7 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
-	void createNotification_blankDescription() {
+	void createNotificationBlankDescription() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Notification.create().withOwnerId("jane01doe").withType("CREATE"))
@@ -65,7 +65,7 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
-	void createNotification_invalidType() {
+	void createNotificationInvalidType() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Notification.create().withOwnerId("o").withType("INVALID").withDescription("d"))
@@ -79,7 +79,7 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
-	void createNotification_invalidSubType() {
+	void createNotificationInvalidSubType() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Notification.create().withOwnerId("o").withType("CREATE").withSubType("BANANA").withDescription("d"))
@@ -93,7 +93,7 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
-	void createNotification_typeMissing() {
+	void createNotificationTypeMissing() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Notification.create().withOwnerId("o").withDescription("d"))
@@ -107,7 +107,7 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
-	void createNotification_badMunicipalityId() {
+	void createNotificationBadMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", "abc", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Notification.create().withOwnerId("o").withType("CREATE").withDescription("d"))
@@ -121,7 +121,7 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
-	void createNotification_badNamespace() {
+	void createNotificationBadNamespace() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.bodyValue(Notification.create().withOwnerId("o").withType("CREATE").withDescription("d"))
@@ -135,7 +135,7 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
-	void createNotification_badErrandIdUuid() {
+	void createNotificationBadErrandIdUuid() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.bodyValue(Notification.create().withOwnerId("o").withType("CREATE").withDescription("d"))
@@ -149,7 +149,7 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
-	void readNotification_badNotificationIdUuid() {
+	void readNotificationBadNotificationIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(ERRAND_BASE + "/{notificationId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "notificationId", "not-a-uuid")))
@@ -163,7 +163,7 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
-	void updateNotification_invalidEnumInPatch() {
+	void updateNotificationInvalidEnumInPatch() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(ERRAND_BASE + "/{notificationId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "notificationId", NOTIFICATION_ID)))
@@ -178,7 +178,7 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
-	void readNotificationsByOwner_missingOwnerId() {
+	void readNotificationsByOwnerMissingOwnerId() {
 		webTestClient.get()
 			.uri(uri -> uri.path("/{municipalityId}/{namespace}/notifications").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
@@ -192,7 +192,7 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
-	void readNotificationsByOwner_blankOwnerId() {
+	void readNotificationsByOwnerBlankOwnerId() {
 		webTestClient.get()
 			.uri(uri -> uri.path("/{municipalityId}/{namespace}/notifications").queryParam("ownerId", " ")
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))

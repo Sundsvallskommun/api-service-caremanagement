@@ -36,7 +36,7 @@ class PermitResourceFailureTest {
 	private WebTestClient webTestClient;
 
 	@Test
-	void issuePermit_blankPermitType() {
+	void issuePermitBlankPermitType() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Permit.create().withPermitType(" "))
@@ -50,7 +50,7 @@ class PermitResourceFailureTest {
 	}
 
 	@Test
-	void issuePermit_invalidStatus() {
+	void issuePermitInvalidStatus() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Permit.create().withPermitType("PARKING_PERMIT").withStatus("PENDING"))
@@ -64,7 +64,7 @@ class PermitResourceFailureTest {
 	}
 
 	@Test
-	void readPermits_invalidErrandId() {
+	void readPermitsInvalidErrandId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()

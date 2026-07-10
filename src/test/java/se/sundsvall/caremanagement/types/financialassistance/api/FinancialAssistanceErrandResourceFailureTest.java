@@ -16,7 +16,7 @@ import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.
 class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssistanceResourceTest {
 
 	@Test
-	void createErrand_blankTitle() {
+	void createErrandBlankTitle() {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle(" ").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
 
@@ -34,7 +34,7 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void createErrand_missingData() {
+	void createErrandMissingData() {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("ok"), APPLICATION_JSON);
 
@@ -52,7 +52,7 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void createErrand_malformedRequestJson() {
+	void createErrandMalformedRequestJson() {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", "{not valid json", APPLICATION_JSON);
 
@@ -71,7 +71,7 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void createErrand_invalidApplicationType() {
+	void createErrandInvalidApplicationType() {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("ok").withData(FinancialAssistanceData.create().withApplicationType("BOGUS")), APPLICATION_JSON);
 
@@ -89,7 +89,7 @@ class FinancialAssistanceErrandResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void readErrand_invalidErrandId() {
+	void readErrandInvalidErrandId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/{errandId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()

@@ -14,6 +14,7 @@ import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.MonitoringRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaMonitoringRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaMonitoringEntity;
+import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.time.Month.JULY;
@@ -273,7 +274,7 @@ class MonitoringServiceTest {
 	@Test
 	void scopeCheckPropagatesWhenErrandMissing() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
-			.thenThrow(se.sundsvall.dept44.problem.Problem.valueOf(NOT_FOUND, "Errand not found"));
+			.thenThrow(Problem.valueOf(NOT_FOUND, "Errand not found"));
 
 		assertThatThrownBy(() -> service.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)

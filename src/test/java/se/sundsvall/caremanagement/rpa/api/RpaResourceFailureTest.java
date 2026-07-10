@@ -15,10 +15,11 @@ import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
 
-@SpringBootTest(classes = Application.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
 @ActiveProfiles("junit")
 class RpaResourceFailureTest {

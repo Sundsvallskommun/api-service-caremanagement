@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaWarningRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaWarningEntity;
+import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -130,7 +131,7 @@ class WarningServiceTest {
 	void reconcileCalculationWarningsFoldsAllSections() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
-		final var changes = new se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges(
+		final var changes = new DraftChanges(
 			List.of("Lön (APPLICANT)"), List.of("Pension (APPLICANT)"),
 			List.of("RENT"), List.of(),
 			List.of("Barn (CHILD)"), List.of());

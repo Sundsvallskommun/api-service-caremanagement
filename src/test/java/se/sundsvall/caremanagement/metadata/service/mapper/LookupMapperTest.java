@@ -13,7 +13,7 @@ class LookupMapperTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
-	void toLookup_maps() {
+	void toLookupMaps() {
 		final var created = FIXED_TIMESTAMP.minusDays(1);
 		final var modified = FIXED_TIMESTAMP;
 		final var entity = LookupEntity.create()
@@ -35,12 +35,12 @@ class LookupMapperTest {
 	}
 
 	@Test
-	void toLookup_nullReturnsNull() {
+	void toLookupNullReturnsNull() {
 		assertThat(LookupMapper.toLookup(null)).isNull();
 	}
 
 	@Test
-	void toLookupEntity_maps() {
+	void toLookupEntityMaps() {
 		final var lookup = Lookup.create().withName("NEW").withDisplayName("New case");
 
 		final var result = LookupMapper.toLookupEntity(lookup, LookupKind.STATUS, "ns", "2281");
@@ -54,12 +54,12 @@ class LookupMapperTest {
 	}
 
 	@Test
-	void toLookupEntity_nullLookupReturnsNull() {
+	void toLookupEntityNullLookupReturnsNull() {
 		assertThat(LookupMapper.toLookupEntity(null, LookupKind.STATUS, "ns", "2281")).isNull();
 	}
 
 	@Test
-	void updateLookupEntity_updatesDisplayNameOnly() {
+	void updateLookupEntityUpdatesDisplayNameOnly() {
 		final var entity = LookupEntity.create().withName("NEW").withDisplayName("Old").withKind(LookupKind.STATUS);
 		final var source = Lookup.create().withName("IGNORED").withDisplayName("Updated");
 
@@ -71,12 +71,12 @@ class LookupMapperTest {
 	}
 
 	@Test
-	void updateLookupEntity_nullEntityReturnsNull() {
+	void updateLookupEntityNullEntityReturnsNull() {
 		assertThat(LookupMapper.updateLookupEntity(null, Lookup.create())).isNull();
 	}
 
 	@Test
-	void updateLookupEntity_nullSourceReturnsEntity() {
+	void updateLookupEntityNullSourceReturnsEntity() {
 		final var entity = LookupEntity.create().withDisplayName("kept");
 
 		final var result = LookupMapper.updateLookupEntity(entity, null);
@@ -86,7 +86,7 @@ class LookupMapperTest {
 	}
 
 	@Test
-	void toLookupList_maps() {
+	void toLookupListMaps() {
 		final var result = LookupMapper.toLookupList(List.of(
 			LookupEntity.create().withName("A"),
 			LookupEntity.create().withName("B")));
@@ -95,7 +95,7 @@ class LookupMapperTest {
 	}
 
 	@Test
-	void toLookupList_nullReturnsEmpty() {
+	void toLookupListNullReturnsEmpty() {
 		assertThat(LookupMapper.toLookupList(null)).isEmpty();
 	}
 }

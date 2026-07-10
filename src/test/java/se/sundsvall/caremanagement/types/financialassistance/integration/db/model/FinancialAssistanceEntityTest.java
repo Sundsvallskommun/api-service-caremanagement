@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +16,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static com.google.code.beanmatchers.BeanMatchers.registerValueGenerator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 class FinancialAssistanceEntityTest {
 
@@ -35,7 +35,7 @@ class FinancialAssistanceEntityTest {
 	// of the 37 fields, so every other field must be excluded here.
 	@Test
 	void testBean() {
-		assertThat(FinancialAssistanceEntity.class, allOf(
+		MatcherAssert.assertThat(FinancialAssistanceEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCodeExcluding("otherBenefitDescription", "livelihoodDescription", "childrenResidenceChangeDescription", "housingDescription", "housingChangeDescription", "stayDescription"),
@@ -47,7 +47,7 @@ class FinancialAssistanceEntityTest {
 	}
 
 	@Test
-	void hasValidBuilderMethods() {
+	void testBuilderMethods() {
 		final var children = List.of(FaChild.create().withPartyId("20180101-1234").withFirstName("Kid"));
 		final var costs = List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("5000.00")));
 		final var incomes = List.of(FaIncome.create().withIncomeType("SALARY").withAmount(new BigDecimal("12000.00")));
@@ -138,7 +138,7 @@ class FinancialAssistanceEntityTest {
 	}
 
 	@Test
-	void hasNoDirtOnCreatedBean() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(FinancialAssistanceEntity.create()).hasAllNullFieldsOrProperties();
 		assertThat(new FinancialAssistanceEntity()).hasAllNullFieldsOrProperties();
 	}

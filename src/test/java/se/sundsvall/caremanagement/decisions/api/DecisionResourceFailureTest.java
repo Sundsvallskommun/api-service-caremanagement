@@ -37,7 +37,7 @@ class DecisionResourceFailureTest {
 	private WebTestClient webTestClient;
 
 	@Test
-	void createDecision_blankDecisionType() {
+	void createDecisionBlankDecisionType() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Decision.create().withValue("APPROVED"))
@@ -51,7 +51,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void createDecision_blankValue() {
+	void createDecisionBlankValue() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Decision.create().withDecisionType("PAYMENT"))
@@ -65,7 +65,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void createDecision_emptyBody() {
+	void createDecisionEmptyBody() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Decision.create())
@@ -80,7 +80,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void createDecision_badMunicipalityId() {
+	void createDecisionBadMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(Decision.create().withDecisionType("PAYMENT").withValue("APPROVED"))
@@ -94,7 +94,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void createDecision_badNamespace() {
+	void createDecisionBadNamespace() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.bodyValue(Decision.create().withDecisionType("PAYMENT").withValue("APPROVED"))
@@ -108,7 +108,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void createDecision_badErrandIdUuid() {
+	void createDecisionBadErrandIdUuid() {
 		webTestClient.post()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.bodyValue(Decision.create().withDecisionType("PAYMENT").withValue("APPROVED"))
@@ -122,7 +122,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void readDecisions_badMunicipalityId() {
+	void readDecisionsBadMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
@@ -135,7 +135,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void readDecisions_badNamespace() {
+	void readDecisionsBadNamespace() {
 		webTestClient.get()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.exchange()
@@ -148,7 +148,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void readDecisions_badErrandIdUuid() {
+	void readDecisionsBadErrandIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(ERRAND_BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()
@@ -161,7 +161,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void readDecision_badErrandIdUuid() {
+	void readDecisionBadErrandIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(ERRAND_BASE + "/{decisionId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid", "decisionId", DECISION_ID)))
@@ -175,7 +175,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void readDecision_badDecisionIdUuid() {
+	void readDecisionBadDecisionIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(ERRAND_BASE + "/{decisionId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "decisionId", "not-a-uuid")))
@@ -189,7 +189,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void deleteDecision_badErrandIdUuid() {
+	void deleteDecisionBadErrandIdUuid() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(ERRAND_BASE + "/{decisionId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid", "decisionId", DECISION_ID)))
@@ -203,7 +203,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void deleteDecision_badDecisionIdUuid() {
+	void deleteDecisionBadDecisionIdUuid() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(ERRAND_BASE + "/{decisionId}").build(Map.of(
 				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "decisionId", "not-a-uuid")))
@@ -217,7 +217,7 @@ class DecisionResourceFailureTest {
 	}
 
 	@Test
-	void deleteDecision_badMunicipalityId() {
+	void deleteDecisionBadMunicipalityId() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(ERRAND_BASE + "/{decisionId}").build(Map.of(
 				"municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID, "decisionId", DECISION_ID)))

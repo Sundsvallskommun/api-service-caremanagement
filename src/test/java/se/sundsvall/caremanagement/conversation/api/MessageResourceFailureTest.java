@@ -64,7 +64,7 @@ class MessageResourceFailureTest {
 	}
 
 	@Test
-	void post_missingIdentifier() {
+	void postMissingIdentifier() {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("message", new CreateMessage("OUTBOUND", "body", "author", null), APPLICATION_JSON);
 
@@ -83,38 +83,38 @@ class MessageResourceFailureTest {
 	}
 
 	@Test
-	void post_blankDirection() {
+	void postBlankDirection() {
 		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("", "body", "author", null),
 			tuple("direction", "must not be blank"),
 			tuple("direction", "must be one of: [INBOUND, OUTBOUND]"));
 	}
 
 	@Test
-	void post_invalidDirection() {
+	void postInvalidDirection() {
 		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("SIDEWAYS", "body", "author", null),
 			tuple("direction", "must be one of: [INBOUND, OUTBOUND]"));
 	}
 
 	@Test
-	void post_blankBody() {
+	void postBlankBody() {
 		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("OUTBOUND", "", "author", null),
 			tuple("body", "must not be blank"));
 	}
 
 	@Test
-	void post_invalidErrandId() {
+	void postInvalidErrandId() {
 		postMessageExpectingBadRequest("not-a-uuid", new CreateMessage("OUTBOUND", "body", "author", null),
 			tuple("createMessage.errandId", "not a valid UUID"));
 	}
 
 	@Test
-	void post_invalidInReplyToId() {
+	void postInvalidInReplyToId() {
 		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("OUTBOUND", "body", "author", "not-a-uuid"),
 			tuple("inReplyToId", "not a valid UUID"));
 	}
 
 	@Test
-	void unreadCount_missingIdentifier() {
+	void unreadCountMissingIdentifier() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
@@ -128,7 +128,7 @@ class MessageResourceFailureTest {
 	}
 
 	@Test
-	void markRead_missingIdentifier() {
+	void markReadMissingIdentifier() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/read").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.contentType(APPLICATION_JSON)
@@ -144,7 +144,7 @@ class MessageResourceFailureTest {
 	}
 
 	@Test
-	void markRead_emptyMessageIds() {
+	void markReadEmptyMessageIds() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/read").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.header(Identifier.HEADER_NAME, "joe001doe; type=adAccount")
@@ -160,7 +160,7 @@ class MessageResourceFailureTest {
 	}
 
 	@Test
-	void markRead_invalidMessageId() {
+	void markReadInvalidMessageId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/read").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.header(Identifier.HEADER_NAME, "joe001doe; type=adAccount")

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import com.google.code.beanmatchers.BeanMatchers;
 import java.util.List;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +13,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 class LifecareCalculationTest {
 
@@ -30,7 +30,7 @@ class LifecareCalculationTest {
 
 	@Test
 	void testBean() {
-		assertThat(LifecareCalculation.class, allOf(
+		MatcherAssert.assertThat(LifecareCalculation.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -79,7 +79,7 @@ class LifecareCalculationTest {
 	}
 
 	@Test
-	void testCreateReturnsBlankInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(LifecareCalculation.create()).hasAllNullFieldsOrProperties();
 	}
 }

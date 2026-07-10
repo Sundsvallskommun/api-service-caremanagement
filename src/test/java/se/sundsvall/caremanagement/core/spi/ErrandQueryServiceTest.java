@@ -80,5 +80,4 @@ class ErrandQueryServiceTest {
 			new ErrandStatusView("OPEN", "jane01doe"),
 			new ErrandStatusView("CLOSED", null));
 	}
-
 }

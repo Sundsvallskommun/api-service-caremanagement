@@ -35,11 +35,11 @@ class SectionReconcilerTest {
 	private static final String ERRAND_ID = "errand-1";
 
 	@Mock
-	private FaNormPersonRepository personRepository;
+	private FaNormPersonRepository personRepositoryMock;
 	@Mock
-	private FaNormIncomeRepository incomeRepository;
+	private FaNormIncomeRepository incomeRepositoryMock;
 	@Mock
-	private FaNormExpenseRepository expenseRepository;
+	private FaNormExpenseRepository expenseRepositoryMock;
 
 	@InjectMocks
 	private SectionReconciler sectionReconciler;
@@ -47,20 +47,20 @@ class SectionReconcilerTest {
 	@Test
 	void freshSystemRowWithNoMatchIsInsertedAndReportedAsAdded() {
 		final var fresh = systemRow(20, "Bostadsbidrag", "1850");
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
 		final var diff = sectionReconciler.reconcileIncomes(ERRAND_ID, List.of(fresh));
 
 		assertThat(diff.added()).containsExactly("Bostadsbidrag");
 		assertThat(diff.dropped()).isEmpty();
-		verify(incomeRepository).save(fresh);
+		verify(incomeRepositoryMock).save(fresh);
 	}
 
 	@Test
 	void matchedSystemRowRefreshesTheProcessColumnAndPreservesTheCaseworkerValue() {
 		final var existing = systemRow(20, "Bostadsbidrag", "1850").withApplicantCaseworkerAmount(new BigDecimal("1900")).withNote("ok");
 		final var fresh = systemRow(20, "Bostadsbidrag", "2000");
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
 
 		final var diff = sectionReconciler.reconcileIncomes(ERRAND_ID, List.of(fresh));
 
@@ -69,52 +69,52 @@ class SectionReconcilerTest {
 		assertThat(existing.getApplicantProcessAmount()).isEqualByComparingTo("2000"); // process refreshed
 		assertThat(existing.getApplicantCaseworkerAmount()).isEqualByComparingTo("1900"); // caseworker value untouched
 		assertThat(existing.getNote()).isEqualTo("ok"); // note untouched
-		verify(incomeRepository).save(existing);
+		verify(incomeRepositoryMock).save(existing);
 	}
 
 	@Test
 	void softDeletedSystemRowStaysDeletedAndIsNotResurrected() {
 		final var existing = systemRow(20, "Bostadsbidrag", "1850").withDeleted(true);
 		final var fresh = systemRow(20, "Bostadsbidrag", "2000");
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
 
 		final var diff = sectionReconciler.reconcileIncomes(ERRAND_ID, List.of(fresh));
 
 		assertThat(diff.added()).isEmpty(); // not re-added
 		assertThat(existing.isDeleted()).isTrue(); // still deleted — never resurrected
 		assertThat(existing.getApplicantProcessAmount()).isEqualByComparingTo("2000"); // process still refreshed in place
-		verify(incomeRepository).save(existing);
+		verify(incomeRepositoryMock).save(existing);
 	}
 
 	@Test
 	void caseworkerAddedRowIsNeverMatchedOrRefreshedByTheProcess() {
 		final var caseworkerRow = systemRow(20, "Bostadsbidrag", null).withOrigin(ORIGIN_CASEWORKER).withApplicantCaseworkerAmount(new BigDecimal("500"));
 		final var fresh = systemRow(20, "Bostadsbidrag", "2000");
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(caseworkerRow)));
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(caseworkerRow)));
 
 		final var diff = sectionReconciler.reconcileIncomes(ERRAND_ID, List.of(fresh));
 
 		assertThat(diff.added()).containsExactly("Bostadsbidrag"); // the fresh row is inserted as new
 		assertThat(caseworkerRow.getApplicantProcessAmount()).isNull(); // caseworker row untouched
-		verify(incomeRepository).save(fresh); // only the new system row is persisted
-		verify(incomeRepository, never()).save(caseworkerRow);
+		verify(incomeRepositoryMock).save(fresh); // only the new system row is persisted
+		verify(incomeRepositoryMock, never()).save(caseworkerRow);
 	}
 
 	@Test
 	void systemRowThatDisappearsFromTheFreshSetIsKeptAndReportedAsDropped() {
 		final var existing = systemRow(20, "Bostadsbidrag", "1850");
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
 
 		final var diff = sectionReconciler.reconcileIncomes(ERRAND_ID, List.of());
 
 		assertThat(diff.dropped()).containsExactly("Bostadsbidrag");
 		assertThat(diff.added()).isEmpty();
-		verify(incomeRepository, never()).save(existing); // not auto-deleted, not re-saved
+		verify(incomeRepositoryMock, never()).save(existing); // not auto-deleted, not re-saved
 	}
 
 	@Test
 	void reconcilePersonsKeepsChildrenWithoutPartyIdDistinct() {
-		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		when(personRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
 		// Three children, none carrying a partyId. Keyed on partyId alone they all collapse to "null|CHILD" and only the
 		// last is counted; keyed with the name fallback they stay three distinct rows.
@@ -132,8 +132,8 @@ class SectionReconcilerTest {
 		final var existing = systemRow(20, "Bostadsbidrag", "1850").withPosition(0); // already positioned
 		final var refreshedFresh = systemRow(20, "Bostadsbidrag", "2000"); // matches existing (same typeId)
 		final var newFresh = systemRow(99, "Underhållsstöd", "500"); // brand new
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
-		when(incomeRepository.nextPositionForErrand(ERRAND_ID)).thenReturn(1);
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
+		when(incomeRepositoryMock.nextPositionForErrand(ERRAND_ID)).thenReturn(1);
 
 		sectionReconciler.reconcileIncomes(ERRAND_ID, List.of(refreshedFresh, newFresh));
 
@@ -149,13 +149,13 @@ class SectionReconcilerTest {
 		// the freshly computed row for the same expense carries the original applied amount (9000) and a new process cap
 		final var fresh = FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("HOUSING_COST")
 			.withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8500"));
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
+		when(expenseRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
 
 		sectionReconciler.reconcileExpenses(ERRAND_ID, List.of(fresh));
 
 		assertThat(existing.getAppliedAmount()).isEqualByComparingTo("9999"); // caseworker edit survives the daily refresh
 		assertThat(existing.getProcessAmount()).isEqualByComparingTo("8500"); // process column is still refreshed
-		verify(expenseRepository).save(existing);
+		verify(expenseRepositoryMock).save(existing);
 	}
 
 	@Test
@@ -163,25 +163,25 @@ class SectionReconcilerTest {
 		// existing system expense disappears from the fresh set (dropped); a different fresh expense appears (added)
 		final var existing = FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("FOOD");
 		final var fresh = FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("MEDICINE").withSpecification("Glasses");
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
+		when(expenseRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
 
 		final var diff = sectionReconciler.reconcileExpenses(ERRAND_ID, List.of(fresh));
 
 		assertThat(diff.added()).containsExactly("MEDICINE – Glasses"); // costType + specification
 		assertThat(diff.dropped()).containsExactly("FOOD"); // costType only, no specification
-		verify(expenseRepository).save(fresh);
+		verify(expenseRepositoryMock).save(fresh);
 	}
 
 	@Test
 	void nullFreshListIsTreatedAsEmpty() {
 		final var existing = systemRow(20, "Bostadsbidrag", "1850");
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
 
 		final var diff = sectionReconciler.reconcileIncomes(ERRAND_ID, null);
 
 		assertThat(diff.added()).isEmpty();
 		assertThat(diff.dropped()).containsExactly("Bostadsbidrag");
-		verify(incomeRepository, never()).save(existing);
+		verify(incomeRepositoryMock, never()).save(existing);
 	}
 
 	private static FaNormIncomeEntity systemRow(final Integer typeId, final String typeName, final String processAmount) {

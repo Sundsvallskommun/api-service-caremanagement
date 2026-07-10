@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.document.api;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Map;
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -85,7 +86,7 @@ class DocumentResourceFailureTest {
 		verifyNoInteractions(serviceMock);
 	}
 
-	private void post(final CreateDocument request, final org.assertj.core.groups.Tuple... violations) {
+	private void post(final CreateDocument request, final Tuple... violations) {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(request)

@@ -13,7 +13,7 @@ import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.
 class FinancialAssistanceWarningResourceFailureTest extends AbstractFinancialAssistanceResourceTest {
 
 	@Test
-	void createWarning_invalidMunicipalityId() {
+	void createWarningInvalidMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/errand-1/warnings").build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
 			.contentType(APPLICATION_JSON)
@@ -28,7 +28,7 @@ class FinancialAssistanceWarningResourceFailureTest extends AbstractFinancialAss
 	}
 
 	@Test
-	void listWarnings_invalidMunicipalityId() {
+	void listWarningsInvalidMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/errand-1/warnings").build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
 			.exchange()

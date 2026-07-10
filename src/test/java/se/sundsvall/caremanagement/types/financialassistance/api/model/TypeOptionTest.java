@@ -41,7 +41,7 @@ class TypeOptionTest {
 	}
 
 	@Test
-	void testCreateReturnsEmptyInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(TypeOption.create()).hasAllNullFieldsOrPropertiesExcept("citizenReportable");
 	}
 }

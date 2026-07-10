@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.stakeholders.service;
 
+import java.util.HashSet;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.stakeholders.api.model.RoleDefinition;
@@ -20,7 +21,7 @@ class StakeholderRoleContributionTest {
 
 	@Test
 	void rolesAreCopiedDefensively() {
-		final var original = new java.util.HashSet<>(Set.of(new RoleDefinition("X", "X", 1, true)));
+		final var original = new HashSet<>(Set.of(new RoleDefinition("X", "X", 1, true)));
 		final var contribution = new StakeholderRoleContribution("t", original);
 		original.clear();
 		assertThat(contribution.roles()).hasSize(1);

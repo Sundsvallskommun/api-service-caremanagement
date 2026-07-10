@@ -15,9 +15,10 @@ import se.sundsvall.caremanagement.rpa.service.RpaService;
 
 import static java.util.UUID.randomUUID;
 import static org.mockito.Mockito.verify;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
-@SpringBootTest(classes = Application.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
 @ActiveProfiles("junit")
 class RpaResourceTest {

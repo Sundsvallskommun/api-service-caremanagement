@@ -45,7 +45,7 @@ class ErrandResourceFailureTest {
 	// ---------------------------------------------------------------------
 
 	@Test
-	void createErrand_badMunicipalityId() {
+	void createErrandBadMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE)))
 			.bodyValue(validErrand())
@@ -59,7 +59,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void createErrand_badNamespace() {
+	void createErrandBadNamespace() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace")))
 			.bodyValue(validErrand())
@@ -77,7 +77,7 @@ class ErrandResourceFailureTest {
 	// ---------------------------------------------------------------------
 
 	@Test
-	void createErrand_blankTypeSlug() {
+	void createErrandBlankTypeSlug() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(Errand.create().withTypeSlug(" ").withTitle("A title"))
@@ -91,7 +91,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void createErrand_missingTypeSlug() {
+	void createErrandMissingTypeSlug() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(Errand.create().withTitle("A title"))
@@ -105,7 +105,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void createErrand_blankTitle() {
+	void createErrandBlankTitle() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(Errand.create().withTypeSlug("case-type-slug").withTitle(" "))
@@ -119,7 +119,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void createErrand_missingTitle() {
+	void createErrandMissingTitle() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(Errand.create().withTypeSlug("case-type-slug"))
@@ -133,7 +133,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void createErrand_readOnlyIdSupplied() {
+	void createErrandReadOnlyIdSupplied() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(validErrand().withId(randomUUID().toString()))
@@ -151,7 +151,7 @@ class ErrandResourceFailureTest {
 	// ---------------------------------------------------------------------
 
 	@Test
-	void readErrand_badMunicipalityId() {
+	void readErrandBadMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE + "/{errandId}").build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
@@ -164,7 +164,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void readErrand_badNamespace() {
+	void readErrandBadNamespace() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE + "/{errandId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.exchange()
@@ -177,7 +177,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void readErrand_badErrandIdUuid() {
+	void readErrandBadErrandIdUuid() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE + "/{errandId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()
@@ -194,7 +194,7 @@ class ErrandResourceFailureTest {
 	// ---------------------------------------------------------------------
 
 	@Test
-	void findErrands_badMunicipalityId() {
+	void findErrandsBadMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE)))
 			.exchange()
@@ -207,7 +207,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void findErrands_badNamespace() {
+	void findErrandsBadNamespace() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace")))
 			.exchange()
@@ -224,7 +224,7 @@ class ErrandResourceFailureTest {
 	// ---------------------------------------------------------------------
 
 	@Test
-	void countErrands_badMunicipalityId() {
+	void countErrandsBadMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE + "/count").build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE)))
 			.exchange()
@@ -237,7 +237,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void countErrands_badNamespace() {
+	void countErrandsBadNamespace() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE + "/count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace")))
 			.exchange()
@@ -254,7 +254,7 @@ class ErrandResourceFailureTest {
 	// ---------------------------------------------------------------------
 
 	@Test
-	void updateErrand_badMunicipalityId() {
+	void updateErrandBadMunicipalityId() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(BASE + "/{errandId}").build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(PatchErrand.create().withTitle("Updated"))
@@ -268,7 +268,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void updateErrand_badNamespace() {
+	void updateErrandBadNamespace() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(BASE + "/{errandId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.bodyValue(PatchErrand.create().withTitle("Updated"))
@@ -282,7 +282,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void updateErrand_badErrandIdUuid() {
+	void updateErrandBadErrandIdUuid() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(BASE + "/{errandId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.bodyValue(PatchErrand.create().withTitle("Updated"))
@@ -300,7 +300,7 @@ class ErrandResourceFailureTest {
 	// ---------------------------------------------------------------------
 
 	@Test
-	void deleteErrand_badMunicipalityId() {
+	void deleteErrandBadMunicipalityId() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(BASE + "/{errandId}").build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
@@ -313,7 +313,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void deleteErrand_badNamespace() {
+	void deleteErrandBadNamespace() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(BASE + "/{errandId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.exchange()
@@ -326,7 +326,7 @@ class ErrandResourceFailureTest {
 	}
 
 	@Test
-	void deleteErrand_badErrandIdUuid() {
+	void deleteErrandBadErrandIdUuid() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(BASE + "/{errandId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.exchange()

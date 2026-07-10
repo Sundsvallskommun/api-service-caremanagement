@@ -12,7 +12,7 @@ import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.
 class FinancialAssistanceCalculationResourceFailureTest extends AbstractFinancialAssistanceResourceTest {
 
 	@Test
-	void prepareCalculation_invalidApplicant() {
+	void prepareCalculationInvalidApplicant() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/calculation/prepare").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(CalculationRequest.create().withApplicant("123").withApplicationMonth("2026-06"))
@@ -27,7 +27,7 @@ class FinancialAssistanceCalculationResourceFailureTest extends AbstractFinancia
 	}
 
 	@Test
-	void commitCalculation_invalidMonth() {
+	void commitCalculationInvalidMonth() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/calculation/commit").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-13"))
@@ -42,7 +42,7 @@ class FinancialAssistanceCalculationResourceFailureTest extends AbstractFinancia
 	}
 
 	@Test
-	void prepareCalculation_missingErrandId() {
+	void prepareCalculationMissingErrandId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/calculation/prepare").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
@@ -56,7 +56,7 @@ class FinancialAssistanceCalculationResourceFailureTest extends AbstractFinancia
 	}
 
 	@Test
-	void commitCalculation_missingErrandId() {
+	void commitCalculationMissingErrandId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/calculation/commit").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
@@ -70,7 +70,7 @@ class FinancialAssistanceCalculationResourceFailureTest extends AbstractFinancia
 	}
 
 	@Test
-	void commitFromApplication_missingErrandId() {
+	void commitFromApplicationMissingErrandId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/calculation/from-application").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))

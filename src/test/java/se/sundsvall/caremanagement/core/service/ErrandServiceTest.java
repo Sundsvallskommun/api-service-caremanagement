@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.core.service;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +29,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -210,7 +210,7 @@ class ErrandServiceTest {
 
 	@Test
 	void findByStatusTouchedBeforeMapsEntities() {
-		final var cutoff = java.time.OffsetDateTime.parse("2026-05-01T00:00:00Z");
+		final var cutoff = OffsetDateTime.parse("2026-05-01T00:00:00Z");
 		final var entity = ErrandEntity.create().withId(ERRAND_ID).withErrandNumber(ERRAND_NUMBER).withStatus("CLOSED")
 			.withMunicipalityId(MUNICIPALITY_ID).withNamespace(NAMESPACE);
 		when(repositoryMock.findByMunicipalityIdAndNamespaceAndStatusAndTouchedLessThanEqual(MUNICIPALITY_ID, NAMESPACE, "CLOSED", cutoff))
@@ -288,7 +288,7 @@ class ErrandServiceTest {
 		service.deleteErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		verify(repositoryMock).delete(entity);
-		verify(eventPublisherMock, times(1)).publishEvent(any(ErrandDeleted.class));
+		verify(eventPublisherMock).publishEvent(any(ErrandDeleted.class));
 	}
 
 	@Test

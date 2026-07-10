@@ -36,7 +36,7 @@ class ProcessMessageResourceFailureTest {
 	private WebTestClient webTestClient;
 
 	@Test
-	void sendProcessMessage_badMunicipalityId() {
+	void sendProcessMessageBadMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(ProcessMessageRequest.create().withMessageName("PaymentDecisionReceived"))
@@ -50,7 +50,7 @@ class ProcessMessageResourceFailureTest {
 	}
 
 	@Test
-	void sendProcessMessage_badNamespace() {
+	void sendProcessMessageBadNamespace() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "errandId", ERRAND_ID)))
 			.bodyValue(ProcessMessageRequest.create().withMessageName("PaymentDecisionReceived"))
@@ -64,7 +64,7 @@ class ProcessMessageResourceFailureTest {
 	}
 
 	@Test
-	void sendProcessMessage_badErrandIdUuid() {
+	void sendProcessMessageBadErrandIdUuid() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
 			.bodyValue(ProcessMessageRequest.create().withMessageName("PaymentDecisionReceived"))
@@ -78,7 +78,7 @@ class ProcessMessageResourceFailureTest {
 	}
 
 	@Test
-	void sendProcessMessage_blankMessageName() {
+	void sendProcessMessageBlankMessageName() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(ProcessMessageRequest.create().withMessageName(" "))
@@ -92,7 +92,7 @@ class ProcessMessageResourceFailureTest {
 	}
 
 	@Test
-	void sendProcessMessage_missingMessageName() {
+	void sendProcessMessageMissingMessageName() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.bodyValue(ProcessMessageRequest.create().withVariables(Map.of("paymentDecision", "APPROVED")))

@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +18,6 @@ import static java.time.Month.JUNE;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 class FaNormPersonEntityTest {
 
@@ -28,7 +28,7 @@ class FaNormPersonEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(FaNormPersonEntity.class, allOf(
+		MatcherAssert.assertThat(FaNormPersonEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCodeExcluding("note"),

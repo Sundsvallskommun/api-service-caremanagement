@@ -4,6 +4,7 @@ import com.google.code.beanmatchers.BeanMatchers;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +16,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 class FaNormIncomeEntityTest {
 
@@ -26,7 +26,7 @@ class FaNormIncomeEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(FaNormIncomeEntity.class, allOf(
+		MatcherAssert.assertThat(FaNormIncomeEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCodeExcluding("note"),

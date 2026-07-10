@@ -56,7 +56,7 @@ class MonitoringRequestTest {
 	}
 
 	@Test
-	void testCreateReturnsEmptyInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(MonitoringRequest.create()).hasAllNullFieldsOrProperties();
 	}
 }

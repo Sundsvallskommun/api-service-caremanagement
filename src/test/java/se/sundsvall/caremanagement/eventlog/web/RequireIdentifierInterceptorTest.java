@@ -19,50 +19,50 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 class RequireIdentifierInterceptorTest {
 
 	@Mock
-	private HttpServletRequest request;
+	private HttpServletRequest requestMock;
 
 	@Mock
-	private HttpServletResponse response;
+	private HttpServletResponse responseMock;
 
 	@Test
 	void passesWhenIdentifierValid() {
-		when(request.getMethod()).thenReturn("POST");
-		when(request.getHeader(Identifier.HEADER_NAME)).thenReturn("joe001doe; type=adAccount");
+		when(requestMock.getMethod()).thenReturn("POST");
+		when(requestMock.getHeader(Identifier.HEADER_NAME)).thenReturn("joe001doe; type=adAccount");
 
-		assertThat(new RequireIdentifierInterceptor(true).preHandle(request, response, new Object())).isTrue();
+		assertThat(new RequireIdentifierInterceptor(true).preHandle(requestMock, responseMock, new Object())).isTrue();
 	}
 
 	@Test
 	void rejectsWhenIdentifierMissing() {
-		when(request.getMethod()).thenReturn("GET");
-		when(request.getHeader(Identifier.HEADER_NAME)).thenReturn(null);
+		when(requestMock.getMethod()).thenReturn("GET");
+		when(requestMock.getHeader(Identifier.HEADER_NAME)).thenReturn(null);
 
-		assertThatThrownBy(() -> new RequireIdentifierInterceptor(true).preHandle(request, response, new Object()))
+		assertThatThrownBy(() -> new RequireIdentifierInterceptor(true).preHandle(requestMock, responseMock, new Object()))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 	}
 
 	@Test
 	void rejectsWhenIdentifierMalformed() {
-		when(request.getMethod()).thenReturn("POST");
-		when(request.getHeader(Identifier.HEADER_NAME)).thenReturn("not-a-valid-identifier");
+		when(requestMock.getMethod()).thenReturn("POST");
+		when(requestMock.getHeader(Identifier.HEADER_NAME)).thenReturn("not-a-valid-identifier");
 
-		assertThatThrownBy(() -> new RequireIdentifierInterceptor(true).preHandle(request, response, new Object()))
+		assertThatThrownBy(() -> new RequireIdentifierInterceptor(true).preHandle(requestMock, responseMock, new Object()))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 	}
 
 	@Test
 	void allowsPreflightOptionsWithoutIdentifier() {
-		when(request.getMethod()).thenReturn("OPTIONS");
+		when(requestMock.getMethod()).thenReturn("OPTIONS");
 
-		assertThat(new RequireIdentifierInterceptor(true).preHandle(request, response, new Object())).isTrue();
+		assertThat(new RequireIdentifierInterceptor(true).preHandle(requestMock, responseMock, new Object())).isTrue();
 	}
 
 	@Test
 	void passesWhenEnforcementDisabled() {
-		lenient().when(request.getMethod()).thenReturn("GET");
+		lenient().when(requestMock.getMethod()).thenReturn("GET");
 
-		assertThat(new RequireIdentifierInterceptor(false).preHandle(request, response, new Object())).isTrue();
+		assertThat(new RequireIdentifierInterceptor(false).preHandle(requestMock, responseMock, new Object())).isTrue();
 	}
 }

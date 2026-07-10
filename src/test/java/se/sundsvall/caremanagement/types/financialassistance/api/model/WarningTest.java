@@ -53,7 +53,7 @@ class WarningTest {
 	}
 
 	@Test
-	void testCreateReturnsEmptyInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(Warning.create()).hasAllNullFieldsOrPropertiesExcept("autoResolved");
 	}
 }

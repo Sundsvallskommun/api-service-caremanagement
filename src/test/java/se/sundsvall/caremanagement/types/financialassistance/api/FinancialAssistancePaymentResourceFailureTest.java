@@ -13,7 +13,7 @@ import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.
 class FinancialAssistancePaymentResourceFailureTest extends AbstractFinancialAssistanceResourceTest {
 
 	@Test
-	void checkPaymentStatus_invalidMunicipalityId() {
+	void checkPaymentStatusInvalidMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/payment-status").build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
 			.contentType(APPLICATION_JSON)

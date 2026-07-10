@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
@@ -12,13 +13,12 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 class NormPersonInputTest {
 
 	@Test
 	void testBean() {
-		assertThat(NormPersonInput.class, allOf(
+		MatcherAssert.assertThat(NormPersonInput.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),

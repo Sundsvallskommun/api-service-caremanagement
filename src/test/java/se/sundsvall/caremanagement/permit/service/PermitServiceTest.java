@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -121,7 +120,7 @@ class PermitServiceTest {
 
 		service.revokeAllForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
-		verify(permitRepositoryMock, times(1)).save(any(PermitEntity.class));
+		verify(permitRepositoryMock).save(any(PermitEntity.class));
 	}
 
 	@Test

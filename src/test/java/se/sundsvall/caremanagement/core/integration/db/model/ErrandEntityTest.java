@@ -4,6 +4,7 @@ import com.google.code.beanmatchers.BeanMatchers;
 import java.time.OffsetDateTime;
 import java.util.Random;
 import java.util.UUID;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +16,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 class ErrandEntityTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
@@ -27,7 +27,7 @@ class ErrandEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(ErrandEntity.class, allOf(
+		MatcherAssert.assertThat(ErrandEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCodeExcluding("description"),
@@ -36,7 +36,7 @@ class ErrandEntityTest {
 	}
 
 	@Test
-	void hasValidBuilderMethods() {
+	void testBuilderMethods() {
 		final var now = FIXED_TIMESTAMP;
 
 		final var id = UUID.randomUUID().toString();
@@ -125,7 +125,7 @@ class ErrandEntityTest {
 	}
 
 	@Test
-	void hasNoDirtOnCreatedBean() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(ErrandEntity.create()).hasAllNullFieldsOrProperties();
 		assertThat(new ErrandEntity()).hasAllNullFieldsOrProperties();
 	}

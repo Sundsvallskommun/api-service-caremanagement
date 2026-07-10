@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.conversation.integration.db.model;
 import com.google.code.beanmatchers.BeanMatchers;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,6 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 class MessageAttachmentEntityTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
@@ -26,7 +26,7 @@ class MessageAttachmentEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(MessageAttachmentEntity.class, allOf(
+		MatcherAssert.assertThat(MessageAttachmentEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -35,7 +35,7 @@ class MessageAttachmentEntityTest {
 	}
 
 	@Test
-	void hasValidBuilderMethods() {
+	void testBuilderMethods() {
 		final var id = "attachment-1";
 		final var messageId = "message-1";
 		final var fileName = "certificate.pdf";

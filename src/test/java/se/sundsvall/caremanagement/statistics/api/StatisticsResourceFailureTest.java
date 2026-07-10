@@ -32,7 +32,7 @@ class StatisticsResourceFailureTest {
 	private WebTestClient webTestClient;
 
 	@Test
-	void getStatistics_invalidMunicipalityId() {
+	void getStatisticsInvalidMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "invalid", "namespace", NAMESPACE)))
 			.exchange()
@@ -45,7 +45,7 @@ class StatisticsResourceFailureTest {
 	}
 
 	@Test
-	void getStatistics_invalidNamespace() {
+	void getStatisticsInvalidNamespace() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "2281", "namespace", "invalid namespace")))
 			.exchange()

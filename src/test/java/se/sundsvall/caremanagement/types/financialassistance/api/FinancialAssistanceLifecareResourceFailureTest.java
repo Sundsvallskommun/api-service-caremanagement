@@ -12,7 +12,7 @@ import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.
 class FinancialAssistanceLifecareResourceFailureTest extends AbstractFinancialAssistanceResourceTest {
 
 	@Test
-	void readDocumentContent_invalidPartyId() {
+	void readDocumentContentInvalidPartyId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/documents/{documentId}/content").queryParam("partyId", "not-a-uuid").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "documentId", "a3f1c2d4-0000-1111-2222-333344445555")))
 			.accept(APPLICATION_PDF)
@@ -26,7 +26,7 @@ class FinancialAssistanceLifecareResourceFailureTest extends AbstractFinancialAs
 	}
 
 	@Test
-	void readDocumentContent_missingPartyId() {
+	void readDocumentContentMissingPartyId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/documents/{documentId}/content").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "documentId", "a3f1c2d4-0000-1111-2222-333344445555")))
 			.accept(APPLICATION_PDF)

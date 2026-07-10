@@ -4,6 +4,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.client.MultipartBodyBuilder;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
@@ -17,7 +18,7 @@ import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.
 class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssistanceResourceTest {
 
 	@Test
-	void checkEligibility_missingApplicant() {
+	void checkEligibilityMissingApplicant() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/eligibility").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(EligibilityRequest.create())
@@ -31,7 +32,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void checkEligibility_invalidApplicant() {
+	void checkEligibilityInvalidApplicant() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/eligibility").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(EligibilityRequest.create().withApplicant("123"))
@@ -45,7 +46,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void checkEligibility_invalidCoApplicant() {
+	void checkEligibilityInvalidCoApplicant() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/eligibility").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(EligibilityRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withCoApplicant("nope"))
@@ -59,7 +60,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void createActualisation_invalidApplicant() {
+	void createActualisationInvalidApplicant() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/actualisation").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(ActualisationRequest.create().withApplicant("123").withApplicationMonth("2026-06"))
@@ -73,7 +74,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void createActualisation_invalidMonth() {
+	void createActualisationInvalidMonth() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/actualisation").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(ActualisationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-13"))
@@ -87,7 +88,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void prefill_invalidPartyId() {
+	void prefillInvalidPartyId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/prefill").queryParam("partyId", "not-a-uuid").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
@@ -100,7 +101,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void listActualisations_invalidPartyId() {
+	void listActualisationsInvalidPartyId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/actualisations").queryParam("partyId", "not-a-uuid").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
@@ -113,7 +114,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void listActualisations_invalidMunicipalityId() {
+	void listActualisationsInvalidMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/actualisations").queryParam("partyId", randomUUID().toString()).build(Map.of("municipalityId", "x", "namespace", NAMESPACE)))
 			.exchange()
@@ -126,7 +127,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void archiveToActualisation_invalidMunicipalityId() {
+	void archiveToActualisationInvalidMunicipalityId() {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("file", "%PDF-1.4".getBytes()).filename("tillaggsansokan.pdf");
 
@@ -144,9 +145,9 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void archiveToActualisation_missingFile() {
+	void archiveToActualisationMissingFile() {
 		final var builder = new MultipartBodyBuilder();
-		builder.part("request", se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest.create().withTitle("x"), APPLICATION_JSON);
+		builder.part("request", ArchiveActualisationRequest.create().withTitle("x"), APPLICATION_JSON);
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").queryParam("partyId", "f47ac10b-58cc-4372-a567-0e02b2c3d479").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
@@ -163,10 +164,10 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void archiveToActualisation_invalidErrandId() {
+	void archiveToActualisationInvalidErrandId() {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("file", "%PDF-1.4".getBytes()).filename("tillaggsansokan.pdf");
-		builder.part("request", se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest.create().withErrandId("not-a-uuid"), APPLICATION_JSON);
+		builder.part("request", ArchiveActualisationRequest.create().withErrandId("not-a-uuid"), APPLICATION_JSON);
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/actualisations/{actualisationId}/archive").queryParam("partyId", "f47ac10b-58cc-4372-a567-0e02b2c3d479").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "actualisationId", 5012)))
@@ -182,7 +183,7 @@ class FinancialAssistanceIntakeResourceFailureTest extends AbstractFinancialAssi
 	}
 
 	@Test
-	void archiveToActualisation_invalidPartyId() {
+	void archiveToActualisationInvalidPartyId() {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("file", "%PDF-1.4".getBytes()).filename("tillaggsansokan.pdf");
 

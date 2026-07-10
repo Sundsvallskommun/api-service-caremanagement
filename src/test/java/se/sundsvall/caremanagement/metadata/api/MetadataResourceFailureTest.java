@@ -37,7 +37,7 @@ class MetadataResourceFailureTest {
 	private WebTestClient webTestClient;
 
 	@Test
-	void createLookup_badMunicipalityId() {
+	void createLookupBadMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).queryParam("kind", KIND)
 				.build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE)))
@@ -52,7 +52,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void createLookup_badNamespace() {
+	void createLookupBadNamespace() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).queryParam("kind", KIND)
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace")))
@@ -67,7 +67,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void createLookup_invalidKind() {
+	void createLookupInvalidKind() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).queryParam("kind", "NOT_A_KIND")
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
@@ -82,7 +82,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void createLookup_missingKind() {
+	void createLookupMissingKind() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE)
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
@@ -98,7 +98,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void createLookup_blankName() {
+	void createLookupBlankName() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).queryParam("kind", KIND)
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
@@ -113,7 +113,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void createLookup_missingName() {
+	void createLookupMissingName() {
 		webTestClient.post()
 			.uri(uri -> uri.path(BASE).queryParam("kind", KIND)
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
@@ -128,7 +128,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void readLookups_badMunicipalityId() {
+	void readLookupsBadMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE).queryParam("kind", KIND)
 				.build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE)))
@@ -142,7 +142,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void readLookups_badNamespace() {
+	void readLookupsBadNamespace() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE).queryParam("kind", KIND)
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace")))
@@ -156,7 +156,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void readLookups_invalidKind() {
+	void readLookupsInvalidKind() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE).queryParam("kind", "NOT_A_KIND")
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
@@ -170,7 +170,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void readLookups_missingKind() {
+	void readLookupsMissingKind() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE)
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
@@ -185,7 +185,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void readLookup_badMunicipalityId() {
+	void readLookupBadMunicipalityId() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE + "/{name}").queryParam("kind", KIND)
 				.build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "name", NAME)))
@@ -199,7 +199,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void readLookup_badNamespace() {
+	void readLookupBadNamespace() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE + "/{name}").queryParam("kind", KIND)
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "name", NAME)))
@@ -213,7 +213,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void readLookup_invalidKind() {
+	void readLookupInvalidKind() {
 		webTestClient.get()
 			.uri(uri -> uri.path(BASE + "/{name}").queryParam("kind", "NOT_A_KIND")
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "name", NAME)))
@@ -227,7 +227,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void updateLookup_badMunicipalityId() {
+	void updateLookupBadMunicipalityId() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(BASE + "/{name}").queryParam("kind", KIND)
 				.build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "name", NAME)))
@@ -242,7 +242,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void updateLookup_badNamespace() {
+	void updateLookupBadNamespace() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(BASE + "/{name}").queryParam("kind", KIND)
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "name", NAME)))
@@ -257,7 +257,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void updateLookup_invalidKind() {
+	void updateLookupInvalidKind() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(BASE + "/{name}").queryParam("kind", "NOT_A_KIND")
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "name", NAME)))
@@ -272,7 +272,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void deleteLookup_badMunicipalityId() {
+	void deleteLookupBadMunicipalityId() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(BASE + "/{name}").queryParam("kind", KIND)
 				.build(Map.of("municipalityId", "bad-municipality-id", "namespace", NAMESPACE, "name", NAME)))
@@ -286,7 +286,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void deleteLookup_badNamespace() {
+	void deleteLookupBadNamespace() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(BASE + "/{name}").queryParam("kind", KIND)
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", "bad namespace", "name", NAME)))
@@ -300,7 +300,7 @@ class MetadataResourceFailureTest {
 	}
 
 	@Test
-	void deleteLookup_invalidKind() {
+	void deleteLookupInvalidKind() {
 		webTestClient.delete()
 			.uri(uri -> uri.path(BASE + "/{name}").queryParam("kind", "NOT_A_KIND")
 				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "name", NAME)))
