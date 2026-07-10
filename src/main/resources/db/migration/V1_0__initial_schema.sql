@@ -369,7 +369,7 @@ CREATE TABLE `errand_financial_assistance_monitoring` (
   `source` varchar(16) NOT NULL DEFAULT 'CASEWORKER',
   `lifecare_id` varchar(64) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_fa_monitoring_lifecare` (`errand_id`,`lifecare_id`),
+  UNIQUE KEY `uq_fa_monitoring_errand_id_lifecare_id` (`errand_id`,`lifecare_id`),
   CONSTRAINT `fk_fa_monitoring_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `errand_financial_assistance_section_approval` (
@@ -550,6 +550,7 @@ CREATE TABLE `namespace_config` (
   `short_code` varchar(16) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_namespace_config_namespace_municipality_id` (`namespace`,`municipality_id`),
+  UNIQUE KEY `uq_namespace_config_municipality_id_short_code` (`municipality_id`,`short_code`),
   KEY `idx_namespace_config_municipality_id` (`municipality_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `notification` (
