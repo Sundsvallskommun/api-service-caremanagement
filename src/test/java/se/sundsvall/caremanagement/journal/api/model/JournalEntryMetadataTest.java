@@ -33,38 +33,9 @@ class JournalEntryMetadataTest {
 	}
 
 	@Test
-	void testSetters() {
-		final var types = List.of(JournalEntryType.create().withCode("C").withDisplayName("D"));
-		final var metadata = JournalEntryMetadata.create();
-		metadata.setTypes(types);
-
-		assertThat(metadata.getTypes()).isEqualTo(types);
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(JournalEntryMetadata.create()).hasAllNullFieldsOrProperties();
 		assertThat(new JournalEntryMetadata()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void testEqualsAndHashCode() {
-		final var types = List.of(JournalEntryType.create().withCode("C").withDisplayName("D"));
-		final var a = JournalEntryMetadata.create().withTypes(types);
-		final var b = JournalEntryMetadata.create().withTypes(types);
-		final var c = JournalEntryMetadata.create();
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string");
-	}
-
-	@Test
-	void testToStringContainsFields() {
-		final var types = List.of(JournalEntryType.create().withCode("C").withDisplayName("D"));
-		final var metadata = JournalEntryMetadata.create().withTypes(types);
-
-		assertThat(metadata.toString()).contains("JournalEntryMetadata", "types");
-	}
 }

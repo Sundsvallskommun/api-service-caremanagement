@@ -74,73 +74,8 @@ class DocumentTest {
 	}
 
 	@Test
-	void testSetters() {
-		final var document = Document.create();
-		document.setId("id");
-		document.setErrandId("eid");
-		document.setType("T");
-		document.setHeading("H");
-		document.setText("b");
-		document.setDocumentDate(DOCUMENT_DATE);
-		document.setDocumentTime(DOCUMENT_TIME);
-		document.setStatus("LOCKED");
-		document.setCreatedBy("a");
-		document.setCreated(FIXED_TIMESTAMP);
-		document.setModifiedBy("editor");
-		document.setModified(FIXED_TIMESTAMP.plusHours(1));
-		document.setLockedBy("locker");
-		document.setLocked(FIXED_TIMESTAMP.plusHours(2));
-
-		assertThat(document.getId()).isEqualTo("id");
-		assertThat(document.getErrandId()).isEqualTo("eid");
-		assertThat(document.getType()).isEqualTo("T");
-		assertThat(document.getHeading()).isEqualTo("H");
-		assertThat(document.getText()).isEqualTo("b");
-		assertThat(document.getDocumentDate()).isEqualTo(DOCUMENT_DATE);
-		assertThat(document.getDocumentTime()).isEqualTo(DOCUMENT_TIME);
-		assertThat(document.getStatus()).isEqualTo("LOCKED");
-		assertThat(document.getCreatedBy()).isEqualTo("a");
-		assertThat(document.getCreated()).isEqualTo(FIXED_TIMESTAMP);
-		assertThat(document.getModifiedBy()).isEqualTo("editor");
-		assertThat(document.getModified()).isEqualTo(FIXED_TIMESTAMP.plusHours(1));
-		assertThat(document.getLockedBy()).isEqualTo("locker");
-		assertThat(document.getLocked()).isEqualTo(FIXED_TIMESTAMP.plusHours(2));
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(Document.create()).hasAllNullFieldsOrProperties();
 		assertThat(new Document()).hasAllNullFieldsOrProperties();
-	}
-
-	@Test
-	void testEqualsAndHashCode() {
-		final var a = Document.create().withId("1").withErrandId("e").withType("T").withHeading("H").withText("b")
-			.withDocumentDate(DOCUMENT_DATE).withDocumentTime(DOCUMENT_TIME).withStatus("WORKING").withCreatedBy("u").withCreated(FIXED_TIMESTAMP);
-		final var b = Document.create().withId("1").withErrandId("e").withType("T").withHeading("H").withText("b")
-			.withDocumentDate(DOCUMENT_DATE).withDocumentTime(DOCUMENT_TIME).withStatus("WORKING").withCreatedBy("u").withCreated(FIXED_TIMESTAMP);
-		final var c = Document.create().withId("2");
-		final var d = Document.create().withId("1").withErrandId("e").withType("T").withHeading("H").withText("b")
-			.withDocumentDate(DOCUMENT_DATE).withDocumentTime(DOCUMENT_TIME).withStatus("LOCKED").withCreatedBy("u").withCreated(FIXED_TIMESTAMP);
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(d)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string");
-	}
-
-	@Test
-	void testToStringContainsFields() {
-		final var document = Document.create()
-			.withId("d1")
-			.withErrandId("e1")
-			.withType("Brev")
-			.withHeading("Rubrik")
-			.withText("body")
-			.withStatus("WORKING")
-			.withCreatedBy("carola");
-
-		assertThat(document.toString()).contains("d1", "e1", "Brev", "Rubrik", "body", "WORKING", "carola");
 	}
 }

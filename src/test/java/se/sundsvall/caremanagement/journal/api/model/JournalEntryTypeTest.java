@@ -32,31 +32,9 @@ class JournalEntryTypeTest {
 	}
 
 	@Test
-	void testSetters() {
-		final var type = JournalEntryType.create();
-		type.setCode("OTHER");
-		type.setDisplayName("Övrigt");
-
-		assertThat(type.getCode()).isEqualTo("OTHER");
-		assertThat(type.getDisplayName()).isEqualTo("Övrigt");
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(JournalEntryType.create()).hasAllNullFieldsOrProperties();
 		assertThat(new JournalEntryType()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void testEqualsHashCodeAndToString() {
-		final var a = JournalEntryType.create().withCode("C").withDisplayName("D");
-		final var b = JournalEntryType.create().withCode("C").withDisplayName("D");
-		final var c = JournalEntryType.create().withCode("X").withDisplayName("D");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string")
-			.hasToString("JournalEntryType{code='C', displayName='D'}");
-	}
 }

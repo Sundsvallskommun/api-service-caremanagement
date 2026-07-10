@@ -35,13 +35,6 @@ class ErrandEventEntityTest {
 	}
 
 	@Test
-	void testToString() {
-		final var entity = ErrandEventEntity.create().withId("id").withErrandId("errand-1");
-		assertThat(entity.toString())
-			.contains("ErrandEventEntity{").contains("id='id'").contains("errandId='errand-1'");
-	}
-
-	@Test
 	void testBuilderMethods() {
 		final var entity = ErrandEventEntity.create()
 			.withId("id")

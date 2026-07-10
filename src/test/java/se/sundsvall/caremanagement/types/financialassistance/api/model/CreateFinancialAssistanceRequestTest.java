@@ -45,38 +45,9 @@ class CreateFinancialAssistanceRequestTest {
 	}
 
 	@Test
-	void testSettersWork() {
-		final var request = CreateFinancialAssistanceRequest.create();
-		request.setTitle("title");
-		request.setDescription("description");
-		request.setPriority("LOW");
-		request.setReporterUserId("reporter");
-		request.setAssignedUserId("assignee");
-		request.setData(DATA);
-
-		assertThat(request.getTitle()).isEqualTo("title");
-		assertThat(request.getDescription()).isEqualTo("description");
-		assertThat(request.getPriority()).isEqualTo("LOW");
-		assertThat(request.getReporterUserId()).isEqualTo("reporter");
-		assertThat(request.getAssignedUserId()).isEqualTo("assignee");
-		assertThat(request.getData()).isEqualTo(DATA);
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(CreateFinancialAssistanceRequest.create()).hasAllNullFieldsOrProperties();
 		assertThat(new CreateFinancialAssistanceRequest()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void testEqualsAndHashCode() {
-		final var a = CreateFinancialAssistanceRequest.create().withTitle("T").withData(DATA);
-		final var b = CreateFinancialAssistanceRequest.create().withTitle("T").withData(DATA);
-		final var c = CreateFinancialAssistanceRequest.create().withTitle("X");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string");
-	}
 }

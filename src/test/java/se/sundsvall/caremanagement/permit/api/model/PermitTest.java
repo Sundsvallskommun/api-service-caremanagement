@@ -55,37 +55,9 @@ class PermitTest {
 	}
 
 	@Test
-	void testSetters() {
-		final var permit = Permit.create();
-		permit.setId("p1");
-		permit.setPermitType("PARKING_PERMIT");
-		permit.setValidFrom(FROM);
-		permit.setValidUntil(UNTIL);
-		permit.setConditions("c");
-		permit.setStatus("REVOKED");
-		permit.setCreated(CREATED);
-		permit.setModified(MODIFIED);
-
-		assertThat(permit.getId()).isEqualTo("p1");
-		assertThat(permit.getStatus()).isEqualTo("REVOKED");
-		assertThat(permit.getValidUntil()).isEqualTo(UNTIL);
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(Permit.create()).hasAllNullFieldsOrProperties();
 		assertThat(new Permit()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void testEqualsAndHashCode() {
-		final var a = Permit.create().withId("1").withPermitType("T").withStatus("ACTIVE");
-		final var b = Permit.create().withId("1").withPermitType("T").withStatus("ACTIVE");
-		final var c = Permit.create().withId("2");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string");
-	}
 }

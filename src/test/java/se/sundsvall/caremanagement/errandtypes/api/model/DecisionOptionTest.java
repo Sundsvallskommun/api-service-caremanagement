@@ -37,35 +37,9 @@ class DecisionOptionTest {
 	}
 
 	@Test
-	void testSettersWork() {
-		final var option = DecisionOption.create();
-		option.setCode("AVSLAG");
-		option.setDisplayName("Avslag");
-		option.setCarriesAmount(false);
-
-		assertThat(option.getCode()).isEqualTo("AVSLAG");
-		assertThat(option.getDisplayName()).isEqualTo("Avslag");
-		assertThat(option.isCarriesAmount()).isFalse();
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(DecisionOption.create()).hasAllNullFieldsOrPropertiesExcept("carriesAmount");
 		assertThat(new DecisionOption()).hasAllNullFieldsOrPropertiesExcept("carriesAmount");
 	}
 
-	@Test
-	void testEqualsHashCodeAndToString() {
-		final var a = DecisionOption.create().withCode("BIFALL").withDisplayName("Bifall").withCarriesAmount(true);
-		final var b = DecisionOption.create().withCode("BIFALL").withDisplayName("Bifall").withCarriesAmount(true);
-		final var c = DecisionOption.create().withCode("AVSLAG").withDisplayName("Avslag").withCarriesAmount(false);
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string")
-			.isEqualTo(a)
-			.hasToString(b.toString());
-		assertThat(a.toString()).contains("BIFALL", "Bifall");
-	}
 }

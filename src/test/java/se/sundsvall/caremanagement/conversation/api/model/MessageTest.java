@@ -66,30 +66,6 @@ class MessageTest {
 	}
 
 	@Test
-	void testSetters() {
-		final var message = Message.create();
-		message.setId("id");
-		message.setErrandId("eid");
-		message.setDirection("INBOUND");
-		message.setBody("b");
-		message.setAuthor("a");
-		message.setInReplyToId("r1");
-		final var ts = FIXED_TIMESTAMP;
-		message.setCreated(ts);
-		final var attachments = List.of(MessageAttachment.create().withId("a1"));
-		message.setAttachments(attachments);
-
-		assertThat(message.getId()).isEqualTo("id");
-		assertThat(message.getErrandId()).isEqualTo("eid");
-		assertThat(message.getDirection()).isEqualTo("INBOUND");
-		assertThat(message.getBody()).isEqualTo("b");
-		assertThat(message.getAuthor()).isEqualTo("a");
-		assertThat(message.getInReplyToId()).isEqualTo("r1");
-		assertThat(message.getCreated()).isEqualTo(ts);
-		assertThat(message.getAttachments()).isEqualTo(attachments);
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		final var message = Message.create();
 		assertThat(message).hasAllNullFieldsOrPropertiesExcept("attachments");
@@ -100,16 +76,4 @@ class MessageTest {
 		assertThat(newMessage.getAttachments()).isEmpty();
 	}
 
-	@Test
-	void testEqualsAndHashCode() {
-		final var ts = FIXED_TIMESTAMP;
-		final var a = Message.create().withId("1").withErrandId("e").withDirection("OUTBOUND").withBody("b").withAuthor("u").withCreated(ts);
-		final var b = Message.create().withId("1").withErrandId("e").withDirection("OUTBOUND").withBody("b").withAuthor("u").withCreated(ts);
-		final var c = Message.create().withId("2");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string");
-	}
 }

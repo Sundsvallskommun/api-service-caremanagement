@@ -35,13 +35,6 @@ class NoteEntityTest {
 	}
 
 	@Test
-	void testToString() {
-		final var entity = NoteEntity.create().withId("n1").withErrandId("e1");
-		assertThat(entity.toString())
-			.contains("NoteEntity{").contains("id='n1'").contains("errandId='e1'");
-	}
-
-	@Test
 	void testBuilderMethods() {
 		final var created = FIXED_TIMESTAMP;
 		final var modified = FIXED_TIMESTAMP.plusHours(1);

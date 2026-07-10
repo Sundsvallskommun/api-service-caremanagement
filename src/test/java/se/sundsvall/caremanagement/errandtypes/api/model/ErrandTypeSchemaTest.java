@@ -55,43 +55,9 @@ class ErrandTypeSchemaTest {
 	}
 
 	@Test
-	void testSettersWork() {
-		final var schema = ErrandTypeSchema.create();
-		schema.setTypeSlug("financial-assistance-new");
-		schema.setApplicationType(null);
-		schema.setDisplayName("New");
-		schema.setStatuses(STATUSES);
-		schema.setRoles(ROLES);
-		schema.setFields(FIELDS);
-		schema.setDecisionOptions(DECISION_OPTIONS);
-
-		assertThat(schema.getTypeSlug()).isEqualTo("financial-assistance-new");
-		assertThat(schema.getApplicationType()).isNull();
-		assertThat(schema.getDisplayName()).isEqualTo("New");
-		assertThat(schema.getStatuses()).isEqualTo(STATUSES);
-		assertThat(schema.getRoles()).isEqualTo(ROLES);
-		assertThat(schema.getFields()).isEqualTo(FIELDS);
-		assertThat(schema.getDecisionOptions()).isEqualTo(DECISION_OPTIONS);
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(ErrandTypeSchema.create()).hasAllNullFieldsOrProperties();
 		assertThat(new ErrandTypeSchema()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void testEqualsHashCodeAndToString() {
-		final var a = ErrandTypeSchema.create().withTypeSlug("slug").withApplicationType("NEW").withStatuses(STATUSES);
-		final var b = ErrandTypeSchema.create().withTypeSlug("slug").withApplicationType("NEW").withStatuses(STATUSES);
-		final var c = ErrandTypeSchema.create().withTypeSlug("other");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string")
-			.isEqualTo(a)
-			.hasToString(b.toString());
-		assertThat(a.toString()).contains("slug", "NEW");
-	}
 }

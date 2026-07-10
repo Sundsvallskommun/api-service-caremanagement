@@ -39,13 +39,6 @@ class DecisionEntityTest {
 	}
 
 	@Test
-	void testToString() {
-		final var entity = DecisionEntity.create().withId("id").withErrandId("e1");
-		assertThat(entity.toString())
-			.contains("DecisionEntity{").contains("id='id'").contains("errandId='e1'");
-	}
-
-	@Test
 	void testBuilderMethods() {
 		final var created = FIXED_TIMESTAMP;
 		final var amount = new BigDecimal("7900.00");

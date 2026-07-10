@@ -78,32 +78,6 @@ class EligibilityResponseTest {
 	}
 
 	@Test
-	void testSettersWork() {
-		final var response = EligibilityResponse.create();
-		response.setSuggestions(SUGGESTIONS);
-		response.setReasonCode("NO_EXISTING_CASE");
-		response.setMessage("Föreslår nyansökan");
-		response.setExistsInCm(false);
-		response.setExistsInLc(false);
-		response.setMaritalStatusMatches(null);
-		response.setWindowDays(30);
-		response.setApplicationExistsThisMonth(false);
-		response.setApplicationExistsNextMonth(false);
-		response.setCurrentMonthDecided(false);
-		response.setLatestDecisionPeriodMonth(null);
-		response.setLatestDecisionPeriodYear(null);
-		response.setHasPreviousCalculation(false);
-		response.setLifecareChecked(false);
-		response.setHasCoApplicant(false);
-
-		assertThat(response.getReasonCode()).isEqualTo("NO_EXISTING_CASE");
-		assertThat(response.getMessage()).isEqualTo("Föreslår nyansökan");
-		assertThat(response.getWindowDays()).isEqualTo(30);
-		assertThat(response.getMaritalStatusMatches()).isNull();
-		assertThat(response.isLifecareChecked()).isFalse();
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(EligibilityResponse.create()).hasAllNullFieldsOrPropertiesExcept(
 			"existsInCm", "existsInLc", "windowDays", "applicationExistsThisMonth", "applicationExistsNextMonth", "currentMonthDecided",
@@ -113,15 +87,4 @@ class EligibilityResponseTest {
 			"hasPreviousCalculation", "lifecareChecked", "hasCoApplicant");
 	}
 
-	@Test
-	void testEqualsAndHashCode() {
-		final var a = EligibilityResponse.create().withReasonCode("NO_EXISTING_CASE").withWindowDays(90).withSuggestions(SUGGESTIONS);
-		final var b = EligibilityResponse.create().withReasonCode("NO_EXISTING_CASE").withWindowDays(90).withSuggestions(SUGGESTIONS);
-		final var c = EligibilityResponse.create().withReasonCode("MARITAL_STATUS_CHANGED");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string");
-	}
 }

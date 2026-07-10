@@ -33,38 +33,8 @@ class DocumentMetadataTest {
 	}
 
 	@Test
-	void testSetters() {
-		final var types = List.of(DocumentType.create().withCode("C").withDisplayName("D"));
-		final var metadata = DocumentMetadata.create();
-		metadata.setTypes(types);
-
-		assertThat(metadata.getTypes()).isEqualTo(types);
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(DocumentMetadata.create()).hasAllNullFieldsOrProperties();
 		assertThat(new DocumentMetadata()).hasAllNullFieldsOrProperties();
-	}
-
-	@Test
-	void testEqualsAndHashCode() {
-		final var types = List.of(DocumentType.create().withCode("C").withDisplayName("D"));
-		final var a = DocumentMetadata.create().withTypes(types);
-		final var b = DocumentMetadata.create().withTypes(types);
-		final var c = DocumentMetadata.create();
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string");
-	}
-
-	@Test
-	void testToStringContainsFields() {
-		final var types = List.of(DocumentType.create().withCode("C").withDisplayName("D"));
-		final var metadata = DocumentMetadata.create().withTypes(types);
-
-		assertThat(metadata.toString()).contains("DocumentMetadata", "types");
 	}
 }

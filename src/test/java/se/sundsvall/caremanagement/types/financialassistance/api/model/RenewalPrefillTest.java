@@ -39,30 +39,9 @@ class RenewalPrefillTest {
 	}
 
 	@Test
-	void testSettersWork() {
-		final var prefill = RenewalPrefill.create();
-		prefill.setChildren(CHILDREN);
-		prefill.setLifecareChecked(false);
-
-		assertThat(prefill.getChildren()).isEqualTo(CHILDREN);
-		assertThat(prefill.isLifecareChecked()).isFalse();
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(RenewalPrefill.create()).hasAllNullFieldsOrPropertiesExcept("lifecareChecked");
 		assertThat(new RenewalPrefill()).hasAllNullFieldsOrPropertiesExcept("lifecareChecked");
 	}
 
-	@Test
-	void testEqualsAndHashCode() {
-		final var a = RenewalPrefill.create().withChildren(CHILDREN).withLifecareChecked(true);
-		final var b = RenewalPrefill.create().withChildren(CHILDREN).withLifecareChecked(true);
-		final var c = RenewalPrefill.create().withLifecareChecked(false);
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string");
-	}
 }

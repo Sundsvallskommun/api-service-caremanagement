@@ -55,38 +55,9 @@ class ReferralTest {
 	}
 
 	@Test
-	void testSetters() {
-		final var referral = Referral.create();
-		referral.setId("r1");
-		referral.setAuthority("POLICE");
-		referral.setRecipient("Local police");
-		referral.setSentAt(SENT);
-		referral.setDueAt(DUE);
-		referral.setResponseText("ok");
-		referral.setStatus("SENT");
-		referral.setCreated(CREATED);
-		referral.setModified(CREATED);
-
-		assertThat(referral.getAuthority()).isEqualTo("POLICE");
-		assertThat(referral.getStatus()).isEqualTo("SENT");
-		assertThat(referral.getDueAt()).isEqualTo(DUE);
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(Referral.create()).hasAllNullFieldsOrProperties();
 		assertThat(new Referral()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void testEqualsAndHashCode() {
-		final var a = Referral.create().withId("1").withAuthority("A").withStatus("SENT");
-		final var b = Referral.create().withId("1").withAuthority("A").withStatus("SENT");
-		final var c = Referral.create().withId("2");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string");
-	}
 }

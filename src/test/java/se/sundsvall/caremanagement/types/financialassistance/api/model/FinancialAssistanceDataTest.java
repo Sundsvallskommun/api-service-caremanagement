@@ -5,11 +5,18 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class FinancialAssistanceDataTest {
 
@@ -27,6 +34,16 @@ class FinancialAssistanceDataTest {
 	@BeforeAll
 	static void setup() {
 		BeanMatchers.registerValueGenerator(() -> now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+	}
+
+	@Test
+	void testBean() {
+		MatcherAssert.assertThat(FinancialAssistanceData.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
 	}
 
 	@Test
@@ -142,63 +159,8 @@ class FinancialAssistanceDataTest {
 	}
 
 	@Test
-	void testSettersWork() {
-		final var data = FinancialAssistanceData.create();
-		data.setApplicationType("RENEWAL");
-		data.setMaritalStatus("COHABITING");
-		data.setPeriodMonth(7);
-		data.setPeriodYear(2027);
-		data.setPeriodChoice("NEXT_MONTH");
-		data.setNormType(List.of("OTHER_NORM"));
-		data.setOtherBenefitDescription("desc");
-		data.setLivelihoodDescription("livelihood");
-		data.setHasChildrenUnder21(false);
-		data.setChildrenResidenceChanged(true);
-		data.setChildrenResidenceChangeDescription("change");
-		data.setHousingForm("SUBLET");
-		data.setHousingPersonCount(3);
-		data.setHousingRoomsPlusKitchen(2);
-		data.setHousingDescription("housing");
-		data.setHousingChanged(true);
-		data.setHousingChangeDescription("housingChange");
-		data.setHasIncomes(false);
-		data.setHasPendingBenefits(true);
-		data.setHasAssets(true);
-		data.setStaysInMunicipality(false);
-		data.setStayDescription("stay");
-		data.setAttestation(false);
-		data.setAttestedAt(ATTESTED_AT);
-		data.setChildren(CHILDREN);
-		data.setCosts(COSTS);
-		data.setIncomes(INCOMES);
-		data.setPendingBenefits(PENDING_BENEFITS);
-		data.setAssets(ASSETS);
-		data.setPersons(PERSONS);
-		data.setPlannings(PLANNINGS);
-		data.setPlannedActivities(PLANNED_ACTIVITIES);
-		data.setJobApplications(JOB_APPLICATIONS);
-
-		assertThat(data.getApplicationType()).isEqualTo("RENEWAL");
-		assertThat(data.getMaritalStatus()).isEqualTo("COHABITING");
-		assertThat(data.getHousingForm()).isEqualTo("SUBLET");
-		assertThat(data.getHasPendingBenefits()).isTrue();
-		assertThat(data.getJobApplications()).isEqualTo(JOB_APPLICATIONS);
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(FinancialAssistanceData.create()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void testEqualsAndHashCode() {
-		final var a = FinancialAssistanceData.create().withApplicationType("NEW").withPeriodMonth(6).withChildren(CHILDREN);
-		final var b = FinancialAssistanceData.create().withApplicationType("NEW").withPeriodMonth(6).withChildren(CHILDREN);
-		final var c = FinancialAssistanceData.create().withApplicationType("RENEWAL");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string");
-	}
 }

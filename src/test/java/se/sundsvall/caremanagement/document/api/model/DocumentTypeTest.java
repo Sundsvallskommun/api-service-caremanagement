@@ -32,31 +32,9 @@ class DocumentTypeTest {
 	}
 
 	@Test
-	void testSetters() {
-		final var type = DocumentType.create();
-		type.setCode("FORM");
-		type.setDisplayName("Blankett");
-
-		assertThat(type.getCode()).isEqualTo("FORM");
-		assertThat(type.getDisplayName()).isEqualTo("Blankett");
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(DocumentType.create()).hasAllNullFieldsOrProperties();
 		assertThat(new DocumentType()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void testEqualsHashCodeAndToString() {
-		final var a = DocumentType.create().withCode("C").withDisplayName("D");
-		final var b = DocumentType.create().withCode("C").withDisplayName("D");
-		final var c = DocumentType.create().withCode("X").withDisplayName("D");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string")
-			.hasToString("DocumentType{code='C', displayName='D'}");
-	}
 }

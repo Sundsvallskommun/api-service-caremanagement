@@ -35,13 +35,6 @@ class StatusHistoryEntityTest {
 	}
 
 	@Test
-	void testToString() {
-		final var entity = StatusHistoryEntity.create().withId("id").withErrandId("errand-1");
-		assertThat(entity.toString())
-			.contains("StatusHistoryEntity{").contains("id='id'").contains("errandId='errand-1'");
-	}
-
-	@Test
 	void testBuilderMethods() {
 		final var changedAt = FIXED_TIMESTAMP;
 		final var entity = StatusHistoryEntity.create()

@@ -62,52 +62,9 @@ class NoteTest {
 	}
 
 	@Test
-	void testSetters() {
-		final var note = Note.create();
-		note.setId("id");
-		note.setErrandId("eid");
-		note.setBody("b");
-		note.setAuthor("a");
-		final var ts = FIXED_TIMESTAMP;
-		note.setCreated(ts);
-		note.setModifiedBy("editor");
-		note.setModified(ts.plusHours(1));
-
-		assertThat(note.getId()).isEqualTo("id");
-		assertThat(note.getErrandId()).isEqualTo("eid");
-		assertThat(note.getBody()).isEqualTo("b");
-		assertThat(note.getAuthor()).isEqualTo("a");
-		assertThat(note.getCreated()).isEqualTo(ts);
-		assertThat(note.getModifiedBy()).isEqualTo("editor");
-		assertThat(note.getModified()).isEqualTo(ts.plusHours(1));
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(Note.create()).hasAllNullFieldsOrProperties();
 		assertThat(new Note()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void testEqualsAndHashCode() {
-		final var ts = FIXED_TIMESTAMP;
-		final var a = Note.create().withId("1").withErrandId("e").withBody("b").withAuthor("u").withCreated(ts).withModifiedBy("ed").withModified(ts);
-		final var b = Note.create().withId("1").withErrandId("e").withBody("b").withAuthor("u").withCreated(ts).withModifiedBy("ed").withModified(ts);
-		final var c = Note.create().withId("2");
-		final var d = Note.create().withId("1").withErrandId("e").withBody("b").withAuthor("u").withCreated(ts).withModifiedBy("other").withModified(ts);
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(d)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string");
-	}
-
-	@Test
-	void testToStringContainsFields() {
-		final var note = Note.create().withId("n1").withErrandId("e1").withBody("body").withAuthor("author")
-			.withCreated(FIXED_TIMESTAMP).withModifiedBy("editor").withModified(FIXED_TIMESTAMP);
-
-		assertThat(note.toString()).contains("n1", "e1", "body", "author", "editor");
-	}
 }

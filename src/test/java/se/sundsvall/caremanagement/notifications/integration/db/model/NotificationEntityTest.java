@@ -79,11 +79,4 @@ class NotificationEntityTest {
 		assertThat(entity.getId()).isNull();
 		assertThat(entity.isAcknowledged()).isFalse();
 	}
-
-	@Test
-	void testToString() {
-		final var entity = NotificationEntity.create().withId("id").withErrandId("e").withOwnerId("o").withDescription("d");
-		assertThat(entity.toString())
-			.contains("NotificationEntity{").contains("id='id'").contains("errandId='e'").contains("ownerId='o'");
-	}
 }

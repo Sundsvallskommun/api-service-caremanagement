@@ -47,47 +47,9 @@ class FieldDescriptorTest {
 	}
 
 	@Test
-	void testSettersWork() {
-		final var field = FieldDescriptor.create();
-		field.setName("costs");
-		field.setType("ARRAY");
-		field.setRequired(false);
-		field.setOptions(null);
-		field.setItemsRef("Cost");
-		field.setAppliesTo(List.of("NEW", "RENEWAL", "SUPPLEMENTARY"));
-		field.setCondition(null);
-		field.setDescription("Costs applied for");
-
-		assertThat(field.getName()).isEqualTo("costs");
-		assertThat(field.getType()).isEqualTo("ARRAY");
-		assertThat(field.isRequired()).isFalse();
-		assertThat(field.getOptions()).isNull();
-		assertThat(field.getItemsRef()).isEqualTo("Cost");
-		assertThat(field.getAppliesTo()).containsExactly("NEW", "RENEWAL", "SUPPLEMENTARY");
-		assertThat(field.getCondition()).isNull();
-		assertThat(field.getDescription()).isEqualTo("Costs applied for");
-	}
-
-	@Test
 	void testNoDirtOnCreatedBean() {
 		assertThat(FieldDescriptor.create()).hasAllNullFieldsOrPropertiesExcept("required");
 		assertThat(new FieldDescriptor()).hasAllNullFieldsOrPropertiesExcept("required");
 	}
 
-	@Test
-	void testEqualsHashCodeAndToString() {
-		final var a = FieldDescriptor.create().withName("hasIncomes").withType("BOOLEAN").withRequired(true)
-			.withAppliesTo(List.of("NEW", "RENEWAL"));
-		final var b = FieldDescriptor.create().withName("hasIncomes").withType("BOOLEAN").withRequired(true)
-			.withAppliesTo(List.of("NEW", "RENEWAL"));
-		final var c = FieldDescriptor.create().withName("hasAssets").withType("BOOLEAN").withRequired(false);
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo(null)
-			.isNotEqualTo("string")
-			.isEqualTo(a)
-			.hasToString(b.toString());
-		assertThat(a.toString()).contains("hasIncomes", "BOOLEAN");
-	}
 }

@@ -36,13 +36,6 @@ class JournalEntryEntityTest {
 	}
 
 	@Test
-	void testToString() {
-		final var entity = JournalEntryEntity.create().withId("je1").withErrandId("e1");
-		assertThat(entity.toString())
-			.contains("JournalEntryEntity{").contains("id='je1'").contains("errandId='e1'");
-	}
-
-	@Test
 	void testBuilderMethods() {
 		final var entryDateTime = OffsetDateTime.parse("2025-05-30T14:30:00+02:00");
 		final var modified = FIXED_TIMESTAMP.plusHours(1);

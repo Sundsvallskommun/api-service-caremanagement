@@ -40,13 +40,6 @@ class DocumentEntityTest {
 	}
 
 	@Test
-	void testToString() {
-		final var entity = DocumentEntity.create().withId("d1").withErrandId("e1");
-		assertThat(entity.toString())
-			.contains("DocumentEntity{").contains("id='d1'").contains("errandId='e1'");
-	}
-
-	@Test
 	void testBuilderMethods() {
 		final var documentDate = LocalDate.parse("2025-05-30");
 		final var documentTime = LocalTime.of(14, 30);
