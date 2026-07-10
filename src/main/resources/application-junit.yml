@@ -25,6 +25,9 @@ scheduler:
 caremanagement:
   identifier:
     required: false
+financial-assistance:
+  eligibility:
+    return-all-types: false
 spring:
   cache:
     type: none

@@ -54,32 +54,12 @@ class MessageResourceFailureTest {
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", errandId)))
-			.header(Identifier.HEADER_NAME, "joe001doe; type=adAccount")
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(), violations));
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
-	void postMissingIdentifier() {
-		final var builder = new MultipartBodyBuilder();
-		builder.part("message", new CreateMessage("OUTBOUND", "body", "author", null), APPLICATION_JSON);
-
-		webTestClient.post()
-			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
-			.contentType(MULTIPART_FORM_DATA)
-			.bodyValue(builder.build())
-			.exchange()
-			.expectStatus().isBadRequest()
-			.expectBody()
-			.jsonPath("$.title").isEqualTo("Bad Request")
-			.jsonPath("$.status").isEqualTo(400)
-			.jsonPath("$.detail").isEqualTo("Required header 'X-Sent-By' is not present.");
 
 		verifyNoInteractions(serviceMock);
 	}

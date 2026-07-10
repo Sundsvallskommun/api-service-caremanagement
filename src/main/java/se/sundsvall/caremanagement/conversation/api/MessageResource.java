@@ -71,8 +71,7 @@ class MessageResource {
 
 	@PostMapping(consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Post a message on the errand",
-		description = "Multipart request. The 'message' part carries the message (JSON); the optional 'attachments' part carries the files to attach (any type). The sender's identity is taken from the '"
-			+ Identifier.HEADER_NAME + "' header (type=adAccount → caseworker, type=partyId → applicant).",
+		description = "Multipart request. The 'message' part carries the message (JSON) including the sender ('direction' and 'author'); the optional 'attachments' part carries the files to attach (any type).",
 		responses = {
 			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
 		})
@@ -80,9 +79,6 @@ class MessageResource {
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId,
-		@Parameter(name = Identifier.HEADER_NAME,
-			description = "Sender identity (type=adAccount → caseworker, type=partyId → applicant)",
-			example = "joe001doe; type=adAccount") @RequestHeader(Identifier.HEADER_NAME) final String xSentBy,
 		@Valid @NotNull @RequestPart("message") final CreateMessage message,
 		@RequestPart(value = "attachments", required = false) final List<MultipartFile> attachments) {
 

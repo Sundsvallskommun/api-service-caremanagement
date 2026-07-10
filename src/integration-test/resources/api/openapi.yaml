@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:57616
+- url: http://localhost:53069
   description: Generated server url
 tags:
 - name: Statistics
@@ -1705,10 +1705,9 @@ paths:
       tags:
       - Conversation
       summary: Post a message on the errand
-      description: "Multipart request. The 'message' part carries the message (JSON);\
-        \ the optional 'attachments' part carries the files to attach (any type).\
-        \ The sender's identity is taken from the 'X-Sent-By' header (type=adAccount\
-        \ → caseworker, type=partyId → applicant)."
+      description: Multipart request. The 'message' part carries the message (JSON)
+        including the sender ('direction' and 'author'); the optional 'attachments'
+        part carries the files to attach (any type).
       operationId: createMessage
       parameters:
       - name: municipalityId
@@ -1727,14 +1726,6 @@ paths:
         required: true
         schema:
           type: string
-      - name: X-Sent-By
-        in: header
-        description: "Sender identity (type=adAccount → caseworker, type=partyId →\
-          \ applicant)"
-        required: true
-        schema:
-          type: string
-        example: joe001doe; type=adAccount
       requestBody:
         content:
           multipart/form-data:

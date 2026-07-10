@@ -90,7 +90,7 @@ public class EligibilityService {
 		final LifecareEbCaseService lifecareEbCaseService, final CitizenService citizenService,
 		final RecentlyClosedErrandService recentlyClosedErrandService,
 		@Value("${financial-assistance.eligibility.duplicate-window-days:90}") final int windowDays,
-		@Value("${financial-assistance.eligibility.return-all-types:false}") final boolean returnAllTypes) {
+		@Value("${financial-assistance.eligibility.return-all-types}") final boolean returnAllTypes) {
 		this.errandQueryService = errandQueryService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.lifecareEbCaseService = lifecareEbCaseService;

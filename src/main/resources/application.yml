@@ -187,5 +187,5 @@ financial-assistance:
     recently-closed-window-days: 30
     # TEST OVERRIDE: when true the eligibility check short-circuits and returns all three application types
     # (new/renewal/supplementary application) regardless of any existing case, so the frontend can exercise all three
-    # flows. Set to false to restore the real common-entry-point routing.
-    return-all-types: true
+    # flows. Set FINANCIAL_ASSISTANCE_RETURN_ALL_TYPES=false to restore the real common-entry-point routing.
+    return-all-types: ${FINANCIAL_ASSISTANCE_RETURN_ALL_TYPES}

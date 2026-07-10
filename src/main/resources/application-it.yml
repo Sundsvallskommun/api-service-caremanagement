@@ -7,6 +7,9 @@ logging:
 caremanagement:
   identifier:
     required: false
+financial-assistance:
+  eligibility:
+    return-all-types: false
 integration:
   operaton:
     url: http://localhost:${wiremock.server.port:}/api-operaton
