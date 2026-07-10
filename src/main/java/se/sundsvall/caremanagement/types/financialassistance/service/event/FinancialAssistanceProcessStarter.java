@@ -17,22 +17,30 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_CO_APPLICANT;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * Starts a financial assistance process on an errand and seeds the household start variables the BPMN/DMN flow reads.
- * The renewal intake
- * ({@link FinancialAssistanceErrandCreatedListener}) and the manual-review release
- * ({@link FinancialAssistanceReleaseListener}) start the full decision-support process
- * ({@code rakel-ekonomiskt-bistand}); the supplementary intake starts the lighter supplementary-application process
- * ({@code rakel-ekonomiskt-bistand-tillaggsansokan}) and the new-application intake the new-application process
- * ({@code rakel-ekonomiskt-bistand-nyansokan}) — both reuse the same first steps (status + actualisation) without
- * SSBTEK/calculation, the new application additionally building a calculation straight from what the citizen declared.
- * In
+ * The errand's type slug picks the process: a renewal starts the full decision-support process
+ * ({@code rakel-ekonomiskt-bistand}), a supplementary application the lighter supplementary-application process
+ * ({@code rakel-ekonomiskt-bistand-tillaggsansokan}) and a new application the new-application process
+ * ({@code rakel-ekonomiskt-bistand-nyansokan}) — the latter two reuse the same first steps (status + actualisation)
+ * without SSBTEK/calculation, the new application additionally building a calculation straight from what the citizen
+ * declared. In
  * each case the actualisation step resolves the caseworker off the applicant's most recent Lifecare intervention (for a
  * supplementary application: the ongoing renewal application's caseworker), so the errand ends up on that caseworker
  * rather than the
  * default assignee (a new application has no prior intervention and keeps the default assignee).
+ *
+ * <p>
+ * Both callers — the intake ({@link FinancialAssistanceErrandCreatedListener}) and the manual-review release
+ * ({@link FinancialAssistanceReleaseListener}) — go through the single {@link #startFor} dispatch, so a frozen errand
+ * resumes in the flow of the type the citizen actually applied for. Choosing that type is the eligibility check's job
+ * (a changed household constellation is a new application, never a renewal); the freeze only defers the start, it must
+ * not rewrite the type.
  *
  * <p>
  * The process is started with {@code businessKey = errandId} and seeded with the municipalityId and namespace, the
@@ -64,6 +72,12 @@ class FinancialAssistanceProcessStarter {
 	 */
 	static final String PROCESS_DEFINITION_NAME_NEW = "rakel-ekonomiskt-bistand-nyansokan";
 
+	/** The process each financial assistance type starts — the single place the intake and the release agree on. */
+	private static final Map<String, String> PROCESS_DEFINITION_BY_SLUG = Map.of(
+		SLUG_RENEWAL, PROCESS_DEFINITION_NAME,
+		SLUG_SUPPLEMENTARY, PROCESS_DEFINITION_NAME_SUPPLEMENTARY,
+		SLUG_NEW, PROCESS_DEFINITION_NAME_NEW);
+
 	// Start-variable keys the BPMN/DMN flow reads (scalars — Operaton receives a plain map, so no list indexing).
 	static final String VAR_MUNICIPALITY_ID = "municipalityId";
 	static final String VAR_NAMESPACE = "namespace";
@@ -88,26 +102,20 @@ class FinancialAssistanceProcessStarter {
 	}
 
 	/**
-	 * Start the financial assistance decision-support process (renewal) on {@code errandId} and link the instance back.
-	 * Best-effort.
+	 * Start the process belonging to {@code typeSlug} on {@code errandId} and link the instance back. A slug outside the
+	 * three financial assistance types has no process and is a no-op. Best-effort.
 	 */
-	void start(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity entity) {
-		start(PROCESS_DEFINITION_NAME, municipalityId, namespace, errandId, entity);
+	void startFor(final String typeSlug, final String municipalityId, final String namespace, final String errandId,
+		final FinancialAssistanceEntity entity) {
+		processDefinitionName(typeSlug)
+			.ifPresent(processDefinitionName -> start(processDefinitionName, municipalityId, namespace, errandId, entity));
 	}
 
 	/**
-	 * Start the financial assistance supplementary-application process on {@code errandId} and link the instance back.
-	 * Best-effort.
+	 * The BPMN process a financial assistance type starts, when the slug is one of the three financial assistance types.
 	 */
-	void startSupplementary(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity entity) {
-		start(PROCESS_DEFINITION_NAME_SUPPLEMENTARY, municipalityId, namespace, errandId, entity);
-	}
-
-	/**
-	 * Start the financial assistance new-application process on {@code errandId} and link the instance back. Best-effort.
-	 */
-	void startNew(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity entity) {
-		start(PROCESS_DEFINITION_NAME_NEW, municipalityId, namespace, errandId, entity);
+	private static Optional<String> processDefinitionName(final String typeSlug) {
+		return Optional.ofNullable(typeSlug).map(PROCESS_DEFINITION_BY_SLUG::get);
 	}
 
 	private void start(final String processDefinitionName, final String municipalityId, final String namespace, final String errandId,

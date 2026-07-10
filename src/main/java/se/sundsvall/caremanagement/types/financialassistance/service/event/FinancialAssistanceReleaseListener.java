@@ -14,9 +14,12 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * Releases a manually-reviewed financial assistance errand for processing. After a caseworker has reopened the previous
  * intervention in
  * Lifecare
- * and moves the frozen errand {@code NEEDS_MANUAL_REVIEW → UNDER_REVIEW}, this starts the financial assistance process
- * on the same errand
- * so it runs like a normal renewal (SSBTEK → calculation → recommendation → caseworker in the loop).
+ * and moves the frozen errand {@code NEEDS_MANUAL_REVIEW → UNDER_REVIEW}, this starts the process belonging to the
+ * errand's own application type, so it runs exactly as it would have at creation had the recently-closed freeze not
+ * held it back. A frozen renewal resumes the full decision-support flow (SSBTEK → calculation → recommendation →
+ * caseworker in the loop); a frozen new application still builds its normberäkning from what the citizen declared. The
+ * freeze defers a start, it never rewrites the application type — a household that applied as a couple after a
+ * single-applicant case is a new application, and the eligibility check has already routed it as one.
  *
  * <p>
  * The trigger is scoped precisely to that one edge so the normal renewal flow — which already starts its process at
@@ -45,7 +48,7 @@ class FinancialAssistanceReleaseListener {
 		errandQueryService.findErrand(event.municipalityId(), event.namespace(), event.errandId())
 			.filter(errand -> !StringUtils.hasText(errand.getProcessInstanceId())) // defensive: never start a second instance
 			.flatMap(errand -> financialAssistanceRepository.findByErrandId(event.errandId()))
-			.ifPresent(entity -> processStarter.start(event.municipalityId(), event.namespace(), event.errandId(), entity));
+			.ifPresent(entity -> processStarter.startFor(event.typeSlug(), event.municipalityId(), event.namespace(), event.errandId(), entity));
 	}
 
 	/**

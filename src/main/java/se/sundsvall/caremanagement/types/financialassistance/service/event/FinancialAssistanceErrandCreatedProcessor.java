@@ -15,9 +15,6 @@ import se.sundsvall.caremanagement.types.financialassistance.service.DefaultAssi
 import se.sundsvall.caremanagement.types.financialassistance.service.RecentlyClosedErrandService;
 
 import static org.springframework.transaction.annotation.Propagation.REQUIRES_NEW;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_NEEDS_MANUAL_REVIEW;
 
 /**
@@ -90,19 +87,8 @@ class FinancialAssistanceErrandCreatedProcessor {
 	 */
 	@Transactional(propagation = REQUIRES_NEW)
 	void startProcess(final ErrandCreated event) {
-		financialAssistanceRepository.findByErrandId(event.errandId()).ifPresent(entity -> {
-			if (SLUG_RENEWAL.equals(event.typeSlug())) {
-				processStarter.start(event.municipalityId(), event.namespace(), event.errandId(), entity); // renewal starts the full decision-support process
-			} else if (SLUG_SUPPLEMENTARY.equals(event.typeSlug())) {
-				// A supplementary application supplements an ongoing bistånd: start the tilläggsansökan process so its
-				// actualisation step attaches the previous återansökan's Lifecare caseworker, not the default assignee.
-				processStarter.startSupplementary(event.municipalityId(), event.namespace(), event.errandId(), entity);
-			} else if (SLUG_NEW.equals(event.typeSlug())) {
-				// A new application starts the nyansökan process (status + actualisation, then a normberäkning built
-				// straight from what the citizen declared). It has no prior insats, so the default assignee above stands.
-				processStarter.startNew(event.municipalityId(), event.namespace(), event.errandId(), entity);
-			}
-		});
+		financialAssistanceRepository.findByErrandId(event.errandId())
+			.ifPresent(entity -> processStarter.startFor(event.typeSlug(), event.municipalityId(), event.namespace(), event.errandId(), entity));
 	}
 
 	/**

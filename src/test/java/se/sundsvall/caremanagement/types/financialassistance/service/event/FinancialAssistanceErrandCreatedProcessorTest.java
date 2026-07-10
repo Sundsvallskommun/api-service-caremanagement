@@ -145,9 +145,7 @@ class FinancialAssistanceErrandCreatedProcessorTest {
 
 		processor.startProcess(event(SLUG_RENEWAL));
 
-		verify(processStarterMock).start(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
-		verify(processStarterMock, never()).startSupplementary(any(), any(), any(), any());
-		verify(processStarterMock, never()).startNew(any(), any(), any(), any());
+		verify(processStarterMock).startFor(eq(SLUG_RENEWAL), eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
 	}
 
 	@Test
@@ -156,9 +154,7 @@ class FinancialAssistanceErrandCreatedProcessorTest {
 
 		processor.startProcess(event(SLUG_SUPPLEMENTARY));
 
-		verify(processStarterMock).startSupplementary(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
-		verify(processStarterMock, never()).start(any(), any(), any(), any());
-		verify(processStarterMock, never()).startNew(any(), any(), any(), any());
+		verify(processStarterMock).startFor(eq(SLUG_SUPPLEMENTARY), eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
 	}
 
 	@Test
@@ -167,9 +163,7 @@ class FinancialAssistanceErrandCreatedProcessorTest {
 
 		processor.startProcess(event(SLUG_NEW));
 
-		verify(processStarterMock).startNew(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
-		verify(processStarterMock, never()).start(any(), any(), any(), any());
-		verify(processStarterMock, never()).startSupplementary(any(), any(), any(), any());
+		verify(processStarterMock).startFor(eq(SLUG_NEW), eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
 	}
 
 	@Test
