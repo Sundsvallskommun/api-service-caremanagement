@@ -4,8 +4,15 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.multipart.MultipartFile;
+import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Actualisation;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
@@ -14,6 +21,9 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Eligibili
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceMetadata;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RenewalPrefill;
+import se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceActualisationService;
+import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
 
 import static java.time.Month.JANUARY;
 import static java.time.Month.JUNE;
@@ -23,15 +33,34 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 
-class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceResourceTest {
+@SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
+@AutoConfigureWebTestClient
+@ActiveProfiles("junit")
+class FinancialAssistanceIntakeResourceTest {
+	private static final String MUNICIPALITY_ID = "2281";
+	private static final String NAMESPACE = "my-namespace";
+	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance";
+
+	@MockitoBean
+	private RenewalPrefillService prefillServiceMock;
+
+	@MockitoBean
+	private EligibilityService eligibilityServiceMock;
+
+	@MockitoBean
+	private FinancialAssistanceActualisationService actualisationServiceMock;
+
+	@Autowired
+	private WebTestClient webTestClient;
 
 	@Test
 	void getMetadata() {
 		final var metadata = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/metadata").build(base()))
+			.uri(uri -> uri.path(PATH + "/metadata").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(FinancialAssistanceMetadata.class)
@@ -64,7 +93,7 @@ class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceR
 			.thenReturn(EligibilityResponse.create().withReasonCode("EXISTING_CASE"));
 
 		final var response = webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/eligibility").build(base()))
+			.uri(uri -> uri.path(PATH + "/eligibility").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(EligibilityRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479"))
 			.exchange()
 			.expectStatus().isOk()
@@ -83,7 +112,7 @@ class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceR
 			.thenReturn(ActualisationResponse.create().withActualisationId(5012));
 
 		final var response = webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/actualisation").build(base()))
+			.uri(uri -> uri.path(PATH + "/actualisation").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(ActualisationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
 			.exchange()
 			.expectStatus().isOk()
@@ -103,7 +132,7 @@ class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceR
 			.thenReturn(List.of(Actualisation.create().withId(5012).withName("Ekonomiskt bistånd")));
 
 		final var result = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/actualisations").queryParam("partyId", partyId).build(base()))
+			.uri(uri -> uri.path(PATH + "/actualisations").queryParam("partyId", partyId).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBodyList(Actualisation.class)
@@ -121,7 +150,7 @@ class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceR
 			.thenReturn(List.of());
 
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/actualisations").queryParam("partyId", partyId).queryParam("from", "2026-01-01").queryParam("to", "2026-06-30").build(base()))
+			.uri(uri -> uri.path(PATH + "/actualisations").queryParam("partyId", partyId).queryParam("from", "2026-01-01").queryParam("to", "2026-06-30").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk();
 
@@ -167,7 +196,7 @@ class FinancialAssistanceIntakeResourceTest extends AbstractFinancialAssistanceR
 		when(prefillServiceMock.prefill(MUNICIPALITY_ID, partyId)).thenReturn(RenewalPrefill.create().withLifecareChecked(true));
 
 		final var prefill = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/prefill").queryParam("partyId", partyId).build(base()))
+			.uri(uri -> uri.path(PATH + "/prefill").queryParam("partyId", partyId).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(RenewalPrefill.class)

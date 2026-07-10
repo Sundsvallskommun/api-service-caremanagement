@@ -5,24 +5,49 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.formsnapshot.api.model.FormSnapshot;
 import se.sundsvall.caremanagement.formsnapshot.api.model.FormSnapshotSection;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceErrandService;
 
+import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.ALL;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 import static org.springframework.http.MediaType.TEXT_PLAIN;
 
-class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceResourceTest {
+@SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
+@AutoConfigureWebTestClient
+@ActiveProfiles("junit")
+class FinancialAssistanceErrandResourceTest {
+
+	private static final String ERRAND_ID = randomUUID().toString();
+	private static final String SLUG = "financial-assistance-new";
+	private static final String CREATE_PATH = "/{municipalityId}/{namespace}/errands/" + SLUG;
+
+	private static final String MUNICIPALITY_ID = "2281";
+	private static final String NAMESPACE = "my-namespace";
+	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance";
+	@MockitoBean
+	private FinancialAssistanceErrandService errandServiceMock;
+	@Autowired
+	private WebTestClient webTestClient;
 
 	@Test
 	void createErrand() {
@@ -32,7 +57,7 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 		builder.part("request", CreateFinancialAssistanceRequest.create().withTitle("Min application").withData(FinancialAssistanceData.create()), APPLICATION_JSON);
 
 		webTestClient.post()
-			.uri(uri -> uri.path(CREATE_PATH).build(base()))
+			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
@@ -54,7 +79,7 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 		builder.part("request", requestJson, TEXT_PLAIN);
 
 		webTestClient.post()
-			.uri(uri -> uri.path(CREATE_PATH).build(base()))
+			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
@@ -75,7 +100,7 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 		builder.part("request", requestJson.getBytes(StandardCharsets.UTF_8), APPLICATION_JSON);
 
 		webTestClient.post()
-			.uri(uri -> uri.path(CREATE_PATH).build(base()))
+			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
@@ -97,7 +122,7 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 		builder.part("caseData", "%PDF-1.4".getBytes()).filename("snapshot.pdf");
 
 		webTestClient.post()
-			.uri(uri -> uri.path(CREATE_PATH).build(base()))
+			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
@@ -118,7 +143,7 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 		builder.part("attachments", "hyresavi".getBytes()).filename("hyresavi.png");
 
 		webTestClient.post()
-			.uri(uri -> uri.path(CREATE_PATH).build(base()))
+			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
@@ -138,7 +163,7 @@ class FinancialAssistanceErrandResourceTest extends AbstractFinancialAssistanceR
 		builder.part("formSnapshot", "{\"schemaVersion\":\"form-snapshot/1\",\"sections\":[]}", APPLICATION_JSON);
 
 		webTestClient.post()
-			.uri(uri -> uri.path(CREATE_PATH).build(base()))
+			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()

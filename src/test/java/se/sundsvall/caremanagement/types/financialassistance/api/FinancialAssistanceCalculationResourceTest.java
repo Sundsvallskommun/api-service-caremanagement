@@ -2,20 +2,43 @@ package se.sundsvall.caremanagement.types.financialassistance.api;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceCalculationService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
-class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssistanceResourceTest {
+@SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
+@AutoConfigureWebTestClient
+@ActiveProfiles("junit")
+class FinancialAssistanceCalculationResourceTest {
+
+	private static final String MUNICIPALITY_ID = "2281";
+	private static final String NAMESPACE = "my-namespace";
+	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance";
+
+	@MockitoBean
+	private FinancialAssistanceCalculationService calculationServiceMock;
+
+	@Autowired
+	private WebTestClient webTestClient;
 
 	@Test
 	void prepareCalculation() {
@@ -23,7 +46,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 			.thenReturn(CalculationResponse.create().withInformationComplete(false).withMissingIncomeTypes(List.of("Dagersättning")));
 
 		final var response = webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/calculation/prepare").build(base()))
+			.uri(uri -> uri.path(PATH + "/calculation/prepare").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06").withErrandId("cb20c51f-fcf3-42c0-b613-de563634a8ec"))
 			.exchange()
 			.expectStatus().isOk()
@@ -44,7 +67,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 				.withIncomes(List.of(NormIncomeRow.create().withTypeName("Bostadsbidrag").withApplicantProcessAmount(new BigDecimal("1850")))));
 
 		final var response = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft").build(base()))
+			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(CalculationDraft.class)
@@ -63,7 +86,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 			.thenReturn(CalculationDraft.create().withNormId(5).withHouseholdSize(1));
 
 		final var response = webTestClient.patch()
-			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/header").build(base()))
+			.uri(uri -> uri.path(PATH + "/errand-1/calculation/draft/header").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(new NormHeaderInput().withNormId(5).withHasCustomHouseholdSize(true).withHouseholdSize(1))
 			.exchange()
 			.expectStatus().isOk()
@@ -82,7 +105,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 			.thenReturn(CalculationResponse.create().withCalculationId(4711));
 
 		final var response = webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/calculation/commit").build(base()))
+			.uri(uri -> uri.path(PATH + "/calculation/commit").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06").withErrandId("cb20c51f-fcf3-42c0-b613-de563634a8ec"))
 			.exchange()
 			.expectStatus().isOk()
@@ -101,7 +124,7 @@ class FinancialAssistanceCalculationResourceTest extends AbstractFinancialAssist
 			.thenReturn(CalculationResponse.create().withCalculationId(5001));
 
 		final var response = webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/calculation/from-application").build(base()))
+			.uri(uri -> uri.path(PATH + "/calculation/from-application").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06").withErrandId("cb20c51f-fcf3-42c0-b613-de563634a8ec"))
 			.exchange()
 			.expectStatus().isOk()

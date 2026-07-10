@@ -4,9 +4,17 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareCalculation;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDocument;
+import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceLifecareService;
 
 import static java.time.Month.JANUARY;
 import static java.time.Month.JUNE;
@@ -15,9 +23,22 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_PDF;
 
-class FinancialAssistanceLifecareResourceTest extends AbstractFinancialAssistanceResourceTest {
+@SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
+@AutoConfigureWebTestClient
+@ActiveProfiles("junit")
+class FinancialAssistanceLifecareResourceTest {
+	private static final String MUNICIPALITY_ID = "2281";
+	private static final String NAMESPACE = "my-namespace";
+	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance";
+
+	@MockitoBean
+	private FinancialAssistanceLifecareService lifecareServiceMock;
+
+	@Autowired
+	private WebTestClient webTestClient;
 
 	@Test
 	void listCalculations() {
@@ -26,7 +47,7 @@ class FinancialAssistanceLifecareResourceTest extends AbstractFinancialAssistanc
 			.thenReturn(List.of(LifecareCalculation.create().withId(7001).withNormSum(10500.0)));
 
 		final var result = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/calculations").queryParam("partyId", partyId).build(base()))
+			.uri(uri -> uri.path(PATH + "/calculations").queryParam("partyId", partyId).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBodyList(LifecareCalculation.class)
@@ -44,7 +65,7 @@ class FinancialAssistanceLifecareResourceTest extends AbstractFinancialAssistanc
 			.thenReturn(List.of());
 
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/calculations").queryParam("partyId", partyId).queryParam("from", "2026-01-01").queryParam("to", "2026-06-30").build(base()))
+			.uri(uri -> uri.path(PATH + "/calculations").queryParam("partyId", partyId).queryParam("from", "2026-01-01").queryParam("to", "2026-06-30").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk();
 
@@ -58,7 +79,7 @@ class FinancialAssistanceLifecareResourceTest extends AbstractFinancialAssistanc
 			.thenReturn(List.of(LifecareDecision.create().withId(9900).withType("Bifall")));
 
 		final var result = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/decisions").queryParam("partyId", partyId).build(base()))
+			.uri(uri -> uri.path(PATH + "/decisions").queryParam("partyId", partyId).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBodyList(LifecareDecision.class)
@@ -76,7 +97,7 @@ class FinancialAssistanceLifecareResourceTest extends AbstractFinancialAssistanc
 			.thenReturn(List.of(LifecareDocument.create().withId("doc-1").withTitle("Beslut")));
 
 		final var result = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/documents").queryParam("partyId", partyId).build(base()))
+			.uri(uri -> uri.path(PATH + "/documents").queryParam("partyId", partyId).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBodyList(LifecareDocument.class)
