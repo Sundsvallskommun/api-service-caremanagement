@@ -1,15 +1,18 @@
 package se.sundsvall.caremanagement.types.financialassistance.api;
 
 import java.util.Map;
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
+import se.sundsvall.dept44.problem.violations.Violation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 class FinancialAssistanceCalculationResourceFailureTest extends AbstractFinancialAssistanceResourceTest {
 
@@ -62,4 +65,16 @@ class FinancialAssistanceCalculationResourceFailureTest extends AbstractFinancia
 		verifyNoInteractions(calculationServiceMock);
 	}
 
+	private static void assertConstraintViolation(final ConstraintViolationProblem response, final Tuple... violations) {
+		assertThat(response).isNotNull();
+		assertThat(response.getTitle()).isEqualTo("Constraint Violation");
+		assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
+		assertThat(response.getViolations())
+			.isNotEmpty()
+			.allSatisfy(violation -> assertThat(violation.field()).isNotBlank())
+			.allSatisfy(violation -> assertThat(violation.message()).isNotBlank());
+		assertThat(response.getViolations())
+			.extracting(Violation::field, Violation::message)
+			.containsExactlyInAnyOrder(violations);
+	}
 }

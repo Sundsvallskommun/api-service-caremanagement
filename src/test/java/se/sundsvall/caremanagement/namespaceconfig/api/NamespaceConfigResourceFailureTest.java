@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.namespaceconfig.api;
 
 import java.util.Map;
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,11 +13,13 @@ import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.namespaceconfig.api.model.NamespaceConfig;
 import se.sundsvall.caremanagement.namespaceconfig.service.NamespaceConfigService;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
+import se.sundsvall.dept44.problem.violations.Violation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
-import static se.sundsvall.caremanagement.support.ConstraintViolationAssertions.assertConstraintViolation;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -181,5 +184,18 @@ class NamespaceConfigResourceFailureTest {
 				tuple("deleteNamespaceConfig.namespace", "can only contain A-Z, a-z, 0-9, - and _")));
 
 		verifyNoInteractions(serviceMock);
+	}
+
+	private static void assertConstraintViolation(final ConstraintViolationProblem response, final Tuple... violations) {
+		assertThat(response).isNotNull();
+		assertThat(response.getTitle()).isEqualTo("Constraint Violation");
+		assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
+		assertThat(response.getViolations())
+			.isNotEmpty()
+			.allSatisfy(violation -> assertThat(violation.field()).isNotBlank())
+			.allSatisfy(violation -> assertThat(violation.message()).isNotBlank());
+		assertThat(response.getViolations())
+			.extracting(Violation::field, Violation::message)
+			.containsExactlyInAnyOrder(violations);
 	}
 }
