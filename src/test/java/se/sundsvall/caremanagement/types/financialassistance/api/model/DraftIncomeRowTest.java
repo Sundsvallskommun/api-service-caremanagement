@@ -25,18 +25,36 @@ class DraftIncomeRowTest {
 
 	@Test
 	void testBuilderMethods() {
-		final var row = DraftIncomeRow.create()
-			.withTypeId(20)
-			.withTypeName("Bostadsbidrag")
-			.withApplicantAmount(1850.0)
-			.withApplicantAmountDate("2026-05-15T00:00:00Z")
-			.withCoApplicantAmount(0.0)
-			.withCoApplicantAmountDate(null)
-			.withNote("SSBTEK: Bostadsbidrag");
+		final var typeId = 20;
+		final var typeName = "Bostadsbidrag";
+		final var applicantAmount = 1850.0;
+		final var applicantAmountDate = "2026-05-15T00:00:00Z";
+		final var coApplicantAmount = 0.0;
+		final var coApplicantAmountDate = "2026-05-16T00:00:00Z";
+		final var note = "SSBTEK: Bostadsbidrag";
 
-		assertThat(row.getTypeId()).isEqualTo(20);
-		assertThat(row.getTypeName()).isEqualTo("Bostadsbidrag");
-		assertThat(row.getApplicantAmount()).isEqualTo(1850.0);
-		assertThat(row.getNote()).isEqualTo("SSBTEK: Bostadsbidrag");
+		final var result = DraftIncomeRow.create()
+			.withTypeId(typeId)
+			.withTypeName(typeName)
+			.withApplicantAmount(applicantAmount)
+			.withApplicantAmountDate(applicantAmountDate)
+			.withCoApplicantAmount(coApplicantAmount)
+			.withCoApplicantAmountDate(coApplicantAmountDate)
+			.withNote(note);
+
+		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getTypeId()).isEqualTo(typeId);
+		assertThat(result.getTypeName()).isEqualTo(typeName);
+		assertThat(result.getApplicantAmount()).isEqualTo(applicantAmount);
+		assertThat(result.getApplicantAmountDate()).isEqualTo(applicantAmountDate);
+		assertThat(result.getCoApplicantAmount()).isEqualTo(coApplicantAmount);
+		assertThat(result.getCoApplicantAmountDate()).isEqualTo(coApplicantAmountDate);
+		assertThat(result.getNote()).isEqualTo(note);
 	}
+
+	@Test
+	void testNoDirtOnCreatedBean() {
+		assertThat(DraftIncomeRow.create()).hasAllNullFieldsOrProperties();
+	}
+
 }

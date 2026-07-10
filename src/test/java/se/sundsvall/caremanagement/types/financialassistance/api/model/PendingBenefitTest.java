@@ -8,6 +8,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
 
 class PendingBenefitTest {
@@ -20,5 +21,24 @@ class PendingBenefitTest {
 			hasValidBeanHashCode(),
 			hasValidBeanEquals(),
 			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
+		final var benefitName = "Bostadsbidrag";
+		final var applicantName = "Anna Andersson";
+
+		final var result = PendingBenefit.create()
+			.withBenefitName(benefitName)
+			.withApplicantName(applicantName);
+
+		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getBenefitName()).isEqualTo(benefitName);
+		assertThat(result.getApplicantName()).isEqualTo(applicantName);
+	}
+
+	@Test
+	void testNoDirtOnCreatedBean() {
+		assertThat(PendingBenefit.create()).hasAllNullFieldsOrProperties();
 	}
 }

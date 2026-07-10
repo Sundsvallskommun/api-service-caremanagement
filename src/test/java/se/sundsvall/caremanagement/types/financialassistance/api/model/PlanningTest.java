@@ -12,6 +12,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
 
 class PlanningTest {
@@ -29,5 +30,42 @@ class PlanningTest {
 			hasValidBeanHashCode(),
 			hasValidBeanEquals(),
 			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
+		final var person = "APPLICANT";
+		final var planningType = "WORK";
+		final var workExtent = "FULL";
+		final var workDescription = "Permanent employment";
+		final var sickLeaveLevel = "100";
+		final var sfiStudyPath = "1";
+		final var sfiCourse = "B";
+		final var otherDescription = "Internship";
+
+		final var result = Planning.create()
+			.withPerson(person)
+			.withPlanningType(planningType)
+			.withWorkExtent(workExtent)
+			.withWorkDescription(workDescription)
+			.withSickLeaveLevel(sickLeaveLevel)
+			.withSfiStudyPath(sfiStudyPath)
+			.withSfiCourse(sfiCourse)
+			.withOtherDescription(otherDescription);
+
+		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getPerson()).isEqualTo(person);
+		assertThat(result.getPlanningType()).isEqualTo(planningType);
+		assertThat(result.getWorkExtent()).isEqualTo(workExtent);
+		assertThat(result.getWorkDescription()).isEqualTo(workDescription);
+		assertThat(result.getSickLeaveLevel()).isEqualTo(sickLeaveLevel);
+		assertThat(result.getSfiStudyPath()).isEqualTo(sfiStudyPath);
+		assertThat(result.getSfiCourse()).isEqualTo(sfiCourse);
+		assertThat(result.getOtherDescription()).isEqualTo(otherDescription);
+	}
+
+	@Test
+	void testNoDirtOnCreatedBean() {
+		assertThat(Planning.create()).hasAllNullFieldsOrProperties();
 	}
 }

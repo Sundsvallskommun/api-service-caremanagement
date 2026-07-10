@@ -3,9 +3,14 @@ package se.sundsvall.caremanagement.attachments.service.mapper;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Blob;
 import java.time.OffsetDateTime;
 import java.util.List;
+import org.hibernate.Hibernate;
+import org.hibernate.LobHelper;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentDataEntity;
@@ -16,6 +21,10 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 class AttachmentMapperTest {
@@ -125,11 +134,15 @@ class AttachmentMapperTest {
 	@Test
 	void toAttachmentEntityFromMultipartFileBuildsEntity() {
 		final var file = new MockMultipartFile("file", "hello.txt", "text/plain", new ByteArrayInputStream("hello".getBytes()).readAllBytes());
+		final var blob = Mockito.mock(Blob.class);
+		final var lobHelper = Mockito.mock(LobHelper.class);
 
-		// Will likely fail at Hibernate.getLobHelper() since no JPA context is active.
-		// Either we get a real entity (when running in an integration setup) or an exception.
-		try {
+		try (MockedStatic<Hibernate> hibernateMock = Mockito.mockStatic(Hibernate.class)) {
+			hibernateMock.when(Hibernate::getLobHelper).thenReturn(lobHelper);
+			when(lobHelper.createBlob(any(InputStream.class), eq(5L))).thenReturn(blob);
+
 			final AttachmentEntity entity = AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "ERRAND", "CASEWORKER", file);
+
 			assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "modified");
 			assertThat(entity.getErrandId()).isEqualTo("eid");
 			assertThat(entity.getNamespace()).isEqualTo("ns");
@@ -140,9 +153,8 @@ class AttachmentMapperTest {
 			assertThat(entity.getDocumentType()).isEqualTo("ERRAND");
 			assertThat(entity.getSenderRole()).isEqualTo("CASEWORKER");
 			assertThat(entity.getAttachmentData()).isNotNull();
-		} catch (final Exception e) {
-			// Acceptable in unit context with no Hibernate session
-			assertThat(e).isNotNull();
+			assertThat(entity.getAttachmentData().getFile()).isSameAs(blob);
+			verify(lobHelper).createBlob(any(InputStream.class), eq(5L));
 		}
 	}
 

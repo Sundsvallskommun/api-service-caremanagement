@@ -17,6 +17,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAs
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceLifecareService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistancePaymentService;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceWarningService;
+import se.sundsvall.caremanagement.types.financialassistance.service.MonitoringService;
 import se.sundsvall.caremanagement.types.financialassistance.service.RenewalPrefillService;
 
 import static java.util.UUID.randomUUID;
@@ -70,6 +71,9 @@ abstract class AbstractFinancialAssistanceResourceTest {
 
 	@MockitoBean
 	protected FinancialAssistanceDraftRowService draftRowServiceMock;
+
+	@MockitoBean
+	protected MonitoringService monitoringServiceMock;
 
 	@Autowired
 	protected WebTestClient webTestClient;

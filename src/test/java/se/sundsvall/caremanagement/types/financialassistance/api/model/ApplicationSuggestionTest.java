@@ -25,19 +25,33 @@ class ApplicationSuggestionTest {
 
 	@Test
 	void testBuilderMethods() {
-		final var suggestion = ApplicationSuggestion.create()
-			.withTypeSlug("financial-assistance-renewal")
-			.withApplicationType("RENEWAL")
-			.withPeriodMonth(7)
-			.withPeriodYear(2026)
-			.withRecommended(true)
-			.withLabel("Renewal for July 2026");
+		final var typeSlug = "financial-assistance-renewal";
+		final var applicationType = "RENEWAL";
+		final var periodMonth = 7;
+		final var periodYear = 2026;
+		final var recommended = true;
+		final var label = "Renewal for July 2026";
 
-		assertThat(suggestion.getTypeSlug()).isEqualTo("financial-assistance-renewal");
-		assertThat(suggestion.getApplicationType()).isEqualTo("RENEWAL");
-		assertThat(suggestion.getPeriodMonth()).isEqualTo(7);
-		assertThat(suggestion.getPeriodYear()).isEqualTo(2026);
-		assertThat(suggestion.isRecommended()).isTrue();
-		assertThat(suggestion.getLabel()).isEqualTo("Renewal for July 2026");
+		final var result = ApplicationSuggestion.create()
+			.withTypeSlug(typeSlug)
+			.withApplicationType(applicationType)
+			.withPeriodMonth(periodMonth)
+			.withPeriodYear(periodYear)
+			.withRecommended(recommended)
+			.withLabel(label);
+
+		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getTypeSlug()).isEqualTo(typeSlug);
+		assertThat(result.getApplicationType()).isEqualTo(applicationType);
+		assertThat(result.getPeriodMonth()).isEqualTo(periodMonth);
+		assertThat(result.getPeriodYear()).isEqualTo(periodYear);
+		assertThat(result.isRecommended()).isEqualTo(recommended);
+		assertThat(result.getLabel()).isEqualTo(label);
 	}
+
+	@Test
+	void testNoDirtOnCreatedBean() {
+		assertThat(ApplicationSuggestion.create()).hasAllNullFieldsOrPropertiesExcept("recommended");
+	}
+
 }

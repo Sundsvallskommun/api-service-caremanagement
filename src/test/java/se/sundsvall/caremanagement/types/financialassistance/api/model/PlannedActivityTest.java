@@ -12,6 +12,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
 
 class PlannedActivityTest {
@@ -29,5 +30,30 @@ class PlannedActivityTest {
 			hasValidBeanHashCode(),
 			hasValidBeanEquals(),
 			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
+		final var person = "APPLICANT";
+		final var activity = "Job coaching";
+		final var periodFrom = LocalDate.of(2026, 6, 1);
+		final var periodTo = LocalDate.of(2026, 6, 30);
+
+		final var result = PlannedActivity.create()
+			.withPerson(person)
+			.withActivity(activity)
+			.withPeriodFrom(periodFrom)
+			.withPeriodTo(periodTo);
+
+		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getPerson()).isEqualTo(person);
+		assertThat(result.getActivity()).isEqualTo(activity);
+		assertThat(result.getPeriodFrom()).isEqualTo(periodFrom);
+		assertThat(result.getPeriodTo()).isEqualTo(periodTo);
+	}
+
+	@Test
+	void testNoDirtOnCreatedBean() {
+		assertThat(PlannedActivity.create()).hasAllNullFieldsOrProperties();
 	}
 }

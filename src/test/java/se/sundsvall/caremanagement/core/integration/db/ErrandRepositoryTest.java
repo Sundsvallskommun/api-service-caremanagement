@@ -5,21 +5,21 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
-import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase.Replace.NONE;
 import static se.sundsvall.caremanagement.core.integration.db.specification.ErrandSpecification.selection;
 import static se.sundsvall.caremanagement.core.integration.db.specification.ErrandSpecification.withNamespaceAndMunicipalityId;
 import static se.sundsvall.caremanagement.core.integration.db.specification.ErrandSpecification.withStatus;
 import static se.sundsvall.caremanagement.core.integration.db.specification.ErrandSpecification.withTypeSlug;
 
-@SpringBootTest(classes = Application.class)
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = NONE)
 @ActiveProfiles("junit")
-@Transactional
 class ErrandRepositoryTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
