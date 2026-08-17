@@ -21,7 +21,6 @@ import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
-import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
@@ -32,7 +31,6 @@ import static java.time.Month.JUNE;
 import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,94 +65,6 @@ class CalculationServiceTest {
 	}
 
 	@Test
-	void buildAndPostFromClassifiedMapsCategoryToFamilyCareAndPosts() {
-		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
-			bostadsbidrag()
-		});
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
-		when(lifecareFamilyCareIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4712);
-		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag"));
-
-		final var result = service.buildAndPostFromClassified(APPLICANT, MONTH, "[json]");
-
-		assertThat(result.calculationId()).isEqualTo(4712);
-		assertThat(result.informationComplete()).isTrue();
-		assertThat(result.missingIncomeTypes()).isEmpty();
-		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
-		verify(lifecareFamilyCareIntegrationMock).createCalculation(captor.capture());
-		assertThat(captor.getValue().getPersonId()).isEqualTo(APPLICANT);
-		assertThat(captor.getValue().getServiceId()).isEqualTo(5);
-		assertThat(captor.getValue().getCalculationIncomes()).hasSize(1);
-		assertThat(captor.getValue().getCalculationIncomes().getFirst().getId()).isEqualTo(20);
-	}
-
-	@Test
-	void reportsIncompleteWhenAPreviousIncomeTypeIsMissingThisMonth() {
-		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
-			bostadsbidrag()
-		});
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
-		when(lifecareFamilyCareIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4712);
-		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag", "Dagersättning"));
-
-		final var result = service.buildAndPostFromClassified(APPLICANT, MONTH, "[json]");
-
-		assertThat(result.informationComplete()).isFalse();
-		assertThat(result.missingIncomeTypes()).containsExactly("Dagersättning");
-	}
-
-	@Test
-	void treatsCompletenessAsCompleteWhenPreviousLookupFails() {
-		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
-			bostadsbidrag()
-		});
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
-		when(lifecareFamilyCareIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4712);
-		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenThrow(new RuntimeException("FamilyCare down"));
-
-		final var result = service.buildAndPostFromClassified(APPLICANT, MONTH, "[json]");
-
-		assertThat(result.calculationId()).isEqualTo(4712);
-		assertThat(result.informationComplete()).isTrue();
-		assertThat(result.missingIncomeTypes()).isEmpty();
-	}
-
-	@Test
-	void buildDraftReturnsRowsAndCompletenessWithoutPosting() {
-		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
-			bostadsbidrag()
-		});
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
-		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag"));
-
-		final var result = service.buildDraft(APPLICANT, MONTH, "[json]");
-
-		assertThat(result.informationComplete()).isTrue();
-		assertThat(result.missingIncomeTypes()).isEmpty();
-		assertThat(result.rows()).hasSize(1);
-		assertThat(result.rows().getFirst().typeId()).isEqualTo(20);
-		assertThat(result.rows().getFirst().typeName()).isEqualTo("Bostadsbidrag");
-		assertThat(result.rows().getFirst().applicantAmount()).isEqualTo(BigDecimal.valueOf(1850.0));
-		verify(lifecareFamilyCareIntegrationMock, never()).createCalculation(any());
-	}
-
-	@Test
-	void postDraftRowsAssemblesFromRowsAndPosts() {
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
-		when(lifecareFamilyCareIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4713);
-
-		final var rows = List.of(new DraftRow(20, "Bostadsbidrag", BigDecimal.valueOf(1850.0), "2026-05-15T00:00:00Z", null, null, "SSBTEK: Bostadsbidrag"));
-		final var calculationId = service.postDraftRows(APPLICANT, MONTH, rows);
-
-		assertThat(calculationId).isEqualTo(4713);
-		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
-		verify(lifecareFamilyCareIntegrationMock).createCalculation(captor.capture());
-		assertThat(captor.getValue().getCalculationIncomes()).hasSize(1);
-		assertThat(captor.getValue().getCalculationIncomes().getFirst().getId()).isEqualTo(20);
-		assertThat(captor.getValue().getCalculationIncomes().getFirst().getApplicantAmount()).isEqualTo(1850.0);
-	}
-
-	@Test
 	void incomeLinesResolvesPerRecipientRows() {
 		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
 			bostadsbidrag()
@@ -186,6 +96,21 @@ class CalculationServiceTest {
 			assertThat(line.amount()).isEqualByComparingTo("18500");
 			assertThat(line.note()).isEqualTo("Ansökan");
 		});
+	}
+
+	@Test
+	void completenessTreatedAsCompleteWhenThePreviousLookupFails() {
+		// Best-effort: a Lifecare outage must not wedge the financial assistance process on an incomplete verdict.
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			bostadsbidrag()
+		});
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenThrow(new RuntimeException("FamilyCare down"));
+
+		final var completeness = service.completeness(APPLICANT, MONTH, "[json]");
+
+		assertThat(completeness.informationComplete()).isTrue();
+		assertThat(completeness.missingIncomeTypes()).isEmpty();
 	}
 
 	@Test

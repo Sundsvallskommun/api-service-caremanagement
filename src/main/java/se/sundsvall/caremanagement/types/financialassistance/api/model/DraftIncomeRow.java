@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
- * One income row of the draft calculation — an FamilyCare income type with the applicant's and co-applicant's
+ * One income row of the draft calculation — a FamilyCare income type with the applicant's and co-applicant's
  * amounts. Also the persisted JSON shape (in the draft's {@code rows_json}). A caseworker edits these in Draken; on a
  * decision they are posted to Lifecare.
  */

@@ -145,7 +145,7 @@ public class LifecareFamilyCareIntegration {
 	}
 
 	/**
-	 * Runs an FamilyCare call, translating any failure into a {@code BAD_GATEWAY} problem. The {@code action} is a short
+	 * Runs a FamilyCare call, translating any failure into a {@code BAD_GATEWAY} problem. The {@code action} is a short
 	 * verb phrase ("creating actualisation") used only for the log/problem detail — never a personId or payload.
 	 */
 	private <T> T call(final String action, final Supplier<T> operation) {
