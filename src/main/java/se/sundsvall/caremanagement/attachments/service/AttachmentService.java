@@ -19,6 +19,7 @@ import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentQueryS
 import se.sundsvall.caremanagement.conversation.spi.Direction;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
+import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Comparator.nullsLast;
@@ -190,10 +191,7 @@ public class AttachmentService {
 			return;
 		}
 
-		final var sources = contents.stream()
-			.map(content -> new SourceFile(content.fileName(), content.mimeType(), content.content()))
-			.toList();
-		final var combined = PdfCombiner.combine(sources);
+		final var combined = PdfCombiner.combine(contents);
 		final var rebuilt = toAttachmentEntity(errandId, namespace, municipalityId, DOCUMENT_TYPE_CONVERSATION, SENDER_CLIENT, new SourceFile(CLIENT_PDF_FILE_NAME, APPLICATION_PDF_VALUE, combined));
 
 		attachmentRepository.findFirstByErrandIdAndFileNameAndDocumentType(errandId, CLIENT_PDF_FILE_NAME, DOCUMENT_TYPE_CONVERSATION)

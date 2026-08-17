@@ -14,8 +14,8 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentDataEntity;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEntity;
-import se.sundsvall.caremanagement.attachments.service.SourceFile;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachment;
+import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;

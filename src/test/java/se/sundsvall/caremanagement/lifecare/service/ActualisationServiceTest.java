@@ -13,7 +13,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.lifecare.integration.ActualisationAttachment;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 
 import static java.time.Month.JANUARY;
@@ -141,8 +140,7 @@ class ActualisationServiceTest {
 
 		service.uploadAttachment(5012, "EB-26060001_meddelandehistorik.pdf", content, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun");
 
-		verify(lifecareFamilyCareIntegrationMock).postActualisationAttachment(5012,
-			new ActualisationAttachment("MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun",
-				"EB-26060001_meddelandehistorik.pdf", "application/pdf", content));
+		verify(lifecareFamilyCareIntegrationMock).postActualisationAttachment(5012, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik",
+			"Sundsvalls kommun", "EB-26060001_meddelandehistorik.pdf", content);
 	}
 }

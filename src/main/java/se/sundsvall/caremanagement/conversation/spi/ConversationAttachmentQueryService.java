@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachmentDataRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachmentRepository;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentEntity;
+import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
@@ -48,7 +49,7 @@ public class ConversationAttachmentQueryService {
 	 * fully into memory. Attachments whose blob row is missing are skipped rather than failing the whole consolidation.
 	 */
 	@Transactional(readOnly = true)
-	public List<ConversationAttachmentContent> clientAttachmentContentsForErrand(final String errandId) {
+	public List<SourceFile> clientAttachmentContentsForErrand(final String errandId) {
 		return attachmentRepository.findByErrandIdOrderByCreatedAsc(errandId).stream()
 			.filter(attachment -> Direction.INBOUND.role().equals(attachment.getSenderRole()))
 			.map(this::toContent)
@@ -56,12 +57,12 @@ public class ConversationAttachmentQueryService {
 			.toList();
 	}
 
-	private ConversationAttachmentContent toContent(final MessageAttachmentEntity attachment) {
+	private SourceFile toContent(final MessageAttachmentEntity attachment) {
 		return attachmentDataRepository.findByMessageAttachmentId(attachment.getId())
 			.map(data -> {
 				try (final var in = data.getFile().getBinaryStream()) {
 					final var content = in.readAllBytes();
-					return new ConversationAttachmentContent(attachment.getFileName(), attachment.getMimeType(), content);
+					return new SourceFile(attachment.getFileName(), attachment.getMimeType(), content);
 				} catch (final SQLException | IOException exception) {
 					throw Problem.valueOf(INTERNAL_SERVER_ERROR, READ_ERROR_MESSAGE.formatted(attachment.getId(), exception.getMessage()));
 				}

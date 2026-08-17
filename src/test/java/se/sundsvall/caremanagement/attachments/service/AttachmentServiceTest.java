@@ -20,10 +20,10 @@ import se.sundsvall.caremanagement.attachments.integration.db.AttachmentReposito
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentDataEntity;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEntity;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachment;
-import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentContent;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachmentQueryService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
+import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -325,7 +325,7 @@ class AttachmentServiceTest {
 	@Test
 	void regenerateClientAttachmentPdfInsertsWhenAbsent() {
 		when(conversationAttachmentQueryServiceMock.clientAttachmentContentsForErrand(ERRAND_ID)).thenReturn(List.of(
-			new ConversationAttachmentContent("intyg.pdf", "application/pdf", "%PDF-1.4 minimal".getBytes())));
+			new SourceFile("intyg.pdf", "application/pdf", "%PDF-1.4 minimal".getBytes())));
 		when(errandQueryServiceMock.existsWithLock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
 		when(attachmentRepositoryMock.findFirstByErrandIdAndFileNameAndDocumentType(ERRAND_ID, CLIENT_PDF_FILE_NAME, "CONVERSATION"))
 			.thenReturn(Optional.empty());
@@ -348,7 +348,7 @@ class AttachmentServiceTest {
 			.withId("existing-id").withErrandId(ERRAND_ID).withFileName(CLIENT_PDF_FILE_NAME).withDocumentType("CONVERSATION")
 			.withAttachmentData(AttachmentDataEntity.create().withFile(originalBlob));
 		when(conversationAttachmentQueryServiceMock.clientAttachmentContentsForErrand(ERRAND_ID)).thenReturn(List.of(
-			new ConversationAttachmentContent("intyg.pdf", "application/pdf", "%PDF-1.4 minimal".getBytes())));
+			new SourceFile("intyg.pdf", "application/pdf", "%PDF-1.4 minimal".getBytes())));
 		when(errandQueryServiceMock.existsWithLock(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
 		when(attachmentRepositoryMock.findFirstByErrandIdAndFileNameAndDocumentType(ERRAND_ID, CLIENT_PDF_FILE_NAME, "CONVERSATION"))
 			.thenReturn(Optional.of(existing));

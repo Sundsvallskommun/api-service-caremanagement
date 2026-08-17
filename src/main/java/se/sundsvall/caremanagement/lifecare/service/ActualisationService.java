@@ -8,7 +8,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import se.sundsvall.caremanagement.lifecare.integration.ActualisationAttachment;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ActualisationAssembler;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
@@ -28,8 +27,6 @@ import static java.util.Optional.ofNullable;
  */
 @Service
 public class ActualisationService {
-
-	private static final String PDF_MIME_TYPE = "application/pdf";
 
 	private static final Logger LOG = LoggerFactory.getLogger(ActualisationService.class);
 
@@ -116,7 +113,6 @@ public class ActualisationService {
 	 */
 	public void uploadAttachment(final Integer actualisationId, final String fileName, final byte[] content,
 		final String documentType, final String documentSenderType, final String title, final String senderName) {
-		lifecareFamilyCareIntegration.postActualisationAttachment(actualisationId,
-			new ActualisationAttachment(documentType, documentSenderType, title, senderName, fileName, PDF_MIME_TYPE, content));
+		lifecareFamilyCareIntegration.postActualisationAttachment(actualisationId, documentType, documentSenderType, title, senderName, fileName, content);
 	}
 }

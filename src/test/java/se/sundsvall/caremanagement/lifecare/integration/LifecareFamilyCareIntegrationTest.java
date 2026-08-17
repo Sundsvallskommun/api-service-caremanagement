@@ -275,8 +275,7 @@ class LifecareFamilyCareIntegrationTest {
 			9, 8, 7
 		};
 
-		integration.postActualisationAttachment(4711,
-			new ActualisationAttachment("DOC", "SENDER", "Title", "Sender", "EB-1_meddelandehistorik.pdf", "application/pdf", content));
+		integration.postActualisationAttachment(4711, "DOC", "SENDER", "Title", "Sender", "EB-1_meddelandehistorik.pdf", content);
 
 		final ArgumentCaptor<MultipartFile> fileCaptor = ArgumentCaptor.forClass(MultipartFile.class);
 		verify(clientMock).postActualisationAttachment(eq(4711), eq("DOC"), eq("SENDER"), eq("Title"), eq("Sender"), fileCaptor.capture());
@@ -292,10 +291,9 @@ class LifecareFamilyCareIntegrationTest {
 		doThrow(new RuntimeException("connection reset")).when(clientMock)
 			.postActualisationAttachment(eq(4711), any(), any(), any(), any(), any());
 
-		assertThatThrownBy(() -> integration.postActualisationAttachment(4711,
-			new ActualisationAttachment("DOC", "SENDER", "Title", "Sender", "f.pdf", "application/pdf", new byte[] {
-				1
-			})))
+		assertThatThrownBy(() -> integration.postActualisationAttachment(4711, "DOC", "SENDER", "Title", "Sender", "f.pdf", new byte[] {
+			1
+		}))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())

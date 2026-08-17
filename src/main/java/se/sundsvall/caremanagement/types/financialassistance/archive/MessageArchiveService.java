@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
-import se.sundsvall.caremanagement.attachments.service.SourceFile;
 import se.sundsvall.caremanagement.conversation.spi.ConversationMessageView;
 import se.sundsvall.caremanagement.conversation.spi.ConversationThreadQueryService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
@@ -19,6 +18,7 @@ import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
+import se.sundsvall.caremanagement.shared.SourceFile;
 
 import static java.time.OffsetDateTime.now;
 import static java.time.ZoneId.systemDefault;

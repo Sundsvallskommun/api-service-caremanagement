@@ -34,6 +34,9 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 @Component
 public class LifecareFamilyCareIntegration {
 
+	/** Everything uploaded to an actualisation is a generated or uploaded PDF. */
+	private static final String PDF_MIME_TYPE = "application/pdf";
+
 	private final LifecareFamilyCareClient lifecareFamilyCareClient;
 
 	public LifecareFamilyCareIntegration(final LifecareFamilyCareClient lifecareFamilyCareClient) {
@@ -128,12 +131,15 @@ public class LifecareFamilyCareIntegration {
 
 	/**
 	 * Upload a document and bind it to a Lifecare actualisation. The raw bytes are wrapped in an in-memory multipart
-	 * {@code Content} part named after the attachment's file name with its MIME type. No payload is logged.
+	 * {@code Content} part named after the file. Everything sent this way is a generated or uploaded PDF, so the part is
+	 * typed as {@code application/pdf}. No payload is logged.
 	 */
-	public void postActualisationAttachment(final Integer actualisationId, final ActualisationAttachment attachment) {
-		final var file = new ByteArrayMultipartFile("Content", attachment.fileName(), attachment.mimeType(), attachment.content());
+	public void postActualisationAttachment(final Integer actualisationId, final String documentType, final String documentSenderType,
+		final String title, final String senderName, final String fileName, final byte[] content) {
+
+		final var file = new ByteArrayMultipartFile("Content", fileName, PDF_MIME_TYPE, content);
 		call("uploading actualisation attachment", () -> {
-			lifecareFamilyCareClient.postActualisationAttachment(actualisationId, attachment.documentType(), attachment.documentSenderType(), attachment.title(), attachment.senderName(), file);
+			lifecareFamilyCareClient.postActualisationAttachment(actualisationId, documentType, documentSenderType, title, senderName, file);
 			return null;
 		});
 	}

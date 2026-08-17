@@ -24,6 +24,7 @@ import org.apache.poi.hwpf.extractor.WordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;

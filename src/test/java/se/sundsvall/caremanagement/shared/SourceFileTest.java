@@ -1,4 +1,4 @@
-package se.sundsvall.caremanagement.attachments.service;
+package se.sundsvall.caremanagement.shared;
 
 import org.junit.jupiter.api.Test;
 

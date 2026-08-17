@@ -1,4 +1,4 @@
-package se.sundsvall.caremanagement.attachments.service;
+package se.sundsvall.caremanagement.shared;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -7,7 +7,8 @@ import static java.util.Optional.ofNullable;
 
 /**
  * A single file's content fully read into memory — an uploaded file, or a generated document such as a combined PDF —
- * so it can be persisted as an attachment and fed to {@link PdfCombiner} without re-reading an underlying stream.
+ * so it can be persisted as an attachment and fed to the attachments module's PDF combiner without re-reading an
+ * underlying stream.
  *
  * @param fileName    the file name (may be {@code null})
  * @param contentType the MIME type (may be {@code null})
