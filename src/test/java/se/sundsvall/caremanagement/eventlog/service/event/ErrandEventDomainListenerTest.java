@@ -38,7 +38,7 @@ class ErrandEventDomainListenerTest {
 
 	@Test
 	void recordsErrandCreatedWithReporterAsActor() {
-		listener.on(new ErrandCreated(ERRAND_ID, "FINANCIAL_ASSISTANCE", "2281", "EB", "joe001doe", "edwmol", TS));
+		listener.recordErrandEvent(new ErrandCreated(ERRAND_ID, "FINANCIAL_ASSISTANCE", "2281", "EB", "joe001doe", "edwmol", TS));
 
 		final var entity = capture();
 		assertThat(entity.getErrandId()).isEqualTo(ERRAND_ID);
@@ -53,7 +53,7 @@ class ErrandEventDomainListenerTest {
 
 	@Test
 	void recordsStatusChange() {
-		listener.on(new ErrandStatusChanged(ERRAND_ID, "FINANCIAL_ASSISTANCE", "2281", "EB", "OPEN", "DECIDED", "edwmol", TS));
+		listener.recordErrandEvent(new ErrandStatusChanged(ERRAND_ID, "FINANCIAL_ASSISTANCE", "2281", "EB", "OPEN", "DECIDED", "edwmol", TS));
 
 		final var entity = capture();
 		assertThat(entity.getAction()).isEqualTo("UPDATE");
@@ -64,7 +64,7 @@ class ErrandEventDomainListenerTest {
 
 	@Test
 	void recordsAssignment() {
-		listener.on(new ErrandAssigned(ERRAND_ID, "FINANCIAL_ASSISTANCE", "2281", "EB", "joe001doe", "edwmol", "boss001", TS));
+		listener.recordErrandEvent(new ErrandAssigned(ERRAND_ID, "FINANCIAL_ASSISTANCE", "2281", "EB", "joe001doe", "edwmol", "boss001", TS));
 
 		final var entity = capture();
 		assertThat(entity.getAction()).isEqualTo("UPDATE");
@@ -75,7 +75,7 @@ class ErrandEventDomainListenerTest {
 
 	@Test
 	void disposesLogOnDeletionInsteadOfRecording() {
-		listener.on(new ErrandDeleted(ERRAND_ID, "FINANCIAL_ASSISTANCE", "2281", "EB", "edwmol", TS));
+		listener.recordErrandEvent(new ErrandDeleted(ERRAND_ID, "FINANCIAL_ASSISTANCE", "2281", "EB", "edwmol", TS));
 
 		// The errand is gallrat: its whole log is disposed, not appended to.
 		verify(serviceMock).deleteForErrand("2281", "EB", ERRAND_ID);
@@ -84,7 +84,7 @@ class ErrandEventDomainListenerTest {
 
 	@Test
 	void defaultsActorToSystemWhenEventCarriesNone() {
-		listener.on(new ErrandStatusChanged(ERRAND_ID, "FINANCIAL_ASSISTANCE", "2281", "EB", "OPEN", "DECIDED", null, TS));
+		listener.recordErrandEvent(new ErrandStatusChanged(ERRAND_ID, "FINANCIAL_ASSISTANCE", "2281", "EB", "OPEN", "DECIDED", null, TS));
 
 		assertThat(capture().getActor()).isEqualTo("system");
 	}

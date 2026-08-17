@@ -31,7 +31,8 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_REGEXP;
 import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE;
 
 /**
- * Inbound trigger for RPA tasks — lets the EB process (an Operaton topic worker) and Draken enqueue a UiPath robot job
+ * Inbound trigger for RPA tasks — lets the financial assistance process (an Operaton topic worker) and Draken enqueue a
+ * UiPath robot job
  * for an errand. The actual Lifecare GUI work happens out of band; this endpoint only drops the queue item and returns
  * {@code 202 Accepted}.
  */

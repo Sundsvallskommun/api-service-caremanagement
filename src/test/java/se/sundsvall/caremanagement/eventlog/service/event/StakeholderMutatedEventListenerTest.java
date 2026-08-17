@@ -24,7 +24,7 @@ class StakeholderMutatedEventListenerTest {
 
 	@Test
 	void recordsStakeholderMutatedAsCoarseChangeRow() {
-		listener.on(new StakeholderMutated("2281", "EB", "errand-1"));
+		listener.recordStakeholderChange(new StakeholderMutated("2281", "EB", "errand-1"));
 
 		final var captor = ArgumentCaptor.forClass(ErrandEventEntity.class);
 		verify(serviceMock).recordDomainEvent(captor.capture());

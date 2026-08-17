@@ -22,7 +22,7 @@ class StatusHistoryListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandStatusChanged event) {
+	void recordStatusChange(final ErrandStatusChanged event) {
 		statusHistoryRepository.save(StatusHistoryEntity.create()
 			.withErrandId(event.errandId())
 			.withFromStatus(event.fromStatus())

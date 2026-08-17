@@ -24,7 +24,7 @@ class StakeholderErrandDeletedListenerTest {
 
 	@Test
 	void deletesAllStakeholdersForErrand() {
-		listener.on(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", FIXED_TIMESTAMP));
+		listener.deleteStakeholdersForErrand(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", FIXED_TIMESTAMP));
 
 		verify(repositoryMock).deleteByErrandId("e1");
 		verifyNoMoreInteractions(repositoryMock);

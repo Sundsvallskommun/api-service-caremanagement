@@ -5,7 +5,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Financial
 import se.sundsvall.caremanagement.types.financialassistance.api.model.TypeOption;
 
 /**
- * The complete EB income/cost type catalogue — a label/grouping layer over both surfaces:
+ * The complete financial assistance income/cost type catalogue — a label/grouping layer over both surfaces:
  * <ul>
  * <li>the citizen Mina-sidor types ({@code citizenReportable = true}) — keyed on the existing
  * {@code Income.incomeType} / {@code Cost.costType} codes (a guard test asserts the citizen-reportable codes match

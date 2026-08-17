@@ -99,82 +99,43 @@ class FinancialAssistanceEntityTest {
 
 		assertThat(entity).hasNoNullFieldsOrProperties();
 		assertThat(entity)
-			.extracting(
-				FinancialAssistanceEntity::getErrandId,
-				FinancialAssistanceEntity::getApplicationType,
-				FinancialAssistanceEntity::getMaritalStatus,
-				FinancialAssistanceEntity::getPeriodMonth,
-				FinancialAssistanceEntity::getPeriodYear,
-				FinancialAssistanceEntity::getPeriodChoice,
-				FinancialAssistanceEntity::getNormType,
-				FinancialAssistanceEntity::getOtherBenefitDescription,
-				FinancialAssistanceEntity::getLivelihoodDescription,
-				FinancialAssistanceEntity::getHasChildrenUnder21,
-				FinancialAssistanceEntity::getChildrenResidenceChanged,
-				FinancialAssistanceEntity::getChildrenResidenceChangeDescription,
-				FinancialAssistanceEntity::getHousingForm,
-				FinancialAssistanceEntity::getHousingPersonCount,
-				FinancialAssistanceEntity::getHousingRoomsPlusKitchen,
-				FinancialAssistanceEntity::getHousingDescription,
-				FinancialAssistanceEntity::getHousingChanged,
-				FinancialAssistanceEntity::getHousingChangeDescription,
-				FinancialAssistanceEntity::getHasIncomes,
-				FinancialAssistanceEntity::getHasPendingBenefits,
-				FinancialAssistanceEntity::getHasAssets,
-				FinancialAssistanceEntity::getStaysInMunicipality,
-				FinancialAssistanceEntity::getStayDescription,
-				FinancialAssistanceEntity::getAttestation,
-				FinancialAssistanceEntity::getAttestedAt,
-				FinancialAssistanceEntity::getLastDailyRunAt,
-				FinancialAssistanceEntity::getChildren,
-				FinancialAssistanceEntity::getCosts,
-				FinancialAssistanceEntity::getIncomes,
-				FinancialAssistanceEntity::getPendingBenefits,
-				FinancialAssistanceEntity::getAssets,
-				FinancialAssistanceEntity::getPersons,
-				FinancialAssistanceEntity::getPlannings,
-				FinancialAssistanceEntity::getPlannedActivities,
-				FinancialAssistanceEntity::getJobApplications,
-				FinancialAssistanceEntity::getCreated,
-				FinancialAssistanceEntity::getModified)
-			.containsExactly(
-				"errand-1",
-				"NEW",
-				"SINGLE",
-				6,
-				2026,
-				"CURRENT_MONTH",
-				List.of("NATIONAL_NORM"),
-				"Establishment benefit",
-				"Soker arbete",
-				true,
-				false,
-				"Bor vaxelvis",
-				"RENTAL",
-				3,
-				3,
-				"Trerumslagenhet",
-				false,
-				"Flyttade i maj",
-				true,
-				false,
-				true,
-				true,
-				"Lives at the registered address",
-				true,
-				ATTESTED_AT,
-				LAST_DAILY_RUN_AT,
-				children,
-				costs,
-				incomes,
-				pendingBenefits,
-				assets,
-				persons,
-				plannings,
-				plannedActivities,
-				jobApplications,
-				CREATED,
-				MODIFIED);
+			.returns("errand-1", FinancialAssistanceEntity::getErrandId)
+			.returns("NEW", FinancialAssistanceEntity::getApplicationType)
+			.returns("SINGLE", FinancialAssistanceEntity::getMaritalStatus)
+			.returns(6, FinancialAssistanceEntity::getPeriodMonth)
+			.returns(2026, FinancialAssistanceEntity::getPeriodYear)
+			.returns("CURRENT_MONTH", FinancialAssistanceEntity::getPeriodChoice)
+			.returns(List.of("NATIONAL_NORM"), FinancialAssistanceEntity::getNormType)
+			.returns("Establishment benefit", FinancialAssistanceEntity::getOtherBenefitDescription)
+			.returns("Soker arbete", FinancialAssistanceEntity::getLivelihoodDescription)
+			.returns(true, FinancialAssistanceEntity::getHasChildrenUnder21)
+			.returns(false, FinancialAssistanceEntity::getChildrenResidenceChanged)
+			.returns("Bor vaxelvis", FinancialAssistanceEntity::getChildrenResidenceChangeDescription)
+			.returns("RENTAL", FinancialAssistanceEntity::getHousingForm)
+			.returns(3, FinancialAssistanceEntity::getHousingPersonCount)
+			.returns(3, FinancialAssistanceEntity::getHousingRoomsPlusKitchen)
+			.returns("Trerumslagenhet", FinancialAssistanceEntity::getHousingDescription)
+			.returns(false, FinancialAssistanceEntity::getHousingChanged)
+			.returns("Flyttade i maj", FinancialAssistanceEntity::getHousingChangeDescription)
+			.returns(true, FinancialAssistanceEntity::getHasIncomes)
+			.returns(false, FinancialAssistanceEntity::getHasPendingBenefits)
+			.returns(true, FinancialAssistanceEntity::getHasAssets)
+			.returns(true, FinancialAssistanceEntity::getStaysInMunicipality)
+			.returns("Lives at the registered address", FinancialAssistanceEntity::getStayDescription)
+			.returns(true, FinancialAssistanceEntity::getAttestation)
+			.returns(ATTESTED_AT, FinancialAssistanceEntity::getAttestedAt)
+			.returns(LAST_DAILY_RUN_AT, FinancialAssistanceEntity::getLastDailyRunAt)
+			.returns(children, FinancialAssistanceEntity::getChildren)
+			.returns(costs, FinancialAssistanceEntity::getCosts)
+			.returns(incomes, FinancialAssistanceEntity::getIncomes)
+			.returns(pendingBenefits, FinancialAssistanceEntity::getPendingBenefits)
+			.returns(assets, FinancialAssistanceEntity::getAssets)
+			.returns(persons, FinancialAssistanceEntity::getPersons)
+			.returns(plannings, FinancialAssistanceEntity::getPlannings)
+			.returns(plannedActivities, FinancialAssistanceEntity::getPlannedActivities)
+			.returns(jobApplications, FinancialAssistanceEntity::getJobApplications)
+			.returns(CREATED, FinancialAssistanceEntity::getCreated)
+			.returns(MODIFIED, FinancialAssistanceEntity::getModified);
 	}
 
 	@Test

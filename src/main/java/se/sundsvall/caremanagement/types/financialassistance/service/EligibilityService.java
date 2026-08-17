@@ -15,8 +15,8 @@ import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
-import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseService;
-import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseSummary;
+import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
+import se.sundsvall.caremanagement.lifecare.service.LifecareCaseSummary;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ApplicationSuggestion;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.EligibilityResponse;
@@ -80,20 +80,20 @@ public class EligibilityService {
 
 	private final ErrandQueryService errandQueryService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
-	private final LifecareEbCaseService lifecareEbCaseService;
+	private final LifecareCaseService lifecareCaseService;
 	private final CitizenService citizenService;
 	private final RecentlyClosedErrandService recentlyClosedErrandService;
 	private final int windowDays;
 	private final boolean returnAllTypes;
 
 	EligibilityService(final ErrandQueryService errandQueryService, final FinancialAssistanceRepository financialAssistanceRepository,
-		final LifecareEbCaseService lifecareEbCaseService, final CitizenService citizenService,
+		final LifecareCaseService lifecareCaseService, final CitizenService citizenService,
 		final RecentlyClosedErrandService recentlyClosedErrandService,
 		@Value("${financial-assistance.eligibility.duplicate-window-days:90}") final int windowDays,
-		@Value("${financial-assistance.eligibility.return-all-types}") final boolean returnAllTypes) {
+		@Value("${financial-assistance.eligibility.return-all-types:false}") final boolean returnAllTypes) {
 		this.errandQueryService = errandQueryService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
-		this.lifecareEbCaseService = lifecareEbCaseService;
+		this.lifecareCaseService = lifecareCaseService;
 		this.citizenService = citizenService;
 		this.recentlyClosedErrandService = recentlyClosedErrandService;
 		this.windowDays = windowDays;
@@ -173,18 +173,18 @@ public class EligibilityService {
 	/** The Lifecare summaries for the applicant (+ co-applicant), best-effort: an upstream failure degrades to "none". */
 	private LifecareFacts loadLifecare(final String municipalityId, final EligibilityRequest request, final LocalDate today, final boolean hasCoApplicant) {
 		try {
-			final var applicant = lifecareEbCaseService.summarize(personalNumber(municipalityId, request.getApplicant()), today);
-			LifecareEbCaseSummary coApplicant = null;
+			final var applicant = lifecareCaseService.summarize(personalNumber(municipalityId, request.getApplicant()), today);
+			LifecareCaseSummary coApplicant = null;
 			if (hasCoApplicant) {
-				coApplicant = lifecareEbCaseService.summarize(personalNumber(municipalityId, request.getCoApplicant()), today);
+				coApplicant = lifecareCaseService.summarize(personalNumber(municipalityId, request.getCoApplicant()), today);
 			}
 			return new LifecareFacts(true, applicant, coApplicant);
 		} catch (final ThrowableProblem e) {
-			LifecareEbCaseSummary coApplicant = null;
+			LifecareCaseSummary coApplicant = null;
 			if (hasCoApplicant) {
-				coApplicant = LifecareEbCaseSummary.none();
+				coApplicant = LifecareCaseSummary.none();
 			}
-			return new LifecareFacts(false, LifecareEbCaseSummary.none(), coApplicant);
+			return new LifecareFacts(false, LifecareCaseSummary.none(), coApplicant);
 		}
 	}
 
@@ -232,7 +232,7 @@ public class EligibilityService {
 	 * decided.
 	 */
 	private static EligibilityResponse perMonthResponse(final EligibilityResponse response, final List<CmRecord> cmRecords,
-		final LifecareEbCaseSummary applicantLc, final YearMonth currentMonth, final YearMonth nextMonth, final OffsetDateTime cutoff) {
+		final LifecareCaseSummary applicantLc, final YearMonth currentMonth, final YearMonth nextMonth, final OffsetDateTime cutoff) {
 
 		final var existsThisMonth = applicationExists(cmRecords, applicantLc, currentMonth, cutoff);
 		final var existsNextMonth = applicationExists(cmRecords, applicantLc, nextMonth, cutoff);
@@ -262,7 +262,7 @@ public class EligibilityService {
 	}
 
 	/** The Lifecare summaries gathered for an eligibility check, plus whether Lifecare was reachable. */
-	private record LifecareFacts(boolean checked, LifecareEbCaseSummary applicant, LifecareEbCaseSummary coApplicant) {
+	private record LifecareFacts(boolean checked, LifecareCaseSummary applicant, LifecareCaseSummary coApplicant) {
 	}
 
 	/**
@@ -301,7 +301,7 @@ public class EligibilityService {
 	private boolean lifecareProtected(final String municipalityId, final String partyId) {
 		try {
 			return citizenService.getPersonalNumber(municipalityId, partyId)
-				.map(lifecareEbCaseService::hasProtectedIdentity)
+				.map(lifecareCaseService::hasProtectedIdentity)
 				.orElse(false);
 		} catch (final ThrowableProblem e) {
 			return false;
@@ -340,7 +340,7 @@ public class EligibilityService {
 	/**
 	 * Is there an application for {@code month} — a CM errand for that period within the window, or a Lifecare decision?
 	 */
-	private static boolean applicationExists(final List<CmRecord> cmRecords, final LifecareEbCaseSummary applicantLc,
+	private static boolean applicationExists(final List<CmRecord> cmRecords, final LifecareCaseSummary applicantLc,
 		final YearMonth month, final OffsetDateTime cutoff) {
 		final var inCm = cmRecords.stream().anyMatch(cm -> periodEquals(cm.fa(), month) && createdWithin(cm.errand(), cutoff));
 		return inCm || applicantLc.decisionMonths().contains(month);
@@ -350,7 +350,7 @@ public class EligibilityService {
 	 * The constellation of the most recent existing case — a CM application with a co-applicant, else the latest Lifecare
 	 * decision.
 	 */
-	private static boolean previousHadCoApplicant(final List<CmRecord> cmRecords, final LifecareEbCaseSummary applicantLc) {
+	private static boolean previousHadCoApplicant(final List<CmRecord> cmRecords, final LifecareCaseSummary applicantLc) {
 		return cmRecords.stream().findFirst()
 			.map(cm -> hasCoApplicantPerson(cm.fa()))
 			.orElseGet(applicantLc::hasCoApplicant);

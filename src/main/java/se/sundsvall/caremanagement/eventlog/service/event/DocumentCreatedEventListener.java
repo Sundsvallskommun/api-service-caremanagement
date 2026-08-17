@@ -28,7 +28,7 @@ class DocumentCreatedEventListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final DocumentCreated event) {
+	void recordDocumentCreation(final DocumentCreated event) {
 		service.recordDomainEvent(ErrandEventEntity.create()
 			.withErrandId(event.errandId())
 			.withMunicipalityId(event.municipalityId())

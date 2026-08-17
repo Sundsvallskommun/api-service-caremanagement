@@ -48,7 +48,7 @@ class FinancialAssistanceErrandCreatedListenerTest {
 	void startsProcessWhenClassificationProceeds() {
 		when(processorMock.assignAndClassify(any())).thenReturn(Outcome.PROCEED);
 
-		listener.on(event());
+		listener.classifyAndStartProcess(event());
 
 		verify(processorMock).assignAndClassify(any());
 		verify(processorMock).startProcess(any());
@@ -58,16 +58,16 @@ class FinancialAssistanceErrandCreatedListenerTest {
 	void doesNotStartProcessWhenFrozen() {
 		when(processorMock.assignAndClassify(any())).thenReturn(Outcome.FROZEN);
 
-		listener.on(event());
+		listener.classifyAndStartProcess(event());
 
 		verify(processorMock, never()).startProcess(any());
 	}
 
 	@Test
 	void doesNotStartProcessForNonEbErrand() {
-		when(processorMock.assignAndClassify(any())).thenReturn(Outcome.NOT_EB);
+		when(processorMock.assignAndClassify(any())).thenReturn(Outcome.NOT_FINANCIAL_ASSISTANCE);
 
-		listener.on(event());
+		listener.classifyAndStartProcess(event());
 
 		verify(processorMock, never()).startProcess(any());
 	}
@@ -79,7 +79,7 @@ class FinancialAssistanceErrandCreatedListenerTest {
 			.thenThrow(snapshotConflict())
 			.thenReturn(Outcome.PROCEED);
 
-		listener.on(event());
+		listener.classifyAndStartProcess(event());
 
 		verify(processorMock, times(3)).assignAndClassify(any());
 		verify(processorMock).startProcess(any());
@@ -90,7 +90,7 @@ class FinancialAssistanceErrandCreatedListenerTest {
 		when(processorMock.assignAndClassify(any())).thenThrow(snapshotConflict());
 		final var event = event();
 
-		assertThatExceptionOfType(JpaSystemException.class).isThrownBy(() -> listener.on(event));
+		assertThatExceptionOfType(JpaSystemException.class).isThrownBy(() -> listener.classifyAndStartProcess(event));
 
 		verify(processorMock, times(MAX_ATTEMPTS)).assignAndClassify(any());
 		verify(processorMock, never()).startProcess(any());
@@ -102,7 +102,7 @@ class FinancialAssistanceErrandCreatedListenerTest {
 		when(processorMock.assignAndClassify(any())).thenThrow(unrelated);
 		final var event = event();
 
-		assertThatExceptionOfType(JpaSystemException.class).isThrownBy(() -> listener.on(event));
+		assertThatExceptionOfType(JpaSystemException.class).isThrownBy(() -> listener.classifyAndStartProcess(event));
 
 		verify(processorMock, times(1)).assignAndClassify(any());
 		verify(processorMock, never()).startProcess(any());

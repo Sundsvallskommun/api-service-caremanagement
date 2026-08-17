@@ -32,7 +32,7 @@ class DocumentCreatedEventListenerTest {
 
 	@Test
 	void recordsDocumentCreatedAsDescriptiveEventRow() {
-		listener.on(new DocumentCreated("doc-1", "errand-1", "2281", "EB", "Brev", "carola01winberg", TS));
+		listener.recordDocumentCreation(new DocumentCreated("doc-1", "errand-1", "2281", "EB", "Brev", "carola01winberg", TS));
 
 		final var entity = capture();
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
@@ -48,7 +48,7 @@ class DocumentCreatedEventListenerTest {
 
 	@Test
 	void defaultsActorToSystemWhenCreatedByBlank() {
-		listener.on(new DocumentCreated("doc-1", "errand-1", "2281", "EB", "Brev", " ", TS));
+		listener.recordDocumentCreation(new DocumentCreated("doc-1", "errand-1", "2281", "EB", "Brev", " ", TS));
 
 		assertThat(capture().getActor()).isEqualTo("system");
 	}

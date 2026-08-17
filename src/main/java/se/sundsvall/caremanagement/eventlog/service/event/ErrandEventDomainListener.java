@@ -35,7 +35,7 @@ class ErrandEventDomainListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandEvent event) {
+	void recordErrandEvent(final ErrandEvent event) {
 		final var entity = base(event);
 
 		switch (event) {

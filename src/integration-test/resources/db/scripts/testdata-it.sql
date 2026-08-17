@@ -67,8 +67,8 @@ INSERT INTO message_read_receipt (id, message_id, reader_side, read_by, read_at)
 INSERT INTO errand_note (id, errand_id, body, author, created, modified_by, modified) VALUES
     ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbn01', '44444444-4444-4444-4444-444444444444', 'Internal note on the errand', 'assignee1', '2025-01-02 09:20:00.000000', NULL, NULL);
 
-INSERT INTO errand_document (id, errand_id, document_type, heading, document_text, document_date, document_time, status, created_by, created, modified_by, modified, locked_by, locked) VALUES
-    ('ffffffff-ffff-ffff-ffff-ffffffffff01', '44444444-4444-4444-4444-444444444444', 'TYPE-1', 'Case document', 'Document body text', '2025-01-02', '09:25:00', 'WORKING', 'assignee1', '2025-01-02 09:25:00.000000', NULL, NULL, NULL, NULL);
+INSERT INTO errand_document (id, errand_id, document_type, heading, document_text, document_date_time, status, created_by, created, modified_by, modified, locked_by, locked) VALUES
+    ('ffffffff-ffff-ffff-ffff-ffffffffff01', '44444444-4444-4444-4444-444444444444', 'TYPE-1', 'Case document', 'Document body text', '2025-01-02 09:25:00.000000', 'WORKING', 'assignee1', '2025-01-02 09:25:00.000000', NULL, NULL, NULL, NULL);
 
 -- Financial-assistance extension row on the same errand — proves fk_financial_assistance_errand_id also cascades on
 -- errand deletion (without ON DELETE CASCADE the errand delete would FK-violate and roll back).

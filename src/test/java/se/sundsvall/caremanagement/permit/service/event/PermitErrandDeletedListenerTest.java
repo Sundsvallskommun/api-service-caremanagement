@@ -23,7 +23,7 @@ class PermitErrandDeletedListenerTest {
 
 	@Test
 	void onErrandDeletedRemovesPermits() {
-		listener.on(new ErrandDeleted("errand-1", "TYPE-1", "2281", "my-namespace", "user", OffsetDateTime.parse("2026-06-03T10:00:00Z")));
+		listener.deletePermitsForErrand(new ErrandDeleted("errand-1", "TYPE-1", "2281", "my-namespace", "user", OffsetDateTime.parse("2026-06-03T10:00:00Z")));
 
 		verify(repositoryMock).deleteByErrandId("errand-1");
 		verifyNoMoreInteractions(repositoryMock);

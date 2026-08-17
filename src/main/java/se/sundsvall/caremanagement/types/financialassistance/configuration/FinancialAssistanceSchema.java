@@ -10,7 +10,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_SUPPLEMENTARY;
 
 /**
- * The EB form-field catalogue: the superset of {@code data.*} fields the three application types collect, each tagged
+ * The financial assistance form-field catalogue: the superset of {@code data.*} fields the three application types
+ * collect, each tagged
  * with the application types that use it. {@link #contribution(String, String)} produces the per-slug
  * {@link ErrandTypeSchemaContribution} (the fields filtered to one application type), which
  * {@link FinancialAssistanceModuleConfig} registers as beans for the {@code /errand-types} endpoint.
@@ -35,7 +36,8 @@ final class FinancialAssistanceSchema {
 	private static final List<String> R = List.of(APPLICATION_TYPE_RENEWAL);
 
 	/**
-	 * The allowed decision alternatives for every EB type (the Decision-form outcome dropdown). {@code carriesAmount} is
+	 * The allowed decision alternatives for every financial assistance type (the Decision-form outcome dropdown).
+	 * {@code carriesAmount} is
 	 * false
 	 * for the outcomes that imply a 0 belopp (avslag/avvisning), which the frontend uses to zero the amount.
 	 */
@@ -87,7 +89,10 @@ final class FinancialAssistanceSchema {
 			.toList();
 	}
 
-	/** A schema contribution for one slug — its fields filtered to the slug's application type, plus the EB outcomes. */
+	/**
+	 * A schema contribution for one slug — its fields filtered to the slug's application type, plus the financial
+	 * assistance outcomes.
+	 */
 	static ErrandTypeSchemaContribution contribution(final String typeSlug, final String applicationType) {
 		return new Contribution(typeSlug, applicationType, forApplicationType(applicationType), DECISION_OPTIONS);
 	}

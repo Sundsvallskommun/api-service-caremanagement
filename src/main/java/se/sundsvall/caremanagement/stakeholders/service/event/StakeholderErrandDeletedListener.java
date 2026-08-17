@@ -21,7 +21,7 @@ class StakeholderErrandDeletedListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandDeleted event) {
+	void deleteStakeholdersForErrand(final ErrandDeleted event) {
 		stakeholderRepository.deleteByErrandId(event.errandId());
 	}
 }

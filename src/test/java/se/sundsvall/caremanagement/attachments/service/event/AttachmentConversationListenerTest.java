@@ -25,7 +25,7 @@ class AttachmentConversationListenerTest {
 
 	@Test
 	void inboundWithAttachmentsRegeneratesClientPdf() {
-		listener.on(new MessageCreated("m1", "2281", "MY_NAMESPACE", "e1", "INBOUND", "applicant", true, FIXED_TIMESTAMP));
+		listener.regenerateCombinedPdfOnInboundAttachments(new MessageCreated("m1", "2281", "MY_NAMESPACE", "e1", "INBOUND", "applicant", true, FIXED_TIMESTAMP));
 
 		verify(attachmentServiceMock).regenerateClientAttachmentPdf("2281", "MY_NAMESPACE", "e1");
 		verifyNoMoreInteractions(attachmentServiceMock);
@@ -33,14 +33,14 @@ class AttachmentConversationListenerTest {
 
 	@Test
 	void outboundIsIgnored() {
-		listener.on(new MessageCreated("m1", "2281", "MY_NAMESPACE", "e1", "OUTBOUND", "caseworker", true, FIXED_TIMESTAMP));
+		listener.regenerateCombinedPdfOnInboundAttachments(new MessageCreated("m1", "2281", "MY_NAMESPACE", "e1", "OUTBOUND", "caseworker", true, FIXED_TIMESTAMP));
 
 		verifyNoInteractions(attachmentServiceMock);
 	}
 
 	@Test
 	void inboundWithoutAttachmentsIsIgnored() {
-		listener.on(new MessageCreated("m1", "2281", "MY_NAMESPACE", "e1", "INBOUND", "applicant", false, FIXED_TIMESTAMP));
+		listener.regenerateCombinedPdfOnInboundAttachments(new MessageCreated("m1", "2281", "MY_NAMESPACE", "e1", "INBOUND", "applicant", false, FIXED_TIMESTAMP));
 
 		verifyNoInteractions(attachmentServiceMock);
 	}

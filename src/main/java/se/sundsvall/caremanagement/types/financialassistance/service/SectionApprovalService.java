@@ -12,6 +12,7 @@ import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.stream.Collectors.toMap;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.util.StringUtils.hasText;
 
 /**
  * The caseworker approval state of the three Draken financial assistance view sections — {@code CALCULATION}
@@ -47,11 +48,12 @@ public class SectionApprovalService {
 	/**
 	 * Set a section's approval (a caseworker action) — upserts the one row for {@code (errandId, section)}. Approving
 	 * stamps {@code approvedBy}/{@code approvedAt}; withdrawing clears them. Throws {@code 400} when the section is not one
-	 * of the three.
+	 * of the three, or when an approval carries no approver.
 	 */
 	@Transactional
 	public SectionApproval setApproval(final String errandId, final String section, final boolean approved, final String approvedBy) {
 		final var target = validateSection(section);
+		requireApprover(approved, approvedBy);
 		final var entity = sectionApprovalRepository.findByErrandIdAndSection(errandId, target)
 			.orElseGet(() -> FaSectionApprovalEntity.create().withErrandId(errandId).withSection(target));
 
@@ -69,6 +71,18 @@ public class SectionApprovalService {
 		entity.setApprovedAt(resolvedApprovedAt);
 
 		return toApproval(target, sectionApprovalRepository.save(entity));
+	}
+
+	/**
+	 * An approval is an audit record of <em>who</em> verified the section, so it is only meaningful with an identifiable
+	 * caseworker behind it. The approver comes from the authenticated identity (X-Sent-By), so a blank one means the
+	 * request arrived unidentified — reject it rather than storing an approval nobody owns. Withdrawing an approval needs
+	 * no approver: it clears the stamp.
+	 */
+	private static void requireApprover(final boolean approved, final String approvedBy) {
+		if (approved && !hasText(approvedBy)) {
+			throw Problem.valueOf(BAD_REQUEST, "a section can only be approved by an identified user - the X-Sent-By header is required");
+		}
 	}
 
 	private static String validateSection(final String section) {

@@ -20,7 +20,7 @@ import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 
 /**
- * Assembles the FC {@link PostAktualiseringsBodyRequest} for an financial-assistance intake (actualisation) by
+ * Assembles the FC {@link PostAktualiseringsBodyRequest} for a financial-assistance intake (actualisation) by
  * resolving
  * the integer codes the POST body requires from the person's FC actualisation proposal. The proposal's
  * {@code FromWho}/{@code Reason} code lists — and the {@code SpecifyType}/{@code WorkingStatus} requirement flags —

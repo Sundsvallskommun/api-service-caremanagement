@@ -3,7 +3,7 @@
 	"info": {
 		"version": "v1",
 		"title": "Lifecare FamilyCare (FC) API — caremanagement subset",
-		"description": "Trimmed subset of Tieto/Lifecare FamilyCare API V1 used by api-service-caremanagement: EB write-back (aktualisering + normberäkning) + proposal lookups, and the person-based case-data reads (persons, contacts, actualisations, calculations, decisions, payments, investigations, services, executions, resource allocations, documents) and document content. Full spec archived in vof-ekonomiskt-bistand/docs/source/lifecare-fc-swagger-v1.json. Auth (domain+key query params / X-API-Key header) is applied by LifecareFcConfiguration, not modelled here."
+		"description": "Trimmed subset of Tieto/Lifecare FamilyCare API V1 used by api-service-caremanagement: financial assistance write-back (aktualisering + normberäkning) + proposal lookups, and the person-based case-data reads (persons, contacts, actualisations, calculations, decisions, payments, investigations, services, executions, resource allocations, documents) and document content. Full spec archived in vof-ekonomiskt-bistand/docs/source/lifecare-fc-swagger-v1.json. Auth (domain+key query params / X-API-Key header) is applied by LifecareFcConfiguration, not modelled here."
 	},
 	"host": "prod-lcsse.service.tieto.com",
 	"basePath": "/WESE.FC.Api.FC",

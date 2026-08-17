@@ -32,7 +32,7 @@ class MessageCreatedEventListenerTest {
 
 	@Test
 	void recordsOutboundMessageAsSent() {
-		listener.on(new MessageCreated("m-1", "2281", "EB", "errand-1", "OUTBOUND", "carola01winberg", true, TS));
+		listener.recordMessageCreation(new MessageCreated("m-1", "2281", "EB", "errand-1", "OUTBOUND", "carola01winberg", true, TS));
 
 		final var entity = capture();
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
@@ -48,14 +48,14 @@ class MessageCreatedEventListenerTest {
 
 	@Test
 	void recordsInboundMessageAsReceived() {
-		listener.on(new MessageCreated("m-1", "2281", "EB", "errand-1", "INBOUND", "199001011234", false, TS));
+		listener.recordMessageCreation(new MessageCreated("m-1", "2281", "EB", "errand-1", "INBOUND", "199001011234", false, TS));
 
 		assertThat(capture().getDescription()).isEqualTo("Meddelande mottaget");
 	}
 
 	@Test
 	void defaultsActorToSystemWhenAuthorBlank() {
-		listener.on(new MessageCreated("m-1", "2281", "EB", "errand-1", "OUTBOUND", " ", false, TS));
+		listener.recordMessageCreation(new MessageCreated("m-1", "2281", "EB", "errand-1", "OUTBOUND", " ", false, TS));
 
 		assertThat(capture().getActor()).isEqualTo("system");
 	}

@@ -7,8 +7,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
@@ -21,7 +19,7 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 @Table(name = "errand_document",
 	indexes = {
 		@Index(name = "idx_document_errand_id", columnList = "errand_id"),
-		@Index(name = "idx_document_document_date", columnList = "document_date")
+		@Index(name = "idx_document_document_date_time", columnList = "document_date_time")
 	})
 public class DocumentEntity {
 
@@ -42,11 +40,9 @@ public class DocumentEntity {
 	@Column(name = "document_text", length = LONG32)
 	private String text;
 
-	@Column(name = "document_date", nullable = false)
-	private LocalDate documentDate;
-
-	@Column(name = "document_time")
-	private LocalTime documentTime;
+	@Column(name = "document_date_time", nullable = false)
+	@TimeZoneStorage(NORMALIZE)
+	private OffsetDateTime documentDateTime;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false, length = 16)
@@ -97,12 +93,8 @@ public class DocumentEntity {
 		return text;
 	}
 
-	public LocalDate getDocumentDate() {
-		return documentDate;
-	}
-
-	public LocalTime getDocumentTime() {
-		return documentTime;
+	public OffsetDateTime getDocumentDateTime() {
+		return documentDateTime;
 	}
 
 	public DocumentStatus getStatus() {
@@ -153,12 +145,8 @@ public class DocumentEntity {
 		this.text = text;
 	}
 
-	public void setDocumentDate(final LocalDate documentDate) {
-		this.documentDate = documentDate;
-	}
-
-	public void setDocumentTime(final LocalTime documentTime) {
-		this.documentTime = documentTime;
+	public void setDocumentDateTime(final OffsetDateTime documentDateTime) {
+		this.documentDateTime = documentDateTime;
 	}
 
 	public void setStatus(final DocumentStatus status) {
@@ -214,13 +202,8 @@ public class DocumentEntity {
 		return this;
 	}
 
-	public DocumentEntity withDocumentDate(final LocalDate documentDate) {
-		this.documentDate = documentDate;
-		return this;
-	}
-
-	public DocumentEntity withDocumentTime(final LocalTime documentTime) {
-		this.documentTime = documentTime;
+	public DocumentEntity withDocumentDateTime(final OffsetDateTime documentDateTime) {
+		this.documentDateTime = documentDateTime;
 		return this;
 	}
 
@@ -269,8 +252,8 @@ public class DocumentEntity {
 			return false;
 		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
 			&& Objects.equals(type, other.type) && Objects.equals(heading, other.heading)
-			&& Objects.equals(documentDate, other.documentDate)
-			&& Objects.equals(documentTime, other.documentTime) && status == other.status
+			&& Objects.equals(documentDateTime, other.documentDateTime)
+			&& status == other.status
 			&& Objects.equals(createdBy, other.createdBy) && Objects.equals(created, other.created)
 			&& Objects.equals(modifiedBy, other.modifiedBy) && Objects.equals(modified, other.modified)
 			&& Objects.equals(lockedBy, other.lockedBy) && Objects.equals(locked, other.locked);
@@ -278,14 +261,14 @@ public class DocumentEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, heading, documentDate, documentTime, status, createdBy, created,
+		return Objects.hash(id, errandId, type, heading, documentDateTime, status, createdBy, created,
 			modifiedBy, modified, lockedBy, locked);
 	}
 
 	@Override
 	public String toString() {
 		return "DocumentEntity{id='" + id + "', errandId='" + errandId + "', type='" + type + "', heading='" + heading
-			+ "', documentDate=" + documentDate + ", documentTime=" + documentTime + ", status=" + status
+			+ "', documentDateTime=" + documentDateTime + ", status=" + status
 			+ ", createdBy='" + createdBy + "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified="
 			+ modified + ", lockedBy='" + lockedBy + "', locked=" + locked + '}';
 	}

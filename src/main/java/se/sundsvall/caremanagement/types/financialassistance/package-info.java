@@ -1,8 +1,9 @@
 /**
- * Financial assistance (financial assistance) type module.
+ * Financial assistance type module.
  *
  * <p>
- * The EB errand type. One {@code financial-assistance} errand carries a citizen's monthly application for financial aid
+ * The financial assistance errand type. One {@code financial-assistance} errand carries a citizen's monthly application
+ * for financial aid
  * (new application / renewal / supplementary application, discriminated by {@code applicationType}). The strongly-typed
  * application
  * data — household children, costs, incomes, pending benefits, assets, per-person planning and payment — lives on this

@@ -27,7 +27,7 @@ class MessageCreatedEventListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final MessageCreated event) {
+	void recordMessageCreation(final MessageCreated event) {
 		service.recordDomainEvent(ErrandEventEntity.create()
 			.withErrandId(event.errandId())
 			.withMunicipalityId(event.municipalityId())

@@ -11,10 +11,12 @@ import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toMap;
 
 /**
- * Resolves an EB cost type to the numeric FC expense-type id offered by the calculation proposal — the expense
+ * Resolves a financial assistance cost type to the numeric FC expense-type id offered by the calculation proposal — the
+ * expense
  * counterpart of {@link ClassifiedIncomeToFcMapper}'s income-type resolution. The bucket selects the proposal
  * catalogue: {@code EXPENSE} → {@code calculationExpenseTypes} (UTGIFTER), {@code SPECIAL_EXPENSE} →
- * {@code calculationSpecialExpenseTypes} (LEVNADSKOSTNADER I ÖVRIGT). The EB→FC name map below is a starting point
+ * {@code calculationSpecialExpenseTypes} (LEVNADSKOSTNADER I ÖVRIGT). The financial assistance→FC name map below is a
+ * starting point
  * flagged for the verksamhet to confirm against the real FC catalogues (the agency owns the ids); a cost type that does
  * not resolve is skipped at commit rather than guessed.
  */
@@ -23,7 +25,10 @@ public final class ExpenseTypeMapper {
 	/** The FC bucket that posts to the special-expense (living costs i övrigt) array. */
 	public static final String BUCKET_SPECIAL_EXPENSE = "SPECIAL_EXPENSE";
 
-	/** EB cost type → the FC expense-type name it is matched against in the proposal. Confirm with the verksamhet. */
+	/**
+	 * financial assistance cost type → the FC expense-type name it is matched against in the proposal. Confirm with the
+	 * verksamhet.
+	 */
 	private static final Map<String, String> FC_NAME_BY_COST_TYPE = Map.ofEntries(
 		Map.entry("RENT", "Rent"),
 		Map.entry("ELECTRICITY", "El"),
@@ -38,7 +43,8 @@ public final class ExpenseTypeMapper {
 		Map.entry("OTHER", "Övrigt"));
 
 	/**
-	 * FC expense-type name (normalized) → EB cost type — the reverse of {@link #FC_NAME_BY_COST_TYPE}, for reading a
+	 * FC expense-type name (normalized) → financial assistance cost type — the reverse of {@link #FC_NAME_BY_COST_TYPE},
+	 * for reading a
 	 * previous calculation's amounts back per cost type.
 	 */
 	private static final Map<String, String> COST_TYPE_BY_FC_NAME = FC_NAME_BY_COST_TYPE.entrySet().stream()
@@ -47,7 +53,8 @@ public final class ExpenseTypeMapper {
 	private ExpenseTypeMapper() {}
 
 	/**
-	 * The EB cost type for an FC expense-type name (e.g. "Rent" → {@code RENT}), or empty when the name is unmapped.
+	 * The financial assistance cost type for an FC expense-type name (e.g. "Rent" → {@code RENT}), or empty when the name
+	 * is unmapped.
 	 * Best-effort, case/space-insensitive — used to read a previous Lifecare calculation's per-type approved amounts.
 	 */
 	public static Optional<String> costTypeForFcName(final String fcName) {
@@ -55,10 +62,11 @@ public final class ExpenseTypeMapper {
 	}
 
 	/**
-	 * The FC expense-type id for an EB cost type given the proposal's catalogue for the bucket, or empty when the cost
+	 * The FC expense-type id for a financial assistance cost type given the proposal's catalogue for the bucket, or empty
+	 * when the cost
 	 * type is unmapped or the catalogue has no matching name.
 	 *
-	 * @param  costType the EB cost type (e.g. RENT, MEDICINE)
+	 * @param  costType the financial assistance cost type (e.g. RENT, MEDICINE)
 	 * @param  proposal the FC calculation proposal supplying the type catalogues
 	 * @param  bucket   {@code SPECIAL_EXPENSE} to resolve against the special-expense catalogue, else the regular one
 	 * @return          the FC type id, or empty

@@ -4,12 +4,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.OffsetDateTime;
 
 /**
- * Request to create a document. Mirrors the Lifecare document form — Typ, Rubrik and Datum are required, Tid and the
- * body text are optional. The document is created in the editable WORKING state.
+ * Request to create a document. Mirrors the Lifecare document form — Typ, Rubrik and Datum/Tid are required, the body
+ * text is optional. The document is created in the editable WORKING state.
  */
 public record CreateDocument(
 
@@ -19,8 +18,6 @@ public record CreateDocument(
 
 	@Schema(description = "Free-text body of the document; optional", examples = "Beslut har fattats enligt nedan ...") @Size(max = 1_048_576) String text,
 
-	@Schema(description = "Documented date (Lifecare 'Datum')", examples = "2025-05-30", requiredMode = Schema.RequiredMode.REQUIRED) @NotNull LocalDate documentDate,
-
-	@Schema(description = "Documented time (Lifecare 'Tid'); optional", examples = "14:30") LocalTime documentTime,
+	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid')", examples = "2025-05-30T14:30:00+02:00", requiredMode = Schema.RequiredMode.REQUIRED) @NotNull OffsetDateTime documentDateTime,
 
 	@Schema(description = "User id of the author (Lifecare 'Upprättad av'); optional", examples = "carola01winberg") @Size(max = 64) String createdBy) {}

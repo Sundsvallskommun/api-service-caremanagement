@@ -16,7 +16,7 @@ import org.hibernate.annotations.UuidGenerator;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * A caseworker's approval of one section of the Draken EB view — {@code CALCULATION} (calculation),
+ * A caseworker's approval of one section of the Draken financial assistance view — {@code CALCULATION} (calculation),
  * {@code PAYMENT} (payment) or {@code DECISION} (decision). One row per {@code (errandId, section)}; the section is
  * either approved or its approval withdrawn. {@code approvedBy} / {@code approvedAt} record who approved it and when,
  * and are cleared when the approval is withdrawn.

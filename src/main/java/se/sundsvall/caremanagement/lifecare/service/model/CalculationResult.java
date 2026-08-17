@@ -3,10 +3,12 @@ package se.sundsvall.caremanagement.lifecare.service.model;
 import java.util.List;
 
 /**
- * Outcome of building and posting an EB calculation: the created Lifecare calculation id plus the completeness
+ * Outcome of building and posting a financial assistance calculation: the created Lifecare calculation id plus the
+ * completeness
  * verdict
  * — whether this month's calculation covers every income type the previous month's did, and which types are still
- * missing. The EB process polls SSBTEK daily until {@code informationComplete} so a caseworker reviews a calculation
+ * missing. The financial assistance process polls SSBTEK daily until {@code informationComplete} so a caseworker
+ * reviews a calculation
  * built on the full picture.
  *
  * @param calculationId       the id of the calculation created in Lifecare FC

@@ -46,7 +46,7 @@ class CalculationServiceTest {
 	private LifecareFcIntegration lifecareFcIntegrationMock;
 
 	@Mock
-	private LifecareEbCaseService lifecareEbCaseServiceMock;
+	private LifecareCaseService lifecareCaseServiceMock;
 
 	@Mock
 	private ObjectMapper objectMapperMock;
@@ -73,7 +73,7 @@ class CalculationServiceTest {
 		});
 		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
 		when(lifecareFcIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4712);
-		when(lifecareEbCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag"));
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag"));
 
 		final var result = service.buildAndPostFromClassified(APPLICANT, MONTH, "[json]");
 
@@ -95,7 +95,7 @@ class CalculationServiceTest {
 		});
 		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
 		when(lifecareFcIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4712);
-		when(lifecareEbCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag", "Dagersättning"));
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag", "Dagersättning"));
 
 		final var result = service.buildAndPostFromClassified(APPLICANT, MONTH, "[json]");
 
@@ -110,7 +110,7 @@ class CalculationServiceTest {
 		});
 		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
 		when(lifecareFcIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4712);
-		when(lifecareEbCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenThrow(new RuntimeException("FC down"));
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenThrow(new RuntimeException("FC down"));
 
 		final var result = service.buildAndPostFromClassified(APPLICANT, MONTH, "[json]");
 
@@ -125,7 +125,7 @@ class CalculationServiceTest {
 			bostadsbidrag()
 		});
 		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
-		when(lifecareEbCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag"));
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag"));
 
 		final var result = service.buildDraft(APPLICANT, MONTH, "[json]");
 
@@ -194,7 +194,7 @@ class CalculationServiceTest {
 			bostadsbidrag()
 		});
 		when(lifecareFcIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
-		when(lifecareEbCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag", "Dagersättning"));
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag", "Dagersättning"));
 
 		final var completeness = service.completeness(APPLICANT, MONTH, "[json]");
 

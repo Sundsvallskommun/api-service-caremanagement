@@ -32,7 +32,7 @@ public class Asset {
 	}, nullable = true)
 	private String propertyType;
 
-	@Schema(description = "Year the asset was purchased", examples = "2018")
+	@Schema(description = "Year the property was purchased (REAL_ESTATE only — the form asks for a year, not a full date, for property). Vehicles carry purchaseDate instead.", examples = "2018")
 	private Integer purchaseYear;
 
 	@Schema(description = "Price paid when the asset was purchased", examples = "2200000.00")
@@ -57,7 +57,7 @@ public class Asset {
 	@Size(max = 16)
 	private String registrationNumber;
 
-	@Schema(description = "The date the asset was purchased", examples = "2018-04-12")
+	@Schema(description = "The date the vehicle was purchased (VEHICLE only — the form asks for a full date here). Property carries purchaseYear instead.", examples = "2018-04-12")
 	private LocalDate purchaseDate;
 
 	public static Asset create() {

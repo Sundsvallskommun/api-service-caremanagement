@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:62623
+- url: http://localhost:52564
   description: Generated server url
 tags:
 - name: Statistics
@@ -4628,7 +4628,9 @@ paths:
       summary: Set a section's approval (caseworker)
       description: "A caseworker verifies one of the financial assistance view sections\
         \ (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier\
-        \ approval. Approving stamps who/when; withdrawing clears them."
+        \ approval. Approving stamps who/when; withdrawing clears them. Approving\
+        \ requires an identified caller (X-Sent-By) — an approval with no approver\
+        \ is rejected with 400."
       operationId: setSectionApproval
       parameters:
       - name: municipalityId
@@ -7258,10 +7260,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -7779,7 +7781,9 @@ components:
         purchaseYear:
           type: integer
           format: int32
-          description: Year the asset was purchased
+          description: "Year the property was purchased (REAL_ESTATE only — the form\
+            \ asks for a year, not a full date, for property). Vehicles carry purchaseDate\
+            \ instead."
           examples:
           - 2018
         purchasePrice:
@@ -7822,7 +7826,8 @@ components:
         purchaseDate:
           type: string
           format: date
-          description: The date the asset was purchased
+          description: The date the vehicle was purchased (VEHICLE only — the form
+            asks for a full date here). Property carries purchaseYear instead.
           examples:
           - 2018-04-12
     Person:
@@ -8877,17 +8882,12 @@ components:
           - Beslut har fattats enligt nedan ...
           maxLength: 1048576
           minLength: 0
-        documentDate:
+        documentDateTime:
           type: string
-          format: date
-          description: Documented date (Lifecare 'Datum')
+          format: date-time
+          description: Documented date and time (Lifecare 'Datum'/'Tid')
           examples:
-          - 2025-05-30
-        documentTime:
-          type: string
-          description: Documented time (Lifecare 'Tid'); optional
-          examples:
-          - 14:30
+          - 2025-05-30T14:30:00+02:00
         createdBy:
           type: string
           description: User id of the author (Lifecare 'Upprättad av'); optional
@@ -8896,7 +8896,7 @@ components:
           maxLength: 64
           minLength: 0
       required:
-      - documentDate
+      - documentDateTime
       - heading
       - type
     LockDocument:
@@ -8935,18 +8935,13 @@ components:
           description: Free-text body of the document
           examples:
           - Beslut har fattats enligt nedan ...
-        documentDate:
+        documentDateTime:
           type: string
-          format: date
-          description: "Documented date (Lifecare 'Datum'), distinct from the system\
-            \ created timestamp"
+          format: date-time
+          description: "Documented date and time (Lifecare 'Datum'/'Tid'), distinct\
+            \ from the system created timestamp"
           examples:
-          - 2025-05-30
-        documentTime:
-          type: string
-          description: Documented time (Lifecare 'Tid'); optional
-          examples:
-          - 14:30
+          - 2025-05-30T14:30:00+02:00
         status:
           type: string
           description: "Write-protection status — WORKING is an editable draft, LOCKED\
@@ -10167,17 +10162,12 @@ components:
           - Beslut har fattats enligt nedan ...
           maxLength: 1048576
           minLength: 0
-        documentDate:
+        documentDateTime:
           type: string
-          format: date
-          description: Documented date (Lifecare 'Datum')
+          format: date-time
+          description: Documented date and time (Lifecare 'Datum'/'Tid')
           examples:
-          - 2025-05-30
-        documentTime:
-          type: string
-          description: Documented time (Lifecare 'Tid'); optional
-          examples:
-          - 14:30
+          - 2025-05-30T14:30:00+02:00
         modifiedBy:
           type: string
           description: User id of the editor (Lifecare 'Ändrat av'); optional
@@ -10186,7 +10176,7 @@ components:
           maxLength: 64
           minLength: 0
       required:
-      - documentDate
+      - documentDateTime
       - heading
       - type
     SectionApprovalRequest:

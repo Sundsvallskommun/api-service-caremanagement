@@ -39,7 +39,7 @@ import static org.springframework.util.StringUtils.hasText;
  * reading
  * actualisations, decision and calculations over a lookback window ending at the reference date, and reduces them to
  * a
- * domain {@link LifecareEbCaseSummary}. FC's date strings (from/to periods) and generated DTOs never leave this module.
+ * domain {@link LifecareCaseSummary}. FC's date strings (from/to periods) and generated DTOs never leave this module.
  *
  * <p>
  * Calls propagate the integration's {@code BAD_GATEWAY} problem on failure — the caller decides whether to treat the
@@ -47,7 +47,7 @@ import static org.springframework.util.StringUtils.hasText;
  * </p>
  */
 @Service
-public class LifecareEbCaseService {
+public class LifecareCaseService {
 
 	/** Guard against a malformed decision period (e.g. from 2000 to 2030) producing an unbounded month set. */
 	private static final int MAX_MONTHS_PER_DECISION = 36;
@@ -55,8 +55,8 @@ public class LifecareEbCaseService {
 	private final LifecareFcIntegration lifecareFcIntegration;
 	private final int lookbackMonths;
 
-	LifecareEbCaseService(final LifecareFcIntegration lifecareFcIntegration,
-		@Value("${integration.lifecare-fc.eb-lookback-months:13}") final int lookbackMonths) {
+	LifecareCaseService(final LifecareFcIntegration lifecareFcIntegration,
+		@Value("${integration.lifecare-fc.lookback-months:13}") final int lookbackMonths) {
 		this.lifecareFcIntegration = lifecareFcIntegration;
 		this.lookbackMonths = lookbackMonths;
 	}
@@ -69,7 +69,7 @@ public class LifecareEbCaseService {
 	 * @param  referenceDate the date the routing is evaluated against (bounds the lookback window)
 	 * @return               the distilled summary; never {@code null}
 	 */
-	public LifecareEbCaseSummary summarize(final String personId, final LocalDate referenceDate) {
+	public LifecareCaseSummary summarize(final String personId, final LocalDate referenceDate) {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
@@ -92,12 +92,12 @@ public class LifecareEbCaseService {
 
 		final var latestDecision = latestDecision(decisions);
 
-		return new LifecareEbCaseSummary(
+		return new LifecareCaseSummary(
 			hasFootprint,
 			Set.copyOf(decisionMonths),
-			latestDecision.map(LifecareEbCaseService::periodOf).orElse(null),
+			latestDecision.map(LifecareCaseService::periodOf).orElse(null),
 			!calculations.isEmpty(),
-			latestDecision.map(LifecareEbCaseService::hasCoApplicant).orElse(false));
+			latestDecision.map(LifecareCaseService::hasCoApplicant).orElse(false));
 	}
 
 	/**
@@ -126,7 +126,7 @@ public class LifecareEbCaseService {
 	 * @param  referenceDate the date the lookup is evaluated against (bounds the lookback window)
 	 * @return               the roster (applicant, co-applicant and the calculation members); members empty when none
 	 */
-	public LifecareEbRoster latestRoster(final String personId, final LocalDate referenceDate) {
+	public LifecareRoster latestRoster(final String personId, final LocalDate referenceDate) {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
@@ -142,14 +142,14 @@ public class LifecareEbCaseService {
 			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
 			.orElseGet(List::of).stream()
 			.filter(person -> hasText(person.getPersonId()))
-			.map(person -> new LifecareEbRoster.Member(person.getPersonId(), person.getName()))
+			.map(person -> new LifecareRoster.Member(person.getPersonId(), person.getName()))
 			.toList();
 
 		final var coApplicant = latestDecision(decisions)
-			.flatMap(LifecareEbCaseService::coApplicantPersonId)
+			.flatMap(LifecareCaseService::coApplicantPersonId)
 			.orElse(null);
 
-		return new LifecareEbRoster(personId, coApplicant, members);
+		return new LifecareRoster(personId, coApplicant, members);
 	}
 
 	/**
@@ -216,7 +216,7 @@ public class LifecareEbCaseService {
 			.map(PersonBasedCalculationDTO::getCalculationExpensesDTOs)
 			.orElseGet(List::of).stream()
 			.filter(expense -> isHousing(expense.getType()))
-			.map(LifecareEbCaseService::expenseAmount)
+			.map(LifecareCaseService::expenseAmount)
 			.filter(Objects::nonNull)
 			.reduce(Double::sum)
 			.orElse(null);
@@ -278,7 +278,7 @@ public class LifecareEbCaseService {
 	private static Optional<PersonBasedDecisionDTO> latestDecision(final List<PersonBasedDecisionDTO> decisions) {
 		return decisions.stream()
 			.filter(decision -> periodOf(decision) != null)
-			.max(comparing(LifecareEbCaseService::periodOf));
+			.max(comparing(LifecareCaseService::periodOf));
 	}
 
 	/** Whether a decision included a co-applicant — a flagged participant or the scalar {@code coApplicant} field. */
@@ -306,7 +306,7 @@ public class LifecareEbCaseService {
 	private static Optional<PersonBasedCalculationDTO> latestCalculation(final List<PersonBasedCalculationDTO> calculations) {
 		return calculations.stream()
 			.filter(calculation -> periodOf(calculation) != null)
-			.max(comparing(LifecareEbCaseService::periodOf));
+			.max(comparing(LifecareCaseService::periodOf));
 	}
 
 	/** The representative period of a calculation — its {@code toDate} month, falling back to {@code fromDate}. */

@@ -19,7 +19,7 @@ import java.util.Set;
  * @param hasCoApplicant       the most recent decision included a co-applicant (used to infer the previous marital
  *                             status)
  */
-public record LifecareEbCaseSummary(
+public record LifecareCaseSummary(
 	boolean hasFootprint,
 	Set<YearMonth> decisionMonths,
 	YearMonth latestDecisionPeriod,
@@ -27,7 +27,7 @@ public record LifecareEbCaseSummary(
 	boolean hasCoApplicant) {
 
 	/** Empty summary — used when the person has no financial assistance footprint, or as the best-effort fallback. */
-	public static LifecareEbCaseSummary none() {
-		return new LifecareEbCaseSummary(false, Set.of(), null, false, false);
+	public static LifecareCaseSummary none() {
+		return new LifecareCaseSummary(false, Set.of(), null, false, false);
 	}
 }

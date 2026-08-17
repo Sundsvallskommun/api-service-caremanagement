@@ -79,7 +79,7 @@ class FinancialAssistanceErrandCreatedProcessorTest {
 	void assignAndClassifyReturnsNotEbForNonEbErrand() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
 
-		assertThat(processor.assignAndClassify(event(SLUG_NEW, null))).isEqualTo(Outcome.NOT_EB);
+		assertThat(processor.assignAndClassify(event(SLUG_NEW, null))).isEqualTo(Outcome.NOT_FINANCIAL_ASSISTANCE);
 
 		verify(repositoryMock).findByErrandId(ERRAND_ID);
 		verifyNoMoreInteractions(repositoryMock);

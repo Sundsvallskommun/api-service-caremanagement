@@ -17,7 +17,7 @@ import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 
 /**
- * Creates an financial-assistance intake (actualisation) in Lifecare FC — the "API instead of RPA" case-intake step.
+ * Creates a financial-assistance intake (actualisation) in Lifecare FC — the "API instead of RPA" case-intake step.
  * Fetches the applicant's FC actualisation proposal, assembles the {@code PostAktualiseringsBodyRequest} against it
  * (via
  * {@link ActualisationAssembler}), posts it, and returns the created actualisation id.

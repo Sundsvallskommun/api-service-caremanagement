@@ -32,7 +32,7 @@ class JournalEntryCreatedEventListenerTest {
 
 	@Test
 	void recordsJournalEntryCreatedAsDescriptiveEventRow() {
-		listener.on(new JournalEntryCreated("je-1", "errand-1", "2281", "EB", "Journalfört meddelande", "carola01winberg", TS));
+		listener.recordJournalEntryCreation(new JournalEntryCreated("je-1", "errand-1", "2281", "EB", "Journalfört meddelande", "carola01winberg", TS));
 
 		final var entity = capture();
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
@@ -48,7 +48,7 @@ class JournalEntryCreatedEventListenerTest {
 
 	@Test
 	void defaultsActorToSystemWhenCreatedByBlank() {
-		listener.on(new JournalEntryCreated("je-1", "errand-1", "2281", "EB", "Journalfört meddelande", " ", TS));
+		listener.recordJournalEntryCreation(new JournalEntryCreated("je-1", "errand-1", "2281", "EB", "Journalfört meddelande", " ", TS));
 
 		assertThat(capture().getActor()).isEqualTo("system");
 	}

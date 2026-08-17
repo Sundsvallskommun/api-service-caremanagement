@@ -20,7 +20,7 @@ class ReferralErrandDeletedListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandDeleted event) {
+	void deleteReferralsForErrand(final ErrandDeleted event) {
 		referralRepository.deleteByErrandId(event.errandId());
 	}
 }

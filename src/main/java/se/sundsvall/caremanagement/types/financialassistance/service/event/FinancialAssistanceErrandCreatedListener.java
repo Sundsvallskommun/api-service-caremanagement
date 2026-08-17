@@ -58,7 +58,7 @@ class FinancialAssistanceErrandCreatedListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandCreated event) {
+	void classifyAndStartProcess(final ErrandCreated event) {
 		// The classification writes the errand row and can lose a snapshot-isolation race with the applicant-name sync,
 		// so retry it in a fresh transaction until it lands. Only then, and only for a normal financial assistance errand,
 		// start the process.
@@ -75,7 +75,7 @@ class FinancialAssistanceErrandCreatedListener {
 				if (attempt >= MAX_ATTEMPTS || !isSnapshotConflict(e)) {
 					throw e;
 				}
-				LOG.info("EB errand {} create classification hit a transient row conflict (attempt {}/{}); retrying",
+				LOG.info("financial assistance errand {} create classification hit a transient row conflict (attempt {}/{}); retrying",
 					event.errandId(), attempt, MAX_ATTEMPTS);
 			}
 		}

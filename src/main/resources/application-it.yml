@@ -13,6 +13,18 @@ financial-assistance:
 integration:
   operaton:
     url: http://localhost:${wiremock.server.port:}/api-operaton
+  financial-aid:
+    url: http://localhost:${wiremock.server.port:}/api-financial-aid
+  messaging:
+    url: http://localhost:${wiremock.server.port:}/api-messaging
+  templating:
+    url: http://localhost:${wiremock.server.port:}/api-templating
+  citizen:
+    url: http://localhost:${wiremock.server.port:}/api-citizen
+  lifecare-fc:
+    url: http://localhost:${wiremock.server.port:}/api-lifecare-fc
+    domain: it-domain
+    key: it-key
 spring:
   datasource:
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
@@ -32,7 +44,27 @@ spring:
         provider:
           operaton:
             token-uri: http://localhost:${wiremock.server.port:}/api-gateway/token
+          messaging:
+            token-uri: http://localhost:${wiremock.server.port:}/api-gateway/token
+          templating:
+            token-uri: http://localhost:${wiremock.server.port:}/api-gateway/token
+          citizen:
+            token-uri: http://localhost:${wiremock.server.port:}/api-gateway/token
+          financial-aid:
+            token-uri: http://localhost:${wiremock.server.port:}/api-gateway/token
         registration:
           operaton:
+            client-id: the-client-id
+            client-secret: the-client-secret
+          messaging:
+            client-id: the-client-id
+            client-secret: the-client-secret
+          templating:
+            client-id: the-client-id
+            client-secret: the-client-secret
+          citizen:
+            client-id: the-client-id
+            client-secret: the-client-secret
+          financial-aid:
             client-id: the-client-id
             client-secret: the-client-secret

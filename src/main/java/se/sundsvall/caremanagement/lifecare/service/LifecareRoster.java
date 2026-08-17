@@ -17,7 +17,7 @@ import java.util.List;
  *                    and, when
  *                    present, the co-applicant
  */
-public record LifecareEbRoster(String applicant, String coApplicant, List<Member> members) {
+public record LifecareRoster(String applicant, String coApplicant, List<Member> members) {
 
 	/** A single person on the calculation — personal identity number and name as Lifecare stores them. */
 	public record Member(String personalNumber, String name) {

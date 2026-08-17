@@ -60,7 +60,7 @@ class FinancialAssistanceReleaseListenerTest {
 		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
 
-		listener.on(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
+		listener.startProcessOnRelease(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
 
 		verify(processStarterMock).startFor(SLUG_RENEWAL, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 	}
@@ -77,7 +77,7 @@ class FinancialAssistanceReleaseListenerTest {
 		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
 
-		listener.on(event(SLUG_NEW, STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
+		listener.startProcessOnRelease(event(SLUG_NEW, STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
 
 		verify(processStarterMock).startFor(SLUG_NEW, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 	}
@@ -89,7 +89,7 @@ class FinancialAssistanceReleaseListenerTest {
 		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
 
-		listener.on(event(SLUG_SUPPLEMENTARY, STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
+		listener.startProcessOnRelease(event(SLUG_SUPPLEMENTARY, STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
 
 		verify(processStarterMock).startFor(SLUG_SUPPLEMENTARY, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 	}
@@ -97,7 +97,7 @@ class FinancialAssistanceReleaseListenerTest {
 	@Test
 	void ignoresNonReleaseTransition() {
 		// A normal renewal moves RECEIVED → UNDER_REVIEW (process worker) — must NOT re-trigger a start.
-		listener.on(event(STATUS_RECEIVED, STATUS_UNDER_REVIEW));
+		listener.startProcessOnRelease(event(STATUS_RECEIVED, STATUS_UNDER_REVIEW));
 
 		verifyNoInteractions(errandQueryServiceMock, repositoryMock, processStarterMock);
 	}
@@ -107,7 +107,7 @@ class FinancialAssistanceReleaseListenerTest {
 		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withProcessInstanceId("already-running")));
 
-		listener.on(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
+		listener.startProcessOnRelease(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
 
 		verifyNoInteractions(processStarterMock);
 	}
@@ -116,7 +116,7 @@ class FinancialAssistanceReleaseListenerTest {
 	void noopWhenErrandEnvelopeMissing() {
 		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Optional.empty());
 
-		listener.on(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
+		listener.startProcessOnRelease(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
 
 		verifyNoInteractions(processStarterMock);
 		verify(repositoryMock, never()).findByErrandId(any());
@@ -128,7 +128,7 @@ class FinancialAssistanceReleaseListenerTest {
 			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID)));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
 
-		listener.on(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
+		listener.startProcessOnRelease(event(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW));
 
 		verifyNoInteractions(processStarterMock);
 	}

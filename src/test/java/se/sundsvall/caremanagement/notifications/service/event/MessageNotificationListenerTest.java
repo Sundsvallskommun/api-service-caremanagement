@@ -45,7 +45,7 @@ class MessageNotificationListenerTest {
 		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withAssignedUserId("jane01doe")));
 
-		listener.on(inbound());
+		listener.notifyOnInboundMessage(inbound());
 
 		final var captor = ArgumentCaptor.forClass(Notification.class);
 		verify(notificationServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), captor.capture());
@@ -59,7 +59,7 @@ class MessageNotificationListenerTest {
 
 	@Test
 	void outboundMessageIsIgnored() {
-		listener.on(new MessageCreated(MESSAGE_ID, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "OUTBOUND", "jane01doe", false, OffsetDateTime.now()));
+		listener.notifyOnInboundMessage(new MessageCreated(MESSAGE_ID, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "OUTBOUND", "jane01doe", false, OffsetDateTime.now()));
 
 		verifyNoInteractions(errandQueryServiceMock, notificationServiceMock);
 	}
@@ -69,7 +69,7 @@ class MessageNotificationListenerTest {
 		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID)));
 
-		listener.on(inbound());
+		listener.notifyOnInboundMessage(inbound());
 
 		final var captor = ArgumentCaptor.forClass(Notification.class);
 		verify(notificationServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), captor.capture());
@@ -84,7 +84,7 @@ class MessageNotificationListenerTest {
 		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withAssignedUserId(" ")));
 
-		listener.on(inbound());
+		listener.notifyOnInboundMessage(inbound());
 
 		final var captor = ArgumentCaptor.forClass(Notification.class);
 		verify(notificationServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), captor.capture());
@@ -96,7 +96,7 @@ class MessageNotificationListenerTest {
 		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.empty());
 
-		listener.on(inbound());
+		listener.notifyOnInboundMessage(inbound());
 
 		verify(notificationServiceMock, never()).create(any(), any(), any(), any());
 	}
@@ -107,7 +107,7 @@ class MessageNotificationListenerTest {
 			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withAssignedUserId("jane01doe")));
 		when(notificationServiceMock.create(any(), any(), any(), any())).thenThrow(new RuntimeException("boom"));
 
-		listener.on(inbound());
+		listener.notifyOnInboundMessage(inbound());
 
 		verify(notificationServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Notification.class));
 	}

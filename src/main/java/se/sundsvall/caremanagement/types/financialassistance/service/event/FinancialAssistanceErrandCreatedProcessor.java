@@ -37,11 +37,11 @@ class FinancialAssistanceErrandCreatedProcessor {
 
 	/** What the create classification decided, driving whether the listener goes on to start a process. */
 	enum Outcome {
-		/** Not an EB errand (no typed FA data) — nothing to do. */
-		NOT_EB,
+		/** Not a financial assistance errand (no typed FA data) — nothing to do. */
+		NOT_FINANCIAL_ASSISTANCE,
 		/** A recently-closed re-application — frozen for manual review, no process. */
 		FROZEN,
-		/** A normal EB errand — the listener should start the type's process. */
+		/** A normal financial assistance errand — the listener should start the type's process. */
 		PROCEED
 	}
 
@@ -78,7 +78,7 @@ class FinancialAssistanceErrandCreatedProcessor {
 				}
 				return Outcome.PROCEED;
 			})
-			.orElse(Outcome.NOT_EB);
+			.orElse(Outcome.NOT_FINANCIAL_ASSISTANCE);
 	}
 
 	/**
@@ -92,7 +92,8 @@ class FinancialAssistanceErrandCreatedProcessor {
 	}
 
 	/**
-	 * Route an EB errand that arrived without an assignee to the modeler-configured default handläggare (best-effort).
+	 * Route a financial assistance errand that arrived without an assignee to the modeler-configured default handläggare
+	 * (best-effort).
 	 * Respects an assignee the application already carried; a renewal/supplement that later resolves a real Lifecare
 	 * caseworker overwrites this in the actualisation flow.
 	 */

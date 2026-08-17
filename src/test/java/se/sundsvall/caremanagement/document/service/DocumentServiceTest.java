@@ -1,7 +1,5 @@
 package se.sundsvall.caremanagement.document.service;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -38,8 +36,7 @@ import static se.sundsvall.caremanagement.document.integration.db.model.Document
 @ExtendWith(MockitoExtension.class)
 class DocumentServiceTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
-	private static final LocalDate DOCUMENT_DATE = LocalDate.parse("2025-05-30");
-	private static final LocalTime DOCUMENT_TIME = LocalTime.of(14, 30);
+	private static final OffsetDateTime DOCUMENT_DATE_TIME = OffsetDateTime.parse("2025-05-30T14:30:00+02:00");
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = "errand-1";
@@ -61,7 +58,7 @@ class DocumentServiceTest {
 		final var saved = DocumentEntity.create().withId("doc-1").withErrandId(ERRAND_ID);
 		when(repositoryMock.save(any(DocumentEntity.class))).thenReturn(saved);
 
-		final var id = service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateDocument("Brev", "Rubrik", "text", DOCUMENT_DATE, DOCUMENT_TIME, "carola"));
+		final var id = service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateDocument("Brev", "Rubrik", "text", DOCUMENT_DATE_TIME, "carola"));
 
 		assertThat(id).isEqualTo("doc-1");
 
@@ -74,8 +71,7 @@ class DocumentServiceTest {
 		assertThat(captured.getType()).isEqualTo("Brev");
 		assertThat(captured.getHeading()).isEqualTo("Rubrik");
 		assertThat(captured.getText()).isEqualTo("text");
-		assertThat(captured.getDocumentDate()).isEqualTo(DOCUMENT_DATE);
-		assertThat(captured.getDocumentTime()).isEqualTo(DOCUMENT_TIME);
+		assertThat(captured.getDocumentDateTime()).isEqualTo(DOCUMENT_DATE_TIME);
 		assertThat(captured.getStatus()).isEqualTo(WORKING);
 		assertThat(captured.getCreatedBy()).isEqualTo("carola");
 		assertThat(captured.getCreated()).isNotNull();
@@ -94,7 +90,7 @@ class DocumentServiceTest {
 	void addMissingErrandNotFound() {
 		doThrow(Problem.valueOf(NOT_FOUND, "no errand")).when(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
-		assertThatThrownBy(() -> service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateDocument("T", "H", null, DOCUMENT_DATE, null, "carola")))
+		assertThatThrownBy(() -> service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new CreateDocument("T", "H", null, DOCUMENT_DATE_TIME, "carola")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
 			.hasMessage("Not Found: no errand");
@@ -105,16 +101,16 @@ class DocumentServiceTest {
 
 	@Test
 	void listForErrandReturnsMappedDocuments() {
-		when(repositoryMock.findByErrandIdOrderByDocumentDateDescDocumentTimeDescCreatedDesc(ERRAND_ID)).thenReturn(List.of(
+		when(repositoryMock.findByErrandIdOrderByDocumentDateTimeDescCreatedDesc(ERRAND_ID)).thenReturn(List.of(
 			DocumentEntity.create().withId("d1").withErrandId(ERRAND_ID).withType("T").withHeading("H")
-				.withText("b").withDocumentDate(DOCUMENT_DATE).withDocumentTime(DOCUMENT_TIME).withStatus(WORKING).withCreated(FIXED_TIMESTAMP)));
+				.withText("b").withDocumentDateTime(DOCUMENT_DATE_TIME).withStatus(WORKING).withCreated(FIXED_TIMESTAMP)));
 
 		final var result = service.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		assertThat(result).hasSize(1);
 		assertThat(result.getFirst().getId()).isEqualTo("d1");
 		assertThat(result.getFirst().getHeading()).isEqualTo("H");
-		assertThat(result.getFirst().getDocumentDate()).isEqualTo(DOCUMENT_DATE);
+		assertThat(result.getFirst().getDocumentDateTime()).isEqualTo(DOCUMENT_DATE_TIME);
 		assertThat(result.getFirst().getStatus()).isEqualTo("WORKING");
 		assertThat(result.getFirst().getCreated()).isEqualTo(FIXED_TIMESTAMP);
 		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
@@ -176,17 +172,16 @@ class DocumentServiceTest {
 	@Test
 	void updateUpdatesFieldsAndReturnsDocument() {
 		final var existing = DocumentEntity.create().withId("d1").withErrandId(ERRAND_ID).withType("old").withHeading("oldH")
-			.withDocumentDate(DOCUMENT_DATE).withStatus(WORKING).withCreated(FIXED_TIMESTAMP);
+			.withDocumentDateTime(DOCUMENT_DATE_TIME).withStatus(WORKING).withCreated(FIXED_TIMESTAMP);
 		when(repositoryMock.findByIdAndErrandIdForUpdate("d1", ERRAND_ID)).thenReturn(Optional.of(existing));
 		when(repositoryMock.save(any(DocumentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "d1", new UpdateDocument("newT", "newH", "newText", DOCUMENT_DATE.plusDays(1), DOCUMENT_TIME, "editor"));
+		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "d1", new UpdateDocument("newT", "newH", "newText", DOCUMENT_DATE_TIME.plusDays(1), "editor"));
 
 		assertThat(result.getType()).isEqualTo("newT");
 		assertThat(result.getHeading()).isEqualTo("newH");
 		assertThat(result.getText()).isEqualTo("newText");
-		assertThat(result.getDocumentDate()).isEqualTo(DOCUMENT_DATE.plusDays(1));
-		assertThat(result.getDocumentTime()).isEqualTo(DOCUMENT_TIME);
+		assertThat(result.getDocumentDateTime()).isEqualTo(DOCUMENT_DATE_TIME.plusDays(1));
 		assertThat(result.getModifiedBy()).isEqualTo("editor");
 		assertThat(result.getModified()).isNotNull();
 		assertThat(result.getStatus()).isEqualTo("WORKING");
@@ -198,7 +193,7 @@ class DocumentServiceTest {
 	void updateNotFound() {
 		when(repositoryMock.findByIdAndErrandIdForUpdate("missing", ERRAND_ID)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing", new UpdateDocument("t", "h", null, DOCUMENT_DATE, null, "editor")))
+		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing", new UpdateDocument("t", "h", null, DOCUMENT_DATE_TIME, "editor")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
 			.hasMessage("Not Found: No document with id 'missing'");
@@ -211,7 +206,7 @@ class DocumentServiceTest {
 		when(repositoryMock.findByIdAndErrandIdForUpdate("d1", ERRAND_ID)).thenReturn(Optional.of(
 			DocumentEntity.create().withId("d1").withStatus(LOCKED)));
 
-		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "d1", new UpdateDocument("t", "h", null, DOCUMENT_DATE, null, "editor")))
+		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "d1", new UpdateDocument("t", "h", null, DOCUMENT_DATE_TIME, "editor")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", CONFLICT)
 			.hasMessage("Conflict: Document is locked and cannot be edited");

@@ -43,7 +43,7 @@ class ApplicantNameSyncListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final StakeholderMutated event) {
+	void syncApplicantName(final StakeholderMutated event) {
 		errandQueryService.findErrand(event.municipalityId(), event.namespace(), event.errandId())
 			.ifPresent(errand -> {
 				final var applicantName = resolveApplicantName(event);

@@ -23,7 +23,7 @@ class AttachmentConversationListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final MessageCreated event) {
+	void regenerateCombinedPdfOnInboundAttachments(final MessageCreated event) {
 		if (Direction.INBOUND.name().equals(event.direction()) && event.hasAttachments()) {
 			attachmentService.regenerateClientAttachmentPdf(event.municipalityId(), event.namespace(), event.errandId());
 		}

@@ -55,7 +55,7 @@ class ApplicantNameSyncListenerTest {
 			Stakeholder.create().withRole("CO_APPLICANT").withFirstName("Bo").withLastName("Bergström"),
 			Stakeholder.create().withRole("APPLICANT").withFirstName("Anna").withLastName("Andersson")));
 
-		listener.on(event());
+		listener.syncApplicantName(event());
 
 		verify(errandServiceMock).updateApplicantName(ERRAND_ID, "Anna Andersson");
 	}
@@ -66,7 +66,7 @@ class ApplicantNameSyncListenerTest {
 		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
 			Stakeholder.create().withRole("APPLICANT").withFirstName("ignored").withOrganizationName("Acme AB")));
 
-		listener.on(event());
+		listener.syncApplicantName(event());
 
 		verify(errandServiceMock).updateApplicantName(ERRAND_ID, "Acme AB");
 	}
@@ -77,7 +77,7 @@ class ApplicantNameSyncListenerTest {
 		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
 			Stakeholder.create().withRole("APPLICANT").withFirstName("Anna").withLastName("Andersson")));
 
-		listener.on(event());
+		listener.syncApplicantName(event());
 
 		verify(errandServiceMock, never()).updateApplicantName(any(), any());
 	}
@@ -88,7 +88,7 @@ class ApplicantNameSyncListenerTest {
 		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
 			Stakeholder.create().withRole("CO_APPLICANT").withFirstName("Bo").withLastName("Bergström")));
 
-		listener.on(event());
+		listener.syncApplicantName(event());
 
 		verify(errandServiceMock).updateApplicantName(ERRAND_ID, null);
 	}
@@ -98,7 +98,7 @@ class ApplicantNameSyncListenerTest {
 		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.empty());
 
-		listener.on(event());
+		listener.syncApplicantName(event());
 
 		verifyNoInteractions(stakeholderServiceMock);
 		verify(errandServiceMock, never()).updateApplicantName(any(), any());

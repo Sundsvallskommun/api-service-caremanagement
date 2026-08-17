@@ -21,7 +21,7 @@ class DecisionErrandDeletedListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandDeleted event) {
+	void deleteDecisionsForErrand(final ErrandDeleted event) {
 		decisionRepository.deleteByErrandId(event.errandId());
 	}
 }

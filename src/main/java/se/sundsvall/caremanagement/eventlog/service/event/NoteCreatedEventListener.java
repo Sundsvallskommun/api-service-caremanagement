@@ -26,7 +26,7 @@ class NoteCreatedEventListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final NoteCreated event) {
+	void recordNoteCreation(final NoteCreated event) {
 		service.recordDomainEvent(ErrandEventEntity.create()
 			.withErrandId(event.errandId())
 			.withMunicipalityId(event.municipalityId())

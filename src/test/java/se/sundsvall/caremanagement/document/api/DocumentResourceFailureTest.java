@@ -1,7 +1,6 @@
 package se.sundsvall.caremanagement.document.api;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.Map;
 import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
@@ -33,8 +32,7 @@ class DocumentResourceFailureTest {
 	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = randomUUID().toString();
 	private static final String PATH = "/{municipalityId}/{namespace}/errands/{errandId}/documents";
-	private static final LocalDate DOCUMENT_DATE = LocalDate.parse("2025-05-30");
-	private static final LocalTime DOCUMENT_TIME = LocalTime.of(14, 30);
+	private static final OffsetDateTime DOCUMENT_DATE_TIME = OffsetDateTime.parse("2025-05-30T14:30:00+02:00");
 
 	@MockitoBean
 	private DocumentService serviceMock;
@@ -44,27 +42,27 @@ class DocumentResourceFailureTest {
 
 	@Test
 	void addWithBlankType() {
-		post(new CreateDocument(" ", "Rubrik", "body", DOCUMENT_DATE, DOCUMENT_TIME, "carola"),
+		post(new CreateDocument(" ", "Rubrik", "body", DOCUMENT_DATE_TIME, "carola"),
 			tuple("type", "must not be blank"));
 	}
 
 	@Test
 	void addWithBlankHeading() {
-		post(new CreateDocument("Brev", " ", "body", DOCUMENT_DATE, DOCUMENT_TIME, "carola"),
+		post(new CreateDocument("Brev", " ", "body", DOCUMENT_DATE_TIME, "carola"),
 			tuple("heading", "must not be blank"));
 	}
 
 	@Test
-	void addWithMissingDocumentDate() {
-		post(new CreateDocument("Brev", "Rubrik", "body", null, DOCUMENT_TIME, "carola"),
-			tuple("documentDate", "must not be null"));
+	void addWithMissingDocumentDateTime() {
+		post(new CreateDocument("Brev", "Rubrik", "body", null, "carola"),
+			tuple("documentDateTime", "must not be null"));
 	}
 
 	@Test
 	void addWithInvalidErrandId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
-			.bodyValue(new CreateDocument("Brev", "Rubrik", "body", DOCUMENT_DATE, DOCUMENT_TIME, "carola"))
+			.bodyValue(new CreateDocument("Brev", "Rubrik", "body", DOCUMENT_DATE_TIME, "carola"))
 			.exchange()
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
@@ -78,7 +76,7 @@ class DocumentResourceFailureTest {
 	void addWithInvalidMunicipalityId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "invalid", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
-			.bodyValue(new CreateDocument("Brev", "Rubrik", "body", DOCUMENT_DATE, DOCUMENT_TIME, "carola"))
+			.bodyValue(new CreateDocument("Brev", "Rubrik", "body", DOCUMENT_DATE_TIME, "carola"))
 			.exchange()
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)

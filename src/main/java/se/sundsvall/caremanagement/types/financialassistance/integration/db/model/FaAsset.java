@@ -8,6 +8,20 @@ import java.util.Objects;
 
 import static org.hibernate.Length.LONG32;
 
+/**
+ * One asset declared on the application. {@code assetCategory} discriminates which of the branches below applies, and
+ * each branch fills only its own fields — the citizen form asks a different set of questions per asset kind, so most
+ * columns are null on any given row.
+ *
+ * <ul>
+ * <li>{@code BANK_SAVINGS} — {@code description} + {@code value}</li>
+ * <li>{@code REAL_ESTATE} — {@code propertyType}, {@code purchaseYear} ("Inköpsår"), {@code purchasePrice}</li>
+ * <li>{@code COMPANY} — {@code companyName}, {@code companyAssetSum}</li>
+ * <li>{@code VEHICLE} — {@code vehicleType}, {@code registrationNumber}, {@code purchaseDate} ("Inköpsdatum"),
+ * {@code purchasePrice}, {@code value}</li>
+ * <li>{@code OTHER} — {@code description} + {@code value} (art, jewellery, other assets)</li>
+ * </ul>
+ */
 @Embeddable
 public class FaAsset {
 
@@ -23,6 +37,10 @@ public class FaAsset {
 	@Column(name = "property_type")
 	private String propertyType;
 
+	/**
+	 * REAL_ESTATE only — the form asks for the purchase <em>year</em> ("Inköpsår") for property, not a full date. Distinct
+	 * from {@link #purchaseDate}, which is the VEHICLE branch's "Inköpsdatum"; the two never apply to the same row.
+	 */
 	@Column(name = "purchase_year")
 	private Integer purchaseYear;
 
@@ -41,6 +59,7 @@ public class FaAsset {
 	@Column(name = "registration_number")
 	private String registrationNumber;
 
+	/** VEHICLE only — the form asks for a full purchase date ("Inköpsdatum") here. See {@link #purchaseYear}. */
 	@Column(name = "purchase_date")
 	private LocalDate purchaseDate;
 

@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -106,5 +109,30 @@ class SectionApprovalServiceTest {
 			.hasMessage("Bad Request: section must be CALCULATION, PAYMENT or DECISION");
 
 		verify(repositoryMock, never()).save(any());
+	}
+
+	@ParameterizedTest
+	@NullAndEmptySource
+	@ValueSource(strings = {
+		" "
+	})
+	void setApprovalRejectsApprovalWithoutApprover(final String approvedBy) {
+		assertThatThrownBy(() -> service.setApproval(ERRAND_ID, SECTION_CALCULATION, true, approvedBy))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: a section can only be approved by an identified user - the X-Sent-By header is required");
+
+		verify(repositoryMock, never()).save(any());
+	}
+
+	@Test
+	void setApprovalWithdrawalNeedsNoApprover() {
+		when(repositoryMock.findByErrandIdAndSection(ERRAND_ID, SECTION_DECISION)).thenReturn(Optional.of(approved(SECTION_DECISION, "jane02doe")));
+		when(repositoryMock.save(any(FaSectionApprovalEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.setApproval(ERRAND_ID, SECTION_DECISION, false, null);
+
+		assertThat(result.isApproved()).isFalse();
+		assertThat(result.getApprovedBy()).isNull();
 	}
 }

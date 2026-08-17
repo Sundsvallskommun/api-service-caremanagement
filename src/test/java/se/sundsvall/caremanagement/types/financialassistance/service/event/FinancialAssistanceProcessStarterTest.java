@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -62,6 +63,9 @@ class FinancialAssistanceProcessStarterTest {
 	@Mock
 	private CitizenService citizenServiceMock;
 
+	@Captor
+	private ArgumentCaptor<Map<String, Object>> varsCaptor;
+
 	@InjectMocks
 	private FinancialAssistanceProcessStarter starter;
 
@@ -81,8 +85,6 @@ class FinancialAssistanceProcessStarterTest {
 
 		starter.startFor(SLUG_RENEWAL, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 
-		@SuppressWarnings("unchecked")
-		final ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
 		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), varsCaptor.capture());
 		assertThat(varsCaptor.getValue())
 			.containsEntry(VAR_MUNICIPALITY_ID, MUNICIPALITY_ID)
@@ -111,8 +113,6 @@ class FinancialAssistanceProcessStarterTest {
 
 		starter.startFor(SLUG_SUPPLEMENTARY, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 
-		@SuppressWarnings("unchecked")
-		final ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
 		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME_SUPPLEMENTARY), eq(ERRAND_ID), varsCaptor.capture());
 		assertThat(varsCaptor.getValue())
 			.containsEntry(VAR_MUNICIPALITY_ID, MUNICIPALITY_ID)
@@ -136,8 +136,6 @@ class FinancialAssistanceProcessStarterTest {
 
 		starter.startFor(SLUG_NEW, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 
-		@SuppressWarnings("unchecked")
-		final ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
 		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME_NEW), eq(ERRAND_ID), varsCaptor.capture());
 		assertThat(varsCaptor.getValue())
 			.containsEntry(VAR_MUNICIPALITY_ID, MUNICIPALITY_ID)
@@ -159,8 +157,6 @@ class FinancialAssistanceProcessStarterTest {
 
 		starter.startFor(SLUG_RENEWAL, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 
-		@SuppressWarnings("unchecked")
-		final ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
 		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), varsCaptor.capture());
 		assertThat(varsCaptor.getValue())
 			.containsEntry(VAR_APPLICANT, APPLICANT_PARTY_ID)

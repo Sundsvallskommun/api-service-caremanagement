@@ -29,7 +29,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class LifecareEbCaseServiceTest {
+class LifecareCaseServiceTest {
 
 	private static final String APPLICANT = "198001012389";
 	private static final LocalDate REFERENCE = LocalDate.of(2026, JUNE, 15);
@@ -37,8 +37,8 @@ class LifecareEbCaseServiceTest {
 	@Mock
 	private LifecareFcIntegration integrationMock;
 
-	private LifecareEbCaseService service() {
-		return new LifecareEbCaseService(integrationMock, 13);
+	private LifecareCaseService service() {
+		return new LifecareCaseService(integrationMock, 13);
 	}
 
 	private void noActualisations() {
@@ -180,8 +180,8 @@ class LifecareEbCaseServiceTest {
 
 		assertThat(roster.applicant()).isEqualTo(APPLICANT);
 		assertThat(roster.coApplicant()).isEqualTo("198202022397");
-		assertThat(roster.members()).extracting(LifecareEbRoster.Member::personalNumber).containsExactly(APPLICANT, "201801012380");
-		assertThat(roster.members()).extracting(LifecareEbRoster.Member::name).containsExactly("Anna", "Kid");
+		assertThat(roster.members()).extracting(LifecareRoster.Member::personalNumber).containsExactly(APPLICANT, "201801012380");
+		assertThat(roster.members()).extracting(LifecareRoster.Member::name).containsExactly("Anna", "Kid");
 	}
 
 	@Test
@@ -198,7 +198,7 @@ class LifecareEbCaseServiceTest {
 
 		final var roster = service().latestRoster(APPLICANT, REFERENCE);
 
-		assertThat(roster.members()).extracting(LifecareEbRoster.Member::personalNumber).containsExactly(APPLICANT);
+		assertThat(roster.members()).extracting(LifecareRoster.Member::personalNumber).containsExactly(APPLICANT);
 		assertThat(roster.coApplicant()).isEqualTo("198202022397");
 	}
 
@@ -318,14 +318,14 @@ class LifecareEbCaseServiceTest {
 
 	@Test
 	void toYearMonthHandlesVariousFormats() {
-		assertThat(LifecareEbCaseService.toYearMonth("2026-06")).contains(YearMonth.of(2026, JUNE));
-		assertThat(LifecareEbCaseService.toYearMonth("2026-06-15")).contains(YearMonth.of(2026, JUNE));
-		assertThat(LifecareEbCaseService.toYearMonth("2026-06-15T08:30:00")).contains(YearMonth.of(2026, JUNE));
-		assertThat(LifecareEbCaseService.toYearMonth("2026-06-15 08:30:00")).contains(YearMonth.of(2026, JUNE));
-		assertThat(LifecareEbCaseService.toYearMonth(null)).isEmpty();
-		assertThat(LifecareEbCaseService.toYearMonth("  ")).isEmpty();
-		assertThat(LifecareEbCaseService.toYearMonth("2026")).isEmpty();
-		assertThat(LifecareEbCaseService.toYearMonth("garbage")).isEmpty();
-		assertThat(LifecareEbCaseService.toYearMonth("2026-13")).isEmpty();
+		assertThat(LifecareCaseService.toYearMonth("2026-06")).contains(YearMonth.of(2026, JUNE));
+		assertThat(LifecareCaseService.toYearMonth("2026-06-15")).contains(YearMonth.of(2026, JUNE));
+		assertThat(LifecareCaseService.toYearMonth("2026-06-15T08:30:00")).contains(YearMonth.of(2026, JUNE));
+		assertThat(LifecareCaseService.toYearMonth("2026-06-15 08:30:00")).contains(YearMonth.of(2026, JUNE));
+		assertThat(LifecareCaseService.toYearMonth(null)).isEmpty();
+		assertThat(LifecareCaseService.toYearMonth("  ")).isEmpty();
+		assertThat(LifecareCaseService.toYearMonth("2026")).isEmpty();
+		assertThat(LifecareCaseService.toYearMonth("garbage")).isEmpty();
+		assertThat(LifecareCaseService.toYearMonth("2026-13")).isEmpty();
 	}
 }

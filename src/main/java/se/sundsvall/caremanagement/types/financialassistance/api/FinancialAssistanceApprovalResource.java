@@ -68,7 +68,7 @@ class FinancialAssistanceApprovalResource {
 
 	@PatchMapping(path = "/financial-assistance/{errandId}/sections/{section}/approval", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Set a section's approval (caseworker)",
-		description = "A caseworker verifies one of the financial assistance view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them.",
+		description = "A caseworker verifies one of the financial assistance view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them. Approving requires an identified caller (X-Sent-By) — an approval with no approver is rejected with 400.",
 		responses = @ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true))
 	ResponseEntity<SectionApproval> setSectionApproval(
 		@ValidMunicipalityId @PathVariable final String municipalityId,

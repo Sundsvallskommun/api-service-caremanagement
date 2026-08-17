@@ -65,13 +65,13 @@ public class CalculationService {
 	private static final Logger LOG = LoggerFactory.getLogger(CalculationService.class);
 
 	private final LifecareFcIntegration lifecareFcIntegration;
-	private final LifecareEbCaseService lifecareEbCaseService;
+	private final LifecareCaseService lifecareCaseService;
 	private final ObjectMapper objectMapper;
 
-	public CalculationService(final LifecareFcIntegration lifecareFcIntegration, final LifecareEbCaseService lifecareEbCaseService,
+	public CalculationService(final LifecareFcIntegration lifecareFcIntegration, final LifecareCaseService lifecareCaseService,
 		final ObjectMapper objectMapper) {
 		this.lifecareFcIntegration = lifecareFcIntegration;
-		this.lifecareEbCaseService = lifecareEbCaseService;
+		this.lifecareCaseService = lifecareCaseService;
 		this.objectMapper = objectMapper;
 	}
 
@@ -268,7 +268,7 @@ public class CalculationService {
 	private List<String> missingPreviousIncomeTypes(final String applicantPersonId, final YearMonth applicationMonth,
 		final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
 		try {
-			final var previousTypes = lifecareEbCaseService.previousCalculationIncomeTypes(applicantPersonId, applicationMonth);
+			final var previousTypes = lifecareCaseService.previousCalculationIncomeTypes(applicantPersonId, applicationMonth);
 			return ClassifiedIncomeToFcMapper.missingPreviousIncomeTypes(previousTypes, classified, proposal);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not determine calculation completeness against the previous month — treating as complete", e);

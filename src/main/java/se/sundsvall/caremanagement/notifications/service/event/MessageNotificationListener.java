@@ -39,7 +39,7 @@ class MessageNotificationListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final MessageCreated event) {
+	void notifyOnInboundMessage(final MessageCreated event) {
 		if (!INBOUND.equals(event.direction())) {
 			return;
 		}

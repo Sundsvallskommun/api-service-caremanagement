@@ -28,7 +28,7 @@ class ErrandAssignmentNotificationListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandAssigned event) {
+	void assignOwnerlessNotifications(final ErrandAssigned event) {
 		try {
 			notificationService.assignUnownedNotifications(event.municipalityId(), event.namespace(), event.errandId(), event.newAssignee());
 		} catch (final RuntimeException e) {

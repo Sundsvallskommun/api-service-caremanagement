@@ -41,7 +41,7 @@ class AttachmentErrandDeletedListenerTest {
 			.withAttachmentData(AttachmentDataEntity.create().withId(2));
 		when(repositoryMock.findByErrandId("e1")).thenReturn(List.of(first, second));
 
-		listener.on(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", FIXED_TIMESTAMP));
+		listener.deleteAttachmentsForErrand(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", FIXED_TIMESTAMP));
 
 		verify(repositoryMock).findByErrandId("e1");
 		verify(repositoryMock).deleteAll(List.of(first, second));
@@ -52,7 +52,7 @@ class AttachmentErrandDeletedListenerTest {
 	void deletesNothingWhenErrandHasNoAttachments() {
 		when(repositoryMock.findByErrandId("e1")).thenReturn(List.of());
 
-		listener.on(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", FIXED_TIMESTAMP));
+		listener.deleteAttachmentsForErrand(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", FIXED_TIMESTAMP));
 
 		verify(repositoryMock).findByErrandId("e1");
 		verify(repositoryMock).deleteAll(List.of());

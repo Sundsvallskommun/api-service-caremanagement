@@ -27,7 +27,7 @@ class StatusHistoryListenerTest {
 
 	@Test
 	void persistsStatusChangeAsHistoryRow() {
-		listener.on(new ErrandStatusChanged("errand-1", "financial-assistance", "2281", "EB", "RECEIVED", "AWAITING_DECISION", "carola01winberg", TS));
+		listener.recordStatusChange(new ErrandStatusChanged("errand-1", "financial-assistance", "2281", "EB", "RECEIVED", "AWAITING_DECISION", "carola01winberg", TS));
 
 		final var captor = ArgumentCaptor.forClass(StatusHistoryEntity.class);
 		verify(statusHistoryRepositoryMock).save(captor.capture());

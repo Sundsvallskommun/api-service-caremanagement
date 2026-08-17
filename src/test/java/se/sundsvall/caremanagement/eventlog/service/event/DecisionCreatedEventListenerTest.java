@@ -32,7 +32,7 @@ class DecisionCreatedEventListenerTest {
 
 	@Test
 	void recordsDecisionWithTypeAndOutcome() {
-		listener.on(new DecisionCreated("d-1", "errand-1", "2281", "EB", "PAYMENT", "APPROVED", "carola01winberg", TS));
+		listener.recordDecisionCreation(new DecisionCreated("d-1", "errand-1", "2281", "EB", "PAYMENT", "APPROVED", "carola01winberg", TS));
 
 		final var entity = capture();
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
@@ -48,7 +48,7 @@ class DecisionCreatedEventListenerTest {
 
 	@Test
 	void omitsOutcomeWhenBlankAndDefaultsActorToSystem() {
-		listener.on(new DecisionCreated("d-1", "errand-1", "2281", "EB", "RECOMMENDATION", " ", null, TS));
+		listener.recordDecisionCreation(new DecisionCreated("d-1", "errand-1", "2281", "EB", "RECOMMENDATION", " ", null, TS));
 
 		final var entity = capture();
 		assertThat(entity.getDescription()).isEqualTo("Beslut registrerat: RECOMMENDATION");

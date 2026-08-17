@@ -56,8 +56,7 @@ public class DocumentService {
 			.withType(request.type())
 			.withHeading(request.heading())
 			.withText(request.text())
-			.withDocumentDate(request.documentDate())
-			.withDocumentTime(request.documentTime())
+			.withDocumentDateTime(request.documentDateTime())
 			.withStatus(WORKING)
 			.withCreatedBy(request.createdBy())
 			.withCreated(timestamp));
@@ -70,7 +69,7 @@ public class DocumentService {
 	public List<Document> listForErrand(final String municipalityId, final String namespace, final String errandId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
-		return documentRepository.findByErrandIdOrderByDocumentDateDescDocumentTimeDescCreatedDesc(errandId).stream()
+		return documentRepository.findByErrandIdOrderByDocumentDateTimeDescCreatedDesc(errandId).stream()
 			.map(DocumentService::toDocument)
 			.toList();
 	}
@@ -89,8 +88,7 @@ public class DocumentService {
 			.withType(request.type())
 			.withHeading(request.heading())
 			.withText(request.text())
-			.withDocumentDate(request.documentDate())
-			.withDocumentTime(request.documentTime())
+			.withDocumentDateTime(request.documentDateTime())
 			.withModifiedBy(request.modifiedBy())
 			.withModified(now(systemDefault()).truncatedTo(MILLIS));
 
@@ -148,8 +146,7 @@ public class DocumentService {
 			.withType(e.getType())
 			.withHeading(e.getHeading())
 			.withText(e.getText())
-			.withDocumentDate(e.getDocumentDate())
-			.withDocumentTime(e.getDocumentTime())
+			.withDocumentDateTime(e.getDocumentDateTime())
 			.withStatus(ofNullable(e.getStatus()).map(Enum::name).orElse(null))
 			.withCreatedBy(e.getCreatedBy())
 			.withCreated(e.getCreated())

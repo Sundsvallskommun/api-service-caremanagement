@@ -31,7 +31,7 @@ class AttachmentErrandDeletedListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandDeleted event) {
+	void deleteAttachmentsForErrand(final ErrandDeleted event) {
 		attachmentRepository.deleteAll(attachmentRepository.findByErrandId(event.errandId()));
 	}
 }

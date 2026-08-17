@@ -170,7 +170,7 @@ public class FinancialAssistanceModuleConfig {
 			.build();
 	}
 
-	/** Identical roles for every EB slug. */
+	/** Identical roles for every financial assistance slug. */
 	private static StakeholderRoleContribution roleContribution(final String slug) {
 		return new StakeholderRoleContribution(slug, Set.of(
 			new RoleDefinition(ROLE_APPLICANT, "Applicant", 1, true),

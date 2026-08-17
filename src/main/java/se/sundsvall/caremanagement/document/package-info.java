@@ -10,9 +10,9 @@
  * Each document carries a {@code type} (Lifecare "Typ"/Dokumenttyp — a municipality-configured value; the
  * {@code /documents/metadata} catalogue offers a dropdown source, backed by the core metadata lookup store — seeded
  * {@code DOCUMENT_TYPE} lookups for the namespace, or a built-in provisional set as fallback), a {@code heading}
- * (Rubrik), free-text {@code text}, a documented {@code documentDate}/{@code documentTime} (Datum/Tid, distinct from
- * the
- * system {@code created} timestamp) and authorship ({@code createdBy} = Upprättad av/Ägare, {@code modifiedBy} = Ändrat
+ * (Rubrik), free-text {@code text}, a documented {@code documentDateTime} (Lifecare's Datum/Tid as one timestamp,
+ * distinct from the system {@code created} timestamp) and authorship ({@code createdBy} = Upprättad av/Ägare,
+ * {@code modifiedBy} = Ändrat
  * av).
  * </p>
  *

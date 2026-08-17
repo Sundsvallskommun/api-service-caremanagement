@@ -44,40 +44,42 @@ spring:
             authorization-grant-type: client_credentials
             provider: operaton
           messaging:
-            client-id: ${INTEGRATION_MESSAGING_CLIENT_ID:override}
-            client-secret: ${INTEGRATION_MESSAGING_CLIENT_SECRET:override}
+            client-id: ${INTEGRATION_MESSAGING_CLIENT_ID}
+            client-secret: ${INTEGRATION_MESSAGING_CLIENT_SECRET}
             authorization-grant-type: client_credentials
             provider: messaging
           templating:
-            client-id: ${INTEGRATION_TEMPLATING_CLIENT_ID:override}
-            client-secret: ${INTEGRATION_TEMPLATING_CLIENT_SECRET:override}
+            client-id: ${INTEGRATION_TEMPLATING_CLIENT_ID}
+            client-secret: ${INTEGRATION_TEMPLATING_CLIENT_SECRET}
             authorization-grant-type: client_credentials
             provider: templating
           citizen:
-            client-id: ${INTEGRATION_CITIZEN_CLIENT_ID:override}
-            client-secret: ${INTEGRATION_CITIZEN_CLIENT_SECRET:override}
+            client-id: ${INTEGRATION_CITIZEN_CLIENT_ID}
+            client-secret: ${INTEGRATION_CITIZEN_CLIENT_SECRET}
             authorization-grant-type: client_credentials
             provider: citizen
           financial-aid:
-            client-id: ${INTEGRATION_FINANCIAL_AID_CLIENT_ID:override}
-            client-secret: ${INTEGRATION_FINANCIAL_AID_CLIENT_SECRET:override}
+            client-id: ${INTEGRATION_FINANCIAL_AID_CLIENT_ID}
+            client-secret: ${INTEGRATION_FINANCIAL_AID_CLIENT_SECRET}
             authorization-grant-type: client_credentials
             provider: financial-aid
+          # RPA is the one optional integration (integration.rpa.enabled is the master switch), so it keeps
+          # placeholder credentials — a deploy without an Orchestrator runs with enabled=false and never uses them.
           rpa:
-            client-id: ${INTEGRATION_RPA_CLIENT_ID:override}
-            client-secret: ${INTEGRATION_RPA_CLIENT_SECRET:override}
+            client-id: ${INTEGRATION_RPA_CLIENT_ID:placeholder}
+            client-secret: ${INTEGRATION_RPA_CLIENT_SECRET:placeholder}
             authorization-grant-type: client_credentials
             provider: rpa
             scope: OR.Queues, OR.Queues.Read, OR.Queues.Write
         provider:
           messaging:
-            token-uri: ${INTEGRATION_MESSAGING_TOKEN_URI:http://localhost/token}
+            token-uri: ${INTEGRATION_MESSAGING_TOKEN_URI}
           templating:
-            token-uri: ${INTEGRATION_TEMPLATING_TOKEN_URI:http://localhost/token}
+            token-uri: ${INTEGRATION_TEMPLATING_TOKEN_URI}
           citizen:
-            token-uri: ${INTEGRATION_CITIZEN_TOKEN_URI:http://localhost/token}
+            token-uri: ${INTEGRATION_CITIZEN_TOKEN_URI}
           financial-aid:
-            token-uri: ${INTEGRATION_FINANCIAL_AID_TOKEN_URI:http://localhost/token}
+            token-uri: ${INTEGRATION_FINANCIAL_AID_TOKEN_URI}
           rpa:
             token-uri: ${INTEGRATION_RPA_TOKEN_URI:http://localhost/token}
 #========================================
@@ -89,34 +91,34 @@ integration:
     read-timeout: 30
   # financial-aid (SSBTEK proxy). OAuth2 client-credentials via the financial-aid Spring security registration above.
   financial-aid:
-    url: ${INTEGRATION_FINANCIAL_AID_URL:http://localhost}
+    url: ${INTEGRATION_FINANCIAL_AID_URL}
     connect-timeout: 5
     read-timeout: 30
   messaging:
-    url: ${INTEGRATION_MESSAGING_URL:http://localhost}
+    url: ${INTEGRATION_MESSAGING_URL}
     connect-timeout: 5
     read-timeout: 30
   templating:
-    url: ${INTEGRATION_TEMPLATING_URL:http://localhost}
+    url: ${INTEGRATION_TEMPLATING_URL}
     connect-timeout: 5
     read-timeout: 30
   citizen:
-    url: ${INTEGRATION_CITIZEN_URL:http://localhost}
+    url: ${INTEGRATION_CITIZEN_URL}
     connect-timeout: 5
     read-timeout: 30
-  # Lifecare FamilyCare (FC) — EB write-back (actualisation + calculation) + proposal lookups. Auth is domain + key
+  # Lifecare FamilyCare (FC) — financial assistance write-back (actualisation + calculation) + proposal lookups. Auth is domain + key
   # (query params / X-API-Key header); url is the FC base path (host + /WESE.FC.Api.FC). The key is sensitive — inject
   # via secret and keep it out of request logging.
   lifecare-fc:
-    url: ${INTEGRATION_LIFECARE_FC_URL:http://localhost}
-    domain: ${INTEGRATION_LIFECARE_FC_DOMAIN:override}
-    key: ${INTEGRATION_LIFECARE_FC_KEY:override}
+    url: ${INTEGRATION_LIFECARE_FC_URL}
+    domain: ${INTEGRATION_LIFECARE_FC_DOMAIN}
+    key: ${INTEGRATION_LIFECARE_FC_KEY}
     connect-timeout: 5
     read-timeout: 30
-    # Lookback (months, ending at the reference date) for the EB eligibility reads — actualisations, decisions, calculations.
-    eb-lookback-months: 13
-  # UiPath Orchestrator RPA — enqueues EB Lifecare write/fetch jobs as queue items (AddQueueItem). url is the
-  # Orchestrator base; queue is the single EB queue (the action travels in the item SpecificContent); folderIds map
+    # Lookback (months, ending at the reference date) for the financial assistance eligibility reads — actualisations, decisions, calculations.
+    lookback-months: 13
+  # UiPath Orchestrator RPA — enqueues financial assistance Lifecare write/fetch jobs as queue items (AddQueueItem). url is the
+  # Orchestrator base; queue is the single financial assistance queue (the action travels in the item SpecificContent); folderIds map
   # municipalityId → Orchestrator folder (X-UIPATH-OrganizationUnitId). OAuth2 via the rpa registration above. Set
   # enabled=false to make every enqueue a logged no-op (environments without an Orchestrator).
     # enabled defaults false so an unconfigured deploy is a logged no-op (no errors); set INTEGRATION_RPA_ENABLED=true
@@ -140,11 +142,6 @@ scheduler:
     name: notification-cleanup
     shedlock-lock-at-most-for: PT5M
     maximum-execution-time: PT5M
-  database-cleanup:
-    cron: '-'
-    name: database-cleanup
-    shedlock-lock-at-most-for: PT5M
-    maximum-execution-time: PT10M
   message-archive:
     cron: '0 30 3 * * *'
     name: message-archive
@@ -153,7 +150,7 @@ scheduler:
 #========================================
 # Conversation archiving settings
 #========================================
-# Nightly job: snapshots the conversation of every closed EB errand into {errandNumber}_meddelandehistorik.pdf once it
+# Nightly job: snapshots the conversation of every closed financial assistance errand into {errandNumber}_meddelandehistorik.pdf once it
 # has been closed (and untouched) for days-after-close days, then uploads it to the errand's Lifecare actualisation.
 # The Lifecare document-type / sender-type codes are tenant-specific (mocked in Drakel) — override per environment.
 archive:
@@ -166,26 +163,19 @@ archive:
     document-label: Meddelanden och bilagor från Draken
     lifecare-sender-name: Sundsvalls kommun
 #========================================
-# Maintenance settings
-#========================================
-maintenance:
-  database-cleanup:
-    # Destructive nightly demo reset. Disabled by default; the scheduler bean is only created when this
-    # is true (set together with scheduler.database-cleanup.cron in throwaway demo environments only).
-    enabled: false
-#========================================
-# Financial assistance (EB) settings
+# Financial assistance settings
 #========================================
 financial-assistance:
   eligibility:
     # "Inom X dagar" duplicate-application guard for the common-entry-point eligibility check. A request may override it.
     duplicate-window-days: 90
-    # "Recently closed inom X dagar" guard. When an applicant's previous EB errand was closed this recently, the
+    # "Recently closed inom X dagar" guard. When an applicant's previous financial assistance errand was closed this recently, the
     # eligibility check recommends a renewal (reasonCode RECENTLY_CLOSED) and surfaces the closed errand, and a freshly
     # created errand is frozen as NEEDS_MANUAL_REVIEW (no aktualisering, no arkivering) for a caseworker to reopen in
     # Lifecare and release. Policy value — confirm the day count with legal/jurist.
     recently-closed-window-days: 30
-    # TEST OVERRIDE: when true the eligibility check short-circuits and returns all three application types
-    # (new/renewal/supplementary application) regardless of any existing case, so the frontend can exercise all three
-    # flows. Set FINANCIAL_ASSISTANCE_RETURN_ALL_TYPES=false to restore the real common-entry-point routing.
-    return-all-types: ${FINANCIAL_ASSISTANCE_RETURN_ALL_TYPES}
+    # TEST OVERRIDE, off by default: when true the eligibility check short-circuits and returns all three application
+    # types (new/renewal/supplementary application) regardless of any existing case, so the frontend can exercise all
+    # three flows. Only ever set FINANCIAL_ASSISTANCE_RETURN_ALL_TYPES=true in a throwaway test environment — it
+    # bypasses the real common-entry-point routing, including the protected-identity gate.
+    return-all-types: ${FINANCIAL_ASSISTANCE_RETURN_ALL_TYPES:false}

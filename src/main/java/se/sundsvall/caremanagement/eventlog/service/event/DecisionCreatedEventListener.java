@@ -29,7 +29,7 @@ class DecisionCreatedEventListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final DecisionCreated event) {
+	void recordDecisionCreation(final DecisionCreated event) {
 		service.recordDomainEvent(ErrandEventEntity.create()
 			.withErrandId(event.errandId())
 			.withMunicipalityId(event.municipalityId())

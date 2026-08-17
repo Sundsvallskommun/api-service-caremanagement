@@ -18,7 +18,7 @@ import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
-import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseService;
+import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
@@ -71,7 +71,7 @@ class FinancialAssistanceCalculationServiceTest {
 	private CalculationService calculationServiceMock;
 
 	@Mock
-	private LifecareEbCaseService lifecareEbCaseServiceMock;
+	private LifecareCaseService lifecareCaseServiceMock;
 
 	@Mock
 	private CitizenService citizenServiceMock;

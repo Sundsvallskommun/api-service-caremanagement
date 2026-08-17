@@ -1,8 +1,6 @@
 package se.sundsvall.caremanagement.document.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -31,11 +29,9 @@ public class Document {
 	@Schema(description = "Free-text body of the document", examples = "Beslut har fattats enligt nedan ...")
 	private String text;
 
-	@Schema(description = "Documented date (Lifecare 'Datum'), distinct from the system created timestamp", examples = "2025-05-30")
-	private LocalDate documentDate;
-
-	@Schema(description = "Documented time (Lifecare 'Tid'); optional", examples = "14:30")
-	private LocalTime documentTime;
+	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid'), distinct from the system created timestamp", examples = "2025-05-30T14:30:00+02:00")
+	@DateTimeFormat(iso = DATE_TIME)
+	private OffsetDateTime documentDateTime;
 
 	@Schema(description = "Write-protection status — WORKING is an editable draft, LOCKED is a finalised record", allowableValues = {
 		"WORKING", "LOCKED"
@@ -87,12 +83,8 @@ public class Document {
 		return text;
 	}
 
-	public LocalDate getDocumentDate() {
-		return documentDate;
-	}
-
-	public LocalTime getDocumentTime() {
-		return documentTime;
+	public OffsetDateTime getDocumentDateTime() {
+		return documentDateTime;
 	}
 
 	public String getStatus() {
@@ -143,12 +135,8 @@ public class Document {
 		this.text = text;
 	}
 
-	public void setDocumentDate(final LocalDate documentDate) {
-		this.documentDate = documentDate;
-	}
-
-	public void setDocumentTime(final LocalTime documentTime) {
-		this.documentTime = documentTime;
+	public void setDocumentDateTime(final OffsetDateTime documentDateTime) {
+		this.documentDateTime = documentDateTime;
 	}
 
 	public void setStatus(final String status) {
@@ -204,13 +192,8 @@ public class Document {
 		return this;
 	}
 
-	public Document withDocumentDate(final LocalDate documentDate) {
-		this.documentDate = documentDate;
-		return this;
-	}
-
-	public Document withDocumentTime(final LocalTime documentTime) {
-		this.documentTime = documentTime;
+	public Document withDocumentDateTime(final OffsetDateTime documentDateTime) {
+		this.documentDateTime = documentDateTime;
 		return this;
 	}
 
@@ -256,8 +239,8 @@ public class Document {
 		final Document that = (Document) o;
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
 			&& Objects.equals(type, that.type) && Objects.equals(heading, that.heading)
-			&& Objects.equals(text, that.text) && Objects.equals(documentDate, that.documentDate)
-			&& Objects.equals(documentTime, that.documentTime) && Objects.equals(status, that.status)
+			&& Objects.equals(text, that.text) && Objects.equals(documentDateTime, that.documentDateTime)
+			&& Objects.equals(status, that.status)
 			&& Objects.equals(createdBy, that.createdBy) && Objects.equals(created, that.created)
 			&& Objects.equals(modifiedBy, that.modifiedBy) && Objects.equals(modified, that.modified)
 			&& Objects.equals(lockedBy, that.lockedBy) && Objects.equals(locked, that.locked);
@@ -265,13 +248,13 @@ public class Document {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, heading, text, documentDate, documentTime, status, createdBy, created, modifiedBy, modified, lockedBy, locked);
+		return Objects.hash(id, errandId, type, heading, text, documentDateTime, status, createdBy, created, modifiedBy, modified, lockedBy, locked);
 	}
 
 	@Override
 	public String toString() {
 		return "Document{id='" + id + "', errandId='" + errandId + "', type='" + type + "', heading='" + heading
-			+ "', text='" + text + "', documentDate=" + documentDate + ", documentTime=" + documentTime + ", status='"
+			+ "', text='" + text + "', documentDateTime=" + documentDateTime + ", status='"
 			+ status + "', createdBy='" + createdBy + "', created=" + created + ", modifiedBy='" + modifiedBy
 			+ "', modified=" + modified + ", lockedBy='" + lockedBy + "', locked=" + locked + "}";
 	}

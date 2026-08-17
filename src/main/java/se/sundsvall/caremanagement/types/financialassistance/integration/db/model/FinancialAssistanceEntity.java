@@ -19,7 +19,7 @@ import se.sundsvall.caremanagement.shared.AuditableListener;
 import static org.hibernate.Length.LONG32;
 
 /**
- * Financial assistance (EB) application data. One row per errand, sharing the primary key with {@code errand.id}
+ * Financial assistance application data. One row per errand, sharing the primary key with {@code errand.id}
  * ({@code errand_id} is set from the envelope id, not generated). Repeating groups — children, costs, incomes, pending
  * benefits, assets, per-person details, planning, planned activities and job applications — are owned
  * {@code @ElementCollection} value tables ({@code errand_fa_*}) that cascade with the row.

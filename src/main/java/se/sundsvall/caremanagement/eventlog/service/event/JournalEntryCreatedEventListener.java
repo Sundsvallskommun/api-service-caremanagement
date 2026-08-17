@@ -28,7 +28,7 @@ class JournalEntryCreatedEventListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final JournalEntryCreated event) {
+	void recordJournalEntryCreation(final JournalEntryCreated event) {
 		service.recordDomainEvent(ErrandEventEntity.create()
 			.withErrandId(event.errandId())
 			.withMunicipalityId(event.municipalityId())

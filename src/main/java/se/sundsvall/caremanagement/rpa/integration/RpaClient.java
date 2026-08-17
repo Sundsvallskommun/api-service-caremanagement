@@ -12,7 +12,8 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static se.sundsvall.caremanagement.rpa.integration.configuration.RpaConfiguration.CLIENT_ID;
 
 /**
- * Feign contract for the UiPath Orchestrator OData API — the single {@code AddQueueItem} operation that enqueues an EB
+ * Feign contract for the UiPath Orchestrator OData API — the single {@code AddQueueItem} operation that enqueues a
+ * financial assistance
  * RPA task. The {@code X-UIPATH-OrganizationUnitId} header selects the Orchestrator folder (per municipality). OAuth2
  * is applied globally by {@link RpaConfiguration}.
  */

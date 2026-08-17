@@ -7,12 +7,12 @@ import org.junit.jupiter.api.Test;
 import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-class LifecareEbCaseSummaryTest {
+class LifecareCaseSummaryTest {
 
 	@Test
 	void accessors() {
 		final var period = YearMonth.of(2026, MAY);
-		final var summary = new LifecareEbCaseSummary(true, Set.of(period), period, true, true);
+		final var summary = new LifecareCaseSummary(true, Set.of(period), period, true, true);
 
 		assertThat(summary.hasFootprint()).isTrue();
 		assertThat(summary.decisionMonths()).containsExactly(period);
@@ -23,7 +23,7 @@ class LifecareEbCaseSummaryTest {
 
 	@Test
 	void noneIsEmpty() {
-		final var none = LifecareEbCaseSummary.none();
+		final var none = LifecareCaseSummary.none();
 
 		assertThat(none.hasFootprint()).isFalse();
 		assertThat(none.decisionMonths()).isEmpty();

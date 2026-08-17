@@ -8,11 +8,12 @@ import org.springframework.validation.annotation.Validated;
 
 /**
  * Configuration for the conversation-archiving job (see {@code MessageArchiveScheduler}). The job snapshots the
- * conversation of every closed EB errand into a message-history PDF once the errand has been
+ * conversation of every closed financial assistance errand into a message-history PDF once the errand has been
  * quiet for {@code daysAfterClose} days, then uploads it to the errand's Lifecare actualisation.
  *
  * @param municipalityId             the municipality whose errands are archived
- * @param namespace                  the namespace whose errands are archived (EB = {@code FINANCIAL_ASSISTANCE})
+ * @param namespace                  the namespace whose errands are archived (financial assistance =
+ *                                   {@code FINANCIAL_ASSISTANCE})
  * @param daysAfterClose             the settle delay — an errand is only archived once it has been closed (and
  *                                   otherwise untouched) for at least this many days. {@code 0} means archive on the
  *                                   next run after it closes

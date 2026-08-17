@@ -28,7 +28,7 @@ class StakeholderMutatedEventListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final StakeholderMutated event) {
+	void recordStakeholderChange(final StakeholderMutated event) {
 		service.recordDomainEvent(ErrandEventEntity.create()
 			.withErrandId(event.errandId())
 			.withMunicipalityId(event.municipalityId())

@@ -20,7 +20,7 @@ class PermitErrandDeletedListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandDeleted event) {
+	void deletePermitsForErrand(final ErrandDeleted event) {
 		permitRepository.deleteByErrandId(event.errandId());
 	}
 }

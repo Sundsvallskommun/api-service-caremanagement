@@ -1,7 +1,5 @@
 package se.sundsvall.caremanagement.document.api.model;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Random;
 import org.hamcrest.MatcherAssert;
@@ -19,14 +17,11 @@ import static org.hamcrest.CoreMatchers.allOf;
 
 class DocumentTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
-	private static final LocalDate DOCUMENT_DATE = LocalDate.parse("2025-05-30");
-	private static final LocalTime DOCUMENT_TIME = LocalTime.of(14, 30);
+	private static final OffsetDateTime DOCUMENT_DATE_TIME = OffsetDateTime.parse("2025-05-30T14:30:00+02:00");
 
 	@BeforeAll
 	static void setup() {
 		registerValueGenerator(() -> OffsetDateTime.now().plusDays(new Random().nextInt()), OffsetDateTime.class);
-		registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(1000)), LocalDate.class);
-		registerValueGenerator(() -> LocalTime.ofNanoOfDay(Math.floorMod(new Random().nextLong(), 86_400_000_000_000L)), LocalTime.class);
 	}
 
 	@Test
@@ -47,8 +42,7 @@ class DocumentTest {
 			.withType("Brev")
 			.withHeading("Rubrik")
 			.withText("body")
-			.withDocumentDate(DOCUMENT_DATE)
-			.withDocumentTime(DOCUMENT_TIME)
+			.withDocumentDateTime(DOCUMENT_DATE_TIME)
 			.withStatus("WORKING")
 			.withCreatedBy("carola")
 			.withCreated(FIXED_TIMESTAMP)
@@ -62,8 +56,7 @@ class DocumentTest {
 		assertThat(document.getType()).isEqualTo("Brev");
 		assertThat(document.getHeading()).isEqualTo("Rubrik");
 		assertThat(document.getText()).isEqualTo("body");
-		assertThat(document.getDocumentDate()).isEqualTo(DOCUMENT_DATE);
-		assertThat(document.getDocumentTime()).isEqualTo(DOCUMENT_TIME);
+		assertThat(document.getDocumentDateTime()).isEqualTo(DOCUMENT_DATE_TIME);
 		assertThat(document.getStatus()).isEqualTo("WORKING");
 		assertThat(document.getCreatedBy()).isEqualTo("carola");
 		assertThat(document.getCreated()).isEqualTo(FIXED_TIMESTAMP);

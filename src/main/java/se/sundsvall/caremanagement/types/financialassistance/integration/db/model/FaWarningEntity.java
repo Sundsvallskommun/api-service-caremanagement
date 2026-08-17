@@ -17,7 +17,8 @@ import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * A single EB income warning on an errand — an acknowledgeable object the caseworker reviews in Draken. The daily
+ * A single financial assistance income warning on an errand — an acknowledgeable object the caseworker reviews in
+ * Draken. The daily
  * prepare step reconciles these against the current SSBTEK picture (creating new ones, auto-closing resolved ones);
  * dedup is on {@code (errandId, type, sourceKey)}.
  */

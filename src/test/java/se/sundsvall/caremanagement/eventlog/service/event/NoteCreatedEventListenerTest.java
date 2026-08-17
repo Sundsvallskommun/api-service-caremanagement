@@ -32,7 +32,7 @@ class NoteCreatedEventListenerTest {
 
 	@Test
 	void recordsNoteCreatedAsDescriptiveEventRow() {
-		listener.on(new NoteCreated("note-1", "errand-1", "2281", "EB", "carola01winberg", TS));
+		listener.recordNoteCreation(new NoteCreated("note-1", "errand-1", "2281", "EB", "carola01winberg", TS));
 
 		final var entity = capture();
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
@@ -48,7 +48,7 @@ class NoteCreatedEventListenerTest {
 
 	@Test
 	void defaultsActorToSystemWhenAuthorBlank() {
-		listener.on(new NoteCreated("note-1", "errand-1", "2281", "EB", " ", TS));
+		listener.recordNoteCreation(new NoteCreated("note-1", "errand-1", "2281", "EB", " ", TS));
 
 		assertThat(capture().getActor()).isEqualTo("system");
 	}

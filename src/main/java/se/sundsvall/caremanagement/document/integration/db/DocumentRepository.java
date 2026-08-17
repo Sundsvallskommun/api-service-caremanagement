@@ -13,7 +13,7 @@ import se.sundsvall.caremanagement.document.integration.db.model.DocumentEntity;
 @CircuitBreaker(name = "documentRepository")
 public interface DocumentRepository extends JpaRepository<DocumentEntity, String> {
 
-	List<DocumentEntity> findByErrandIdOrderByDocumentDateDescDocumentTimeDescCreatedDesc(String errandId);
+	List<DocumentEntity> findByErrandIdOrderByDocumentDateTimeDescCreatedDesc(String errandId);
 
 	/**
 	 * Loads the document only if it belongs to the given errand. Scopes reads to the errand (and, via the

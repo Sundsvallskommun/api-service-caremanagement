@@ -20,7 +20,7 @@ import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
-import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseService;
+import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
@@ -32,7 +32,9 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.caremanagement.types.financialassistance.service.mapper.CalculationDraftMapper;
+import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
@@ -68,7 +70,7 @@ public class FinancialAssistanceCalculationService {
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final CalculationService calculationService;
-	private final LifecareEbCaseService lifecareEbCaseService;
+	private final LifecareCaseService lifecareCaseService;
 	private final CitizenService citizenService;
 	private final DecisionService decisionService;
 	private final WarningService warningService;
@@ -77,12 +79,12 @@ public class FinancialAssistanceCalculationService {
 	private final RpaService rpaService;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
-		final LifecareEbCaseService lifecareEbCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
+		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final RpaService rpaService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
-		this.lifecareEbCaseService = lifecareEbCaseService;
+		this.lifecareCaseService = lifecareCaseService;
 		this.citizenService = citizenService;
 		this.decisionService = decisionService;
 		this.warningService = warningService;
@@ -102,49 +104,93 @@ public class FinancialAssistanceCalculationService {
 	 * No Lifecare calculation is created here — that happens only after a decision, via {@link #commitCalculation}.
 	 */
 	public CalculationResponse prepareCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
+		final var input = gather(municipalityId, namespace, request);
+		final var refresh = refreshDraft(municipalityId, input);
+		final var response = completeness(request, input);
+
+		publish(municipalityId, namespace, input, refresh, response);
+		stampDailyRun(input.errand());
+		return response;
+	}
+
+	/**
+	 * What one prepare run works from: the request's resolved identifiers plus the errand it targets. The month is kept
+	 * both parsed (for the Lifecare reads) and verbatim (the draft header stores the request's own string).
+	 */
+	private record PrepareInput(String errandId, String applicant, YearMonth applicationMonth, String applicationMonthValue,
+		String classifiedIncomes, FinancialAssistanceEntity errand) {}
+
+	/** What refreshing the draft produced: the per-row changes to reconcile, and the warnings the feed raised. */
+	private record DraftRefresh(DraftChanges changes, List<WarningService.WarningInput> warnings) {}
+
+	/**
+	 * Resolve everything the run needs before any work is done: the errand is scope-checked (404 outside this
+	 * namespace/municipality), the applicant party id resolved to a personal number, and the classified incomes required —
+	 * the SSBTEK rules are evaluated in the process, not here.
+	 */
+	private PrepareInput gather(final String municipalityId, final String namespace, final CalculationRequest request) {
 		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+
+		// Validated in this order so the caller gets the most specific rejection first: an unresolvable applicant, then a
+		// missing classifiedIncomes, then a missing typed errand.
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 		final var classifiedIncomes = requireClassifiedIncomes(request);
 		final var errand = financialAssistanceRepository.findByErrandId(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No financial-assistance errand for id " + errandId));
 
-		// Compute the fresh process rows for the three sections, then merge them into the editable draft (the merge keeps
-		// the caseworker's values + soft-deletes; only the process columns are refreshed).
-		final var incomeRows = calculationFeeder.incomeRows(errandId, calculationService.incomeLines(applicant, classifiedIncomes));
-		final var applicantAge = ageFromPnr(applicant);
-		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, errandId, errand,
-			previousExpenseAmounts(applicant, applicationMonth), applicantAge);
-		final var personRows = calculationFeeder.personRows(errandId, errand);
-		final var normId = calculationService.selectNormId(applicant, applicationMonth);
-		final var draftChanges = draftService.refresh(errandId, request.getApplicationMonth(), normId, errand.getNormType(), personRows, incomeRows, expenseFeed.rows());
+		return new PrepareInput(errandId, applicant, applicationMonth, request.getApplicationMonth(), classifiedIncomes, errand);
+	}
 
-		final var completeness = calculationService.completeness(applicant, applicationMonth, classifiedIncomes);
-		final var deltaWarnings = calculationFeeder.householdDeltaWarnings(municipalityId, errand, personRows, previousHousehold(applicant, applicationMonth));
+	/**
+	 * Compute the fresh process rows for the three sections, then merge them into the editable draft (the merge keeps the
+	 * caseworker's values + soft-deletes; only the process columns are refreshed). The expense feed and the household
+	 * comparison also raise the section warnings reconciled in {@link #publish}.
+	 */
+	private DraftRefresh refreshDraft(final String municipalityId, final PrepareInput input) {
+		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(input.applicant(), input.classifiedIncomes()));
+		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, input.errandId(), input.errand(),
+			previousExpenseAmounts(input.applicant(), input.applicationMonth()), ageFromPnr(input.applicant()));
+		final var personRows = calculationFeeder.personRows(input.errandId(), input.errand());
+		final var normId = calculationService.selectNormId(input.applicant(), input.applicationMonth());
+		final var changes = draftService.refresh(input.errandId(), input.applicationMonthValue(), normId, input.errand().getNormType(),
+			personRows, incomeRows, expenseFeed.rows());
 
-		final var response = CalculationResponse.create()
+		final var deltaWarnings = calculationFeeder.householdDeltaWarnings(municipalityId, input.errand(), personRows,
+			previousHousehold(input.applicant(), input.applicationMonth()));
+		return new DraftRefresh(changes, Stream.concat(expenseFeed.warnings().stream(), deltaWarnings.stream()).toList());
+	}
+
+	/** The verdict the process asked for: does this month cover every income type the previous calculation had? */
+	private CalculationResponse completeness(final CalculationRequest request, final PrepareInput input) {
+		final var completeness = calculationService.completeness(input.applicant(), input.applicationMonth(), input.classifiedIncomes());
+		return CalculationResponse.create()
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
 			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of))
 			.withInformationComplete(completeness.informationComplete())
 			.withMissingIncomeTypes(completeness.missingIncomeTypes());
+	}
 
-		recordRecommendationOnce(municipalityId, namespace, errandId, response);
-		final var sectionWarnings = Stream.concat(expenseFeed.warnings().stream(), deltaWarnings.stream()).toList();
-		warningService.reconcileCalculationWarnings(errandId, response.getUnhandledIncomes(), response.getChangeWarnings(),
-			response.getMissingIncomeTypes(), draftChanges, sectionWarnings);
-		applyCompletenessStatus(municipalityId, namespace, errandId, completeness.informationComplete());
+	/** Surface the run on the errand: the one recommendation, the reconciled warnings and the completeness status. */
+	private void publish(final String municipalityId, final String namespace, final PrepareInput input, final DraftRefresh refresh,
+		final CalculationResponse response) {
+		recordRecommendationOnce(municipalityId, namespace, input.errandId(), response);
+		warningService.reconcileCalculationWarnings(input.errandId(), response.getUnhandledIncomes(), response.getChangeWarnings(),
+			response.getMissingIncomeTypes(), refresh.changes(), refresh.warnings());
+		applyCompletenessStatus(municipalityId, namespace, input.errandId(), response.isInformationComplete());
+	}
 
-		// Stamp the errand with this daily-loop run so Draken can show "last checked" and ops can spot stale loops.
+	/** Stamp the errand with this daily-loop run so Draken can show "last checked" and ops can spot stale loops. */
+	private void stampDailyRun(final FinancialAssistanceEntity errand) {
 		errand.setLastDailyRunAt(OffsetDateTime.now(ZoneId.systemDefault()));
 		financialAssistanceRepository.save(errand);
-		return response;
 	}
 
 	/** The previous calculation household, best-effort — a failed Lifecare read degrades to "no previous household". */
 	private PreviousHousehold previousHousehold(final String applicant, final YearMonth applicationMonth) {
 		try {
-			return lifecareEbCaseService.previousHousehold(applicant, applicationMonth);
+			return lifecareCaseService.previousHousehold(applicant, applicationMonth);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation household — skipping the household drift check", e);
 			return PreviousHousehold.empty();
@@ -154,7 +200,7 @@ public class FinancialAssistanceCalculationService {
 	/** The previous calculation's per-cost-type approved amounts, best-effort — a failed Lifecare read degrades to none. */
 	private Map<String, Double> previousExpenseAmounts(final String applicant, final YearMonth applicationMonth) {
 		try {
-			return lifecareEbCaseService.previousExpenseAmounts(applicant, applicationMonth);
+			return lifecareCaseService.previousExpenseAmounts(applicant, applicationMonth);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation expense amounts — expense history treated as missing", e);
 			return Map.of();

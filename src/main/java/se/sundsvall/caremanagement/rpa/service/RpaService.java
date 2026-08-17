@@ -18,11 +18,13 @@ import static org.springframework.http.HttpStatus.CONFLICT;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
- * Enqueues EB RPA tasks on the UiPath Orchestrator. Each call adds one queue item to the configured EB queue, keyed by
+ * Enqueues financial assistance RPA tasks on the UiPath Orchestrator. Each call adds one queue item to the configured
+ * financial assistance queue, keyed by
  * {@code reference = errandId:action}; a robot then performs the matching Lifecare GUI flow out of band.
  *
  * <p>
- * The enqueue is idempotent on the Orchestrator side: re-running the EB process (the daily loop, a retried external
+ * The enqueue is idempotent on the Orchestrator side: re-running the financial assistance process (the daily loop, a
+ * retried external
  * task) re-adds the same {@code (queue, reference)} item, which UiPath rejects with {@code 409}/{@code 1016} — that is
  * swallowed as success. The reference includes the {@code action} so the dedup is per-(errand, action): two
  * <em>different</em> actions on the same errand (e.g. fetch then write) are distinct items and neither shadows the

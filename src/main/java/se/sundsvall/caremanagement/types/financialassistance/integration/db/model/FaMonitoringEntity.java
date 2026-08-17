@@ -18,7 +18,8 @@ import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * A single EB monitoring on an errand — a date-bound watch/reminder the caseworker manages in Draken. Unlike the income
+ * A single financial assistance monitoring on an errand — a date-bound watch/reminder the caseworker manages in Draken.
+ * Unlike the income
  * warnings it carries no acknowledge lifecycle: it is created, edited and removed directly, and has a start date (when
  * the watch becomes relevant) plus an optional end date. Modelled after Lifecare IFO's "Monitorings".
  *

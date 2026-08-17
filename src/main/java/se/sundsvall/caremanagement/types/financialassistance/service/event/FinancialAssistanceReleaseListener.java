@@ -41,7 +41,7 @@ class FinancialAssistanceReleaseListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandStatusChanged event) {
+	void startProcessOnRelease(final ErrandStatusChanged event) {
 		if (!isReleaseTransition(event)) {
 			return;
 		}

@@ -25,7 +25,8 @@ import static java.time.ZoneId.systemDefault;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_CLOSED;
 
 /**
- * Archives the conversation of every closed EB errand into a single PDF — the rendered message pages first, then each
+ * Archives the conversation of every closed financial assistance errand into a single PDF — the rendered message pages
+ * first, then each
  * conversation attachment appended in full, introduced by a numbered {@code Bilaga {n}} divider so two
  * identically-named
  * files can be told apart. The PDF is named
