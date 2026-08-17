@@ -47,22 +47,19 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * <ol>
  * <li><b>Protected identity</b> — a safety gate ahead of the routing: if the applicant or co-applicant has protected
  * identity in population register (citizen) or Lifecare, no application is offered (empty suggestions). The response
- * carries
- * <em>no</em> reason or flag — the protected status must not leak across the API edge — so the frontend simply sees
- * that nothing can be recommended and directs the citizen to a caseworker.</li>
- * <li><b>Exists in CM? + LC</b> — does the applicant already exist (a financial assistance errand in caremanagement, or
- * a Lifecare
- * footprint)? When applying together, <em>both</em> must exist. If not → new application.</li>
+ * carries <em>no</em> reason or flag — the protected status must not leak across the API edge — so the frontend
+ * simply sees that nothing can be recommended and directs the citizen to a caseworker.</li>
+ * <li><b>Exists in CM? + LC</b> — does the applicant already exist (a financial assistance errand in caremanagement,
+ * or a Lifecare footprint)? When applying together, <em>both</em> must exist. If not → new application.</li>
  * <li><b>Same marital status?</b> — does the requested constellation (alone vs with a partner, inferred from the
  * co-applicant) match the previous application's? If it changed → new application.</li>
- * <li><b>Per-month</b> — for the current and next month, is there already an application/decision (within the window)?
- * If yes → supplementary application for that month; if no → renewal. The current month being decided in Lifecare makes
- * the
- * next-month option the recommended one.</li>
+ * <li><b>Per-month</b> — for the current and next month, is there already an application/decision (within the
+ * window)? If yes → supplementary application for that month; if no → renewal. The current month being decided in
+ * Lifecare makes the next-month option the recommended one.</li>
  * </ol>
  *
- * The decision is advisory — the caseworker stays in the loop — so the result carries the facts each gate was decided
- * from and degrades ({@code lifecareChecked=false}) when Lifecare is unreachable.
+ * The decision is advisory — the caseworker stays in the loop — so the result carries the facts each gate was
+ * decided from and degrades ({@code lifecareChecked=false}) when Lifecare is unreachable.
  */
 @Service
 @Transactional(readOnly = true)
@@ -282,10 +279,8 @@ public class EligibilityService {
 
 	/**
 	 * Protected identity for one person — protected in population register (citizen) <em>or</em> in Lifecare FamilyCare.
-	 * Each
-	 * source is
-	 * best-effort: a transport/upstream failure is treated as "not protected" so an outage degrades to normal routing
-	 * rather than blocking the applicant.
+	 * Each source is best-effort: a transport/upstream failure is treated as "not protected" so an outage degrades to
+	 * normal routing rather than blocking the applicant.
 	 */
 	private boolean hasProtectedIdentity(final String municipalityId, final String partyId) {
 		return citizenProtected(municipalityId, partyId) || lifecareProtected(municipalityId, partyId);
@@ -348,8 +343,8 @@ public class EligibilityService {
 	}
 
 	/**
-	 * The constellation of the most recent existing case — a CM application with a co-applicant, else the latest Lifecare
-	 * decision.
+	 * The constellation of the most recent existing case — a CM application with a co-applicant, else the latest
+	 * Lifecare decision.
 	 */
 	private static boolean previousHadCoApplicant(final List<CmRecord> cmRecords, final LifecareCaseSummary applicantLc) {
 		return cmRecords.stream().findFirst()
@@ -419,7 +414,8 @@ public class EligibilityService {
 	}
 
 	/**
-	 * Resolve a partyId to the personnummer Lifecare needs; throws (caught upstream → lifecareChecked=false) when unknown.
+	 * Resolve a partyId to the personnummer Lifecare needs; throws (caught upstream → lifecareChecked=false) when
+	 * unknown.
 	 */
 	private String personalNumber(final String municipalityId, final String partyId) {
 		return citizenService.getPersonalNumber(municipalityId, partyId)

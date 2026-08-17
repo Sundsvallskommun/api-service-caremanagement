@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
@@ -17,7 +18,7 @@ public class LifecareCalculationPerson {
 	private String name;
 
 	@Schema(description = "The amount the person contributes to the norm", examples = "4500.0")
-	private Double amount;
+	private BigDecimal amount;
 
 	@Schema(description = "The start date of the deviation period, when any", examples = "2026-06-01")
 	private String deviationFromDate;
@@ -55,15 +56,15 @@ public class LifecareCalculationPerson {
 		return this;
 	}
 
-	public Double getAmount() {
+	public BigDecimal getAmount() {
 		return amount;
 	}
 
-	public void setAmount(final Double amount) {
+	public void setAmount(final BigDecimal amount) {
 		this.amount = amount;
 	}
 
-	public LifecareCalculationPerson withAmount(final Double amount) {
+	public LifecareCalculationPerson withAmount(final BigDecimal amount) {
 		this.amount = amount;
 		return this;
 	}

@@ -8,9 +8,9 @@ import java.util.List;
 
 /**
  * The row sections of a full FamilyCare calculation body — the effective income, expense, special-expense and
- * household-person
- * rows plus the draft header. Grouped into one carrier so {@code CalculationAssembler.assemble} stays under the
- * parameter limit; any field may be {@code null} (treated as "left unset → FamilyCare default" by the assembler).
+ * household-person rows plus the draft header. Grouped into one carrier so {@code CalculationAssembler.assemble} stays
+ * under the parameter limit; any field may be {@code null} (treated as "left unset → FamilyCare default" by the
+ * assembler).
  *
  * @param incomes         the effective FamilyCare income rows; may be {@code null}
  * @param expenses        the effective FamilyCare expense rows; may be {@code null}

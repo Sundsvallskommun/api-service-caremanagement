@@ -10,8 +10,7 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 
 /**
  * One income row of the calculation draft, as returned to Draken — one FamilyCare income type with a applicant
- * (applicant, "S")
- * side and a co-applicant (co-applicant, "M") side, mirroring the Lifecare INCOMES tab and FamilyCare
+ * (applicant, "S") side and a co-applicant (co-applicant, "M") side, mirroring the Lifecare INCOMES tab and FamilyCare
  * {@code CalculationIncomes}. Per side the amount the process decided ({@code *ProcessAmount}, from the classified
  * SSBTEK income) is read-only; the caseworker's override ({@code *CaseworkerAmount}) and the note are editable. The
  * effective amount per side ({@code *EffectiveAmount}) is what is posted to Lifecare = the caseworker amount when set,

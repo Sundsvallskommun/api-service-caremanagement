@@ -18,18 +18,16 @@ import static java.util.Optional.ofNullable;
 
 /**
  * Resolves the caseworker to put on a financial assistance intake: reads the applicant's <em>most recent</em> Lifecare
- * FamilyCare Service
- * (support effort) over a lookback window, takes its {@code Caseworker} display name, and matches that name against the
- * FamilyCare
- * user directory ({@code Users/GetUsers}) to recover the user's FamilyCare {@code Id} (the actualisation
- * {@code CaseworkerId})
- * and {@code NetworkUserId} (the careM errand {@code assignedUserId}). The person-based Service read only carries the
- * caseworker as a display name, so the directory match is the only way to recover the ids the writes need.
+ * FamilyCare Service (support effort) over a lookback window, takes its {@code Caseworker} display name, and matches
+ * that name against the FamilyCare user directory ({@code Users/GetUsers}) to recover the user's FamilyCare {@code Id}
+ * (the actualisation {@code CaseworkerId}) and {@code NetworkUserId} (the careM errand {@code assignedUserId}). The
+ * person-based Service read only carries the caseworker as a display name, so the directory match is the only way to
+ * recover the ids the writes need.
  *
  * <p>
- * Resolution is intentionally lenient — any step that yields nothing (no Service, no caseworker name, no matching user)
- * returns {@link Optional#empty()} so the caller can create the intake without a caseworker rather than fail. Names are
- * matched case-insensitively and trimmed; disabled users are skipped. No personId or name is logged here.
+ * Resolution is intentionally lenient — any step that yields nothing (no Service, no caseworker name, no matching
+ * user) returns {@link Optional#empty()} so the caller can create the intake without a caseworker rather than fail.
+ * Names are matched case-insensitively and trimmed; disabled users are skipped. No personId or name is logged here.
  */
 @Service
 public class CaseworkerResolver {

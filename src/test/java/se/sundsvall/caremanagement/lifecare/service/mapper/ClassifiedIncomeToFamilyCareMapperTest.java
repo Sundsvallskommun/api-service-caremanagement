@@ -29,7 +29,7 @@ class ClassifiedIncomeToFamilyCareMapperTest {
 	}
 
 	@Test
-	void resolvesCategoryToFcTypeIdAndMergesByRole() {
+	void resolvesCategoryToFamilyCareTypeIdAndMergesByRole() {
 		final var rows = ClassifiedIncomeToFamilyCareMapper.toCalculationIncomes(List.of(
 			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED_KVITTNING", "1850", APPLICANT),
 			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED_KVITTNING", "200", CO_APPLICANT),

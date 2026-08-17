@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import com.google.code.beanmatchers.BeanMatchers;
+import java.math.BigDecimal;
 import java.util.List;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
@@ -17,9 +18,9 @@ import static org.hamcrest.CoreMatchers.allOf;
 class LifecareCalculationTest {
 
 	private static final List<LifecareCalculationPerson> PERSONS = List.of(LifecareCalculationPerson.create().withPersonId("200001011234").withName("Anna Andersson"));
-	private static final List<LifecareCalculationIncome> INCOMES = List.of(LifecareCalculationIncome.create().withType("Lön").withAmountApplicant(12000.0));
-	private static final List<LifecareCalculationExpense> EXPENSES = List.of(LifecareCalculationExpense.create().withType("Hyra").withAppliedAmount(7500.0));
-	private static final List<LifecareCalculationExpense> SPECIAL_EXPENSES = List.of(LifecareCalculationExpense.create().withType("Tandvård").withAppliedAmount(500.0));
+	private static final List<LifecareCalculationIncome> INCOMES = List.of(LifecareCalculationIncome.create().withType("Lön").withAmountApplicant(BigDecimal.valueOf(12000.0)));
+	private static final List<LifecareCalculationExpense> EXPENSES = List.of(LifecareCalculationExpense.create().withType("Hyra").withAppliedAmount(BigDecimal.valueOf(7500.0)));
+	private static final List<LifecareCalculationExpense> SPECIAL_EXPENSES = List.of(LifecareCalculationExpense.create().withType("Tandvård").withAppliedAmount(BigDecimal.valueOf(500.0)));
 
 	@BeforeAll
 	static void setup() {
@@ -45,14 +46,14 @@ class LifecareCalculationTest {
 			.withNorm("Riksnorm 2026")
 			.withFromDate("2026-06-01")
 			.withToDate("2026-06-30")
-			.withIncomeSum(12000.0)
-			.withExpenseSum(9500.0)
-			.withSpecialExpenseSum(500.0)
-			.withNormSum(10500.0)
-			.withCommonHouseholdCost(1200.0)
-			.withFamilyCost(800.0)
-			.withBalance(-2000.0)
-			.withTotalSum(8500.0)
+			.withIncomeSum(BigDecimal.valueOf(12000.0))
+			.withExpenseSum(BigDecimal.valueOf(9500.0))
+			.withSpecialExpenseSum(BigDecimal.valueOf(500.0))
+			.withNormSum(BigDecimal.valueOf(10500.0))
+			.withCommonHouseholdCost(BigDecimal.valueOf(1200.0))
+			.withFamilyCost(BigDecimal.valueOf(800.0))
+			.withBalance(BigDecimal.valueOf(-2000.0))
+			.withTotalSum(BigDecimal.valueOf(8500.0))
 			.withIsFinal(true)
 			.withPersons(PERSONS)
 			.withIncomes(INCOMES)
@@ -63,14 +64,14 @@ class LifecareCalculationTest {
 		assertThat(calculation.getNorm()).isEqualTo("Riksnorm 2026");
 		assertThat(calculation.getFromDate()).isEqualTo("2026-06-01");
 		assertThat(calculation.getToDate()).isEqualTo("2026-06-30");
-		assertThat(calculation.getIncomeSum()).isEqualTo(12000.0);
-		assertThat(calculation.getExpenseSum()).isEqualTo(9500.0);
-		assertThat(calculation.getSpecialExpenseSum()).isEqualTo(500.0);
-		assertThat(calculation.getNormSum()).isEqualTo(10500.0);
-		assertThat(calculation.getCommonHouseholdCost()).isEqualTo(1200.0);
-		assertThat(calculation.getFamilyCost()).isEqualTo(800.0);
-		assertThat(calculation.getBalance()).isEqualTo(-2000.0);
-		assertThat(calculation.getTotalSum()).isEqualTo(8500.0);
+		assertThat(calculation.getIncomeSum()).isEqualTo(BigDecimal.valueOf(12000.0));
+		assertThat(calculation.getExpenseSum()).isEqualTo(BigDecimal.valueOf(9500.0));
+		assertThat(calculation.getSpecialExpenseSum()).isEqualTo(BigDecimal.valueOf(500.0));
+		assertThat(calculation.getNormSum()).isEqualTo(BigDecimal.valueOf(10500.0));
+		assertThat(calculation.getCommonHouseholdCost()).isEqualTo(BigDecimal.valueOf(1200.0));
+		assertThat(calculation.getFamilyCost()).isEqualTo(BigDecimal.valueOf(800.0));
+		assertThat(calculation.getBalance()).isEqualTo(BigDecimal.valueOf(-2000.0));
+		assertThat(calculation.getTotalSum()).isEqualTo(BigDecimal.valueOf(8500.0));
 		assertThat(calculation.getIsFinal()).isTrue();
 		assertThat(calculation.getPersons()).isEqualTo(PERSONS);
 		assertThat(calculation.getIncomes()).isEqualTo(INCOMES);

@@ -27,12 +27,9 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 
 /**
  * Thin wrapper over {@link LifecareFamilyCareClient}. Every call goes through {@link #call(String, Supplier)}, which
- * translates
- * any transport/FamilyCare failure into a {@code BAD_GATEWAY} problem carrying the upstream status into the problem
- * detail.
- * Deliberately logs no {@code personId} or request/response payloads — FamilyCare carries personal identity number and
- * income
- * data (sprint privacy rule, vof-ekonomiskt-bistand/CLAUDE.md).
+ * translates any transport/FamilyCare failure into a {@code BAD_GATEWAY} problem carrying the upstream status into the
+ * problem detail. Deliberately logs no {@code personId} or request/response payloads — FamilyCare carries personal
+ * identity number and income data (sprint privacy rule, vof-ekonomiskt-bistand/CLAUDE.md).
  */
 @Component
 public class LifecareFamilyCareIntegration {
@@ -46,11 +43,11 @@ public class LifecareFamilyCareIntegration {
 	// ---- Person-based reads ------------------------------------------------------------------------------------------
 
 	/**
-	 * Short upstream descriptor (HTTP status when available) to make failures self-diagnosing without leaking payloads. For
-	 * {@link ThrowableProblem} causes the (already-clean) status + detail is used; for any other cause only the exception
-	 * class name is
-	 * emitted — transport failures (e.g. Feign {@code RetryableException}) embed the full request line in their message,
-	 * which carries personal identity number and the FamilyCare API key, so the message is deliberately dropped.
+	 * Short upstream descriptor (HTTP status when available) to make failures self-diagnosing without leaking payloads.
+	 * For {@link ThrowableProblem} causes the (already-clean) status + detail is used; for any other cause only the
+	 * exception class name is emitted — transport failures (e.g. Feign {@code RetryableException}) embed the full
+	 * request line in their message, which carries personal identity number and the FamilyCare API key, so the message is
+	 * deliberately dropped.
 	 */
 	private static String describe(final Throwable e) {
 		if (e instanceof final ThrowableProblem problem) {
@@ -143,8 +140,7 @@ public class LifecareFamilyCareIntegration {
 
 	/**
 	 * Runs an FamilyCare call, translating any failure into a {@code BAD_GATEWAY} problem. The {@code action} is a short
-	 * verb
-	 * phrase ("creating actualisation") used only for the log/problem detail — never a personId or payload.
+	 * verb phrase ("creating actualisation") used only for the log/problem detail — never a personId or payload.
 	 */
 	private <T> T call(final String action, final Supplier<T> operation) {
 		try {

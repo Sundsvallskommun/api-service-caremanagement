@@ -28,11 +28,11 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
 
 /**
- * Maps the draft calculation between its persisted entities ({@link FaCalculationDraftEntity} header +
- * {@code FaNorm*Entity} section rows) and the API models — the per-row read views ({@code Norm*Row}), the caseworker
- * edit payloads ({@code Norm*Input}) and the full {@link CalculationDraft} view. The effective value shown to the
- * caseworker is the caseworker value when set, otherwise the process value ({@link #effectiveAmount} /
- * {@link #effectiveDays}). Null-safe throughout.
+ * Maps the draft calculation between its persisted entities ({@link FaCalculationDraftEntity} header + {@code
+ * FaNorm*Entity} section rows) and the API models — the per-row read views ({@code Norm*Row}), the caseworker edit
+ * payloads ({@code Norm*Input}) and the full {@link CalculationDraft} view. The effective value shown to the caseworker
+ * is the caseworker value when set, otherwise the process value ({@link #effectiveAmount} / {@link #effectiveDays}).
+ * Null-safe throughout.
  */
 public final class CalculationDraftMapper {
 
@@ -160,25 +160,21 @@ public final class CalculationDraftMapper {
 	 */
 	public static EffectiveIncome toEffectiveIncome(final FaNormIncomeEntity row) {
 		return new EffectiveIncome(row.getTypeId(),
-			effectiveDouble(row.getApplicantCaseworkerAmount(), row.getApplicantProcessAmount()), row.getApplicantAmountDate(),
-			effectiveDouble(row.getCoapplicantCaseworkerAmount(), row.getCoapplicantProcessAmount()), row.getCoapplicantAmountDate(),
+			effectiveAmount(row.getApplicantCaseworkerAmount(), row.getApplicantProcessAmount()), row.getApplicantAmountDate(),
+			effectiveAmount(row.getCoapplicantCaseworkerAmount(), row.getCoapplicantProcessAmount()), row.getCoapplicantAmountDate(),
 			row.getNote());
 	}
 
 	public static EffectiveExpense toEffectiveExpense(final FaNormExpenseEntity row) {
 		return new EffectiveExpense(row.getCostType(), row.getBucket(),
-			ofNullable(row.getAppliedAmount()).map(BigDecimal::doubleValue).orElse(null),
-			effectiveDouble(row.getCaseworkerAmount(), row.getProcessAmount()),
+			row.getAppliedAmount(),
+			effectiveAmount(row.getCaseworkerAmount(), row.getProcessAmount()),
 			row.getNote());
 	}
 
 	public static EffectivePerson toEffectivePerson(final FaNormPersonEntity row) {
 		return new EffectivePerson(row.getPartyId(), effectiveDays(row.getCaseworkerDays(), row.getProcessDays()),
 			row.getDeviationFromDate(), row.getDeviationToDate());
-	}
-
-	public static Double effectiveDouble(final BigDecimal caseworkerAmount, final BigDecimal processAmount) {
-		return ofNullable(effectiveAmount(caseworkerAmount, processAmount)).map(BigDecimal::doubleValue).orElse(null);
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

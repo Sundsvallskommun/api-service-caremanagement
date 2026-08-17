@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.lifecare.service.mapper;
 
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationCalculationIncomeTypeDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -31,9 +32,21 @@ public final class MapperUtil {
 	}
 
 	/**
-	 * Index a proposal's calculation income types by normalized name → FamilyCare type id, keeping insertion order and the
-	 * first
-	 * id when two types normalize to the same name. Types with a null name or id are skipped.
+	 * A generated FamilyCare amount ({@code Double}, the vendor's wire type) as the {@link BigDecimal} money is carried in
+	 * everywhere on our side. Kept to this one boundary so no amount is passed around as a binary floating-point value.
+	 */
+	public static BigDecimal toAmount(final Double value) {
+		return ofNullable(value).map(BigDecimal::valueOf).orElse(null);
+	}
+
+	/** The reverse of {@link #toAmount(Double)} — only for filling a generated FamilyCare DTO on the way out. */
+	public static Double toWireAmount(final BigDecimal value) {
+		return ofNullable(value).map(BigDecimal::doubleValue).orElse(null);
+	}
+
+	/**
+	 * Index a proposal's calculation income types by normalized name → FamilyCare type id, keeping insertion order and
+	 * the first id when two types normalize to the same name. Types with a null name or id are skipped.
 	 */
 	public static Map<String, Integer> indexIncomeTypeIds(final PersonBasedCalculationProposalDTO proposal) {
 		return ofNullable(proposal)

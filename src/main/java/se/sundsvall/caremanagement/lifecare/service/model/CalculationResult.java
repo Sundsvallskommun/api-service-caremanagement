@@ -4,12 +4,9 @@ import java.util.List;
 
 /**
  * Outcome of building and posting a financial assistance calculation: the created Lifecare calculation id plus the
- * completeness
- * verdict
- * — whether this month's calculation covers every income type the previous month's did, and which types are still
- * missing. The financial assistance process polls SSBTEK daily until {@code informationComplete} so a caseworker
- * reviews a calculation
- * built on the full picture.
+ * completeness verdict — whether this month's calculation covers every income type the previous month's did, and
+ * which types are still missing. The financial assistance process polls SSBTEK daily until {@code informationComplete}
+ * so a caseworker reviews a calculation built on the full picture.
  *
  * @param calculationId       the id of the calculation created in Lifecare FamilyCare
  * @param informationComplete whether every previous-month income type is present this month (no missing types)

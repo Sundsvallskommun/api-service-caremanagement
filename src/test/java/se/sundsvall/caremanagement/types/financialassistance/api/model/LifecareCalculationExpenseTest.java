@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import java.math.BigDecimal;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
@@ -27,12 +28,12 @@ class LifecareCalculationExpenseTest {
 	void testBuilderMethods() {
 		final var expense = LifecareCalculationExpense.create()
 			.withType("Hyra")
-			.withAppliedAmount(7500.0)
-			.withApprovedAmount(7000.0);
+			.withAppliedAmount(BigDecimal.valueOf(7500.0))
+			.withApprovedAmount(BigDecimal.valueOf(7000.0));
 
 		assertThat(expense.getType()).isEqualTo("Hyra");
-		assertThat(expense.getAppliedAmount()).isEqualTo(7500.0);
-		assertThat(expense.getApprovedAmount()).isEqualTo(7000.0);
+		assertThat(expense.getAppliedAmount()).isEqualTo(BigDecimal.valueOf(7500.0));
+		assertThat(expense.getApprovedAmount()).isEqualTo(BigDecimal.valueOf(7000.0));
 	}
 
 	@Test

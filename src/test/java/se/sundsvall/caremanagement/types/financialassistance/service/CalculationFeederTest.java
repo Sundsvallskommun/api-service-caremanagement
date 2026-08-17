@@ -230,7 +230,7 @@ class CalculationFeederTest {
 		when(expenseRulesServiceMock.verdict(any(), any(), any(), any(), any(), any(), any()))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("9000"), "EXPENSE", false, null));
 
-		feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of("RENT", 7000.0), 35);
+		feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of("RENT", BigDecimal.valueOf(7000.0)), 35);
 
 		final var applied = ArgumentCaptor.forClass(BigDecimal.class);
 		final var previous = ArgumentCaptor.forClass(BigDecimal.class);
@@ -256,7 +256,7 @@ class CalculationFeederTest {
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(BigDecimal.ZERO, "EXPENSE", true, "historik saknas"));
 
 		// only ELECTRICITY has history → RENT's godkandForra is null, and household falls back to persons + children (0)
-		feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of("ELECTRICITY", 1000.0), 40);
+		feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of("ELECTRICITY", BigDecimal.valueOf(1000.0)), 40);
 
 		final var previous = ArgumentCaptor.forClass(BigDecimal.class);
 		final var household = ArgumentCaptor.forClass(Integer.class);
@@ -369,7 +369,7 @@ class CalculationFeederTest {
 	@Test
 	void householdDeltaWarningsFlagsHousingCostChange() {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, 5000.0);
+		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, BigDecimal.valueOf(5000.0));
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6600"))));
 
@@ -391,7 +391,7 @@ class CalculationFeederTest {
 	@Test
 	void householdDeltaWarningsFlagsBothSizeAndHousing() {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, 5000.0);
+		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, BigDecimal.valueOf(5000.0));
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("2500"))));
 

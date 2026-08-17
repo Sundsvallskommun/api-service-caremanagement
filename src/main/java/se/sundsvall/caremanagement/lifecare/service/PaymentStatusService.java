@@ -11,9 +11,8 @@ import static java.util.Optional.ofNullable;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Reads whether a Lifecare payment concerning an application month has been effectuated for an applicant. The
- * payment itself is a manual caseworker step in Lifecare (FamilyCare exposes no payment write) — this service only
- * reads the
+ * Reads whether a Lifecare payment concerning an application month has been effectuated for an applicant. The payment
+ * itself is a manual caseworker step in Lifecare (FamilyCare exposes no payment write) — this service only reads the
  * registered payments via {@link LifecareFamilyCareIntegration}. Mirrors {@link ActualisationService}.
  */
 @Service

@@ -18,17 +18,13 @@ import static java.util.Optional.ofNullable;
 
 /**
  * Creates a financial-assistance intake (actualisation) in Lifecare FamilyCare — the "API instead of RPA" case-intake
- * step.
- * Fetches the applicant's FamilyCare actualisation proposal, assembles the {@code PostAktualiseringsBodyRequest}
- * against it
- * (via
- * {@link ActualisationAssembler}), posts it, and returns the created actualisation id.
+ * step. Fetches the applicant's FamilyCare actualisation proposal, assembles the {@code PostAktualiseringsBodyRequest}
+ * against it (via {@link ActualisationAssembler}), posts it, and returns the created actualisation id.
  *
  * <p>
- * The write is a two-call exchange (proposal GET → actualisation POST); both go through
- * {@link LifecareFamilyCareIntegration},
- * which keeps the generated FamilyCare DTOs and the privacy-safe logging inside the integration layer. Mirrors
- * {@link CalculationService}.
+ * The write is a two-call exchange (proposal GET → actualisation POST); both go through {@link
+ * LifecareFamilyCareIntegration}, which keeps the generated FamilyCare DTOs and the privacy-safe logging inside the
+ * integration layer. Mirrors {@link CalculationService}.
  */
 @Service
 public class ActualisationService {
@@ -48,15 +44,15 @@ public class ActualisationService {
 	/**
 	 * Build and post the actualisation for the applicant and intake date. The caseworker is resolved off the applicant's
 	 * most recent Lifecare Service and, when found, set as the actualisation {@code CaseworkerId}; the same user's network
-	 * id is returned so the caller can assign the careM errand. Caseworker resolution is best-effort — a lookup failure is
-	 * logged and the intake is still created without a caseworker.
+	 * id is returned so the caller can assign the careM errand. Caseworker resolution is best-effort — a lookup failure
+	 * is logged and the intake is still created without a caseworker.
 	 *
 	 * @param  applicantPersonId the applicant's personal identity number (the FamilyCare actualisation owner)
 	 * @param  date              the intake date
-	 * @return                   the created actualisation id and the resolved errand assignee (assignee {@code null} when
-	 *                           no caseworker was resolved)
+	 * @return                   the created actualisation id and the errand assignee ({@code null} when no caseworker was
+	 *                           found)
 	 */
-	public ActualisationResult create(final String applicantPersonId, final LocalDate date) {
+	public ActualisationResult createActualisation(final String applicantPersonId, final LocalDate date) {
 		final var caseworker = resolveCaseworker(applicantPersonId, date);
 
 		final var proposal = lifecareFamilyCareIntegration.getActualisationProposal(applicantPersonId);
@@ -88,7 +84,7 @@ public class ActualisationService {
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's actualisations in the period (newest-first as Lifecare returns them)
 	 */
-	public List<ActualisationSummary> list(final String personId, final LocalDate fromDate, final LocalDate toDate) {
+	public List<ActualisationSummary> listActualisations(final String personId, final LocalDate fromDate, final LocalDate toDate) {
 		return ofNullable(lifecareFamilyCareIntegration.getActualisations(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
 			.map(ApiPaginationCompositePersonBasedAktualiseringDTO::getResult)
 			.orElseGet(List::of)
@@ -99,8 +95,7 @@ public class ActualisationService {
 
 	/**
 	 * Project the generated FamilyCare DTO onto the privacy-safe summary — deliberately omitting the personId (personal
-	 * identity
-	 * number).
+	 * identity number).
 	 */
 	private static ActualisationSummary toSummary(final PersonBasedAktualiseringDTO dto) {
 		return new ActualisationSummary(dto.getId(), dto.getType(), dto.getName(), dto.getDate(), dto.getReason(), dto.getRegards(),

@@ -9,6 +9,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionPersonDTO;
+import java.math.BigDecimal;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -33,19 +34,17 @@ import static java.util.Comparator.comparing;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toSet;
 import static org.springframework.util.StringUtils.hasText;
+import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.toAmount;
 
 /**
- * Answers financial-assistance-routing questions about a person from Lifecare FamilyCare. Wraps
- * {@link LifecareFamilyCareIntegration},
- * reading
- * actualisations, decision and calculations over a lookback window ending at the reference date, and reduces them to
- * a
- * domain {@link LifecareCaseSummary}. FamilyCare's date strings (from/to periods) and generated DTOs never leave this
- * module.
+ * Answers financial-assistance-routing questions about a person from Lifecare FamilyCare. Wraps {@link
+ * LifecareFamilyCareIntegration}, reading actualisations, decision and calculations over a lookback window ending at
+ * the reference date, and reduces them to a domain {@link LifecareCaseSummary}. FamilyCare's date strings (from/to
+ * periods) and generated DTOs never leave this module.
  *
  * <p>
- * Calls propagate the integration's {@code BAD_GATEWAY} problem on failure — the caller decides whether to treat the
- * lookup as best-effort.
+ * Calls propagate the integration's {@code BAD_GATEWAY} problem on failure — the caller decides whether to treat
+ * the lookup as best-effort.
  * </p>
  */
 @Service
@@ -105,13 +104,10 @@ public class LifecareCaseService {
 	/**
 	 * Whether the person is flagged with protected identity in Lifecare FamilyCare — protected address (skyddad
 	 * population register/retained registration) or protected registration (confidentiality marking). Propagates the
-	 * integration's
-	 * {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
+	 * integration's {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
 	 *
 	 * @param  personId the person's personal identity number
-	 * @return          {@code true} when either protection flag is set; {@code false} when neither is set or FamilyCare has
-	 *                  no
-	 *                  record
+	 * @return          {@code true} when either protection flag is set, {@code false} otherwise or when unknown
 	 */
 	public boolean hasProtectedIdentity(final String personId) {
 		return ofNullable(lifecareFamilyCareIntegration.getPerson(personId))
@@ -121,9 +117,9 @@ public class LifecareCaseService {
 
 	/**
 	 * The household roster from the person's most recent calculation over the lookback window, paired with the
-	 * co-applicant flagged on the most recent decision — the basis for a financial assistance renewal pre-fill. Propagates
-	 * the
-	 * integration's {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
+	 * co-applicant flagged on the most recent decision — the basis for a financial assistance renewal pre-fill.
+	 * Propagates the integration's {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup
+	 * as best-effort.
 	 *
 	 * @param  personId      the applicant's personal identity number
 	 * @param  referenceDate the date the lookup is evaluated against (bounds the lookback window)
@@ -156,11 +152,10 @@ public class LifecareCaseService {
 	}
 
 	/**
-	 * The distinct FamilyCare income-type names on the person's most recent calculation strictly before
-	 * {@code applicationMonth} — the baseline for the financial assistance "all last month's values present" completeness
-	 * check. Empty when
-	 * there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the caller
-	 * decides whether to treat the lookup as best-effort.
+	 * The distinct FamilyCare income-type names on the person's most recent calculation strictly before {@code
+	 * applicationMonth} — the baseline for the financial assistance "all last month's values present" completeness
+	 * check. Empty when there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on
+	 * failure; the caller decides whether to treat the lookup as best-effort.
 	 *
 	 * @param  personId         the applicant's personal identity number
 	 * @param  applicationMonth the month being applied for; only calculations before it are considered
@@ -214,35 +209,32 @@ public class LifecareCaseService {
 			.map(PersonBasedCalculationPersonDTO::getPersonId)
 			.filter(StringUtils::hasText)
 			.collect(toSet());
-		final var normSum = latest.map(PersonBasedCalculationDTO::getNormSum).orElse(null);
+		final var normSum = toAmount(latest.map(PersonBasedCalculationDTO::getNormSum).orElse(null));
 		final var housingCost = latest
 			.map(PersonBasedCalculationDTO::getCalculationExpensesDTOs)
 			.orElseGet(List::of).stream()
 			.filter(expense -> isHousing(expense.getType()))
 			.map(LifecareCaseService::expenseAmount)
 			.filter(Objects::nonNull)
-			.reduce(Double::sum)
+			.reduce(BigDecimal::add)
 			.orElse(null);
 
 		return new PreviousHousehold(personIds, personIds.size(), normSum, housingCost);
 	}
 
 	/**
-	 * The approved amount per financial assistance cost type on the person's most recent previous calculation — read from
-	 * the regular
-	 * (UTGIFTER) expense array and mapped back from each FamilyCare type name via {@link ExpenseTypeMapper}. Empty when
-	 * there is
-	 * no previous calculation. Feeds the expense rule tree's "godkänt belopp föregående månad" (best-effort: an FamilyCare
-	 * name
-	 * with no financial assistance cost type is skipped; the special-expense (LEVNADSKOSTNADER I ÖVRIGT) array is untyped
-	 * in the FamilyCare spec
-	 * and not read, so those types start without history).
+	 * The approved amount per financial assistance cost type on the person's most recent previous calculation — read
+	 * from the regular (UTGIFTER) expense array and mapped back from each FamilyCare type name via {@link
+	 * ExpenseTypeMapper}. Empty when there is no previous calculation. Feeds the expense rule tree's "godkänt belopp
+	 * föregående månad" (best-effort: a FamilyCare name with no financial assistance cost type is skipped; the
+	 * special-expense (LEVNADSKOSTNADER I ÖVRIGT) array is untyped in the FamilyCare spec and not read, so those types
+	 * start without history).
 	 *
 	 * @param  personId         the applicant's personal identity number
 	 * @param  applicationMonth the month being applied for; only calculations before it are considered
 	 * @return                  approved amount keyed by financial assistance cost type (empty when none)
 	 */
-	public Map<String, Double> previousExpenseAmounts(final String personId, final YearMonth applicationMonth) {
+	public Map<String, BigDecimal> previousExpenseAmounts(final String personId, final YearMonth applicationMonth) {
 		final var referenceDate = applicationMonth.atDay(1);
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
@@ -254,12 +246,12 @@ public class LifecareCaseService {
 			.toList();
 
 		final var latest = latestCalculation(calculations);
-		final var amounts = new HashMap<String, Double>();
+		final var amounts = new HashMap<String, BigDecimal>();
 		latest.map(PersonBasedCalculationDTO::getCalculationExpensesDTOs).orElseGet(List::of)
-			.forEach(expense -> ExpenseTypeMapper.costTypeForFcName(expense.getType()).ifPresent(costType -> {
+			.forEach(expense -> ExpenseTypeMapper.costTypeForFamilyCareName(expense.getType()).ifPresent(costType -> {
 				final var amount = expenseAmount(expense);
 				if (amount != null) {
-					amounts.merge(costType, amount, Double::sum);
+					amounts.merge(costType, amount, BigDecimal::add);
 				}
 			}));
 		return amounts;
@@ -275,8 +267,8 @@ public class LifecareCaseService {
 	}
 
 	/** The decided (approved) amount of an expense, falling back to the applied amount. */
-	private static Double expenseAmount(final CommonCalculationExpenseDTO expense) {
-		return ofNullable(expense.getApprovedAmount()).orElseGet(expense::getAppliedAmount);
+	private static BigDecimal expenseAmount(final CommonCalculationExpenseDTO expense) {
+		return toAmount(ofNullable(expense.getApprovedAmount()).orElseGet(expense::getAppliedAmount));
 	}
 
 	/** The decision with the most recent period (to/from), used to read the current household constellation. */
@@ -296,7 +288,8 @@ public class LifecareCaseService {
 	}
 
 	/**
-	 * The co-applicant's personal identity number on a decision — a flagged participant, falling back to the scalar field.
+	 * The co-applicant's personal identity number on a decision — a flagged participant, falling back to the scalar
+	 * field.
 	 */
 	private static Optional<String> coApplicantPersonId(final PersonBasedDecisionDTO decision) {
 		final var flagged = ofNullable(decision.getDecisionPersonDTOs()).orElseGet(List::of).stream()

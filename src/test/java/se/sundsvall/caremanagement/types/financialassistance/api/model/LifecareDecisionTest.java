@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import com.google.code.beanmatchers.BeanMatchers;
+import java.math.BigDecimal;
 import java.util.List;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
@@ -44,7 +45,7 @@ class LifecareDecisionTest {
 			.withReason("Beviljas enligt norm")
 			.withDecisionMaker("Anna Andersson")
 			.withOrganization("IFO")
-			.withAmount(8500.0)
+			.withAmount(BigDecimal.valueOf(8500.0))
 			.withCoApplicant("198001019999")
 			.withReasonCoApplicant("Sammanboende")
 			.withPersons(PERSONS);
@@ -57,7 +58,7 @@ class LifecareDecisionTest {
 		assertThat(decision.getReason()).isEqualTo("Beviljas enligt norm");
 		assertThat(decision.getDecisionMaker()).isEqualTo("Anna Andersson");
 		assertThat(decision.getOrganization()).isEqualTo("IFO");
-		assertThat(decision.getAmount()).isEqualTo(8500.0);
+		assertThat(decision.getAmount()).isEqualTo(BigDecimal.valueOf(8500.0));
 		assertThat(decision.getCoApplicant()).isEqualTo("198001019999");
 		assertThat(decision.getReasonCoApplicant()).isEqualTo("Sammanboende");
 		assertThat(decision.getPersons()).isEqualTo(PERSONS);

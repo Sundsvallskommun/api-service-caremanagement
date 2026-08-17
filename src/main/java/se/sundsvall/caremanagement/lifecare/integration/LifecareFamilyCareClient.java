@@ -34,15 +34,13 @@ import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 import static se.sundsvall.caremanagement.lifecare.integration.configuration.LifecareFamilyCareConfiguration.CLIENT_ID;
 
 /**
- * Feign contract for the financial assistance subset of the Tieto/Lifecare FamilyCare API: the person-based
- * case-data reads
- * (person, contacts, and the date-ranged lists that make up the financial assistance lifecycle — actualisations,
- * calculations,
- * decision, payments, investigations, services, executions, resource allocations), the write-back (create
- * actualisation + calculation), and the two proposal lookups that supply the code lists those POST bodies reference.
- * The mandatory {@code domain} + {@code key} auth (and the {@code X-API-Key} header) are added globally by
- * {@link LifecareFamilyCareConfiguration}, so they are not part of these method signatures. The list reads share
- * {@code startDate}/{@code endDate} (required) and optional {@code pageSize}/{@code pageNr}/{@code ascending}
+ * Feign contract for the financial assistance subset of the Tieto/Lifecare FamilyCare API: the person-based case-data
+ * reads (person, contacts, and the date-ranged lists that make up the financial assistance lifecycle —
+ * actualisations, calculations, decision, payments, investigations, services, executions, resource allocations), the
+ * write-back (create actualisation + calculation), and the two proposal lookups that supply the code lists those POST
+ * bodies reference. The mandatory {@code domain} + {@code key} auth (and the {@code X-API-Key} header) are added
+ * globally by {@link LifecareFamilyCareConfiguration}, so they are not part of these method signatures. The list reads
+ * share {@code startDate}/{@code endDate} (required) and optional {@code pageSize}/{@code pageNr}/{@code ascending}
  * pagination. Full API documented in vof-ekonomiskt-bistand/architecture/lifecare-familycare-api.md.
  */
 @FeignClient(name = CLIENT_ID, url = "${integration.lifecare-familycare.url}", configuration = LifecareFamilyCareConfiguration.class)
@@ -182,8 +180,7 @@ public interface LifecareFamilyCareClient {
 
 	/**
 	 * Fetch a single document's content (the generated PDF) by its document id. FamilyCare answers {@code 404} when the
-	 * document
-	 * has no generated PDF (content exists only for PDF-backed document types).
+	 * document has no generated PDF (content exists only for PDF-backed document types).
 	 *
 	 * @param  id the document id ({@code PersonBasedDocumentDTO.Id})
 	 * @return    the raw document bytes (PDF)
@@ -194,8 +191,8 @@ public interface LifecareFamilyCareClient {
 
 	/**
 	 * List FamilyCare users (caseworkers). Used to resolve a Service's caseworker display name to the user's FamilyCare
-	 * {@code Id}
-	 * (the actualisation {@code CaseworkerId}) and {@code NetworkUserId} (the careM errand {@code assignedUserId}).
+	 * {@code Id} (the actualisation {@code CaseworkerId}) and {@code NetworkUserId} (the careM errand {@code
+	 * assignedUserId}).
 	 *
 	 * @param  limit          the maximum number of users to return (required by FamilyCare)
 	 * @param  offset         the starting point within the result set (optional)
@@ -255,9 +252,9 @@ public interface LifecareFamilyCareClient {
 		@RequestBody final PostCalculationBodyRequest body);
 
 	/**
-	 * Upload a document and bind it to an actualisation. Multipart {@code form-data} (the {@code domain}/{@code key}
-	 * query auth is added globally by {@link LifecareFamilyCareConfiguration}); FamilyCare answers {@code 204 No Content}
-	 * on success.
+	 * Upload a document and bind it to an actualisation. Multipart {@code form-data} (the {@code domain}/{@code key} query
+	 * auth is added globally by {@link LifecareFamilyCareConfiguration}); FamilyCare answers {@code 204 No Content} on
+	 * success.
 	 *
 	 * @param id                 the Lifecare actualisation id the document is bound to
 	 * @param documentType       the {@code InsertDocumentType} code for the document

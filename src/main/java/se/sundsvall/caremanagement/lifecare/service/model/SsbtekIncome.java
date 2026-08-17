@@ -6,18 +6,17 @@ import java.time.LocalDate;
 
 /**
  * A single normalised income read out of SSBTEK, expressed in SSBTEK's own terms (benefit / sub-benefit / amountType)
- * plus
- * the net amount, the date it is attributed to, and which household member it belongs to. It backs
- * {@link ClassifiedIncome}: the operaton regelverk classifies these (raw list + thresholds + period selection) and
- * caremanagement maps the result onto FamilyCare calculation income rows via
- * {@link se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFamilyCareMapper}.
+ * plus the net amount, the date it is attributed to, and which household member it belongs to. It backs {@link
+ * ClassifiedIncome}: the operaton regelverk classifies these (raw list + thresholds + period selection) and
+ * caremanagement maps the result onto FamilyCare calculation income rows via {@link
+ * se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFamilyCareMapper}.
  *
  * <p>
- * Deserialised from the {@code classifiedIncomes[].income} JSON the operaton {@code evaluate-income-regelverk} worker
- * produces. As with {@link ClassifiedIncome}, the JSON keys stay Swedish (operaton's {@code SsbtekIncome} serialises
- * its
- * record components {@code forman}/{@code delforman}/{@code beloppstyp} verbatim), mapped onto the English record
- * components via {@link JsonProperty}. {@code netAmount}/{@code period}/{@code role} already share the wire key.
+ * Deserialised from the {@code classifiedIncomes[].income} JSON the operaton {@code evaluate-income-regelverk}
+ * worker produces. As with {@link ClassifiedIncome}, the JSON keys stay Swedish (operaton's {@code SsbtekIncome}
+ * serialises its record components {@code forman}/{@code delforman}/{@code beloppstyp} verbatim), mapped onto the
+ * English record components via {@link JsonProperty}. {@code netAmount}/{@code period}/{@code role} already share the
+ * wire key.
  *
  * @param benefit    the SSBTEK benefit ({@code forman}, e.g. "Bostadsbidrag", "Dagersättning") — the whitelist key
  * @param subBenefit the SSBTEK sub-benefit ({@code delforman}), may be {@code null}

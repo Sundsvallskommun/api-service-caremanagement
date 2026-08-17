@@ -67,7 +67,7 @@ class CalculationServiceTest {
 	}
 
 	@Test
-	void buildAndPostFromClassifiedMapsCategoryToFcAndPosts() {
+	void buildAndPostFromClassifiedMapsCategoryToFamilyCareAndPosts() {
 		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
 			bostadsbidrag()
 		});
@@ -134,7 +134,7 @@ class CalculationServiceTest {
 		assertThat(result.rows()).hasSize(1);
 		assertThat(result.rows().getFirst().typeId()).isEqualTo(20);
 		assertThat(result.rows().getFirst().typeName()).isEqualTo("Bostadsbidrag");
-		assertThat(result.rows().getFirst().applicantAmount()).isEqualTo(1850.0);
+		assertThat(result.rows().getFirst().applicantAmount()).isEqualTo(BigDecimal.valueOf(1850.0));
 		verify(lifecareFamilyCareIntegrationMock, never()).createCalculation(any());
 	}
 
@@ -143,7 +143,7 @@ class CalculationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
 		when(lifecareFamilyCareIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(4713);
 
-		final var rows = List.of(new DraftRow(20, "Bostadsbidrag", 1850.0, "2026-05-15T00:00:00Z", null, null, "SSBTEK: Bostadsbidrag"));
+		final var rows = List.of(new DraftRow(20, "Bostadsbidrag", BigDecimal.valueOf(1850.0), "2026-05-15T00:00:00Z", null, null, "SSBTEK: Bostadsbidrag"));
 		final var calculationId = service.postDraftRows(APPLICANT, MONTH, rows);
 
 		assertThat(calculationId).isEqualTo(4713);
@@ -216,10 +216,10 @@ class CalculationServiceTest {
 			.addCalculationExpenseTypesItem(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Rent")));
 		when(lifecareFamilyCareIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(5000);
 
-		final var incomes = List.of(new EffectiveIncome(20, 1850.0, null, null, null, "SSBTEK"));
+		final var incomes = List.of(new EffectiveIncome(20, BigDecimal.valueOf(1850.0), null, null, null, "SSBTEK"));
 		final var expenses = List.of(
-			new EffectiveExpense("RENT", "EXPENSE", 9000.0, 8000.0, null), // resolves to FamilyCare id 42
-			new EffectiveExpense("UNMAPPED_NONSENSE", "EXPENSE", 100.0, 100.0, null)); // skipped (no FamilyCare id)
+			new EffectiveExpense("RENT", "EXPENSE", BigDecimal.valueOf(9000.0), BigDecimal.valueOf(8000.0), null), // resolves to FamilyCare id 42
+			new EffectiveExpense("UNMAPPED_NONSENSE", "EXPENSE", BigDecimal.valueOf(100.0), BigDecimal.valueOf(100.0), null)); // skipped (no FamilyCare id)
 		final var persons = List.of(new EffectivePerson("p1", 30, null, null));
 
 		final var calculationId = service.commitEffective(APPLICANT, MONTH, new CalculationHeader(7, null, null, null, null, null), incomes, expenses, persons);

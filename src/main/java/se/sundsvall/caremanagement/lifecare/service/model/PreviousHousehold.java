@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.lifecare.service.model;
 
+import java.math.BigDecimal;
 import java.util.Set;
 
 /**
@@ -13,8 +14,8 @@ import java.util.Set;
 public record PreviousHousehold(
 	Set<String> personIds,
 	int memberCount,
-	Double normSum,
-	Double housingCost) {
+	BigDecimal normSum,
+	BigDecimal housingCost) {
 
 	public static PreviousHousehold empty() {
 		return new PreviousHousehold(Set.of(), 0, null, null);

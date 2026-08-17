@@ -30,10 +30,9 @@ import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.C
  * Maps incomes already classified by the operaton rules to FamilyCare calculation income rows. The raw list decision is
  * done — each income carries its target calculation category; this mapper only resolves that category to the numeric
  * FamilyCare type id offered by the calculation proposal and merges incomes of the same type into one row (applicant
- * and
- * co-applicant amounts summed into their own columns). Off-list / "ej ta med" incomes (no {@code TA_MED} action or no
- * category) are skipped — their warnings already come from operaton. This is the plumbing half of the former
- * {@code SsbtekToFcIncomeMapper}; the raw list half moved to the engine.
+ * and co-applicant amounts summed into their own columns). Off-list / "ej ta med" incomes (no {@code TA_MED} action or
+ * no category) are skipped — their warnings already come from operaton. This is the plumbing half of the former
+ * {@code SsbtekToFamilyCareIncomeMapper}; the raw list half moved to the engine.
  */
 public final class ClassifiedIncomeToFamilyCareMapper {
 
@@ -67,16 +66,13 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 	}
 
 	/**
-	 * Map the classified incomes to draft income lines — one line per (FamilyCare income type, recipient), the granularity
-	 * the
-	 * calculation draft stores so a caseworker can override or soft-delete a single person's income of a type. The same
-	 * transferability + type-id resolution as {@link #toCalculationIncomes} is used; the difference is the rows are not
-	 * folded across recipients.
+	 * Map the classified incomes to draft income lines — one line per (FamilyCare income type, recipient), the
+	 * granularity the calculation draft stores so a caseworker can override or soft-delete a single person's income of a
+	 * type. The same transferability + type-id resolution as {@link #toCalculationIncomes} is used; the difference is the
+	 * rows are not folded across recipients.
 	 *
 	 * @param  classified the incomes classified by the operaton rules (maybe {@code null})
-	 * @param  proposal   the FamilyCare calculation proposal whose {@code calculationIncomeTypes} supply the numeric type
-	 *                    ids +
-	 *                    names
+	 * @param  proposal   the FamilyCare proposal whose {@code calculationIncomeTypes} supply the type ids and names
 	 * @return            one income line per (type id, recipient), amounts summed within the pair
 	 */
 	public static List<FamilyCareIncomeLine> toIncomeLines(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
@@ -114,11 +110,9 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 
 	/**
 	 * The previous-month FamilyCare income-type names not covered by this month's classified incomes — the basis for the
-	 * financial
-	 * assistance "all
-	 * last month's calculation values present" completeness check. Matching is on the normalised type name, the same key
-	 * {@link #toCalculationIncomes} resolves on, so the two months compare like-for-like. An empty result means every
-	 * previous income type has a transferable income this month (i.e. the information is complete).
+	 * financial assistance "all last month's calculation values present" completeness check. Matching is on the normalised
+	 * type name, the same key {@link #toCalculationIncomes} resolves on, so the two months compare like-for-like. An empty
+	 * result means every previous income type has a transferable income this month (i.e. the information is complete).
 	 *
 	 * @param  previousTypeNames the income-type names on the previous calculation (FamilyCare {@code getType()})
 	 * @param  classified        this month's classified incomes

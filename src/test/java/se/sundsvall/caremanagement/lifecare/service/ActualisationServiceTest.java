@@ -47,7 +47,7 @@ class ActualisationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
 		when(lifecareFamilyCareIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
-		final var result = service.create(APPLICANT, DATE);
+		final var result = service.createActualisation(APPLICANT, DATE);
 
 		assertThat(result.actualisationId()).isEqualTo(5012);
 		assertThat(result.assignedUserId()).isEqualTo("anna01ker");
@@ -69,7 +69,7 @@ class ActualisationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
 		when(lifecareFamilyCareIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
-		final var result = service.create(APPLICANT, DATE);
+		final var result = service.createActualisation(APPLICANT, DATE);
 
 		assertThat(result.actualisationId()).isEqualTo(5012);
 		assertThat(result.assignedUserId()).isNull();
@@ -88,7 +88,7 @@ class ActualisationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
 		when(lifecareFamilyCareIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
-		final var result = service.create(APPLICANT, DATE);
+		final var result = service.createActualisation(APPLICANT, DATE);
 
 		assertThat(result.actualisationId()).isEqualTo(5012);
 		assertThat(result.assignedUserId()).isNull();
@@ -107,7 +107,7 @@ class ActualisationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30"))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO().addResultItem(dto));
 
-		final var result = service.list(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
+		final var result = service.listActualisations(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 
 		assertThat(result).singleElement().satisfies(summary -> {
 			assertThat(summary.id()).isEqualTo(5012);
@@ -127,10 +127,10 @@ class ActualisationServiceTest {
 	}
 
 	@Test
-	void listReturnsEmptyWhenFcHasNoPage() {
+	void listReturnsEmptyWhenFamilyCareHasNoPage() {
 		when(lifecareFamilyCareIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30")).thenReturn(null);
 
-		assertThat(service.list(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30))).isEmpty();
+		assertThat(service.listActualisations(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30))).isEmpty();
 	}
 
 	@Test

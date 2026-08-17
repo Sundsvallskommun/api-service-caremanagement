@@ -8,10 +8,8 @@ import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
  * Request to create the Lifecare FamilyCare actualisation (case intake) for one applicant and one application month.
- * The
- * actualisation is built against the applicant's FamilyCare actualisation proposal and created in Lifecare; the intake
- * date is
- * the first day of the application month.
+ * The actualisation is built against the applicant's FamilyCare actualisation proposal and created in Lifecare; the
+ * intake date is the first day of the application month.
  */
 @Schema(description = "Request to create the Lifecare actualisation (case intake) for an application month.")
 public class ActualisationRequest {

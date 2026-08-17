@@ -14,12 +14,12 @@ class ClassifiedIncomeTest {
 
 	/**
 	 * The {@code classifiedIncomes} JSON the operaton regelverk worker produces keeps Swedish keys throughout — both the
-	 * outer verdict ({@code atgard}, {@code normberakning}, {@code varning}, {@code regel}) and the nested
-	 * {@code income} object ({@code forman}, {@code delforman}, {@code beloppstyp}; {@code netAmount}/{@code period}/
-	 * {@code role} already share the wire key). They must deserialise onto the English record components via
-	 * {@link com.fasterxml.jackson.annotation.JsonProperty}. This exercises the real parse (which the service tests mock
-	 * out) with the exact keys operaton serialises, so a missing/wrong {@code JsonProperty} — which nulls the field
-	 * silently — can't slip through: {@code normberakning} → {@link ClassifiedIncome#calculation()} drives the FamilyCare
+	 * outer verdict ({@code atgard}, {@code normberakning}, {@code varning}, {@code regel}) and the nested {@code income}
+	 * object ({@code forman}, {@code delforman}, {@code beloppstyp}; {@code netAmount}/{@code period}/ {@code role}
+	 * already share the wire key). They must deserialise onto the English record components via {@link
+	 * com.fasterxml.jackson.annotation.JsonProperty}. This exercises the real parse (which the service tests mock out)
+	 * with the exact keys operaton serialises, so a missing/wrong {@code JsonProperty} — which nulls the field silently
+	 * — can't slip through: {@code normberakning} → {@link ClassifiedIncome#calculation()} drives the FamilyCare
 	 * income-type lookup, and {@code forman}/{@code delforman}/{@code beloppstyp} → the {@link SsbtekIncome} descriptor.
 	 */
 	@Test

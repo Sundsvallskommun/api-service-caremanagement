@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import java.math.BigDecimal;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
@@ -27,9 +28,9 @@ class DraftIncomeRowTest {
 	void testBuilderMethods() {
 		final var typeId = 20;
 		final var typeName = "Bostadsbidrag";
-		final var applicantAmount = 1850.0;
+		final var applicantAmount = BigDecimal.valueOf(1850.0);
 		final var applicantAmountDate = "2026-05-15T00:00:00Z";
-		final var coApplicantAmount = 0.0;
+		final var coApplicantAmount = BigDecimal.valueOf(0.0);
 		final var coApplicantAmountDate = "2026-05-16T00:00:00Z";
 		final var note = "SSBTEK: Bostadsbidrag";
 

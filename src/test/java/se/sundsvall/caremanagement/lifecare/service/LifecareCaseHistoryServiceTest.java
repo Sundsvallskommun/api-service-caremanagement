@@ -11,6 +11,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonDTO
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDocumentDTO;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,11 +57,11 @@ class LifecareCaseHistoryServiceTest {
 		assertThat(result).singleElement().satisfies(calculation -> {
 			assertThat(calculation.id()).isEqualTo(7001);
 			assertThat(calculation.norm()).isEqualTo("Riksnorm 2026");
-			assertThat(calculation.normSum()).isEqualTo(10500.0);
+			assertThat(calculation.normSum()).isEqualTo(BigDecimal.valueOf(10500.0));
 			assertThat(calculation.isFinal()).isTrue();
 			assertThat(calculation.persons()).singleElement().satisfies(person -> assertThat(person.personId()).isEqualTo("200001011234"));
 			assertThat(calculation.incomes()).singleElement().satisfies(income -> assertThat(income.type()).isEqualTo("Lön"));
-			assertThat(calculation.expenses()).singleElement().satisfies(expense -> assertThat(expense.approvedAmount()).isEqualTo(7000.0));
+			assertThat(calculation.expenses()).singleElement().satisfies(expense -> assertThat(expense.approvedAmount()).isEqualTo(BigDecimal.valueOf(7000.0)));
 			assertThat(calculation.specialExpenses()).singleElement().satisfies(expense -> assertThat(expense.type()).isEqualTo("Tandvård"));
 		});
 	}
@@ -97,7 +98,7 @@ class LifecareCaseHistoryServiceTest {
 		assertThat(service.listDecisions(PERSON_ID, FROM, TO)).singleElement().satisfies(decision -> {
 			assertThat(decision.id()).isEqualTo(9900);
 			assertThat(decision.type()).isEqualTo("Bifall");
-			assertThat(decision.amount()).isEqualTo(8500.0);
+			assertThat(decision.amount()).isEqualTo(BigDecimal.valueOf(8500.0));
 			assertThat(decision.persons()).singleElement().satisfies(person -> assertThat(person.coApplicant()).isTrue());
 		});
 	}

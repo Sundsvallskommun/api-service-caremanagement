@@ -98,7 +98,7 @@ class ExpenseRulesServiceTest {
 	}
 
 	@Test
-	void bucketForCostTypeMapsToTheFcArray() {
+	void bucketForCostTypeMapsToTheFamilyCareArray() {
 		assertThat(ExpenseRulesService.bucketForCostType("RENT")).isEqualTo("EXPENSE");
 		assertThat(ExpenseRulesService.bucketForCostType("MEDICINE")).isEqualTo("SPECIAL_EXPENSE");
 		assertThat(ExpenseRulesService.bucketForCostType("OTHER")).isEqualTo("SPECIAL_EXPENSE");

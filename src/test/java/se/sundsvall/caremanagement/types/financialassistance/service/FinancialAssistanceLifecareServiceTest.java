@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -49,23 +50,23 @@ class FinancialAssistanceLifecareServiceTest {
 	@Test
 	void listCalculationsResolvesPartyDefaultsPeriodAndMaps() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		final var view = new CalculationView(7001, "Riksnorm 2026", "2026-06-01", "2026-06-30", 12000.0, 9500.0, 500.0, 10500.0,
-			1200.0, 800.0, -2000.0, 8500.0, Boolean.TRUE,
-			List.of(new CalculationPersonView("200001011234", "Barn Andersson", 4500.0, null, null)),
-			List.of(new CalculationIncomeView("Lön", 12000.0, "2026-05-15", 0.0, null)),
-			List.of(new CalculationExpenseView("Hyra", 7500.0, 7000.0)),
-			List.of(new CalculationExpenseView("Tandvård", 500.0, 500.0)));
+		final var view = new CalculationView(7001, "Riksnorm 2026", "2026-06-01", "2026-06-30", BigDecimal.valueOf(12000.0), BigDecimal.valueOf(9500.0), BigDecimal.valueOf(500.0), BigDecimal.valueOf(10500.0),
+			BigDecimal.valueOf(1200.0), BigDecimal.valueOf(800.0), BigDecimal.valueOf(-2000.0), BigDecimal.valueOf(8500.0), Boolean.TRUE,
+			List.of(new CalculationPersonView("200001011234", "Barn Andersson", BigDecimal.valueOf(4500.0), null, null)),
+			List.of(new CalculationIncomeView("Lön", BigDecimal.valueOf(12000.0), "2026-05-15", BigDecimal.valueOf(0.0), null)),
+			List.of(new CalculationExpenseView("Hyra", BigDecimal.valueOf(7500.0), BigDecimal.valueOf(7000.0))),
+			List.of(new CalculationExpenseView("Tandvård", BigDecimal.valueOf(500.0), BigDecimal.valueOf(500.0))));
 		when(lifecareCaseHistoryServiceMock.listCalculations(eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
 
 		final var result = service.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null);
 
 		assertThat(result).singleElement().satisfies(calculation -> {
 			assertThat(calculation.getId()).isEqualTo(7001);
-			assertThat(calculation.getNormSum()).isEqualTo(10500.0);
+			assertThat(calculation.getNormSum()).isEqualTo(BigDecimal.valueOf(10500.0));
 			assertThat(calculation.getIsFinal()).isTrue();
 			assertThat(calculation.getPersons()).singleElement().satisfies(person -> assertThat(person.getPersonId()).isEqualTo("200001011234"));
 			assertThat(calculation.getIncomes()).singleElement().satisfies(income -> assertThat(income.getType()).isEqualTo("Lön"));
-			assertThat(calculation.getExpenses()).singleElement().satisfies(expense -> assertThat(expense.getApprovedAmount()).isEqualTo(7000.0));
+			assertThat(calculation.getExpenses()).singleElement().satisfies(expense -> assertThat(expense.getApprovedAmount()).isEqualTo(BigDecimal.valueOf(7000.0)));
 			assertThat(calculation.getSpecialExpenses()).singleElement().satisfies(expense -> assertThat(expense.getType()).isEqualTo("Tandvård"));
 		});
 
@@ -92,7 +93,7 @@ class FinancialAssistanceLifecareServiceTest {
 	void listDecisionsResolvesPartyDefaultsPeriodAndMaps() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		final var view = new DecisionView(9900, "2026-06-02", "Bifall", "2026-06-01", "2026-06-30", "Beviljas enligt norm",
-			"Anna Andersson", "IFO", 8500.0, "198001019999", "Sammanboende",
+			"Anna Andersson", "IFO", BigDecimal.valueOf(8500.0), "198001019999", "Sammanboende",
 			List.of(new DecisionPersonView("198001019999", "Sven Svensson", Boolean.TRUE)));
 		when(lifecareCaseHistoryServiceMock.listDecisions(eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
 
@@ -101,7 +102,7 @@ class FinancialAssistanceLifecareServiceTest {
 		assertThat(result).singleElement().satisfies(decision -> {
 			assertThat(decision.getId()).isEqualTo(9900);
 			assertThat(decision.getType()).isEqualTo("Bifall");
-			assertThat(decision.getAmount()).isEqualTo(8500.0);
+			assertThat(decision.getAmount()).isEqualTo(BigDecimal.valueOf(8500.0));
 			assertThat(decision.getPersons()).singleElement().satisfies(person -> assertThat(person.getCoApplicant()).isTrue());
 		});
 		verify(lifecareCaseHistoryServiceMock).listDecisions("199001011234", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
@@ -128,11 +129,11 @@ class FinancialAssistanceLifecareServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(lifecareCaseHistoryServiceMock.listDocuments(eq("199001011234"), any(LocalDate.class), any(LocalDate.class)))
 			.thenReturn(List.of(new DocumentView("doc-1", "Beslut", "2026-06-02", "Beslut", "9900", "Decision")));
-		when(lifecareCaseHistoryServiceMock.documentContent("doc-1")).thenReturn("%PDF-1.4".getBytes());
+		when(lifecareCaseHistoryServiceMock.documentContent("doc-1")).thenReturn("%PDFBigDecimal.valueOf(-1.4)".getBytes());
 
 		final var content = service.readDocumentContent(MUNICIPALITY_ID, APPLICANT_PARTY_ID, "doc-1", null, null);
 
-		assertThat(content).isEqualTo("%PDF-1.4".getBytes());
+		assertThat(content).isEqualTo("%PDFBigDecimal.valueOf(-1.4)".getBytes());
 		verify(lifecareCaseHistoryServiceMock).documentContent("doc-1");
 	}
 

@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
@@ -14,10 +15,10 @@ public class LifecareCalculationExpense {
 	private String type;
 
 	@Schema(description = "The applied amount", examples = "7500.0")
-	private Double appliedAmount;
+	private BigDecimal appliedAmount;
 
 	@Schema(description = "The approved amount", examples = "7000.0")
-	private Double approvedAmount;
+	private BigDecimal approvedAmount;
 
 	public static LifecareCalculationExpense create() {
 		return new LifecareCalculationExpense();
@@ -36,28 +37,28 @@ public class LifecareCalculationExpense {
 		return this;
 	}
 
-	public Double getAppliedAmount() {
+	public BigDecimal getAppliedAmount() {
 		return appliedAmount;
 	}
 
-	public void setAppliedAmount(final Double appliedAmount) {
+	public void setAppliedAmount(final BigDecimal appliedAmount) {
 		this.appliedAmount = appliedAmount;
 	}
 
-	public LifecareCalculationExpense withAppliedAmount(final Double appliedAmount) {
+	public LifecareCalculationExpense withAppliedAmount(final BigDecimal appliedAmount) {
 		this.appliedAmount = appliedAmount;
 		return this;
 	}
 
-	public Double getApprovedAmount() {
+	public BigDecimal getApprovedAmount() {
 		return approvedAmount;
 	}
 
-	public void setApprovedAmount(final Double approvedAmount) {
+	public void setApprovedAmount(final BigDecimal approvedAmount) {
 		this.approvedAmount = approvedAmount;
 	}
 
-	public LifecareCalculationExpense withApprovedAmount(final Double approvedAmount) {
+	public LifecareCalculationExpense withApprovedAmount(final BigDecimal approvedAmount) {
 		this.approvedAmount = approvedAmount;
 		return this;
 	}

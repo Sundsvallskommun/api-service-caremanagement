@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import java.math.BigDecimal;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
@@ -28,13 +29,13 @@ class LifecareCalculationPersonTest {
 		final var person = LifecareCalculationPerson.create()
 			.withPersonId("200001011234")
 			.withName("Anna Andersson")
-			.withAmount(4500.0)
+			.withAmount(BigDecimal.valueOf(4500.0))
 			.withDeviationFromDate("2026-06-01")
 			.withDeviationToDate("2026-06-30");
 
 		assertThat(person.getPersonId()).isEqualTo("200001011234");
 		assertThat(person.getName()).isEqualTo("Anna Andersson");
-		assertThat(person.getAmount()).isEqualTo(4500.0);
+		assertThat(person.getAmount()).isEqualTo(BigDecimal.valueOf(4500.0));
 		assertThat(person.getDeviationFromDate()).isEqualTo("2026-06-01");
 		assertThat(person.getDeviationToDate()).isEqualTo("2026-06-30");
 	}

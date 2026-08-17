@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ class FinancialAssistanceLifecareResourceTest {
 	void listCalculations() {
 		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 		when(lifecareServiceMock.listCalculations(eq(MUNICIPALITY_ID), eq(partyId), isNull(), isNull()))
-			.thenReturn(List.of(LifecareCalculation.create().withId(7001).withNormSum(10500.0)));
+			.thenReturn(List.of(LifecareCalculation.create().withId(7001).withNormSum(BigDecimal.valueOf(10500.0))));
 
 		final var result = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/calculations").queryParam("partyId", partyId).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
@@ -112,7 +113,7 @@ class FinancialAssistanceLifecareResourceTest {
 	void readDocumentContent() {
 		final var documentId = "a3f1c2d4-0000-1111-2222-333344445555";
 		final var partyId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-		when(lifecareServiceMock.readDocumentContent(eq(MUNICIPALITY_ID), eq(partyId), eq(documentId), isNull(), isNull())).thenReturn("%PDF-1.4".getBytes());
+		when(lifecareServiceMock.readDocumentContent(eq(MUNICIPALITY_ID), eq(partyId), eq(documentId), isNull(), isNull())).thenReturn("%PDF-BigDecimal.valueOf(1.4)".getBytes());
 
 		final var body = webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/documents/{documentId}/content").queryParam("partyId", partyId).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "documentId", documentId)))
@@ -124,7 +125,7 @@ class FinancialAssistanceLifecareResourceTest {
 			.returnResult()
 			.getResponseBody();
 
-		assertThat(body).isEqualTo("%PDF-1.4".getBytes());
+		assertThat(body).isEqualTo("%PDF-BigDecimal.valueOf(1.4)".getBytes());
 		verify(lifecareServiceMock).readDocumentContent(MUNICIPALITY_ID, partyId, documentId, null, null);
 	}
 

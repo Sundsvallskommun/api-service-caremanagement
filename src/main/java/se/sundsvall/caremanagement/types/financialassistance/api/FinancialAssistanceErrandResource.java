@@ -59,12 +59,12 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 class FinancialAssistanceErrandResource {
 
 	/**
-	 * Scopes the create mapping to the three slugs this module owns. Every errand type contributes its own
-	 * {@code POST .../errands/{its-slugs}} under the same prefix, so a bare {@code {typeSlug}} here would match every
-	 * single-segment POST under {@code /errands} and swallow the create path of every type module added later. This is
-	 * routing ownership, not validation — which is why it cannot be a constraint annotation on the {@code @PathVariable}:
-	 * a constraint runs after routing has already chosen this handler. The trade-off is that a slug no module owns is a
-	 * dispatcher {@code 404} rather than a {@code 400}.
+	 * Scopes the create mapping to the three slugs this module owns. Every errand type contributes its own {@code POST
+	 * .../errands/{its-slugs}} under the same prefix, so a bare {@code {typeSlug}} here would match every single-segment
+	 * POST under {@code /errands} and swallow the create path of every type module added later. This is routing ownership,
+	 * not validation — which is why it cannot be a constraint annotation on the {@code @PathVariable}: a constraint runs
+	 * after routing has already chosen this handler. The trade-off is that a slug no module owns is a dispatcher {@code
+	 * 404} rather than a {@code 400}.
 	 */
 	private static final String SLUG_REGEXP = "financial-assistance-new|financial-assistance-renewal|financial-assistance-supplementary";
 

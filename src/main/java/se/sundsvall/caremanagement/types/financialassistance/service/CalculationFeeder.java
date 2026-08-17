@@ -29,12 +29,11 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
 
 /**
  * Builds the freshly computed process rows for the calculation sections from the errand: the income rows (one per
- * FamilyCare
- * income type, with a applicant and co-applicant side) from the operaton-classified incomes, the expense rows from the
- * application's costs — each given a process amount + bucket by the {@link ExpenseRulesService} — and the person
- * rows from the household (visitation child = part-time children). Also compares the household against the previous
- * calculation in Lifecare to produce drift warnings. Every row is stamped {@code origin = SYSTEM}; the
- * {@link DraftService} merge then refreshes only the process columns.
+ * FamilyCare income type, with a applicant and co-applicant side) from the operaton-classified incomes, the expense
+ * rows from the application's costs — each given a process amount + bucket by the {@link ExpenseRulesService} — and
+ * the person rows from the household (visitation child = part-time children). Also compares the household against the
+ * previous calculation in Lifecare to produce drift warnings. Every row is stamped {@code origin = SYSTEM}; the {@link
+ * DraftService} merge then refreshes only the process columns.
  */
 @Service
 public class CalculationFeeder {
@@ -73,14 +72,11 @@ public class CalculationFeeder {
 
 	/**
 	 * The fresh income process rows — one per FamilyCare income type, the classified lines folded into a applicant +
-	 * co-applicant
-	 * side. Within each (FamilyCare type, recipient) the amounts are summed: the SSBTEK/classified path arrives pre-summed
-	 * (one
-	 * line per recipient), but the application/new-application path emits one line per raw declared income, so two
-	 * same-type
-	 * same-recipient incomes (e.g. two OTHER_INCOME) must be added together rather than dropping all but the first — else
-	 * the income is understated and the computed benefit inflated. The first line in a recipient group supplies the
-	 * non-amount fields (date, type name, note).
+	 * co-applicant side. Within each (FamilyCare type, recipient) the amounts are summed: the SSBTEK/classified path
+	 * arrives pre-summed (one line per recipient), but the application/new-application path emits one line per raw
+	 * declared income, so two same-type same-recipient incomes (e.g. two OTHER_INCOME) must be added together rather than
+	 * dropping all but the first — else the income is understated and the computed benefit inflated. The first line in a
+	 * recipient group supplies the non-amount fields (date, type name, note).
 	 */
 	public List<FaNormIncomeEntity> incomeRows(final String errandId, final List<FamilyCareIncomeLine> lines) {
 		final var byType = ofNullable(lines).orElseGet(List::of).stream()
@@ -133,12 +129,11 @@ public class CalculationFeeder {
 	/**
 	 * The fresh expense process rows — one per applied cost, the process amount + bucket coming from the rules — plus
 	 * the expense warnings the rules raised: a manual reasonableness assessment ({@code EXPENSE_REVIEW}) for a flagged
-	 * cost,
-	 * and a cap ({@code EXPENSE_CAPPED}) when the process amount lands below what the citizen applied for. The decision is
-	 * evaluated once per cost; the verdict feeds both the row and its warnings.
+	 * cost, and a cap ({@code EXPENSE_CAPPED}) when the process amount lands below what the citizen applied for. The
+	 * decision is evaluated once per cost; the verdict feeds both the row and its warnings.
 	 */
 	public ExpenseFeed expenseFeed(final String municipalityId, final String errandId, final FinancialAssistanceEntity errand,
-		final Map<String, Double> previousAmounts, final Integer applicantAge) {
+		final Map<String, BigDecimal> previousAmounts, final Integer applicantAge) {
 
 		final var childCount = ofNullable(errand.getChildren()).orElseGet(List::of).size();
 		final var householdCount = householdSize(errand);
@@ -148,7 +143,7 @@ public class CalculationFeeder {
 		final var warnings = new ArrayList<WarningService.WarningInput>();
 
 		ofNullable(errand.getCosts()).orElseGet(List::of).forEach(cost -> {
-			final var previousApproved = ofNullable(previous.get(cost.getCostType())).map(BigDecimal::valueOf).orElse(null);
+			final var previousApproved = previous.get(cost.getCostType());
 			final var verdict = expenseRulesService.verdict(municipalityId, cost.getCostType(), cost.getAppliedAmount(),
 				previousApproved, applicantAge, childCount, householdCount);
 			rows.add(FaNormExpenseEntity.create()
@@ -163,9 +158,9 @@ public class CalculationFeeder {
 
 	/**
 	 * The application's expense rows for the direct new-application commit — applied amount + the cost type's static
-	 * bucket,
-	 * with no history rule tree (a new application has no previous month) and no warnings. The rule tree applies to the
-	 * daily-prepare draft ({@link #expenseFeed}) instead, where there is history and a caseworker review before commit.
+	 * bucket, with no history rule tree (a new application has no previous month) and no warnings. The rule tree applies
+	 * to the daily-prepare draft ({@link #expenseFeed}) instead, where there is history and a caseworker review before
+	 * commit.
 	 */
 	public List<FaNormExpenseEntity> applicationExpenseRows(final String errandId, final FinancialAssistanceEntity errand) {
 		return ofNullable(errand.getCosts()).orElseGet(List::of).stream()
@@ -237,9 +232,9 @@ public class CalculationFeeder {
 	}
 
 	/**
-	 * The fresh person process rows — applicant + co-applicant (full month) and each child (days in the home; a part-time
-	 * child becomes an visitation child). All start {@code included = true}; the caseworker may later exclude one (is
-	 * included).
+	 * The fresh person process rows — applicant + co-applicant (full month) and each child (days in the home; a
+	 * part-time child becomes an visitation child). All start {@code included = true}; the caseworker may later exclude
+	 * one (is included).
 	 */
 	public List<FaNormPersonEntity> personRows(final String errandId, final FinancialAssistanceEntity errand) {
 		final var rows = new ArrayList<FaNormPersonEntity>();
@@ -257,11 +252,10 @@ public class CalculationFeeder {
 	}
 
 	/**
-	 * Renewal delta warnings against the previous calculation in Lifecare — household-size drift (members
-	 * added/removed, count changed) and housing-cost drift. Each candidate delta is classified by the
-	 * {@code Decision_ateransokanDelta} DMN, which decides — by what changed and how much — whether it is worth flagging
-	 * and the note to show; a small change passes silently. New members are surfaced separately as NEW_PERSON warnings
-	 * from the merge.
+	 * Renewal delta warnings against the previous calculation in Lifecare — household-size drift (members added/removed,
+	 * count changed) and housing-cost drift. Each candidate delta is classified by the {@code Decision_ateransokanDelta}
+	 * DMN, which decides — by what changed and how much — whether it is worth flagging and the note to show; a small
+	 * change passes silently. New members are surfaced separately as NEW_PERSON warnings from the merge.
 	 */
 	public List<WarningService.WarningInput> householdDeltaWarnings(final String municipalityId, final FinancialAssistanceEntity errand,
 		final List<FaNormPersonEntity> currentPersons, final PreviousHousehold previous) {
@@ -306,13 +300,12 @@ public class CalculationFeeder {
 		final PreviousHousehold previous) {
 
 		final var previousCost = previous.housingCost();
-		if ((previousCost == null) || (previousCost <= 0)) {
+		if ((previousCost == null) || (previousCost.signum() <= 0)) {
 			return Optional.empty();
 		}
 
 		final var currentRent = currentRent(errand);
-		final var previousBd = BigDecimal.valueOf(previousCost);
-		final var percent = currentRent.subtract(previousBd).multiply(HUNDRED).divide(previousBd, 0, RoundingMode.HALF_UP);
+		final var percent = currentRent.subtract(previousCost).multiply(HUNDRED).divide(previousCost, 0, RoundingMode.HALF_UP);
 
 		final var verdict = renewalDeltaService.classify(municipalityId, CHANGE_HOUSING_COST, 0, percent);
 		if (!verdict.warning()) {
@@ -325,7 +318,7 @@ public class CalculationFeeder {
 		} else {
 			sign = "";
 		}
-		final var detail = "Boendekostnaden har ändrats " + sign + percent + "% (tidigare " + plain(previousBd) + " kr → nu " + plain(currentRent) + " kr)";
+		final var detail = "Boendekostnaden har ändrats " + sign + percent + "% (tidigare " + plain(previousCost) + " kr → nu " + plain(currentRent) + " kr)";
 		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "housing-cost", withRule(detail, verdict.rule())));
 	}
 

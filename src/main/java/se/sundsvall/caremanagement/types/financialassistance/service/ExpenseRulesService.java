@@ -14,17 +14,15 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
 
 /**
  * The expense rules — the process-decided (reasonable) amount for a cost, the FamilyCare array it belongs to, and the
- * manual-review flag. Each cost type has its <em>own</em> modeler-editable decision in the operaton engine running
- * the business unit's rent rule tree (the 8-row history logic: the amount is governed by the previous month's approved
+ * manual-review flag. Each cost type has its <em>own</em> modeler-editable decision in the operaton engine running the
+ * business unit's rent rule tree (the 8-row history logic: the amount is governed by the previous month's approved
  * amount, the threshold governs the warning text), so any type can diverge later without touching the others:
  *
  * <ul>
- * <li>{@code RENT} → {@code Decision_hyra} (cap per age/children) · {@code HOME_INSURANCE} →
- * {@code Decision_hemforsakring}
- * (cap per household size)</li>
- * <li>fixed caps:
- * {@code ELECTRICITY}/{@code INTERNET}/{@code UNEMPLOYMENT_FUND}/{@code UNION_FEE}/{@code TRAVEL_APPROVED}/
- * {@code TRAVEL_MEDICAL_TRANSPORT}/{@code MEDICAL_CARE}/{@code MEDICINE}</li>
+ * <li>{@code RENT} → {@code Decision_hyra} (cap per age/children) · {@code HOME_INSURANCE} → {@code
+ * Decision_hemforsakring} (cap per household size)</li>
+ * <li>fixed caps: {@code ELECTRICITY}/{@code INTERNET}/{@code UNEMPLOYMENT_FUND}/{@code UNION_FEE}/{@code
+ * TRAVEL_APPROVED}/ {@code TRAVEL_MEDICAL_TRANSPORT}/{@code MEDICAL_CARE}/{@code MEDICINE}</li>
  * <li>{@code OTHER} → {@code Decision_ovrigtBistand} (always 0, assessed manually)</li>
  * </ul>
  *
@@ -57,8 +55,8 @@ public class ExpenseRulesService {
 		Map.entry("OTHER", "Decision_ovrigtBistand"));
 
 	/**
-	 * financial assistance cost type → the FamilyCare array it posts to (the static counterpart of each decision's bucket
-	 * output).
+	 * financial assistance cost type → the FamilyCare array it posts to (the static counterpart of each decision's
+	 * bucket output).
 	 */
 	private static final Map<String, String> BUCKET_BY_COST_TYPE = Map.ofEntries(
 		Map.entry("RENT", BUCKET_EXPENSE),
@@ -83,9 +81,8 @@ public class ExpenseRulesService {
 
 	/**
 	 * The rules verdict for a cost — the process (reasonable) amount, the FamilyCare bucket it posts to, and the
-	 * manual-review
-	 * flag: {@code warning} true when the cost needs a reasonableness assessment, with {@code rule} the human-readable
-	 * reason.
+	 * manual-review flag: {@code warning} true when the cost needs a reasonableness assessment, with {@code rule} the
+	 * human-readable reason.
 	 */
 	public record ExpenseVerdict(BigDecimal processAmount, String bucket, boolean warning, String rule) {}
 

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -37,7 +38,7 @@ public class LifecareDecision {
 	private String organization;
 
 	@Schema(description = "The decided amount", examples = "8500.0")
-	private Double amount;
+	private BigDecimal amount;
 
 	@Schema(description = "The co-applicant the decision covers, when any", examples = "198001019999")
 	private String coApplicant;
@@ -156,15 +157,15 @@ public class LifecareDecision {
 		return this;
 	}
 
-	public Double getAmount() {
+	public BigDecimal getAmount() {
 		return amount;
 	}
 
-	public void setAmount(final Double amount) {
+	public void setAmount(final BigDecimal amount) {
 		this.amount = amount;
 	}
 
-	public LifecareDecision withAmount(final Double amount) {
+	public LifecareDecision withAmount(final BigDecimal amount) {
 		this.amount = amount;
 		return this;
 	}

@@ -2,9 +2,8 @@ package se.sundsvall.caremanagement.lifecare.service;
 
 /**
  * The caseworker resolved for a financial assistance intake: the Lifecare FamilyCare user id used as the actualisation
- * {@code CaseworkerId},
- * the network (AD) user id used as the careM errand {@code assignedUserId}, and the display name it was resolved from
- * (the Service's {@code Caseworker}). All three originate from the same FamilyCare {@code User}.
+ * {@code CaseworkerId}, the network (AD) user id used as the careM errand {@code assignedUserId}, and the display name
+ * it was resolved from (the Service's {@code Caseworker}). All three originate from the same FamilyCare {@code User}.
  *
  * @param caseworkerId   the FamilyCare user id (actualisation {@code CaseworkerId})
  * @param assignedUserId the network/AD user id (careM errand {@code assignedUserId})

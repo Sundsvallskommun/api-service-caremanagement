@@ -20,20 +20,15 @@ import static java.util.Optional.ofNullable;
 
 /**
  * Assembles the full FamilyCare {@link PostCalculationBodyRequest} for an SSBTEK-driven calculation by combining the
- * FamilyCare
- * calculation proposal (the service / investigation / norm / actualisation links FamilyCare offers for the person) with
- * the
- * prepared income rows and the application month.
+ * FamilyCare calculation proposal (the service / investigation / norm / actualisation links FamilyCare offers for the
+ * person) with the prepared income rows and the application month.
  *
  * <p>
  * Sprint defaults where the proposal offers a choice: the first service, investigation and (when mandatory)
  * actualisation are taken, and the norm covering the application month — falling back to the first. The calculation
  * spans the application month. Expenses are left to the caseworker and household size to FamilyCare (left unset →
- * FamilyCare derives
- * it
- * from the proposal's household). These selections are intentionally simple and isolated here so they are easy to
- * refine
- * once real FamilyCare proposals are available.
+ * FamilyCare derives it from the proposal's household). These selections are intentionally simple and isolated here so
+ * they are easy to refine once real FamilyCare proposals are available.
  */
 public final class CalculationAssembler {
 
@@ -73,10 +68,10 @@ public final class CalculationAssembler {
 	}
 
 	/**
-	 * Build the full three-section FamilyCare calculation body — incomes (subtracted), expenses (added) and the household
-	 * persons (the norm base) — for one applicant and application month. Reuses the income + proposal-link selection of
-	 * {@link #assemble(String, PersonBasedCalculationProposalDTO, List, YearMonth)}; adds the expenses and persons and,
-	 * when given, overrides the proposal-selected norm with the one chosen on the draft header.
+	 * Build the full three-section FamilyCare calculation body — incomes (subtracted), expenses (added) and the
+	 * household persons (the norm base) — for one applicant and application month. Reuses the income + proposal-link
+	 * selection of {@link #assemble(String, PersonBasedCalculationProposalDTO, List, YearMonth)}; adds the expenses and
+	 * persons and, when given, overrides the proposal-selected norm with the one chosen on the draft header.
 	 *
 	 * @param  applicantPersonId the applicant's personnummer (the FamilyCare calculation owner)
 	 * @param  proposal          the FamilyCare calculation proposal supplying the link ids; may be {@code null}
@@ -99,7 +94,8 @@ public final class CalculationAssembler {
 	}
 
 	/**
-	 * Apply the draft header onto the body — the chosen norm overrides the proposal selection, dates + household when set.
+	 * Apply the draft header onto the body — the chosen norm overrides the proposal selection, dates + household when
+	 * set.
 	 */
 	private static void applyHeader(final PostCalculationBodyRequest body, final CalculationHeader header) {
 		ofNullable(header.normId()).ifPresent(body::normId);

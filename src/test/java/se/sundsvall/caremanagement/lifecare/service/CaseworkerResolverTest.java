@@ -78,7 +78,7 @@ class CaseworkerResolverTest {
 	}
 
 	@Test
-	void fallsBackToFcUserIdWhenNetworkUserIdBlank() {
+	void fallsBackToFamilyCareUserIdWhenNetworkUserIdBlank() {
 		when(lifecareFamilyCareIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
 			new ApiPaginationCompositePersonBasedServiceDTO()
 				.addResultItem(new PersonBasedServiceDTO().startDate("2026-02-01").caseworker("Anna Andersson")));

@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.Period;
@@ -47,14 +48,11 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * The financial-assistance calculation pipeline — preparing the (editable) draft calculation from the
- * process-classified
- * incomes without touching Lifecare ({@link #prepareCalculation}) and, once a decision is taken, committing the
- * effective
- * draft to Lifecare FamilyCare ({@link #commitCalculation}). This service also owns the editable draft (get/patch
- * header) and
- * the from-application commit; the errand envelope, its strongly-typed application data and the case-history reads stay
- * on the per-resource FinancialAssistanceErrandService / FinancialAssistanceLifecareService /
- * FinancialAssistanceActualisationService / FinancialAssistancePaymentService.
+ * process-classified incomes without touching Lifecare ({@link #prepareCalculation}) and, once a decision is taken,
+ * committing the effective draft to Lifecare FamilyCare ({@link #commitCalculation}). This service also owns the
+ * editable draft (get/patch header) and the from-application commit; the errand envelope, its strongly-typed
+ * application data and the case-history reads stay on the per-resource FinancialAssistanceErrandService /
+ * FinancialAssistanceLifecareService / FinancialAssistanceActualisationService / FinancialAssistancePaymentService.
  */
 @Service
 @Transactional
@@ -199,7 +197,7 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/** The previous calculation's per-cost-type approved amounts, best-effort — a failed Lifecare read degrades to none. */
-	private Map<String, Double> previousExpenseAmounts(final String applicant, final YearMonth applicationMonth) {
+	private Map<String, BigDecimal> previousExpenseAmounts(final String applicant, final YearMonth applicationMonth) {
 		try {
 			return lifecareCaseService.previousExpenseAmounts(applicant, applicationMonth);
 		} catch (final RuntimeException e) {
@@ -224,8 +222,7 @@ public class FinancialAssistanceCalculationService {
 
 	/**
 	 * Create the calculation in Lifecare FamilyCare from the classified incomes — called once a decision is taken, never
-	 * during
-	 * the daily SSBTEK loop. Returns the created calculation id (plus the completeness verdict for reference).
+	 * during the daily SSBTEK loop. Returns the created calculation id (plus the completeness verdict for reference).
 	 */
 	public CalculationResponse commitCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
 		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
@@ -258,13 +255,10 @@ public class FinancialAssistanceCalculationService {
 
 	/**
 	 * Create the calculation in Lifecare FamilyCare straight from the incomes, costs and household the citizen declared in
-	 * the
-	 * application — the new application path: no SSBTEK, no daily loop, no caseworker draft. Incomes come from the
-	 * application's
-	 * own declared incomes (resolved to FamilyCare types by name), expenses and persons from the same feeder the renewal
-	 * path uses
-	 * (both already application-sourced), and the norm from the proposal for the application month. Posts in one shot and
-	 * returns the created calculation id.
+	 * the application — the new application path: no SSBTEK, no daily loop, no caseworker draft. Incomes come from the
+	 * application's own declared incomes (resolved to FamilyCare types by name), expenses and persons from the same feeder
+	 * the renewal path uses (both already application-sourced), and the norm from the proposal for the application month.
+	 * Posts in one shot and returns the created calculation id.
 	 */
 	public CalculationResponse commitFromApplication(final String municipalityId, final String namespace, final CalculationRequest request) {
 		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
@@ -311,8 +305,7 @@ public class FinancialAssistanceCalculationService {
 
 	/**
 	 * The (editable) draft calculation for an errand — the FamilyCare income rows the caseworker reviews and may edit
-	 * before a
-	 * decision. Scoped: throws {@code 404} when the errand (or its draft) is missing.
+	 * before a decision. Scoped: throws {@code 404} when the errand (or its draft) is missing.
 	 */
 	@Transactional(readOnly = true)
 	public CalculationDraft getDraft(final String municipalityId, final String namespace, final String errandId) {
@@ -342,10 +335,10 @@ public class FinancialAssistanceCalculationService {
 
 	/**
 	 * Surface the calculation's income warnings on the errand as a single {@code Decision(RECOMMENDATION)} — written
-	 * once (the daily loop re-runs prepare, but the recommendation is not duplicated). The value is {@code REVIEW_REQUIRED}
-	 * when there is anything to review (unhandled or significantly changed incomes, or still-missing SSBTEK data) and
-	 * {@code OK} otherwise; the description lists the warnings in plain language. No Lifecare calculation exists yet, so
-	 * the recommendation is explicitly preliminary.
+	 * once (the daily loop re-runs prepare, but the recommendation is not duplicated). The value is {@code
+	 * REVIEW_REQUIRED} when there is anything to review (unhandled or significantly changed incomes, or still-missing
+	 * SSBTEK data) and {@code OK} otherwise; the description lists the warnings in plain language. No Lifecare calculation
+	 * exists yet, so the recommendation is explicitly preliminary.
 	 */
 	private void recordRecommendationOnce(final String municipalityId, final String namespace, final String errandId, final CalculationResponse response) {
 		final var alreadyRecorded = decisionService.readAll(municipalityId, namespace, errandId).stream()
@@ -382,10 +375,9 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/**
-	 * Reflect SSBTEK completeness in the errand status — {@code SUPPLEMENT_REQUESTED} while incomplete,
-	 * {@code AWAITING_DECISION}
-	 * when complete — writing only when it actually changes (the daily loop re-runs prepare, so an unchanged status is a
-	 * no-op).
+	 * Reflect SSBTEK completeness in the errand status — {@code SUPPLEMENT_REQUESTED} while incomplete, {@code
+	 * AWAITING_DECISION} when complete — writing only when it actually changes (the daily loop re-runs prepare, so an
+	 * unchanged status is a no-op).
 	 */
 	private void applyCompletenessStatus(final String municipalityId, final String namespace, final String errandId, final boolean informationComplete) {
 		final String target;

@@ -119,7 +119,7 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(calculationServiceMock).commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), incomeCaptor.capture(), any(), any());
 		assertThat(incomeCaptor.getValue()).singleElement().satisfies(income -> {
 			assertThat(income.typeId()).isEqualTo(20);
-			assertThat(income.applicantAmount()).isEqualTo(1100.0); // caseworker value wins over the process value
+			assertThat(income.applicantAmount()).isEqualByComparingTo(BigDecimal.valueOf(1100.0)); // caseworker value wins over the process value
 		});
 		// commit does not touch the errand status/recommendation — that is prepare's job
 		verifyNoInteractions(decisionServiceMock);

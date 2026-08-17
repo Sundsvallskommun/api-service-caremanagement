@@ -63,7 +63,7 @@ class FinancialAssistanceActualisationServiceTest {
 	@Test
 	void createActualisationResolvesPartyDelegatesAndMaps() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
+		when(actualisationServiceMock.createActualisation("199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -72,7 +72,7 @@ class FinancialAssistanceActualisationServiceTest {
 		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		assertThat(response.getActualisationId()).isEqualTo(5012);
-		verify(actualisationServiceMock).create("199001011234", LocalDate.of(2026, JUNE, 1));
+		verify(actualisationServiceMock).createActualisation("199001011234", LocalDate.of(2026, JUNE, 1));
 		// No errandId on the request → nothing recorded on an errand and no assignment.
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
@@ -81,7 +81,7 @@ class FinancialAssistanceActualisationServiceTest {
 	@Test
 	void createActualisationWithErrandIdRecordsActualisationDecisionAndAssignsCaseworker() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
+		when(actualisationServiceMock.createActualisation("199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -108,7 +108,7 @@ class FinancialAssistanceActualisationServiceTest {
 	@Test
 	void createActualisationWithErrandIdButNoResolvedCaseworkerRecordsDecisionWithoutAssigning() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.create("199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, null));
+		when(actualisationServiceMock.createActualisation("199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, null));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -133,7 +133,7 @@ class FinancialAssistanceActualisationServiceTest {
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
 			.hasMessage("Not Found: No citizen found for partyId f47ac10b-58cc-4372-a567-0e02b2c3d479");
 
-		verify(actualisationServiceMock, never()).create(any(), any());
+		verify(actualisationServiceMock, never()).createActualisation(any(), any());
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 	}
 
@@ -142,7 +142,7 @@ class FinancialAssistanceActualisationServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		final var summary = new ActualisationSummary(5012, "Ansökan", "Ekonomiskt bistånd", "2026-06-01", "Nyansökan", "Försörjningsstöd",
 			"Den enskilde", "Anna Andersson", "IFO", "Pågående", 8801, 7700, 9900);
-		when(actualisationServiceMock.list(eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(summary));
+		when(actualisationServiceMock.listActualisations(eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(summary));
 
 		final var result = service.listActualisations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null);
 
@@ -164,7 +164,7 @@ class FinancialAssistanceActualisationServiceTest {
 
 		final var fromCaptor = ArgumentCaptor.forClass(LocalDate.class);
 		final var toCaptor = ArgumentCaptor.forClass(LocalDate.class);
-		verify(actualisationServiceMock).list(eq("199001011234"), fromCaptor.capture(), toCaptor.capture());
+		verify(actualisationServiceMock).listActualisations(eq("199001011234"), fromCaptor.capture(), toCaptor.capture());
 		assertThat(toCaptor.getValue()).isEqualTo(LocalDate.now());
 		assertThat(fromCaptor.getValue()).isEqualTo(toCaptor.getValue().minusMonths(24));
 	}
@@ -172,12 +172,12 @@ class FinancialAssistanceActualisationServiceTest {
 	@Test
 	void listActualisationsUsesExplicitPeriod() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.list("199001011234", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30))).thenReturn(List.of());
+		when(actualisationServiceMock.listActualisations("199001011234", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30))).thenReturn(List.of());
 
 		final var result = service.listActualisations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 
 		assertThat(result).isEmpty();
-		verify(actualisationServiceMock).list("199001011234", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
+		verify(actualisationServiceMock).listActualisations("199001011234", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 	}
 
 	@Test
@@ -189,12 +189,12 @@ class FinancialAssistanceActualisationServiceTest {
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
 			.hasMessage("Not Found: No citizen found for partyId f47ac10b-58cc-4372-a567-0e02b2c3d479");
 
-		verify(actualisationServiceMock, never()).list(any(), any(), any());
+		verify(actualisationServiceMock, never()).listActualisations(any(), any(), any());
 	}
 
 	private void applicantOwnsActualisation5012() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.list(eq("199001011234"), any(LocalDate.class), any(LocalDate.class)))
+		when(actualisationServiceMock.listActualisations(eq("199001011234"), any(LocalDate.class), any(LocalDate.class)))
 			.thenReturn(List.of(new ActualisationSummary(5012, "Ansökan", "EB", "2026-06-01", "Nyansökan", "Försörjningsstöd", "Den enskilde", "Anna", "IFO", "Pågående", 8801, 7700, 9900)));
 	}
 

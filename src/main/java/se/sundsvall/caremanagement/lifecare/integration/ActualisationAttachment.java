@@ -6,10 +6,9 @@ import java.util.Objects;
 import static java.util.Optional.ofNullable;
 
 /**
- * The metadata + bytes of a document uploaded and bound to a Lifecare actualisation. Grouped into one carrier so
- * {@link LifecareFamilyCareIntegration#postActualisationAttachment(Integer, ActualisationAttachment)} stays under the
- * parameter
- * limit. Carries no personal identity number — the document is bound by {@code actualisationId} only.
+ * The metadata + bytes of a document uploaded and bound to a Lifecare actualisation. Grouped into one carrier so {@link
+ * LifecareFamilyCareIntegration#postActualisationAttachment(Integer, ActualisationAttachment)} stays under the
+ * parameter limit. Carries no personal identity number — the document is bound by {@code actualisationId} only.
  *
  * @param documentType       the Lifecare {@code InsertDocumentType} code
  * @param documentSenderType the Lifecare {@code InsertDocumentSenderType} code

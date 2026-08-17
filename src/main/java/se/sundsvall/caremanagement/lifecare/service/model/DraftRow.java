@@ -1,10 +1,12 @@
 package se.sundsvall.caremanagement.lifecare.service.model;
 
+import java.math.BigDecimal;
+
 /**
- * One FamilyCare income row of a draft calculation, in module-neutral terms (amounts as {@code Double}, dates as ISO
- * strings)
- * so it crosses the lifecare → financial-assistance boundary without leaking the generated Lifecare DTOs. The
- * financial-assistance module maps this to its own API/persistence row.
+ * One FamilyCare income row of a draft calculation, in module-neutral terms (amounts as {@code BigDecimal}, dates as
+ * ISO
+ * strings) so it crosses the lifecare → financial-assistance boundary without leaking the generated Lifecare DTOs.
+ * The financial-assistance module maps this to its own API/persistence row.
  *
  * @param typeId                the FamilyCare income-type id
  * @param typeName              the FamilyCare income-type name (resolved from the calculation proposal)
@@ -17,9 +19,9 @@ package se.sundsvall.caremanagement.lifecare.service.model;
 public record DraftRow(
 	Integer typeId,
 	String typeName,
-	Double applicantAmount,
+	BigDecimal applicantAmount,
 	String applicantAmountDate,
-	Double coApplicantAmount,
+	BigDecimal coApplicantAmount,
 	String coApplicantAmountDate,
 	String note) {
 }

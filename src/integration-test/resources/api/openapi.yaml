@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:63155
+- url: http://localhost:49861
   description: Generated server url
 tags:
 - name: Statistics
@@ -7261,10 +7261,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -11288,7 +11288,6 @@ components:
           - IFO
         amount:
           type: number
-          format: double
           description: The decided amount
           examples:
           - 8500.0
@@ -11352,49 +11351,41 @@ components:
           - 2026-06-30
         incomeSum:
           type: number
-          format: double
           description: The sum of all incomes
           examples:
           - 12000.0
         expenseSum:
           type: number
-          format: double
           description: The sum of all regular expenses
           examples:
           - 9500.0
         specialExpenseSum:
           type: number
-          format: double
           description: The sum of all special expenses
           examples:
           - 500.0
         normSum:
           type: number
-          format: double
           description: The sum of the norm
           examples:
           - 10500.0
         commonHouseholdCost:
           type: number
-          format: double
           description: The common household cost
           examples:
           - 1200.0
         familyCost:
           type: number
-          format: double
           description: The family cost
           examples:
           - 800.0
         balance:
           type: number
-          format: double
           description: The balance of the calculation
           examples:
           - -2000.0
         totalSum:
           type: number
-          format: double
           description: The total sum of the calculation
           examples:
           - 8500.0
@@ -11430,13 +11421,11 @@ components:
           - Hyra
         appliedAmount:
           type: number
-          format: double
           description: The applied amount
           examples:
           - 7500.0
         approvedAmount:
           type: number
-          format: double
           description: The approved amount
           examples:
           - 7000.0
@@ -11451,7 +11440,6 @@ components:
           - Lön
         amountApplicant:
           type: number
-          format: double
           description: The income amount for the applicant
           examples:
           - 12000.0
@@ -11462,7 +11450,6 @@ components:
           - 2026-05-15
         amountCoApplicant:
           type: number
-          format: double
           description: The income amount for the co-applicant
           examples:
           - 0.0
@@ -11487,7 +11474,6 @@ components:
           - Anna Andersson
         amount:
           type: number
-          format: double
           description: The amount the person contributes to the norm
           examples:
           - 4500.0

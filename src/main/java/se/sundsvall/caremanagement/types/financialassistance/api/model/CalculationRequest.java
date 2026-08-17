@@ -9,9 +9,8 @@ import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
  * Request to build and post an SSBTEK-driven calculation to Lifecare FamilyCare for one applicant (and optional
- * co-applicant)
- * and one application month. The household's income basis is fetched from SSBTEK for the rule periods derived from the
- * month; the resulting calculation is created in Lifecare.
+ * co-applicant) and one application month. The household's income basis is fetched from SSBTEK for the rule periods
+ * derived from the month; the resulting calculation is created in Lifecare.
  */
 @Schema(description = "Request to build and post the SSBTEK-driven calculation for an application month.")
 public class CalculationRequest {

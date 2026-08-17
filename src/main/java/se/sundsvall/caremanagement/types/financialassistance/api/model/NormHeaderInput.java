@@ -11,8 +11,8 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 
 /**
  * What a caseworker sends to edit the calculation header — the chosen norm (Norm), the calculation date window
- * (from/to/calculation date) and the custom household size (common costs → custom household size). Only the
- * fields present are applied.
+ * (from/to/calculation date) and the custom household size (common costs → custom household size). Only the fields
+ * present are applied.
  */
 @Schema(description = "Caseworker edit of the calculation header — norm, calculation dates and custom household size.")
 public class NormHeaderInput {

@@ -11,6 +11,22 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMap
 
 class ExpenseTypeMapperTest {
 
+	/**
+	 * The two directions are written out by hand, so this locks them together: every forward entry must have a reverse
+	 * entry keyed by the normalized name, and neither map may carry an entry the other lacks. Adding a cost type to one
+	 * and forgetting the other fails here rather than silently dropping an amount when a previous calculation is read
+	 * back.
+	 */
+	@Test
+	void theCostTypeAndNameMapsAreExactInverses() {
+		final var nameByCostType = ExpenseTypeMapper.familyCareNameByCostType();
+		final var costTypeByName = ExpenseTypeMapper.costTypeByFamilyCareName();
+
+		assertThat(costTypeByName).hasSameSizeAs(nameByCostType);
+		assertThat(nameByCostType).allSatisfy((costType, name) -> assertThat(costTypeByName)
+			.containsEntry(MapperUtil.normalize(name), costType));
+	}
+
 	private static PersonBasedCalculationProposalDTO proposalWith(final PersonBasedCalculationExpenseTypeDTO... types) {
 		return new PersonBasedCalculationProposalDTO().calculationExpenseTypes(List.of(types));
 	}

@@ -30,7 +30,7 @@ class ApplicationIncomeToFamilyCareMapperTest {
 	}
 
 	@Test
-	void resolvesApplicationTypeToFcTypeIdByName() {
+	void resolvesApplicationTypeToFamilyCareTypeIdByName() {
 		final var lines = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(
 			income("SALARY", "18500", LocalDate.of(2026, MAY, 25), APPLICANT),
 			income("SWISH_DEPOSITS", "300", LocalDate.of(2026, MAY, 10), CO_APPLICANT)),
@@ -49,7 +49,7 @@ class ApplicationIncomeToFamilyCareMapperTest {
 	}
 
 	@Test
-	void foldsTheManyOtherTypesOntoTheSameFcType() {
+	void foldsTheManyOtherTypesOntoTheSameFamilyCareType() {
 		final var lines = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(
 			income("OTHER_INCOME", "100", null, APPLICANT),
 			income("RENT_SHARE_FROM_CHILD", "200", null, APPLICANT),

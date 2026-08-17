@@ -18,18 +18,17 @@ import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * A single financial assistance monitoring on an errand — a date-bound watch/reminder the caseworker manages in Draken.
- * Unlike the income
- * warnings it carries no acknowledge lifecycle: it is created, edited and removed directly, and has a start date (when
- * the watch becomes relevant) plus an optional end date. Modelled after Lifecare IFO's "Monitorings".
+ * A single financial assistance monitoring on an errand — a date-bound watch/reminder the caseworker manages in
+ * Draken. Unlike the income warnings it carries no acknowledge lifecycle: it is created, edited and removed directly,
+ * and has a start date (when the watch becomes relevant) plus an optional end date. Modelled after Lifecare IFO's
+ * "Monitorings".
  *
  * <p>
- * {@code source} records provenance — {@code CASEWORKER} for one authored in Draken (RPA later mirrors it onto the
- * person in Lifecare), {@code LIFECARE} for one read out of Lifecare by RPA and surfaced here on the errand. The
- * FamilyCare API
- * carries no bevakningar endpoint, so the sync is out-of-band: {@code lifecareId} is the monitoring's id in Lifecare
- * once it exists there — null for a caseworker row not yet mirrored, the idempotency key RPA upserts LIFECARE rows on,
- * and (by its presence) the "synced" marker.
+ * {@code source} records provenance — {@code CASEWORKER} for one authored in Draken (RPA later mirrors it onto
+ * the person in Lifecare), {@code LIFECARE} for one read out of Lifecare by RPA and surfaced here on the errand. The
+ * FamilyCare API carries no bevakningar endpoint, so the sync is out-of-band: {@code lifecareId} is the monitoring's id
+ * in Lifecare once it exists there — null for a caseworker row not yet mirrored, the idempotency key RPA upserts
+ * LIFECARE rows on, and (by its presence) the "synced" marker.
  * </p>
  */
 @Entity

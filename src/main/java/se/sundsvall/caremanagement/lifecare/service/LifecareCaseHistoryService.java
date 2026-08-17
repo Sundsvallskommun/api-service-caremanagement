@@ -25,21 +25,18 @@ import se.sundsvall.caremanagement.lifecare.service.model.DocumentView;
 
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.toAmount;
 
 /**
- * Reads a person's Lifecare FamilyCare case history — calculations, decisions and documents — for the caseworker-facing
- * case
- * view, and fetches a single document's content. Wraps {@link LifecareFamilyCareIntegration}, reducing the generated
- * FamilyCare DTOs to
- * the display projections in {@code lifecare.service.model} so the generated types never leave the integration
- * boundary.
+ * Reads a person's Lifecare FamilyCare case history — calculations, decisions and documents — for the
+ * caseworker-facing case view, and fetches a single document's content. Wraps {@link LifecareFamilyCareIntegration},
+ * reducing the generated FamilyCare DTOs to the display projections in {@code lifecare.service.model} so the generated
+ * types never leave the integration boundary.
  *
  * <p>
  * The list reads bound the FamilyCare query with ISO local dates; an empty/absent FamilyCare page maps to an empty
- * list. Calls
- * propagate the integration's {@code BAD_GATEWAY} problem on failure — the caller decides whether to treat the lookup
- * as
- * best-effort.
+ * list. Calls propagate the integration's {@code BAD_GATEWAY} problem on failure — the caller decides whether to
+ * treat the lookup as best-effort.
  * </p>
  */
 @Service
@@ -119,14 +116,14 @@ public class LifecareCaseHistoryService {
 			dto.getNorm(),
 			dto.getFromDate(),
 			dto.getToDate(),
-			dto.getIncomeSum(),
-			dto.getExpenseSum(),
-			dto.getSpecialExpenseSum(),
-			dto.getNormSum(),
-			dto.getCommonHouseholdCost(),
-			dto.getFamilyCost(),
-			dto.getBalance(),
-			dto.getTotalSum(),
+			toAmount(dto.getIncomeSum()),
+			toAmount(dto.getExpenseSum()),
+			toAmount(dto.getSpecialExpenseSum()),
+			toAmount(dto.getNormSum()),
+			toAmount(dto.getCommonHouseholdCost()),
+			toAmount(dto.getFamilyCost()),
+			toAmount(dto.getBalance()),
+			toAmount(dto.getTotalSum()),
 			dto.getFinal(),
 			ofNullable(dto.getCalculationPersonDTOs()).orElseGet(List::of).stream().map(LifecareCaseHistoryService::toCalculationPerson).toList(),
 			ofNullable(dto.getCalculationIncomesDTOs()).orElseGet(List::of).stream().map(LifecareCaseHistoryService::toCalculationIncome).toList(),
@@ -135,19 +132,19 @@ public class LifecareCaseHistoryService {
 	}
 
 	private static CalculationIncomeView toCalculationIncome(final CommonCalculationIncomeDTO dto) {
-		return new CalculationIncomeView(dto.getType(), dto.getAmountApplicant(), dto.getApplicantSearchDate(), dto.getAmountCoApplicant(), dto.getCoApplicantSearchDate());
+		return new CalculationIncomeView(dto.getType(), toAmount(dto.getAmountApplicant()), dto.getApplicantSearchDate(), toAmount(dto.getAmountCoApplicant()), dto.getCoApplicantSearchDate());
 	}
 
 	private static CalculationExpenseView toCalculationExpense(final CommonCalculationExpenseDTO dto) {
-		return new CalculationExpenseView(dto.getType(), dto.getAppliedAmount(), dto.getApprovedAmount());
+		return new CalculationExpenseView(dto.getType(), toAmount(dto.getAppliedAmount()), toAmount(dto.getApprovedAmount()));
 	}
 
 	private static CalculationExpenseView toSpecialExpense(final CommonCalculationSpecialExpenseDTO dto) {
-		return new CalculationExpenseView(dto.getType(), dto.getAppliedAmount(), dto.getApprovedAmount());
+		return new CalculationExpenseView(dto.getType(), toAmount(dto.getAppliedAmount()), toAmount(dto.getApprovedAmount()));
 	}
 
 	private static CalculationPersonView toCalculationPerson(final PersonBasedCalculationPersonDTO dto) {
-		return new CalculationPersonView(dto.getPersonId(), dto.getName(), dto.getAmount(), dto.getDeviationFromDate(), dto.getDeviationToDate());
+		return new CalculationPersonView(dto.getPersonId(), dto.getName(), toAmount(dto.getAmount()), dto.getDeviationFromDate(), dto.getDeviationToDate());
 	}
 
 	private static DecisionView toDecision(final PersonBasedDecisionDTO dto) {
@@ -160,7 +157,7 @@ public class LifecareCaseHistoryService {
 			dto.getReason(),
 			dto.getDecisionMaker(),
 			dto.getOrganization(),
-			dto.getAmount(),
+			toAmount(dto.getAmount()),
 			dto.getCoApplicant(),
 			dto.getReasonCoApplicant(),
 			ofNullable(dto.getDecisionPersonDTOs()).orElseGet(List::of).stream().map(LifecareCaseHistoryService::toDecisionPerson).toList());

@@ -11,6 +11,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonDTO
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -272,8 +273,8 @@ class LifecareCaseServiceTest {
 
 		assertThat(household.personIds()).containsExactlyInAnyOrder(APPLICANT, "201801012380");
 		assertThat(household.memberCount()).isEqualTo(2);
-		assertThat(household.normSum()).isEqualTo(12345.0);
-		assertThat(household.housingCost()).isEqualTo(7500.0); // 6000 (approved) + 1500 (applied fallback)
+		assertThat(household.normSum()).isEqualTo(BigDecimal.valueOf(12345.0));
+		assertThat(household.housingCost()).isEqualTo(BigDecimal.valueOf(7500.0)); // 6000 (approved) + 1500 (applied fallback)
 	}
 
 	@Test
