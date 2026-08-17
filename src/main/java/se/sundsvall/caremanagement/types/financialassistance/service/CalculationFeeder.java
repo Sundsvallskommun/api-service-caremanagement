@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
-import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCost;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
@@ -28,7 +28,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_VISITATION_CHILD;
 
 /**
- * Builds the freshly computed process rows for the calculation sections from the errand: the income rows (one per FC
+ * Builds the freshly computed process rows for the calculation sections from the errand: the income rows (one per
+ * FamilyCare
  * income type, with a applicant and co-applicant side) from the operaton-classified incomes, the expense rows from the
  * application's costs — each given a process amount + bucket by the {@link ExpenseRulesService} — and the person
  * rows from the household (visitation child = part-time children). Also compares the household against the previous
@@ -71,18 +72,20 @@ public class CalculationFeeder {
 	public record ExpenseFeed(List<FaNormExpenseEntity> rows, List<WarningService.WarningInput> warnings) {}
 
 	/**
-	 * The fresh income process rows — one per FC income type, the classified lines folded into a applicant + co-applicant
-	 * side. Within each (FC type, recipient) the amounts are summed: the SSBTEK/classified path arrives pre-summed (one
+	 * The fresh income process rows — one per FamilyCare income type, the classified lines folded into a applicant +
+	 * co-applicant
+	 * side. Within each (FamilyCare type, recipient) the amounts are summed: the SSBTEK/classified path arrives pre-summed
+	 * (one
 	 * line per recipient), but the application/new-application path emits one line per raw declared income, so two
 	 * same-type
 	 * same-recipient incomes (e.g. two OTHER_INCOME) must be added together rather than dropping all but the first — else
 	 * the income is understated and the computed benefit inflated. The first line in a recipient group supplies the
 	 * non-amount fields (date, type name, note).
 	 */
-	public List<FaNormIncomeEntity> incomeRows(final String errandId, final List<FcIncomeLine> lines) {
+	public List<FaNormIncomeEntity> incomeRows(final String errandId, final List<FamilyCareIncomeLine> lines) {
 		final var byType = ofNullable(lines).orElseGet(List::of).stream()
 			.filter(line -> line.typeId() != null)
-			.collect(Collectors.groupingBy(FcIncomeLine::typeId, LinkedHashMap::new, Collectors.toList()));
+			.collect(Collectors.groupingBy(FamilyCareIncomeLine::typeId, LinkedHashMap::new, Collectors.toList()));
 
 		return byType.entrySet().stream().map(entry -> {
 			final var group = entry.getValue();
@@ -101,7 +104,7 @@ public class CalculationFeeder {
 	}
 
 	/** The lines in a type group belonging to a single recipient, in encounter order. */
-	private static List<FcIncomeLine> recipientLines(final List<FcIncomeLine> group, final String recipient) {
+	private static List<FamilyCareIncomeLine> recipientLines(final List<FamilyCareIncomeLine> group, final String recipient) {
 		return group.stream().filter(line -> recipient.equals(line.recipient())).toList();
 	}
 
@@ -109,12 +112,12 @@ public class CalculationFeeder {
 	 * The summed amount across a recipient's lines, or {@code null} when the recipient has no lines at all. Null
 	 * individual amounts are skipped; a recipient with only null-amount lines therefore sums to zero.
 	 */
-	private static BigDecimal sumAmounts(final List<FcIncomeLine> lines) {
+	private static BigDecimal sumAmounts(final List<FamilyCareIncomeLine> lines) {
 		if (lines.isEmpty()) {
 			return null;
 		}
 		return lines.stream()
-			.map(FcIncomeLine::amount)
+			.map(FamilyCareIncomeLine::amount)
 			.filter(Objects::nonNull)
 			.reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
@@ -123,8 +126,8 @@ public class CalculationFeeder {
 	 * The first line's amount date for a recipient (the non-amount fields come from the first line), {@code null} when
 	 * none.
 	 */
-	private static OffsetDateTime firstDate(final List<FcIncomeLine> lines) {
-		return lines.stream().findFirst().map(FcIncomeLine::date).orElse(null);
+	private static OffsetDateTime firstDate(final List<FamilyCareIncomeLine> lines) {
+		return lines.stream().findFirst().map(FamilyCareIncomeLine::date).orElse(null);
 	}
 
 	/**

@@ -27,7 +27,8 @@ import static org.springframework.util.StringUtils.hasText;
  *
  * <p>
  * A monitoring carries a {@code source} ({@code CASEWORKER}, the default, or {@code LIFECARE}) and an optional
- * {@code lifecareId}. Lifecare FC exposes no watch/reminder endpoint, so the mirror is driven out-of-band by RPA: RPA
+ * {@code lifecareId}. Lifecare FamilyCare exposes no watch/reminder endpoint, so the mirror is driven out-of-band by
+ * RPA: RPA
  * surfaces a Lifecare watch/reminder by POSTing {@code source=LIFECARE} with its {@code lifecareId} (idempotent per
  * errand + lifecareId, so re-runs don't duplicate), and mirrors a caseworker monitoring the other way, later stamping
  * back the {@code lifecareId} it was given in Lifecare. The provenance fields are system/RPA-managed: an update only

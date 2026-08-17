@@ -10,14 +10,14 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 @SpringBootTest(classes = Application.class)
 @ActiveProfiles("junit")
-class LifecareFcPropertiesTest {
+class LifecareFamilyCarePropertiesTest {
 
 	@Autowired
-	private LifecareFcProperties properties;
+	private LifecareFamilyCareProperties properties;
 
 	@Test
 	void testProperties() {
-		assertThat(properties.url()).isEqualTo("http://lifecarefc.url");
+		assertThat(properties.url()).isEqualTo("http://lifecarefamilycare.url");
 		assertThat(properties.domain()).isEqualTo("junit-domain");
 		assertThat(properties.key()).isEqualTo("junit-key");
 		assertThat(properties.connectTimeout()).isEqualTo(5);

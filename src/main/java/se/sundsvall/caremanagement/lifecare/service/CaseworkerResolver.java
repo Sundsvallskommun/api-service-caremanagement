@@ -1,8 +1,8 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedServiceDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedServiceDTO;
-import generated.se.sundsvall.lifecarefc.User;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.User;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -11,17 +11,18 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 
 /**
  * Resolves the caseworker to put on a financial assistance intake: reads the applicant's <em>most recent</em> Lifecare
- * FC Service
+ * FamilyCare Service
  * (support effort) over a lookback window, takes its {@code Caseworker} display name, and matches that name against the
- * FC
- * user directory ({@code Users/GetUsers}) to recover the user's FC {@code Id} (the actualisation {@code CaseworkerId})
+ * FamilyCare
+ * user directory ({@code Users/GetUsers}) to recover the user's FamilyCare {@code Id} (the actualisation
+ * {@code CaseworkerId})
  * and {@code NetworkUserId} (the careM errand {@code assignedUserId}). The person-based Service read only carries the
  * caseworker as a display name, so the directory match is the only way to recover the ids the writes need.
  *
@@ -33,14 +34,14 @@ import static java.util.Optional.ofNullable;
 @Service
 public class CaseworkerResolver {
 
-	private final LifecareFcIntegration lifecareFcIntegration;
+	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
 	private final int lookbackMonths;
 	private final int usersLimit;
 
-	CaseworkerResolver(final LifecareFcIntegration lifecareFcIntegration,
-		@Value("${integration.lifecare-fc.caseworker-lookback-months:36}") final int lookbackMonths,
-		@Value("${integration.lifecare-fc.users-limit:1000}") final int usersLimit) {
-		this.lifecareFcIntegration = lifecareFcIntegration;
+	CaseworkerResolver(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration,
+		@Value("${integration.lifecare-familycare.caseworker-lookback-months:36}") final int lookbackMonths,
+		@Value("${integration.lifecare-familycare.users-limit:1000}") final int usersLimit) {
+		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
 		this.lookbackMonths = lookbackMonths;
 		this.usersLimit = usersLimit;
 	}
@@ -63,7 +64,7 @@ public class CaseworkerResolver {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		return ofNullable(lifecareFcIntegration.getServices(personId, start, end))
+		return ofNullable(lifecareFamilyCareIntegration.getServices(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedServiceDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
@@ -73,9 +74,9 @@ public class CaseworkerResolver {
 			.map(String::trim);
 	}
 
-	/** The first enabled FC user whose full name matches the given caseworker name (case-insensitive, trimmed). */
+	/** The first enabled FamilyCare user whose full name matches the given caseworker name (case-insensitive, trimmed). */
 	private Optional<User> findUserByFullName(final String caseworkerName) {
-		return ofNullable(lifecareFcIntegration.getUsers(usersLimit, null, null, null))
+		return ofNullable(lifecareFamilyCareIntegration.getUsers(usersLimit, null, null, null))
 			.orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
 			.filter(user -> !Boolean.TRUE.equals(user.getDisabled()))
@@ -94,7 +95,7 @@ public class CaseworkerResolver {
 			.filter(StringUtils::hasText)
 			.map(date -> {
 				try {
-					// FC may return a datetime (e.g. 2026-05-01T00:00:00); take the leading yyyy-MM-dd so a time
+					// FamilyCare may return a datetime (e.g. 2026-05-01T00:00:00); take the leading yyyy-MM-dd so a time
 					// component doesn't push every service to LocalDate.MIN and scramble the caseworker ordering.
 					final String datePart;
 					if (date.length() >= 10) {

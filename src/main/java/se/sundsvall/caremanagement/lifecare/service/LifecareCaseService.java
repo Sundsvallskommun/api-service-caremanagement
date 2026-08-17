@@ -1,14 +1,14 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
-import generated.se.sundsvall.lifecarefc.CommonCalculationExpenseDTO;
-import generated.se.sundsvall.lifecarefc.CommonCalculationIncomeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedDecisionDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedDecisionPersonDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedAktualiseringDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedCalculationDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefamilycare.CommonCalculationExpenseDTO;
+import generated.se.sundsvall.lifecarefamilycare.CommonCalculationIncomeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionPersonDTO;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -23,7 +23,7 @@ import java.util.TreeSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 
@@ -35,11 +35,13 @@ import static java.util.stream.Collectors.toSet;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Answers financial-assistance-routing questions about a person from Lifecare FC. Wraps {@link LifecareFcIntegration},
+ * Answers financial-assistance-routing questions about a person from Lifecare FamilyCare. Wraps
+ * {@link LifecareFamilyCareIntegration},
  * reading
  * actualisations, decision and calculations over a lookback window ending at the reference date, and reduces them to
  * a
- * domain {@link LifecareCaseSummary}. FC's date strings (from/to periods) and generated DTOs never leave this module.
+ * domain {@link LifecareCaseSummary}. FamilyCare's date strings (from/to periods) and generated DTOs never leave this
+ * module.
  *
  * <p>
  * Calls propagate the integration's {@code BAD_GATEWAY} problem on failure — the caller decides whether to treat the
@@ -52,17 +54,17 @@ public class LifecareCaseService {
 	/** Guard against a malformed decision period (e.g. from 2000 to 2030) producing an unbounded month set. */
 	private static final int MAX_MONTHS_PER_DECISION = 36;
 
-	private final LifecareFcIntegration lifecareFcIntegration;
+	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
 	private final int lookbackMonths;
 
-	LifecareCaseService(final LifecareFcIntegration lifecareFcIntegration,
-		@Value("${integration.lifecare-fc.lookback-months:13}") final int lookbackMonths) {
-		this.lifecareFcIntegration = lifecareFcIntegration;
+	LifecareCaseService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration,
+		@Value("${integration.lifecare-familycare.lookback-months:13}") final int lookbackMonths) {
+		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
 		this.lookbackMonths = lookbackMonths;
 	}
 
 	/**
-	 * Summarises the person's financial assistance footprint in FC over the lookback window ending at
+	 * Summarises the person's financial assistance footprint in FamilyCare over the lookback window ending at
 	 * {@code referenceDate}.
 	 *
 	 * @param  personId      the person's personal identity number
@@ -73,15 +75,15 @@ public class LifecareCaseService {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		final var actualisations = ofNullable(lifecareFcIntegration.getActualisations(personId, start, end))
+		final var actualisations = ofNullable(lifecareFamilyCareIntegration.getActualisations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedAktualiseringDTO::getResult)
 			.orElseGet(List::of);
 
-		final var decisions = ofNullable(lifecareFcIntegration.getDecisions(personId, start, end))
+		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of);
 
-		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of);
 
@@ -101,17 +103,18 @@ public class LifecareCaseService {
 	}
 
 	/**
-	 * Whether the person is flagged with protected identity in Lifecare FC — protected address (skyddad
+	 * Whether the person is flagged with protected identity in Lifecare FamilyCare — protected address (skyddad
 	 * population register/retained registration) or protected registration (confidentiality marking). Propagates the
 	 * integration's
 	 * {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
 	 *
 	 * @param  personId the person's personal identity number
-	 * @return          {@code true} when either protection flag is set; {@code false} when neither is set or FC has no
+	 * @return          {@code true} when either protection flag is set; {@code false} when neither is set or FamilyCare has
+	 *                  no
 	 *                  record
 	 */
 	public boolean hasProtectedIdentity(final String personId) {
-		return ofNullable(lifecareFcIntegration.getPerson(personId))
+		return ofNullable(lifecareFamilyCareIntegration.getPerson(personId))
 			.map(person -> TRUE.equals(person.getAddressProtection()) || TRUE.equals(person.getProtectedRegistration()))
 			.orElse(false);
 	}
@@ -130,11 +133,11 @@ public class LifecareCaseService {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of);
 
-		final var decisions = ofNullable(lifecareFcIntegration.getDecisions(personId, start, end))
+		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of);
 
@@ -153,7 +156,7 @@ public class LifecareCaseService {
 	}
 
 	/**
-	 * The distinct FC income-type names on the person's most recent calculation strictly before
+	 * The distinct FamilyCare income-type names on the person's most recent calculation strictly before
 	 * {@code applicationMonth} — the baseline for the financial assistance "all last month's values present" completeness
 	 * check. Empty when
 	 * there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the caller
@@ -168,7 +171,7 @@ public class LifecareCaseService {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
@@ -198,7 +201,7 @@ public class LifecareCaseService {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
@@ -227,10 +230,12 @@ public class LifecareCaseService {
 	/**
 	 * The approved amount per financial assistance cost type on the person's most recent previous calculation — read from
 	 * the regular
-	 * (UTGIFTER) expense array and mapped back from each FC type name via {@link ExpenseTypeMapper}. Empty when there is
-	 * no previous calculation. Feeds the expense rule tree's "godkänt belopp föregående månad" (best-effort: an FC name
+	 * (UTGIFTER) expense array and mapped back from each FamilyCare type name via {@link ExpenseTypeMapper}. Empty when
+	 * there is
+	 * no previous calculation. Feeds the expense rule tree's "godkänt belopp föregående månad" (best-effort: an FamilyCare
+	 * name
 	 * with no financial assistance cost type is skipped; the special-expense (LEVNADSKOSTNADER I ÖVRIGT) array is untyped
-	 * in the FC spec
+	 * in the FamilyCare spec
 	 * and not read, so those types start without history).
 	 *
 	 * @param  personId         the applicant's personal identity number
@@ -242,7 +247,7 @@ public class LifecareCaseService {
 		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
 		final var end = referenceDate.format(ISO_LOCAL_DATE);
 
-		final var calculations = ofNullable(lifecareFcIntegration.getCalculations(personId, start, end))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, end))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
@@ -260,7 +265,7 @@ public class LifecareCaseService {
 		return amounts;
 	}
 
-	/** The previous housing cost — Rent/housing expense rows, matched on the FC type name (best-effort). */
+	/** The previous housing cost — Rent/housing expense rows, matched on the FamilyCare type name (best-effort). */
 	private static boolean isHousing(final String type) {
 		if (type == null) {
 			return false;
@@ -336,7 +341,7 @@ public class LifecareCaseService {
 		return toYearMonth(decision.getToDate()).or(() -> toYearMonth(decision.getFromDate())).orElse(null);
 	}
 
-	/** Lenient year-month extraction from FC's date strings ("yyyy-MM-dd", "yyyy-MM", or an ISO datetime). */
+	/** Lenient year-month extraction from FamilyCare's date strings ("yyyy-MM-dd", "yyyy-MM", or an ISO datetime). */
 	static Optional<YearMonth> toYearMonth(final String value) {
 		if (!hasText(value)) {
 			return Optional.empty();

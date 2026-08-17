@@ -19,7 +19,7 @@ class ClassifiedIncomeTest {
 	 * {@code role} already share the wire key). They must deserialise onto the English record components via
 	 * {@link com.fasterxml.jackson.annotation.JsonProperty}. This exercises the real parse (which the service tests mock
 	 * out) with the exact keys operaton serialises, so a missing/wrong {@code JsonProperty} — which nulls the field
-	 * silently — can't slip through: {@code normberakning} → {@link ClassifiedIncome#calculation()} drives the FC
+	 * silently — can't slip through: {@code normberakning} → {@link ClassifiedIncome#calculation()} drives the FamilyCare
 	 * income-type lookup, and {@code forman}/{@code delforman}/{@code beloppstyp} → the {@link SsbtekIncome} descriptor.
 	 */
 	@Test

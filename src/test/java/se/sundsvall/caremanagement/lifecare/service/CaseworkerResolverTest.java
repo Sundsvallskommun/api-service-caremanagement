@@ -1,8 +1,8 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedServiceDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedServiceDTO;
-import generated.se.sundsvall.lifecarefc.User;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.User;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 
 import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,22 +29,22 @@ class CaseworkerResolverTest {
 	private static final int USERS_LIMIT = 1000;
 
 	@Mock
-	private LifecareFcIntegration lifecareFcIntegrationMock;
+	private LifecareFamilyCareIntegration lifecareFamilyCareIntegrationMock;
 
 	private CaseworkerResolver resolver;
 
 	@BeforeEach
 	void setUp() {
-		resolver = new CaseworkerResolver(lifecareFcIntegrationMock, LOOKBACK_MONTHS, USERS_LIMIT);
+		resolver = new CaseworkerResolver(lifecareFamilyCareIntegrationMock, LOOKBACK_MONTHS, USERS_LIMIT);
 	}
 
 	@Test
 	void resolvesMostRecentServiceCaseworkerToUserIds() {
-		when(lifecareFcIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
 			new ApiPaginationCompositePersonBasedServiceDTO()
 				.addResultItem(new PersonBasedServiceDTO().startDate("2024-01-01").caseworker("Old Caseworker"))
 				.addResultItem(new PersonBasedServiceDTO().startDate("2026-02-01").caseworker("Anna Andersson")));
-		when(lifecareFcIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
+		when(lifecareFamilyCareIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
 			new User().id("9001").fullName("Anna Andersson").networkUserId("anna01ker")));
 
 		final var resolved = resolver.resolve(PERSON_ID, DATE);
@@ -58,20 +58,20 @@ class CaseworkerResolverTest {
 
 	@Test
 	void queriesServicesOverTheLookbackWindow() {
-		when(lifecareFcIntegrationMock.getServices(PERSON_ID, "2023-06-01", "2026-06-01"))
+		when(lifecareFamilyCareIntegrationMock.getServices(PERSON_ID, "2023-06-01", "2026-06-01"))
 			.thenReturn(new ApiPaginationCompositePersonBasedServiceDTO());
 
 		resolver.resolve(PERSON_ID, DATE);
 
-		verify(lifecareFcIntegrationMock).getServices(PERSON_ID, "2023-06-01", "2026-06-01");
+		verify(lifecareFamilyCareIntegrationMock).getServices(PERSON_ID, "2023-06-01", "2026-06-01");
 	}
 
 	@Test
 	void matchesFullNameCaseInsensitivelyAndTrimmed() {
-		when(lifecareFcIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
 			new ApiPaginationCompositePersonBasedServiceDTO()
 				.addResultItem(new PersonBasedServiceDTO().startDate("2026-02-01").caseworker("  anna andersson  ")));
-		when(lifecareFcIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
+		when(lifecareFamilyCareIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
 			new User().id("9001").fullName("Anna Andersson").networkUserId("anna01ker")));
 
 		assertThat(resolver.resolve(PERSON_ID, DATE)).map(ResolvedCaseworker::caseworkerId).contains("9001");
@@ -79,10 +79,10 @@ class CaseworkerResolverTest {
 
 	@Test
 	void fallsBackToFcUserIdWhenNetworkUserIdBlank() {
-		when(lifecareFcIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
 			new ApiPaginationCompositePersonBasedServiceDTO()
 				.addResultItem(new PersonBasedServiceDTO().startDate("2026-02-01").caseworker("Anna Andersson")));
-		when(lifecareFcIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
+		when(lifecareFamilyCareIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
 			new User().id("9001").fullName("Anna Andersson").networkUserId("   ")));
 
 		assertThat(resolver.resolve(PERSON_ID, DATE)).map(ResolvedCaseworker::assignedUserId).contains("9001");
@@ -90,10 +90,10 @@ class CaseworkerResolverTest {
 
 	@Test
 	void skipsDisabledUsersWhenMatching() {
-		when(lifecareFcIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
 			new ApiPaginationCompositePersonBasedServiceDTO()
 				.addResultItem(new PersonBasedServiceDTO().startDate("2026-02-01").caseworker("Anna Andersson")));
-		when(lifecareFcIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
+		when(lifecareFamilyCareIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
 			new User().id("8000").fullName("Anna Andersson").networkUserId("old01ker").disabled(true),
 			new User().id("9001").fullName("Anna Andersson").networkUserId("anna01ker")));
 
@@ -102,36 +102,36 @@ class CaseworkerResolverTest {
 
 	@Test
 	void returnsEmptyWhenNoServices() {
-		when(lifecareFcIntegrationMock.getServices(eq(PERSON_ID), any(), any()))
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(PERSON_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedServiceDTO());
 
 		assertThat(resolver.resolve(PERSON_ID, DATE)).isEmpty();
-		verify(lifecareFcIntegrationMock, never()).getUsers(any(), any(), any(), any());
+		verify(lifecareFamilyCareIntegrationMock, never()).getUsers(any(), any(), any(), any());
 	}
 
 	@Test
 	void returnsEmptyWhenServicesResponseIsNull() {
-		when(lifecareFcIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(null);
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(null);
 
 		assertThat(resolver.resolve(PERSON_ID, DATE)).isEmpty();
 	}
 
 	@Test
 	void returnsEmptyWhenNoServiceCarriesACaseworker() {
-		when(lifecareFcIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
 			new ApiPaginationCompositePersonBasedServiceDTO()
 				.addResultItem(new PersonBasedServiceDTO().startDate("2026-02-01")));
 
 		assertThat(resolver.resolve(PERSON_ID, DATE)).isEmpty();
-		verify(lifecareFcIntegrationMock, never()).getUsers(any(), any(), any(), any());
+		verify(lifecareFamilyCareIntegrationMock, never()).getUsers(any(), any(), any(), any());
 	}
 
 	@Test
 	void returnsEmptyWhenNoUserMatchesTheCaseworkerName() {
-		when(lifecareFcIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
 			new ApiPaginationCompositePersonBasedServiceDTO()
 				.addResultItem(new PersonBasedServiceDTO().startDate("2026-02-01").caseworker("Anna Andersson")));
-		when(lifecareFcIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
+		when(lifecareFamilyCareIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
 			new User().id("9001").fullName("Bertil Bertilsson").networkUserId("bertil01")));
 
 		assertThat(resolver.resolve(PERSON_ID, DATE)).isEmpty();
@@ -139,12 +139,12 @@ class CaseworkerResolverTest {
 
 	@Test
 	void ignoresServicesWithMissingOrGarbledStartDateWhenPickingMostRecent() {
-		when(lifecareFcIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(PERSON_ID), any(), any())).thenReturn(
 			new ApiPaginationCompositePersonBasedServiceDTO()
 				.addResultItem(new PersonBasedServiceDTO().caseworker("No Date Caseworker"))
 				.addResultItem(new PersonBasedServiceDTO().startDate("not-a-date").caseworker("Garbled Date Caseworker"))
 				.addResultItem(new PersonBasedServiceDTO().startDate("2026-02-01").caseworker("Anna Andersson")));
-		when(lifecareFcIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
+		when(lifecareFamilyCareIntegrationMock.getUsers(USERS_LIMIT, null, null, null)).thenReturn(List.of(
 			new User().id("9001").fullName("Anna Andersson").networkUserId("anna01ker")));
 
 		assertThat(resolver.resolve(PERSON_ID, DATE)).map(ResolvedCaseworker::fullName).contains("Anna Andersson");
@@ -152,7 +152,7 @@ class CaseworkerResolverTest {
 
 	@Test
 	void returnsEmptyWithoutUserLookupWhenServiceResultListIsNull() {
-		when(lifecareFcIntegrationMock.getServices(eq(PERSON_ID), any(), any()))
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(PERSON_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedServiceDTO().result(null));
 
 		assertThat(resolver.resolve(PERSON_ID, DATE)).isEmpty();

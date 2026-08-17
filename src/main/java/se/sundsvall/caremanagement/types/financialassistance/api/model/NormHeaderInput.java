@@ -17,7 +17,7 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 @Schema(description = "Caseworker edit of the calculation header — norm, calculation dates and custom household size.")
 public class NormHeaderInput {
 
-	@Schema(description = "The selected FC norm id (Norm)", examples = "5")
+	@Schema(description = "The selected FamilyCare norm id (Norm)", examples = "5")
 	private Integer normId;
 
 	@ArraySchema(schema = @Schema(description = "The norm type", examples = "NATIONAL_NORM", allowableValues = {

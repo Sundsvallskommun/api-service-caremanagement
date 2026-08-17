@@ -1,16 +1,16 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
-import generated.se.sundsvall.lifecarefc.CommonCalculationExpenseDTO;
-import generated.se.sundsvall.lifecarefc.CommonCalculationIncomeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedDecisionDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedDecisionPersonDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedPersonDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedAktualiseringDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedCalculationDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefamilycare.CommonCalculationExpenseDTO;
+import generated.se.sundsvall.lifecarefamilycare.CommonCalculationIncomeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionPersonDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 
 import static java.time.Month.JUNE;
 import static java.time.Month.MARCH;
@@ -35,7 +35,7 @@ class LifecareCaseServiceTest {
 	private static final LocalDate REFERENCE = LocalDate.of(2026, JUNE, 15);
 
 	@Mock
-	private LifecareFcIntegration integrationMock;
+	private LifecareFamilyCareIntegration integrationMock;
 
 	private LifecareCaseService service() {
 		return new LifecareCaseService(integrationMock, 13);

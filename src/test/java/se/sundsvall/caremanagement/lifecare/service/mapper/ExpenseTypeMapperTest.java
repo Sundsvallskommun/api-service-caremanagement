@@ -1,8 +1,8 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationExpenseTypeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationSpecialExpenseTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationExpenseTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationSpecialExpenseTypeDTO;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

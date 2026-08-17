@@ -50,7 +50,8 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * process-classified
  * incomes without touching Lifecare ({@link #prepareCalculation}) and, once a decision is taken, committing the
  * effective
- * draft to Lifecare FC ({@link #commitCalculation}). This service also owns the editable draft (get/patch header) and
+ * draft to Lifecare FamilyCare ({@link #commitCalculation}). This service also owns the editable draft (get/patch
+ * header) and
  * the from-application commit; the errand envelope, its strongly-typed application data and the case-history reads stay
  * on the per-resource FinancialAssistanceErrandService / FinancialAssistanceLifecareService /
  * FinancialAssistanceActualisationService / FinancialAssistancePaymentService.
@@ -222,7 +223,8 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/**
-	 * Create the calculation in Lifecare FC from the classified incomes — called once a decision is taken, never during
+	 * Create the calculation in Lifecare FamilyCare from the classified incomes — called once a decision is taken, never
+	 * during
 	 * the daily SSBTEK loop. Returns the created calculation id (plus the completeness verdict for reference).
 	 */
 	public CalculationResponse commitCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
@@ -243,8 +245,9 @@ public class FinancialAssistanceCalculationService {
 			header.getCalculationDate(), header.getHasCustomHouseholdSize(), header.getHouseholdSize());
 		final var calculationId = calculationService.commitEffective(applicant, applicationMonth, calculationHeader, incomes, expenses, persons);
 
-		// The calculation is now in Lifecare via the FC API; ask RPA to mirror the rest of the decision surface that has no
-		// FC endpoint. Best-effort — the Lifecare write already succeeded, so a queue hiccup must not fail the commit.
+		// The calculation is now in Lifecare via the FamilyCare API; ask RPA to mirror the rest of the decision surface that
+		// has no
+		// FamilyCare endpoint. Best-effort — the Lifecare write already succeeded, so a queue hiccup must not fail the commit.
 		triggerRpaWrite(municipalityId, errandId);
 
 		return CalculationResponse.create()
@@ -254,10 +257,12 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/**
-	 * Create the calculation in Lifecare FC straight from the incomes, costs and household the citizen declared in the
+	 * Create the calculation in Lifecare FamilyCare straight from the incomes, costs and household the citizen declared in
+	 * the
 	 * application — the new application path: no SSBTEK, no daily loop, no caseworker draft. Incomes come from the
 	 * application's
-	 * own declared incomes (resolved to FC types by name), expenses and persons from the same feeder the renewal path uses
+	 * own declared incomes (resolved to FamilyCare types by name), expenses and persons from the same feeder the renewal
+	 * path uses
 	 * (both already application-sourced), and the norm from the proposal for the application month. Posts in one shot and
 	 * returns the created calculation id.
 	 */
@@ -289,7 +294,7 @@ public class FinancialAssistanceCalculationService {
 		return CalculationResponse.create().withCalculationId(calculationId);
 	}
 
-	/** The application's declared incomes as the neutral {@link ApplicationIncome} the FC mapper consumes. */
+	/** The application's declared incomes as the neutral {@link ApplicationIncome} the FamilyCare mapper consumes. */
 	private static List<ApplicationIncome> toApplicationIncomes(final List<FaIncome> incomes) {
 		return ofNullable(incomes).orElseGet(List::of).stream()
 			.map(income -> new ApplicationIncome(income.getIncomeType(), income.getAmount(), income.getIncomeDate(), toRole(income.getRecipient())))
@@ -305,7 +310,8 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/**
-	 * The (editable) draft calculation for an errand — the FC income rows the caseworker reviews and may edit before a
+	 * The (editable) draft calculation for an errand — the FamilyCare income rows the caseworker reviews and may edit
+	 * before a
 	 * decision. Scoped: throws {@code 404} when the errand (or its draft) is missing.
 	 */
 	@Transactional(readOnly = true)

@@ -69,7 +69,7 @@ class FinancialAssistanceCalculationResource {
 
 	@PostMapping(path = "/financial-assistance/calculation/commit", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Create the calculation in Lifecare (after decision)",
-		description = "Builds the calculation from the classified incomes and creates it in Lifecare FC, returning the created calculation id. Called once a decision is taken — never during the daily SSBTEK loop.",
+		description = "Builds the calculation from the classified incomes and creates it in Lifecare FamilyCare, returning the created calculation id. Called once a decision is taken — never during the daily SSBTEK loop.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -84,7 +84,7 @@ class FinancialAssistanceCalculationResource {
 
 	@PostMapping(path = "/financial-assistance/calculation/from-application", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Create the calculation in Lifecare straight from the application (new application)",
-		description = "Builds the calculation from the data the citizen declared in the application — incomes resolved to FC types by name, expenses and household from the same feeder the renewal path uses — and creates it in Lifecare FC in one shot, returning the created calculation id. No SSBTEK, no daily loop, no caseworker draft. Used by the new application process.",
+		description = "Builds the calculation from the data the citizen declared in the application — incomes resolved to FamilyCare types by name, expenses and household from the same feeder the renewal path uses — and creates it in Lifecare FamilyCare in one shot, returning the created calculation id. No SSBTEK, no daily loop, no caseworker draft. Used by the new application process.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -99,7 +99,7 @@ class FinancialAssistanceCalculationResource {
 
 	@GetMapping(path = "/financial-assistance/{errandId}/calculation/draft", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read the draft calculation",
-		description = "The FC income rows the financial assistance process prepared (not yet created in Lifecare) for the caseworker to review and edit before a decision. 404 when no draft exists yet.",
+		description = "The FamilyCare income rows the financial assistance process prepared (not yet created in Lifecare) for the caseworker to review and edit before a decision. 404 when no draft exists yet.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))

@@ -1,20 +1,20 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDocumentDTO;
-import generated.se.sundsvall.lifecarefc.CommonCalculationExpenseDTO;
-import generated.se.sundsvall.lifecarefc.CommonCalculationIncomeDTO;
-import generated.se.sundsvall.lifecarefc.CommonCalculationSpecialExpenseDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedDecisionDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedDecisionPersonDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedDocumentDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedCalculationDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDocumentDTO;
+import generated.se.sundsvall.lifecarefamilycare.CommonCalculationExpenseDTO;
+import generated.se.sundsvall.lifecarefamilycare.CommonCalculationIncomeDTO;
+import generated.se.sundsvall.lifecarefamilycare.CommonCalculationSpecialExpenseDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionPersonDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedDocumentDTO;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationExpenseView;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationIncomeView;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationPersonView;
@@ -27,13 +27,16 @@ import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 
 /**
- * Reads a person's Lifecare FC case history — calculations, decisions and documents — for the caseworker-facing case
- * view, and fetches a single document's content. Wraps {@link LifecareFcIntegration}, reducing the generated FC DTOs to
+ * Reads a person's Lifecare FamilyCare case history — calculations, decisions and documents — for the caseworker-facing
+ * case
+ * view, and fetches a single document's content. Wraps {@link LifecareFamilyCareIntegration}, reducing the generated
+ * FamilyCare DTOs to
  * the display projections in {@code lifecare.service.model} so the generated types never leave the integration
  * boundary.
  *
  * <p>
- * The list reads bound the FC query with ISO local dates; an empty/absent FC page maps to an empty list. Calls
+ * The list reads bound the FamilyCare query with ISO local dates; an empty/absent FamilyCare page maps to an empty
+ * list. Calls
  * propagate the integration's {@code BAD_GATEWAY} problem on failure — the caller decides whether to treat the lookup
  * as
  * best-effort.
@@ -42,10 +45,10 @@ import static java.util.Optional.ofNullable;
 @Service
 public class LifecareCaseHistoryService {
 
-	private final LifecareFcIntegration lifecareFcIntegration;
+	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
 
-	public LifecareCaseHistoryService(final LifecareFcIntegration lifecareFcIntegration) {
-		this.lifecareFcIntegration = lifecareFcIntegration;
+	public LifecareCaseHistoryService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration) {
+		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
 	}
 
 	/**
@@ -57,7 +60,7 @@ public class LifecareCaseHistoryService {
 	 * @return          the person's calculations in the period (empty when none)
 	 */
 	public List<CalculationView> listCalculations(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFcIntegration.getCalculations(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
+		return ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -74,7 +77,7 @@ public class LifecareCaseHistoryService {
 	 * @return          the person's decisions in the period (empty when none)
 	 */
 	public List<DecisionView> listDecisions(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFcIntegration.getDecisions(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
+		return ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -92,7 +95,7 @@ public class LifecareCaseHistoryService {
 	 * @return          the person's documents in the period (empty when none)
 	 */
 	public List<DocumentView> listDocuments(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFcIntegration.getDocuments(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
+		return ofNullable(lifecareFamilyCareIntegration.getDocuments(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
 			.map(ApiPaginationCompositePersonBasedDocumentDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -107,7 +110,7 @@ public class LifecareCaseHistoryService {
 	 * @return    the raw document bytes (PDF)
 	 */
 	public byte[] documentContent(final String id) {
-		return lifecareFcIntegration.getDocumentContent(id);
+		return lifecareFamilyCareIntegration.getDocumentContent(id);
 	}
 
 	private static CalculationView toCalculation(final PersonBasedCalculationDTO dto) {

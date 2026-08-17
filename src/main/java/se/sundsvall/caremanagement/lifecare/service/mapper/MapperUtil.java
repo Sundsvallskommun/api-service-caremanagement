@@ -1,7 +1,7 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationCalculationIncomeTypeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationCalculationIncomeTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -13,7 +13,8 @@ import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toMap;
 
 /**
- * Small shared helpers for the lifecare FC mappers — pulled out of the individual mappers where they were duplicated.
+ * Small shared helpers for the lifecare FamilyCare mappers — pulled out of the individual mappers where they were
+ * duplicated.
  */
 public final class MapperUtil {
 
@@ -30,7 +31,8 @@ public final class MapperUtil {
 	}
 
 	/**
-	 * Index a proposal's calculation income types by normalized name → FC type id, keeping insertion order and the first
+	 * Index a proposal's calculation income types by normalized name → FamilyCare type id, keeping insertion order and the
+	 * first
 	 * id when two types normalize to the same name. Types with a null name or id are skipped.
 	 */
 	public static Map<String, Integer> indexIncomeTypeIds(final PersonBasedCalculationProposalDTO proposal) {

@@ -3,7 +3,7 @@ package se.sundsvall.caremanagement.lifecare.service;
 import java.util.List;
 
 /**
- * The household roster distilled from a person's most recent Lifecare FC calculation (the persons it included),
+ * The household roster distilled from a person's most recent Lifecare FamilyCare calculation (the persons it included),
  * paired with the co-applicant flagged on the most recent decision. Drives a financial assistance renewal pre-fill —
  * the applicant, the
  * co-applicant and the remaining household members (children). Lifecare supplies personal identity number + name only;

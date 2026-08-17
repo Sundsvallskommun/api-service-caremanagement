@@ -152,10 +152,12 @@ public final class CalculationDraftMapper {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
-	// Live draft row -> effective FC row (the effective value of each row, ready to post to Lifecare FC).
+	// Live draft row -> effective FamilyCare row (the effective value of each row, ready to post to Lifecare FamilyCare).
 	// ------------------------------------------------------------------------------------------------------------------
 
-	/** One live income row → its effective FC income (applicant + co-applicant effective amounts), ready to post. */
+	/**
+	 * One live income row → its effective FamilyCare income (applicant + co-applicant effective amounts), ready to post.
+	 */
 	public static EffectiveIncome toEffectiveIncome(final FaNormIncomeEntity row) {
 		return new EffectiveIncome(row.getTypeId(),
 			effectiveDouble(row.getApplicantCaseworkerAmount(), row.getApplicantProcessAmount()), row.getApplicantAmountDate(),

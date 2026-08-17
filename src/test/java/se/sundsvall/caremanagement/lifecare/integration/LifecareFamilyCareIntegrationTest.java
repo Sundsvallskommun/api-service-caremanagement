@@ -1,20 +1,20 @@
 package se.sundsvall.caremanagement.lifecare.integration;
 
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedCalculationDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedDecisionDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedExecutionDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedInvestigationDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedPaymentDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedResourceAllocationDTO;
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedServiceDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedContactDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedPersonDTO;
-import generated.se.sundsvall.lifecarefc.PostAktualiseringsBodyRequest;
-import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
-import generated.se.sundsvall.lifecarefc.User;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedAktualiseringDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedCalculationDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedExecutionDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedInvestigationDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedPaymentDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedResourceAllocationDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
+import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
+import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
+import generated.se.sundsvall.lifecarefamilycare.User;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,17 +38,17 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
-class LifecareFcIntegrationTest {
+class LifecareFamilyCareIntegrationTest {
 
 	private static final String PERSON_ID = "200001012384";
 	private static final String START = "2026-04-01";
 	private static final String END = "2026-06-30";
 
 	@Mock
-	private LifecareFcClient clientMock;
+	private LifecareFamilyCareClient clientMock;
 
 	@InjectMocks
-	private LifecareFcIntegration integration;
+	private LifecareFamilyCareIntegration integration;
 
 	// ---- Person-based reads ------------------------------------------------------------------------------------------
 
@@ -160,7 +160,7 @@ class LifecareFcIntegrationTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
-			.isEqualTo("Error fetching users in Lifecare FC: 404 Not Found: boom");
+			.isEqualTo("Error fetching users in Lifecare FamilyCare: 404 Not Found: boom");
 	}
 
 	@Test
@@ -181,7 +181,7 @@ class LifecareFcIntegrationTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
-			.isEqualTo("Error fetching decision in Lifecare FC: RuntimeException");
+			.isEqualTo("Error fetching decision in Lifecare FamilyCare: RuntimeException");
 
 		verify(clientMock).getDecisions(PERSON_ID, START, END, null, null, false);
 	}
@@ -206,7 +206,7 @@ class LifecareFcIntegrationTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
-			.isEqualTo("Error fetching actualisation proposal in Lifecare FC: 404 Not Found: boom");
+			.isEqualTo("Error fetching actualisation proposal in Lifecare FamilyCare: 404 Not Found: boom");
 
 		verify(clientMock).getActualisationProposal(PERSON_ID);
 	}
@@ -230,7 +230,7 @@ class LifecareFcIntegrationTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
-			.isEqualTo("Error creating actualisation in Lifecare FC: RuntimeException");
+			.isEqualTo("Error creating actualisation in Lifecare FamilyCare: RuntimeException");
 
 		verify(clientMock).createActualisation(body);
 	}
@@ -264,7 +264,7 @@ class LifecareFcIntegrationTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
-			.isEqualTo("Error creating calculation in Lifecare FC: 502 Bad Gateway: upstream down");
+			.isEqualTo("Error creating calculation in Lifecare FamilyCare: 502 Bad Gateway: upstream down");
 
 		verify(clientMock).createCalculation(body);
 	}
@@ -299,7 +299,7 @@ class LifecareFcIntegrationTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
-			.isEqualTo("Error uploading actualisation attachment in Lifecare FC: RuntimeException");
+			.isEqualTo("Error uploading actualisation attachment in Lifecare FamilyCare: RuntimeException");
 	}
 
 	// ---- describe(): transport-failure messages must not reach the problem detail ------------------------------------
@@ -307,7 +307,7 @@ class LifecareFcIntegrationTest {
 	@Test
 	void transportFailureMessageIsNotLeakedIntoProblemDetail() {
 		// A Feign transport failure embeds the full request line (personId + key) in its message — must be dropped.
-		final var leaky = "GET https://lifecare-fc/Persons?personId=200001012384&key=SUPER-SECRET-KEY HTTP/1.1";
+		final var leaky = "GET https://lifecare-familycare/Persons?personId=200001012384&key=SUPER-SECRET-KEY HTTP/1.1";
 		when(clientMock.getPerson(PERSON_ID)).thenThrow(new RuntimeException(leaky));
 
 		assertThatThrownBy(() -> integration.getPerson(PERSON_ID))
@@ -319,7 +319,7 @@ class LifecareFcIntegrationTest {
 				assertThat(detail).doesNotContain("200001012384");
 				assertThat(detail).doesNotContain("SUPER-SECRET-KEY");
 				// Only the exception class name is exposed.
-				assertThat(detail).isEqualTo("Error fetching person in Lifecare FC: RuntimeException");
+				assertThat(detail).isEqualTo("Error fetching person in Lifecare FamilyCare: RuntimeException");
 			});
 	}
 

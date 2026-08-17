@@ -18,9 +18,10 @@ import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * One income row of the calculation draft — one FC income type, with a applicant (applicant, "S") side and a
+ * One income row of the calculation draft — one FamilyCare income type, with a applicant (applicant, "S") side and a
  * co-applicant
- * (co-applicant, "M") side, mirroring the Lifecare INCOMES tab and FC {@code CalculationIncomes}. Each side keeps the
+ * (co-applicant, "M") side, mirroring the Lifecare INCOMES tab and FamilyCare {@code CalculationIncomes}. Each side
+ * keeps the
  * amount the process decided (from the classified SSBTEK income, written only by the daily prepare) separate from the
  * amount a caseworker decided (written only from Draken); the effective amount per side is the caseworker amount when
  * set, otherwise the process amount. A row can be soft-deleted and is then excluded but never resurrected by the daily

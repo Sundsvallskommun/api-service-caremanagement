@@ -1,8 +1,8 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationCalculationIncomeTypeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationIncomePostDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationCalculationIncomeTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationIncomePostDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
-import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 
 import static java.util.Optional.ofNullable;
@@ -27,32 +27,34 @@ import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.A
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;
 
 /**
- * Maps incomes already classified by the operaton rules to FC calculation income rows. The raw list decision is
+ * Maps incomes already classified by the operaton rules to FamilyCare calculation income rows. The raw list decision is
  * done — each income carries its target calculation category; this mapper only resolves that category to the numeric
- * FC type id offered by the calculation proposal and merges incomes of the same type into one row (applicant and
+ * FamilyCare type id offered by the calculation proposal and merges incomes of the same type into one row (applicant
+ * and
  * co-applicant amounts summed into their own columns). Off-list / "ej ta med" incomes (no {@code TA_MED} action or no
  * category) are skipped — their warnings already come from operaton. This is the plumbing half of the former
  * {@code SsbtekToFcIncomeMapper}; the raw list half moved to the engine.
  */
-public final class ClassifiedIncomeToFcMapper {
+public final class ClassifiedIncomeToFamilyCareMapper {
 
 	private static final String TRANSFER_ACTION_PREFIX = "TA_MED";
 
-	private ClassifiedIncomeToFcMapper() {}
+	private ClassifiedIncomeToFamilyCareMapper() {}
 
 	/**
-	 * Map the classified incomes to FC calculation rows for the given calculation proposal.
+	 * Map the classified incomes to FamilyCare calculation rows for the given calculation proposal.
 	 *
 	 * @param  classified the incomes classified by the operaton rules (maybe {@code null})
-	 * @param  proposal   the FC calculation proposal whose {@code calculationIncomeTypes} supply the numeric type ids
-	 * @return            the FC income rows (incomes resolving to the same type id are merged)
+	 * @param  proposal   the FamilyCare calculation proposal whose {@code calculationIncomeTypes} supply the numeric type
+	 *                    ids
+	 * @return            the FamilyCare income rows (incomes resolving to the same type id are merged)
 	 */
 	public static List<PersonBasedCalculationIncomePostDTO> toCalculationIncomes(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
 		final var typeIdByName = MapperUtil.indexIncomeTypeIds(proposal);
 
 		return ofNullable(classified).orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
-			.filter(ClassifiedIncomeToFcMapper::isTransferable)
+			.filter(ClassifiedIncomeToFamilyCareMapper::isTransferable)
 			.map(income -> resolve(income, typeIdByName))
 			.filter(Objects::nonNull)
 			// Drop role-less incomes — they can't be attributed to the applicant or co-applicant amount, so (consistent
@@ -65,23 +67,25 @@ public final class ClassifiedIncomeToFcMapper {
 	}
 
 	/**
-	 * Map the classified incomes to draft income lines — one line per (FC income type, recipient), the granularity the
+	 * Map the classified incomes to draft income lines — one line per (FamilyCare income type, recipient), the granularity
+	 * the
 	 * calculation draft stores so a caseworker can override or soft-delete a single person's income of a type. The same
 	 * transferability + type-id resolution as {@link #toCalculationIncomes} is used; the difference is the rows are not
 	 * folded across recipients.
 	 *
 	 * @param  classified the incomes classified by the operaton rules (maybe {@code null})
-	 * @param  proposal   the FC calculation proposal whose {@code calculationIncomeTypes} supply the numeric type ids +
+	 * @param  proposal   the FamilyCare calculation proposal whose {@code calculationIncomeTypes} supply the numeric type
+	 *                    ids +
 	 *                    names
 	 * @return            one income line per (type id, recipient), amounts summed within the pair
 	 */
-	public static List<FcIncomeLine> toIncomeLines(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
+	public static List<FamilyCareIncomeLine> toIncomeLines(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
 		final var typeIdByName = MapperUtil.indexIncomeTypeIds(proposal);
 		final var nameById = indexIncomeTypeNamesById(proposal);
 
 		return ofNullable(classified).orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
-			.filter(ClassifiedIncomeToFcMapper::isTransferable)
+			.filter(ClassifiedIncomeToFamilyCareMapper::isTransferable)
 			.map(income -> resolve(income, typeIdByName))
 			.filter(Objects::nonNull)
 			// A classified income with no role can't be folded per-recipient — drop it (consistent with the
@@ -93,10 +97,10 @@ public final class ClassifiedIncomeToFcMapper {
 			.toList();
 	}
 
-	private static FcIncomeLine toLine(final List<Resolved> group, final Map<Integer, String> nameById) {
+	private static FamilyCareIncomeLine toLine(final List<Resolved> group, final Map<Integer, String> nameById) {
 		final var typeId = group.getFirst().typeId();
 		final var role = group.getFirst().income().role();
-		return new FcIncomeLine(typeId, nameById.get(typeId), role.name(),
+		return new FamilyCareIncomeLine(typeId, nameById.get(typeId), role.name(),
 			sumByRole(group, role), MapperUtil.toOffsetDateTime(latestDateByRole(group, role)), noteFor(group));
 	}
 
@@ -109,15 +113,16 @@ public final class ClassifiedIncomeToFcMapper {
 	}
 
 	/**
-	 * The previous-month FC income-type names not covered by this month's classified incomes — the basis for the financial
+	 * The previous-month FamilyCare income-type names not covered by this month's classified incomes — the basis for the
+	 * financial
 	 * assistance "all
 	 * last month's calculation values present" completeness check. Matching is on the normalised type name, the same key
 	 * {@link #toCalculationIncomes} resolves on, so the two months compare like-for-like. An empty result means every
 	 * previous income type has a transferable income this month (i.e. the information is complete).
 	 *
-	 * @param  previousTypeNames the income-type names on the previous calculation (FC {@code getType()})
+	 * @param  previousTypeNames the income-type names on the previous calculation (FamilyCare {@code getType()})
 	 * @param  classified        this month's classified incomes
-	 * @param  proposal          this month's FC calculation proposal (supplies the valid type names)
+	 * @param  proposal          this month's FamilyCare calculation proposal (supplies the valid type names)
 	 * @return                   the previous type names with no transferable income this month
 	 */
 	public static List<String> missingPreviousIncomeTypes(final List<String> previousTypeNames,
@@ -131,12 +136,12 @@ public final class ClassifiedIncomeToFcMapper {
 			.toList();
 	}
 
-	/** The normalised FC income-type names this month's transferable classified incomes resolve to. */
+	/** The normalised FamilyCare income-type names this month's transferable classified incomes resolve to. */
 	private static Set<String> coveredTypeNames(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
 		final var typeIdByName = MapperUtil.indexIncomeTypeIds(proposal);
 		return ofNullable(classified).orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
-			.filter(ClassifiedIncomeToFcMapper::isTransferable)
+			.filter(ClassifiedIncomeToFamilyCareMapper::isTransferable)
 			.map(income -> MapperUtil.normalize(income.calculation()))
 			.filter(typeIdByName::containsKey)
 			.collect(toSet());
@@ -188,7 +193,7 @@ public final class ClassifiedIncomeToFcMapper {
 	private static String noteFor(final List<Resolved> group) {
 		return "SSBTEK: " + group.stream()
 			.map(Resolved::income)
-			.map(ClassifiedIncomeToFcMapper::describe)
+			.map(ClassifiedIncomeToFamilyCareMapper::describe)
 			.distinct()
 			.collect(joining("; "));
 	}
@@ -204,7 +209,7 @@ public final class ClassifiedIncomeToFcMapper {
 		return ofNullable(value).map(BigDecimal::doubleValue).orElse(null);
 	}
 
-	/** An income that resolved to a concrete FC income-type id, pending aggregation. */
+	/** An income that resolved to a concrete FamilyCare income-type id, pending aggregation. */
 	private record Resolved(Integer typeId, SsbtekIncome income) {
 	}
 }

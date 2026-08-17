@@ -1,14 +1,14 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationAktualiseringDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationExpensePostDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationIncomePostDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationInvestigationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationNormDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonPostDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationServiceDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationSpecialExpensePostDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationAktualiseringDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationExpensePostDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationIncomePostDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationInvestigationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationNormDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonPostDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationSpecialExpensePostDTO;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;

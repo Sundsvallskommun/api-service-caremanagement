@@ -25,7 +25,8 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  *
  * <p>
  * {@code source} records provenance — {@code CASEWORKER} for one authored in Draken (RPA later mirrors it onto the
- * person in Lifecare), {@code LIFECARE} for one read out of Lifecare by RPA and surfaced here on the errand. The FC API
+ * person in Lifecare), {@code LIFECARE} for one read out of Lifecare by RPA and surfaced here on the errand. The
+ * FamilyCare API
  * carries no bevakningar endpoint, so the sync is out-of-band: {@code lifecareId} is the monitoring's id in Lifecare
  * once it exists there — null for a caseworker row not yet mirrored, the idempotency key RPA upserts LIFECARE rows on,
  * and (by its presence) the "synced" marker.

@@ -1,15 +1,15 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsFromWhoDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInfoDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInvestigationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsOrganizationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsReasonDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsServiceDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsSpecifyTypeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsWorkingStatusDTO;
-import generated.se.sundsvall.lifecarefc.PostAktualiseringsBodyRequest;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsFromWhoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInfoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInvestigationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsOrganizationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsReasonDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsSpecifyTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsWorkingStatusDTO;
+import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -20,9 +20,9 @@ import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 
 /**
- * Assembles the FC {@link PostAktualiseringsBodyRequest} for a financial-assistance intake (actualisation) by
+ * Assembles the FamilyCare {@link PostAktualiseringsBodyRequest} for a financial-assistance intake (actualisation) by
  * resolving
- * the integer codes the POST body requires from the person's FC actualisation proposal. The proposal's
+ * the integer codes the POST body requires from the person's FamilyCare actualisation proposal. The proposal's
  * {@code FromWho}/{@code Reason} code lists — and the {@code SpecifyType}/{@code WorkingStatus} requirement flags —
  * live
  * inside the chosen actualisation <em>type</em>; the organisation, service and investigation links are top-level.
@@ -33,7 +33,8 @@ import static java.util.Optional.ofNullable;
  * specify-type is only set when the chosen type marks it mandatory, and a working-status only when the chosen type asks
  * for it — then the first offered value is used. The {@code CaseworkerId} is set from the caseworker resolved off the
  * applicant's most recent Lifecare Service (see {@code CaseworkerResolver}) when one is supplied, and left unset
- * otherwise. These selections are intentionally simple and isolated here so they are easy to refine once real FC
+ * otherwise. These selections are intentionally simple and isolated here so they are easy to refine once real
+ * FamilyCare
  * proposals are available, mirroring {@link CalculationAssembler}.
  */
 public final class ActualisationAssembler {
@@ -41,12 +42,13 @@ public final class ActualisationAssembler {
 	private ActualisationAssembler() {}
 
 	/**
-	 * Build the FC actualisation body for one applicant and intake date.
+	 * Build the FamilyCare actualisation body for one applicant and intake date.
 	 *
-	 * @param  applicantPersonId the applicant's personal identity number (the FC actualisation owner)
-	 * @param  proposalDTO       the FC actualisation proposal supplying the code lists; may be {@code null}
+	 * @param  applicantPersonId the applicant's personal identity number (the FamilyCare actualisation owner)
+	 * @param  proposalDTO       the FamilyCare actualisation proposal supplying the code lists; may be {@code null}
 	 * @param  date              the intake date
-	 * @param  caseworkerId      the resolved FC caseworker id to set on the body; may be {@code null}/blank to leave unset
+	 * @param  caseworkerId      the resolved FamilyCare caseworker id to set on the body; may be {@code null}/blank to
+	 *                           leave unset
 	 * @return                   the assembled {@link PostAktualiseringsBodyRequest}
 	 */
 	public static PostAktualiseringsBodyRequest assemble(final String applicantPersonId, final PersonBasedAktualiseringProposalDTO proposalDTO, final LocalDate date, final String caseworkerId) {

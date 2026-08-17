@@ -10,14 +10,16 @@ import se.sundsvall.dept44.configuration.feign.FeignMultiCustomizer;
 import se.sundsvall.dept44.configuration.feign.decoder.ProblemErrorDecoder;
 
 /**
- * Builds the {@link se.sundsvall.caremanagement.lifecare.integration.LifecareFcClient} customizer. FC authenticates
+ * Builds the {@link se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareClient} customizer. FamilyCare
+ * authenticates
  * with
  * a {@code domain} + {@code key}, both required as query parameters; the spec also accepts the key as an
  * {@code X-API-Key} header, so we send both. The header is harmless where ignored and lets us drop the query-string key
  * once Tieto confirms header auth fleet-wide.
  *
  * <p>
- * Feign logging is forced to {@link feign.Logger.Level#NONE}, overriding the dept44 default of {@code FULL}. FC reads
+ * Feign logging is forced to {@link feign.Logger.Level#NONE}, overriding the dept44 default of {@code FULL}. FamilyCare
+ * reads
  * carry the applicant's {@code personId} and the {@code key} secret as query parameters and return income/calculation
  * payloads as bodies; at any level above {@code NONE} Feign would log the request URL (personal identity number +
  * secret) and/or
@@ -26,13 +28,13 @@ import se.sundsvall.dept44.configuration.feign.decoder.ProblemErrorDecoder;
  * regardless of the configured log level.
  */
 @Import(FeignConfiguration.class)
-@EnableConfigurationProperties(LifecareFcProperties.class)
-public class LifecareFcConfiguration {
+@EnableConfigurationProperties(LifecareFamilyCareProperties.class)
+public class LifecareFamilyCareConfiguration {
 
-	public static final String CLIENT_ID = "lifecare-fc";
+	public static final String CLIENT_ID = "lifecare-familycare";
 
 	@Bean
-	FeignBuilderCustomizer feignBuilderCustomizer(final LifecareFcProperties properties) {
+	FeignBuilderCustomizer feignBuilderCustomizer(final LifecareFamilyCareProperties properties) {
 		return FeignMultiCustomizer.create()
 			.withErrorDecoder(new ProblemErrorDecoder(CLIENT_ID))
 			.withRequestInterceptor(template -> {

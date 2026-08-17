@@ -165,7 +165,7 @@ class EligibilityServiceTest {
 		// Both protection sources fail → treated as not protected → routing proceeds normally.
 		noCmErrands();
 		when(citizenServiceMock.hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT)).thenThrow(Problem.valueOf(BAD_GATEWAY, "citizen down"));
-		when(lifecareCaseServiceMock.hasProtectedIdentity(APPLICANT_PNR)).thenThrow(Problem.valueOf(BAD_GATEWAY, "FC down"));
+		when(lifecareCaseServiceMock.hasProtectedIdentity(APPLICANT_PNR)).thenThrow(Problem.valueOf(BAD_GATEWAY, "FamilyCare down"));
 		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
@@ -392,7 +392,7 @@ class EligibilityServiceTest {
 	@Test
 	void lifecareUnavailableButExistsInCmStillRoutes() {
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "FC down"));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "FamilyCare down"));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 

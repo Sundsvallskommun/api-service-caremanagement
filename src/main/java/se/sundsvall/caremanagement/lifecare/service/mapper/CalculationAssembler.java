@@ -1,12 +1,12 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationAktualiseringDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationIncomePostDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationInvestigationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationNormDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationServiceDTO;
-import generated.se.sundsvall.lifecarefc.PostCalculationBodyRequest;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationAktualiseringDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationIncomePostDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationInvestigationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationNormDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -19,29 +19,32 @@ import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 
 /**
- * Assembles the full FC {@link PostCalculationBodyRequest} for an SSBTEK-driven calculation by combining the FC
- * calculation proposal (the service / investigation / norm / actualisation links FC offers for the person) with the
+ * Assembles the full FamilyCare {@link PostCalculationBodyRequest} for an SSBTEK-driven calculation by combining the
+ * FamilyCare
+ * calculation proposal (the service / investigation / norm / actualisation links FamilyCare offers for the person) with
+ * the
  * prepared income rows and the application month.
  *
  * <p>
  * Sprint defaults where the proposal offers a choice: the first service, investigation and (when mandatory)
  * actualisation are taken, and the norm covering the application month — falling back to the first. The calculation
- * spans the application month. Expenses are left to the caseworker and household size to FC (left unset → FC derives
+ * spans the application month. Expenses are left to the caseworker and household size to FamilyCare (left unset →
+ * FamilyCare derives
  * it
  * from the proposal's household). These selections are intentionally simple and isolated here so they are easy to
  * refine
- * once real FC proposals are available.
+ * once real FamilyCare proposals are available.
  */
 public final class CalculationAssembler {
 
 	private CalculationAssembler() {}
 
 	/**
-	 * Build the FC calculation body for one applicant and application month.
+	 * Build the FamilyCare calculation body for one applicant and application month.
 	 *
-	 * @param  applicantPersonId  the applicant's personnummer (the FC calculation owner)
-	 * @param  proposal           the FC calculation proposal supplying the link ids; may be {@code null}
-	 * @param  calculationIncomes the prepared FC income rows; may be {@code null}
+	 * @param  applicantPersonId  the applicant's personnummer (the FamilyCare calculation owner)
+	 * @param  proposal           the FamilyCare calculation proposal supplying the link ids; may be {@code null}
+	 * @param  calculationIncomes the prepared FamilyCare income rows; may be {@code null}
 	 * @param  applicationMonth   the month the application concerns
 	 * @return                    the assembled {@link PostCalculationBodyRequest}
 	 */
@@ -70,13 +73,13 @@ public final class CalculationAssembler {
 	}
 
 	/**
-	 * Build the full three-section FC calculation body — incomes (subtracted), expenses (added) and the household
+	 * Build the full three-section FamilyCare calculation body — incomes (subtracted), expenses (added) and the household
 	 * persons (the norm base) — for one applicant and application month. Reuses the income + proposal-link selection of
 	 * {@link #assemble(String, PersonBasedCalculationProposalDTO, List, YearMonth)}; adds the expenses and persons and,
 	 * when given, overrides the proposal-selected norm with the one chosen on the draft header.
 	 *
-	 * @param  applicantPersonId the applicant's personnummer (the FC calculation owner)
-	 * @param  proposal          the FC calculation proposal supplying the link ids; may be {@code null}
+	 * @param  applicantPersonId the applicant's personnummer (the FamilyCare calculation owner)
+	 * @param  proposal          the FamilyCare calculation proposal supplying the link ids; may be {@code null}
 	 * @param  sections          the income/expense/special-expense/person rows + draft header; fields may be {@code null}
 	 * @param  applicationMonth  the month the application concerns
 	 * @return                   the assembled {@link PostCalculationBodyRequest}
@@ -140,7 +143,7 @@ public final class CalculationAssembler {
 				.findFirst());
 	}
 
-	/** Only link an actualisation when FC says one is mandatory; then take the first offered. */
+	/** Only link an actualisation when FamilyCare says one is mandatory; then take the first offered. */
 	private static Optional<Integer> mandatoryAktualiseringId(final PersonBasedCalculationProposalDTO proposal) {
 		if (!Boolean.TRUE.equals(proposal.getAktualiseringMandatory())) {
 			return Optional.empty();
@@ -159,7 +162,9 @@ public final class CalculationAssembler {
 		return notBeforeFrom && notAfterTo;
 	}
 
-	/** FC dates are ISO calendar dates, some with a trailing time/offset, so parse the leading {@code yyyy-MM-dd}. */
+	/**
+	 * FamilyCare dates are ISO calendar dates, some with a trailing time/offset, so parse the leading {@code yyyy-MM-dd}.
+	 */
 	private static LocalDate parseDate(final String text) {
 		return ofNullable(text)
 			.map(String::trim)

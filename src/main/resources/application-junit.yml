@@ -7,8 +7,8 @@ logging:
 integration:
   operaton:
     url: http://operaton.url
-  lifecare-fc:
-    url: http://lifecarefc.url
+  lifecare-familycare:
+    url: http://lifecarefamilycare.url
     domain: junit-domain
     key: junit-key
   financial-aid:

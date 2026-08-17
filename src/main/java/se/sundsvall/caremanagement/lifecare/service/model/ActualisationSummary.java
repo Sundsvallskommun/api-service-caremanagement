@@ -1,7 +1,7 @@
 package se.sundsvall.caremanagement.lifecare.service.model;
 
 /**
- * A single Lifecare FC actualisation (case intake) as listed for a person — the read-side counterpart of the
+ * A single Lifecare FamilyCare actualisation (case intake) as listed for a person — the read-side counterpart of the
  * write-back the financial assistance intake performs. A privacy-safe projection of the generated
  * {@code PersonBasedAktualiseringDTO}:
  * the {@code personId} (personnummer) is deliberately dropped so it never leaves the integration boundary. The

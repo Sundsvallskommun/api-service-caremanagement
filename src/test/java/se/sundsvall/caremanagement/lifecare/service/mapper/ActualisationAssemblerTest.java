@@ -1,14 +1,14 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsFromWhoDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInfoDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInvestigationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsOrganizationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsReasonDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsServiceDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsSpecifyTypeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsWorkingStatusDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsFromWhoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInfoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInvestigationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsOrganizationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsReasonDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsSpecifyTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsWorkingStatusDTO;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 

@@ -90,7 +90,7 @@ class FinancialAssistanceIntakeResource {
 
 	@PostMapping(path = "/financial-assistance/actualisation", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Create the Lifecare actualisation (case intake)",
-		description = "Builds the actualisation against the applicant's Lifecare FC actualisation proposal and creates it in Lifecare, returning the created actualisation id. When the request carries an errandId, the creation is recorded on the errand as a Decision(ACTUALISATION) for the audit trail.",
+		description = "Builds the actualisation against the applicant's Lifecare FamilyCare actualisation proposal and creates it in Lifecare, returning the created actualisation id. When the request carries an errandId, the creation is recorded on the errand as a Decision(ACTUALISATION) for the audit trail.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))

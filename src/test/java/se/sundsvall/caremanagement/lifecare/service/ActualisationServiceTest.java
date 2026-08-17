@@ -1,10 +1,10 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedAktualiseringDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInfoDTO;
-import generated.se.sundsvall.lifecarefc.PostAktualiseringsBodyRequest;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedAktualiseringDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInfoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -14,7 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.integration.ActualisationAttachment;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 
 import static java.time.Month.JANUARY;
 import static java.time.Month.JUNE;
@@ -30,7 +30,7 @@ class ActualisationServiceTest {
 	private static final LocalDate DATE = LocalDate.of(2026, JUNE, 1);
 
 	@Mock
-	private LifecareFcIntegration lifecareFcIntegrationMock;
+	private LifecareFamilyCareIntegration lifecareFamilyCareIntegrationMock;
 
 	@Mock
 	private CaseworkerResolver caseworkerResolverMock;
@@ -44,8 +44,8 @@ class ActualisationServiceTest {
 			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(3));
 
 		when(caseworkerResolverMock.resolve(APPLICANT, DATE)).thenReturn(Optional.of(new ResolvedCaseworker("9001", "anna01ker", "Anna Andersson")));
-		when(lifecareFcIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
-		when(lifecareFcIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
+		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
+		when(lifecareFamilyCareIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
 		final var result = service.create(APPLICANT, DATE);
 
@@ -53,7 +53,7 @@ class ActualisationServiceTest {
 		assertThat(result.assignedUserId()).isEqualTo("anna01ker");
 
 		final ArgumentCaptor<PostAktualiseringsBodyRequest> captor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
-		verify(lifecareFcIntegrationMock).createActualisation(captor.capture());
+		verify(lifecareFamilyCareIntegrationMock).createActualisation(captor.capture());
 		assertThat(captor.getValue().getPersonId()).isEqualTo(APPLICANT);
 		assertThat(captor.getValue().getDate()).isEqualTo("2026-06-01");
 		assertThat(captor.getValue().getType()).isEqualTo(3);
@@ -66,8 +66,8 @@ class ActualisationServiceTest {
 			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(3));
 
 		when(caseworkerResolverMock.resolve(APPLICANT, DATE)).thenReturn(Optional.empty());
-		when(lifecareFcIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
-		when(lifecareFcIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
+		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
+		when(lifecareFamilyCareIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
 		final var result = service.create(APPLICANT, DATE);
 
@@ -75,7 +75,7 @@ class ActualisationServiceTest {
 		assertThat(result.assignedUserId()).isNull();
 
 		final ArgumentCaptor<PostAktualiseringsBodyRequest> captor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
-		verify(lifecareFcIntegrationMock).createActualisation(captor.capture());
+		verify(lifecareFamilyCareIntegrationMock).createActualisation(captor.capture());
 		assertThat(captor.getValue().getCaseworkerId()).isNull();
 	}
 
@@ -84,9 +84,9 @@ class ActualisationServiceTest {
 		final var proposal = new PersonBasedAktualiseringProposalDTO()
 			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(3));
 
-		when(caseworkerResolverMock.resolve(APPLICANT, DATE)).thenThrow(new RuntimeException("FC down"));
-		when(lifecareFcIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
-		when(lifecareFcIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
+		when(caseworkerResolverMock.resolve(APPLICANT, DATE)).thenThrow(new RuntimeException("FamilyCare down"));
+		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
+		when(lifecareFamilyCareIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
 		final var result = service.create(APPLICANT, DATE);
 
@@ -94,7 +94,7 @@ class ActualisationServiceTest {
 		assertThat(result.assignedUserId()).isNull();
 
 		final ArgumentCaptor<PostAktualiseringsBodyRequest> captor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
-		verify(lifecareFcIntegrationMock).createActualisation(captor.capture());
+		verify(lifecareFamilyCareIntegrationMock).createActualisation(captor.capture());
 		assertThat(captor.getValue().getCaseworkerId()).isNull();
 	}
 
@@ -104,7 +104,7 @@ class ActualisationServiceTest {
 			.id(5012).type("Ansökan").personId(APPLICANT).name("Ekonomiskt bistånd").date("2026-06-01")
 			.reason("Nyansökan").regards("Försörjningsstöd").fromWho("Den enskilde").caseworker("Anna Andersson")
 			.organization("IFO").status("Pågående").investigationId(8801).serviceId(7700).decisionId(9900);
-		when(lifecareFcIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30"))
+		when(lifecareFamilyCareIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30"))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO().addResultItem(dto));
 
 		final var result = service.list(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
@@ -128,7 +128,7 @@ class ActualisationServiceTest {
 
 	@Test
 	void listReturnsEmptyWhenFcHasNoPage() {
-		when(lifecareFcIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30")).thenReturn(null);
+		when(lifecareFamilyCareIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30")).thenReturn(null);
 
 		assertThat(service.list(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30))).isEmpty();
 	}
@@ -141,7 +141,7 @@ class ActualisationServiceTest {
 
 		service.uploadAttachment(5012, "EB-26060001_meddelandehistorik.pdf", content, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun");
 
-		verify(lifecareFcIntegrationMock).postActualisationAttachment(5012,
+		verify(lifecareFamilyCareIntegrationMock).postActualisationAttachment(5012,
 			new ActualisationAttachment("MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun",
 				"EB-26060001_meddelandehistorik.pdf", "application/pdf", content));
 	}

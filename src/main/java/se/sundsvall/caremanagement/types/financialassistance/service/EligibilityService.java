@@ -281,7 +281,8 @@ public class EligibilityService {
 	}
 
 	/**
-	 * Protected identity for one person — protected in population register (citizen) <em>or</em> in Lifecare FC. Each
+	 * Protected identity for one person — protected in population register (citizen) <em>or</em> in Lifecare FamilyCare.
+	 * Each
 	 * source is
 	 * best-effort: a transport/upstream failure is treated as "not protected" so an outage degrades to normal routing
 	 * rather than blocking the applicant.

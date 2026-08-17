@@ -6,14 +6,15 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * Configuration for the Tieto/Lifecare FamilyCare (FC) integration. {@code url} is the FC base path (host +
- * {@code /WESE.FC.Api.FC}); {@code domain} and {@code key} are the FC tenant id and API key applied as query
- * parameters / {@code X-API-Key} header by {@link LifecareFcConfiguration}. The key is sensitive — keep it in a secret,
+ * Configuration for the Tieto/Lifecare FamilyCare integration. {@code url} is the FamilyCare base path (host +
+ * {@code /WESE.FC.Api.FC}); {@code domain} and {@code key} are the FamilyCare tenant id and API key applied as query
+ * parameters / {@code X-API-Key} header by {@link LifecareFamilyCareConfiguration}. The key is sensitive — keep it in a
+ * secret,
  * never in committed config, and out of request logging.
  */
 @Validated
-@ConfigurationProperties(prefix = "integration.lifecare-fc")
-public record LifecareFcProperties(
+@ConfigurationProperties(prefix = "integration.lifecare-familycare")
+public record LifecareFamilyCareProperties(
 
 	@NotBlank String url,
 

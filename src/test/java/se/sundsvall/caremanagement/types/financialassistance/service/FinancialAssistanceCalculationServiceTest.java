@@ -23,7 +23,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
-import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
@@ -306,7 +306,7 @@ class FinancialAssistanceCalculationServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
 		when(calculationServiceMock.applicationIncomeLines(eq("199001011234"), any()))
-			.thenReturn(List.of(new FcIncomeLine(11, "Lön efter skatt", "APPLICANT", new BigDecimal("18500"), null, "Ansökan")));
+			.thenReturn(List.of(new FamilyCareIncomeLine(11, "Lön efter skatt", "APPLICANT", new BigDecimal("18500"), null, "Ansökan")));
 		when(calculationFeederMock.incomeRows(eq(ERRAND_ID), any())).thenReturn(List.of(
 			FaNormIncomeEntity.create().withTypeId(11).withApplicantProcessAmount(new BigDecimal("18500"))));
 		when(calculationFeederMock.applicationExpenseRows(eq(ERRAND_ID), any())).thenReturn(

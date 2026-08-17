@@ -8,7 +8,8 @@ import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
- * Request to build and post an SSBTEK-driven calculation to Lifecare FC for one applicant (and optional co-applicant)
+ * Request to build and post an SSBTEK-driven calculation to Lifecare FamilyCare for one applicant (and optional
+ * co-applicant)
  * and one application month. The household's income basis is fetched from SSBTEK for the rule periods derived from the
  * month; the resulting calculation is created in Lifecare.
  */
@@ -35,7 +36,7 @@ public class CalculationRequest {
 	@ValidUuid
 	private String errandId;
 
-	@Schema(description = "The incomes classified by the operaton rules (the evaluate-income-rules worker output), as JSON. When present, caremanagement maps these to FC income rows instead of fetching SSBTEK and evaluating the raw list itself.")
+	@Schema(description = "The incomes classified by the operaton rules (the evaluate-income-rules worker output), as JSON. When present, caremanagement maps these to FamilyCare income rows instead of fetching SSBTEK and evaluating the raw list itself.")
 	private String classifiedIncomes;
 
 	@Schema(description = "The unhandled-income warnings from the operaton rules, recorded on the errand recommendation")

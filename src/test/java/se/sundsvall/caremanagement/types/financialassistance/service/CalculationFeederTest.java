@@ -11,7 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCost;
@@ -47,8 +47,8 @@ class CalculationFeederTest {
 	void incomeRowsMapsEachLine() {
 		final var date = OffsetDateTime.parse("2026-05-15T00:00:00Z");
 		final var lines = List.of(
-			new FcIncomeLine(20, "Bostadsbidrag", "APPLICANT", new BigDecimal("1850"), date, "note"),
-			new FcIncomeLine(21, "Lön", "CO_APPLICANT", new BigDecimal("12000"), date, null));
+			new FamilyCareIncomeLine(20, "Bostadsbidrag", "APPLICANT", new BigDecimal("1850"), date, "note"),
+			new FamilyCareIncomeLine(21, "Lön", "CO_APPLICANT", new BigDecimal("12000"), date, null));
 
 		final var rows = feeder.incomeRows(ERRAND_ID, lines);
 
@@ -64,13 +64,13 @@ class CalculationFeederTest {
 	@Test
 	void incomeRowsSumsSameTypeSameRecipientLines() {
 		// the application/nyansökan path emits one line per raw declared income with no folding: two OTHER_INCOME for the
-		// same applicant resolve to the same FC type id + recipient and must be summed, not collapsed to the first.
+		// same applicant resolve to the same FamilyCare type id + recipient and must be summed, not collapsed to the first.
 		final var firstDate = OffsetDateTime.parse("2026-05-15T00:00:00Z");
 		final var secondDate = OffsetDateTime.parse("2026-05-20T00:00:00Z");
 		final var lines = List.of(
-			new FcIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("1500"), firstDate, "first"),
-			new FcIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("2500"), secondDate, "second"),
-			new FcIncomeLine(40, "Övriga inkomster", "CO_APPLICANT", new BigDecimal("800"), firstDate, null));
+			new FamilyCareIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("1500"), firstDate, "first"),
+			new FamilyCareIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("2500"), secondDate, "second"),
+			new FamilyCareIncomeLine(40, "Övriga inkomster", "CO_APPLICANT", new BigDecimal("800"), firstDate, null));
 
 		final var rows = feeder.incomeRows(ERRAND_ID, lines);
 
@@ -91,7 +91,7 @@ class CalculationFeederTest {
 	void incomeRowsLeavesAbsentRecipientAmountNull() {
 		// only an applicant line for the type → the co-applicant side stays null (not zero)
 		final var lines = List.of(
-			new FcIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("1500"), null, null));
+			new FamilyCareIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("1500"), null, null));
 
 		final var rows = feeder.incomeRows(ERRAND_ID, lines);
 

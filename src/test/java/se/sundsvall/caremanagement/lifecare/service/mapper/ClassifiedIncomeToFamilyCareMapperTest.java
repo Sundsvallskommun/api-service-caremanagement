@@ -1,14 +1,14 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationCalculationIncomeTypeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationCalculationIncomeTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
-import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 
 import static java.time.Month.MAY;
@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.APPLICANT;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;
 
-class ClassifiedIncomeToFcMapperTest {
+class ClassifiedIncomeToFamilyCareMapperTest {
 
 	private static PersonBasedCalculationProposalDTO proposal() {
 		return new PersonBasedCalculationProposalDTO()
@@ -30,7 +30,7 @@ class ClassifiedIncomeToFcMapperTest {
 
 	@Test
 	void resolvesCategoryToFcTypeIdAndMergesByRole() {
-		final var rows = ClassifiedIncomeToFcMapper.toCalculationIncomes(List.of(
+		final var rows = ClassifiedIncomeToFamilyCareMapper.toCalculationIncomes(List.of(
 			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED_KVITTNING", "1850", APPLICANT),
 			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED_KVITTNING", "200", CO_APPLICANT),
 			classified("Dagersättning", "Dagersättning", "TA_MED", "5000", APPLICANT)),
@@ -47,7 +47,7 @@ class ClassifiedIncomeToFcMapperTest {
 
 	@Test
 	void skipsNonTransferableAndUnknownCategory() {
-		final var rows = ClassifiedIncomeToFcMapper.toCalculationIncomes(List.of(
+		final var rows = ClassifiedIncomeToFamilyCareMapper.toCalculationIncomes(List.of(
 			classified("Handikappersättning", "-", "EJ_TA_MED", "100", APPLICANT),
 			classified("Underhållsstöd", "-", "EJ_PA_LISTAN", "100", APPLICANT),
 			classified("Okänd", "Okänd kategori", "TA_MED", "100", APPLICANT),
@@ -59,18 +59,18 @@ class ClassifiedIncomeToFcMapperTest {
 
 	@Test
 	void nullClassifiedYieldsEmpty() {
-		assertThat(ClassifiedIncomeToFcMapper.toCalculationIncomes(null, proposal())).isEmpty();
+		assertThat(ClassifiedIncomeToFamilyCareMapper.toCalculationIncomes(null, proposal())).isEmpty();
 	}
 
 	@Test
 	void toIncomeLinesDropsNullRoleInsteadOfFailing() {
 		// A classified income with no role must be skipped (it can't be folded per-recipient) rather than NPE in the grouping
 		// key.
-		final var lines = ClassifiedIncomeToFcMapper.toIncomeLines(List.of(
+		final var lines = ClassifiedIncomeToFamilyCareMapper.toIncomeLines(List.of(
 			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED_KVITTNING", "1850", APPLICANT),
 			classified("Dagersättning", "Dagersättning", "TA_MED", "5000", null)),
 			proposal());
 
-		assertThat(lines).extracting(FcIncomeLine::typeId).containsExactly(20);
+		assertThat(lines).extracting(FamilyCareIncomeLine::typeId).containsExactly(20);
 	}
 }

@@ -1,7 +1,7 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationCalculationIncomeTypeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationCalculationIncomeTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.APPLICANT;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;
 
-class ApplicationIncomeToFcMapperTest {
+class ApplicationIncomeToFamilyCareMapperTest {
 
 	private static PersonBasedCalculationProposalDTO proposal() {
 		return new PersonBasedCalculationProposalDTO()
@@ -31,7 +31,7 @@ class ApplicationIncomeToFcMapperTest {
 
 	@Test
 	void resolvesApplicationTypeToFcTypeIdByName() {
-		final var lines = ApplicationIncomeToFcMapper.toIncomeLines(List.of(
+		final var lines = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(
 			income("SALARY", "18500", LocalDate.of(2026, MAY, 25), APPLICANT),
 			income("SWISH_DEPOSITS", "300", LocalDate.of(2026, MAY, 10), CO_APPLICANT)),
 			proposal());
@@ -50,7 +50,7 @@ class ApplicationIncomeToFcMapperTest {
 
 	@Test
 	void foldsTheManyOtherTypesOntoTheSameFcType() {
-		final var lines = ApplicationIncomeToFcMapper.toIncomeLines(List.of(
+		final var lines = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(
 			income("OTHER_INCOME", "100", null, APPLICANT),
 			income("RENT_SHARE_FROM_CHILD", "200", null, APPLICANT),
 			income("FINANCIAL_AID_OTHER_MUNICIPALITY", "300", null, APPLICANT)),
@@ -62,8 +62,8 @@ class ApplicationIncomeToFcMapperTest {
 
 	@Test
 	void skipsUnknownApplicationTypeAndTypeNotOfferedByProposal() {
-		final var lines = ApplicationIncomeToFcMapper.toIncomeLines(List.of(
-			income("MADE_UP_TYPE", "100", null, APPLICANT),               // not in the application→FC table
+		final var lines = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(
+			income("MADE_UP_TYPE", "100", null, APPLICANT),               // not in the application→FamilyCare table
 			income("CHILD_SUPPORT", "100", null, APPLICANT)),             // maps to "Underhållsstöd", absent from this proposal
 			proposal());
 
@@ -72,7 +72,7 @@ class ApplicationIncomeToFcMapperTest {
 
 	@Test
 	void nullIncomeTypeIsSkipped() {
-		final var lines = ApplicationIncomeToFcMapper.toIncomeLines(List.of(
+		final var lines = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(
 			income(null, "100", null, APPLICANT)),
 			proposal());
 
@@ -81,7 +81,7 @@ class ApplicationIncomeToFcMapperTest {
 
 	@Test
 	void nullInputsYieldEmpty() {
-		assertThat(ApplicationIncomeToFcMapper.toIncomeLines(null, proposal())).isEmpty();
-		assertThat(ApplicationIncomeToFcMapper.toIncomeLines(List.of(), new PersonBasedCalculationProposalDTO())).isEmpty();
+		assertThat(ApplicationIncomeToFamilyCareMapper.toIncomeLines(null, proposal())).isEmpty();
+		assertThat(ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(), new PersonBasedCalculationProposalDTO())).isEmpty();
 	}
 }

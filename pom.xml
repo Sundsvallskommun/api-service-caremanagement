@@ -261,12 +261,12 @@
 						</configuration>
 					</execution>
 					<execution>
-						<id>lifecare-fc-api</id>
+						<id>lifecare-familycare-api</id>
 						<goals>
 							<goal>generate</goal>
 						</goals>
 						<configuration>
-							<inputSpec>src/main/resources/integrations/lifecare-fc-api.json</inputSpec>
+							<inputSpec>src/main/resources/integrations/lifecare-familycare-api.json</inputSpec>
 							<output>${generated-sources-path}</output>
 							<generatorName>spring</generatorName>
 							<generateApis>false</generateApis>
@@ -277,7 +277,7 @@
 								<sourceFolder>models</sourceFolder>
 								<dateLibrary>java8</dateLibrary>
 								<apiPackage>generated</apiPackage>
-								<modelPackage>generated.se.sundsvall.lifecarefc</modelPackage>
+								<modelPackage>generated.se.sundsvall.lifecarefamilycare</modelPackage>
 								<openApiNullable>false</openApiNullable>
 								<generatePom>false</generatePom>
 								<useBeanValidation>true</useBeanValidation>

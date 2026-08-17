@@ -16,7 +16,7 @@ import static se.sundsvall.caremanagement.financialaid.integration.configuration
  * service).
  * The response is the aggregated per-agency basis (af/csn/fk/skv/so/tns/miv) returned as a nested, untyped JSON map —
  * the agency payloads are heterogeneous, so there is no typed model. The SSBTEK reader downstream turns this into
- * normalised {@code SsbtekIncome}s; see vof-ekonomiskt-bistand/architecture/lifecare-fc-api.md.
+ * normalised {@code SsbtekIncome}s; see vof-ekonomiskt-bistand/architecture/lifecare-familycare-api.md.
  */
 @FeignClient(name = CLIENT_ID, url = "${integration.financial-aid.url}", configuration = FinancialAidConfiguration.class)
 @CircuitBreaker(name = CLIENT_ID)

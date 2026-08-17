@@ -9,14 +9,15 @@ import org.springframework.format.annotation.DateTimeFormat;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
- * One income row of the calculation draft, as returned to Draken — one FC income type with a applicant (applicant, "S")
- * side and a co-applicant (co-applicant, "M") side, mirroring the Lifecare INCOMES tab and FC
+ * One income row of the calculation draft, as returned to Draken — one FamilyCare income type with a applicant
+ * (applicant, "S")
+ * side and a co-applicant (co-applicant, "M") side, mirroring the Lifecare INCOMES tab and FamilyCare
  * {@code CalculationIncomes}. Per side the amount the process decided ({@code *ProcessAmount}, from the classified
  * SSBTEK income) is read-only; the caseworker's override ({@code *CaseworkerAmount}) and the note are editable. The
  * effective amount per side ({@code *EffectiveAmount}) is what is posted to Lifecare = the caseworker amount when set,
  * otherwise the process amount. Subtracted from the norm.
  */
-@Schema(description = "One income row of the calculation draft (FC income type with applicant/co-applicant sides, process vs caseworker amounts).")
+@Schema(description = "One income row of the calculation draft (FamilyCare income type with applicant/co-applicant sides, process vs caseworker amounts).")
 public class NormIncomeRow {
 
 	@Schema(description = "The row id", accessMode = Schema.AccessMode.READ_ONLY)
@@ -30,10 +31,10 @@ public class NormIncomeRow {
 	@Schema(description = "Stable 0-based position of the row within its section; assigned on creation and kept across refreshes so the row stays in place", examples = "0", accessMode = Schema.AccessMode.READ_ONLY)
 	private Integer position;
 
-	@Schema(description = "The FC income-type id", examples = "20", accessMode = Schema.AccessMode.READ_ONLY)
+	@Schema(description = "The FamilyCare income-type id", examples = "20", accessMode = Schema.AccessMode.READ_ONLY)
 	private Integer typeId;
 
-	@Schema(description = "The FC income-type name", examples = "Bostadsbidrag", accessMode = Schema.AccessMode.READ_ONLY)
+	@Schema(description = "The FamilyCare income-type name", examples = "Bostadsbidrag", accessMode = Schema.AccessMode.READ_ONLY)
 	private String typeName;
 
 	@Schema(description = "The amount the process decided for the applicant (from the classified SSBTEK income)", examples = "1850.00", accessMode = Schema.AccessMode.READ_ONLY)

@@ -1,11 +1,11 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationCalculationIncomeTypeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationExpensePostDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationIncomePostDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationPersonPostDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationSpecialExpensePostDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationCalculationIncomeTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationExpensePostDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationIncomePostDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonPostDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationSpecialExpensePostDTO;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -19,10 +19,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
-import se.sundsvall.caremanagement.lifecare.service.mapper.ApplicationIncomeToFcMapper;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.service.mapper.ApplicationIncomeToFamilyCareMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.CalculationAssembler;
-import se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFcMapper;
+import se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFamilyCareMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationDraftBuild;
@@ -35,7 +35,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.DraftRow;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
-import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.dept44.problem.Problem;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -45,9 +45,10 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper.BUCKET_SPECIAL_EXPENSE;
 
 /**
- * Builds and posts the calculation to Lifecare FC from incomes already classified by the operaton rules.
+ * Builds and posts the calculation to Lifecare FamilyCare from incomes already classified by the operaton rules.
  * caremanagement no longer fetches SSBTEK or evaluates the raw list — the rules live in the process. This service
- * resolves each classified income's category to an FC income-type id (via {@link ClassifiedIncomeToFcMapper}),
+ * resolves each classified income's category to an FamilyCare income-type id (via
+ * {@link ClassifiedIncomeToFamilyCareMapper}),
  * assembles
  * the calculation against the applicant's proposal (via {@link CalculationAssembler}), and posts it. It also reports
  * whether this month's calculation covers every income type the previous month's did — the financial assistance process
@@ -64,13 +65,13 @@ public class CalculationService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(CalculationService.class);
 
-	private final LifecareFcIntegration lifecareFcIntegration;
+	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
 	private final LifecareCaseService lifecareCaseService;
 	private final ObjectMapper objectMapper;
 
-	public CalculationService(final LifecareFcIntegration lifecareFcIntegration, final LifecareCaseService lifecareCaseService,
+	public CalculationService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration, final LifecareCaseService lifecareCaseService,
 		final ObjectMapper objectMapper) {
-		this.lifecareFcIntegration = lifecareFcIntegration;
+		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
 		this.lifecareCaseService = lifecareCaseService;
 		this.objectMapper = objectMapper;
 	}
@@ -81,38 +82,38 @@ public class CalculationService {
 	 * month. The completeness lookup is best-effort: a failure reading the previous calculation never fails the just-
 	 * created calculation; it is reported as complete (with no missing types) so the process is not wedged.
 	 *
-	 * @param  applicantPersonId     the applicant's personal identity number (the FC proposal owner)
+	 * @param  applicantPersonId     the applicant's personal identity number (the FamilyCare proposal owner)
 	 * @param  applicationMonth      the month the application concerns
 	 * @param  classifiedIncomesJson the operaton {@code classifiedIncomes} JSON
 	 * @return                       the created calculation id plus the completeness verdict + missing income types
 	 */
 	public CalculationResult buildAndPostFromClassified(final String applicantPersonId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
 		final var classified = parse(classifiedIncomesJson);
-		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
-		final var incomes = ClassifiedIncomeToFcMapper.toCalculationIncomes(classified, proposal);
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(applicantPersonId);
+		final var incomes = ClassifiedIncomeToFamilyCareMapper.toCalculationIncomes(classified, proposal);
 		final var body = CalculationAssembler.assemble(applicantPersonId, proposal, incomes, applicationMonth);
-		final var calculationId = lifecareFcIntegration.createCalculation(body);
+		final var calculationId = lifecareFamilyCareIntegration.createCalculation(body);
 
 		final var missing = missingPreviousIncomeTypes(applicantPersonId, applicationMonth, classified, proposal);
 		return new CalculationResult(calculationId, missing.isEmpty(), missing);
 	}
 
 	/**
-	 * Build the draft calculation from the classified incomes — the FC income rows plus the completeness verdict —
+	 * Build the draft calculation from the classified incomes — the FamilyCare income rows plus the completeness verdict —
 	 * <strong>without</strong> creating anything in Lifecare. The financial assistance process stores the rows as an
 	 * editable draft and
 	 * polls SSBTEK daily until the information is complete; the Lifecare calculation is created later, on a decision, from
 	 * the (possibly edited) draft (see {@link #postDraftRows}).
 	 *
-	 * @param  applicantPersonId     the applicant's personal identity number (the FC proposal owner)
+	 * @param  applicantPersonId     the applicant's personal identity number (the FamilyCare proposal owner)
 	 * @param  applicationMonth      the month the application concerns
 	 * @param  classifiedIncomesJson the operaton {@code classifiedIncomes} JSON
-	 * @return                       the FC income rows + completeness verdict; nothing is written to Lifecare
+	 * @return                       the FamilyCare income rows + completeness verdict; nothing is written to Lifecare
 	 */
 	public CalculationDraftBuild buildDraft(final String applicantPersonId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
 		final var classified = parse(classifiedIncomesJson);
-		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
-		final var incomes = ClassifiedIncomeToFcMapper.toCalculationIncomes(classified, proposal);
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(applicantPersonId);
+		final var incomes = ClassifiedIncomeToFamilyCareMapper.toCalculationIncomes(classified, proposal);
 		final var typeNamesById = incomeTypeNamesById(proposal);
 		final var rows = incomes.stream().map(income -> toDraftRow(income, typeNamesById)).toList();
 		final var missing = missingPreviousIncomeTypes(applicantPersonId, applicationMonth, classified, proposal);
@@ -120,37 +121,38 @@ public class CalculationService {
 	}
 
 	/**
-	 * Create the calculation in Lifecare FC from the (possibly caseworker-edited) draft income rows — called on a
+	 * Create the calculation in Lifecare FamilyCare from the (possibly caseworker-edited) draft income rows — called on a
 	 * decision. Assembles against the applicant's proposal and posts; returns the created calculation id.
 	 */
 	public Integer postDraftRows(final String applicantPersonId, final YearMonth applicationMonth, final List<DraftRow> rows) {
-		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(applicantPersonId);
 		final var incomes = ofNullable(rows).orElseGet(List::of).stream().map(CalculationService::toPostDto).toList();
 		final var body = CalculationAssembler.assemble(applicantPersonId, proposal, incomes, applicationMonth);
-		return lifecareFcIntegration.createCalculation(body);
+		return lifecareFamilyCareIntegration.createCalculation(body);
 	}
 
 	/**
-	 * The process-derived income lines for the draft — one per (FC income type, recipient) — from the operaton-classified
+	 * The process-derived income lines for the draft — one per (FamilyCare income type, recipient) — from the
+	 * operaton-classified
 	 * incomes resolved against the applicant's calculation proposal. Writes nothing to Lifecare.
 	 */
-	public List<FcIncomeLine> incomeLines(final String applicantPersonId, final String classifiedIncomesJson) {
-		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
-		return ClassifiedIncomeToFcMapper.toIncomeLines(parse(classifiedIncomesJson), proposal);
+	public List<FamilyCareIncomeLine> incomeLines(final String applicantPersonId, final String classifiedIncomesJson) {
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(applicantPersonId);
+		return ClassifiedIncomeToFamilyCareMapper.toIncomeLines(parse(classifiedIncomesJson), proposal);
 	}
 
 	/**
 	 * The process-derived income lines for a calculation built straight from the incomes the citizen declared in the
 	 * application — the new application sibling of {@link #incomeLines}, no SSBTEK. Each application income code is
 	 * translated to
-	 * its FC income type and resolved against the applicant's calculation proposal (via
-	 * {@link ApplicationIncomeToFcMapper});
-	 * incomes whose type does not resolve are skipped. Same {@link FcIncomeLine} shape as the SSBTEK path, so the
+	 * its FamilyCare income type and resolved against the applicant's calculation proposal (via
+	 * {@link ApplicationIncomeToFamilyCareMapper});
+	 * incomes whose type does not resolve are skipped. Same {@link FamilyCareIncomeLine} shape as the SSBTEK path, so the
 	 * downstream fold + commit pipeline is shared. Writes nothing to Lifecare.
 	 */
-	public List<FcIncomeLine> applicationIncomeLines(final String applicantPersonId, final List<ApplicationIncome> incomes) {
-		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
-		return ApplicationIncomeToFcMapper.toIncomeLines(incomes, proposal);
+	public List<FamilyCareIncomeLine> applicationIncomeLines(final String applicantPersonId, final List<ApplicationIncome> incomes) {
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(applicantPersonId);
+		return ApplicationIncomeToFamilyCareMapper.toIncomeLines(incomes, proposal);
 	}
 
 	/**
@@ -158,28 +160,32 @@ public class CalculationService {
 	 * failure reading the previous month is treated as complete so the financial assistance process is not wedged.
 	 */
 	public Completeness completeness(final String applicantPersonId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
-		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(applicantPersonId);
 		final var missing = missingPreviousIncomeTypes(applicantPersonId, applicationMonth, parse(classifiedIncomesJson), proposal);
 		return new Completeness(missing.isEmpty(), missing);
 	}
 
-	/** The norm id the FC proposal offers for the application month (covering window, else first), or {@code null}. */
+	/**
+	 * The norm id the FamilyCare proposal offers for the application month (covering window, else first), or {@code null}.
+	 */
 	public Integer selectNormId(final String applicantPersonId, final YearMonth applicationMonth) {
-		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(applicantPersonId);
 		return CalculationAssembler.selectNormId(proposal, applicationMonth).orElse(null);
 	}
 
 	/**
-	 * Create the calculation in Lifecare FC from the draft's effective rows — called on a decision. Folds the effective
-	 * incomes, expenses (resolving each cost type to an FC expense-type id, skipping the unresolvable) and household
-	 * persons into the FC body, overriding the proposal norm with the one chosen on the draft, and posts it.
+	 * Create the calculation in Lifecare FamilyCare from the draft's effective rows — called on a decision. Folds the
+	 * effective
+	 * incomes, expenses (resolving each cost type to an FamilyCare expense-type id, skipping the unresolvable) and
+	 * household
+	 * persons into the FamilyCare body, overriding the proposal norm with the one chosen on the draft, and posts it.
 	 *
 	 * @return the created Lifecare calculation id
 	 */
 	public Integer commitEffective(final String applicantPersonId, final YearMonth applicationMonth, final CalculationHeader header,
 		final List<EffectiveIncome> incomes, final List<EffectiveExpense> expenses, final List<EffectivePerson> persons) {
 
-		final var proposal = lifecareFcIntegration.getCalculationProposal(applicantPersonId);
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(applicantPersonId);
 		final var incomeDtos = ofNullable(incomes).orElseGet(List::of).stream().map(CalculationService::toIncomeDto).toList();
 
 		final var allExpenses = ofNullable(expenses).orElseGet(List::of);
@@ -194,7 +200,7 @@ public class CalculationService {
 
 		final var sections = new CalculationSections(incomeDtos, expenseDtos, specialExpenseDtos, personDtos, header);
 		final var body = CalculationAssembler.assemble(applicantPersonId, proposal, sections, applicationMonth);
-		return lifecareFcIntegration.createCalculation(body);
+		return lifecareFamilyCareIntegration.createCalculation(body);
 	}
 
 	private static PersonBasedCalculationIncomePostDTO toIncomeDto(final EffectiveIncome income) {
@@ -269,7 +275,7 @@ public class CalculationService {
 		final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
 		try {
 			final var previousTypes = lifecareCaseService.previousCalculationIncomeTypes(applicantPersonId, applicationMonth);
-			return ClassifiedIncomeToFcMapper.missingPreviousIncomeTypes(previousTypes, classified, proposal);
+			return ClassifiedIncomeToFamilyCareMapper.missingPreviousIncomeTypes(previousTypes, classified, proposal);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not determine calculation completeness against the previous month — treating as complete", e);
 			return List.of();

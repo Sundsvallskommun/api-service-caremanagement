@@ -9,8 +9,8 @@ import java.time.LocalDate;
  * plus
  * the net amount, the date it is attributed to, and which household member it belongs to. It backs
  * {@link ClassifiedIncome}: the operaton regelverk classifies these (raw list + thresholds + period selection) and
- * caremanagement maps the result onto FC calculation income rows via
- * {@link se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFcMapper}.
+ * caremanagement maps the result onto FamilyCare calculation income rows via
+ * {@link se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFamilyCareMapper}.
  *
  * <p>
  * Deserialised from the {@code classifiedIncomes[].income} JSON the operaton {@code evaluate-income-regelverk} worker

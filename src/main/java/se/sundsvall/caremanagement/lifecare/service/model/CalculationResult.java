@@ -11,7 +11,7 @@ import java.util.List;
  * reviews a calculation
  * built on the full picture.
  *
- * @param calculationId       the id of the calculation created in Lifecare FC
+ * @param calculationId       the id of the calculation created in Lifecare FamilyCare
  * @param informationComplete whether every previous-month income type is present this month (no missing types)
  * @param missingIncomeTypes  the previous-month income types not yet present this month (empty ⇒ complete)
  */

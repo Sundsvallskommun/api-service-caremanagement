@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:52564
+- url: http://localhost:63155
   description: Generated server url
 tags:
 - name: Statistics
@@ -3108,10 +3108,11 @@ paths:
       summary: Create the calculation in Lifecare straight from the application (new
         application)
       description: "Builds the calculation from the data the citizen declared in the\
-        \ application — incomes resolved to FC types by name, expenses and household\
-        \ from the same feeder the renewal path uses — and creates it in Lifecare\
-        \ FC in one shot, returning the created calculation id. No SSBTEK, no daily\
-        \ loop, no caseworker draft. Used by the new application process."
+        \ application — incomes resolved to FamilyCare types by name, expenses and\
+        \ household from the same feeder the renewal path uses — and creates it in\
+        \ Lifecare FamilyCare in one shot, returning the created calculation id. No\
+        \ SSBTEK, no daily loop, no caseworker draft. Used by the new application\
+        \ process."
       operationId: commitFromApplication
       parameters:
       - name: municipalityId
@@ -3164,8 +3165,8 @@ paths:
       - Financial Assistance · Calculation
       summary: Create the calculation in Lifecare (after decision)
       description: "Builds the calculation from the classified incomes and creates\
-        \ it in Lifecare FC, returning the created calculation id. Called once a decision\
-        \ is taken — never during the daily SSBTEK loop."
+        \ it in Lifecare FamilyCare, returning the created calculation id. Called\
+        \ once a decision is taken — never during the daily SSBTEK loop."
       operationId: commitCalculation
       parameters:
       - name: municipalityId
@@ -3295,10 +3296,10 @@ paths:
       tags:
       - Financial Assistance · Intake
       summary: Create the Lifecare actualisation (case intake)
-      description: "Builds the actualisation against the applicant's Lifecare FC actualisation\
-        \ proposal and creates it in Lifecare, returning the created actualisation\
-        \ id. When the request carries an errandId, the creation is recorded on the\
-        \ errand as a Decision(ACTUALISATION) for the audit trail."
+      description: "Builds the actualisation against the applicant's Lifecare FamilyCare\
+        \ actualisation proposal and creates it in Lifecare, returning the created\
+        \ actualisation id. When the request carries an errandId, the creation is\
+        \ recorded on the errand as a Decision(ACTUALISATION) for the audit trail."
       operationId: createActualisation
       parameters:
       - name: municipalityId
@@ -6479,9 +6480,9 @@ paths:
       tags:
       - Financial Assistance · Calculation
       summary: Read the draft calculation
-      description: The FC income rows the financial assistance process prepared (not
-        yet created in Lifecare) for the caseworker to review and edit before a decision.
-        404 when no draft exists yet.
+      description: The FamilyCare income rows the financial assistance process prepared
+        (not yet created in Lifecare) for the caseworker to review and edit before
+        a decision. 404 when no draft exists yet.
       operationId: getDraft
       parameters:
       - name: municipalityId
@@ -7596,6 +7597,93 @@ components:
           format: date-time
           description: Touched timestamp
           readOnly: true
+    Asset:
+      type: object
+      description: An asset owned by the applicant or co-applicant.
+      properties:
+        assetCategory:
+          type: string
+          description: The category of asset
+          enum:
+          - BANK_SAVINGS
+          - REAL_ESTATE
+          - COMPANY
+          - VEHICLE
+          - OTHER
+          examples:
+          - VEHICLE
+        description:
+          type: string
+          description: Free text description of the asset
+          examples:
+          - Savings account at Swedbank
+        value:
+          type: number
+          description: Estimated value of the asset
+          examples:
+          - 120000.0
+        propertyType:
+          type: string
+          description: Type of real estate property
+          enum:
+          - CONDOMINIUM
+          - HOUSE
+          - PROPERTY
+          - HOLIDAY_HOME
+          examples:
+          - HOUSE
+        purchaseYear:
+          type: integer
+          format: int32
+          description: "Year the property was purchased (REAL_ESTATE only — the form\
+            \ asks for a year, not a full date, for property). Vehicles carry purchaseDate\
+            \ instead."
+          examples:
+          - 2018
+        purchasePrice:
+          type: number
+          description: Price paid when the asset was purchased
+          examples:
+          - 2200000.0
+        companyName:
+          type: string
+          description: Name of the company asset
+          examples:
+          - Andersson Bygg AB
+          maxLength: 255
+          minLength: 0
+        companyAssetSum:
+          type: number
+          description: Total sum of the company's assets
+          examples:
+          - 350000.0
+        vehicleType:
+          type: string
+          description: Type of vehicle
+          enum:
+          - CAR
+          - BOAT
+          - MOTORCYCLE
+          - CARAVAN
+          - MOPED
+          - SNOWMOBILE
+          - OTHER
+          examples:
+          - CAR
+        registrationNumber:
+          type: string
+          description: Vehicle registration number
+          examples:
+          - ABC123
+          maxLength: 16
+          minLength: 0
+        purchaseDate:
+          type: string
+          format: date
+          description: The date the vehicle was purchased (VEHICLE only — the form
+            asks for a full date here). Property carries purchaseYear instead.
+          examples:
+          - 2018-04-12
     Child:
       type: object
       description: A child included in the financial assistance application.
@@ -7688,373 +7776,6 @@ components:
           description: Recipient of the cost or the period it covers
           examples:
           - "Mitt Bostads AB, juni 2026"
-    Income:
-      type: object
-      description: An income reported by the applicant or co-applicant.
-      properties:
-        incomeType:
-          type: string
-          description: The type of income
-          enum:
-          - OTHER_INCOME
-          - FINANCIAL_AID_OTHER_MUNICIPALITY
-          - SALARY
-          - SWISH_DEPOSITS
-          - OCCUPATIONAL_PENSION_INSURANCE
-          - CHILD_SUPPORT
-          - RENT_SHARE_FROM_CHILD
-          examples:
-          - SALARY
-        amount:
-          type: number
-          description: The income amount
-          examples:
-          - 18500.0
-        incomeDate:
-          type: string
-          format: date
-          description: The date the income was received
-          examples:
-          - 2026-05-25
-        recipient:
-          type: string
-          description: Who received the income
-          enum:
-          - APPLICANT
-          - CO_APPLICANT
-          examples:
-          - APPLICANT
-    PendingBenefit:
-      type: object
-      description: A benefit the applicant has applied for but not yet received a
-        decision on.
-      properties:
-        benefitName:
-          type: string
-          description: Name of the pending benefit
-          examples:
-          - Bostadsbidrag
-          maxLength: 255
-          minLength: 0
-        applicantName:
-          type: string
-          description: Name of the person who applied for the benefit
-          examples:
-          - Anna Andersson
-          maxLength: 255
-          minLength: 0
-    Asset:
-      type: object
-      description: An asset owned by the applicant or co-applicant.
-      properties:
-        assetCategory:
-          type: string
-          description: The category of asset
-          enum:
-          - BANK_SAVINGS
-          - REAL_ESTATE
-          - COMPANY
-          - VEHICLE
-          - OTHER
-          examples:
-          - VEHICLE
-        description:
-          type: string
-          description: Free text description of the asset
-          examples:
-          - Savings account at Swedbank
-        value:
-          type: number
-          description: Estimated value of the asset
-          examples:
-          - 120000.0
-        propertyType:
-          type: string
-          description: Type of real estate property
-          enum:
-          - CONDOMINIUM
-          - HOUSE
-          - PROPERTY
-          - HOLIDAY_HOME
-          examples:
-          - HOUSE
-        purchaseYear:
-          type: integer
-          format: int32
-          description: "Year the property was purchased (REAL_ESTATE only — the form\
-            \ asks for a year, not a full date, for property). Vehicles carry purchaseDate\
-            \ instead."
-          examples:
-          - 2018
-        purchasePrice:
-          type: number
-          description: Price paid when the asset was purchased
-          examples:
-          - 2200000.0
-        companyName:
-          type: string
-          description: Name of the company asset
-          examples:
-          - Andersson Bygg AB
-          maxLength: 255
-          minLength: 0
-        companyAssetSum:
-          type: number
-          description: Total sum of the company's assets
-          examples:
-          - 350000.0
-        vehicleType:
-          type: string
-          description: Type of vehicle
-          enum:
-          - CAR
-          - BOAT
-          - MOTORCYCLE
-          - CARAVAN
-          - MOPED
-          - SNOWMOBILE
-          - OTHER
-          examples:
-          - CAR
-        registrationNumber:
-          type: string
-          description: Vehicle registration number
-          examples:
-          - ABC123
-          maxLength: 16
-          minLength: 0
-        purchaseDate:
-          type: string
-          format: date
-          description: The date the vehicle was purchased (VEHICLE only — the form
-            asks for a full date here). Property carries purchaseYear instead.
-          examples:
-          - 2018-04-12
-    Person:
-      type: object
-      description: A person (applicant or co-applicant) on the financial assistance
-        application.
-      properties:
-        role:
-          type: string
-          description: Role of the person
-          enum:
-          - APPLICANT
-          - CO_APPLICANT
-          examples:
-          - APPLICANT
-        partyId:
-          type: string
-          description: Party id (personId GUID) of the person
-          examples:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-          maxLength: 36
-          minLength: 0
-        needsInterpreter:
-          type: boolean
-          description: Whether the person needs an interpreter
-          examples:
-          - "true"
-        interpreterLanguage:
-          type: string
-          description: Language the interpreter should use
-          examples:
-          - Arabiska
-          maxLength: 64
-          minLength: 0
-        hadWorkLast12Months:
-          type: boolean
-          description: Whether the person had work during the last 12 months
-          examples:
-          - "false"
-        hadWorkDescription:
-          type: string
-          description: Description of the work the person had
-          examples:
-          - Substitute in home care services
-        paymentMethod:
-          type: string
-          description: Payment method
-          enum:
-          - BANK_ACCOUNT
-          - OTHER
-          examples:
-          - BANK_ACCOUNT
-        clearingNumber:
-          type: string
-          description: Clearing number of the bank account
-          examples:
-          - 8327-9
-          maxLength: 16
-          minLength: 0
-        accountNumber:
-          type: string
-          description: Bank account number
-          examples:
-          - "123456789"
-          maxLength: 32
-          minLength: 0
-        otherPaymentDescription:
-          type: string
-          description: Description of the payment method when OTHER
-          examples:
-          - Paymentskort
-        paymentSameAsPrevious:
-          type: boolean
-          description: Whether the payment details are the same as previously used
-          examples:
-          - "true"
-        email:
-          type: string
-          description: Email address used for notifications about the application
-          examples:
-          - anna.andersson@example.com
-          maxLength: 128
-          minLength: 0
-        phone:
-          type: string
-          description: Phone number used for SMS notifications about the application
-          examples:
-          - "+46701234567"
-          maxLength: 32
-          minLength: 0
-        notifyByEmail:
-          type: boolean
-          description: Whether the person wants notifications about the application
-            by email
-          examples:
-          - "true"
-        notifyBySms:
-          type: boolean
-          description: Whether the person wants notifications about the application
-            by SMS
-          examples:
-          - "true"
-    Planning:
-      type: object
-      description: The applicant's or co-applicant's planning towards self-sufficiency.
-      properties:
-        person:
-          type: string
-          description: Which person the planning concerns
-          enum:
-          - APPLICANT
-          - CO_APPLICANT
-          examples:
-          - APPLICANT
-        planningType:
-          type: string
-          description: The type of planning
-          enum:
-          - WORK
-          - JOBSEEKING
-          - SICK_LEAVE
-          - SFI
-          - OTHER
-          examples:
-          - WORK
-        workExtent:
-          type: string
-          description: Extent of work
-          enum:
-          - FULL
-          - PART
-          examples:
-          - FULL
-        workDescription:
-          type: string
-          description: Description of the work
-          examples:
-          - Permanent employment as an assistant nurse
-        sickLeaveLevel:
-          type: string
-          description: Level of sick leave (percent)
-          enum:
-          - "100"
-          - "75"
-          - "50"
-          - "25"
-          examples:
-          - "100"
-        sfiStudyPath:
-          type: string
-          description: SFI study path
-          enum:
-          - "1"
-          - "2"
-          - "3"
-          examples:
-          - "1"
-        sfiCourse:
-          type: string
-          description: SFI course
-          enum:
-          - A
-          - B
-          - C
-          - D
-          examples:
-          - B
-        otherDescription:
-          type: string
-          description: Description of other planning
-          examples:
-          - Internship via the employment agency
-    PlannedActivity:
-      type: object
-      description: A planned activity for the applicant or co-applicant.
-      properties:
-        person:
-          type: string
-          description: Which person the activity concerns
-          examples:
-          - APPLICANT
-        activity:
-          type: string
-          description: Description of the activity
-          examples:
-          - Work training placement
-        periodFrom:
-          type: string
-          format: date
-          description: Period from date
-          examples:
-          - 2026-06-01
-        periodTo:
-          type: string
-          format: date
-          description: Period to date
-          examples:
-          - 2026-08-31
-    JobApplication:
-      type: object
-      description: A job application reported by the applicant or co-applicant.
-      properties:
-        person:
-          type: string
-          description: Which person submitted the job application
-          examples:
-          - APPLICANT
-        applicationDate:
-          type: string
-          format: date
-          description: The date the job application was submitted
-          examples:
-          - 2026-05-20
-        jobTitle:
-          type: string
-          description: The job title applied for
-          examples:
-          - Lagerarbetare
-          maxLength: 255
-          minLength: 0
-        employerAndPlace:
-          type: string
-          description: Employer and place of work
-          examples:
-          - "PostNord, Sundsvall"
-          maxLength: 255
-          minLength: 0
     CreateFinancialAssistanceRequest:
       type: object
       description: Request to create a financial assistance errand.
@@ -8287,6 +8008,286 @@ components:
           description: Job applications
           items:
             $ref: "#/components/schemas/JobApplication"
+    Income:
+      type: object
+      description: An income reported by the applicant or co-applicant.
+      properties:
+        incomeType:
+          type: string
+          description: The type of income
+          enum:
+          - OTHER_INCOME
+          - FINANCIAL_AID_OTHER_MUNICIPALITY
+          - SALARY
+          - SWISH_DEPOSITS
+          - OCCUPATIONAL_PENSION_INSURANCE
+          - CHILD_SUPPORT
+          - RENT_SHARE_FROM_CHILD
+          examples:
+          - SALARY
+        amount:
+          type: number
+          description: The income amount
+          examples:
+          - 18500.0
+        incomeDate:
+          type: string
+          format: date
+          description: The date the income was received
+          examples:
+          - 2026-05-25
+        recipient:
+          type: string
+          description: Who received the income
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          examples:
+          - APPLICANT
+    JobApplication:
+      type: object
+      description: A job application reported by the applicant or co-applicant.
+      properties:
+        person:
+          type: string
+          description: Which person submitted the job application
+          examples:
+          - APPLICANT
+        applicationDate:
+          type: string
+          format: date
+          description: The date the job application was submitted
+          examples:
+          - 2026-05-20
+        jobTitle:
+          type: string
+          description: The job title applied for
+          examples:
+          - Lagerarbetare
+          maxLength: 255
+          minLength: 0
+        employerAndPlace:
+          type: string
+          description: Employer and place of work
+          examples:
+          - "PostNord, Sundsvall"
+          maxLength: 255
+          minLength: 0
+    PendingBenefit:
+      type: object
+      description: A benefit the applicant has applied for but not yet received a
+        decision on.
+      properties:
+        benefitName:
+          type: string
+          description: Name of the pending benefit
+          examples:
+          - Bostadsbidrag
+          maxLength: 255
+          minLength: 0
+        applicantName:
+          type: string
+          description: Name of the person who applied for the benefit
+          examples:
+          - Anna Andersson
+          maxLength: 255
+          minLength: 0
+    Person:
+      type: object
+      description: A person (applicant or co-applicant) on the financial assistance
+        application.
+      properties:
+        role:
+          type: string
+          description: Role of the person
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          examples:
+          - APPLICANT
+        partyId:
+          type: string
+          description: Party id (personId GUID) of the person
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+          maxLength: 36
+          minLength: 0
+        needsInterpreter:
+          type: boolean
+          description: Whether the person needs an interpreter
+          examples:
+          - "true"
+        interpreterLanguage:
+          type: string
+          description: Language the interpreter should use
+          examples:
+          - Arabiska
+          maxLength: 64
+          minLength: 0
+        hadWorkLast12Months:
+          type: boolean
+          description: Whether the person had work during the last 12 months
+          examples:
+          - "false"
+        hadWorkDescription:
+          type: string
+          description: Description of the work the person had
+          examples:
+          - Substitute in home care services
+        paymentMethod:
+          type: string
+          description: Payment method
+          enum:
+          - BANK_ACCOUNT
+          - OTHER
+          examples:
+          - BANK_ACCOUNT
+        clearingNumber:
+          type: string
+          description: Clearing number of the bank account
+          examples:
+          - 8327-9
+          maxLength: 16
+          minLength: 0
+        accountNumber:
+          type: string
+          description: Bank account number
+          examples:
+          - "123456789"
+          maxLength: 32
+          minLength: 0
+        otherPaymentDescription:
+          type: string
+          description: Description of the payment method when OTHER
+          examples:
+          - Paymentskort
+        paymentSameAsPrevious:
+          type: boolean
+          description: Whether the payment details are the same as previously used
+          examples:
+          - "true"
+        email:
+          type: string
+          description: Email address used for notifications about the application
+          examples:
+          - anna.andersson@example.com
+          maxLength: 128
+          minLength: 0
+        phone:
+          type: string
+          description: Phone number used for SMS notifications about the application
+          examples:
+          - "+46701234567"
+          maxLength: 32
+          minLength: 0
+        notifyByEmail:
+          type: boolean
+          description: Whether the person wants notifications about the application
+            by email
+          examples:
+          - "true"
+        notifyBySms:
+          type: boolean
+          description: Whether the person wants notifications about the application
+            by SMS
+          examples:
+          - "true"
+    PlannedActivity:
+      type: object
+      description: A planned activity for the applicant or co-applicant.
+      properties:
+        person:
+          type: string
+          description: Which person the activity concerns
+          examples:
+          - APPLICANT
+        activity:
+          type: string
+          description: Description of the activity
+          examples:
+          - Work training placement
+        periodFrom:
+          type: string
+          format: date
+          description: Period from date
+          examples:
+          - 2026-06-01
+        periodTo:
+          type: string
+          format: date
+          description: Period to date
+          examples:
+          - 2026-08-31
+    Planning:
+      type: object
+      description: The applicant's or co-applicant's planning towards self-sufficiency.
+      properties:
+        person:
+          type: string
+          description: Which person the planning concerns
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          examples:
+          - APPLICANT
+        planningType:
+          type: string
+          description: The type of planning
+          enum:
+          - WORK
+          - JOBSEEKING
+          - SICK_LEAVE
+          - SFI
+          - OTHER
+          examples:
+          - WORK
+        workExtent:
+          type: string
+          description: Extent of work
+          enum:
+          - FULL
+          - PART
+          examples:
+          - FULL
+        workDescription:
+          type: string
+          description: Description of the work
+          examples:
+          - Permanent employment as an assistant nurse
+        sickLeaveLevel:
+          type: string
+          description: Level of sick leave (percent)
+          enum:
+          - "100"
+          - "75"
+          - "50"
+          - "25"
+          examples:
+          - "100"
+        sfiStudyPath:
+          type: string
+          description: SFI study path
+          enum:
+          - "1"
+          - "2"
+          - "3"
+          examples:
+          - "1"
+        sfiCourse:
+          type: string
+          description: SFI course
+          enum:
+          - A
+          - B
+          - C
+          - D
+          examples:
+          - B
+        otherDescription:
+          type: string
+          description: Description of other planning
+          examples:
+          - Internship via the employment agency
     ContactChannel:
       type: object
       description: ContactChannel model
@@ -9357,12 +9358,12 @@ components:
         typeId:
           type: integer
           format: int32
-          description: The FC income-type id
+          description: The FamilyCare income-type id
           examples:
           - 20
         typeName:
           type: string
-          description: The FC income-type name
+          description: The FamilyCare income-type name
           examples:
           - Bostadsbidrag
           maxLength: 255
@@ -9396,8 +9397,8 @@ components:
           - Justerat belopp enligt underlag
     NormIncomeRow:
       type: object
-      description: "One income row of the calculation draft (FC income type with applicant/co-applicant\
-        \ sides, process vs caseworker amounts)."
+      description: "One income row of the calculation draft (FamilyCare income type\
+        \ with applicant/co-applicant sides, process vs caseworker amounts)."
       properties:
         id:
           type: string
@@ -9421,13 +9422,13 @@ components:
         typeId:
           type: integer
           format: int32
-          description: The FC income-type id
+          description: The FamilyCare income-type id
           examples:
           - 20
           readOnly: true
         typeName:
           type: string
-          description: The FC income-type name
+          description: The FamilyCare income-type name
           examples:
           - Bostadsbidrag
           readOnly: true
@@ -9874,8 +9875,8 @@ components:
           type: string
           description: "The incomes classified by the operaton rules (the evaluate-income-rules\
             \ worker output), as JSON. When present, caremanagement maps these to\
-            \ FC income rows instead of fetching SSBTEK and evaluating the raw list\
-            \ itself."
+            \ FamilyCare income rows instead of fetching SSBTEK and evaluating the\
+            \ raw list itself."
         unhandledIncomes:
           type: array
           description: "The unhandled-income warnings from the operaton rules, recorded\
@@ -9900,7 +9901,7 @@ components:
         calculationId:
           type: integer
           format: int32
-          description: The id of the calculation created in Lifecare FC
+          description: The id of the calculation created in Lifecare FamilyCare
           examples:
           - 4711
         unhandledIncomes:
@@ -10004,7 +10005,7 @@ components:
         actualisationId:
           type: integer
           format: int32
-          description: The id of the actualisation created in Lifecare FC
+          description: The id of the actualisation created in Lifecare FamilyCare
           examples:
           - 5012
     PatchErrand:
@@ -10229,7 +10230,7 @@ components:
         normId:
           type: integer
           format: int32
-          description: The selected FC norm id (Norm)
+          description: The selected FamilyCare norm id (Norm)
           examples:
           - 5
         normType:

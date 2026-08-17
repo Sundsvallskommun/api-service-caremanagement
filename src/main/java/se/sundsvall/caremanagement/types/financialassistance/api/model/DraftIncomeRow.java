@@ -4,18 +4,19 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * One income row of the draft calculation — an FC income type with the applicant's and co-applicant's amounts. Also
+ * One income row of the draft calculation — an FamilyCare income type with the applicant's and co-applicant's amounts.
+ * Also
  * the persisted JSON shape (in the draft's {@code rows_json}). A caseworker edits these in Draken; on a decision they
  * are
  * posted to Lifecare.
  */
-@Schema(description = "One income row of the draft calculation (FC income type + amounts).")
+@Schema(description = "One income row of the draft calculation (FamilyCare income type + amounts).")
 public class DraftIncomeRow {
 
-	@Schema(description = "The FC income-type id", examples = "20")
+	@Schema(description = "The FamilyCare income-type id", examples = "20")
 	private Integer typeId;
 
-	@Schema(description = "The FC income-type name", examples = "Bostadsbidrag")
+	@Schema(description = "The FamilyCare income-type name", examples = "Bostadsbidrag")
 	private String typeName;
 
 	@Schema(description = "The applicant's amount for this income type", examples = "1850.0")

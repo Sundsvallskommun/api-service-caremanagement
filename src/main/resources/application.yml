@@ -106,13 +106,13 @@ integration:
     url: ${INTEGRATION_CITIZEN_URL}
     connect-timeout: 5
     read-timeout: 30
-  # Lifecare FamilyCare (FC) — financial assistance write-back (actualisation + calculation) + proposal lookups. Auth is domain + key
-  # (query params / X-API-Key header); url is the FC base path (host + /WESE.FC.Api.FC). The key is sensitive — inject
+  # Lifecare FamilyCare — financial assistance write-back (actualisation + calculation) + proposal lookups. Auth is domain + key
+  # (query params / X-API-Key header); url is the FamilyCare base path (host + /WESE.FC.Api.FC). The key is sensitive — inject
   # via secret and keep it out of request logging.
-  lifecare-fc:
-    url: ${INTEGRATION_LIFECARE_FC_URL}
-    domain: ${INTEGRATION_LIFECARE_FC_DOMAIN}
-    key: ${INTEGRATION_LIFECARE_FC_KEY}
+  lifecare-familycare:
+    url: ${INTEGRATION_LIFECARE_FAMILYCARE_URL}
+    domain: ${INTEGRATION_LIFECARE_FAMILYCARE_DOMAIN}
+    key: ${INTEGRATION_LIFECARE_FAMILYCARE_KEY}
     connect-timeout: 5
     read-timeout: 30
     # Lookback (months, ending at the reference date) for the financial assistance eligibility reads — actualisations, decisions, calculations.

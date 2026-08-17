@@ -21,8 +21,8 @@ integration:
     url: http://localhost:${wiremock.server.port:}/api-templating
   citizen:
     url: http://localhost:${wiremock.server.port:}/api-citizen
-  lifecare-fc:
-    url: http://localhost:${wiremock.server.port:}/api-lifecare-fc
+  lifecare-familycare:
+    url: http://localhost:${wiremock.server.port:}/api-lifecare-familycare
     domain: it-domain
     key: it-key
 spring:

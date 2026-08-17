@@ -16,10 +16,10 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 @Schema(description = "What a caseworker sends to add or patch an income row (identity + caseworker-writable fields only).")
 public class NormIncomeInput {
 
-	@Schema(description = "The FC income-type id", examples = "20")
+	@Schema(description = "The FamilyCare income-type id", examples = "20")
 	private Integer typeId;
 
-	@Schema(description = "The FC income-type name", examples = "Bostadsbidrag")
+	@Schema(description = "The FamilyCare income-type name", examples = "Bostadsbidrag")
 	@Size(max = 255)
 	private String typeName;
 
