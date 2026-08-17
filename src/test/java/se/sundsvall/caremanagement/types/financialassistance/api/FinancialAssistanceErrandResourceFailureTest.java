@@ -24,6 +24,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
+import static org.springframework.http.MediaType.TEXT_PLAIN;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -67,7 +68,7 @@ class FinancialAssistanceErrandResourceFailureTest {
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
-				tuple("title", "must not be blank")));
+				tuple("createErrand.request.title", "must not be blank")));
 
 		verifyNoInteractions(errandServiceMock);
 	}
@@ -85,7 +86,7 @@ class FinancialAssistanceErrandResourceFailureTest {
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
-				tuple("data", "must not be null")));
+				tuple("createErrand.request.data", "must not be null")));
 
 		verifyNoInteractions(errandServiceMock);
 	}
@@ -102,9 +103,24 @@ class FinancialAssistanceErrandResourceFailureTest {
 			.exchange()
 			.expectStatus().isBadRequest()
 			.expectBody()
-			.jsonPath("$.title").isEqualTo("Bad Request")
-			.jsonPath("$.status").isEqualTo(400)
-			.jsonPath("$.detail").isEqualTo("The 'request' part could not be read as a financial-assistance application — check that it is valid JSON matching the schema.");
+			.jsonPath("$.status").isEqualTo(400);
+
+		verifyNoInteractions(errandServiceMock);
+	}
+
+	@Test
+	void createErrandRequestPartWithoutJsonContentType() {
+		// The 'request' part must declare its content type — a client that appends the JSON without
+		// 'Content-Type: application/json' gives Spring no converter to bind with, and is rejected.
+		final var builder = new MultipartBodyBuilder();
+		builder.part("request", "{\"title\":\"Utan content-type\",\"data\":{}}", TEXT_PLAIN);
+
+		webTestClient.post()
+			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.contentType(MULTIPART_FORM_DATA)
+			.bodyValue(builder.build())
+			.exchange()
+			.expectStatus().is4xxClientError();
 
 		verifyNoInteractions(errandServiceMock);
 	}

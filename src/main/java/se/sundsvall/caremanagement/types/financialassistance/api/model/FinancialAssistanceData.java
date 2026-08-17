@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -9,6 +10,7 @@ import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
+import static com.fasterxml.jackson.annotation.JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 @Schema(description = "The typed financial assistance application payload.")
@@ -44,6 +46,10 @@ public class FinancialAssistanceData {
 	}, nullable = true)
 	private String periodChoice;
 
+	// Mina sidor sends normType as a bare string rather than a one-element array, so a lone scalar is accepted as a
+	// single-element list. Declared here rather than by reading the payload leniently at the endpoint, so it applies
+	// wherever the model is bound.
+	@JsonFormat(with = ACCEPT_SINGLE_VALUE_AS_ARRAY)
 	@ArraySchema(schema = @Schema(description = "The norm types used for the calculation", examples = "NATIONAL_NORM", allowableValues = {
 		"NATIONAL_NORM", "OTHER_NORM"
 	}))

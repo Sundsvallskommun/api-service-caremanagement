@@ -1,22 +1,16 @@
 package se.sundsvall.caremanagement.types.financialassistance.api;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Valid;
-import jakarta.validation.Validator;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.groups.Default;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,12 +32,9 @@ import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
 
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.HttpHeaders.LOCATION;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.MediaType.ALL_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
@@ -54,8 +45,6 @@ import static org.springframework.http.ResponseEntity.ok;
 import static org.springframework.web.util.UriComponentsBuilder.fromPath;
 import static se.sundsvall.caremanagement.Constants.NAMESPACE_REGEXP;
 import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE;
-import static tools.jackson.databind.DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY;
-import static tools.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 
 @RestController
 @Validated
@@ -69,21 +58,15 @@ import static tools.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROP
 })
 class FinancialAssistanceErrandResource {
 
-	private static final Logger LOG = LoggerFactory.getLogger(FinancialAssistanceErrandResource.class);
-
 	/**
 	 * Constrains the create path variable to the three financial assistance slugs so it never shadows other errand types.
 	 */
 	private static final String SLUG_REGEXP = "financial-assistance-new|financial-assistance-renewal|financial-assistance-supplementary";
 
 	private final FinancialAssistanceErrandService service;
-	private final ObjectMapper objectMapper;
-	private final Validator validator;
 
-	FinancialAssistanceErrandResource(final FinancialAssistanceErrandService service, final ObjectMapper objectMapper, final Validator validator) {
+	FinancialAssistanceErrandResource(final FinancialAssistanceErrandService service) {
 		this.service = service;
-		this.objectMapper = objectMapper;
-		this.validator = validator;
 	}
 
 	@PostMapping(path = "/{typeSlug:" + SLUG_REGEXP + "}", consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
@@ -97,49 +80,16 @@ class FinancialAssistanceErrandResource {
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@PathVariable final String typeSlug,
-		@Parameter(schema = @Schema(implementation = CreateFinancialAssistanceRequest.class)) @NotNull @RequestPart("request") final byte[] requestJson,
+		@Valid @NotNull @RequestPart("request") final CreateFinancialAssistanceRequest request,
 		@RequestPart(value = "attachments", required = false) final List<MultipartFile> attachments,
 		@RequestPart(value = "caseData", required = false) final MultipartFile caseData,
 		@RequestPart(value = "formSnapshot", required = false) final String formSnapshot) {
-
-		// The 'request' part is bound as raw bytes rather than a typed POJO so the endpoint tolerates multipart clients
-		// (e.g. axios FormData) that send the JSON part without an explicit 'Content-Type: application/json'; reading
-		// bytes also lets Jackson detect the JSON encoding itself instead of relying on a part charset. We then
-		// deserialize and bean-validate it by hand, reproducing the @Valid + OnCreate-group behaviour.
-		final var request = readCreateRequest(requestJson);
 
 		final var id = service.create(municipalityId, namespace, typeSlug, request, attachments, caseData, formSnapshot);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}")
 			.buildAndExpand(municipalityId, namespace, id).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)
 			.build();
-	}
-
-	private CreateFinancialAssistanceRequest readCreateRequest(final byte[] requestJson) {
-		final CreateFinancialAssistanceRequest request;
-		try {
-			// Read leniently to match the typed @RequestPart binding this replaced: ignore unknown properties and accept a
-			// single scalar where the model declares a list (e.g. normType), the same coercions Spring's converters allow.
-			request = objectMapper.readerFor(CreateFinancialAssistanceRequest.class)
-				.without(FAIL_ON_UNKNOWN_PROPERTIES)
-				.with(ACCEPT_SINGLE_VALUE_AS_ARRAY)
-				.readValue(requestJson);
-		} catch (final JacksonException e) {
-			// Do NOT echo Jackson's message — it can embed the offending field value (e.g. the rejected string), and the
-			// 'request' part is the financial assistance application carrying applicant data. Log the technical reason server-side
-			// (this
-			// service already keeps payloads out of logs elsewhere) and return a value-free message to the caller.
-			LOG.warn("Could not bind the 'request' part to a financial-assistance application: {}", e.getClass().getSimpleName());
-			throw Problem.valueOf(BAD_REQUEST, "The 'request' part could not be read as a financial-assistance application — check that it is valid JSON matching the schema.");
-		}
-
-		// Validate with both groups to mirror the framework method-validation this part used to get: OnCreate carries
-		// the create-only constraints (@NotBlank title, @NotNull data) and Default carries the nested @OneOf checks.
-		final var violations = validator.validate(request, OnCreate.class, Default.class);
-		if (!violations.isEmpty()) {
-			throw new ConstraintViolationException(violations);
-		}
-		return request;
 	}
 
 	@GetMapping(path = "/financial-assistance/{errandId}", produces = APPLICATION_JSON_VALUE)

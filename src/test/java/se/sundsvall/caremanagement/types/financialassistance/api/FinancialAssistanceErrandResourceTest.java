@@ -30,7 +30,6 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 import static org.springframework.http.MediaType.ALL;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
-import static org.springframework.http.MediaType.TEXT_PLAIN;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -69,32 +68,11 @@ class FinancialAssistanceErrandResourceTest {
 	}
 
 	@Test
-	void createErrandToleratesRequestPartWithoutJsonContentType() {
-		when(errandServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
-
-		// Reproduces an axios FormData client that appends the JSON 'request' part without a 'Content-Type:
-		// application/json' (the part arrives as text/plain). The endpoint must still bind and create.
-		final var requestJson = "{\"title\":\"Utan content-type\",\"data\":{}}";
-		final var builder = new MultipartBodyBuilder();
-		builder.part("request", requestJson, TEXT_PLAIN);
-
-		webTestClient.post()
-			.uri(uri -> uri.path(CREATE_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
-			.contentType(MULTIPART_FORM_DATA)
-			.bodyValue(builder.build())
-			.exchange()
-			.expectStatus().isCreated()
-			.expectHeader().contentType(ALL)
-			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/" + ERRAND_ID);
-
-		verify(errandServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any());
-	}
-
-	@Test
 	void createErrandAcceptsScalarWhereModelExpectsList() {
 		when(errandServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(SLUG), any(CreateFinancialAssistanceRequest.class), any(), any(), any())).thenReturn(ERRAND_ID);
 
-		// Mirrors the Mina sidor client: normType is a List<String> in the model but is sent as a single scalar.
+		// Mirrors the Mina sidor client: normType is a List<String> in the model but is sent as a single scalar. The
+		// coercion is declared on the model (@JsonFormat ACCEPT_SINGLE_VALUE_AS_ARRAY), so it survives normal binding.
 		final var requestJson = "{\"title\":\"Återansökan\",\"data\":{\"normType\":\"NATIONAL_NORM\"}}";
 		final var builder = new MultipartBodyBuilder();
 		builder.part("request", requestJson.getBytes(StandardCharsets.UTF_8), APPLICATION_JSON);
