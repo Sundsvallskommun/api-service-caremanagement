@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:49861
+- url: http://localhost:51698
   description: Generated server url
 tags:
 - name: Statistics
@@ -7874,12 +7874,12 @@ components:
           type: boolean
           description: Whether the household has children under 21
           examples:
-          - "true"
+          - true
         childrenResidenceChanged:
           type: boolean
           description: Whether the children's residence situation has changed
           examples:
-          - "false"
+          - false
         childrenResidenceChangeDescription:
           type: string
           description: Description of the change in children's residence
@@ -7921,7 +7921,7 @@ components:
           type: boolean
           description: Whether the housing situation has changed
           examples:
-          - "false"
+          - false
         housingChangeDescription:
           type: string
           description: Description of the housing change
@@ -7931,22 +7931,22 @@ components:
           type: boolean
           description: Whether the household has incomes
           examples:
-          - "true"
+          - true
         hasPendingBenefits:
           type: boolean
           description: Whether the household has pending benefits
           examples:
-          - "false"
+          - false
         hasAssets:
           type: boolean
           description: Whether the household has assets
           examples:
-          - "false"
+          - false
         staysInMunicipality:
           type: boolean
           description: Whether the applicant stays in the municipality
           examples:
-          - "true"
+          - true
         stayDescription:
           type: string
           description: Description of the applicant's stay
@@ -7956,7 +7956,7 @@ components:
           type: boolean
           description: Whether the applicant has attested the application
           examples:
-          - "true"
+          - true
         attestedAt:
           type: string
           format: date-time
@@ -8116,7 +8116,7 @@ components:
           type: boolean
           description: Whether the person needs an interpreter
           examples:
-          - "true"
+          - true
         interpreterLanguage:
           type: string
           description: Language the interpreter should use
@@ -8128,7 +8128,7 @@ components:
           type: boolean
           description: Whether the person had work during the last 12 months
           examples:
-          - "false"
+          - false
         hadWorkDescription:
           type: string
           description: Description of the work the person had
@@ -8165,7 +8165,7 @@ components:
           type: boolean
           description: Whether the payment details are the same as previously used
           examples:
-          - "true"
+          - true
         email:
           type: string
           description: Email address used for notifications about the application
@@ -8185,13 +8185,13 @@ components:
           description: Whether the person wants notifications about the application
             by email
           examples:
-          - "true"
+          - true
         notifyBySms:
           type: boolean
           description: Whether the person wants notifications about the application
             by SMS
           examples:
-          - "true"
+          - true
     PlannedActivity:
       type: object
       description: A planned activity for the applicant or co-applicant.
@@ -8654,7 +8654,7 @@ components:
             \ true/false sets it. The bulk-acknowledge endpoint flips this to true\
             \ for every notification on an errand."
           examples:
-          - "false"
+          - false
         expires:
           type: string
           format: date-time
@@ -9174,7 +9174,7 @@ components:
           description: Whether the warning was closed automatically (its cause resolved)
             rather than by a caseworker
           examples:
-          - "false"
+          - false
         created:
           type: string
           format: date-time
@@ -9223,7 +9223,7 @@ components:
           type: boolean
           description: Whether the household member is included in the norm
           examples:
-          - "true"
+          - true
         deviationFromDate:
           type: string
           format: date
@@ -9658,7 +9658,7 @@ components:
           description: True when a Lifecare payment concerning the application month
             has been registered
           examples:
-          - "true"
+          - true
         paymentDate:
           type: string
           description: "The date the payment was made (Lifecare PayDate), when effectuated"
@@ -9724,7 +9724,7 @@ components:
           description: True for the primary suggestion the citizen should be guided
             towards
           examples:
-          - "true"
+          - true
         label:
           type: string
           description: Human-readable Swedish label for the suggestion
@@ -9761,20 +9761,20 @@ components:
           description: True when the applicant already has a financial assistance
             errand in caremanagement
           examples:
-          - "true"
+          - true
         existsInLc:
           type: boolean
           description: True when the applicant has a financial assistance footprint
             in Lifecare (actualisation/decision/calculation)
           examples:
-          - "true"
+          - true
         maritalStatusMatches:
           type: boolean
           description: Whether the requested marital status (alone vs with a partner)
             matches the previous application. Null when not evaluated (no existing
             case).
           examples:
-          - "true"
+          - true
         windowDays:
           type: integer
           format: int32
@@ -9787,18 +9787,18 @@ components:
           description: True when an application/decision already exists for the current
             month
           examples:
-          - "false"
+          - false
         applicationExistsNextMonth:
           type: boolean
           description: True when an application/decision already exists for next month
           examples:
-          - "false"
+          - false
         currentMonthDecided:
           type: boolean
           description: True when Lifecare shows a decision for the current month (the
             current month is decided/closed)
           examples:
-          - "false"
+          - false
         latestDecisionPeriodMonth:
           type: integer
           format: int32
@@ -9816,18 +9816,18 @@ components:
           type: boolean
           description: True when Lifecare shows a previous calculation
           examples:
-          - "true"
+          - true
         lifecareChecked:
           type: boolean
           description: True when the Lifecare lookup succeeded. False means the answer
             is degraded (CM-only).
           examples:
-          - "true"
+          - true
         hasCoApplicant:
           type: boolean
           description: True when the request included a co-applicant (co-applicant)
           examples:
-          - "false"
+          - false
         reopenableErrandId:
           type: string
           description: "When reasonCode is RECENTLY_CLOSED: the id of the recently\
@@ -9926,7 +9926,7 @@ components:
             previous month's did — false means SSBTEK data is still missing and the
             process should poll again
           examples:
-          - "true"
+          - true
         missingIncomeTypes:
           type: array
           description: Previous-month income types not yet present this month (the
@@ -10189,7 +10189,7 @@ components:
           description: Whether the section is approved (true) or its approval withdrawn
             (false)
           examples:
-          - "true"
+          - true
       required:
       - approved
     SectionApproval:
@@ -10210,7 +10210,7 @@ components:
           type: boolean
           description: Whether the section has been verified as approved by a caseworker
           examples:
-          - "true"
+          - true
         approvedBy:
           type: string
           description: The caseworker who approved the section (null while not approved)
@@ -10265,7 +10265,7 @@ components:
           type: boolean
           description: Whether a custom household size is used
           examples:
-          - "true"
+          - true
         householdSize:
           type: integer
           format: int32
@@ -11035,12 +11035,12 @@ components:
           type: boolean
           description: Whether the field was required as rendered
           examples:
-          - "true"
+          - true
         visible:
           type: boolean
           description: Whether the field was visible to the applicant
           examples:
-          - "true"
+          - true
         condition:
           type: string
           description: "The visibility rule that was active, human-readable"
@@ -11092,7 +11092,7 @@ components:
           type: boolean
           description: Whether the applicant selected this option
           examples:
-          - "true"
+          - true
     FormSnapshotSection:
       type: object
       description: A section of the form as it was rendered.
@@ -11116,7 +11116,7 @@ components:
           type: boolean
           description: Whether the section was visible to the applicant
           examples:
-          - "true"
+          - true
         fields:
           type: array
           description: "The fields in the section, in render order"
@@ -11153,7 +11153,7 @@ components:
           description: True when the Lifecare lookup succeeded. False means the answer
             is degraded (empty children).
           examples:
-          - "true"
+          - true
     FinancialAssistanceMetadata:
       type: object
       description: "Financial assistance type catalogue for the frontend dropdowns:\
@@ -11206,7 +11206,7 @@ components:
           type: boolean
           description: Whether the type is offered on the citizen Mina-sidor form
           examples:
-          - "true"
+          - true
     LifecareDocument:
       type: object
       description: "A Lifecare document, metadata only."
@@ -11323,7 +11323,7 @@ components:
           type: boolean
           description: Whether the person is the co-applicant
           examples:
-          - "false"
+          - false
     LifecareCalculation:
       type: object
       description: "A Lifecare calculation, full breakdown."
@@ -11393,7 +11393,7 @@ components:
           type: boolean
           description: Whether the calculation is final
           examples:
-          - "true"
+          - true
         persons:
           type: array
           items:
@@ -11614,7 +11614,7 @@ components:
           description: "Whether the outcome carries an amount — true for outcomes\
             \ that grant an amount, false for ones that imply 0 (e.g. a rejection)"
           examples:
-          - "true"
+          - true
     ErrandTypeSchema:
       type: object
       description: "Form descriptor for an errand type slug — statuses, roles and\
@@ -11685,7 +11685,7 @@ components:
           description: True when the field is unconditionally required for the application
             types it applies to
           examples:
-          - "true"
+          - true
         options:
           type: array
           description: "Allowable values when type is ENUM, otherwise null"

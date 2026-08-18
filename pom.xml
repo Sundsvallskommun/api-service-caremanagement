@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>se.sundsvall.dept44</groupId>
 		<artifactId>dept44-service-parent</artifactId>
-		<version>8.0.8</version>
+		<version>8.0.9</version>
 		<relativePath />
 		<!-- lookup parent from repository -->
 	</parent>
@@ -13,7 +13,7 @@
 	<version>1.0</version>
 	<name>api-service-care-management</name>
 	<properties>
-		<spring-filter.version>4.0.3</spring-filter.version>
+		<spring-filter.version>4.0.5</spring-filter.version>
 		<!-- Modulith 2.x targets Spring Boot 4 (which dept44 8.x runs).
 				Verify the latest GA at https://spring.io/projects/spring-modulith
 				before bumping. -->
