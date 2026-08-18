@@ -13,7 +13,7 @@
 	<version>1.0</version>
 	<name>api-service-care-management</name>
 	<properties>
-		<spring-filter.version>4.0.3</spring-filter.version>
+		<spring-filter.version>4.0.5</spring-filter.version>
 		<generated-sources-path>${project.build.directory}/generated-sources</generated-sources-path>
 		<generated-sources-java-path>src/main/java</generated-sources-java-path>
 	</properties>
