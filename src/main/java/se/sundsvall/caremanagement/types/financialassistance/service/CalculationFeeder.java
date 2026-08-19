@@ -208,13 +208,13 @@ public class CalculationFeeder {
 	private static String expenseSourceKey(final FaCost cost) {
 		final var sub = cost.getOtherSubType();
 		if ((sub == null) || sub.isBlank()) {
-			return nz(cost.getCostType());
+			return orEmpty(cost.getCostType());
 		}
-		return nz(cost.getCostType()) + ":" + sub;
+		return orEmpty(cost.getCostType()) + ":" + sub;
 	}
 
 	private static String expenseLabel(final FaCost cost) {
-		final var label = COST_LABEL.getOrDefault(cost.getCostType(), nz(cost.getCostType()));
+		final var label = COST_LABEL.getOrDefault(cost.getCostType(), orEmpty(cost.getCostType()));
 		final var sub = cost.getOtherSubType();
 		if ((sub == null) || sub.isBlank()) {
 			return label;
@@ -227,7 +227,8 @@ public class CalculationFeeder {
 		return amount.stripTrailingZeros().toPlainString();
 	}
 
-	private static String nz(final String value) {
+	/** The value, or an empty string when it is {@code null}. */
+	private static String orEmpty(final String value) {
 		return ofNullable(value).orElse("");
 	}
 

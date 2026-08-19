@@ -64,7 +64,7 @@ class RenewalDeltaServiceTest {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY), anyMap()))
 			.thenThrow(new RuntimeException("operaton down"));
 
-		// a null change kind + null percent exercise the nz()/null-coalescing variable building before the failure
+		// a null change kind + null percent exercise the orEmpty()/null-coalescing variable building before the failure
 		final var result = service.classify(MUNICIPALITY_ID, null, 0, null);
 
 		assertThat(result.warning()).isFalse();

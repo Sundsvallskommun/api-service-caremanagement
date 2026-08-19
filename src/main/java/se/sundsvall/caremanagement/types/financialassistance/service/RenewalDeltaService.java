@@ -50,7 +50,7 @@ public class RenewalDeltaService {
 	public DeltaVerdict classify(final String municipalityId, final String changeKind, final int changeCount, final BigDecimal changePercent) {
 		try {
 			final var variables = new HashMap<String, Object>();
-			variables.put("changeKind", nz(changeKind));
+			variables.put("changeKind", orEmpty(changeKind));
 			variables.put("changeCount", changeCount);
 			variables.put("changePercent", Optional.ofNullable(changePercent).orElse(BigDecimal.ZERO));
 
@@ -70,7 +70,8 @@ public class RenewalDeltaService {
 		return Optional.ofNullable(value).map(Object::toString).orElse(null);
 	}
 
-	private static String nz(final String value) {
+	/** The value, or an empty string when it is {@code null}. */
+	private static String orEmpty(final String value) {
 		return Optional.ofNullable(value).orElse("");
 	}
 }
