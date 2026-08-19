@@ -1,0 +1,101 @@
+package se.sundsvall.caremanagement.metadata.service.mapper;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import se.sundsvall.caremanagement.metadata.api.model.Lookup;
+import se.sundsvall.caremanagement.metadata.integration.db.model.LookupEntity;
+import se.sundsvall.caremanagement.metadata.integration.db.model.LookupKind;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class LookupMapperTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
+
+	@Test
+	void toLookupMaps() {
+		final var created = FIXED_TIMESTAMP.minusDays(1);
+		final var modified = FIXED_TIMESTAMP;
+		final var entity = LookupEntity.create()
+			.withKind(LookupKind.STATUS)
+			.withName("NEW")
+			.withDisplayName("New case")
+			.withNamespace("ns")
+			.withMunicipalityId("2281")
+			.withCreated(created)
+			.withModified(modified);
+
+		final var result = LookupMapper.toLookup(entity);
+
+		assertThat(result).isNotNull().hasNoNullFieldsOrProperties();
+		assertThat(result.getName()).isEqualTo("NEW");
+		assertThat(result.getDisplayName()).isEqualTo("New case");
+		assertThat(result.getCreated()).isEqualTo(created);
+		assertThat(result.getModified()).isEqualTo(modified);
+	}
+
+	@Test
+	void toLookupNullReturnsNull() {
+		assertThat(LookupMapper.toLookup(null)).isNull();
+	}
+
+	@Test
+	void toLookupEntityMaps() {
+		final var lookup = Lookup.create().withName("NEW").withDisplayName("New case");
+
+		final var result = LookupMapper.toLookupEntity(lookup, LookupKind.STATUS, "ns", "2281");
+
+		assertThat(result).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "modified");
+		assertThat(result.getKind()).isEqualTo(LookupKind.STATUS);
+		assertThat(result.getName()).isEqualTo("NEW");
+		assertThat(result.getDisplayName()).isEqualTo("New case");
+		assertThat(result.getNamespace()).isEqualTo("ns");
+		assertThat(result.getMunicipalityId()).isEqualTo("2281");
+	}
+
+	@Test
+	void toLookupEntityNullLookupReturnsNull() {
+		assertThat(LookupMapper.toLookupEntity(null, LookupKind.STATUS, "ns", "2281")).isNull();
+	}
+
+	@Test
+	void updateLookupEntityUpdatesDisplayNameOnly() {
+		final var entity = LookupEntity.create().withName("NEW").withDisplayName("Old").withKind(LookupKind.STATUS);
+		final var source = Lookup.create().withName("IGNORED").withDisplayName("Updated");
+
+		final var result = LookupMapper.updateLookupEntity(entity, source);
+
+		assertThat(result).isSameAs(entity);
+		assertThat(result.getName()).isEqualTo("NEW");
+		assertThat(result.getDisplayName()).isEqualTo("Updated");
+	}
+
+	@Test
+	void updateLookupEntityNullEntityReturnsNull() {
+		assertThat(LookupMapper.updateLookupEntity(null, Lookup.create())).isNull();
+	}
+
+	@Test
+	void updateLookupEntityNullSourceReturnsEntity() {
+		final var entity = LookupEntity.create().withDisplayName("kept");
+
+		final var result = LookupMapper.updateLookupEntity(entity, null);
+
+		assertThat(result).isSameAs(entity);
+		assertThat(result.getDisplayName()).isEqualTo("kept");
+	}
+
+	@Test
+	void toLookupListMaps() {
+		final var result = LookupMapper.toLookupList(List.of(
+			LookupEntity.create().withName("A"),
+			LookupEntity.create().withName("B")));
+
+		assertThat(result).hasSize(2);
+	}
+
+	@Test
+	void toLookupListNullReturnsEmpty() {
+		assertThat(LookupMapper.toLookupList(null)).isEmpty();
+	}
+}

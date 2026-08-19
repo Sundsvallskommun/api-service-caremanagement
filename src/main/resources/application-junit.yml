@@ -7,6 +7,35 @@ logging:
 integration:
   operaton:
     url: http://operaton.url
+  lifecare-familycare:
+    url: http://lifecarefamilycare.url
+    domain: junit-domain
+    key: junit-key
+  financial-aid:
+    url: http://financialaid.url
+  messaging:
+    url: http://messaging.url
+  templating:
+    url: http://templating.url
+  citizen:
+    url: http://citizen.url
+scheduler:
+  notification-cleanup:
+    cron: '-'
+    name: notification-cleanup
+    shedlock-lock-at-most-for: PT5M
+    maximum-execution-time: PT5M
+  message-archive:
+    cron: '-'
+    name: message-archive
+    shedlock-lock-at-most-for: PT5M
+    maximum-execution-time: PT5M
+caremanagement:
+  identifier:
+    required: false
+financial-assistance:
+  eligibility:
+    return-all-types: false
 spring:
   cache:
     type: none
@@ -26,7 +55,27 @@ spring:
         provider:
           operaton:
             token-uri: http://token.url
+          messaging:
+            token-uri: http://token.url
+          templating:
+            token-uri: http://token.url
+          citizen:
+            token-uri: http://token.url
+          financial-aid:
+            token-uri: http://token.url
         registration:
           operaton:
+            client-id: the-client-id
+            client-secret: the-client-secret
+          messaging:
+            client-id: the-client-id
+            client-secret: the-client-secret
+          templating:
+            client-id: the-client-id
+            client-secret: the-client-secret
+          citizen:
+            client-id: the-client-id
+            client-secret: the-client-secret
+          financial-aid:
             client-id: the-client-id
             client-secret: the-client-secret

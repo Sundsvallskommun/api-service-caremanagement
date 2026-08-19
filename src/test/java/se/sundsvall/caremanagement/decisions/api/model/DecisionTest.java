@@ -1,0 +1,85 @@
+package se.sundsvall.caremanagement.decisions.api.model;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.Random;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static com.google.code.beanmatchers.BeanMatchers.registerValueGenerator;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
+
+class DecisionTest {
+	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
+
+	@BeforeAll
+	static void setup() {
+		registerValueGenerator(() -> OffsetDateTime.now().plusDays(new Random().nextInt(1000)), OffsetDateTime.class);
+		registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(1000)), LocalDate.class);
+		registerValueGenerator(() -> BigDecimal.valueOf(new Random().nextInt(1_000_000)), BigDecimal.class);
+	}
+
+	@Test
+	void testBean() {
+		MatcherAssert.assertThat(Decision.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
+		final var id = "id";
+		final var decisionType = "PAYMENT";
+		final var value = "APPROVED";
+		final var description = "desc";
+		final var amount = new BigDecimal("7900.00");
+		final var decisionMessage = "Du beviljas ekonomiskt bistånd för juni 2026.";
+		final var decisionDate = LocalDate.parse("2026-06-18");
+		final var periodFrom = LocalDate.parse("2026-06-01");
+		final var periodTo = LocalDate.parse("2026-06-30");
+		final var createdBy = "jane01doe";
+		final var created = FIXED_TIMESTAMP;
+
+		final var result = Decision.create()
+			.withId(id)
+			.withDecisionType(decisionType)
+			.withValue(value)
+			.withDescription(description)
+			.withAmount(amount)
+			.withDecisionMessage(decisionMessage)
+			.withDecisionDate(decisionDate)
+			.withPeriodFrom(periodFrom)
+			.withPeriodTo(periodTo)
+			.withCreatedBy(createdBy)
+			.withCreated(created);
+
+		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getId()).isEqualTo(id);
+		assertThat(result.getDecisionType()).isEqualTo(decisionType);
+		assertThat(result.getValue()).isEqualTo(value);
+		assertThat(result.getDescription()).isEqualTo(description);
+		assertThat(result.getAmount()).isEqualTo(amount);
+		assertThat(result.getDecisionMessage()).isEqualTo(decisionMessage);
+		assertThat(result.getDecisionDate()).isEqualTo(decisionDate);
+		assertThat(result.getPeriodFrom()).isEqualTo(periodFrom);
+		assertThat(result.getPeriodTo()).isEqualTo(periodTo);
+		assertThat(result.getCreatedBy()).isEqualTo(createdBy);
+		assertThat(result.getCreated()).isEqualTo(created);
+	}
+
+	@Test
+	void testNoDirtOnCreatedBean() {
+		assertThat(Decision.create()).hasAllNullFieldsOrProperties();
+	}
+}
