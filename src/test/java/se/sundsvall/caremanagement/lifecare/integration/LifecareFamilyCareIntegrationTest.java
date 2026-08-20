@@ -27,6 +27,8 @@ import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static java.time.Month.APRIL;
+import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,8 +44,8 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 class LifecareFamilyCareIntegrationTest {
 
 	private static final String PERSON_ID = "200001012384";
-	private static final LocalDate START = LocalDate.of(2026, 4, 1);
-	private static final LocalDate END = LocalDate.of(2026, 6, 30);
+	private static final LocalDate START = LocalDate.of(2026, APRIL, 1);
+	private static final LocalDate END = LocalDate.of(2026, JUNE, 30);
 
 	// The same window on the wire: FamilyCare requires RFC 3339 with a time component, and the window is inclusive in
 	// both ends, so the end date is sent as end of day.
