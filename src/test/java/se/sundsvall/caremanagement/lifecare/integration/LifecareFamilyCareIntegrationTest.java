@@ -15,6 +15,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.User;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +27,8 @@ import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static java.time.Month.APRIL;
+import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,8 +44,13 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 class LifecareFamilyCareIntegrationTest {
 
 	private static final String PERSON_ID = "200001012384";
-	private static final String START = "2026-04-01";
-	private static final String END = "2026-06-30";
+	private static final LocalDate START = LocalDate.of(2026, APRIL, 1);
+	private static final LocalDate END = LocalDate.of(2026, JUNE, 30);
+
+	// The same window on the wire: FamilyCare requires RFC 3339 with a time component, and the window is inclusive in
+	// both ends, so the end date is sent as end of day.
+	private static final String START_WIRE = "2026-04-01T00:00:00";
+	private static final String END_WIRE = "2026-06-30T23:59:59";
 
 	@Mock
 	private LifecareFamilyCareClient clientMock;
@@ -75,70 +83,70 @@ class LifecareFamilyCareIntegrationTest {
 	@Test
 	void getActualisations() {
 		final var response = new ApiPaginationCompositePersonBasedAktualiseringDTO();
-		when(clientMock.getActualisations(PERSON_ID, START, END, null, null, false)).thenReturn(response);
+		when(clientMock.getActualisations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
 		assertThat(integration.getActualisations(PERSON_ID, START, END)).isSameAs(response);
-		verify(clientMock).getActualisations(PERSON_ID, START, END, null, null, false);
+		verify(clientMock).getActualisations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getCalculations() {
 		final var response = new ApiPaginationCompositePersonBasedCalculationDTO();
-		when(clientMock.getCalculations(PERSON_ID, START, END, null, null, false)).thenReturn(response);
+		when(clientMock.getCalculations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
 		assertThat(integration.getCalculations(PERSON_ID, START, END)).isSameAs(response);
-		verify(clientMock).getCalculations(PERSON_ID, START, END, null, null, false);
+		verify(clientMock).getCalculations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getDecisions() {
 		final var response = new ApiPaginationCompositePersonBasedDecisionDTO();
-		when(clientMock.getDecisions(PERSON_ID, START, END, null, null, false)).thenReturn(response);
+		when(clientMock.getDecisions(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
 		assertThat(integration.getDecisions(PERSON_ID, START, END)).isSameAs(response);
-		verify(clientMock).getDecisions(PERSON_ID, START, END, null, null, false);
+		verify(clientMock).getDecisions(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getPayments() {
 		final var response = new ApiPaginationCompositePersonBasedPaymentDTO();
-		when(clientMock.getPayments(PERSON_ID, START, END, null, null, false)).thenReturn(response);
+		when(clientMock.getPayments(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
 		assertThat(integration.getPayments(PERSON_ID, START, END)).isSameAs(response);
-		verify(clientMock).getPayments(PERSON_ID, START, END, null, null, false);
+		verify(clientMock).getPayments(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getInvestigations() {
 		final var response = new ApiPaginationCompositePersonBasedInvestigationDTO();
-		when(clientMock.getInvestigations(PERSON_ID, START, END, null, null, false)).thenReturn(response);
+		when(clientMock.getInvestigations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
 		assertThat(integration.getInvestigations(PERSON_ID, START, END)).isSameAs(response);
-		verify(clientMock).getInvestigations(PERSON_ID, START, END, null, null, false);
+		verify(clientMock).getInvestigations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getServices() {
 		final var response = new ApiPaginationCompositePersonBasedServiceDTO();
-		when(clientMock.getServices(PERSON_ID, START, END, null, null, false)).thenReturn(response);
+		when(clientMock.getServices(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
 		assertThat(integration.getServices(PERSON_ID, START, END)).isSameAs(response);
-		verify(clientMock).getServices(PERSON_ID, START, END, null, null, false);
+		verify(clientMock).getServices(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getExecutions() {
 		final var response = new ApiPaginationCompositePersonBasedExecutionDTO();
-		when(clientMock.getExecutions(PERSON_ID, START, END, null, null, false)).thenReturn(response);
+		when(clientMock.getExecutions(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
 		assertThat(integration.getExecutions(PERSON_ID, START, END)).isSameAs(response);
-		verify(clientMock).getExecutions(PERSON_ID, START, END, null, null, false);
+		verify(clientMock).getExecutions(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
@@ -166,16 +174,16 @@ class LifecareFamilyCareIntegrationTest {
 	@Test
 	void getResourceAllocations() {
 		final var response = new ApiPaginationCompositePersonBasedResourceAllocationDTO();
-		when(clientMock.getResourceAllocations(PERSON_ID, START, END, null, null, false)).thenReturn(response);
+		when(clientMock.getResourceAllocations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
 		assertThat(integration.getResourceAllocations(PERSON_ID, START, END)).isSameAs(response);
-		verify(clientMock).getResourceAllocations(PERSON_ID, START, END, null, null, false);
+		verify(clientMock).getResourceAllocations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void getDecisionsFailure() {
-		when(clientMock.getDecisions(PERSON_ID, START, END, null, null, false)).thenThrow(new RuntimeException("timeout"));
+		when(clientMock.getDecisions(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenThrow(new RuntimeException("timeout"));
 
 		assertThatThrownBy(() -> integration.getDecisions(PERSON_ID, START, END))
 			.isInstanceOf(ThrowableProblem.class)
@@ -183,7 +191,7 @@ class LifecareFamilyCareIntegrationTest {
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
 			.isEqualTo("Error fetching decision in Lifecare FamilyCare: RuntimeException");
 
-		verify(clientMock).getDecisions(PERSON_ID, START, END, null, null, false);
+		verify(clientMock).getDecisions(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 	}
 
 	// ---- Write-back + proposals --------------------------------------------------------------------------------------

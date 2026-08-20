@@ -11,6 +11,7 @@ integration:
     url: http://lifecarefamilycare.url
     domain: junit-domain
     key: junit-key
+    user-key: junit-user-key
   financial-aid:
     url: http://financialaid.url
   messaging:

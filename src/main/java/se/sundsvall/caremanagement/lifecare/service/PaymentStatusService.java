@@ -6,7 +6,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 import static org.springframework.util.StringUtils.hasText;
 
@@ -34,8 +33,8 @@ public class PaymentStatusService {
 	 * @return                   the effectuated flag and, when effectuated, the Lifecare PayDate
 	 */
 	public PaymentStatus read(final String applicantPersonId, final YearMonth applicationMonth) {
-		final var from = applicationMonth.minusMonths(1).atDay(1).format(ISO_LOCAL_DATE);
-		final var to = applicationMonth.atEndOfMonth().format(ISO_LOCAL_DATE);
+		final var from = applicationMonth.minusMonths(1).atDay(1);
+		final var to = applicationMonth.atEndOfMonth();
 
 		final var payments = ofNullable(lifecareFamilyCareIntegration.getPayments(applicantPersonId, from, to))
 			.map(ApiPaginationCompositePersonBasedPaymentDTO::getResult)

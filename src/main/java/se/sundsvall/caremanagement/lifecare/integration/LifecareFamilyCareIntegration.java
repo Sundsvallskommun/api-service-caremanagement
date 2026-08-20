@@ -16,6 +16,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.User;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Supplier;
 import org.springframework.stereotype.Component;
@@ -24,12 +25,19 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.endOfDay;
+import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.startOfDay;
 
 /**
  * Thin wrapper over {@link LifecareFamilyCareClient}. Every call goes through {@link #call(String, Supplier)}, which
  * translates any transport/FamilyCare failure into a {@code BAD_GATEWAY} problem carrying the upstream status into the
  * problem detail. Deliberately logs no {@code personId} or request/response payloads — FamilyCare carries personal
  * identity number and income data (sprint privacy rule, vof-ekonomiskt-bistand/CLAUDE.md).
+ *
+ * <p>
+ * The period reads take the window as {@link LocalDate}s and render them here, through {@link FamilyCareDates}, so no
+ * caller can hand FamilyCare a date in a format it rejects. The window is inclusive in both ends: the start date
+ * becomes start of day and the end date end of day.
  */
 @Component
 public class LifecareFamilyCareIntegration {
@@ -67,44 +75,44 @@ public class LifecareFamilyCareIntegration {
 		return call("fetching contacts", () -> lifecareFamilyCareClient.getContacts(personId));
 	}
 
-	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String personId, final String startDate, final String endDate) {
-		return call("fetching actualisations", () -> lifecareFamilyCareClient.getActualisations(personId, startDate, endDate, null, null, false));
+	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String personId, final LocalDate startDate, final LocalDate endDate) {
+		return call("fetching actualisations", () -> lifecareFamilyCareClient.getActualisations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String personId, final String startDate, final String endDate) {
-		return call("fetching calculations", () -> lifecareFamilyCareClient.getCalculations(personId, startDate, endDate, null, null, false));
+	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String personId, final LocalDate startDate, final LocalDate endDate) {
+		return call("fetching calculations", () -> lifecareFamilyCareClient.getCalculations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String personId, final String startDate, final String endDate) {
-		return call("fetching decision", () -> lifecareFamilyCareClient.getDecisions(personId, startDate, endDate, null, null, false));
+	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String personId, final LocalDate startDate, final LocalDate endDate) {
+		return call("fetching decision", () -> lifecareFamilyCareClient.getDecisions(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String personId, final String startDate, final String endDate) {
-		return call("fetching payments", () -> lifecareFamilyCareClient.getPayments(personId, startDate, endDate, null, null, false));
+	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String personId, final LocalDate startDate, final LocalDate endDate) {
+		return call("fetching payments", () -> lifecareFamilyCareClient.getPayments(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String personId, final String startDate, final String endDate) {
-		return call("fetching investigations", () -> lifecareFamilyCareClient.getInvestigations(personId, startDate, endDate, null, null, false));
+	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String personId, final LocalDate startDate, final LocalDate endDate) {
+		return call("fetching investigations", () -> lifecareFamilyCareClient.getInvestigations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String personId, final String startDate, final String endDate) {
-		return call("fetching services", () -> lifecareFamilyCareClient.getServices(personId, startDate, endDate, null, null, false));
+	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String personId, final LocalDate startDate, final LocalDate endDate) {
+		return call("fetching services", () -> lifecareFamilyCareClient.getServices(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String personId, final String startDate, final String endDate) {
-		return call("fetching executions", () -> lifecareFamilyCareClient.getExecutions(personId, startDate, endDate, null, null, false));
+	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String personId, final LocalDate startDate, final LocalDate endDate) {
+		return call("fetching executions", () -> lifecareFamilyCareClient.getExecutions(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String personId, final String startDate, final String endDate) {
-		return call("fetching resource allocations", () -> lifecareFamilyCareClient.getResourceAllocations(personId, startDate, endDate, null, null, false));
+	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String personId, final LocalDate startDate, final LocalDate endDate) {
+		return call("fetching resource allocations", () -> lifecareFamilyCareClient.getResourceAllocations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
 	public List<User> getUsers(final Integer limit, final Integer offset, final String modifiedAfter, final String modifiedBefore) {
 		return call("fetching users", () -> lifecareFamilyCareClient.getUsers(limit, offset, modifiedAfter, modifiedBefore));
 	}
 
-	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String personId, final String startDate, final String endDate) {
-		return call("fetching documents", () -> lifecareFamilyCareClient.getDocuments(personId, startDate, endDate, null, null, false));
+	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String personId, final LocalDate startDate, final LocalDate endDate) {
+		return call("fetching documents", () -> lifecareFamilyCareClient.getDocuments(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
 	// ---- Write-back (actualisation + calculation) and the proposals that drive it ----------------------------------

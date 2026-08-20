@@ -12,7 +12,6 @@ import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegr
 import se.sundsvall.caremanagement.lifecare.service.mapper.ActualisationAssembler;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
 
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 
 /**
@@ -82,7 +81,7 @@ public class ActualisationService {
 	 * @return          the person's actualisations in the period (newest-first as Lifecare returns them)
 	 */
 	public List<ActualisationSummary> listActualisations(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getActualisations(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
+		return ofNullable(lifecareFamilyCareIntegration.getActualisations(personId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedAktualiseringDTO::getResult)
 			.orElseGet(List::of)
 			.stream()

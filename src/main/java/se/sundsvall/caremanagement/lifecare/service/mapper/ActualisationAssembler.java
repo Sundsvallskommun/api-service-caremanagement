@@ -16,8 +16,8 @@ import java.util.Objects;
 import java.util.Optional;
 import org.springframework.util.StringUtils;
 
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.startOfDay;
 
 /**
  * Assembles the FamilyCare {@link PostAktualiseringsBodyRequest} for a financial-assistance intake (actualisation) by
@@ -51,7 +51,7 @@ public final class ActualisationAssembler {
 	public static PostAktualiseringsBodyRequest assemble(final String applicantPersonId, final PersonBasedAktualiseringProposalDTO proposalDTO, final LocalDate date, final String caseworkerId) {
 		final var body = new PostAktualiseringsBodyRequest()
 			.personId(applicantPersonId)
-			.date(date.format(ISO_LOCAL_DATE));
+			.date(startOfDay(date));
 
 		ofNullable(caseworkerId).filter(StringUtils::hasText).ifPresent(body::caseworkerId);
 
