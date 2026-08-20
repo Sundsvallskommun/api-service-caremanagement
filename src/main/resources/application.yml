@@ -113,6 +113,10 @@ integration:
     url: ${INTEGRATION_LIFECARE_FAMILYCARE_URL}
     domain: ${INTEGRATION_LIFECARE_FAMILYCARE_DOMAIN}
     key: ${INTEGRATION_LIFECARE_FAMILYCARE_KEY}
+    # Separate licence key for the FamilyCare user directory (Users/*), which is licensed to its own consumer
+    # ("Användarinformation IFO"). Optional — leave unset where one consumer covers both surfaces (and in mocked
+    # environments) and `key` is used for every call.
+    user-key: ${INTEGRATION_LIFECARE_FAMILYCARE_USER_KEY:}
     connect-timeout: 5
     read-timeout: 30
     # Lookback (months, ending at the reference date) for the financial assistance eligibility reads — actualisations, decisions, calculations.

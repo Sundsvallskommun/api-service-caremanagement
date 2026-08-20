@@ -20,7 +20,16 @@ class LifecareFamilyCarePropertiesTest {
 		assertThat(properties.url()).isEqualTo("http://lifecarefamilycare.url");
 		assertThat(properties.domain()).isEqualTo("junit-domain");
 		assertThat(properties.key()).isEqualTo("junit-key");
+		assertThat(properties.userKey()).isEqualTo("junit-user-key");
+		assertThat(properties.userKeyOrDefault()).isEqualTo("junit-user-key");
 		assertThat(properties.connectTimeout()).isEqualTo(5);
 		assertThat(properties.readTimeout()).isEqualTo(30);
+	}
+
+	/** The separate user-directory licence key is optional — unset or blank falls back to the main key. */
+	@Test
+	void testUserKeyFallsBackToKeyWhenNotConfigured() {
+		assertThat(new LifecareFamilyCareProperties("url", "domain", "the-key", null, 5, 30).userKeyOrDefault()).isEqualTo("the-key");
+		assertThat(new LifecareFamilyCareProperties("url", "domain", "the-key", " ", 5, 30).userKeyOrDefault()).isEqualTo("the-key");
 	}
 }
