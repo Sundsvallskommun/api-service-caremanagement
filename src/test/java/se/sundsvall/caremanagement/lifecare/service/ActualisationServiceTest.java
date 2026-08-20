@@ -54,7 +54,7 @@ class ActualisationServiceTest {
 		final ArgumentCaptor<PostAktualiseringsBodyRequest> captor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
 		verify(lifecareFamilyCareIntegrationMock).createActualisation(captor.capture());
 		assertThat(captor.getValue().getPersonId()).isEqualTo(APPLICANT);
-		assertThat(captor.getValue().getDate()).isEqualTo("2026-06-01");
+		assertThat(captor.getValue().getDate()).isEqualTo("2026-06-01T00:00:00");
 		assertThat(captor.getValue().getType()).isEqualTo(3);
 		assertThat(captor.getValue().getCaseworkerId()).isEqualTo("9001");
 	}
@@ -103,7 +103,7 @@ class ActualisationServiceTest {
 			.id(5012).type("Ansökan").personId(APPLICANT).name("Ekonomiskt bistånd").date("2026-06-01")
 			.reason("Nyansökan").regards("Försörjningsstöd").fromWho("Den enskilde").caseworker("Anna Andersson")
 			.organization("IFO").status("Pågående").investigationId(8801).serviceId(7700).decisionId(9900);
-		when(lifecareFamilyCareIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30"))
+		when(lifecareFamilyCareIntegrationMock.getActualisations(APPLICANT, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO().addResultItem(dto));
 
 		final var result = service.listActualisations(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
@@ -127,7 +127,7 @@ class ActualisationServiceTest {
 
 	@Test
 	void listReturnsEmptyWhenFamilyCareHasNoPage() {
-		when(lifecareFamilyCareIntegrationMock.getActualisations(APPLICANT, "2026-01-01", "2026-06-30")).thenReturn(null);
+		when(lifecareFamilyCareIntegrationMock.getActualisations(APPLICANT, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30"))).thenReturn(null);
 
 		assertThat(service.listActualisations(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30))).isEmpty();
 	}

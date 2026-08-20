@@ -23,7 +23,6 @@ import se.sundsvall.caremanagement.lifecare.service.model.DecisionPersonView;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.lifecare.service.model.DocumentView;
 
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.toAmount;
 
@@ -57,7 +56,7 @@ public class LifecareCaseHistoryService {
 	 * @return          the person's calculations in the period (empty when none)
 	 */
 	public List<CalculationView> listCalculations(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
+		return ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -74,7 +73,7 @@ public class LifecareCaseHistoryService {
 	 * @return          the person's decisions in the period (empty when none)
 	 */
 	public List<DecisionView> listDecisions(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
+		return ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -92,7 +91,7 @@ public class LifecareCaseHistoryService {
 	 * @return          the person's documents in the period (empty when none)
 	 */
 	public List<DocumentView> listDocuments(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getDocuments(personId, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
+		return ofNullable(lifecareFamilyCareIntegration.getDocuments(personId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedDocumentDTO::getResult)
 			.orElseGet(List::of)
 			.stream()

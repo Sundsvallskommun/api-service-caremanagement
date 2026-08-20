@@ -31,9 +31,9 @@ class CalculationAssemblerTest {
 		final var body = CalculationAssembler.assemble(PERSON_ID, null, List.of(income), MONTH);
 
 		assertThat(body.getPersonId()).isEqualTo(PERSON_ID);
-		assertThat(body.getCalculationDate()).isEqualTo("2026-06-01");
-		assertThat(body.getCalculationFromDate()).isEqualTo("2026-06-01");
-		assertThat(body.getCalculationToDate()).isEqualTo("2026-06-30");
+		assertThat(body.getCalculationDate()).isEqualTo("2026-06-01T00:00:00");
+		assertThat(body.getCalculationFromDate()).isEqualTo("2026-06-01T00:00:00");
+		assertThat(body.getCalculationToDate()).isEqualTo("2026-06-30T00:00:00");
 		assertThat(body.getCalculationIncomes()).containsExactly(income);
 		// No proposal → no links resolved.
 		assertThat(body.getServiceId()).isNull();
@@ -113,9 +113,9 @@ class CalculationAssemblerTest {
 		assertThat(body.getCalculationPersons()).containsExactly(person);
 		// Header overrides the proposal norm and the date window + household.
 		assertThat(body.getNormId()).isEqualTo(999);
-		assertThat(body.getCalculationFromDate()).isEqualTo("2026-06-05");
-		assertThat(body.getCalculationToDate()).isEqualTo("2026-06-25");
-		assertThat(body.getCalculationDate()).isEqualTo("2026-06-05");
+		assertThat(body.getCalculationFromDate()).isEqualTo("2026-06-05T00:00:00");
+		assertThat(body.getCalculationToDate()).isEqualTo("2026-06-25T00:00:00");
+		assertThat(body.getCalculationDate()).isEqualTo("2026-06-05T00:00:00");
 		assertThat(body.getHasCustomHouseholdSize()).isTrue();
 		assertThat(body.getHouseholdSize()).isEqualTo(3);
 	}
@@ -134,7 +134,7 @@ class CalculationAssemblerTest {
 		assertThat(body.getCalculationPersons()).isEmpty();
 		// No header → proposal norm + application-month window stand.
 		assertThat(body.getNormId()).isEqualTo(200);
-		assertThat(body.getCalculationFromDate()).isEqualTo("2026-06-01");
-		assertThat(body.getCalculationToDate()).isEqualTo("2026-06-30");
+		assertThat(body.getCalculationFromDate()).isEqualTo("2026-06-01T00:00:00");
+		assertThat(body.getCalculationToDate()).isEqualTo("2026-06-30T00:00:00");
 	}
 }

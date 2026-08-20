@@ -12,11 +12,12 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationSections;
 
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.startOfDay;
 
 /**
  * Assembles the full FamilyCare {@link PostCalculationBodyRequest} for an SSBTEK-driven calculation by combining the
@@ -52,9 +53,9 @@ public final class CalculationAssembler {
 		final var monthStart = applicationMonth.atDay(1);
 		final var body = new PostCalculationBodyRequest()
 			.personId(applicantPersonId)
-			.calculationDate(monthStart.format(ISO_LOCAL_DATE))
-			.calculationFromDate(monthStart.format(ISO_LOCAL_DATE))
-			.calculationToDate(applicationMonth.atEndOfMonth().format(ISO_LOCAL_DATE))
+			.calculationDate(startOfDay(monthStart))
+			.calculationFromDate(startOfDay(monthStart))
+			.calculationToDate(startOfDay(applicationMonth.atEndOfMonth()))
 			.calculationIncomes(ofNullable(calculationIncomes).orElseGet(List::of));
 
 		ofNullable(proposal).ifPresent(p -> {
@@ -99,9 +100,9 @@ public final class CalculationAssembler {
 	 */
 	private static void applyHeader(final PostCalculationBodyRequest body, final CalculationHeader header) {
 		ofNullable(header.normId()).ifPresent(body::normId);
-		ofNullable(header.calculationFromDate()).map(date -> date.format(ISO_LOCAL_DATE)).ifPresent(body::calculationFromDate);
-		ofNullable(header.calculationToDate()).map(date -> date.format(ISO_LOCAL_DATE)).ifPresent(body::calculationToDate);
-		ofNullable(header.calculationDate()).map(date -> date.format(ISO_LOCAL_DATE)).ifPresent(body::calculationDate);
+		ofNullable(header.calculationFromDate()).map(FamilyCareDates::startOfDay).ifPresent(body::calculationFromDate);
+		ofNullable(header.calculationToDate()).map(FamilyCareDates::startOfDay).ifPresent(body::calculationToDate);
+		ofNullable(header.calculationDate()).map(FamilyCareDates::startOfDay).ifPresent(body::calculationDate);
 		ofNullable(header.hasCustomHouseholdSize()).ifPresent(body::hasCustomHouseholdSize);
 		ofNullable(header.householdSize()).ifPresent(body::householdSize);
 	}

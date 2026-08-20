@@ -59,10 +59,9 @@ public class CaseworkerResolver {
 
 	/** The caseworker display name on the person's most recent Service (by start date) in the lookback window. */
 	private Optional<String> mostRecentServiceCaseworker(final String personId, final LocalDate referenceDate) {
-		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
-		final var end = referenceDate.format(ISO_LOCAL_DATE);
+		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		return ofNullable(lifecareFamilyCareIntegration.getServices(personId, start, end))
+		return ofNullable(lifecareFamilyCareIntegration.getServices(personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedServiceDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(Objects::nonNull)

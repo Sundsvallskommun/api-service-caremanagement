@@ -29,7 +29,6 @@ import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 
 import static java.lang.Boolean.TRUE;
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Comparator.comparing;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toSet;
@@ -71,18 +70,17 @@ public class LifecareCaseService {
 	 * @return               the distilled summary; never {@code null}
 	 */
 	public LifecareCaseSummary summarize(final String personId, final LocalDate referenceDate) {
-		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
-		final var end = referenceDate.format(ISO_LOCAL_DATE);
+		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		final var actualisations = ofNullable(lifecareFamilyCareIntegration.getActualisations(personId, start, end))
+		final var actualisations = ofNullable(lifecareFamilyCareIntegration.getActualisations(personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedAktualiseringDTO::getResult)
 			.orElseGet(List::of);
 
-		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, start, end))
+		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of);
 
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, end))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of);
 
@@ -126,14 +124,13 @@ public class LifecareCaseService {
 	 * @return               the roster (applicant, co-applicant and the calculation members); members empty when none
 	 */
 	public LifecareRoster latestRoster(final String personId, final LocalDate referenceDate) {
-		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
-		final var end = referenceDate.format(ISO_LOCAL_DATE);
+		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, end))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of);
 
-		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, start, end))
+		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of);
 
@@ -163,10 +160,9 @@ public class LifecareCaseService {
 	 */
 	public List<String> previousCalculationIncomeTypes(final String personId, final YearMonth applicationMonth) {
 		final var referenceDate = applicationMonth.atDay(1);
-		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
-		final var end = referenceDate.format(ISO_LOCAL_DATE);
+		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, end))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
@@ -193,10 +189,9 @@ public class LifecareCaseService {
 	 */
 	public PreviousHousehold previousHousehold(final String personId, final YearMonth applicationMonth) {
 		final var referenceDate = applicationMonth.atDay(1);
-		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
-		final var end = referenceDate.format(ISO_LOCAL_DATE);
+		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, end))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
@@ -236,10 +231,9 @@ public class LifecareCaseService {
 	 */
 	public Map<String, BigDecimal> previousExpenseAmounts(final String personId, final YearMonth applicationMonth) {
 		final var referenceDate = applicationMonth.atDay(1);
-		final var start = referenceDate.minusMonths(lookbackMonths).format(ISO_LOCAL_DATE);
-		final var end = referenceDate.format(ISO_LOCAL_DATE);
+		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, end))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))

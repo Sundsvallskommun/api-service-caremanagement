@@ -58,12 +58,12 @@ class CaseworkerResolverTest {
 
 	@Test
 	void queriesServicesOverTheLookbackWindow() {
-		when(lifecareFamilyCareIntegrationMock.getServices(PERSON_ID, "2023-06-01", "2026-06-01"))
+		when(lifecareFamilyCareIntegrationMock.getServices(PERSON_ID, LocalDate.parse("2023-06-01"), LocalDate.parse("2026-06-01")))
 			.thenReturn(new ApiPaginationCompositePersonBasedServiceDTO());
 
 		resolver.resolve(PERSON_ID, DATE);
 
-		verify(lifecareFamilyCareIntegrationMock).getServices(PERSON_ID, "2023-06-01", "2026-06-01");
+		verify(lifecareFamilyCareIntegrationMock).getServices(PERSON_ID, LocalDate.parse("2023-06-01"), LocalDate.parse("2026-06-01"));
 	}
 
 	@Test

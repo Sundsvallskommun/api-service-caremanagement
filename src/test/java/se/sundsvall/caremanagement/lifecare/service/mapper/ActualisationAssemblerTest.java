@@ -25,7 +25,7 @@ class ActualisationAssemblerTest {
 		final var body = ActualisationAssembler.assemble(PERSON_ID, null, DATE, null);
 
 		assertThat(body.getPersonId()).isEqualTo(PERSON_ID);
-		assertThat(body.getDate()).isEqualTo("2026-06-01");
+		assertThat(body.getDate()).isEqualTo("2026-06-01T00:00:00");
 		// No proposal → no codes resolved.
 		assertThat(body.getType()).isNull();
 		assertThat(body.getReason()).isNull();

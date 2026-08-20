@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.lifecare.service;
 
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedPaymentDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPaymentDTO;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -79,6 +80,6 @@ class PaymentStatusServiceTest {
 
 		service.read("199001011234", YearMonth.of(2026, JUNE));
 
-		verify(lifecareFamilyCareIntegrationMock).getPayments("199001011234", "2026-05-01", "2026-06-30");
+		verify(lifecareFamilyCareIntegrationMock).getPayments("199001011234", LocalDate.parse("2026-05-01"), LocalDate.parse("2026-06-30"));
 	}
 }
