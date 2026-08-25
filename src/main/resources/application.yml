@@ -121,6 +121,11 @@ integration:
     read-timeout: 30
     # Lookback (months, ending at the reference date) for the financial assistance eligibility reads — actualisations, decisions, calculations.
     lookback-months: 13
+    # FamilyCare actualisation Status values that count as an open case ("öppet ärende"), matched case-insensitively.
+    # Reported as hasOpenCase on the eligibility response; it only drives the existence gate once
+    # financial-assistance.eligibility.require-open-case is turned on. Confirm the vocabulary against production
+    # Lifecare before adding values here.
+    open-actualisation-statuses: Aktuell
   # UiPath Orchestrator RPA — enqueues financial assistance Lifecare write/fetch jobs as queue items (AddQueueItem). url is the
   # Orchestrator base; queue is the single financial assistance queue (the action travels in the item SpecificContent); folderIds map
   # municipalityId → Orchestrator folder (X-UIPATH-OrganizationUnitId). OAuth2 via the rpa registration above. Set
@@ -171,8 +176,14 @@ archive:
 #========================================
 financial-assistance:
   eligibility:
-    # "Inom X dagar" duplicate-application guard for the common-entry-point eligibility check. A request may override it.
+    # Staleness bound for the per-month duplicate-application check: an ongoing caremanagement application older than
+    # this no longer counts as "pågående" for the month it concerns. Whether an application blocks is decided by its
+    # status (terminal statuses never block) — this is only the upper age limit.
     duplicate-window-days: 90
+    # Require an open Lifecare case (hasOpenCase) — rather than any Lifecare footprint — for the existence gate. Off
+    # until the FamilyCare actualisation status vocabulary is verified against production data; see
+    # integration.lifecare-familycare.open-actualisation-statuses. An unknown status never locks an applicant out.
+    require-open-case: ${FINANCIAL_ASSISTANCE_REQUIRE_OPEN_CASE:false}
     # "Recently closed inom X dagar" guard. When an applicant's previous financial assistance errand was closed this recently, the
     # eligibility check recommends a renewal (reasonCode RECENTLY_CLOSED) and surfaces the closed errand, and a freshly
     # created errand is frozen as NEEDS_MANUAL_REVIEW (no aktualisering, no arkivering) for a caseworker to reopen in

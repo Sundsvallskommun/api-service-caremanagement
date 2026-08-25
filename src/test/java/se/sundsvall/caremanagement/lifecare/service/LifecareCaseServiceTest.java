@@ -39,7 +39,7 @@ class LifecareCaseServiceTest {
 	private LifecareFamilyCareIntegration integrationMock;
 
 	private LifecareCaseService service() {
-		return new LifecareCaseService(integrationMock, 13);
+		return new LifecareCaseService(integrationMock, 13, List.of("Aktuell"));
 	}
 
 	private void noActualisations() {
@@ -77,7 +77,8 @@ class LifecareCaseServiceTest {
 	@Test
 	void footprintFromActualisationOnly() {
 		when(integrationMock.getActualisations(eq(APPLICANT), any(), any()))
-			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO().addResultItem(new PersonBasedAktualiseringDTO().status("OPEN")));
+			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO()
+				.addResultItem(new PersonBasedAktualiseringDTO().status("Aktuell")));
 		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 		noCalculations();
@@ -85,9 +86,67 @@ class LifecareCaseServiceTest {
 		final var summary = service().summarize(APPLICANT, REFERENCE);
 
 		assertThat(summary.hasFootprint()).isTrue();
+		assertThat(summary.hasOpenCase()).isTrue();
 		assertThat(summary.decisionMonths()).isEmpty();
 		assertThat(summary.latestDecisionPeriod()).isNull();
 		assertThat(summary.hasCoApplicant()).isFalse();
+	}
+
+	@Test
+	void openCaseStatusMatchIsCaseAndWhitespaceInsensitive() {
+		when(integrationMock.getActualisations(eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO()
+				.addResultItem(new PersonBasedAktualiseringDTO().status("  aKtUeLl ")));
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
+		noCalculations();
+
+		assertThat(service().summarize(APPLICANT, REFERENCE).hasOpenCase()).isTrue();
+	}
+
+	@Test
+	void aStatusOutsideTheOpenVocabularyIsNotAnOpenCase() {
+		when(integrationMock.getActualisations(eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO()
+				.addResultItem(new PersonBasedAktualiseringDTO().status("Avslutad")));
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
+		noCalculations();
+
+		final var summary = service().summarize(APPLICANT, REFERENCE);
+
+		assertThat(summary.hasFootprint()).isTrue();
+		assertThat(summary.hasOpenCase()).isFalse();
+	}
+
+	@Test
+	void anActualisationWithoutAReadableStatusLeavesTheOpenCaseUnknown() {
+		// FamilyCare's status vocabulary is not fully confirmed — an unreadable status must report "unknown", not "closed".
+		when(integrationMock.getActualisations(eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO()
+				.addResultItem(new PersonBasedAktualiseringDTO().status(" ")));
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
+		noCalculations();
+
+		final var summary = service().summarize(APPLICANT, REFERENCE);
+
+		assertThat(summary.hasFootprint()).isTrue();
+		assertThat(summary.hasOpenCase()).isNull();
+	}
+
+	@Test
+	void blankConfiguredStatusesAreIgnored() {
+		when(integrationMock.getActualisations(eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO()
+				.addResultItem(new PersonBasedAktualiseringDTO().status("Aktuell")));
+		when(integrationMock.getDecisions(eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
+		noCalculations();
+
+		final var service = new LifecareCaseService(integrationMock, 13, List.of(" ", "Aktuell"));
+
+		assertThat(service.summarize(APPLICANT, REFERENCE).hasOpenCase()).isTrue();
 	}
 
 	@Test
