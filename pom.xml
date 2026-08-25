@@ -21,7 +21,7 @@
 		<!-- Combining errand attachments into a single PDF: PDFBox merges/rasterises,
 				POI + XDocReport render DOCX. Versions aligned with the rest of the fleet
 				(api-service-digital-registered-letter / api-service-templating). -->
-		<pdfbox.version>3.0.7</pdfbox.version>
+		<pdfbox.version>3.0.8</pdfbox.version>
 		<poi.version>5.5.1</poi.version>
 		<poi-pdf-converter.version>2.2.0</poi-pdf-converter.version>
 		<generated-sources-path>${project.build.directory}/generated-sources</generated-sources-path>
