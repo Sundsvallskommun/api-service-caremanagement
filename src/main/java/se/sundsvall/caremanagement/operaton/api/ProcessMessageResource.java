@@ -63,7 +63,7 @@ class ProcessMessageResource {
 		@Parameter(name = "errandId") @ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final ProcessMessageRequest request) {
 
-		processService.correlateMessage(municipalityId, request.getMessageName(), errandId, request.getVariables());
+		processService.correlateMessage(municipalityId, namespace, request.getMessageName(), errandId, request.getVariables());
 		return noContent().header(CONTENT_TYPE, ALL_VALUE).build();
 	}
 }

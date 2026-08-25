@@ -253,6 +253,8 @@ public class FaPerson {
 		return this;
 	}
 
+	// 'hadWorkDescription' and 'otherPaymentDescription' (LONG32 columns) are deliberately excluded from
+	// equals/hashCode/toString — they can be large and are not part of the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -260,9 +262,9 @@ public class FaPerson {
 		final FaPerson that = (FaPerson) o;
 		return Objects.equals(role, that.role) && Objects.equals(partyId, that.partyId)
 			&& Objects.equals(needsInterpreter, that.needsInterpreter) && Objects.equals(interpreterLanguage, that.interpreterLanguage)
-			&& Objects.equals(hadWorkLast12Months, that.hadWorkLast12Months) && Objects.equals(hadWorkDescription, that.hadWorkDescription)
+			&& Objects.equals(hadWorkLast12Months, that.hadWorkLast12Months)
 			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(clearingNumber, that.clearingNumber)
-			&& Objects.equals(accountNumber, that.accountNumber) && Objects.equals(otherPaymentDescription, that.otherPaymentDescription)
+			&& Objects.equals(accountNumber, that.accountNumber)
 			&& Objects.equals(paymentSameAsPrevious, that.paymentSameAsPrevious) && Objects.equals(email, that.email)
 			&& Objects.equals(phone, that.phone) && Objects.equals(notifyByEmail, that.notifyByEmail)
 			&& Objects.equals(notifyBySms, that.notifyBySms);
@@ -270,8 +272,8 @@ public class FaPerson {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(role, partyId, needsInterpreter, interpreterLanguage, hadWorkLast12Months, hadWorkDescription,
-			paymentMethod, clearingNumber, accountNumber, otherPaymentDescription, paymentSameAsPrevious, email, phone,
+		return Objects.hash(role, partyId, needsInterpreter, interpreterLanguage, hadWorkLast12Months,
+			paymentMethod, clearingNumber, accountNumber, paymentSameAsPrevious, email, phone,
 			notifyByEmail, notifyBySms);
 	}
 
@@ -279,8 +281,8 @@ public class FaPerson {
 	public String toString() {
 		return "FaPerson{role='" + role + "', partyId='" + partyId + "', needsInterpreter=" + needsInterpreter
 			+ ", interpreterLanguage='" + interpreterLanguage + "', hadWorkLast12Months=" + hadWorkLast12Months
-			+ ", hadWorkDescription='" + hadWorkDescription + "', paymentMethod='" + paymentMethod + "', clearingNumber='"
-			+ clearingNumber + "', accountNumber='" + accountNumber + "', otherPaymentDescription='" + otherPaymentDescription
+			+ ", paymentMethod='" + paymentMethod + "', clearingNumber='"
+			+ clearingNumber + "', accountNumber='" + accountNumber
 			+ "', paymentSameAsPrevious=" + paymentSameAsPrevious + ", email='" + email + "', phone='" + phone
 			+ "', notifyByEmail=" + notifyByEmail + ", notifyBySms=" + notifyBySms + '}';
 	}

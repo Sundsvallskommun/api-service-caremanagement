@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -22,8 +23,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.PROCESS_DEFINITION_NAME;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.PROCESS_DEFINITION_NAME_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.PROCESS_DEFINITION_NAME_SUPPLEMENTARY;
@@ -58,11 +63,14 @@ class FinancialAssistanceProcessStarterTest {
 	@Mock
 	private CitizenService citizenServiceMock;
 
+	@Captor
+	private ArgumentCaptor<Map<String, Object>> varsCaptor;
+
 	@InjectMocks
 	private FinancialAssistanceProcessStarter starter;
 
 	@Test
-	void startsProcessWithHouseholdVariablesAndLinksInstance() {
+	void startForRenewalStartsDecisionSupportProcessWithHouseholdVariablesAndLinksInstance() {
 		final var entity = FinancialAssistanceEntity.create()
 			.withErrandId(ERRAND_ID)
 			.withPeriodYear(2026)
@@ -75,10 +83,8 @@ class FinancialAssistanceProcessStarterTest {
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
 
-		starter.start(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
+		starter.startFor(SLUG_RENEWAL, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 
-		@SuppressWarnings("unchecked")
-		final ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
 		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), varsCaptor.capture());
 		assertThat(varsCaptor.getValue())
 			.containsEntry(VAR_MUNICIPALITY_ID, MUNICIPALITY_ID)
@@ -95,7 +101,7 @@ class FinancialAssistanceProcessStarterTest {
 	}
 
 	@Test
-	void startSupplementaryStartsTillaggsansokanProcessWithSameVariablesAndLinksInstance() {
+	void startForSupplementaryStartsTillaggsansokanProcessWithSameVariablesAndLinksInstance() {
 		final var entity = FinancialAssistanceEntity.create()
 			.withErrandId(ERRAND_ID)
 			.withPeriodYear(2026)
@@ -105,10 +111,8 @@ class FinancialAssistanceProcessStarterTest {
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME_SUPPLEMENTARY), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
 
-		starter.startSupplementary(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
+		starter.startFor(SLUG_SUPPLEMENTARY, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 
-		@SuppressWarnings("unchecked")
-		final ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
 		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME_SUPPLEMENTARY), eq(ERRAND_ID), varsCaptor.capture());
 		assertThat(varsCaptor.getValue())
 			.containsEntry(VAR_MUNICIPALITY_ID, MUNICIPALITY_ID)
@@ -120,7 +124,7 @@ class FinancialAssistanceProcessStarterTest {
 	}
 
 	@Test
-	void startNewStartsNyansokanProcessWithSameVariablesAndLinksInstance() {
+	void startForNewStartsNyansokanProcessWithSameVariablesAndLinksInstance() {
 		final var entity = FinancialAssistanceEntity.create()
 			.withErrandId(ERRAND_ID)
 			.withPeriodYear(2026)
@@ -130,10 +134,8 @@ class FinancialAssistanceProcessStarterTest {
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME_NEW), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
 
-		starter.startNew(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
+		starter.startFor(SLUG_NEW, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 
-		@SuppressWarnings("unchecked")
-		final ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
 		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME_NEW), eq(ERRAND_ID), varsCaptor.capture());
 		assertThat(varsCaptor.getValue())
 			.containsEntry(VAR_MUNICIPALITY_ID, MUNICIPALITY_ID)
@@ -153,10 +155,8 @@ class FinancialAssistanceProcessStarterTest {
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
 
-		starter.start(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
+		starter.startFor(SLUG_RENEWAL, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 
-		@SuppressWarnings("unchecked")
-		final ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
 		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), varsCaptor.capture());
 		assertThat(varsCaptor.getValue())
 			.containsEntry(VAR_APPLICANT, APPLICANT_PARTY_ID)
@@ -179,7 +179,7 @@ class FinancialAssistanceProcessStarterTest {
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenThrow(Problem.valueOf(BAD_REQUEST, "No Operaton process definition found"));
 
-		assertThatCode(() -> starter.start(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity)).doesNotThrowAnyException();
+		assertThatCode(() -> starter.startFor(SLUG_RENEWAL, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity)).doesNotThrowAnyException();
 
 		verify(errandServiceMock, never()).linkProcessInstance(any(), any(), any(), any());
 	}
@@ -193,8 +193,22 @@ class FinancialAssistanceProcessStarterTest {
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.empty());
 
-		starter.start(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
+		starter.startFor(SLUG_RENEWAL, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
 
 		verify(errandServiceMock, never()).linkProcessInstance(any(), any(), any(), any());
+	}
+
+	@Test
+	void startForUnknownSlugStartsNoProcess() {
+		starter.startFor("some-other-errand-type", MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceEntity.create().withErrandId(ERRAND_ID));
+
+		verifyNoInteractions(processServiceMock, errandServiceMock, citizenServiceMock);
+	}
+
+	@Test
+	void startForNullSlugStartsNoProcess() {
+		starter.startFor(null, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceEntity.create().withErrandId(ERRAND_ID));
+
+		verifyNoInteractions(processServiceMock, errandServiceMock, citizenServiceMock);
 	}
 }

@@ -20,4 +20,7 @@ public interface ErrandTypeRegistry {
 	boolean isValidStatus(String typeSlug, String status);
 
 	boolean isValidTransition(String typeSlug, String fromStatus, String toStatus);
+
+	/** Whether this type may only be created via its module's dedicated endpoint, not the generic POST /errands. */
+	boolean requiresTypedCreate(String typeSlug);
 }

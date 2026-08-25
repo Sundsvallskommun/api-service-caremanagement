@@ -49,6 +49,7 @@ class NamespaceConfigServiceTest {
 
 		assertThat(result).isEqualTo(42L);
 		verify(repositoryMock).existsByNamespaceAndMunicipalityId(NAMESPACE, MUNICIPALITY_ID);
+		verify(repositoryMock).findByMunicipalityIdAndShortCode(MUNICIPALITY_ID, "sc");
 		verify(repositoryMock).save(entityCaptor.capture());
 		assertThat(entityCaptor.getValue().getNamespace()).isEqualTo(NAMESPACE);
 		assertThat(entityCaptor.getValue().getMunicipalityId()).isEqualTo(MUNICIPALITY_ID);
@@ -57,12 +58,28 @@ class NamespaceConfigServiceTest {
 	}
 
 	@Test
+	void createShortCodeConflict() {
+		when(repositoryMock.existsByNamespaceAndMunicipalityId(NAMESPACE, MUNICIPALITY_ID)).thenReturn(false);
+		when(repositoryMock.findByMunicipalityIdAndShortCode(MUNICIPALITY_ID, "EB"))
+			.thenReturn(Optional.of(NamespaceConfigEntity.create().withNamespace("other-ns").withShortCode("EB")));
+
+		final var config = NamespaceConfig.create().withShortCode("EB");
+		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, config))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: Short code 'EB' is already used by namespace 'other-ns' in municipality id '2281'");
+
+		verify(repositoryMock, never()).save(any());
+	}
+
+	@Test
 	void createConflict() {
 		when(repositoryMock.existsByNamespaceAndMunicipalityId(NAMESPACE, MUNICIPALITY_ID)).thenReturn(true);
 
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, NamespaceConfig.create()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT);
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: A namespace config already exists for namespace 'ns' and municipality id '2281'");
 
 		verify(repositoryMock).existsByNamespaceAndMunicipalityId(NAMESPACE, MUNICIPALITY_ID);
 		verify(repositoryMock, never()).save(any());
@@ -86,7 +103,8 @@ class NamespaceConfigServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No namespace config found for namespace 'ns' and municipality id '2281'");
 	}
 
 	@Test
@@ -102,12 +120,41 @@ class NamespaceConfigServiceTest {
 	}
 
 	@Test
+	void updateShortCodeConflictWithOtherNamespace() {
+		when(repositoryMock.findByNamespaceAndMunicipalityId(NAMESPACE, MUNICIPALITY_ID))
+			.thenReturn(Optional.of(NamespaceConfigEntity.create().withId(1L).withNamespace(NAMESPACE)));
+		when(repositoryMock.findByMunicipalityIdAndShortCode(MUNICIPALITY_ID, "EB"))
+			.thenReturn(Optional.of(NamespaceConfigEntity.create().withNamespace("other-ns").withShortCode("EB")));
+
+		final var config = NamespaceConfig.create().withShortCode("EB");
+		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, config))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: Short code 'EB' is already used by namespace 'other-ns' in municipality id '2281'");
+
+		verify(repositoryMock, never()).save(any());
+	}
+
+	@Test
+	void updateKeepsOwnShortCode() {
+		final var entity = NamespaceConfigEntity.create().withId(1L).withNamespace(NAMESPACE).withShortCode("EB");
+		when(repositoryMock.findByNamespaceAndMunicipalityId(NAMESPACE, MUNICIPALITY_ID)).thenReturn(Optional.of(entity));
+		when(repositoryMock.findByMunicipalityIdAndShortCode(MUNICIPALITY_ID, "EB")).thenReturn(Optional.of(entity));
+
+		service.update(MUNICIPALITY_ID, NAMESPACE, NamespaceConfig.create().withShortCode("EB"));
+
+		verify(repositoryMock).save(entityCaptor.capture());
+		assertThat(entityCaptor.getValue().getShortCode()).isEqualTo("EB");
+	}
+
+	@Test
 	void updateNotFound() {
 		when(repositoryMock.findByNamespaceAndMunicipalityId(NAMESPACE, MUNICIPALITY_ID)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, NamespaceConfig.create()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No namespace config found for namespace 'ns' and municipality id '2281'");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -127,7 +174,8 @@ class NamespaceConfigServiceTest {
 
 		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No namespace config found for namespace 'ns' and municipality id '2281'");
 
 		verify(repositoryMock, never()).deleteByNamespaceAndMunicipalityId(any(), any());
 	}

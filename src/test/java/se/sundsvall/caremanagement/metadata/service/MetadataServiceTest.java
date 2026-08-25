@@ -64,12 +64,13 @@ class MetadataServiceTest {
 
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, STATUS, Lookup.create().withName(NAME)))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT);
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: A status with name 'NEW' already exists in namespace 'ns' for municipality id '2281'");
 		verify(repositoryMock, never()).save(any());
 	}
 
 	@Test
-	void createConflict_contactReasonKindLabel() {
+	void createConflictContactReasonKindLabel() {
 		when(repositoryMock.existsByKindAndNamespaceAndMunicipalityIdAndName(CONTACT_REASON, NAMESPACE, MUNICIPALITY_ID, NAME)).thenReturn(true);
 
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, CONTACT_REASON, Lookup.create().withName(NAME)))
@@ -95,7 +96,8 @@ class MetadataServiceTest {
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, CATEGORY, NAME))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No category with name 'NEW' found in namespace 'ns' for municipality id '2281'");
 	}
 
 	@Test
@@ -145,7 +147,8 @@ class MetadataServiceTest {
 
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, STATUS, NAME, Lookup.create()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No status with name 'NEW' found in namespace 'ns' for municipality id '2281'");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -165,7 +168,8 @@ class MetadataServiceTest {
 
 		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE, STATUS, NAME))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No status with name 'NEW' found in namespace 'ns' for municipality id '2281'");
 
 		verify(repositoryMock, never()).deleteByKindAndNamespaceAndMunicipalityIdAndName(any(LookupKind.class), any(), any(), any());
 	}

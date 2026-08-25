@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.metadata.service;
 
 import java.util.List;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.metadata.api.model.Lookup;
@@ -23,17 +24,17 @@ public class MetadataService {
 	private static final String NOT_FOUND_MESSAGE = "No %s with name '%s' found in namespace '%s' for municipality id '%s'";
 	private static final String ALREADY_EXISTS_MESSAGE = "A %s with name '%s' already exists in namespace '%s' for municipality id '%s'";
 
-	private final LookupRepository repository;
+	private final LookupRepository lookupRepository;
 
-	MetadataService(final LookupRepository repository) {
-		this.repository = repository;
+	MetadataService(final LookupRepository lookupRepository) {
+		this.lookupRepository = lookupRepository;
 	}
 
 	public String create(final String municipalityId, final String namespace, final LookupKind kind, final Lookup lookup) {
-		if (repository.existsByKindAndNamespaceAndMunicipalityIdAndName(kind, namespace, municipalityId, lookup.getName())) {
+		if (lookupRepository.existsByKindAndNamespaceAndMunicipalityIdAndName(kind, namespace, municipalityId, lookup.getName())) {
 			throw Problem.valueOf(CONFLICT, ALREADY_EXISTS_MESSAGE.formatted(kindLabel(kind), lookup.getName(), namespace, municipalityId));
 		}
-		final var saved = repository.save(toLookupEntity(lookup, kind, namespace, municipalityId));
+		final var saved = lookupRepository.save(toLookupEntity(lookup, kind, namespace, municipalityId));
 		return saved.getName();
 	}
 
@@ -42,7 +43,7 @@ public class MetadataService {
 	}
 
 	public List<Lookup> readAll(final String municipalityId, final String namespace, final LookupKind kind) {
-		return toLookupList(repository.findAllByKindAndNamespaceAndMunicipalityId(kind, namespace, municipalityId));
+		return toLookupList(lookupRepository.findAllByKindAndNamespaceAndMunicipalityId(kind, namespace, municipalityId));
 	}
 
 	/**
@@ -52,34 +53,34 @@ public class MetadataService {
 	 */
 	@Transactional(readOnly = true)
 	public List<Lookup> readAll(final String municipalityId, final String namespace, final String kind) {
-		final LookupKind parsedKind;
 		try {
-			parsedKind = LookupKind.valueOf(kind);
-		} catch (final IllegalArgumentException e) {
+			// NullPointerException covers a null kind, IllegalArgumentException an unrecognised one — both map to "no
+			// such kind", honouring the empty-list contract rather than surfacing a 500.
+			return readAll(municipalityId, namespace, LookupKind.valueOf(kind));
+		} catch (final IllegalArgumentException | NullPointerException e) {
 			return List.of();
 		}
-		return readAll(municipalityId, namespace, parsedKind);
 	}
 
 	public void update(final String municipalityId, final String namespace, final LookupKind kind, final String name, final Lookup lookup) {
 		final var entity = findEntity(municipalityId, namespace, kind, name);
 		updateLookupEntity(entity, lookup);
-		repository.save(entity);
+		lookupRepository.save(entity);
 	}
 
 	public void delete(final String municipalityId, final String namespace, final LookupKind kind, final String name) {
-		if (!repository.existsByKindAndNamespaceAndMunicipalityIdAndName(kind, namespace, municipalityId, name)) {
+		if (!lookupRepository.existsByKindAndNamespaceAndMunicipalityIdAndName(kind, namespace, municipalityId, name)) {
 			throw Problem.valueOf(NOT_FOUND, NOT_FOUND_MESSAGE.formatted(kindLabel(kind), name, namespace, municipalityId));
 		}
-		repository.deleteByKindAndNamespaceAndMunicipalityIdAndName(kind, namespace, municipalityId, name);
+		lookupRepository.deleteByKindAndNamespaceAndMunicipalityIdAndName(kind, namespace, municipalityId, name);
 	}
 
 	private LookupEntity findEntity(final String municipalityId, final String namespace, final LookupKind kind, final String name) {
-		return repository.findByKindAndNamespaceAndMunicipalityIdAndName(kind, namespace, municipalityId, name)
+		return lookupRepository.findByKindAndNamespaceAndMunicipalityIdAndName(kind, namespace, municipalityId, name)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NOT_FOUND_MESSAGE.formatted(kindLabel(kind), name, namespace, municipalityId)));
 	}
 
 	private static String kindLabel(final LookupKind kind) {
-		return kind.name().toLowerCase().replace('_', ' ');
+		return kind.name().toLowerCase(Locale.ROOT).replace('_', ' ');
 	}
 }

@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.attachments.api.model;
 import com.google.code.beanmatchers.BeanMatchers;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -13,8 +14,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class AttachmentTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
@@ -26,7 +26,7 @@ class AttachmentTest {
 
 	@Test
 	void testBean() {
-		assertThat(Attachment.class, allOf(
+		MatcherAssert.assertThat(Attachment.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -40,7 +40,7 @@ class AttachmentTest {
 		final var fileName = "file.pdf";
 		final var mimeType = "application/pdf";
 		final var fileSize = 1024;
-		final var origin = "CONVERSATION";
+		final var documentType = "CONVERSATION";
 		final var senderRole = "CLIENT";
 		final var messageId = "message-1";
 		final var created = FIXED_TIMESTAMP;
@@ -51,7 +51,7 @@ class AttachmentTest {
 			.withFileName(fileName)
 			.withMimeType(mimeType)
 			.withFileSize(fileSize)
-			.withOrigin(origin)
+			.withDocumentType(documentType)
 			.withSenderRole(senderRole)
 			.withMessageId(messageId)
 			.withCreated(created)
@@ -62,7 +62,7 @@ class AttachmentTest {
 		assertThat(result.getFileName()).isEqualTo(fileName);
 		assertThat(result.getMimeType()).isEqualTo(mimeType);
 		assertThat(result.getFileSize()).isEqualTo(fileSize);
-		assertThat(result.getOrigin()).isEqualTo(origin);
+		assertThat(result.getDocumentType()).isEqualTo(documentType);
 		assertThat(result.getSenderRole()).isEqualTo(senderRole);
 		assertThat(result.getMessageId()).isEqualTo(messageId);
 		assertThat(result.getCreated()).isEqualTo(created);

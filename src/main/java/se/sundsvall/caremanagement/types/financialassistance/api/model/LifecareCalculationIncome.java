@@ -1,10 +1,11 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
- * A single income row on a Lifecare normberäkning, split between the applicant and the co-applicant with the search
+ * A single income row on a Lifecare calculation, split between the applicant and the co-applicant with the search
  * date Lifecare used for each.
  */
 @Schema(description = "An income row on a Lifecare calculation.")
@@ -14,13 +15,13 @@ public class LifecareCalculationIncome {
 	private String type;
 
 	@Schema(description = "The income amount for the applicant", examples = "12000.0")
-	private Double amountApplicant;
+	private BigDecimal amountApplicant;
 
 	@Schema(description = "The search date Lifecare used for the applicant", examples = "2026-05-15")
 	private String applicantSearchDate;
 
 	@Schema(description = "The income amount for the co-applicant", examples = "0.0")
-	private Double amountCoApplicant;
+	private BigDecimal amountCoApplicant;
 
 	@Schema(description = "The search date Lifecare used for the co-applicant", examples = "2026-05-15")
 	private String coApplicantSearchDate;
@@ -42,15 +43,15 @@ public class LifecareCalculationIncome {
 		return this;
 	}
 
-	public Double getAmountApplicant() {
+	public BigDecimal getAmountApplicant() {
 		return amountApplicant;
 	}
 
-	public void setAmountApplicant(final Double amountApplicant) {
+	public void setAmountApplicant(final BigDecimal amountApplicant) {
 		this.amountApplicant = amountApplicant;
 	}
 
-	public LifecareCalculationIncome withAmountApplicant(final Double amountApplicant) {
+	public LifecareCalculationIncome withAmountApplicant(final BigDecimal amountApplicant) {
 		this.amountApplicant = amountApplicant;
 		return this;
 	}
@@ -68,15 +69,15 @@ public class LifecareCalculationIncome {
 		return this;
 	}
 
-	public Double getAmountCoApplicant() {
+	public BigDecimal getAmountCoApplicant() {
 		return amountCoApplicant;
 	}
 
-	public void setAmountCoApplicant(final Double amountCoApplicant) {
+	public void setAmountCoApplicant(final BigDecimal amountCoApplicant) {
 		this.amountCoApplicant = amountCoApplicant;
 	}
 
-	public LifecareCalculationIncome withAmountCoApplicant(final Double amountCoApplicant) {
+	public LifecareCalculationIncome withAmountCoApplicant(final BigDecimal amountCoApplicant) {
 		this.amountCoApplicant = amountCoApplicant;
 		return this;
 	}

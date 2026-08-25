@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.lifecare.service.model;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -16,7 +17,7 @@ public record DecisionView(
 	String reason,
 	String decisionMaker,
 	String organization,
-	Double amount,
+	BigDecimal amount,
 	String coApplicant,
 	String reasonCoApplicant,
 	List<DecisionPersonView> persons) {

@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.journal.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -12,7 +13,7 @@ import java.util.Objects;
 @Schema(description = "Journal metadata — the provisional catalogue of selectable journal entry types.")
 public class JournalEntryMetadata {
 
-	@Schema(description = "Selectable journal entry types")
+	@ArraySchema(arraySchema = @Schema(description = "Selectable journal entry types"), schema = @Schema(implementation = JournalEntryType.class))
 	private List<JournalEntryType> types;
 
 	public static JournalEntryMetadata create() {
@@ -43,5 +44,10 @@ public class JournalEntryMetadata {
 	@Override
 	public int hashCode() {
 		return Objects.hash(types);
+	}
+
+	@Override
+	public String toString() {
+		return "JournalEntryMetadata{types=" + types + "}";
 	}
 }

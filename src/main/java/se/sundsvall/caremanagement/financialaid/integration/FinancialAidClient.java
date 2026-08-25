@@ -13,10 +13,9 @@ import static se.sundsvall.caremanagement.financialaid.integration.configuration
 
 /**
  * Feign contract for api-service-financial-aid, the SSBTEK proxy (SOAP + mTLS to Försäkringskassan's composite
- * service).
- * The response is the aggregated per-agency basis (af/csn/fk/skv/so/tns/miv) returned as a nested, untyped JSON map —
- * the agency payloads are heterogeneous, so there is no typed model. The SSBTEK reader downstream turns this into
- * normalised {@code SsbtekIncome}s; see vof-ekonomiskt-bistand/architecture/lifecare-fc-api.md.
+ * service). The response is the aggregated per-agency basis (af/csn/fk/skv/so/tns/miv) returned as a nested, untyped
+ * JSON map — the agency payloads are heterogeneous, so there is no typed model. The SSBTEK reader downstream turns
+ * this into normalised {@code SsbtekIncome}s; see vof-ekonomiskt-bistand/architecture/lifecare-familycare-api.md.
  */
 @FeignClient(name = CLIENT_ID, url = "${integration.financial-aid.url}", configuration = FinancialAidConfiguration.class)
 @CircuitBreaker(name = CLIENT_ID)

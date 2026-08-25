@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class StatusDefinitionTest {
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		final var def = new StatusDefinition("UNDER_REVIEW", "Under utredning");
 
 		assertThat(def.code()).isEqualTo("UNDER_REVIEW");
@@ -16,7 +16,7 @@ class StatusDefinitionTest {
 	}
 
 	@Test
-	void nullDisplayNameAllowed() {
+	void testNullDisplayNameAllowed() {
 		final var def = new StatusDefinition("RECEIVED", null);
 
 		assertThat(def.code()).isEqualTo("RECEIVED");
@@ -24,14 +24,14 @@ class StatusDefinitionTest {
 	}
 
 	@Test
-	void blankCodeRejected() {
+	void testBlankCodeRejected() {
 		assertThatThrownBy(() -> new StatusDefinition("  ", "x"))
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessageContaining("code");
 	}
 
 	@Test
-	void nullCodeRejected() {
+	void testNullCodeRejected() {
 		assertThatThrownBy(() -> new StatusDefinition(null, "x"))
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessageContaining("code");

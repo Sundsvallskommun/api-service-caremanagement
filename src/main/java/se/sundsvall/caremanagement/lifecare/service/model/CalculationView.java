@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.lifecare.service.model;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -12,14 +13,14 @@ public record CalculationView(
 	String norm,
 	String fromDate,
 	String toDate,
-	Double incomeSum,
-	Double expenseSum,
-	Double specialExpenseSum,
-	Double normSum,
-	Double commonHouseholdCost,
-	Double familyCost,
-	Double balance,
-	Double totalSum,
+	BigDecimal incomeSum,
+	BigDecimal expenseSum,
+	BigDecimal specialExpenseSum,
+	BigDecimal normSum,
+	BigDecimal commonHouseholdCost,
+	BigDecimal familyCost,
+	BigDecimal balance,
+	BigDecimal totalSum,
 	Boolean isFinal,
 	List<CalculationPersonView> persons,
 	List<CalculationIncomeView> incomes,

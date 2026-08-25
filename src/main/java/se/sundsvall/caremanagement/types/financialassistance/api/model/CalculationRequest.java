@@ -8,9 +8,9 @@ import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
- * Request to build and post an SSBTEK-driven calculation to Lifecare FC for one applicant (and optional co-applicant)
- * and one application month. The household's income basis is fetched from SSBTEK for the rule periods derived from the
- * month; the resulting calculation is created in Lifecare.
+ * Request to build and post an SSBTEK-driven calculation to Lifecare FamilyCare for one applicant (and optional
+ * co-applicant) and one application month. The household's income basis is fetched from SSBTEK for the rule periods
+ * derived from the month; the resulting calculation is created in Lifecare.
  */
 @Schema(description = "Request to build and post the SSBTEK-driven calculation for an application month.")
 public class CalculationRequest {
@@ -29,12 +29,13 @@ public class CalculationRequest {
 	private String applicationMonth;
 
 	@Schema(
-		description = "The id of the caremanagement errand the calculation concerns. When present, a Decision(RECOMMENDATION) summarising the income warnings is recorded on the errand for the caseworker to review; when omitted, the calculation is built without recording a recommendation.",
-		examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec")
-	@ValidUuid(nullable = true)
+		description = "The id of the caremanagement errand the calculation concerns — used to load the errand and, on the daily prepare, to record the Decision(RECOMMENDATION) the caseworker reviews.",
+		examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec",
+		requiredMode = Schema.RequiredMode.REQUIRED)
+	@ValidUuid
 	private String errandId;
 
-	@Schema(description = "The incomes classified by the operaton rules (the evaluate-income-rules worker output), as JSON. When present, caremanagement maps these to FC income rows instead of fetching SSBTEK and evaluating the raw list itself.")
+	@Schema(description = "The incomes classified by the operaton rules (the evaluate-income-rules worker output), as JSON. When present, caremanagement maps these to FamilyCare income rows instead of fetching SSBTEK and evaluating the raw list itself.")
 	private String classifiedIncomes;
 
 	@Schema(description = "The unhandled-income warnings from the operaton rules, recorded on the errand recommendation")

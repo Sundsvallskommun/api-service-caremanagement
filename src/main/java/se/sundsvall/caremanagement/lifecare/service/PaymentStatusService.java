@@ -1,27 +1,26 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
-import generated.se.sundsvall.lifecarefc.ApiPaginationCompositePersonBasedPaymentDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedPaymentDTO;
 import java.time.YearMonth;
 import java.util.List;
 import org.springframework.stereotype.Service;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFcIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Reads whether a Lifecare payment concerning an application month has been effectuated for an applicant. The
- * payment itself is a manual caseworker step in Lifecare (FC exposes no payment write) — this service only reads the
- * registered payments via {@link LifecareFcIntegration}. Mirrors {@link ActualisationService}.
+ * Reads whether a Lifecare payment concerning an application month has been effectuated for an applicant. The payment
+ * itself is a manual caseworker step in Lifecare (FamilyCare exposes no payment write) — this service only reads the
+ * registered payments via {@link LifecareFamilyCareIntegration}. Mirrors {@link ActualisationService}.
  */
 @Service
 public class PaymentStatusService {
 
-	private final LifecareFcIntegration lifecareFcIntegration;
+	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
 
-	public PaymentStatusService(final LifecareFcIntegration lifecareFcIntegration) {
-		this.lifecareFcIntegration = lifecareFcIntegration;
+	public PaymentStatusService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration) {
+		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
 	}
 
 	/**
@@ -29,15 +28,15 @@ public class PaymentStatusService {
 	 * PayDate and its ConcernedMonth carries the application month (yyyy-MM). The query window spans the month before the
 	 * application month (payments are typically made late in the preceding month) through the application month.
 	 *
-	 * @param  applicantPersonId the applicant's personnummer
+	 * @param  applicantPersonId the applicant's personal identity number
 	 * @param  applicationMonth  the month the payment concerns
 	 * @return                   the effectuated flag and, when effectuated, the Lifecare PayDate
 	 */
 	public PaymentStatus read(final String applicantPersonId, final YearMonth applicationMonth) {
-		final var from = applicationMonth.minusMonths(1).atDay(1).format(ISO_LOCAL_DATE);
-		final var to = applicationMonth.atEndOfMonth().format(ISO_LOCAL_DATE);
+		final var from = applicationMonth.minusMonths(1).atDay(1);
+		final var to = applicationMonth.atEndOfMonth();
 
-		final var payments = ofNullable(lifecareFcIntegration.getPayments(applicantPersonId, from, to, null, null, false))
+		final var payments = ofNullable(lifecareFamilyCareIntegration.getPayments(applicantPersonId, from, to))
 			.map(ApiPaginationCompositePersonBasedPaymentDTO::getResult)
 			.orElseGet(List::of);
 

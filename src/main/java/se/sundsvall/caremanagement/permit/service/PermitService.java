@@ -5,10 +5,10 @@ import java.time.ZoneId;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.permit.api.model.Permit;
 import se.sundsvall.caremanagement.permit.integration.db.PermitRepository;
 import se.sundsvall.caremanagement.permit.integration.db.model.PermitEntity;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -29,19 +29,18 @@ public class PermitService {
 	static final String STATUS_ACTIVE = "ACTIVE";
 	static final String STATUS_REVOKED = "REVOKED";
 
-	private static final String ERRAND_NOT_FOUND_MESSAGE = "No errand with id '%s' found in namespace '%s' for municipality id '%s'";
 	private static final String PERMIT_NOT_FOUND_MESSAGE = "No permit with id '%s' found on errand '%s' in namespace '%s' for municipality id '%s'";
 
-	private final ErrandRepository errandRepository;
+	private final ErrandAccessGuard errandGuard;
 	private final PermitRepository permitRepository;
 
-	PermitService(final ErrandRepository errandRepository, final PermitRepository permitRepository) {
-		this.errandRepository = errandRepository;
+	PermitService(final ErrandAccessGuard errandGuard, final PermitRepository permitRepository) {
+		this.errandGuard = errandGuard;
 		this.permitRepository = permitRepository;
 	}
 
 	public String issue(final String municipalityId, final String namespace, final String errandId, final Permit permit) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		final var entity = toPermitEntity(permit, errandId);
 		if (entity.getValidFrom() == null) {
 			entity.setValidFrom(LocalDate.now(ZoneId.systemDefault()));
@@ -59,7 +58,7 @@ public class PermitService {
 
 	@Transactional(readOnly = true)
 	public List<Permit> readAll(final String municipalityId, final String namespace, final String errandId) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		return toPermitList(permitRepository.findByErrandIdOrderByCreatedDesc(errandId));
 	}
 
@@ -76,7 +75,7 @@ public class PermitService {
 	 * Revokes every permit on an errand that is not already REVOKED.
 	 */
 	public void revokeAllForErrand(final String municipalityId, final String namespace, final String errandId) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		permitRepository.findByErrandIdOrderByCreatedDesc(errandId).stream()
 			.filter(entity -> !STATUS_REVOKED.equals(entity.getStatus()))
 			.forEach(entity -> {
@@ -90,13 +89,8 @@ public class PermitService {
 		permitRepository.delete(entity);
 	}
 
-	private void ensureErrandExists(final String municipalityId, final String namespace, final String errandId) {
-		errandRepository.findByIdAndNamespaceAndMunicipalityId(errandId, namespace, municipalityId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERRAND_NOT_FOUND_MESSAGE.formatted(errandId, namespace, municipalityId)));
-	}
-
 	private PermitEntity findPermit(final String municipalityId, final String namespace, final String errandId, final String permitId) {
-		ensureErrandExists(municipalityId, namespace, errandId);
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		return permitRepository.findByErrandIdAndId(errandId, permitId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, PERMIT_NOT_FOUND_MESSAGE.formatted(permitId, errandId, namespace, municipalityId)));
 	}

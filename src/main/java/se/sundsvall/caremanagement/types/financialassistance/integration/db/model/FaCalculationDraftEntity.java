@@ -11,6 +11,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
@@ -21,7 +22,8 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  * The draft calculation header for an errand — one row per errand, holding the application month and the selected
  * norm. The section rows (persons, incomes, expenses) live in their own tables ({@code errand_fa_norm_person},
  * {@code errand_fa_norm_income}, {@code errand_fa_norm_expense}), each row owning its process and caseworker values
- * separately. The EB process prepares the draft each day without writing to Lifecare; on a decision the effective
+ * separately. The financial assistance process prepares the draft each day without writing to Lifecare; on a decision
+ * the effective
  * values
  * are posted. The errand id is the primary key.
  */
@@ -73,14 +75,14 @@ public class FaCalculationDraftEntity {
 
 	@PrePersist
 	void prePersist() {
-		final var now = OffsetDateTime.now();
+		final var now = OffsetDateTime.now(ZoneId.systemDefault());
 		created = now;
 		updated = now;
 	}
 
 	@PreUpdate
 	void preUpdate() {
-		updated = OffsetDateTime.now();
+		updated = OffsetDateTime.now(ZoneId.systemDefault());
 	}
 
 	public String getErrandId() {

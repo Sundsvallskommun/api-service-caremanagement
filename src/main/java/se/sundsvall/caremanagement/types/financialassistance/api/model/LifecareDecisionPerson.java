@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * A single person on a Lifecare beslut — identifies the person and whether they are the co-applicant.
+ * A single person on a Lifecare decision — identifies the person and whether they are the co-applicant.
  */
 @Schema(description = "A person on a Lifecare decision.")
 public class LifecareDecisionPerson {

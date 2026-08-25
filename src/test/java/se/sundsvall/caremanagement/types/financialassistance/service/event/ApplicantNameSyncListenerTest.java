@@ -7,8 +7,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.stakeholders.service.event.StakeholderMutated;
@@ -27,7 +28,10 @@ class ApplicantNameSyncListenerTest {
 	private static final String ERRAND_ID = "11111111-1111-1111-1111-111111111111";
 
 	@Mock
-	private ErrandRepository errandRepositoryMock;
+	private ErrandQueryService errandQueryServiceMock;
+
+	@Mock
+	private ErrandService errandServiceMock;
 
 	@Mock
 	private StakeholderService stakeholderServiceMock;
@@ -40,8 +44,8 @@ class ApplicantNameSyncListenerTest {
 	}
 
 	private void errandHasApplicantName(final String current) {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withApplicantName(current)));
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withApplicantName(current)));
 	}
 
 	@Test
@@ -51,9 +55,9 @@ class ApplicantNameSyncListenerTest {
 			Stakeholder.create().withRole("CO_APPLICANT").withFirstName("Bo").withLastName("Bergström"),
 			Stakeholder.create().withRole("APPLICANT").withFirstName("Anna").withLastName("Andersson")));
 
-		listener.on(event());
+		listener.syncApplicantName(event());
 
-		verify(errandRepositoryMock).updateApplicantName(ERRAND_ID, "Anna Andersson");
+		verify(errandServiceMock).updateApplicantName(ERRAND_ID, "Anna Andersson");
 	}
 
 	@Test
@@ -62,9 +66,9 @@ class ApplicantNameSyncListenerTest {
 		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
 			Stakeholder.create().withRole("APPLICANT").withFirstName("ignored").withOrganizationName("Acme AB")));
 
-		listener.on(event());
+		listener.syncApplicantName(event());
 
-		verify(errandRepositoryMock).updateApplicantName(ERRAND_ID, "Acme AB");
+		verify(errandServiceMock).updateApplicantName(ERRAND_ID, "Acme AB");
 	}
 
 	@Test
@@ -73,9 +77,9 @@ class ApplicantNameSyncListenerTest {
 		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
 			Stakeholder.create().withRole("APPLICANT").withFirstName("Anna").withLastName("Andersson")));
 
-		listener.on(event());
+		listener.syncApplicantName(event());
 
-		verify(errandRepositoryMock, never()).updateApplicantName(any(), any());
+		verify(errandServiceMock, never()).updateApplicantName(any(), any());
 	}
 
 	@Test
@@ -84,19 +88,19 @@ class ApplicantNameSyncListenerTest {
 		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
 			Stakeholder.create().withRole("CO_APPLICANT").withFirstName("Bo").withLastName("Bergström")));
 
-		listener.on(event());
+		listener.syncApplicantName(event());
 
-		verify(errandRepositoryMock).updateApplicantName(ERRAND_ID, null);
+		verify(errandServiceMock).updateApplicantName(ERRAND_ID, null);
 	}
 
 	@Test
 	void skipsEntirelyWhenErrandNotFound() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.empty());
 
-		listener.on(event());
+		listener.syncApplicantName(event());
 
 		verifyNoInteractions(stakeholderServiceMock);
-		verify(errandRepositoryMock, never()).updateApplicantName(any(), any());
+		verify(errandServiceMock, never()).updateApplicantName(any(), any());
 	}
 }

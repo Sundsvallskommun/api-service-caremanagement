@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
@@ -8,15 +9,19 @@ import se.sundsvall.dept44.common.validators.annotation.OneOf;
 public class Child {
 
 	@Schema(description = "Party id (personId GUID) of the child", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479")
+	@Size(max = 36)
 	private String partyId;
 
 	@Schema(description = "First name", examples = "Astrid")
+	@Size(max = 100)
 	private String firstName;
 
 	@Schema(description = "Last name", examples = "Lindgren")
+	@Size(max = 100)
 	private String lastName;
 
 	@Schema(description = "Name of the child's school", examples = "Bredsands skola")
+	@Size(max = 255)
 	private String schoolName;
 
 	@Schema(description = "Extent of residence in the home", examples = "FULL_TIME", allowableValues = {

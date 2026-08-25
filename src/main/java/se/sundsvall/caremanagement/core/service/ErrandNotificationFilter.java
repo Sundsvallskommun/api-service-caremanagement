@@ -14,7 +14,7 @@ public interface ErrandNotificationFilter {
 	/**
 	 * A specification matching errands that have at least one unacknowledged notification in the given namespace and
 	 * municipality. When {@code ownerId} is non-blank the match is scoped to notifications addressed to that recipient
-	 * (the caseworker), so a handläggare can find the errands where they have something unread.
+	 * (the caseworker), so a caseworker can find the errands where they have something unread.
 	 */
 	Specification<ErrandEntity> hasUnacknowledgedNotifications(String municipalityId, String namespace, String ownerId);
 }

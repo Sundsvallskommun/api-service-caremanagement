@@ -19,18 +19,19 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * EB monitorings (bevakningar) — date-bound watch/reminder objects on an errand. Unlike the income
- * {@link WarningService warnings} these carry no acknowledge lifecycle: a caseworker simply creates, edits and removes
- * them. Every method is scoped to the errand's namespace/municipality (404 when the errand is missing there); each
- * monitoring has a required start date and an optional end date that, when set, must not precede the start.
+ * financial assistance monitorings (watch/reminder objects) — date-bound watch/reminder objects on an errand. Unlike
+ * the income {@link WarningService warnings} these carry no acknowledge lifecycle: a caseworker simply creates, edits
+ * and removes them. Every method is scoped to the errand's namespace/municipality (404 when the errand is missing
+ * there); each monitoring has a required start date and an optional end date that, when set, must not precede the
+ * start.
  *
  * <p>
  * A monitoring carries a {@code source} ({@code CASEWORKER}, the default, or {@code LIFECARE}) and an optional
- * {@code lifecareId}. Lifecare FC exposes no bevakningar endpoint, so the mirror is driven out-of-band by RPA: RPA
- * surfaces a Lifecare bevakning by POSTing {@code source=LIFECARE} with its {@code lifecareId} (idempotent per
- * errand + lifecareId, so re-runs don't duplicate), and mirrors a caseworker monitoring the other way, later stamping
- * back the {@code lifecareId} it was given in Lifecare. The provenance fields are system/RPA-managed: an update only
- * touches them when supplied, so a caseworker edit never drops them.
+ * {@code lifecareId}. Lifecare FamilyCare exposes no watch/reminder endpoint, so the mirror is driven out-of-band by
+ * RPA: RPA surfaces a Lifecare watch/reminder by POSTing {@code source=LIFECARE} with its {@code lifecareId}
+ * (idempotent per errand + lifecareId, so re-runs don't duplicate), and mirrors a caseworker monitoring the other way,
+ * later stamping back the {@code lifecareId} it was given in Lifecare. The provenance fields are system/RPA-managed: an
+ * update only touches them when supplied, so a caseworker edit never drops them.
  * </p>
  */
 @Service
@@ -40,18 +41,18 @@ public class MonitoringService {
 	static final String SOURCE_LIFECARE = "LIFECARE";
 
 	private final ErrandService errandService;
-	private final FaMonitoringRepository repository;
+	private final FaMonitoringRepository monitoringRepository;
 
-	MonitoringService(final ErrandService errandService, final FaMonitoringRepository repository) {
+	MonitoringService(final ErrandService errandService, final FaMonitoringRepository monitoringRepository) {
 		this.errandService = errandService;
-		this.repository = repository;
+		this.monitoringRepository = monitoringRepository;
 	}
 
 	/** The monitorings on an errand, oldest first. Scoped: throws {@code 404} when the errand is missing here. */
 	@Transactional(readOnly = true)
 	public List<Monitoring> list(final String municipalityId, final String namespace, final String errandId) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return repository.findByErrandId(errandId).stream()
+		return monitoringRepository.findByErrandId(errandId).stream()
 			.sorted(comparing(FaMonitoringEntity::getCreated, nullsLast(naturalOrder())))
 			.map(MonitoringService::toMonitoring)
 			.toList();
@@ -61,14 +62,14 @@ public class MonitoringService {
 	@Transactional(readOnly = true)
 	public long count(final String municipalityId, final String namespace, final String errandId) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return repository.countByErrandId(errandId);
+		return monitoringRepository.countByErrandId(errandId);
 	}
 
 	/** A single monitoring on an errand. Scoped: throws {@code 404} when the errand or monitoring is missing here. */
 	@Transactional(readOnly = true)
 	public Monitoring get(final String municipalityId, final String namespace, final String errandId, final String monitoringId) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		return toMonitoring(require(errandId, monitoringId));
+		return toMonitoring(requireMonitoring(errandId, monitoringId));
 	}
 
 	/**
@@ -80,11 +81,14 @@ public class MonitoringService {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		validateDates(request.getStartDate(), request.getEndDate());
 
-		final var entity = hasText(request.getLifecareId())
-			? repository.findByErrandIdAndLifecareId(errandId, request.getLifecareId()).orElseGet(FaMonitoringEntity::create)
-			: FaMonitoringEntity.create();
+		final FaMonitoringEntity entity;
+		if (hasText(request.getLifecareId())) {
+			entity = monitoringRepository.findByErrandIdAndLifecareId(errandId, request.getLifecareId()).orElseGet(FaMonitoringEntity::create);
+		} else {
+			entity = FaMonitoringEntity.create();
+		}
 
-		return toMonitoring(repository.save(entity
+		return toMonitoring(monitoringRepository.save(entity
 			.withErrandId(errandId)
 			.withSource(resolveSource(request.getSource()))
 			.withLifecareId(request.getLifecareId())
@@ -96,14 +100,14 @@ public class MonitoringService {
 	}
 
 	/**
-	 * Replace a monitoring's mutable fields. Scoped: throws {@code 404} when the errand or monitoring is missing,
-	 * {@code 400} on a bad date range.
+	 * Replace a monitoring's mutable fields. Scoped: throws {@code 404} when the errand or monitoring is missing, {@code
+	 * 400} on a bad date range.
 	 */
 	@Transactional
 	public Monitoring update(final String municipalityId, final String namespace, final String errandId, final String monitoringId, final MonitoringRequest request) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		validateDates(request.getStartDate(), request.getEndDate());
-		final var entity = require(errandId, monitoringId)
+		final var entity = requireMonitoring(errandId, monitoringId)
 			.withTitle(request.getTitle())
 			.withDescription(request.getDescription())
 			.withStartDate(request.getStartDate())
@@ -116,18 +120,18 @@ public class MonitoringService {
 		if (hasText(request.getLifecareId())) {
 			entity.setLifecareId(request.getLifecareId());
 		}
-		return toMonitoring(repository.save(entity));
+		return toMonitoring(monitoringRepository.save(entity));
 	}
 
 	/** Remove a monitoring from an errand. Scoped: throws {@code 404} when the errand or monitoring is missing here. */
 	@Transactional
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String monitoringId) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		repository.delete(require(errandId, monitoringId));
+		monitoringRepository.delete(requireMonitoring(errandId, monitoringId));
 	}
 
-	private FaMonitoringEntity require(final String errandId, final String monitoringId) {
-		return repository.findByIdAndErrandId(monitoringId, errandId)
+	private FaMonitoringEntity requireMonitoring(final String errandId, final String monitoringId) {
+		return monitoringRepository.findByIdAndErrandId(monitoringId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "Monitoring not found on errand"));
 	}
 
@@ -139,7 +143,10 @@ public class MonitoringService {
 
 	/** The supplied source, defaulting to {@link #SOURCE_CASEWORKER} when blank (the form omits it for caseworker rows). */
 	private static String resolveSource(final String source) {
-		return hasText(source) ? source : SOURCE_CASEWORKER;
+		if (hasText(source)) {
+			return source;
+		}
+		return SOURCE_CASEWORKER;
 	}
 
 	private static Monitoring toMonitoring(final FaMonitoringEntity entity) {

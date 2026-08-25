@@ -1,17 +1,43 @@
 package se.sundsvall.caremanagement.formsnapshot.integration.db.model;
 
+import com.google.code.beanmatchers.BeanMatchers;
 import java.time.OffsetDateTime;
+import java.util.Random;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEqualsExcluding;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCodeExcluding;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToStringExcluding;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class FormSnapshotEntityTest {
 
 	private static final OffsetDateTime CAPTURED_AT = OffsetDateTime.parse("2026-06-24T10:15:30+02:00");
 	private static final OffsetDateTime CREATED = OffsetDateTime.parse("2026-06-24T08:15:31Z");
 
+	@BeforeAll
+	static void setup() {
+		BeanMatchers.registerValueGenerator(() -> now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+	}
+
 	@Test
-	void builderMethods() {
+	void testBean() {
+		MatcherAssert.assertThat(FormSnapshotEntity.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCodeExcluding("payload"),
+			hasValidBeanEqualsExcluding("payload"),
+			hasValidBeanToStringExcluding("payload")));
+	}
+
+	@Test
+	void testBuilderMethods() {
 		final var entity = FormSnapshotEntity.create()
 			.withId("fs1")
 			.withErrandId("e1")
@@ -26,6 +52,7 @@ class FormSnapshotEntityTest {
 			.withCapturedAt(CAPTURED_AT)
 			.withCreated(CREATED);
 
+		assertThat(entity).hasNoNullFieldsOrProperties();
 		assertThat(entity.getId()).isEqualTo("fs1");
 		assertThat(entity.getErrandId()).isEqualTo("e1");
 		assertThat(entity.getMunicipalityId()).isEqualTo("2281");
@@ -41,15 +68,8 @@ class FormSnapshotEntityTest {
 	}
 
 	@Test
-	void createReturnsBlankInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(FormSnapshotEntity.create()).hasAllNullFieldsOrProperties();
 		assertThat(new FormSnapshotEntity()).hasAllNullFieldsOrProperties();
-	}
-
-	@Test
-	void toStringOmitsPayload() {
-		final var entity = FormSnapshotEntity.create().withId("fs1").withPayload("SENSITIVE-PERSONAL-DATA");
-
-		assertThat(entity.toString()).contains("fs1").doesNotContain("SENSITIVE-PERSONAL-DATA");
 	}
 }

@@ -3,7 +3,7 @@
  *
  * <p>
  * Exposed so type modules (e.g. financial assistance) can record decisions on an errand — for example a
- * {@code RECOMMENDATION} produced by the automated normberäkning pipeline — through
+ * {@code RECOMMENDATION} produced by the automated calculation pipeline — through
  * {@link se.sundsvall.caremanagement.decisions.service.DecisionService}, without reaching into the decisions
  * persistence layer.
  * </p>

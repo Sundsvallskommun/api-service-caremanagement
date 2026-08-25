@@ -40,7 +40,7 @@ class StatusHistoryResourceTest {
 	@Test
 	void list() {
 		final var entry = new StatusHistoryEntry("h1", ERRAND_ID, "OPEN", "CLOSED", "user", FIXED_TIMESTAMP);
-		when(serviceMock.listForErrand(ERRAND_ID)).thenReturn(List.of(entry));
+		when(serviceMock.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(entry));
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -51,12 +51,12 @@ class StatusHistoryResourceTest {
 			.getResponseBody();
 
 		assertThat(response).hasSize(1);
-		verify(serviceMock).listForErrand(ERRAND_ID);
+		verify(serviceMock).listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
 	void listEmpty() {
-		when(serviceMock.listForErrand(ERRAND_ID)).thenReturn(List.of());
+		when(serviceMock.listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -67,5 +67,6 @@ class StatusHistoryResourceTest {
 			.getResponseBody();
 
 		assertThat(response).isEmpty();
+		verify(serviceMock).listForErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 }

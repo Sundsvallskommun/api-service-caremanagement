@@ -34,7 +34,9 @@ class StakeholderRoleRegistryImpl implements StakeholderRoleRegistry {
 
 	@Override
 	public boolean isValidRole(final String typeSlug, final String role) {
-		return Optional.ofNullable(codesByType.get(typeSlug))
+		// Guard the null role: the codes are an immutable Set, whose contains(null) throws NPE. A null role (the update
+		// flow doesn't enforce the OnCreate @NotBlank) is simply not a valid role for a type that declared a catalogue.
+		return (role != null) && Optional.ofNullable(codesByType.get(typeSlug))
 			.map(codes -> codes.contains(role))
 			.orElse(false);
 	}

@@ -20,7 +20,7 @@ public final class CalculationConstants {
 	public static final String ROLE_CHILD = "CHILD";
 	public static final String ROLE_VISITATION_CHILD = "VISITATION_CHILD";
 
-	// Expense buckets — which FC array the cost posts to (and which GUI tab it shows on).
+	// Expense buckets — which FamilyCare array the cost posts to (and which GUI tab it shows on).
 	public static final String BUCKET_EXPENSE = "EXPENSE";                 // EXPENSES → CalculationExpenses
 	public static final String BUCKET_SPECIAL_EXPENSE = "SPECIAL_EXPENSE"; // OTHER LIVING COSTS → CalculationSpecialExpenses
 }

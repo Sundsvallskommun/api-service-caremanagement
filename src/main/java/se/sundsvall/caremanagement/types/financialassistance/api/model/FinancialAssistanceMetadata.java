@@ -1,22 +1,24 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * The EB type catalogue the frontend feeds its dropdowns from — the income and cost types, each carrying its payload
+ * The financial assistance type catalogue the frontend feeds its dropdowns from — the income and cost types, each
+ * carrying its payload
  * code, the Mina-sidor + Lifecare labels, its Mina-sidor form group and the {@code citizenReportable} flag. The codes
  * are exactly the {@code Income.incomeType} / {@code Cost.costType} allowable values; this catalogue only annotates
  * them, it never changes the citizen payload contract.
  */
-@Schema(description = "EB type catalogue for the frontend dropdowns: income and cost types with labels, groups and the citizen flag.")
+@Schema(description = "Financial assistance type catalogue for the frontend dropdowns: income and cost types with labels, groups and the citizen flag.")
 public class FinancialAssistanceMetadata {
 
-	@Schema(description = "The income types (inkomster)")
+	@ArraySchema(arraySchema = @Schema(description = "The income types"), schema = @Schema(implementation = TypeOption.class))
 	private List<TypeOption> incomeTypes;
 
-	@Schema(description = "The cost types (kostnader), grouped by their Mina-sidor form section")
+	@ArraySchema(arraySchema = @Schema(description = "The cost types, grouped by their Mina-sidor form section"), schema = @Schema(implementation = TypeOption.class))
 	private List<TypeOption> costTypes;
 
 	public static FinancialAssistanceMetadata create() {

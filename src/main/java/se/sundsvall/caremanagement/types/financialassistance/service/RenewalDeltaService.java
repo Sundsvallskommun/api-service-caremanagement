@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -13,7 +14,7 @@ import se.sundsvall.caremanagement.operaton.service.ProcessService;
  * evaluates the modeler-editable {@code Decision_ateransokanDelta} DMN in the operaton engine (the same place the
  * income
  * raw list and the expense rules live) for a change kind and its magnitude, and returns whether the change is worth
- * flagging ({@code varning}) plus the human-readable notering ({@code regel}). The delta itself (what changed, by how
+ * flagging ({@code warning}) plus the human-readable note ({@code rule}). The delta itself (what changed, by how
  * much) is computed care-side; this only decides severity/whether to surface — so a small change can pass silently
  * while
  * a large one is flagged. Best-effort: when the decision is unavailable or returns nothing, nothing is flagged so the
@@ -34,8 +35,8 @@ public class RenewalDeltaService {
 		this.processService = processService;
 	}
 
-	/** The delta verdict — whether to flag the change and the notering describing it. */
-	public record DeltaVerdict(boolean varning, String regel) {}
+	/** The delta verdict — whether to flag the change and the note describing it. */
+	public record DeltaVerdict(boolean warning, String rule) {}
 
 	/**
 	 * Classify a household/housing change against the previous calculation.
@@ -44,14 +45,14 @@ public class RenewalDeltaService {
 	 * @param  changeKind     the kind of change (e.g. {@code HOUSEHOLD_SIZE}, {@code HOUSING_COST})
 	 * @param  changeCount    the signed count delta (members added/removed); 0 when not applicable
 	 * @param  changePercent  the signed percent delta (housing cost); 0 when not applicable
-	 * @return                the verdict (flag + notering), best-effort
+	 * @return                the verdict (flag + note), best-effort
 	 */
 	public DeltaVerdict classify(final String municipalityId, final String changeKind, final int changeCount, final BigDecimal changePercent) {
 		try {
 			final var variables = new HashMap<String, Object>();
-			variables.put("changeKind", nz(changeKind));
+			variables.put("changeKind", orEmpty(changeKind));
 			variables.put("changeCount", changeCount);
-			variables.put("changePercent", changePercent == null ? BigDecimal.ZERO : changePercent);
+			variables.put("changePercent", Optional.ofNullable(changePercent).orElse(BigDecimal.ZERO));
 
 			final var rows = processService.evaluateDecision(municipalityId, DECISION_KEY, variables);
 			if (rows.isEmpty()) {
@@ -66,10 +67,11 @@ public class RenewalDeltaService {
 	}
 
 	private static String str(final Object value) {
-		return value == null ? null : value.toString();
+		return Optional.ofNullable(value).map(Object::toString).orElse(null);
 	}
 
-	private static String nz(final String value) {
-		return value == null ? "" : value;
+	/** The value, or an empty string when it is {@code null}. */
+	private static String orEmpty(final String value) {
+		return Optional.ofNullable(value).orElse("");
 	}
 }

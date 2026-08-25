@@ -11,7 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.lifecare.service.model.FcIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCost;
@@ -47,18 +47,57 @@ class CalculationFeederTest {
 	void incomeRowsMapsEachLine() {
 		final var date = OffsetDateTime.parse("2026-05-15T00:00:00Z");
 		final var lines = List.of(
-			new FcIncomeLine(20, "Bostadsbidrag", "APPLICANT", new BigDecimal("1850"), date, "note"),
-			new FcIncomeLine(21, "Lön", "CO_APPLICANT", new BigDecimal("12000"), date, null));
+			new FamilyCareIncomeLine(20, "Bostadsbidrag", "APPLICANT", new BigDecimal("1850"), date, "note"),
+			new FamilyCareIncomeLine(21, "Lön", "CO_APPLICANT", new BigDecimal("12000"), date, null));
 
 		final var rows = feeder.incomeRows(ERRAND_ID, lines);
 
-		assertThat(rows).hasSize(2);
-		assertThat(rows).allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
+		assertThat(rows).hasSize(2)
+			.allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
 		final var first = rows.getFirst();
 		assertThat(first.getTypeId()).isEqualTo(20);
 		assertThat(first.getTypeName()).isEqualTo("Bostadsbidrag");
 		assertThat(first.getApplicantProcessAmount()).isEqualByComparingTo(new BigDecimal("1850"));
 		assertThat(first.getApplicantAmountDate()).isEqualTo(date);
+	}
+
+	@Test
+	void incomeRowsSumsSameTypeSameRecipientLines() {
+		// the application/nyansökan path emits one line per raw declared income with no folding: two OTHER_INCOME for the
+		// same applicant resolve to the same FamilyCare type id + recipient and must be summed, not collapsed to the first.
+		final var firstDate = OffsetDateTime.parse("2026-05-15T00:00:00Z");
+		final var secondDate = OffsetDateTime.parse("2026-05-20T00:00:00Z");
+		final var lines = List.of(
+			new FamilyCareIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("1500"), firstDate, "first"),
+			new FamilyCareIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("2500"), secondDate, "second"),
+			new FamilyCareIncomeLine(40, "Övriga inkomster", "CO_APPLICANT", new BigDecimal("800"), firstDate, null));
+
+		final var rows = feeder.incomeRows(ERRAND_ID, lines);
+
+		assertThat(rows).hasSize(1);
+		final var row = rows.getFirst();
+		assertThat(row.getTypeId()).isEqualTo(40);
+		assertThat(row.getTypeName()).isEqualTo("Övriga inkomster");
+		// 1500 + 2500 summed, not just the first line's 1500
+		assertThat(row.getApplicantProcessAmount()).isEqualByComparingTo(new BigDecimal("4000"));
+		// non-amount fields come from the first line in the recipient group
+		assertThat(row.getApplicantAmountDate()).isEqualTo(firstDate);
+		assertThat(row.getNote()).isEqualTo("first");
+		assertThat(row.getCoapplicantProcessAmount()).isEqualByComparingTo(new BigDecimal("800"));
+		assertThat(row.getCoapplicantAmountDate()).isEqualTo(firstDate);
+	}
+
+	@Test
+	void incomeRowsLeavesAbsentRecipientAmountNull() {
+		// only an applicant line for the type → the co-applicant side stays null (not zero)
+		final var lines = List.of(
+			new FamilyCareIncomeLine(40, "Övriga inkomster", "APPLICANT", new BigDecimal("1500"), null, null));
+
+		final var rows = feeder.incomeRows(ERRAND_ID, lines);
+
+		assertThat(rows).hasSize(1);
+		assertThat(rows.getFirst().getApplicantProcessAmount()).isEqualByComparingTo(new BigDecimal("1500"));
+		assertThat(rows.getFirst().getCoapplicantProcessAmount()).isNull();
 	}
 
 	@Test
@@ -102,7 +141,7 @@ class CalculationFeederTest {
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(other));
 
 		when(expenseRulesServiceMock.verdict(eq(MUNICIPALITY_ID), eq("OTHER"), any(), any(), any(), any(), any()))
-			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("5000"), "SPECIAL_EXPENSE", true, "Other bistånd – reasonableness bedöms manuellt"));
+			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("5000"), "SPECIAL_EXPENSE", true, "Övrigt bistånd – skälighet bedöms manuellt"));
 
 		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
@@ -110,7 +149,7 @@ class CalculationFeederTest {
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
 		final var warning = feed.warnings().getFirst();
 		assertThat(warning.sourceKey()).isEqualTo("OTHER:BEGRAVNING");
-		assertThat(warning.message()).isEqualTo("Övrigt bistånd (BEGRAVNING): Other bistånd – reasonableness bedöms manuellt");
+		assertThat(warning.message()).isEqualTo("Övrigt bistånd (BEGRAVNING): Övrigt bistånd – skälighet bedöms manuellt");
 	}
 
 	@Test
@@ -191,7 +230,7 @@ class CalculationFeederTest {
 		when(expenseRulesServiceMock.verdict(any(), any(), any(), any(), any(), any(), any()))
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(new BigDecimal("9000"), "EXPENSE", false, null));
 
-		feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of("RENT", 7000.0), 35);
+		feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of("RENT", BigDecimal.valueOf(7000.0)), 35);
 
 		final var applied = ArgumentCaptor.forClass(BigDecimal.class);
 		final var previous = ArgumentCaptor.forClass(BigDecimal.class);
@@ -217,7 +256,7 @@ class CalculationFeederTest {
 			.thenReturn(new ExpenseRulesService.ExpenseVerdict(BigDecimal.ZERO, "EXPENSE", true, "historik saknas"));
 
 		// only ELECTRICITY has history → RENT's godkandForra is null, and household falls back to persons + children (0)
-		feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of("ELECTRICITY", 1000.0), 40);
+		feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of("ELECTRICITY", BigDecimal.valueOf(1000.0)), 40);
 
 		final var previous = ArgumentCaptor.forClass(BigDecimal.class);
 		final var household = ArgumentCaptor.forClass(Integer.class);
@@ -260,8 +299,8 @@ class CalculationFeederTest {
 
 		final var rows = feeder.personRows(ERRAND_ID, errand);
 
-		assertThat(rows).hasSize(3);
-		assertThat(rows).allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
+		assertThat(rows).hasSize(3)
+			.allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
 
 		final var personRow = rows.getFirst();
 		assertThat(personRow.getPartyId()).isEqualTo("p-1");
@@ -306,7 +345,7 @@ class CalculationFeederTest {
 
 		assertThat(warnings).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_HOUSEHOLD_CHANGE);
 		final var warning = warnings.getFirst();
-		assertThat(warning.sourceKey()).isEqualTo("hushall-storlek");
+		assertThat(warning.sourceKey()).isEqualTo("household-size");
 		assertThat(warning.message())
 			.contains("tidigare 2, nu 1")
 			.contains("saknas nu: p-2")
@@ -330,19 +369,19 @@ class CalculationFeederTest {
 	@Test
 	void householdDeltaWarningsFlagsHousingCostChange() {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, 5000.0);
+		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, BigDecimal.valueOf(5000.0));
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6600"))));
 
 		// same household → only the housing delta is consulted; (6600-5000)/5000 = +32%
-		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSING_COST"), eq(0), eq(new BigDecimal("32"))))
+		when(renewalDeltaServiceMock.classify(MUNICIPALITY_ID, "HOUSING_COST", 0, new BigDecimal("32")))
 			.thenReturn(new RenewalDeltaService.DeltaVerdict(true, "Väsentlig ökning – kontrollera hyresunderlag"));
 
 		final var warnings = feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous);
 
 		assertThat(warnings).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_HOUSING_COST_CHANGE);
 		final var warning = warnings.getFirst();
-		assertThat(warning.sourceKey()).isEqualTo("housing-kostnad");
+		assertThat(warning.sourceKey()).isEqualTo("housing-cost");
 		assertThat(warning.message())
 			.contains("Boendekostnaden har ändrats +32%")
 			.contains("tidigare 5000 kr → nu 6600 kr")
@@ -352,13 +391,13 @@ class CalculationFeederTest {
 	@Test
 	void householdDeltaWarningsFlagsBothSizeAndHousing() {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, 5000.0);
+		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, BigDecimal.valueOf(5000.0));
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("2500"))));
 
 		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSEHOLD_SIZE"), eq(-1), any()))
 			.thenReturn(new RenewalDeltaService.DeltaVerdict(true, "Kontrollera"));
-		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSING_COST"), eq(0), eq(new BigDecimal("-50"))))
+		when(renewalDeltaServiceMock.classify(MUNICIPALITY_ID, "HOUSING_COST", 0, new BigDecimal("-50")))
 			.thenReturn(new RenewalDeltaService.DeltaVerdict(true, "Väsentlig minskning"));
 
 		final var warnings = feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous);

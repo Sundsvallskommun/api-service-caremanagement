@@ -3,12 +3,19 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import com.google.code.beanmatchers.BeanMatchers;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class FinancialAssistanceViewTest {
 
@@ -29,7 +36,17 @@ class FinancialAssistanceViewTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBean() {
+		MatcherAssert.assertThat(FinancialAssistanceView.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
 		final var view = FinancialAssistanceView.create()
 			.withId("cb20c51f-fcf3-42c0-b613-de563634a8ec")
 			.withErrandNumber("EB-26060042")
@@ -72,47 +89,8 @@ class FinancialAssistanceViewTest {
 	}
 
 	@Test
-	void settersWork() {
-		final var view = FinancialAssistanceView.create();
-		view.setId("id");
-		view.setErrandNumber("EB-26060001");
-		view.setMunicipalityId("2281");
-		view.setNamespace("FINANCIAL_ASSISTANCE");
-		view.setTypeSlug("financial-assistance");
-		view.setTitle("title");
-		view.setStatus("NEW");
-		view.setPriority("MEDIUM");
-		view.setReporterUserId("reporter");
-		view.setAssignedUserId("assignee");
-		view.setProcessInstanceId("pi-1");
-		view.setCreated(CREATED);
-		view.setModified(MODIFIED);
-		view.setTouched(TOUCHED);
-		view.setData(DATA);
-		view.setRecommendation(RECOMMENDATION);
-
-		assertThat(view.getId()).isEqualTo("id");
-		assertThat(view.getErrandNumber()).isEqualTo("EB-26060001");
-		assertThat(view.getStatus()).isEqualTo("NEW");
-		assertThat(view.getTouched()).isEqualTo(TOUCHED);
-		assertThat(view.getData()).isEqualTo(DATA);
-		assertThat(view.getRecommendation()).isEqualTo(RECOMMENDATION);
-	}
-
-	@Test
-	void createReturnsBlankInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(FinancialAssistanceView.create()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void equalsAndHashCode() {
-		final var a = FinancialAssistanceView.create().withId("1").withTitle("T").withData(DATA);
-		final var b = FinancialAssistanceView.create().withId("1").withTitle("T").withData(DATA);
-		final var c = FinancialAssistanceView.create().withId("2");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
-	}
 }

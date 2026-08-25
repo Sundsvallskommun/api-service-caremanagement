@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import com.google.code.beanmatchers.BeanMatchers;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -13,8 +14,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class WarningTest {
 
@@ -25,7 +25,7 @@ class WarningTest {
 
 	@Test
 	void testBean() {
-		assertThat(Warning.class, allOf(
+		MatcherAssert.assertThat(Warning.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -34,26 +34,26 @@ class WarningTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var created = OffsetDateTime.parse("2026-06-01T12:00:00Z");
 		final var warning = Warning.create()
 			.withId("id")
 			.withType("MISSING_SSBTEK")
 			.withSourceKey("Dagersättning")
-			.withMessage("Still missing in SSBTEK: Dagersättning")
+			.withMessage("Saknas fortfarande i SSBTEK: Dagersättning")
 			.withStatus("OPEN")
 			.withAutoResolved(false)
 			.withCreated(created)
 			.withUpdated(created);
 
-		org.assertj.core.api.Assertions.assertThat(warning.getId()).isEqualTo("id");
-		org.assertj.core.api.Assertions.assertThat(warning.getType()).isEqualTo("MISSING_SSBTEK");
-		org.assertj.core.api.Assertions.assertThat(warning.getStatus()).isEqualTo("OPEN");
-		org.assertj.core.api.Assertions.assertThat(warning.getMessage()).isEqualTo("Still missing in SSBTEK: Dagersättning");
+		assertThat(warning.getId()).isEqualTo("id");
+		assertThat(warning.getType()).isEqualTo("MISSING_SSBTEK");
+		assertThat(warning.getStatus()).isEqualTo("OPEN");
+		assertThat(warning.getMessage()).isEqualTo("Saknas fortfarande i SSBTEK: Dagersättning");
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
-		org.assertj.core.api.Assertions.assertThat(Warning.create()).hasAllNullFieldsOrPropertiesExcept("autoResolved");
+	void testNoDirtOnCreatedBean() {
+		assertThat(Warning.create()).hasAllNullFieldsOrPropertiesExcept("autoResolved");
 	}
 }

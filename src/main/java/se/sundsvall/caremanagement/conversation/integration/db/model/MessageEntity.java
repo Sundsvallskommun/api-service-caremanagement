@@ -6,10 +6,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
-import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 @Entity
@@ -25,19 +25,19 @@ public class MessageEntity {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "direction", nullable = false, length = 16)
 	private String direction;
 
-	@Column(name = "body", nullable = false, length = LONG32)
+	@Column(name = "body", nullable = false, length = 8192)
 	private String body;
 
 	@Column(name = "author", length = 64)
 	private String author;
 
-	@Column(name = "in_reply_to_id", length = 255)
+	@Column(name = "in_reply_to_id", length = 36)
 	private String inReplyToId;
 
 	@Column(name = "created", nullable = false)
@@ -76,6 +76,34 @@ public class MessageEntity {
 		return created;
 	}
 
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public void setDirection(final String direction) {
+		this.direction = direction;
+	}
+
+	public void setBody(final String body) {
+		this.body = body;
+	}
+
+	public void setAuthor(final String author) {
+		this.author = author;
+	}
+
+	public void setInReplyToId(final String inReplyToId) {
+		this.inReplyToId = inReplyToId;
+	}
+
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
 	public MessageEntity withId(final String id) {
 		this.id = id;
 		return this;
@@ -109,5 +137,27 @@ public class MessageEntity {
 	public MessageEntity withCreated(final OffsetDateTime created) {
 		this.created = created;
 		return this;
+	}
+
+	@Override
+	public boolean equals(final Object o) {
+		if (o == null || getClass() != o.getClass())
+			return false;
+		final MessageEntity that = (MessageEntity) o;
+		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
+			&& Objects.equals(direction, that.direction) && Objects.equals(body, that.body)
+			&& Objects.equals(author, that.author) && Objects.equals(inReplyToId, that.inReplyToId)
+			&& Objects.equals(created, that.created);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, errandId, direction, body, author, inReplyToId, created);
+	}
+
+	@Override
+	public String toString() {
+		return "MessageEntity{id='" + id + "', errandId='" + errandId + "', direction='" + direction + "', body='" + body
+			+ "', author='" + author + "', inReplyToId='" + inReplyToId + "', created=" + created + '}';
 	}
 }

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.stakeholders.integration.db;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import se.sundsvall.caremanagement.stakeholders.integration.db.model.StakeholderEntity;
 
@@ -9,6 +10,8 @@ import se.sundsvall.caremanagement.stakeholders.integration.db.model.Stakeholder
 public interface StakeholderRepository extends JpaRepository<StakeholderEntity, String> {
 
 	List<StakeholderEntity> findByErrandId(String errandId);
+
+	Optional<StakeholderEntity> findByErrandIdAndId(String errandId, String id);
 
 	long deleteByErrandId(String errandId);
 }

@@ -21,7 +21,8 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /**
- * EB income warnings as acknowledgeable objects. The daily prepare step reconciles the current set against what is
+ * financial assistance income warnings as acknowledgeable objects. The daily prepare step reconciles the current set
+ * against what is
  * stored — creating new warnings, refreshing open ones, and auto-closing ones whose cause has resolved — while never
  * re-opening a warning the caseworker has already acted on. A caseworker can acknowledge or close each warning.
  */
@@ -64,10 +65,10 @@ public class WarningService {
 		Map.entry(STATUS_ACKNOWLEDGED, "Kvitterad"),
 		Map.entry(STATUS_CLOSED, "Stängd"));
 
-	private final FaWarningRepository repository;
+	private final FaWarningRepository warningRepository;
 
-	WarningService(final FaWarningRepository repository) {
-		this.repository = repository;
+	WarningService(final FaWarningRepository warningRepository) {
+		this.warningRepository = warningRepository;
 	}
 
 	/** A computed warning before persistence — the dedup key is {@code type + sourceKey}. */
@@ -75,27 +76,12 @@ public class WarningService {
 	}
 
 	/**
-	 * Reconcile the income warnings produced by the rules + completeness + draft checks into the errand's warning
-	 * objects: unhandled / changed / still-missing incomes, plus income that has newly arrived in SSBTEK but is not in the
-	 * caseworker's edited draft calculation.
-	 */
-	public void reconcileIncomeWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
-		final List<String> missing, final List<String> newIncome) {
-		final List<WarningInput> inputs = new ArrayList<>();
-		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
-		ofList(changes).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_CHANGE, sourceKey(text), text)));
-		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Saknas fortfarande i SSBTEK: " + text)));
-		ofList(newIncome).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, text, "Ny inkomst i SSBTEK, ej införd i beräkningen: " + text)));
-		reconcile(errandId, inputs);
-	}
-
-	/**
 	 * Reconcile the full calculation warnings into the errand's warning objects: the rules income warnings
 	 * (unhandled / changed / still-missing), the rows the daily refresh newly added (NEW_*) or saw disappear, and the
 	 * section warnings the feeder pre-typed and DMN-classified — the expense rules (reasonableness review + cap) and the
-	 * renewal delta (household-size + housing drift). Supersedes {@link #reconcileIncomeWarnings} once the three-section
-	 * draft is in play.
+	 * renewal delta (household-size + housing drift).
 	 */
+	@Transactional
 	public void reconcileCalculationWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final DraftChanges draftChanges, final List<WarningInput> sectionWarnings) {
 
@@ -119,10 +105,14 @@ public class WarningService {
 	 * Reconcile the errand's warnings against {@code current}: create the ones that are new, refresh the message of ones
 	 * still OPEN/ACKNOWLEDGED, and auto-close ones whose cause has resolved (no longer in {@code current}). A CLOSED
 	 * warning is never re-opened.
+	 *
+	 * <p>
+	 * Package-private and intentionally not {@code @Transactional}: it is only ever invoked by the public
+	 * {@code reconcile*Warnings} entry points above, which carry the transaction — a self-invoked {@code @Transactional}
+	 * method would bypass the Spring proxy and silently run without one.
 	 */
-	@Transactional
-	public void reconcile(final String errandId, final List<WarningInput> current) {
-		final var existing = repository.findByErrandId(errandId);
+	void reconcile(final String errandId, final List<WarningInput> current) {
+		final var existing = warningRepository.findByErrandId(errandId);
 		final var currentKeys = current.stream().map(input -> key(input.type(), input.sourceKey())).collect(toSet());
 
 		for (final var input : current) {
@@ -130,7 +120,7 @@ public class WarningService {
 				.filter(entity -> key(entity.getType(), entity.getSourceKey()).equals(key(input.type(), input.sourceKey())))
 				.findFirst();
 			if (match.isEmpty()) {
-				repository.save(FaWarningEntity.create()
+				warningRepository.save(FaWarningEntity.create()
 					.withErrandId(errandId)
 					.withType(input.type())
 					.withSourceKey(input.sourceKey())
@@ -138,7 +128,7 @@ public class WarningService {
 					.withStatus(STATUS_OPEN)
 					.withAutoResolved(false));
 			} else if (!STATUS_CLOSED.equals(match.get().getStatus())) { // never re-open a closed warning
-				repository.save(match.get().withMessage(input.message()));
+				warningRepository.save(match.get().withMessage(input.message()));
 			}
 		}
 
@@ -146,12 +136,12 @@ public class WarningService {
 		existing.stream()
 			.filter(entity -> !currentKeys.contains(key(entity.getType(), entity.getSourceKey())))
 			.filter(entity -> !STATUS_CLOSED.equals(entity.getStatus()))
-			.forEach(entity -> repository.save(entity.withStatus(STATUS_CLOSED).withAutoResolved(true)));
+			.forEach(entity -> warningRepository.save(entity.withStatus(STATUS_CLOSED).withAutoResolved(true)));
 	}
 
 	@Transactional(readOnly = true)
 	public List<Warning> list(final String errandId) {
-		return repository.findByErrandId(errandId).stream()
+		return warningRepository.findByErrandId(errandId).stream()
 			.sorted(comparing(FaWarningEntity::getCreated, nullsLast(naturalOrder())))
 			.map(WarningService::toWarning)
 			.toList();
@@ -160,7 +150,7 @@ public class WarningService {
 	/** How many warnings on the errand are still active (OPEN or ACKNOWLEDGED — i.e. not CLOSED). */
 	@Transactional(readOnly = true)
 	public long countActive(final String errandId) {
-		return repository.countByErrandIdAndStatusNot(errandId, STATUS_CLOSED);
+		return warningRepository.countByErrandIdAndStatusNot(errandId, STATUS_CLOSED);
 	}
 
 	/**
@@ -169,7 +159,7 @@ public class WarningService {
 	 */
 	@Transactional
 	public Warning create(final String errandId, final String type, final String sourceKey, final String message) {
-		return toWarning(repository.save(FaWarningEntity.create()
+		return toWarning(warningRepository.save(FaWarningEntity.create()
 			.withErrandId(errandId)
 			.withType(type)
 			.withSourceKey(ofNullable(sourceKey).filter(StringUtils::hasText).orElseGet(() -> sourceKey(message)))
@@ -185,9 +175,9 @@ public class WarningService {
 	@Transactional
 	public Warning updateStatus(final String errandId, final String warningId, final String status) {
 		final var target = validateTargetStatus(status);
-		final var entity = repository.findByIdAndErrandId(warningId, errandId)
+		final var entity = warningRepository.findByIdAndErrandId(warningId, errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "Warning not found on errand"));
-		return toWarning(repository.save(entity.withStatus(target).withAutoResolved(false)));
+		return toWarning(warningRepository.save(entity.withStatus(target).withAutoResolved(false)));
 	}
 
 	private static String validateTargetStatus(final String status) {
@@ -199,15 +189,18 @@ public class WarningService {
 
 	/** A stable dedup/grouping key for the income a warning concerns — the benefit/type before any " (..." or ": ...". */
 	private static String sourceKey(final String text) {
-		return (text == null) ? "" : text.split("[(:]", 2)[0].trim();
+		if (text == null) {
+			return "";
+		}
+		return text.split("[(:]", 2)[0].trim();
 	}
 
 	private static String key(final String type, final String sourceKey) {
-		return type + "::" + (sourceKey == null ? "" : sourceKey);
+		return type + "::" + ofNullable(sourceKey).orElse("");
 	}
 
 	private static List<String> ofList(final List<String> list) {
-		return (list == null) ? List.of() : list;
+		return ofNullable(list).orElseGet(List::of);
 	}
 
 	private static Warning toWarning(final FaWarningEntity entity) {

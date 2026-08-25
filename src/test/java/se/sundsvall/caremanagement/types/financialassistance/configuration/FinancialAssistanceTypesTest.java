@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.configuration;
 
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Cost;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Income;
@@ -40,12 +41,12 @@ class FinancialAssistanceTypesTest {
 	@Test
 	void handlaggareOnlyTypesHaveInternalNameNoExternalNoGroup() {
 		final var handlaggareOnly = allOptions().stream().filter(option -> !option.isCitizenReportable()).toList();
-		assertThat(handlaggareOnly).isNotEmpty();
-		assertThat(handlaggareOnly).allSatisfy(option -> {
-			assertThat(option.getInternalDisplayName()).isNotBlank();
-			assertThat(option.getExternalDisplayName()).isNull();
-			assertThat(option.getGroup()).isNull();
-		});
+		assertThat(handlaggareOnly).isNotEmpty()
+			.allSatisfy(option -> {
+				assertThat(option.getInternalDisplayName()).isNotBlank();
+				assertThat(option.getExternalDisplayName()).isNull();
+				assertThat(option.getGroup()).isNull();
+			});
 	}
 
 	@Test
@@ -83,7 +84,7 @@ class FinancialAssistanceTypesTest {
 	}
 
 	private static List<TypeOption> allOptions() {
-		return java.util.stream.Stream.concat(FinancialAssistanceTypes.INCOME_TYPES.stream(), FinancialAssistanceTypes.COST_TYPES.stream()).toList();
+		return Stream.concat(FinancialAssistanceTypes.INCOME_TYPES.stream(), FinancialAssistanceTypes.COST_TYPES.stream()).toList();
 	}
 
 	private static List<String> codesOf(final List<TypeOption> catalogue) {

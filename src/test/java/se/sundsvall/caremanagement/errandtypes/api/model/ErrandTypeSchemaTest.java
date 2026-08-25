@@ -1,10 +1,17 @@
 package se.sundsvall.caremanagement.errandtypes.api.model;
 
 import java.util.List;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.stakeholders.api.model.RoleDefinition;
 
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class ErrandTypeSchemaTest {
 
@@ -17,7 +24,17 @@ class ErrandTypeSchemaTest {
 		DecisionOption.create().withCode("BIFALL").withDisplayName("Bifall").withCarriesAmount(true));
 
 	@Test
-	void builderMethods() {
+	void testBean() {
+		MatcherAssert.assertThat(ErrandTypeSchema.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
 		final var schema = ErrandTypeSchema.create()
 			.withTypeSlug("financial-assistance-renewal")
 			.withApplicationType("RENEWAL")
@@ -38,37 +55,9 @@ class ErrandTypeSchemaTest {
 	}
 
 	@Test
-	void settersWork() {
-		final var schema = ErrandTypeSchema.create();
-		schema.setTypeSlug("financial-assistance-new");
-		schema.setApplicationType(null);
-		schema.setDisplayName("New");
-		schema.setStatuses(STATUSES);
-		schema.setRoles(ROLES);
-		schema.setFields(FIELDS);
-		schema.setDecisionOptions(DECISION_OPTIONS);
-
-		assertThat(schema.getTypeSlug()).isEqualTo("financial-assistance-new");
-		assertThat(schema.getApplicationType()).isNull();
-		assertThat(schema.getDisplayName()).isEqualTo("New");
-		assertThat(schema.getStatuses()).isEqualTo(STATUSES);
-		assertThat(schema.getRoles()).isEqualTo(ROLES);
-		assertThat(schema.getFields()).isEqualTo(FIELDS);
-		assertThat(schema.getDecisionOptions()).isEqualTo(DECISION_OPTIONS);
+	void testNoDirtOnCreatedBean() {
+		assertThat(ErrandTypeSchema.create()).hasAllNullFieldsOrProperties();
+		assertThat(new ErrandTypeSchema()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void equalsHashCodeAndToString() {
-		final var a = ErrandTypeSchema.create().withTypeSlug("slug").withApplicationType("NEW").withStatuses(STATUSES);
-		final var b = ErrandTypeSchema.create().withTypeSlug("slug").withApplicationType("NEW").withStatuses(STATUSES);
-		final var c = ErrandTypeSchema.create().withTypeSlug("other");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
-		assertThat(a).isEqualTo(a);
-		assertThat(a).hasToString(b.toString());
-		assertThat(a.toString()).contains("slug", "NEW");
-	}
 }

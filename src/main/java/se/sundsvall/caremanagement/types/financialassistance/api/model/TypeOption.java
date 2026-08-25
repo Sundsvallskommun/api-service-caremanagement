@@ -4,12 +4,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * One selectable EB income/cost type — a label catalogue keyed on the existing {@code Income.incomeType} /
+ * One selectable financial assistance income/cost type — a label catalogue keyed on the existing
+ * {@code Income.incomeType} /
  * {@code Cost.costType} codes, so the same {@code code} carries both presentations:
  * <ul>
  * <li>{@code externalDisplayName} — the citizen Mina-sidor label (e.g. "Hyra (inte parkering/garage)"); null for
- * handläggare-only types not shown on the citizen form.</li>
- * <li>{@code internalDisplayName} — the matching Lifecare handläggare-dropdown label (e.g. "Boendekostnad"); null when
+ * caseworker-only types not shown on the citizen form.</li>
+ * <li>{@code internalDisplayName} — the matching Lifecare caseworker dropdown label (e.g. "Boendekostnad"); null when
  * the type has no Lifecare counterpart.</li>
  * <li>{@code group} — a stable code for the Mina-sidor form section the type is shown under ({@code HOUSING},
  * {@code WORK_AND_STUDIES}, {@code HEALTH}, {@code OTHER}); null for income (a flat list).</li>
@@ -21,16 +22,16 @@ import java.util.Objects;
  * {@code Income.incomeType} / {@code Cost.costType} allowable values (the citizen payload contract).
  * </p>
  */
-@Schema(description = "A selectable EB income/cost type — the payload code plus its Mina-sidor + Lifecare labels, form group and citizen flag.")
+@Schema(description = "A selectable financial assistance income/cost type — the payload code plus its Mina-sidor + Lifecare labels, form group and citizen flag.")
 public class TypeOption {
 
 	@Schema(description = "The type code, as stored on the payload (incomeType / costType)", examples = "RENT")
 	private String code;
 
-	@Schema(description = "The citizen Mina-sidor label; null for handläggare-only types not on the citizen form", examples = "Hyra (inte parkering/garage)")
+	@Schema(description = "The citizen Mina-sidor label; null for caseworker-only types not on the citizen form", examples = "Hyra (inte parkering/garage)")
 	private String externalDisplayName;
 
-	@Schema(description = "The matching Lifecare handläggare-dropdown label, or null when there is no Lifecare counterpart", examples = "Boendekostnad")
+	@Schema(description = "The matching Lifecare caseworker dropdown label, or null when there is no Lifecare counterpart", examples = "Boendekostnad")
 	private String internalDisplayName;
 
 	@Schema(description = "Stable code for the Mina-sidor form section the type is shown under; null for income", examples = "HOUSING", allowableValues = {

@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -13,10 +14,10 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static java.time.Month.JUNE;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class NormPersonRowTest {
 
@@ -27,7 +28,7 @@ class NormPersonRowTest {
 
 	@Test
 	void testBean() {
-		assertThat(NormPersonRow.class, allOf(
+		MatcherAssert.assertThat(NormPersonRow.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -47,8 +48,8 @@ class NormPersonRowTest {
 		final var caseworkerDays = 15;
 		final var effectiveDays = 15;
 		final var included = true;
-		final var deviationFromDate = LocalDate.of(2026, 6, 1);
-		final var deviationToDate = LocalDate.of(2026, 6, 15);
+		final var deviationFromDate = LocalDate.of(2026, JUNE, 1);
+		final var deviationToDate = LocalDate.of(2026, JUNE, 15);
 		final var normInterval = "MONTH";
 		final var jobStimulusAmount = BigDecimal.valueOf(1000.00);
 		final var deleted = true;

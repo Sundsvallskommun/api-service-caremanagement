@@ -36,8 +36,8 @@ class ExpenseRulesServiceTest {
 
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("7100"));
 		assertThat(result.bucket()).isEqualTo("EXPENSE");
-		assertThat(result.varning()).isTrue();
-		assertThat(result.regel()).isEqualTo("Över gränsvärde");
+		assertThat(result.warning()).isTrue();
+		assertThat(result.rule()).isEqualTo("Över gränsvärde");
 	}
 
 	@Test
@@ -49,8 +49,8 @@ class ExpenseRulesServiceTest {
 
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("400"));
 		assertThat(result.bucket()).isEqualTo("SPECIAL_EXPENSE");
-		assertThat(result.varning()).isFalse();
-		assertThat(result.regel()).isNull();
+		assertThat(result.warning()).isFalse();
+		assertThat(result.rule()).isNull();
 	}
 
 	@Test
@@ -61,7 +61,7 @@ class ExpenseRulesServiceTest {
 
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("500"));
 		assertThat(result.bucket()).isEqualTo("SPECIAL_EXPENSE");
-		assertThat(result.varning()).isFalse();
+		assertThat(result.warning()).isFalse();
 	}
 
 	@Test
@@ -93,12 +93,12 @@ class ExpenseRulesServiceTest {
 
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("750"));
 		assertThat(result.bucket()).isEqualTo("EXPENSE");
-		assertThat(result.varning()).isFalse();
+		assertThat(result.warning()).isFalse();
 		verifyNoInteractions(processServiceMock);
 	}
 
 	@Test
-	void bucketForCostTypeMapsToTheFcArray() {
+	void bucketForCostTypeMapsToTheFamilyCareArray() {
 		assertThat(ExpenseRulesService.bucketForCostType("RENT")).isEqualTo("EXPENSE");
 		assertThat(ExpenseRulesService.bucketForCostType("MEDICINE")).isEqualTo("SPECIAL_EXPENSE");
 		assertThat(ExpenseRulesService.bucketForCostType("OTHER")).isEqualTo("SPECIAL_EXPENSE");

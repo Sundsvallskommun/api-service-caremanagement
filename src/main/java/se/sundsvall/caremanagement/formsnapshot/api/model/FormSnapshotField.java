@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.formsnapshot.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -7,7 +8,7 @@ import java.util.Objects;
 /**
  * A single field as it was rendered to the applicant: its label, any help / info / notice text shown alongside it, the
  * full set of options as presented, and the answer given. For a {@code REPEATING_GROUP} (e.g. incomes, children) the
- * repeated instances are carried in {@code items}, each a list of nested fields.
+ * repeated instances are carried in {@code items}, each a {@link FormSnapshotGroup} of nested fields.
  */
 @Schema(description = "A single form field as it was rendered and answered.")
 public class FormSnapshotField {
@@ -29,17 +30,17 @@ public class FormSnapshotField {
 	@Schema(description = "Info texts shown for the field, in order")
 	private List<String> infoTexts;
 
-	@Schema(description = "Info / warning / error notices rendered for the field, in order")
+	@ArraySchema(arraySchema = @Schema(description = "Info / warning / error notices rendered for the field, in order"), schema = @Schema(implementation = FormSnapshotNotice.class))
 	private List<FormSnapshotNotice> notices;
 
-	@Schema(description = "All options as presented (for RADIO/CHECKBOX/SELECT), in order")
+	@ArraySchema(arraySchema = @Schema(description = "All options as presented (for RADIO/CHECKBOX/SELECT), in order"), schema = @Schema(implementation = FormSnapshotOption.class))
 	private List<FormSnapshotOption> options;
 
 	@Schema(description = "The answer given, when the field has a single answer")
 	private FormSnapshotAnswer answer;
 
-	@Schema(description = "For REPEATING_GROUP fields, one entry per repeated instance; each is the list of nested fields")
-	private List<List<FormSnapshotField>> items;
+	@ArraySchema(arraySchema = @Schema(description = "For REPEATING_GROUP fields, one entry per repeated instance"), schema = @Schema(implementation = FormSnapshotGroup.class))
+	private List<FormSnapshotGroup> items;
 
 	@Schema(description = "Whether the field was required as rendered", examples = "true")
 	private boolean required;
@@ -158,15 +159,15 @@ public class FormSnapshotField {
 		return this;
 	}
 
-	public List<List<FormSnapshotField>> getItems() {
+	public List<FormSnapshotGroup> getItems() {
 		return items;
 	}
 
-	public void setItems(final List<List<FormSnapshotField>> items) {
+	public void setItems(final List<FormSnapshotGroup> items) {
 		this.items = items;
 	}
 
-	public FormSnapshotField withItems(final List<List<FormSnapshotField>> items) {
+	public FormSnapshotField withItems(final List<FormSnapshotGroup> items) {
 		this.items = items;
 		return this;
 	}

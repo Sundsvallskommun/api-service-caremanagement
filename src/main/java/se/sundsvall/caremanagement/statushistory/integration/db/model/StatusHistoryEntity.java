@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -24,7 +25,7 @@ public class StatusHistoryEntity {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "from_status", length = 64)
@@ -68,6 +69,30 @@ public class StatusHistoryEntity {
 		return changedAt;
 	}
 
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public void setFromStatus(final String fromStatus) {
+		this.fromStatus = fromStatus;
+	}
+
+	public void setToStatus(final String toStatus) {
+		this.toStatus = toStatus;
+	}
+
+	public void setChangedBy(final String changedBy) {
+		this.changedBy = changedBy;
+	}
+
+	public void setChangedAt(final OffsetDateTime changedAt) {
+		this.changedAt = changedAt;
+	}
+
 	public StatusHistoryEntity withId(final String id) {
 		this.id = id;
 		return this;
@@ -96,5 +121,27 @@ public class StatusHistoryEntity {
 	public StatusHistoryEntity withChangedAt(final OffsetDateTime changedAt) {
 		this.changedAt = changedAt;
 		return this;
+	}
+
+	@Override
+	public boolean equals(final Object obj) {
+		if (this == obj)
+			return true;
+		if (!(obj instanceof final StatusHistoryEntity other))
+			return false;
+		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
+			&& Objects.equals(fromStatus, other.fromStatus) && Objects.equals(toStatus, other.toStatus)
+			&& Objects.equals(changedBy, other.changedBy) && Objects.equals(changedAt, other.changedAt);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, errandId, fromStatus, toStatus, changedBy, changedAt);
+	}
+
+	@Override
+	public String toString() {
+		return "StatusHistoryEntity{id='" + id + "', errandId='" + errandId + "', fromStatus='" + fromStatus
+			+ "', toStatus='" + toStatus + "', changedBy='" + changedBy + "', changedAt=" + changedAt + '}';
 	}
 }

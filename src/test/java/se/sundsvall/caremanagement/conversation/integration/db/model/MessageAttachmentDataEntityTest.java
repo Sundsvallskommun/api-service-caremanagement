@@ -1,29 +1,31 @@
 package se.sundsvall.caremanagement.conversation.integration.db.model;
 
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 import org.mariadb.jdbc.MariaDbBlob;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
-import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
-import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEqualsExcluding;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCodeExcluding;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToStringExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class MessageAttachmentDataEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(MessageAttachmentDataEntity.class, allOf(
+		MatcherAssert.assertThat(MessageAttachmentDataEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
-			hasValidBeanHashCode(),
-			hasValidBeanEquals()));
+			hasValidBeanHashCodeExcluding("file"),
+			hasValidBeanEqualsExcluding("file"),
+			hasValidBeanToStringExcluding("file")));
 	}
 
 	@Test
-	void hasValidBuilderMethods() {
+	void testBuilderMethods() {
 		final var id = 1;
 		final var messageAttachmentId = "attachment-1";
 		final var file = new MariaDbBlob("file".getBytes());

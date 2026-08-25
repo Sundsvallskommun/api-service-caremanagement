@@ -111,7 +111,7 @@ class ErrandTypeServiceTest {
 		assertThatThrownBy(() -> service.findBySlug("bogus"))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
-			.hasMessageContaining("bogus");
+			.hasMessage("Not Found: No errand type with slug 'bogus'");
 	}
 
 	private static ErrandTypeContribution type(final String slug, final String displayName) {

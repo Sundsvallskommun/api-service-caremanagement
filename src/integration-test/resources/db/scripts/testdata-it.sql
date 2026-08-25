@@ -47,3 +47,50 @@ INSERT INTO attachment (id, attachment_data_id, errand_id, file_name, mime_type,
 INSERT INTO notification (id, errand_id, municipality_id, namespace, owner_id, created_by, type, sub_type, description, content, acknowledged, expires, created, modified) VALUES
     ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', '11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'assignee1', 'reporter1', 'CREATE', 'ERRAND',   'New errand assigned to you', NULL, 0, '2099-01-01 00:00:00.000000', '2025-01-02 09:00:00.000000', NULL),
     ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeef', '11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'assignee1', 'operaton',  'CREATE', 'DECISION', 'Decision recorded: PAYMENT = APPROVED', NULL, 0, '2099-01-01 00:00:00.000000', '2025-01-02 09:05:00.000000', NULL);
+
+-- Errand-child rows on errand 4444... (which no other IT reads), used by ErrandIT to prove ON DELETE CASCADE cleanup
+-- on errand deletion: message + its attachment/blob/read-receipt, note, document. Deleting the errand removes all.
+-- Kept off errand 1111... on purpose — the attachment listing aggregates conversation attachments, so seeding a
+-- message attachment there would leak into ErrandAttachmentIT.
+INSERT INTO errand_message (id, errand_id, direction, body, author, created, in_reply_to_id) VALUES
+    ('cccccccc-cccc-cccc-cccc-cccccccccc01', '44444444-4444-4444-4444-444444444444', 'OUTBOUND', 'Please supply the missing document', 'assignee1', '2025-01-02 09:10:00.000000', NULL);
+
+INSERT INTO message_attachment (id, message_id, file_name, mime_type, file_size, created, sender_role) VALUES
+    ('cccccccc-cccc-cccc-cccc-ccccccccca01', 'cccccccc-cccc-cccc-cccc-cccccccccc01', 'note.txt', 'text/plain', 5, '2025-01-02 09:10:00.000000', 'CASEWORKER');
+
+INSERT INTO message_attachment_data (id, message_attachment_id, file) VALUES
+    (1, 'cccccccc-cccc-cccc-cccc-ccccccccca01', 0x48656c6c6f); -- "Hello"
+
+INSERT INTO message_read_receipt (id, message_id, reader_side, read_by, read_at) VALUES
+    ('cccccccc-cccc-cccc-cccc-cccccccccr01', 'cccccccc-cccc-cccc-cccc-cccccccccc01', 'CLIENT', '198001011234', '2025-01-02 09:15:00.000000');
+
+INSERT INTO errand_note (id, errand_id, body, author, created, modified_by, modified) VALUES
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbn01', '44444444-4444-4444-4444-444444444444', 'Internal note on the errand', 'assignee1', '2025-01-02 09:20:00.000000', NULL, NULL);
+
+INSERT INTO errand_document (id, errand_id, document_type, heading, document_text, document_date_time, status, created_by, created, modified_by, modified, locked_by, locked) VALUES
+    ('ffffffff-ffff-ffff-ffff-ffffffffff01', '44444444-4444-4444-4444-444444444444', 'TYPE-1', 'Case document', 'Document body text', '2025-01-02 09:25:00.000000', 'WORKING', 'assignee1', '2025-01-02 09:25:00.000000', NULL, NULL, NULL, NULL);
+
+-- Financial-assistance extension row on the same errand — proves fk_financial_assistance_errand_id also cascades on
+-- errand deletion (without ON DELETE CASCADE the errand delete would FK-violate and roll back).
+INSERT INTO errand_financial_assistance (errand_id) VALUES
+    ('44444444-4444-4444-4444-444444444444');
+
+-- FA satellite tables on the same errand — prove fk_fa_calculation_draft/monitoring/section_approval/warning_errand_id
+-- each cascade on errand deletion (these tables have no FK to errand_financial_assistance, so without their own
+-- ON DELETE CASCADE FK to errand they would orphan a deleted errand's data).
+INSERT INTO errand_financial_assistance_calculation_draft (errand_id, application_month, created) VALUES
+    ('44444444-4444-4444-4444-444444444444', '2025-01', '2025-01-02 09:30:00.000000');
+
+INSERT INTO errand_financial_assistance_monitoring (id, errand_id, title, start_date, source, created) VALUES
+    ('dddddddd-dddd-dddd-dddd-ddddddddda01', '44444444-4444-4444-4444-444444444444', 'Monitoring', '2025-01-02', 'CASEWORKER', '2025-01-02 09:30:00.000000');
+
+INSERT INTO errand_financial_assistance_section_approval (id, errand_id, section, approved, created) VALUES
+    ('dddddddd-dddd-dddd-dddd-dddddddddb01', '44444444-4444-4444-4444-444444444444', 'INCOME', b'0', '2025-01-02 09:30:00.000000');
+
+INSERT INTO errand_financial_assistance_warning (id, errand_id, type, source_key, message, status, auto_resolved, created) VALUES
+    ('dddddddd-dddd-dddd-dddd-dddddddddc01', '44444444-4444-4444-4444-444444444444', 'MISSING_SSBTEK', 'Dagersättning', 'Saknas i SSBTEK', 'OPEN', b'0', '2025-01-02 09:30:00.000000');
+
+-- Form snapshot on the same errand — proves fk_form_snapshot_errand_id cascades on errand deletion (its module's
+-- ErrandDeletedListener was removed as redundant; the DB cascade is now the sole cleanup).
+INSERT INTO errand_form_snapshot (id, errand_id, municipality_id, namespace, type_slug, schema_version, content_hash, payload, created) VALUES
+    ('aaaaaaaa-aaaa-aaaa-aaaa-fffff0000001', '44444444-4444-4444-4444-444444444444', '2281', 'MY_NAMESPACE', 'TYPE-1', 'v1', '0000000000000000000000000000000000000000000000000000000000000000', '{}', '2025-01-02 09:30:00.000000');

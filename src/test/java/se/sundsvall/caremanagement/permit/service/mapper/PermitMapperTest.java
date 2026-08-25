@@ -20,6 +20,7 @@ class PermitMapperTest {
 
 		final var permit = PermitMapper.toPermit(entity);
 
+		assertThat(permit).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(permit.getId()).isEqualTo("p1");
 		assertThat(permit.getPermitType()).isEqualTo("PARKING_PERMIT");
 		assertThat(permit.getValidFrom()).isEqualTo(LocalDate.parse("2026-06-03"));
@@ -35,6 +36,7 @@ class PermitMapperTest {
 		final var entity = PermitMapper.toPermitEntity(
 			Permit.create().withPermitType("PARKING_PERMIT").withConditions("c").withStatus("ACTIVE"), "errand-1");
 
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "validFrom", "validUntil", "created", "modified");
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
 		assertThat(entity.getPermitType()).isEqualTo("PARKING_PERMIT");
 		assertThat(entity.getConditions()).isEqualTo("c");

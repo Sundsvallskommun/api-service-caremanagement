@@ -40,7 +40,7 @@ public class AttachmentEntity implements Auditable {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "namespace", length = 32)
@@ -58,8 +58,9 @@ public class AttachmentEntity implements Auditable {
 	@Column(name = "file_size")
 	private Integer fileSize;
 
+	// Physical column kept as the legacy name "origin" so no migration is needed; the field and API are "documentType".
 	@Column(name = "origin", length = 32)
-	private String origin;
+	private String documentType;
 
 	@Column(name = "sender_role", length = 32)
 	private String senderRole;
@@ -108,8 +109,8 @@ public class AttachmentEntity implements Auditable {
 		return fileSize;
 	}
 
-	public String getOrigin() {
-		return origin;
+	public String getDocumentType() {
+		return documentType;
 	}
 
 	public String getSenderRole() {
@@ -128,54 +129,54 @@ public class AttachmentEntity implements Auditable {
 		return modified;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setErrandId(final String v) {
-		this.errandId = v;
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
 	}
 
-	public void setNamespace(final String v) {
-		this.namespace = v;
+	public void setNamespace(final String namespace) {
+		this.namespace = namespace;
 	}
 
-	public void setMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public void setMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 	}
 
-	public void setFileName(final String v) {
-		this.fileName = v;
+	public void setFileName(final String fileName) {
+		this.fileName = fileName;
 	}
 
-	public void setMimeType(final String v) {
-		this.mimeType = v;
+	public void setMimeType(final String mimeType) {
+		this.mimeType = mimeType;
 	}
 
-	public void setFileSize(final Integer v) {
-		this.fileSize = v;
+	public void setFileSize(final Integer fileSize) {
+		this.fileSize = fileSize;
 	}
 
-	public void setOrigin(final String v) {
-		this.origin = v;
+	public void setDocumentType(final String documentType) {
+		this.documentType = documentType;
 	}
 
-	public void setSenderRole(final String v) {
-		this.senderRole = v;
+	public void setSenderRole(final String senderRole) {
+		this.senderRole = senderRole;
 	}
 
-	public void setAttachmentData(final AttachmentDataEntity v) {
-		this.attachmentData = v;
-	}
-
-	@Override
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setAttachmentData(final AttachmentDataEntity attachmentData) {
+		this.attachmentData = attachmentData;
 	}
 
 	@Override
-	public void setModified(final OffsetDateTime v) {
-		this.modified = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
+	@Override
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
 	}
 
 	public AttachmentEntity withId(final String id) {
@@ -213,8 +214,8 @@ public class AttachmentEntity implements Auditable {
 		return this;
 	}
 
-	public AttachmentEntity withOrigin(final String origin) {
-		this.origin = origin;
+	public AttachmentEntity withDocumentType(final String documentType) {
+		this.documentType = documentType;
 		return this;
 	}
 
@@ -246,20 +247,23 @@ public class AttachmentEntity implements Auditable {
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
 			&& Objects.equals(namespace, that.namespace) && Objects.equals(municipalityId, that.municipalityId)
 			&& Objects.equals(fileName, that.fileName) && Objects.equals(mimeType, that.mimeType)
-			&& Objects.equals(fileSize, that.fileSize) && Objects.equals(origin, that.origin)
-			&& Objects.equals(senderRole, that.senderRole) && Objects.equals(attachmentData, that.attachmentData)
+			&& Objects.equals(fileSize, that.fileSize) && Objects.equals(documentType, that.documentType)
+			&& Objects.equals(senderRole, that.senderRole)
 			&& Objects.equals(created, that.created) && Objects.equals(modified, that.modified);
 	}
 
+	// attachmentData (the lazily-loaded blob) is deliberately excluded from equals/hashCode: including it would force
+	// reading the whole attachment into memory just to compare or hash an entity. Identity/metadata fields suffice.
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, namespace, municipalityId, fileName, mimeType, fileSize, origin, senderRole, attachmentData, created, modified);
+		return Objects.hash(id, errandId, namespace, municipalityId, fileName, mimeType, fileSize, documentType, senderRole, created, modified);
 	}
 
 	@Override
 	public String toString() {
-		return "AttachmentEntity{id='" + id + "', errandId='" + errandId + "', fileName='" + fileName
-			+ "', mimeType='" + mimeType + "', fileSize=" + fileSize + ", origin='" + origin + "', senderRole='" + senderRole
+		return "AttachmentEntity{id='" + id + "', errandId='" + errandId + "', namespace='" + namespace
+			+ "', municipalityId='" + municipalityId + "', fileName='" + fileName
+			+ "', mimeType='" + mimeType + "', fileSize=" + fileSize + ", documentType='" + documentType + "', senderRole='" + senderRole
 			+ "', created=" + created + ", modified=" + modified + '}';
 	}
 }

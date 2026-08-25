@@ -1,12 +1,17 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
+
+import static com.fasterxml.jackson.annotation.JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY;
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 @Schema(description = "The typed financial assistance application payload.")
 public class FinancialAssistanceData {
@@ -41,6 +46,10 @@ public class FinancialAssistanceData {
 	}, nullable = true)
 	private String periodChoice;
 
+	// Mina sidor sends normType as a bare string rather than a one-element array, so a lone scalar is accepted as a
+	// single-element list. Declared here rather than by reading the payload leniently at the endpoint, so it applies
+	// wherever the model is bound.
+	@JsonFormat(with = ACCEPT_SINGLE_VALUE_AS_ARRAY)
 	@ArraySchema(schema = @Schema(description = "The norm types used for the calculation", examples = "NATIONAL_NORM", allowableValues = {
 		"NATIONAL_NORM", "OTHER_NORM"
 	}))
@@ -105,41 +114,42 @@ public class FinancialAssistanceData {
 	private Boolean attestation;
 
 	@Schema(description = "When the application was attested", examples = "2026-06-01T09:30:00Z")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime attestedAt;
 
-	@Schema(description = "Children included in the application")
+	@ArraySchema(arraySchema = @Schema(description = "Children included in the application"), schema = @Schema(implementation = Child.class))
 	@Valid
 	private List<Child> children;
 
-	@Schema(description = "Costs applied for")
+	@ArraySchema(arraySchema = @Schema(description = "Costs applied for"), schema = @Schema(implementation = Cost.class))
 	@Valid
 	private List<Cost> costs;
 
-	@Schema(description = "Incomes reported")
+	@ArraySchema(arraySchema = @Schema(description = "Incomes reported"), schema = @Schema(implementation = Income.class))
 	@Valid
 	private List<Income> incomes;
 
-	@Schema(description = "Pending benefits")
+	@ArraySchema(arraySchema = @Schema(description = "Pending benefits"), schema = @Schema(implementation = PendingBenefit.class))
 	@Valid
 	private List<PendingBenefit> pendingBenefits;
 
-	@Schema(description = "Assets owned")
+	@ArraySchema(arraySchema = @Schema(description = "Assets owned"), schema = @Schema(implementation = Asset.class))
 	@Valid
 	private List<Asset> assets;
 
-	@Schema(description = "Persons on the application")
+	@ArraySchema(arraySchema = @Schema(description = "Persons on the application"), schema = @Schema(implementation = Person.class))
 	@Valid
 	private List<Person> persons;
 
-	@Schema(description = "Plannings towards self-sufficiency")
+	@ArraySchema(arraySchema = @Schema(description = "Plannings towards self-sufficiency"), schema = @Schema(implementation = Planning.class))
 	@Valid
 	private List<Planning> plannings;
 
-	@Schema(description = "Planned activities")
+	@ArraySchema(arraySchema = @Schema(description = "Planned activities"), schema = @Schema(implementation = PlannedActivity.class))
 	@Valid
 	private List<PlannedActivity> plannedActivities;
 
-	@Schema(description = "Job applications")
+	@ArraySchema(arraySchema = @Schema(description = "Job applications"), schema = @Schema(implementation = JobApplication.class))
 	@Valid
 	private List<JobApplication> jobApplications;
 

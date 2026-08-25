@@ -20,6 +20,8 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 @ExtendWith(MockitoExtension.class)
 class TemplatingIntegrationTest {
 
+	private static final String MUNICIPALITY_ID = "2281";
+
 	@Mock
 	private TemplatingClient templatingClientMock;
 
@@ -32,30 +34,34 @@ class TemplatingIntegrationTest {
 	@Test
 	void renderPdfDecodesBase64Output() {
 		final var pdfBytes = "%PDF-1.4 demo".getBytes();
-		when(templatingClientMock.render(eq("2281"), any(RenderRequest.class))).thenReturn(renderResponseMock);
+		when(templatingClientMock.render(eq(MUNICIPALITY_ID), any(RenderRequest.class))).thenReturn(renderResponseMock);
 		when(renderResponseMock.getOutput()).thenReturn(Base64.getEncoder().encodeToString(pdfBytes));
 
-		final var result = integration.renderPdf("2281", new RenderRequest());
+		final var result = integration.renderPdf(MUNICIPALITY_ID, new RenderRequest());
 
 		assertThat(result).isEqualTo(pdfBytes);
 	}
 
 	@Test
 	void renderPdfNullResponseThrowsBadGateway() {
-		when(templatingClientMock.render(eq("2281"), any(RenderRequest.class))).thenReturn(null);
+		when(templatingClientMock.render(eq(MUNICIPALITY_ID), any(RenderRequest.class))).thenReturn(null);
 
-		assertThatThrownBy(() -> integration.renderPdf("2281", new RenderRequest()))
+		assertThatThrownBy(() -> integration.renderPdf(MUNICIPALITY_ID, new RenderRequest()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Templating service returned no output when rendering PDF for municipality '2281'");
 	}
 
 	@Test
 	void renderPdfBlankOutputThrowsBadGateway() {
-		when(templatingClientMock.render(eq("2281"), any(RenderRequest.class))).thenReturn(renderResponseMock);
+		when(templatingClientMock.render(eq(MUNICIPALITY_ID), any(RenderRequest.class))).thenReturn(renderResponseMock);
 		when(renderResponseMock.getOutput()).thenReturn(" ");
 
-		assertThatThrownBy(() -> integration.renderPdf("2281", new RenderRequest()))
+		assertThatThrownBy(() -> integration.renderPdf(MUNICIPALITY_ID, new RenderRequest()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Templating service returned no output when rendering PDF for municipality '2281'");
 	}
 }

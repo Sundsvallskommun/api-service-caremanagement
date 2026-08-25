@@ -13,14 +13,14 @@ import se.sundsvall.caremanagement.referral.integration.db.ReferralRepository;
 @Component
 class ReferralErrandDeletedListener {
 
-	private final ReferralRepository repository;
+	private final ReferralRepository referralRepository;
 
-	ReferralErrandDeletedListener(final ReferralRepository repository) {
-		this.repository = repository;
+	ReferralErrandDeletedListener(final ReferralRepository referralRepository) {
+		this.referralRepository = referralRepository;
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandDeleted event) {
-		repository.deleteByErrandId(event.errandId());
+	void deleteReferralsForErrand(final ErrandDeleted event) {
+		referralRepository.deleteByErrandId(event.errandId());
 	}
 }

@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import java.util.List;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
@@ -9,14 +10,13 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class CalculationRequestTest {
 
 	@Test
 	void testBean() {
-		assertThat(CalculationRequest.class, allOf(
+		MatcherAssert.assertThat(CalculationRequest.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -25,7 +25,7 @@ class CalculationRequestTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var request = CalculationRequest.create()
 			.withApplicant("198001012389")
 			.withCoApplicant("198202022397")
@@ -45,7 +45,7 @@ class CalculationRequestTest {
 	}
 
 	@Test
-	void createReturnsBlankInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(CalculationRequest.create()).hasAllNullFieldsOrProperties();
 	}
 }

@@ -2,17 +2,43 @@ package se.sundsvall.caremanagement.referral.api.model;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Random;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static com.google.code.beanmatchers.BeanMatchers.registerValueGenerator;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class ReferralTest {
 	private static final LocalDate SENT = LocalDate.parse("2026-06-03");
 	private static final LocalDate DUE = LocalDate.parse("2026-07-01");
 	private static final OffsetDateTime CREATED = OffsetDateTime.parse("2026-06-03T10:00:00Z");
 
+	@BeforeAll
+	static void setup() {
+		registerValueGenerator(() -> OffsetDateTime.now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+		registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(1000)), LocalDate.class);
+	}
+
 	@Test
-	void builderMethods() {
+	void testBean() {
+		MatcherAssert.assertThat(Referral.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
 		final var referral = Referral.create()
 			.withId("r1").withAuthority("ENVIRONMENTAL_OFFICE").withRecipient("Env").withSentAt(SENT).withDueAt(DUE)
 			.withResponseText("ok").withStatus("RESPONDED").withCreated(CREATED).withModified(CREATED);
@@ -29,37 +55,9 @@ class ReferralTest {
 	}
 
 	@Test
-	void setters() {
-		final var referral = Referral.create();
-		referral.setId("r1");
-		referral.setAuthority("POLICE");
-		referral.setRecipient("Local police");
-		referral.setSentAt(SENT);
-		referral.setDueAt(DUE);
-		referral.setResponseText("ok");
-		referral.setStatus("SENT");
-		referral.setCreated(CREATED);
-		referral.setModified(CREATED);
-
-		assertThat(referral.getAuthority()).isEqualTo("POLICE");
-		assertThat(referral.getStatus()).isEqualTo("SENT");
-		assertThat(referral.getDueAt()).isEqualTo(DUE);
-	}
-
-	@Test
-	void createReturnsBlankInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(Referral.create()).hasAllNullFieldsOrProperties();
+		assertThat(new Referral()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void equalsAndHashCode() {
-		final var a = Referral.create().withId("1").withAuthority("A").withStatus("SENT");
-		final var b = Referral.create().withId("1").withAuthority("A").withStatus("SENT");
-		final var c = Referral.create().withId("2");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
-	}
 }

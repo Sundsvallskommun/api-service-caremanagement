@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class NoteCountTest {
 
 	@Test
-	void accessor() {
+	void testAccessor() {
 		assertThat(new NoteCount(4).count()).isEqualTo(4);
 	}
 }

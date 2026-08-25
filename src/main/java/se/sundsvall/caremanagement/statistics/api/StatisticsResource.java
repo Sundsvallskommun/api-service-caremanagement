@@ -2,6 +2,10 @@ package se.sundsvall.caremanagement.statistics.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Pattern;
 import java.time.OffsetDateTime;
@@ -16,9 +20,12 @@ import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.statistics.api.model.StatisticsResponse;
 import se.sundsvall.caremanagement.statistics.service.StatisticsService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
+import se.sundsvall.dept44.problem.Problem;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
 import static org.springframework.http.ResponseEntity.ok;
 import static se.sundsvall.caremanagement.Constants.NAMESPACE_REGEXP;
 import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE;
@@ -27,6 +34,12 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/statistics")
 @Tag(name = "Statistics", description = "Read-only errand statistics for the caseworker interface")
+@ApiResponses(value = {
+	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
+		Problem.class, ConstraintViolationProblem.class
+	}))),
+	@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+})
 class StatisticsResource {
 
 	private final StatisticsService service;
@@ -36,7 +49,9 @@ class StatisticsResource {
 	}
 
 	@GetMapping(produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Errand statistics", description = "Aggregates the number of errands per status and per assigned user, optionally filtered by errand type and creation date.")
+	@Operation(summary = "Errand statistics", description = "Aggregates the number of errands per status and per assigned user, optionally filtered by errand type and creation date.", responses = {
+		@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true)
+	})
 	ResponseEntity<StatisticsResponse> getStatistics(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,

@@ -1,8 +1,8 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationExpenseTypeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedCalculationSpecialExpenseTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationExpenseTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationSpecialExpenseTypeDTO;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -11,20 +11,24 @@ import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toMap;
 
 /**
- * Resolves an EB cost type to the numeric FC expense-type id offered by the calculation proposal — the expense
- * counterpart of {@link ClassifiedIncomeToFcMapper}'s income-type resolution. The bucket selects the proposal
- * catalogue: {@code EXPENSE} → {@code calculationExpenseTypes} (UTGIFTER), {@code SPECIAL_EXPENSE} →
- * {@code calculationSpecialExpenseTypes} (LEVNADSKOSTNADER I ÖVRIGT). The EB→FC name map below is a starting point
- * flagged for the verksamhet to confirm against the real FC catalogues (the agency owns the ids); a cost type that does
- * not resolve is skipped at commit rather than guessed.
+ * Resolves a financial assistance cost type to the numeric FamilyCare expense-type id offered by the calculation
+ * proposal — the expense counterpart of {@link ClassifiedIncomeToFamilyCareMapper}'s income-type resolution. The
+ * bucket selects the proposal catalogue: {@code EXPENSE} → {@code calculationExpenseTypes} (UTGIFTER), {@code
+ * SPECIAL_EXPENSE} → {@code calculationSpecialExpenseTypes} (LEVNADSKOSTNADER I ÖVRIGT). The financial
+ * assistance→FamilyCare name map below is a starting point flagged for the verksamhet to confirm against the real
+ * FamilyCare catalogues (the agency owns the ids); a cost type that does not resolve is skipped at commit rather than
+ * guessed.
  */
 public final class ExpenseTypeMapper {
 
-	/** The FC bucket that posts to the special-expense (living costs i övrigt) array. */
+	/** The FamilyCare bucket that posts to the special-expense (living costs i övrigt) array. */
 	public static final String BUCKET_SPECIAL_EXPENSE = "SPECIAL_EXPENSE";
 
-	/** EB cost type → the FC expense-type name it is matched against in the proposal. Confirm with the verksamhet. */
-	private static final Map<String, String> FC_NAME_BY_COST_TYPE = Map.ofEntries(
+	/**
+	 * Financial assistance cost type → the FamilyCare expense-type name matched in the proposal. Confirm with the
+	 * verksamhet.
+	 */
+	private static final Map<String, String> FAMILYCARE_NAME_BY_COST_TYPE = Map.ofEntries(
 		Map.entry("RENT", "Rent"),
 		Map.entry("ELECTRICITY", "El"),
 		Map.entry("HOME_INSURANCE", "Hemförsäkring"),
@@ -38,43 +42,66 @@ public final class ExpenseTypeMapper {
 		Map.entry("OTHER", "Övrigt"));
 
 	/**
-	 * FC expense-type name (normalized) → EB cost type — the reverse of {@link #FC_NAME_BY_COST_TYPE}, for reading a
-	 * previous calculation's amounts back per cost type.
+	 * FamilyCare expense-type name (normalized, i.e. as {@link MapperUtil#normalize}) → financial assistance cost type, for
+	 * reading a previous calculation's amounts back per cost type. Spelled out rather than derived so both directions read
+	 * the same way; {@code ExpenseTypeMapperTest} asserts the two maps stay exact inverses, so adding a cost type to one
+	 * and not the other fails the build rather than silently dropping an amount.
 	 */
-	private static final Map<String, String> COST_TYPE_BY_FC_NAME = FC_NAME_BY_COST_TYPE.entrySet().stream()
-		.collect(toMap(entry -> normalize(entry.getValue()), Map.Entry::getKey, (first, second) -> first));
+	private static final Map<String, String> COST_TYPE_BY_FAMILYCARE_NAME = Map.ofEntries(
+		Map.entry("rent", "RENT"),
+		Map.entry("el", "ELECTRICITY"),
+		Map.entry("hemförsäkring", "HOME_INSURANCE"),
+		Map.entry("bredband", "INTERNET"),
+		Map.entry("a-kassa", "UNEMPLOYMENT_FUND"),
+		Map.entry("fackavgift", "UNION_FEE"),
+		Map.entry("resor", "TRAVEL_APPROVED"),
+		Map.entry("sjukresor", "TRAVEL_MEDICAL_TRANSPORT"),
+		Map.entry("läkarvård", "MEDICAL_CARE"),
+		Map.entry("medicin", "MEDICINE"),
+		Map.entry("övrigt", "OTHER"));
 
 	private ExpenseTypeMapper() {}
 
+	/** The forward mapping, exposed so the test can assert the two directions stay exact inverses. */
+	static Map<String, String> familyCareNameByCostType() {
+		return FAMILYCARE_NAME_BY_COST_TYPE;
+	}
+
+	/** The reverse mapping, exposed so the test can assert the two directions stay exact inverses. */
+	static Map<String, String> costTypeByFamilyCareName() {
+		return COST_TYPE_BY_FAMILYCARE_NAME;
+	}
+
 	/**
-	 * The EB cost type for an FC expense-type name (e.g. "Rent" → {@code RENT}), or empty when the name is unmapped.
-	 * Best-effort, case/space-insensitive — used to read a previous Lifecare calculation's per-type approved amounts.
+	 * The financial assistance cost type for a FamilyCare expense-type name (e.g. "Rent" → {@code RENT}), or empty when
+	 * the name is unmapped. Best-effort, case/space-insensitive — used to read a previous Lifecare calculation's
+	 * per-type approved amounts.
 	 */
-	public static Optional<String> costTypeForFcName(final String fcName) {
-		return ofNullable(fcName).map(ExpenseTypeMapper::normalize).map(COST_TYPE_BY_FC_NAME::get);
-	}
-
-	/** Resolve against the regular (UTGIFTER) expense-type catalogue. */
-	public static Optional<Integer> resolveExpenseTypeId(final String costType, final PersonBasedCalculationProposalDTO proposal) {
-		return resolveExpenseTypeId(costType, proposal, null);
+	public static Optional<String> costTypeForFamilyCareName(final String familyCareName) {
+		return ofNullable(familyCareName).map(MapperUtil::normalize).map(COST_TYPE_BY_FAMILYCARE_NAME::get);
 	}
 
 	/**
-	 * The FC expense-type id for an EB cost type given the proposal's catalogue for the bucket, or empty when the cost
-	 * type is unmapped or the catalogue has no matching name.
+	 * The FamilyCare expense-type id for a financial assistance cost type given the proposal's catalogue for the bucket,
+	 * or empty when the cost type is unmapped or the catalogue has no matching name.
 	 *
-	 * @param  costType the EB cost type (e.g. RENT, MEDICINE)
-	 * @param  proposal the FC calculation proposal supplying the type catalogues
+	 * @param  costType the financial assistance cost type (e.g. RENT, MEDICINE)
+	 * @param  proposal the FamilyCare calculation proposal supplying the type catalogues
 	 * @param  bucket   {@code SPECIAL_EXPENSE} to resolve against the special-expense catalogue, else the regular one
-	 * @return          the FC type id, or empty
+	 * @return          the FamilyCare type id, or empty
 	 */
 	public static Optional<Integer> resolveExpenseTypeId(final String costType, final PersonBasedCalculationProposalDTO proposal, final String bucket) {
-		final var fcName = FC_NAME_BY_COST_TYPE.get(costType);
-		if (fcName == null) {
+		final var familyCareName = FAMILYCARE_NAME_BY_COST_TYPE.get(costType);
+		if (familyCareName == null) {
 			return Optional.empty();
 		}
-		final var catalogue = BUCKET_SPECIAL_EXPENSE.equals(bucket) ? specialIdByName(proposal) : idByName(proposal);
-		return ofNullable(catalogue.get(normalize(fcName)));
+		final Map<String, Integer> catalogue;
+		if (BUCKET_SPECIAL_EXPENSE.equals(bucket)) {
+			catalogue = specialIdByName(proposal);
+		} else {
+			catalogue = idByName(proposal);
+		}
+		return ofNullable(catalogue.get(MapperUtil.normalize(familyCareName)));
 	}
 
 	private static Map<String, Integer> idByName(final PersonBasedCalculationProposalDTO proposal) {
@@ -82,7 +109,7 @@ public final class ExpenseTypeMapper {
 			.map(PersonBasedCalculationProposalDTO::getCalculationExpenseTypes)
 			.orElseGet(List::of).stream()
 			.filter(type -> (type.getName() != null) && (type.getId() != null))
-			.collect(toMap(type -> normalize(type.getName()), PersonBasedCalculationExpenseTypeDTO::getId, (first, second) -> first));
+			.collect(toMap(type -> MapperUtil.normalize(type.getName()), PersonBasedCalculationExpenseTypeDTO::getId, (first, second) -> first));
 	}
 
 	private static Map<String, Integer> specialIdByName(final PersonBasedCalculationProposalDTO proposal) {
@@ -90,10 +117,6 @@ public final class ExpenseTypeMapper {
 			.map(PersonBasedCalculationProposalDTO::getCalculationSpecialExpenseTypes)
 			.orElseGet(List::of).stream()
 			.filter(type -> (type.getName() != null) && (type.getId() != null))
-			.collect(toMap(type -> normalize(type.getName()), PersonBasedCalculationSpecialExpenseTypeDTO::getId, (first, second) -> first));
-	}
-
-	private static String normalize(final String value) {
-		return value == null ? "" : value.trim().toLowerCase();
+			.collect(toMap(type -> MapperUtil.normalize(type.getName()), PersonBasedCalculationSpecialExpenseTypeDTO::getId, (first, second) -> first));
 	}
 }

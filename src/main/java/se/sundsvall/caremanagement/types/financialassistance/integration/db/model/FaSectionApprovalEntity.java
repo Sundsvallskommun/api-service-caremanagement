@@ -3,12 +3,12 @@ package se.sundsvall.caremanagement.types.financialassistance.integration.db.mod
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
@@ -16,15 +16,13 @@ import org.hibernate.annotations.UuidGenerator;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * A caseworker's approval of one section of the Draken EB view — {@code CALCULATION} (calculation),
+ * A caseworker's approval of one section of the Draken financial assistance view — {@code CALCULATION} (calculation),
  * {@code PAYMENT} (payment) or {@code DECISION} (decision). One row per {@code (errandId, section)}; the section is
  * either approved or its approval withdrawn. {@code approvedBy} / {@code approvedAt} record who approved it and when,
  * and are cleared when the approval is withdrawn.
  */
 @Entity
-@Table(name = "errand_financial_assistance_section_approval", indexes = {
-	@Index(name = "idx_fa_section_approval_errand", columnList = "errand_id")
-}, uniqueConstraints = {
+@Table(name = "errand_financial_assistance_section_approval", uniqueConstraints = {
 	@UniqueConstraint(name = "uq_fa_section_approval", columnNames = {
 		"errand_id", "section"
 	})
@@ -66,14 +64,14 @@ public class FaSectionApprovalEntity {
 
 	@PrePersist
 	void prePersist() {
-		final var now = OffsetDateTime.now();
+		final var now = OffsetDateTime.now(ZoneId.systemDefault());
 		created = now;
 		updated = now;
 	}
 
 	@PreUpdate
 	void preUpdate() {
-		updated = OffsetDateTime.now();
+		updated = OffsetDateTime.now(ZoneId.systemDefault());
 	}
 
 	public String getId() {

@@ -11,15 +11,20 @@ import se.sundsvall.dept44.support.Identifier;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
- * Rejects any municipality-scoped business request that arrives without a parsable {@code X-Sent-By} identity, so every
- * action on the API is attributable in the event log — no more anonymous (null-actor) rows.
+ * Rejects any municipality-scoped business request whose {@code X-Sent-By} header is missing or not a valid
+ * {@link Identifier} ({@code <value>; type=<type>}), so every logged action is attributable — no anonymous or
+ * unparseable actors.
  *
  * <p>
- * Guardrails: only the {@code /{municipalityId}/**} business surface is gated, so infra paths (actuator/health,
- * api-docs, swagger) are never affected and the platform healthcheck keeps passing. CORS preflight ({@code OPTIONS})
- * requests are exempt, since the browser cannot attach custom headers to them. Disabled in test profiles via
- * {@code caremanagement.identifier.required=false}; flip that property to turn enforcement off in any environment
- * without a code change.
+ * Only the {@code /{municipalityId}/**} business surface is gated, so infra paths (actuator, api-docs, swagger) are
+ * unaffected and the healthcheck keeps passing. CORS preflight ({@code OPTIONS}) is exempt, since the browser cannot
+ * attach custom headers. Set {@code caremanagement.identifier.required=false} to disable enforcement without a code
+ * change.
+ *
+ * <p>
+ * Validation parses the raw header via {@link Identifier#parse(String)} (which is {@code null} for a missing, blank or
+ * incomplete value) rather than reading {@link Identifier#get()}, which the dept44 filter populates leniently and can
+ * be non-null for a malformed header.
  */
 @Component
 class RequireIdentifierInterceptor implements HandlerInterceptor {
@@ -35,7 +40,7 @@ class RequireIdentifierInterceptor implements HandlerInterceptor {
 		if (!required || "OPTIONS".equals(request.getMethod())) {
 			return true;
 		}
-		if (Identifier.get() == null) {
+		if (Identifier.parse(request.getHeader(Identifier.HEADER_NAME)) == null) {
 			throw Problem.valueOf(BAD_REQUEST, "Missing or malformed required header '" + Identifier.HEADER_NAME
 				+ "' — expected e.g. 'joe001doe; type=adAccount' or '<uuid>; type=partyId'");
 		}

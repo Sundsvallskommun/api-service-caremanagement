@@ -94,24 +94,25 @@ public class FaCost {
 		return this;
 	}
 
+	// 'specification' and 'recipientOrPeriod' (LONG32 columns) are deliberately excluded from equals/hashCode/toString —
+	// they can be large and are not part of the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FaCost that = (FaCost) o;
 		return Objects.equals(costType, that.costType) && Objects.equals(appliedAmount, that.appliedAmount)
-			&& Objects.equals(otherSubType, that.otherSubType) && Objects.equals(specification, that.specification)
-			&& Objects.equals(recipientOrPeriod, that.recipientOrPeriod);
+			&& Objects.equals(otherSubType, that.otherSubType);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(costType, appliedAmount, otherSubType, specification, recipientOrPeriod);
+		return Objects.hash(costType, appliedAmount, otherSubType);
 	}
 
 	@Override
 	public String toString() {
 		return "FaCost{costType='" + costType + "', appliedAmount=" + appliedAmount + ", otherSubType='" + otherSubType
-			+ "', specification='" + specification + "', recipientOrPeriod='" + recipientOrPeriod + "'}";
+			+ "'}";
 	}
 }

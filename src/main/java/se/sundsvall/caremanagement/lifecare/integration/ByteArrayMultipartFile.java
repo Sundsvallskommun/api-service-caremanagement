@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.lifecare.integration;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import static java.util.Optional.ofNullable;
 
 /**
- * In-memory {@link MultipartFile} over a {@code byte[]} — lets platform-generated content (e.g. the meddelandehistorik
+ * In-memory {@link MultipartFile} over a {@code byte[]} — lets platform-generated content (e.g. the message history
  * PDF) be sent as the {@code Content} file part of a multipart Feign call without ever touching disk or the
  * (test-scope)
  * {@code MockMultipartFile}. Read-only: the backing bytes are never mutated.
@@ -71,7 +72,7 @@ class ByteArrayMultipartFile implements MultipartFile {
 	}
 
 	@Override
-	public void transferTo(final java.io.File dest) throws IOException {
+	public void transferTo(final File dest) throws IOException {
 		try (final OutputStream out = Files.newOutputStream(dest.toPath())) {
 			out.write(content);
 		}

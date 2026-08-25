@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.namespaceconfig.integration.db.model;
 
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -13,8 +14,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetter
 import static com.google.code.beanmatchers.BeanMatchers.registerValueGenerator;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class NamespaceConfigEntityTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
@@ -26,7 +26,7 @@ class NamespaceConfigEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(NamespaceConfigEntity.class, allOf(
+		MatcherAssert.assertThat(NamespaceConfigEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -35,7 +35,7 @@ class NamespaceConfigEntityTest {
 	}
 
 	@Test
-	void hasValidBuilderMethods() {
+	void testBuilderMethods() {
 		final var created = FIXED_TIMESTAMP.minusDays(1);
 		final var displayName = "displayName";
 		final var id = 1L;

@@ -10,35 +10,35 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ContactChannelMapperTest {
 
 	@Test
-	void toContactChannel_maps() {
+	void toContactChannelMaps() {
 		final var result = ContactChannelMapper.toContactChannel(TagEmbeddable.create().withKey("PHONE").withValue("0701234567"));
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(result.getKey()).isEqualTo("PHONE");
 		assertThat(result.getValue()).isEqualTo("0701234567");
 	}
 
 	@Test
-	void toContactChannel_nullReturnsNull() {
+	void toContactChannelNullReturnsNull() {
 		assertThat(ContactChannelMapper.toContactChannel(null)).isNull();
 	}
 
 	@Test
-	void toTagEmbeddable_maps() {
+	void toTagEmbeddableMaps() {
 		final var result = ContactChannelMapper.toTagEmbeddable(ContactChannel.create().withKey("EMAIL").withValue("a@b.c"));
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(result.getKey()).isEqualTo("EMAIL");
 		assertThat(result.getValue()).isEqualTo("a@b.c");
 	}
 
 	@Test
-	void toTagEmbeddable_nullReturnsNull() {
+	void toTagEmbeddableNullReturnsNull() {
 		assertThat(ContactChannelMapper.toTagEmbeddable(null)).isNull();
 	}
 
 	@Test
-	void toContactChannelList_maps() {
+	void toContactChannelListMaps() {
 		final var result = ContactChannelMapper.toContactChannelList(List.of(
 			TagEmbeddable.create().withKey("PHONE").withValue("123"),
 			TagEmbeddable.create().withKey("EMAIL").withValue("a@b")));
@@ -47,12 +47,12 @@ class ContactChannelMapperTest {
 	}
 
 	@Test
-	void toContactChannelList_nullReturnsEmpty() {
+	void toContactChannelListNullReturnsEmpty() {
 		assertThat(ContactChannelMapper.toContactChannelList(null)).isEmpty();
 	}
 
 	@Test
-	void toTagEmbeddableList_maps() {
+	void toTagEmbeddableListMaps() {
 		final var result = ContactChannelMapper.toTagEmbeddableList(List.of(
 			ContactChannel.create().withKey("PHONE").withValue("123")));
 
@@ -61,7 +61,7 @@ class ContactChannelMapperTest {
 	}
 
 	@Test
-	void toTagEmbeddableList_nullReturnsEmpty() {
+	void toTagEmbeddableListNullReturnsEmpty() {
 		assertThat(ContactChannelMapper.toTagEmbeddableList(null)).isEmpty();
 	}
 }

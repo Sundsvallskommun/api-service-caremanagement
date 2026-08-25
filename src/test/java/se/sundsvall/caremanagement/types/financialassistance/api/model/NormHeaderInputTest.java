@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import java.time.LocalDate;
 import java.util.List;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
@@ -9,15 +10,15 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class NormHeaderInputTest {
 
 	@Test
 	void testBean() {
-		assertThat(NormHeaderInput.class, allOf(
+		MatcherAssert.assertThat(NormHeaderInput.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -29,9 +30,9 @@ class NormHeaderInputTest {
 	void testBuilderMethods() {
 		final var normId = 5;
 		final var normType = List.of("NATIONAL_NORM");
-		final var calculationFromDate = LocalDate.of(2026, 6, 1);
-		final var calculationToDate = LocalDate.of(2026, 6, 30);
-		final var calculationDate = LocalDate.of(2026, 6, 15);
+		final var calculationFromDate = LocalDate.of(2026, JUNE, 1);
+		final var calculationToDate = LocalDate.of(2026, JUNE, 30);
+		final var calculationDate = LocalDate.of(2026, JUNE, 15);
 		final var hasCustomHouseholdSize = true;
 		final var householdSize = 1;
 

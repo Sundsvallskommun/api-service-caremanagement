@@ -27,7 +27,7 @@ class ErrandAssignmentNotificationListenerTest {
 
 	@Test
 	void claimsOwnerlessNotificationsForNewAssignee() {
-		listener.on(assigned("jane01doe"));
+		listener.assignOwnerlessNotifications(assigned("jane01doe"));
 
 		verify(notificationServiceMock).assignUnownedNotifications(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "jane01doe");
 	}
@@ -37,7 +37,7 @@ class ErrandAssignmentNotificationListenerTest {
 		when(notificationServiceMock.assignUnownedNotifications(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "jane01doe"))
 			.thenThrow(new RuntimeException("boom"));
 
-		listener.on(assigned("jane01doe"));
+		listener.assignOwnerlessNotifications(assigned("jane01doe"));
 
 		verify(notificationServiceMock).assignUnownedNotifications(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "jane01doe");
 	}

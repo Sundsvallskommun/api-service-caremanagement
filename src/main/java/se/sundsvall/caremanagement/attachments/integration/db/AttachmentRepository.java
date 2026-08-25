@@ -13,13 +13,14 @@ public interface AttachmentRepository extends JpaRepository<AttachmentEntity, St
 
 	Optional<AttachmentEntity> findByNamespaceAndMunicipalityIdAndErrandIdAndId(String namespace, String municipalityId, String errandId, String id);
 
-	List<AttachmentEntity> findByNamespaceAndMunicipalityIdAndIdIn(String namespace, String municipalityId, List<String> ids);
+	/**
+	 * Finds an existing generated attachment by its (errand, file name, documentType) so a rebuild can overwrite it in
+	 * place
+	 * instead of creating a duplicate — e.g. the consolidated client-attachment PDF that is regenerated as messages
+	 * arrive.
+	 */
+	Optional<AttachmentEntity> findFirstByErrandIdAndFileNameAndDocumentType(String errandId, String fileName, String documentType);
 
-	/** Upsert lookup for a generated, in-place-regenerated attachment (e.g. the consolidated client-attachment PDF). */
-	Optional<AttachmentEntity> findFirstByErrandIdAndFileNameAndOrigin(String errandId, String fileName, String origin);
-
-	/** Guards the at-most-one-per-errand rule for the case-data (ärendeuppgifter) attachment. */
-	boolean existsByErrandIdAndOrigin(String errandId, String origin);
-
-	long deleteByErrandId(String errandId);
+	/** Guards the at-most-one-per-errand rule for the case-data attachment. */
+	boolean existsByErrandIdAndDocumentType(String errandId, String documentType);
 }

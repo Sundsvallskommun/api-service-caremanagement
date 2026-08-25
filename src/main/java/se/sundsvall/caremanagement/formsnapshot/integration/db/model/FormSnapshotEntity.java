@@ -3,10 +3,10 @@ package se.sundsvall.caremanagement.formsnapshot.integration.db.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -22,8 +22,7 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  */
 @Entity
 @Table(name = "errand_form_snapshot",
-	uniqueConstraints = @UniqueConstraint(name = "uq_form_snapshot_errand", columnNames = "errand_id"),
-	indexes = @Index(name = "idx_form_snapshot_errand_id", columnList = "errand_id"))
+	uniqueConstraints = @UniqueConstraint(name = "uq_form_snapshot_errand", columnNames = "errand_id"))
 public class FormSnapshotEntity {
 
 	@Id
@@ -31,7 +30,7 @@ public class FormSnapshotEntity {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "municipality_id", nullable = false, length = 32)
@@ -118,6 +117,54 @@ public class FormSnapshotEntity {
 		return created;
 	}
 
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public void setMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
+	}
+
+	public void setNamespace(final String namespace) {
+		this.namespace = namespace;
+	}
+
+	public void setTypeSlug(final String typeSlug) {
+		this.typeSlug = typeSlug;
+	}
+
+	public void setSchemaVersion(final String schemaVersion) {
+		this.schemaVersion = schemaVersion;
+	}
+
+	public void setFormDefinitionVersion(final String formDefinitionVersion) {
+		this.formDefinitionVersion = formDefinitionVersion;
+	}
+
+	public void setLocale(final String locale) {
+		this.locale = locale;
+	}
+
+	public void setContentHash(final String contentHash) {
+		this.contentHash = contentHash;
+	}
+
+	public void setPayload(final String payload) {
+		this.payload = payload;
+	}
+
+	public void setCapturedAt(final OffsetDateTime capturedAt) {
+		this.capturedAt = capturedAt;
+	}
+
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
 	public FormSnapshotEntity withId(final String id) {
 		this.id = id;
 		return this;
@@ -176,6 +223,28 @@ public class FormSnapshotEntity {
 	public FormSnapshotEntity withCreated(final OffsetDateTime created) {
 		this.created = created;
 		return this;
+	}
+
+	// 'payload' (a LONG32 column) is deliberately excluded from equals/hashCode — it can be large, and 'contentHash'
+	// (a hash of the payload) already stands in for it as an identity/equality proxy, so hashing it too is wasteful.
+	@Override
+	public boolean equals(final Object obj) {
+		if (this == obj)
+			return true;
+		if (!(obj instanceof final FormSnapshotEntity other))
+			return false;
+		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
+			&& Objects.equals(municipalityId, other.municipalityId) && Objects.equals(namespace, other.namespace)
+			&& Objects.equals(typeSlug, other.typeSlug) && Objects.equals(schemaVersion, other.schemaVersion)
+			&& Objects.equals(formDefinitionVersion, other.formDefinitionVersion) && Objects.equals(locale, other.locale)
+			&& Objects.equals(contentHash, other.contentHash)
+			&& Objects.equals(capturedAt, other.capturedAt) && Objects.equals(created, other.created);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, errandId, municipalityId, namespace, typeSlug, schemaVersion, formDefinitionVersion,
+			locale, contentHash, capturedAt, created);
 	}
 
 	/**

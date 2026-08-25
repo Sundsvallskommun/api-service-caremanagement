@@ -28,7 +28,7 @@ class NotificationEventListenerTest {
 	private NotificationEventListener listener;
 
 	@Test
-	void onNotificationRequested_delegatesToService() {
+	void onNotificationRequestedDelegatesToService() {
 		final var event = new NotificationRequest(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "owner", "creator", "CREATE", "ERRAND", "description");
 
 		listener.onNotificationRequested(event);
@@ -37,7 +37,7 @@ class NotificationEventListenerTest {
 	}
 
 	@Test
-	void onNotificationRequested_swallowsRuntimeException() {
+	void onNotificationRequestedSwallowsRuntimeException() {
 		when(notificationServiceMock.create(any(), any(), any(), any())).thenThrow(new RuntimeException("boom"));
 		final var event = new NotificationRequest(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "owner", "creator", "CREATE", "ERRAND", "description");
 

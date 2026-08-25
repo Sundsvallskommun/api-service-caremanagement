@@ -1,15 +1,32 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class CreateFinancialAssistanceRequestTest {
 
 	private static final FinancialAssistanceData DATA = FinancialAssistanceData.create().withApplicationType("NEW");
 
 	@Test
-	void builderMethods() {
+	void testBean() {
+		MatcherAssert.assertThat(CreateFinancialAssistanceRequest.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
 		final var request = CreateFinancialAssistanceRequest.create()
 			.withTitle("Application for financial assistance")
 			.withDescription("Renewal om rent")
@@ -28,37 +45,9 @@ class CreateFinancialAssistanceRequestTest {
 	}
 
 	@Test
-	void settersWork() {
-		final var request = CreateFinancialAssistanceRequest.create();
-		request.setTitle("title");
-		request.setDescription("description");
-		request.setPriority("LOW");
-		request.setReporterUserId("reporter");
-		request.setAssignedUserId("assignee");
-		request.setData(DATA);
-
-		assertThat(request.getTitle()).isEqualTo("title");
-		assertThat(request.getDescription()).isEqualTo("description");
-		assertThat(request.getPriority()).isEqualTo("LOW");
-		assertThat(request.getReporterUserId()).isEqualTo("reporter");
-		assertThat(request.getAssignedUserId()).isEqualTo("assignee");
-		assertThat(request.getData()).isEqualTo(DATA);
-	}
-
-	@Test
-	void createReturnsBlankInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(CreateFinancialAssistanceRequest.create()).hasAllNullFieldsOrProperties();
+		assertThat(new CreateFinancialAssistanceRequest()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void equalsAndHashCode() {
-		final var a = CreateFinancialAssistanceRequest.create().withTitle("T").withData(DATA);
-		final var b = CreateFinancialAssistanceRequest.create().withTitle("T").withData(DATA);
-		final var c = CreateFinancialAssistanceRequest.create().withTitle("X");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
-	}
 }

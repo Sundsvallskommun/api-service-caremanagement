@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
@@ -23,6 +24,7 @@ import org.apache.poi.hwpf.extractor.WordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
@@ -73,7 +75,7 @@ final class PdfCombiner {
 	static byte[] combine(final List<SourceFile> sources) {
 		final var totalBytes = sources.stream()
 			.map(SourceFile::content)
-			.filter(content -> content != null)
+			.filter(Objects::nonNull)
 			.mapToLong(content -> content.length)
 			.sum();
 		if (totalBytes > MAX_TOTAL_INPUT_BYTES) {
@@ -157,9 +159,12 @@ final class PdfCombiner {
 		// wide wallpaper and a portrait scan end up the same page size in the combined PDF rather than each keeping its own
 		// pixel dimensions. The image is scaled to fit within the page margins, preserving aspect ratio, and centred;
 		// images already smaller than that are left at their natural size (never upscaled).
-		final var pageSize = image.getWidth() > image.getHeight()
-			? new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth())
-			: PDRectangle.A4;
+		final PDRectangle pageSize;
+		if (image.getWidth() > image.getHeight()) {
+			pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
+		} else {
+			pageSize = PDRectangle.A4;
+		}
 		final var page = new PDPage(pageSize);
 		document.addPage(page);
 
@@ -236,7 +241,10 @@ final class PdfCombiner {
 				lines.add(clean.substring(start, Math.min(start + WRAP, clean.length())));
 			}
 		}
-		return lines.isEmpty() ? List.of("") : lines;
+		if (lines.isEmpty()) {
+			return List.of("");
+		}
+		return lines;
 	}
 
 	/** Keep a single line to glyphs the standard Helvetica font can render (tabs and control chars become spaces). */

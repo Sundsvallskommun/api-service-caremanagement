@@ -1,7 +1,9 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import com.google.code.beanmatchers.BeanMatchers;
+import java.math.BigDecimal;
 import java.util.List;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -11,8 +13,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class LifecareDecisionTest {
 
@@ -25,7 +26,7 @@ class LifecareDecisionTest {
 
 	@Test
 	void testBean() {
-		assertThat(LifecareDecision.class, allOf(
+		MatcherAssert.assertThat(LifecareDecision.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -34,7 +35,7 @@ class LifecareDecisionTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var decision = LifecareDecision.create()
 			.withId(9900)
 			.withDate("2026-06-02")
@@ -44,7 +45,7 @@ class LifecareDecisionTest {
 			.withReason("Beviljas enligt norm")
 			.withDecisionMaker("Anna Andersson")
 			.withOrganization("IFO")
-			.withAmount(8500.0)
+			.withAmount(BigDecimal.valueOf(8500.0))
 			.withCoApplicant("198001019999")
 			.withReasonCoApplicant("Sammanboende")
 			.withPersons(PERSONS);
@@ -57,14 +58,14 @@ class LifecareDecisionTest {
 		assertThat(decision.getReason()).isEqualTo("Beviljas enligt norm");
 		assertThat(decision.getDecisionMaker()).isEqualTo("Anna Andersson");
 		assertThat(decision.getOrganization()).isEqualTo("IFO");
-		assertThat(decision.getAmount()).isEqualTo(8500.0);
+		assertThat(decision.getAmount()).isEqualTo(BigDecimal.valueOf(8500.0));
 		assertThat(decision.getCoApplicant()).isEqualTo("198001019999");
 		assertThat(decision.getReasonCoApplicant()).isEqualTo("Sammanboende");
 		assertThat(decision.getPersons()).isEqualTo(PERSONS);
 	}
 
 	@Test
-	void createReturnsBlankInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(LifecareDecision.create()).hasAllNullFieldsOrProperties();
 	}
 }

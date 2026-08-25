@@ -1,0 +1,37 @@
+{
+	"request": {
+		"method": "POST",
+		"urlPath": "/api-operaton/2281/process-instances",
+		"headers": {
+			"Authorization": {
+				"equalTo": "Bearer 0000000000000000AAAAAAAAAAAAAAAA"
+			}
+		},
+		"bodyPatterns": [
+			{
+				"equalToJson": {
+					"processDefinitionKey": "handling",
+					"businessKey": "${json-unit.ignore}",
+					"variables": {
+						"priorityLevel": [
+							"high"
+						]
+					}
+				}
+			}
+		]
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"id": "pi-test-08",
+			"processDefinitionId": "handling:1:1",
+			"businessKey": "some-business-key",
+			"suspended": false,
+			"ended": false
+		},
+		"status": 200
+	}
+}

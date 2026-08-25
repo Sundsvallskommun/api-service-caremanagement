@@ -3,9 +3,13 @@ package se.sundsvall.caremanagement.eventlog.web;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -16,6 +20,7 @@ import se.sundsvall.dept44.support.Identifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
@@ -34,10 +39,10 @@ class ErrandEventInterceptorTest {
 	private ErrandEventService serviceMock;
 
 	@Mock
-	private HttpServletRequest request;
+	private HttpServletRequest requestMock;
 
 	@Mock
-	private HttpServletResponse response;
+	private HttpServletResponse responseMock;
 
 	@AfterEach
 	void cleanup() {
@@ -51,7 +56,7 @@ class ErrandEventInterceptorTest {
 
 	private ErrandEventEntity capture() {
 		final var captor = ArgumentCaptor.forClass(ErrandEventEntity.class);
-		verify(serviceMock).record(captor.capture());
+		verify(serviceMock).recordEvent(captor.capture());
 		return captor.getValue();
 	}
 
@@ -59,7 +64,7 @@ class ErrandEventInterceptorTest {
 	void recordsPlainErrandRead() {
 		stub("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID, 200);
 
-		interceptor().afterCompletion(request, response, new Object(), null);
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
 
 		final var entity = capture();
 		assertThat(entity.getErrandId()).isEqualTo(ERRAND_ID);
@@ -80,7 +85,7 @@ class ErrandEventInterceptorTest {
 		Identifier.set(Identifier.parse("joe001doe; type=adAccount"));
 		stub("POST", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/decisions", 201);
 
-		interceptor().afterCompletion(request, response, new Object(), null);
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
 
 		final var entity = capture();
 		assertThat(entity.getAction()).isEqualTo("CREATE");
@@ -94,7 +99,7 @@ class ErrandEventInterceptorTest {
 	void recordsFinancialAssistanceCalculationUpdateDroppingRowId() {
 		stub("PATCH", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/" + ERRAND_ID + "/calculation/draft/incomes/" + ROW_ID, 200);
 
-		interceptor().afterCompletion(request, response, new Object(), null);
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
 
 		final var entity = capture();
 		assertThat(entity.getErrandId()).isEqualTo(ERRAND_ID);
@@ -107,7 +112,7 @@ class ErrandEventInterceptorTest {
 	void dropsNumericIdSegmentsFromTarget() {
 		stub("PUT", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/attachments/12345", 200);
 
-		interceptor().afterCompletion(request, response, new Object(), null);
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
 
 		assertThat(capture().getTarget()).isEqualTo("attachments");
 	}
@@ -116,7 +121,7 @@ class ErrandEventInterceptorTest {
 	void ignoresEmptyPathSegments() {
 		stub("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "//notes", 200);
 
-		interceptor().afterCompletion(request, response, new Object(), null);
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
 
 		assertThat(capture().getTarget()).isEqualTo("notes");
 	}
@@ -125,7 +130,7 @@ class ErrandEventInterceptorTest {
 	void recordsDelete() {
 		stub("DELETE", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID, 204);
 
-		interceptor().afterCompletion(request, response, new Object(), null);
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
 
 		assertThat(capture().getAction()).isEqualTo("DELETE");
 	}
@@ -135,117 +140,67 @@ class ErrandEventInterceptorTest {
 		RequestId.init("rid-123");
 		stub("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID, 200);
 
-		interceptor().afterCompletion(request, response, new Object(), null);
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
 
 		assertThat(capture().getRequestId()).isEqualTo("rid-123");
 	}
 
-	@Test
-	void skipsEligibilityRouteWithNoErrandId() {
-		stubMethodAndUri("POST", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/eligibility");
+	@ParameterizedTest(name = "skips {0} {1}")
+	@MethodSource
+	void skipsNonRecordableRoute(final String method, final String uri) {
+		stubMethodAndUri(method, uri);
 
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
-	void skipsErrandCollectionRoute() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
 
 		verifyNoInteractions(serviceMock);
 	}
 
-	@Test
-	void skipsNonErrandRoute() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/metadata");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
-	void skipsReadsOfTheEventLogItself() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/events");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
-	void skipsUnreadCountPolls() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/unread-count");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
-	void skipsMarkAsReadCalls() {
-		stubMethodAndUri("POST", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/read");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
+	static Stream<Arguments> skipsNonRecordableRoute() {
+		return Stream.of(
+			arguments("POST", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/eligibility"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/metadata"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/events"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/unread-count"),
+			arguments("POST", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/read"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/notes/count"),
+			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/" + ERRAND_ID + "/warnings/count"));
 	}
 
 	@Test
 	void stillRecordsRegularMessageRoutes() {
 		stub("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages", 200);
 
-		interceptor().afterCompletion(request, response, new Object(), null);
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
 
 		assertThat(capture().getTarget()).isEqualTo("messages");
 	}
 
 	@Test
-	void skipsBadgeCountReads() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/notes/count");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
-	void skipsFinancialAssistanceCountReads() {
-		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/" + ERRAND_ID + "/warnings/count");
-
-		interceptor().afterCompletion(request, response, new Object(), null);
-
-		verifyNoInteractions(serviceMock);
-	}
-
-	@Test
 	void skipsNonCrudMethod() {
-		when(request.getMethod()).thenReturn("OPTIONS");
+		when(requestMock.getMethod()).thenReturn("OPTIONS");
 
-		interceptor().afterCompletion(request, response, new Object(), null);
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
 
-		verify(serviceMock, never()).record(any());
+		verify(serviceMock, never()).recordEvent(any());
 	}
 
 	@Test
 	void swallowsExceptionsFromRecording() {
 		stub("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID, 200);
-		doThrow(new RuntimeException("db down")).when(serviceMock).record(any());
+		doThrow(new RuntimeException("db down")).when(serviceMock).recordEvent(any());
 
-		assertThatNoException().isThrownBy(() -> interceptor().afterCompletion(request, response, new Object(), null));
+		assertThatNoException().isThrownBy(() -> interceptor().afterCompletion(requestMock, responseMock, new Object(), null));
 	}
 
 	private void stub(final String method, final String uri, final int status) {
-		when(request.getMethod()).thenReturn(method);
-		when(request.getRequestURI()).thenReturn(uri);
-		when(response.getStatus()).thenReturn(status);
+		when(requestMock.getMethod()).thenReturn(method);
+		when(requestMock.getRequestURI()).thenReturn(uri);
+		when(responseMock.getStatus()).thenReturn(status);
 	}
 
 	private void stubMethodAndUri(final String method, final String uri) {
-		when(request.getMethod()).thenReturn(method);
-		lenient().when(request.getRequestURI()).thenReturn(uri);
+		when(requestMock.getMethod()).thenReturn(method);
+		lenient().when(requestMock.getRequestURI()).thenReturn(uri);
 	}
 }

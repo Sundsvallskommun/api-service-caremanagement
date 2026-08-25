@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.docs.Documenter;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
+
 /**
  * Build-time enforcement of module boundaries.
  *
@@ -18,14 +20,14 @@ class ModulithVerificationTest {
 
 	@Test
 	void modulesAreWellFormed() {
-		modules.verify();
+		assertThatCode(modules::verify).doesNotThrowAnyException();
 	}
 
 	@Test
 	void writeDocumentation() {
-		new Documenter(modules)
+		assertThatCode(() -> new Documenter(modules)
 			.writeModulesAsPlantUml()
 			.writeIndividualModulesAsPlantUml()
-			.writeDocumentation();
+			.writeDocumentation()).doesNotThrowAnyException();
 	}
 }

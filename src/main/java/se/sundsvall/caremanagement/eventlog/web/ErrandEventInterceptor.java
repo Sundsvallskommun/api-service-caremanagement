@@ -17,6 +17,8 @@ import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
 import se.sundsvall.dept44.requestid.RequestId;
 import se.sundsvall.dept44.support.Identifier;
 
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
+
 /**
  * Records one {@link ErrandEventEntity} per errand-scoped HTTP request — the "who/what/when" log.
  *
@@ -67,14 +69,14 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 	@Override
 	public void afterCompletion(final HttpServletRequest request, final HttpServletResponse response, final Object handler, @Nullable final Exception ex) {
 		try {
-			record(request, response);
+			recordEvent(request, response);
 		} catch (final Exception e) {
 			// An audit write must never break the request the caller already completed.
-			LOG.warn("Failed to record errand event for {} {}", request.getMethod(), request.getRequestURI(), e);
+			LOG.warn("Failed to record errand event for {} {}", sanitizeForLogging(request.getMethod()), sanitizeForLogging(request.getRequestURI()), e);
 		}
 	}
 
-	private void record(final HttpServletRequest request, final HttpServletResponse response) {
+	private void recordEvent(final HttpServletRequest request, final HttpServletResponse response) {
 		final var action = actionFor(request.getMethod());
 		if (action == null) {
 			return; // not a CRUD method (HEAD/OPTIONS/...) — nothing to log
@@ -99,7 +101,7 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 		final var identifier = Optional.ofNullable(Identifier.get());
 		final var description = ErrandEventDescriber.describe(request.getMethod(), tailSegments(parts, errandIdIndex), hasItemId(parts, errandIdIndex));
 
-		service.record(ErrandEventEntity.create()
+		service.recordEvent(ErrandEventEntity.create()
 			.withErrandId(parts[errandIdIndex])
 			.withMunicipalityId(parts[1])
 			.withNamespace(parts[2])
@@ -140,7 +142,10 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 				segments.add(segment);
 			}
 		}
-		return segments.isEmpty() ? DEFAULT_TARGET : String.join("/", segments);
+		if (segments.isEmpty()) {
+			return DEFAULT_TARGET;
+		}
+		return String.join("/", segments);
 	}
 
 	private static boolean isIdLike(final String segment) {

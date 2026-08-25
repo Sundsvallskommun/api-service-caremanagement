@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.citizen.service;
 import generated.se.sundsvall.citizen.CitizenExtended;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.integration.CitizenClient;
@@ -20,50 +21,49 @@ class CitizenServiceTest {
 	@Mock
 	private CitizenClient citizenClientMock;
 
-	private CitizenService service() {
-		return new CitizenService(citizenClientMock);
-	}
+	@InjectMocks
+	private CitizenService service;
 
 	@Test
 	void resolvesPersonalNumber() {
 		when(citizenClientMock.getPersonNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(PERSONAL_NUMBER);
 
-		assertThat(service().getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).contains(PERSONAL_NUMBER);
+		assertThat(service.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).contains(PERSONAL_NUMBER);
 	}
 
 	@Test
 	void emptyWhenNoContent() {
 		when(citizenClientMock.getPersonNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(null);
 
-		assertThat(service().getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).isEmpty();
+		assertThat(service.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).isEmpty();
 	}
 
 	@Test
 	void emptyWhenBlank() {
 		when(citizenClientMock.getPersonNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn("   ");
 
-		assertThat(service().getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).isEmpty();
+		assertThat(service.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).isEmpty();
 	}
 
 	@Test
 	void resolvesPartyId() {
 		when(citizenClientMock.getGuid(MUNICIPALITY_ID, PERSONAL_NUMBER)).thenReturn(PARTY_ID);
 
-		assertThat(service().getPartyId(MUNICIPALITY_ID, PERSONAL_NUMBER)).contains(PARTY_ID);
+		assertThat(service.getPartyId(MUNICIPALITY_ID, PERSONAL_NUMBER)).contains(PARTY_ID);
 	}
 
 	@Test
 	void emptyPartyIdWhenNoContent() {
 		when(citizenClientMock.getGuid(MUNICIPALITY_ID, PERSONAL_NUMBER)).thenReturn(null);
 
-		assertThat(service().getPartyId(MUNICIPALITY_ID, PERSONAL_NUMBER)).isEmpty();
+		assertThat(service.getPartyId(MUNICIPALITY_ID, PERSONAL_NUMBER)).isEmpty();
 	}
 
 	@Test
 	void emptyPartyIdWhenBlank() {
 		when(citizenClientMock.getGuid(MUNICIPALITY_ID, PERSONAL_NUMBER)).thenReturn("   ");
 
-		assertThat(service().getPartyId(MUNICIPALITY_ID, PERSONAL_NUMBER)).isEmpty();
+		assertThat(service.getPartyId(MUNICIPALITY_ID, PERSONAL_NUMBER)).isEmpty();
 	}
 
 	@Test
@@ -71,7 +71,7 @@ class CitizenServiceTest {
 		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true))
 			.thenReturn(new CitizenExtended().classified("PROTECTED"));
 
-		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isTrue();
+		assertThat(service.hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isTrue();
 	}
 
 	@Test
@@ -79,20 +79,20 @@ class CitizenServiceTest {
 		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true))
 			.thenReturn(new CitizenExtended().protectedNR("PROTECTED_IDENTITY"));
 
-		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isTrue();
+		assertThat(service.hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isTrue();
 	}
 
 	@Test
 	void notProtectedWhenNeitherFlagSet() {
 		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true)).thenReturn(new CitizenExtended());
 
-		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isFalse();
+		assertThat(service.hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isFalse();
 	}
 
 	@Test
 	void notProtectedWhenNoCitizenRecord() {
 		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true)).thenReturn(null);
 
-		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isFalse();
+		assertThat(service.hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isFalse();
 	}
 }

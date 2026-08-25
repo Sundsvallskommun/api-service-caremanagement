@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.eventlog.service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,7 +30,7 @@ class ErrandEventServiceTest {
 	void recordStampsCreatedAndSaves() {
 		final var entity = ErrandEventEntity.create().withErrandId("e1").withAction("READ").withTarget("errand");
 
-		service.record(entity);
+		service.recordEvent(entity);
 
 		verify(repositoryMock).save(entity);
 		assertThat(entity.getCreated()).isNotNull();
@@ -46,50 +47,59 @@ class ErrandEventServiceTest {
 	}
 
 	@Test
+	void deleteForErrandDisposesTheTenantScopedLog() {
+		when(repositoryMock.deleteByErrandIdAndMunicipalityIdAndNamespace("e1", "2281", "ns")).thenReturn(4);
+
+		service.deleteForErrand("2281", "ns", "e1");
+
+		verify(repositoryMock).deleteByErrandIdAndMunicipalityIdAndNamespace("e1", "2281", "ns");
+	}
+
+	@Test
 	void listForErrandMapsRepositoryResultsAndForwardsNoFilters() {
-		when(repositoryMock.findFiltered("e1", null, null, null, true)).thenReturn(List.of(
+		when(repositoryMock.findFiltered("2281", "ns", "e1", null, null, null, true)).thenReturn(List.of(
 			event("ev2", "READ", "joe001doe", FIXED_TIMESTAMP),
 			event("ev1", "UPDATE", "edwmol", FIXED_TIMESTAMP.minusHours(1))));
 
-		final var result = service.listForErrand("e1", null, null, null, true);
+		final var result = service.listForErrand("2281", "ns", "e1", null, null, null, true);
 
 		assertThat(result).extracting("id", "action", "actor")
 			.containsExactly(
 				tuple("ev2", "READ", "joe001doe"),
 				tuple("ev1", "UPDATE", "edwmol"));
-		verify(repositoryMock).findFiltered("e1", null, null, null, true);
+		verify(repositoryMock).findFiltered("2281", "ns", "e1", null, null, null, true);
 	}
 
 	@Test
 	void listForErrandForwardsAllFiltersToRepository() {
-		when(repositoryMock.findFiltered("e1", "read", "edwmol", "event", false)).thenReturn(List.of());
+		when(repositoryMock.findFiltered("2281", "ns", "e1", "read", "edwmol", "event", false)).thenReturn(List.of());
 
-		service.listForErrand("e1", "read", "edwmol", "event", false);
+		service.listForErrand("2281", "ns", "e1", "read", "edwmol", "event", false);
 
-		verify(repositoryMock).findFiltered("e1", "read", "edwmol", "event", false);
+		verify(repositoryMock).findFiltered("2281", "ns", "e1", "read", "edwmol", "event", false);
 	}
 
 	@Test
 	void listForErrandReturnsEmptyWhenNone() {
-		when(repositoryMock.findFiltered("e2", null, null, null, true)).thenReturn(List.of());
+		when(repositoryMock.findFiltered("2281", "ns", "e2", null, null, null, true)).thenReturn(List.of());
 
-		assertThat(service.listForErrand("e2", null, null, null, true)).isEmpty();
+		assertThat(service.listForErrand("2281", "ns", "e2", null, null, null, true)).isEmpty();
 	}
 
 	@Test
 	void countForErrandDelegatesToRepositoryWithoutFilters() {
-		when(repositoryMock.countFiltered("e1", null, null, null, true)).thenReturn(7L);
+		when(repositoryMock.countFiltered("2281", "ns", "e1", null, null, null, true)).thenReturn(7L);
 
-		assertThat(service.countForErrand("e1", null, null, null, true)).isEqualTo(7L);
-		verify(repositoryMock).countFiltered("e1", null, null, null, true);
+		assertThat(service.countForErrand("2281", "ns", "e1", null, null, null, true)).isEqualTo(7L);
+		verify(repositoryMock).countFiltered("2281", "ns", "e1", null, null, null, true);
 	}
 
 	@Test
 	void countForErrandForwardsFiltersToRepository() {
-		when(repositoryMock.countFiltered("e1", null, null, null, false)).thenReturn(1L);
+		when(repositoryMock.countFiltered("2281", "ns", "e1", null, null, null, false)).thenReturn(1L);
 
-		assertThat(service.countForErrand("e1", null, null, null, false)).isEqualTo(1L);
-		verify(repositoryMock).countFiltered("e1", null, null, null, false);
+		assertThat(service.countForErrand("2281", "ns", "e1", null, null, null, false)).isEqualTo(1L);
+		verify(repositoryMock).countFiltered("2281", "ns", "e1", null, null, null, false);
 	}
 
 	private static ErrandEventEntity event(final String id, final String action, final String actor, final OffsetDateTime created) {
@@ -105,7 +115,7 @@ class ErrandEventServiceTest {
 			.withHttpMethod("GET")
 			.withRequestPath("/2281/FINANCIAL_ASSISTANCE/errands/e1")
 			.withActor(actor)
-			.withActorType(actor == null ? null : "adAccount")
+			.withActorType(Optional.ofNullable(actor).map(_ -> "adAccount").orElse(null))
 			.withRequestId("req")
 			.withStatusCode(200)
 			.withCreated(created);

@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
@@ -8,14 +9,13 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class ApplicationSuggestionTest {
 
 	@Test
 	void testBean() {
-		assertThat(ApplicationSuggestion.class, allOf(
+		MatcherAssert.assertThat(ApplicationSuggestion.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -24,20 +24,34 @@ class ApplicationSuggestionTest {
 	}
 
 	@Test
-	void builderMethods() {
-		final var suggestion = ApplicationSuggestion.create()
-			.withTypeSlug("financial-assistance-renewal")
-			.withApplicationType("RENEWAL")
-			.withPeriodMonth(7)
-			.withPeriodYear(2026)
-			.withRecommended(true)
-			.withLabel("Renewal for July 2026");
+	void testBuilderMethods() {
+		final var typeSlug = "financial-assistance-renewal";
+		final var applicationType = "RENEWAL";
+		final var periodMonth = 7;
+		final var periodYear = 2026;
+		final var recommended = true;
+		final var label = "Renewal for July 2026";
 
-		assertThat(suggestion.getTypeSlug()).isEqualTo("financial-assistance-renewal");
-		assertThat(suggestion.getApplicationType()).isEqualTo("RENEWAL");
-		assertThat(suggestion.getPeriodMonth()).isEqualTo(7);
-		assertThat(suggestion.getPeriodYear()).isEqualTo(2026);
-		assertThat(suggestion.isRecommended()).isTrue();
-		assertThat(suggestion.getLabel()).isEqualTo("Renewal for July 2026");
+		final var result = ApplicationSuggestion.create()
+			.withTypeSlug(typeSlug)
+			.withApplicationType(applicationType)
+			.withPeriodMonth(periodMonth)
+			.withPeriodYear(periodYear)
+			.withRecommended(recommended)
+			.withLabel(label);
+
+		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getTypeSlug()).isEqualTo(typeSlug);
+		assertThat(result.getApplicationType()).isEqualTo(applicationType);
+		assertThat(result.getPeriodMonth()).isEqualTo(periodMonth);
+		assertThat(result.getPeriodYear()).isEqualTo(periodYear);
+		assertThat(result.isRecommended()).isEqualTo(recommended);
+		assertThat(result.getLabel()).isEqualTo(label);
 	}
+
+	@Test
+	void testNoDirtOnCreatedBean() {
+		assertThat(ApplicationSuggestion.create()).hasAllNullFieldsOrPropertiesExcept("recommended");
+	}
+
 }

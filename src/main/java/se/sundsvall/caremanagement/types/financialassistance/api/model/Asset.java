@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -31,13 +32,14 @@ public class Asset {
 	}, nullable = true)
 	private String propertyType;
 
-	@Schema(description = "Year the asset was purchased", examples = "2018")
+	@Schema(description = "Year the property was purchased (REAL_ESTATE only — the form asks for a year, not a full date, for property). Vehicles carry purchaseDate instead.", examples = "2018")
 	private Integer purchaseYear;
 
 	@Schema(description = "Price paid when the asset was purchased", examples = "2200000.00")
 	private BigDecimal purchasePrice;
 
 	@Schema(description = "Name of the company asset", examples = "Andersson Bygg AB")
+	@Size(max = 255)
 	private String companyName;
 
 	@Schema(description = "Total sum of the company's assets", examples = "350000.00")
@@ -52,9 +54,10 @@ public class Asset {
 	private String vehicleType;
 
 	@Schema(description = "Vehicle registration number", examples = "ABC123")
+	@Size(max = 16)
 	private String registrationNumber;
 
-	@Schema(description = "The date the asset was purchased", examples = "2018-04-12")
+	@Schema(description = "The date the vehicle was purchased (VEHICLE only — the form asks for a full date here). Property carries purchaseYear instead.", examples = "2018-04-12")
 	private LocalDate purchaseDate;
 
 	public static Asset create() {

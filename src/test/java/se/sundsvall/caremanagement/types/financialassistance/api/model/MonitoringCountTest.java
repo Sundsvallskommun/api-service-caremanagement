@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MonitoringCountTest {
 
 	@Test
-	void accessor() {
+	void testAccessor() {
 		assertThat(new MonitoringCount(2).count()).isEqualTo(2);
 	}
 }

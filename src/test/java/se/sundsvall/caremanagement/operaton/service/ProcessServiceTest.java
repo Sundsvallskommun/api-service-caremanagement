@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.operaton.integration.OperatonClient;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRequest;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,9 +32,13 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 class ProcessServiceTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
+	private static final String NAMESPACE = "my-namespace";
 
 	@Mock
 	private OperatonClient operatonClientMock;
+
+	@Mock
+	private ErrandAccessGuard errandGuardMock;
 
 	@InjectMocks
 	private ProcessService service;
@@ -85,7 +90,8 @@ class ProcessServiceTest {
 
 		assertThatThrownBy(() -> service.startProcess(MUNICIPALITY_ID, "Unknown", "biz", Map.of()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: No Operaton process definition found with name 'Unknown'");
 	}
 
 	@Test
@@ -94,13 +100,15 @@ class ProcessServiceTest {
 
 		assertThatThrownBy(() -> service.startProcess(MUNICIPALITY_ID, "X", "biz", Map.of()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: No Operaton process definition found with name 'X'");
 	}
 
 	@Test
 	void correlateMessagePassesVariables() {
-		service.correlateMessage(MUNICIPALITY_ID, "msg-1", "biz-1", Map.of("k", "v"));
+		service.correlateMessage(MUNICIPALITY_ID, NAMESPACE, "msg-1", "biz-1", Map.of("k", "v"));
 
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, "biz-1");
 		final ArgumentCaptor<CorrelationMessageRequest> captor = ArgumentCaptor.forClass(CorrelationMessageRequest.class);
 		verify(operatonClientMock).correlateMessage(eq(MUNICIPALITY_ID), captor.capture());
 		assertThat(captor.getValue().getMessageName()).isEqualTo("msg-1");
@@ -110,7 +118,7 @@ class ProcessServiceTest {
 
 	@Test
 	void correlateMessageNullVariablesDefaultsToEmptyMap() {
-		service.correlateMessage(MUNICIPALITY_ID, "msg", "biz", null);
+		service.correlateMessage(MUNICIPALITY_ID, NAMESPACE, "msg", "biz", null);
 
 		final ArgumentCaptor<CorrelationMessageRequest> captor = ArgumentCaptor.forClass(CorrelationMessageRequest.class);
 		verify(operatonClientMock).correlateMessage(eq(MUNICIPALITY_ID), captor.capture());

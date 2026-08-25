@@ -10,14 +10,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.rpa.api.model.RpaTaskRequest;
+import se.sundsvall.caremanagement.rpa.service.RpaAction;
 import se.sundsvall.caremanagement.rpa.service.RpaService;
 
 import static java.util.UUID.randomUUID;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
-@SpringBootTest(classes = Application.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
 @ActiveProfiles("junit")
 class RpaResourceTest {
@@ -44,6 +45,6 @@ class RpaResourceTest {
 			.exchange()
 			.expectStatus().isAccepted();
 
-		verify(serviceMock).enqueue(eq(MUNICIPALITY_ID), eq(ERRAND_ID), eq("FETCH_SUPPLEMENTS"), eq(Map.of("k", "v")));
+		verify(serviceMock).enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.FETCH_SUPPLEMENTS, Map.of("k", "v"));
 	}
 }

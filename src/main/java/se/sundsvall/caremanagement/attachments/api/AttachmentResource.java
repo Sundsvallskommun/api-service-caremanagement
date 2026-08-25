@@ -64,10 +64,11 @@ class AttachmentResource {
 
 	@PostMapping(consumes = MULTIPART_FORM_DATA_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Create attachment",
-		description = "Uploads a new attachment for the errand. The optional origin tags what the file is: ERRAND (a plain "
-			+ "manual upload, the default), CASE_DATA (ärendeuppgifter — a case-data document) or DECISION (beslut — a "
-			+ "decision document). A CASE_DATA attachment is renamed to {errandNumber}.pdf and only one is allowed per "
-			+ "errand — uploading a second returns 400.",
+		description = """
+			Uploads a new attachment for the errand. The optional documentType tags what the file is: ERRAND (a plain \
+			manual upload, the default), CASE_DATA (a case-data document) or DECISION (a \
+			decision document). A CASE_DATA attachment is renamed to {errandNumber}.pdf and only one is allowed per \
+			errand — uploading a second returns 400.""",
 		responses = {
 			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
 		})
@@ -75,18 +76,19 @@ class AttachmentResource {
 		@Parameter(name = "municipalityId", description = "Municipality id", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,
 		@Parameter(name = "namespace", description = "Namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Parameter(name = "errandId", description = "Errand id") @ValidUuid @PathVariable final String errandId,
-		@Parameter(name = "origin",
-			description = "What the uploaded file is: ERRAND (a plain manual upload, the default), CASE_DATA "
-				+ "(ärendeuppgifter — a case-data document) or DECISION (beslut — a decision document). Defaults to ERRAND "
-				+ "when omitted.",
+		@Parameter(name = "documentType",
+			description = """
+				What the uploaded file is: ERRAND (a plain manual upload, the default), CASE_DATA \
+				(a case-data document) or DECISION (a decision document). Defaults to ERRAND \
+				when omitted.""",
 			schema = @Schema(allowableValues = {
 				"ERRAND", "CASE_DATA", "DECISION"
 			})) @OneOf(value = {
 				"ERRAND", "CASE_DATA", "DECISION"
-		}, nullable = true) @RequestParam(required = false) final String origin,
+		}, nullable = true) @RequestParam(required = false) final String documentType,
 		@NotNull @RequestPart("file") final MultipartFile file) {
 
-		final var attachmentId = service.createAttachment(municipalityId, namespace, errandId, origin, file);
+		final var attachmentId = service.createAttachment(municipalityId, namespace, errandId, documentType, file);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/{errandId}/attachments/{attachmentId}")
 			.buildAndExpand(municipalityId, namespace, errandId, attachmentId).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)
@@ -95,7 +97,7 @@ class AttachmentResource {
 
 	@GetMapping(produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "List attachments",
-		description = "Fetches all attachment metadata for the errand (application files, generated PDFs, manual uploads and conversation attachments), oldest first. Optionally filtered by origin and/or sender role.",
+		description = "Fetches all attachment metadata for the errand (application files, generated PDFs, manual uploads and conversation attachments), oldest first. Optionally filtered by documentType and/or sender role.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 		})
@@ -103,18 +105,18 @@ class AttachmentResource {
 		@Parameter(name = "municipalityId", description = "Municipality id", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,
 		@Parameter(name = "namespace", description = "Namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Parameter(name = "errandId", description = "Errand id") @ValidUuid @PathVariable final String errandId,
-		@Parameter(name = "origin", description = "Only return attachments with this origin", schema = @Schema(allowableValues = {
-			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION"
+		@Parameter(name = "documentType", description = "Only return attachments with this documentType", schema = @Schema(allowableValues = {
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION", "MESSAGE_HISTORY"
 		})) @OneOf(value = {
-			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION"
-		}, nullable = true) @RequestParam(required = false) final String origin,
+			"APPLICATION", "CONVERSATION", "GENERATED", "ERRAND", "CASE_DATA", "DECISION", "MESSAGE_HISTORY"
+		}, nullable = true) @RequestParam(required = false) final String documentType,
 		@Parameter(name = "senderRole", description = "Only return attachments from this sender", schema = @Schema(allowableValues = {
 			"CLIENT", "CASEWORKER"
 		})) @OneOf(value = {
 			"CLIENT", "CASEWORKER"
 		}, nullable = true) @RequestParam(required = false) final String senderRole) {
 
-		return ok(service.readAttachments(municipalityId, namespace, errandId, origin, senderRole));
+		return ok(service.readAttachments(municipalityId, namespace, errandId, documentType, senderRole));
 	}
 
 	@GetMapping(path = "/{attachmentId}", produces = APPLICATION_JSON_VALUE)

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.metadata.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -15,9 +16,11 @@ public class Lookup {
 
 	@Schema(description = "Name (machine-friendly key) of the lookup", examples = "NEW")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 255)
 	private String name;
 
 	@Schema(description = "Display name", examples = "New case")
+	@Size(max = 255)
 	private String displayName;
 
 	@Schema(description = "Created timestamp", accessMode = READ_ONLY)

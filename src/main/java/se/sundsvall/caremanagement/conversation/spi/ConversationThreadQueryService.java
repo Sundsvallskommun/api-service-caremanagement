@@ -3,7 +3,7 @@ package se.sundsvall.caremanagement.conversation.spi;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachmentDataRepository;
@@ -19,7 +19,7 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 /**
  * Read-only cross-module view of an errand's full conversation thread (both directions, oldest first) with attachment
  * content materialised, exposed via the {@code spi} named interface so the archiving job can render the thread into the
- * meddelandehistorik PDF and merge the attachments without reaching into the conversation persistence layer. Attachment
+ * message history PDF and merge the attachments without reaching into the conversation persistence layer. Attachment
  * blobs are read fully into {@code byte[]} inside this module's own transaction; attachments whose blob row is missing
  * are dropped rather than failing the whole thread.
  */
@@ -57,20 +57,21 @@ public class ConversationThreadQueryService {
 				message.getCreated(),
 				attachmentsByMessageId.getOrDefault(message.getId(), List.of()).stream()
 					.map(this::toView)
-					.flatMap(Optional::stream)
+					.filter(Objects::nonNull)
 					.toList()))
 			.toList();
 	}
 
-	private Optional<ConversationAttachmentView> toView(final MessageAttachmentEntity attachment) {
+	private ConversationAttachmentView toView(final MessageAttachmentEntity attachment) {
 		return attachmentDataRepository.findByMessageAttachmentId(attachment.getId())
 			.map(data -> {
-				try {
-					final var content = data.getFile().getBinaryStream().readAllBytes();
+				try (final var in = data.getFile().getBinaryStream()) {
+					final var content = in.readAllBytes();
 					return new ConversationAttachmentView(attachment.getFileName(), attachment.getMimeType(), content);
 				} catch (final SQLException | IOException exception) {
 					throw Problem.valueOf(INTERNAL_SERVER_ERROR, READ_ERROR_MESSAGE.formatted(attachment.getId(), exception.getMessage()));
 				}
-			});
+			})
+			.orElse(null);
 	}
 }

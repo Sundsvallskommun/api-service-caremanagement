@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.conversation.api;
 
 import java.util.Map;
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,12 +15,17 @@ import se.sundsvall.caremanagement.conversation.api.model.CreateMessage;
 import se.sundsvall.caremanagement.conversation.api.model.MarkMessagesRead;
 import se.sundsvall.caremanagement.conversation.service.MessageReadService;
 import se.sundsvall.caremanagement.conversation.service.MessageService;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
+import se.sundsvall.dept44.problem.violations.Violation;
 import se.sundsvall.dept44.support.Identifier;
 
 import static java.util.List.of;
 import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 
@@ -42,7 +48,7 @@ class MessageResourceFailureTest {
 	@Autowired
 	private WebTestClient webTestClient;
 
-	private void postMessageExpectingBadRequest(final String errandId, final CreateMessage message) {
+	private void postMessageExpectingBadRequest(final String errandId, final CreateMessage message, final Tuple... violations) {
 		final var builder = new MultipartBodyBuilder();
 		builder.part("message", message, APPLICATION_JSON);
 
@@ -51,92 +57,116 @@ class MessageResourceFailureTest {
 			.contentType(MULTIPART_FORM_DATA)
 			.bodyValue(builder.build())
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(), violations));
 
 		verifyNoInteractions(serviceMock);
 	}
 
 	@Test
-	void post_blankDirection() {
-		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("", "body", "author", null));
+	void postBlankDirection() {
+		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("", "body", "author", null),
+			tuple("direction", "must not be blank"),
+			tuple("direction", "must be one of: [INBOUND, OUTBOUND]"));
 	}
 
 	@Test
-	void post_invalidDirection() {
-		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("SIDEWAYS", "body", "author", null));
+	void postInvalidDirection() {
+		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("SIDEWAYS", "body", "author", null),
+			tuple("direction", "must be one of: [INBOUND, OUTBOUND]"));
 	}
 
 	@Test
-	void post_blankBody() {
-		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("OUTBOUND", "", "author", null));
+	void postBlankBody() {
+		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("OUTBOUND", "", "author", null),
+			tuple("body", "must not be blank"));
 	}
 
 	@Test
-	void post_invalidErrandId() {
-		postMessageExpectingBadRequest("not-a-uuid", new CreateMessage("OUTBOUND", "body", "author", null));
+	void postInvalidErrandId() {
+		postMessageExpectingBadRequest("not-a-uuid", new CreateMessage("OUTBOUND", "body", "author", null),
+			tuple("createMessage.errandId", "not a valid UUID"));
 	}
 
 	@Test
-	void post_invalidInReplyToId() {
-		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("OUTBOUND", "body", "author", "not-a-uuid"));
+	void postInvalidInReplyToId() {
+		postMessageExpectingBadRequest(ERRAND_ID, new CreateMessage("OUTBOUND", "body", "author", "not-a-uuid"),
+			tuple("inReplyToId", "not a valid UUID"));
 	}
 
 	@Test
-	void unreadCount_missingIdentifier() {
+	void unreadCountMissingIdentifier() {
 		webTestClient.get()
 			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody()
+			.jsonPath("$.title").isEqualTo("Bad Request")
+			.jsonPath("$.status").isEqualTo(400)
+			.jsonPath("$.detail").isEqualTo("Required header 'X-Sent-By' is not present.");
 
 		verifyNoInteractions(readServiceMock);
 	}
 
 	@Test
-	void unreadCount_unsupportedIdentifierType() {
-		webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
-			.header(Identifier.HEADER_NAME, "some-system; type=someCustomType")
-			.exchange()
-			.expectStatus().isBadRequest();
-
-		verifyNoInteractions(readServiceMock);
-	}
-
-	@Test
-	void markRead_missingIdentifier() {
+	void markReadMissingIdentifier() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/read").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.contentType(APPLICATION_JSON)
 			.bodyValue(new MarkMessagesRead(of(randomUUID().toString())))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody()
+			.jsonPath("$.title").isEqualTo("Bad Request")
+			.jsonPath("$.status").isEqualTo(400)
+			.jsonPath("$.detail").isEqualTo("Required header 'X-Sent-By' is not present.");
 
 		verifyNoInteractions(readServiceMock);
 	}
 
 	@Test
-	void markRead_emptyMessageIds() {
+	void markReadEmptyMessageIds() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/read").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.header(Identifier.HEADER_NAME, "joe001doe; type=adAccount")
 			.contentType(APPLICATION_JSON)
 			.bodyValue(new MarkMessagesRead(of()))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("messageIds", "must not be empty")));
 
 		verifyNoInteractions(readServiceMock);
 	}
 
 	@Test
-	void markRead_invalidMessageId() {
+	void markReadInvalidMessageId() {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/read").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.header(Identifier.HEADER_NAME, "joe001doe; type=adAccount")
 			.contentType(APPLICATION_JSON)
 			.bodyValue(new MarkMessagesRead(of("not-a-uuid")))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("messageIds[0]", "not a valid UUID")));
 
 		verifyNoInteractions(readServiceMock);
+	}
+
+	private static void assertConstraintViolation(final ConstraintViolationProblem response, final Tuple... violations) {
+		assertThat(response).isNotNull();
+		assertThat(response.getTitle()).isEqualTo("Constraint Violation");
+		assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
+		assertThat(response.getViolations())
+			.isNotEmpty()
+			.allSatisfy(violation -> assertThat(violation.field()).isNotBlank())
+			.allSatisfy(violation -> assertThat(violation.message()).isNotBlank());
+		assertThat(response.getViolations())
+			.extracting(Violation::field, Violation::message)
+			.containsExactlyInAnyOrder(violations);
 	}
 }

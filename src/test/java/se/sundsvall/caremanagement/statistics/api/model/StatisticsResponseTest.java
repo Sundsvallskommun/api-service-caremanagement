@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class StatisticsResponseTest {
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		final var byStatus = List.of(new StatusCount("NEW", 2L));
 		final var byAssignee = List.of(new AssigneeCount("joe01doe", 1L));
 		final var response = new StatisticsResponse(3L, byStatus, byAssignee, 1L);

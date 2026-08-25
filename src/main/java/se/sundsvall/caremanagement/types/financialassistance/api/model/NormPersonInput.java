@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -15,38 +16,41 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 @Schema(description = "What a caseworker sends to add or patch a person row (identity + caseworker-writable fields only).")
 public class NormPersonInput {
 
-	@Schema(description = "The party id of the household member")
+	@Schema(description = "The party id of the household member", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479")
+	@Size(max = 36)
 	private String partyId;
 
-	@Schema(description = "The role of the household member", allowableValues = {
+	@Schema(description = "The role of the household member", examples = "APPLICANT", allowableValues = {
 		"APPLICANT", "CO_APPLICANT", "CHILD"
 	})
 	private String role;
 
-	@Schema(description = "The name of the household member")
+	@Schema(description = "The name of the household member", examples = "Anna Andersson")
+	@Size(max = 255)
 	private String name;
 
 	@Schema(description = "The number of days the caseworker decided", examples = "15")
 	private Integer caseworkerDays;
 
-	@Schema(description = "Whether the household member is included in the norm")
+	@Schema(description = "Whether the household member is included in the norm", examples = "true")
 	private Boolean included;
 
-	@Schema(description = "The start date of the member's deviation from the household")
+	@Schema(description = "The start date of the member's deviation from the household", examples = "2026-06-01")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate deviationFromDate;
 
-	@Schema(description = "The end date of the member's deviation from the household")
+	@Schema(description = "The end date of the member's deviation from the household", examples = "2026-06-30")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate deviationToDate;
 
-	@Schema(description = "The norm interval applied to the member")
+	@Schema(description = "The norm interval applied to the member", examples = "4-6 år")
+	@Size(max = 64)
 	private String normInterval;
 
 	@Schema(description = "The job stimulus amount applied to the member", examples = "1000.00")
 	private BigDecimal jobStimulusAmount;
 
-	@Schema(description = "Free-text note")
+	@Schema(description = "Free-text note", examples = "Justerat efter inlämnat underlag")
 	private String note;
 
 	public static NormPersonInput create() {

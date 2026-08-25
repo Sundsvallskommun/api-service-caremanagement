@@ -19,8 +19,6 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
 
 	List<NotificationEntity> findAllByNamespaceAndMunicipalityIdAndOwnerId(String namespace, String municipalityId, String ownerId, Sort sort);
 
-	List<NotificationEntity> findByErrandId(String errandId);
-
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("update NotificationEntity n set n.acknowledged = true where n.namespace = ?1 and n.municipalityId = ?2 and n.errandId = ?3 and n.acknowledged = false")
 	int acknowledgeAllByErrand(String namespace, String municipalityId, String errandId);
@@ -31,7 +29,4 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	long deleteByExpiresBefore(OffsetDateTime cutoff);
-
-	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	long deleteByErrandId(String errandId);
 }

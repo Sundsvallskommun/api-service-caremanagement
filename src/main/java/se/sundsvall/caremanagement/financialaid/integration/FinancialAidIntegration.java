@@ -43,16 +43,22 @@ public class FinancialAidIntegration {
 			LOG.debug("Financial-aid basis fetched");
 			return basis;
 		} catch (final Exception e) {
-			LOG.error("Error fetching financial-aid basis: {}", describe(e), e);
+			// Do not log the raw exception: transport failures embed the request URL, which carries the personalNumber.
+			// The thrown Problem's detail carries the (payload-free) upstream descriptor and is logged by the framework.
 			throw Problem.valueOf(BAD_GATEWAY, "Error fetching financial-aid basis: %s".formatted(describe(e)));
 		}
 	}
 
-	/** Short upstream descriptor (HTTP status when available) to make failures self-diagnosing without leaking payloads. */
+	/**
+	 * Short upstream descriptor (HTTP status when available) to make failures self-diagnosing without leaking payloads.
+	 * For {@link ThrowableProblem} causes the (already-clean) status + detail is used; for any other cause only the
+	 * exception class name is emitted — transport failures embed the full request URL in their message, which carries the
+	 * personalNumber, so the message is deliberately dropped.
+	 */
 	private static String describe(final Throwable e) {
 		if (e instanceof final ThrowableProblem problem) {
 			return ofNullable(problem.getStatus()).map(status -> status.value() + " " + problem.getMessage()).orElseGet(problem::getMessage);
 		}
-		return e.getClass().getSimpleName() + ": " + e.getMessage();
+		return e.getClass().getSimpleName();
 	}
 }

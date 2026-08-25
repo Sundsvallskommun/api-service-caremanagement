@@ -3,18 +3,29 @@ package se.sundsvall.caremanagement.attachments.service.mapper;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Blob;
 import java.time.OffsetDateTime;
 import java.util.List;
+import org.hibernate.Hibernate;
+import org.hibernate.LobHelper;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentDataEntity;
 import se.sundsvall.caremanagement.attachments.integration.db.model.AttachmentEntity;
 import se.sundsvall.caremanagement.conversation.spi.ConversationAttachment;
+import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 class AttachmentMapperTest {
@@ -29,19 +40,19 @@ class AttachmentMapperTest {
 			.withFileName("f.txt")
 			.withMimeType("text/plain")
 			.withFileSize(10)
-			.withOrigin("CONVERSATION")
+			.withDocumentType("CONVERSATION")
 			.withSenderRole("CLIENT")
 			.withCreated(created)
 			.withModified(modified);
 
 		final var attachment = AttachmentMapper.toAttachment(entity);
 
-		assertThat(attachment).isNotNull();
+		assertThat(attachment).isNotNull().hasNoNullFieldsOrPropertiesExcept("messageId");
 		assertThat(attachment.getId()).isEqualTo("id");
 		assertThat(attachment.getFileName()).isEqualTo("f.txt");
 		assertThat(attachment.getMimeType()).isEqualTo("text/plain");
 		assertThat(attachment.getFileSize()).isEqualTo(10);
-		assertThat(attachment.getOrigin()).isEqualTo("CONVERSATION");
+		assertThat(attachment.getDocumentType()).isEqualTo("CONVERSATION");
 		assertThat(attachment.getSenderRole()).isEqualTo("CLIENT");
 		assertThat(attachment.getMessageId()).isNull();
 		assertThat(attachment.getCreated()).isEqualTo(created);
@@ -59,13 +70,13 @@ class AttachmentMapperTest {
 
 		final var attachment = AttachmentMapper.toAttachment(source);
 
-		assertThat(attachment).isNotNull();
+		assertThat(attachment).isNotNull().hasNoNullFieldsOrPropertiesExcept("modified");
 		assertThat(attachment.getId()).isEqualTo("a1");
 		assertThat(attachment.getMessageId()).isEqualTo("m1");
 		assertThat(attachment.getFileName()).isEqualTo("intyg.pdf");
 		assertThat(attachment.getMimeType()).isEqualTo("application/pdf");
 		assertThat(attachment.getFileSize()).isEqualTo(42);
-		assertThat(attachment.getOrigin()).isEqualTo("CONVERSATION");
+		assertThat(attachment.getDocumentType()).isEqualTo("CONVERSATION");
 		assertThat(attachment.getSenderRole()).isEqualTo("CLIENT");
 		assertThat(attachment.getCreated()).isEqualTo(FIXED_TIMESTAMP);
 		assertThat(attachment.getModified()).isNull();
@@ -124,24 +135,27 @@ class AttachmentMapperTest {
 	@Test
 	void toAttachmentEntityFromMultipartFileBuildsEntity() {
 		final var file = new MockMultipartFile("file", "hello.txt", "text/plain", new ByteArrayInputStream("hello".getBytes()).readAllBytes());
+		final var blob = mock(Blob.class);
+		final var lobHelper = mock(LobHelper.class);
 
-		// Will likely fail at Hibernate.getLobHelper() since no JPA context is active.
-		// Either we get a real entity (when running in an integration setup) or an exception.
-		try {
+		try (MockedStatic<Hibernate> hibernateMock = mockStatic(Hibernate.class)) {
+			hibernateMock.when(Hibernate::getLobHelper).thenReturn(lobHelper);
+			when(lobHelper.createBlob(any(InputStream.class), eq(5L))).thenReturn(blob);
+
 			final AttachmentEntity entity = AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "ERRAND", "CASEWORKER", file);
-			assertThat(entity).isNotNull();
+
+			assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "modified");
 			assertThat(entity.getErrandId()).isEqualTo("eid");
 			assertThat(entity.getNamespace()).isEqualTo("ns");
 			assertThat(entity.getMunicipalityId()).isEqualTo("mid");
 			assertThat(entity.getFileName()).isEqualTo("hello.txt");
 			assertThat(entity.getMimeType()).isEqualTo("text/plain");
 			assertThat(entity.getFileSize()).isEqualTo(5);
-			assertThat(entity.getOrigin()).isEqualTo("ERRAND");
+			assertThat(entity.getDocumentType()).isEqualTo("ERRAND");
 			assertThat(entity.getSenderRole()).isEqualTo("CASEWORKER");
 			assertThat(entity.getAttachmentData()).isNotNull();
-		} catch (final Exception e) {
-			// Acceptable in unit context with no Hibernate session
-			assertThat(e).isNotNull();
+			assertThat(entity.getAttachmentData().getFile()).isSameAs(blob);
+			verify(lobHelper).createBlob(any(InputStream.class), eq(5L));
 		}
 	}
 
@@ -153,29 +167,29 @@ class AttachmentMapperTest {
 
 	@Test
 	void toAttachmentEntityFromBytesBuildsEntity() {
-		final var entity = AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "GENERATED", "CLIENT", "sammanstallning.pdf", "application/pdf", "%PDF".getBytes());
+		final var entity = AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "GENERATED", "CLIENT", new SourceFile("sammanstallning.pdf", "application/pdf", "%PDF".getBytes()));
 
-		assertThat(entity).isNotNull();
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "modified");
 		assertThat(entity.getErrandId()).isEqualTo("eid");
 		assertThat(entity.getNamespace()).isEqualTo("ns");
 		assertThat(entity.getMunicipalityId()).isEqualTo("mid");
 		assertThat(entity.getFileName()).isEqualTo("sammanstallning.pdf");
 		assertThat(entity.getMimeType()).isEqualTo("application/pdf");
 		assertThat(entity.getFileSize()).isEqualTo(4);
-		assertThat(entity.getOrigin()).isEqualTo("GENERATED");
+		assertThat(entity.getDocumentType()).isEqualTo("GENERATED");
 		assertThat(entity.getSenderRole()).isEqualTo("CLIENT");
 		assertThat(entity.getAttachmentData()).isNotNull();
 	}
 
 	@Test
 	void toAttachmentEntityFromBytesNullErrandIdReturnsNull() {
-		assertThat(AttachmentMapper.toAttachmentEntity(null, "ns", "mid", "GENERATED", "CLIENT", "f.pdf", "application/pdf", new byte[] {
+		assertThat(AttachmentMapper.toAttachmentEntity(null, "ns", "mid", "GENERATED", "CLIENT", new SourceFile("f.pdf", "application/pdf", new byte[] {
 			1
-		})).isNull();
+		}))).isNull();
 	}
 
 	@Test
 	void toAttachmentEntityFromBytesNullContentReturnsNull() {
-		assertThat(AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "GENERATED", "CLIENT", "f.pdf", "application/pdf", null)).isNull();
+		assertThat(AttachmentMapper.toAttachmentEntity("eid", "ns", "mid", "GENERATED", "CLIENT", new SourceFile("f.pdf", "application/pdf", null))).isNull();
 	}
 }

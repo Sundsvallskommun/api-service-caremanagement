@@ -1,79 +1,78 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsFromWhoDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInfoDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInvestigationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsOrganizationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsReasonDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsServiceDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsSpecifyTypeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsWorkingStatusDTO;
-import generated.se.sundsvall.lifecarefc.PostAktualiseringsBodyRequest;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsFromWhoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInfoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInvestigationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsOrganizationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsReasonDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsSpecifyTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsWorkingStatusDTO;
+import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.util.StringUtils;
 
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.startOfDay;
 
 /**
- * Assembles the FC {@link PostAktualiseringsBodyRequest} for an financial-assistance intake (actualisation) by
- * resolving
- * the integer codes the POST body requires from the person's FC actualisation proposal. The proposal's
- * {@code FromWho}/{@code Reason} code lists — and the {@code SpecifyType}/{@code WorkingStatus} requirement flags —
- * live
- * inside the chosen actualisation <em>type</em>; the organisation, service and investigation links are top-level.
+ * Assembles the FamilyCare {@link PostAktualiseringsBodyRequest} for a financial-assistance intake (actualisation) by
+ * resolving the integer codes the POST body requires from the person's FamilyCare actualisation proposal. The
+ * proposal's {@code FromWho}/{@code Reason} code lists — and the {@code SpecifyType}/{@code WorkingStatus}
+ * requirement flags — live inside the chosen actualisation <em>type</em>; the organisation, service and investigation
+ * links are top-level.
  *
  * <p>
  * Sprint defaults where the proposal offers a choice: the first offered actualisation type is taken, then its first
  * reason and first fromWho; the first organisation (id + unit), the first service and the first investigation. A
  * specify-type is only set when the chosen type marks it mandatory, and a working-status only when the chosen type asks
- * for it — then the first offered value is used. The {@code CaseworkerId} is set from the handläggare resolved off the
+ * for it — then the first offered value is used. The {@code CaseworkerId} is set from the caseworker resolved off the
  * applicant's most recent Lifecare Service (see {@code CaseworkerResolver}) when one is supplied, and left unset
- * otherwise. These selections are intentionally simple and isolated here so they are easy to refine once real FC
- * proposals are available, mirroring {@link CalculationAssembler}.
+ * otherwise. These selections are intentionally simple and isolated here so they are easy to refine once real
+ * FamilyCare proposals are available, mirroring {@link CalculationAssembler}.
  */
 public final class ActualisationAssembler {
 
 	private ActualisationAssembler() {}
 
 	/**
-	 * Build the FC actualisation body for one applicant and intake date.
+	 * Build the FamilyCare actualisation body for one applicant and intake date.
 	 *
-	 * @param  applicantPersonId the applicant's personnummer (the FC actualisation owner)
-	 * @param  proposal          the FC actualisation proposal supplying the code lists; may be {@code null}
+	 * @param  applicantPersonId the applicant's personal identity number (the FamilyCare actualisation owner)
+	 * @param  proposalDTO       the FamilyCare actualisation proposal supplying the code lists; may be {@code null}
 	 * @param  date              the intake date
-	 * @param  caseworkerId      the resolved FC caseworker id to set on the body; may be {@code null}/blank to leave unset
+	 * @param  caseworkerId      the resolved FamilyCare caseworker id; {@code null}/blank leaves it unset
 	 * @return                   the assembled {@link PostAktualiseringsBodyRequest}
 	 */
-	public static PostAktualiseringsBodyRequest assemble(final String applicantPersonId, final PersonBasedAktualiseringProposalDTO proposal, final LocalDate date, final String caseworkerId) {
+	public static PostAktualiseringsBodyRequest assemble(final String applicantPersonId, final PersonBasedAktualiseringProposalDTO proposalDTO, final LocalDate date, final String caseworkerId) {
 		final var body = new PostAktualiseringsBodyRequest()
 			.personId(applicantPersonId)
-			.date(date.format(ISO_LOCAL_DATE));
+			.date(startOfDay(date));
 
 		ofNullable(caseworkerId).filter(StringUtils::hasText).ifPresent(body::caseworkerId);
 
-		ofNullable(proposal).ifPresent(p -> {
-			firstActualisationType(p).ifPresent(type -> {
+		ofNullable(proposalDTO).ifPresent(proposal -> {
+			firstActualisationType(proposal).ifPresent(type -> {
 				body.type(type.getId());
 				firstReasonId(type).ifPresent(body::reason);
 				firstFromWhoId(type).ifPresent(body::fromWho);
 				if (Boolean.TRUE.equals(type.getSpecifyTypeMandatory())) {
-					firstSpecifyTypeId(p).ifPresent(body::specifies);
+					firstSpecifyTypeId(proposal).ifPresent(body::specifies);
 				}
 				if (Boolean.TRUE.equals(type.getWorkingStatus())) {
-					firstWorkingStatusId(p).ifPresent(body::workingStatus);
+					firstWorkingStatusId(proposal).ifPresent(body::workingStatus);
 				}
 			});
-			firstOrganization(p).ifPresent(org -> {
+			firstOrganization(proposal).ifPresent(org -> {
 				body.organisationId(org.getId());
 				body.organisationUnitId(org.getUnitId());
 			});
-			firstServiceId(p).ifPresent(body::serviceId);
-			firstInvestigationId(p).ifPresent(body::investigationId);
+			firstServiceId(proposal).ifPresent(body::serviceId);
+			firstInvestigationId(proposal).ifPresent(body::investigationId);
 		});
 
 		return body;

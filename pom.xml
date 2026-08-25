@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>se.sundsvall.dept44</groupId>
 		<artifactId>dept44-service-parent</artifactId>
-		<version>8.0.7</version>
+		<version>8.0.9</version>
 		<relativePath />
 		<!-- lookup parent from repository -->
 	</parent>
@@ -13,15 +13,15 @@
 	<version>1.0</version>
 	<name>api-service-care-management</name>
 	<properties>
-		<spring-filter.version>3.2.5</spring-filter.version>
+		<spring-filter.version>4.0.6</spring-filter.version>
 		<!-- Modulith 2.x targets Spring Boot 4 (which dept44 8.x runs).
 				Verify the latest GA at https://spring.io/projects/spring-modulith
 				before bumping. -->
-		<spring-modulith.version>2.0.0</spring-modulith.version>
+		<spring-modulith.version>2.1.0</spring-modulith.version>
 		<!-- Combining errand attachments into a single PDF: PDFBox merges/rasterises,
 				POI + XDocReport render DOCX. Versions aligned with the rest of the fleet
 				(api-service-digital-registered-letter / api-service-templating). -->
-		<pdfbox.version>3.0.7</pdfbox.version>
+		<pdfbox.version>3.0.8</pdfbox.version>
 		<poi.version>5.5.1</poi.version>
 		<poi-pdf-converter.version>2.2.0</poi-pdf-converter.version>
 		<generated-sources-path>${project.build.directory}/generated-sources</generated-sources-path>
@@ -139,7 +139,7 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<argLine>${surefireArgLine} -Xmx1024m</argLine>
+					<argLine>${surefireArgLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Xmx2048m</argLine>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -261,39 +261,12 @@
 						</configuration>
 					</execution>
 					<execution>
-						<id>eneo-api</id>
+						<id>lifecare-familycare-api</id>
 						<goals>
 							<goal>generate</goal>
 						</goals>
 						<configuration>
-							<inputSpec>src/main/resources/integrations/eneo-api.yml</inputSpec>
-							<output>${generated-sources-path}</output>
-							<generatorName>spring</generatorName>
-							<generateApis>false</generateApis>
-							<generateSupportingFiles>false</generateSupportingFiles>
-							<modelsToGenerate>AskAssistant,AskResponse,FilePublic</modelsToGenerate>
-							<configOptions>
-								<useSpringBoot4>true</useSpringBoot4>
-								<useJackson3>true</useJackson3>
-								<sourceFolder>models</sourceFolder>
-								<dateLibrary>java8</dateLibrary>
-								<apiPackage>generated</apiPackage>
-								<modelPackage>generated.se.sundsvall.eneo</modelPackage>
-								<openApiNullable>false</openApiNullable>
-								<generatePom>false</generatePom>
-								<useBeanValidation>true</useBeanValidation>
-								<useSwaggerAnnotations>true</useSwaggerAnnotations>
-								<interfaceOnly>true</interfaceOnly>
-							</configOptions>
-						</configuration>
-					</execution>
-					<execution>
-						<id>lifecare-fc-api</id>
-						<goals>
-							<goal>generate</goal>
-						</goals>
-						<configuration>
-							<inputSpec>src/main/resources/integrations/lifecare-fc-api.json</inputSpec>
+							<inputSpec>src/main/resources/integrations/lifecare-familycare-api.json</inputSpec>
 							<output>${generated-sources-path}</output>
 							<generatorName>spring</generatorName>
 							<generateApis>false</generateApis>
@@ -304,7 +277,7 @@
 								<sourceFolder>models</sourceFolder>
 								<dateLibrary>java8</dateLibrary>
 								<apiPackage>generated</apiPackage>
-								<modelPackage>generated.se.sundsvall.lifecarefc</modelPackage>
+								<modelPackage>generated.se.sundsvall.lifecarefamilycare</modelPackage>
 								<openApiNullable>false</openApiNullable>
 								<generatePom>false</generatePom>
 								<useBeanValidation>true</useBeanValidation>

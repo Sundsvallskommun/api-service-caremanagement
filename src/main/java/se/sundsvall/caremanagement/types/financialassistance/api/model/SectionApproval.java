@@ -3,15 +3,18 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
- * One section of the Draken EB view as an acknowledgeable object — whether a caseworker has verified it as approved.
+ * One section of the Draken financial assistance view as an acknowledgeable object — whether a caseworker has verified
+ * it as approved.
  * The section is {@code CALCULATION} (calculation), {@code PAYMENT} (payment) or {@code DECISION} (decision).
  * {@code approvedBy} / {@code approvedAt} are populated while approved and null once the approval is withdrawn.
  */
-@Schema(description = "A caseworker's approval of one section of the EB view (calculation / payment / decision).")
+@Schema(description = "A caseworker's approval of one section of the financial assistance view (calculation / payment / decision).")
 public class SectionApproval {
 
 	@Schema(description = "The section this approval concerns", examples = "CALCULATION", allowableValues = {
@@ -26,6 +29,7 @@ public class SectionApproval {
 	private String approvedBy;
 
 	@Schema(description = "When the section was approved (null while not approved)", accessMode = READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime approvedAt;
 
 	public static SectionApproval create() {

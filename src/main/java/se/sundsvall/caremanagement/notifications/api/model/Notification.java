@@ -30,9 +30,11 @@ public class Notification {
 
 	@Schema(description = "User id of the recipient (the user who should see this notification)", examples = "jane01doe")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 64)
 	private String ownerId;
 
 	@Schema(description = "User or system id that produced the notification. Automatically acknowledged if equal to ownerId.", examples = "john02doe")
+	@Size(max = 64)
 	private String createdBy;
 
 	@Schema(description = "Notification type", examples = "CREATE", allowableValues = {
@@ -65,7 +67,7 @@ public class Notification {
 	})
 	private String description;
 
-	@Schema(description = "Optional longer content / body")
+	@Schema(description = "Optional longer content / body", examples = "You have been assigned a new errand regarding financial assistance.")
 	@Size(max = 2048, groups = {
 		OnCreate.class, OnUpdate.class
 	})

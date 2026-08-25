@@ -40,6 +40,12 @@ class ErrandTypeContributionTest {
 	}
 
 	@Test
+	void typedCreateOnlyDefaultsFalseAndIsSettable() {
+		assertThat(ErrandTypeContribution.builder("t").build().typedCreateOnly()).isFalse();
+		assertThat(ErrandTypeContribution.builder("t").typedCreateOnly(true).build().typedCreateOnly()).isTrue();
+	}
+
+	@Test
 	void isValidStatus() {
 		final var contribution = ErrandTypeContribution.builder("t")
 			.allowedStatuses("DRAFT", "OPEN")

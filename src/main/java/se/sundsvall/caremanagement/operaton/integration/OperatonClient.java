@@ -96,16 +96,16 @@ public interface OperatonClient {
 
 	/**
 	 * Evaluate a deployed DMN decision in the engine and return its result rows — used to run the (modeler-editable)
-	 * normberäkning regelverk, e.g. the expense cap decision, from caremanagement.
+	 * calculation rules, e.g. the expense cap decision, from caremanagement.
 	 *
 	 * @param  municipalityId the id of the municipality
 	 * @param  key            the decision definition key (e.g. {@code Decision_utgiftRegelverk})
 	 * @param  request        the input variables to evaluate the decision against
 	 * @return                the decision result rows (one map of output name → value per matched rule)
 	 */
-	@PostMapping(path = "/{municipalityId}/decision-definitions/{key}/evaluate", produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
+	@PostMapping(path = "/{municipalityId}/decision-definitions/evaluate", produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
 	EvaluateDecisionResponse evaluateDecision(
 		@PathVariable final String municipalityId,
-		@PathVariable final String key,
+		@RequestParam final String key,
 		@RequestBody final EvaluateDecisionRequest request);
 }

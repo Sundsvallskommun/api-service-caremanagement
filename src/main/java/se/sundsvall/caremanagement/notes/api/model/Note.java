@@ -3,6 +3,9 @@ package se.sundsvall.caremanagement.notes.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 @Schema(description = "Note attached to an errand")
 public class Note {
@@ -13,19 +16,21 @@ public class Note {
 	@Schema(description = "Errand id this note belongs to")
 	private String errandId;
 
-	@Schema(description = "Note body", example = "Spoke to family today, awaiting docs.")
+	@Schema(description = "Note body", examples = "Spoke to family today, awaiting docs.")
 	private String body;
 
-	@Schema(description = "Author user id", example = "jane01doe")
+	@Schema(description = "Author user id", examples = "jane01doe")
 	private String author;
 
 	@Schema(description = "Created timestamp")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
-	@Schema(description = "User id of the last editor", example = "jane01doe")
+	@Schema(description = "User id of the last editor", examples = "jane01doe")
 	private String modifiedBy;
 
 	@Schema(description = "Last modified timestamp; null until the note has been edited")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime modified;
 
 	public static Note create() {
@@ -60,32 +65,32 @@ public class Note {
 		return modified;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setErrandId(final String v) {
-		this.errandId = v;
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
 	}
 
-	public void setBody(final String v) {
-		this.body = v;
+	public void setBody(final String body) {
+		this.body = body;
 	}
 
-	public void setAuthor(final String v) {
-		this.author = v;
+	public void setAuthor(final String author) {
+		this.author = author;
 	}
 
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
 	}
 
-	public void setModifiedBy(final String v) {
-		this.modifiedBy = v;
+	public void setModifiedBy(final String modifiedBy) {
+		this.modifiedBy = modifiedBy;
 	}
 
-	public void setModified(final OffsetDateTime v) {
-		this.modified = v;
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
 	}
 
 	public Note withId(final String id) {
@@ -137,5 +142,11 @@ public class Note {
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, body, author, created, modifiedBy, modified);
+	}
+
+	@Override
+	public String toString() {
+		return "Note{id='" + id + "', errandId='" + errandId + "', body='" + body + "', author='" + author
+			+ "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified=" + modified + "}";
 	}
 }

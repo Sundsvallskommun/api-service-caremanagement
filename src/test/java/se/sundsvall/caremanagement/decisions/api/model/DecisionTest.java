@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -14,8 +15,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static com.google.code.beanmatchers.BeanMatchers.registerValueGenerator;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class DecisionTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
@@ -29,7 +29,7 @@ class DecisionTest {
 
 	@Test
 	void testBean() {
-		assertThat(Decision.class, allOf(
+		MatcherAssert.assertThat(Decision.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -44,7 +44,7 @@ class DecisionTest {
 		final var value = "APPROVED";
 		final var description = "desc";
 		final var amount = new BigDecimal("7900.00");
-		final var decisionMessage = "Du beviljas financial assistance för juni 2026.";
+		final var decisionMessage = "Du beviljas ekonomiskt bistånd för juni 2026.";
 		final var decisionDate = LocalDate.parse("2026-06-18");
 		final var periodFrom = LocalDate.parse("2026-06-01");
 		final var periodTo = LocalDate.parse("2026-06-30");

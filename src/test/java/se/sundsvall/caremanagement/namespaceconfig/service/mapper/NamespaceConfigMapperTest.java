@@ -11,7 +11,7 @@ class NamespaceConfigMapperTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
-	void toNamespaceConfig_maps() {
+	void toNamespaceConfigMaps() {
 		final var created = FIXED_TIMESTAMP.minusDays(1);
 		final var modified = FIXED_TIMESTAMP;
 		final var entity = NamespaceConfigEntity.create()
@@ -25,7 +25,7 @@ class NamespaceConfigMapperTest {
 
 		final var result = NamespaceConfigMapper.toNamespaceConfig(entity);
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(result.getId()).isEqualTo(42L);
 		assertThat(result.getDisplayName()).isEqualTo("display");
 		assertThat(result.getShortCode()).isEqualTo("sc");
@@ -34,17 +34,17 @@ class NamespaceConfigMapperTest {
 	}
 
 	@Test
-	void toNamespaceConfig_nullReturnsNull() {
+	void toNamespaceConfigNullReturnsNull() {
 		assertThat(NamespaceConfigMapper.toNamespaceConfig(null)).isNull();
 	}
 
 	@Test
-	void toNamespaceConfigEntity_maps() {
+	void toNamespaceConfigEntityMaps() {
 		final var config = NamespaceConfig.create().withDisplayName("display").withShortCode("sc");
 
 		final var result = NamespaceConfigMapper.toNamespaceConfigEntity(config, "ns", "2281");
 
-		assertThat(result).isNotNull();
+		assertThat(result).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "modified");
 		assertThat(result.getNamespace()).isEqualTo("ns");
 		assertThat(result.getMunicipalityId()).isEqualTo("2281");
 		assertThat(result.getDisplayName()).isEqualTo("display");
@@ -52,12 +52,12 @@ class NamespaceConfigMapperTest {
 	}
 
 	@Test
-	void toNamespaceConfigEntity_nullConfigReturnsNull() {
+	void toNamespaceConfigEntityNullConfigReturnsNull() {
 		assertThat(NamespaceConfigMapper.toNamespaceConfigEntity(null, "ns", "2281")).isNull();
 	}
 
 	@Test
-	void updateNamespaceConfigEntity_updates() {
+	void updateNamespaceConfigEntityUpdates() {
 		final var entity = NamespaceConfigEntity.create().withDisplayName("old").withShortCode("o");
 		final var source = NamespaceConfig.create().withDisplayName("new").withShortCode("n");
 
@@ -69,12 +69,12 @@ class NamespaceConfigMapperTest {
 	}
 
 	@Test
-	void updateNamespaceConfigEntity_nullEntity() {
+	void updateNamespaceConfigEntityNullEntity() {
 		assertThat(NamespaceConfigMapper.updateNamespaceConfigEntity(null, NamespaceConfig.create())).isNull();
 	}
 
 	@Test
-	void updateNamespaceConfigEntity_nullSource() {
+	void updateNamespaceConfigEntityNullSource() {
 		final var entity = NamespaceConfigEntity.create().withDisplayName("kept");
 		final var result = NamespaceConfigMapper.updateNamespaceConfigEntity(entity, null);
 		assertThat(result).isSameAs(entity);

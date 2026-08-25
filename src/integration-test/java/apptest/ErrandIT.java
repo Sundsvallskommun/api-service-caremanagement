@@ -16,7 +16,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 import se.sundsvall.caremanagement.Application;
+import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachmentDataRepository;
+import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachmentRepository;
+import se.sundsvall.caremanagement.conversation.integration.db.MessageReadReceiptRepository;
+import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
+import se.sundsvall.caremanagement.document.integration.db.DocumentRepository;
+import se.sundsvall.caremanagement.formsnapshot.integration.db.FormSnapshotRepository;
+import se.sundsvall.caremanagement.notes.integration.db.NoteRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaCalculationDraftRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaMonitoringRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaSectionApprovalRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaWarningRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 
@@ -35,8 +47,59 @@ class ErrandIT extends AbstractAppTest {
 	private static final String NOT_FOUND_ERRAND_ID = "33333333-3333-3333-3333-333333333333";
 	private static final String PATH = "/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands";
 
+	// Dedicated errand carrying child rows (message + attachment/blob/read-receipt, note, document), used to prove
+	// ON DELETE CASCADE cleanup on errand deletion. Kept separate from EXISTING_ERRAND_ID so the seeded message
+	// attachment does not leak into ErrandAttachmentIT (the attachment listing aggregates conversation attachments).
+	private static final String CASCADE_ERRAND_ID = "44444444-4444-4444-4444-444444444444";
+	private static final String MESSAGE_ID = "cccccccc-cccc-cccc-cccc-cccccccccc01";
+	private static final String MESSAGE_ATTACHMENT_ID = "cccccccc-cccc-cccc-cccc-ccccccccca01";
+	private static final int MESSAGE_ATTACHMENT_DATA_ID = 1;
+	private static final String MESSAGE_READ_RECEIPT_ID = "cccccccc-cccc-cccc-cccc-cccccccccr01";
+	private static final String NOTE_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbn01";
+	private static final String DOCUMENT_ID = "ffffffff-ffff-ffff-ffff-ffffffffff01";
+	private static final String FORM_SNAPSHOT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-fffff0000001";
+	private static final String FA_MONITORING_ID = "dddddddd-dddd-dddd-dddd-ddddddddda01";
+	private static final String FA_SECTION_APPROVAL_ID = "dddddddd-dddd-dddd-dddd-dddddddddb01";
+	private static final String FA_WARNING_ID = "dddddddd-dddd-dddd-dddd-dddddddddc01";
+
 	@Autowired
 	private ErrandRepository repository;
+
+	@Autowired
+	private MessageRepository messageRepository;
+
+	@Autowired
+	private MessageAttachmentRepository messageAttachmentRepository;
+
+	@Autowired
+	private MessageAttachmentDataRepository messageAttachmentDataRepository;
+
+	@Autowired
+	private MessageReadReceiptRepository messageReadReceiptRepository;
+
+	@Autowired
+	private NoteRepository noteRepository;
+
+	@Autowired
+	private DocumentRepository documentRepository;
+
+	@Autowired
+	private FinancialAssistanceRepository financialAssistanceRepository;
+
+	@Autowired
+	private FormSnapshotRepository formSnapshotRepository;
+
+	@Autowired
+	private FaCalculationDraftRepository faCalculationDraftRepository;
+
+	@Autowired
+	private FaMonitoringRepository faMonitoringRepository;
+
+	@Autowired
+	private FaSectionApprovalRepository faSectionApprovalRepository;
+
+	@Autowired
+	private FaWarningRepository faWarningRepository;
 
 	@Test
 	void test01_createErrand() {
@@ -113,5 +176,45 @@ class ErrandIT extends AbstractAppTest {
 			.withExpectedResponseStatus(NOT_FOUND)
 			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequestAndVerifyResponse();
+	}
+
+	@Test
+	void test08_deleteErrandCascadesToChildren() {
+		// Errand-child rows exist up front (seeded): message + its attachment/blob/read-receipt, note, document.
+		assertThat(messageRepository.existsById(MESSAGE_ID)).isTrue();
+		assertThat(messageAttachmentRepository.existsById(MESSAGE_ATTACHMENT_ID)).isTrue();
+		assertThat(messageAttachmentDataRepository.existsById(MESSAGE_ATTACHMENT_DATA_ID)).isTrue();
+		assertThat(messageReadReceiptRepository.existsById(MESSAGE_READ_RECEIPT_ID)).isTrue();
+		assertThat(noteRepository.existsById(NOTE_ID)).isTrue();
+		assertThat(documentRepository.existsById(DOCUMENT_ID)).isTrue();
+		assertThat(financialAssistanceRepository.existsById(CASCADE_ERRAND_ID)).isTrue();
+		assertThat(formSnapshotRepository.existsById(FORM_SNAPSHOT_ID)).isTrue();
+		assertThat(faCalculationDraftRepository.existsById(CASCADE_ERRAND_ID)).isTrue();
+		assertThat(faMonitoringRepository.existsById(FA_MONITORING_ID)).isTrue();
+		assertThat(faSectionApprovalRepository.existsById(FA_SECTION_APPROVAL_ID)).isTrue();
+		assertThat(faWarningRepository.existsById(FA_WARNING_ID)).isTrue();
+
+		setupCall()
+			.withServicePath(PATH + "/" + CASCADE_ERRAND_ID)
+			.withHttpMethod(DELETE)
+			.withExpectedResponseStatus(NO_CONTENT)
+			.withExpectedResponseBodyIsNull()
+			.sendRequestAndVerifyResponse();
+
+		assertThat(repository.existsById(CASCADE_ERRAND_ID)).isFalse();
+		// ON DELETE CASCADE removed every errand-child row — no orphaned message/attachment/note/document data.
+		assertThat(messageRepository.existsById(MESSAGE_ID)).isFalse();
+		assertThat(messageAttachmentRepository.existsById(MESSAGE_ATTACHMENT_ID)).isFalse();
+		assertThat(messageAttachmentDataRepository.existsById(MESSAGE_ATTACHMENT_DATA_ID)).isFalse();
+		assertThat(messageReadReceiptRepository.existsById(MESSAGE_READ_RECEIPT_ID)).isFalse();
+		assertThat(noteRepository.existsById(NOTE_ID)).isFalse();
+		assertThat(documentRepository.existsById(DOCUMENT_ID)).isFalse();
+		assertThat(financialAssistanceRepository.existsById(CASCADE_ERRAND_ID)).isFalse();
+		assertThat(formSnapshotRepository.existsById(FORM_SNAPSHOT_ID)).isFalse();
+		// The FA satellite tables (no FK to errand_financial_assistance) cascade via their own FK to errand.
+		assertThat(faCalculationDraftRepository.existsById(CASCADE_ERRAND_ID)).isFalse();
+		assertThat(faMonitoringRepository.existsById(FA_MONITORING_ID)).isFalse();
+		assertThat(faSectionApprovalRepository.existsById(FA_SECTION_APPROVAL_ID)).isFalse();
+		assertThat(faWarningRepository.existsById(FA_WARNING_ID)).isFalse();
 	}
 }

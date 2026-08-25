@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.formsnapshot.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -7,6 +8,9 @@ import jakarta.validation.constraints.NotEmpty;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
  * A self-describing, re-renderable snapshot of the citizen-facing application form exactly as it was rendered and
@@ -37,6 +41,7 @@ public class FormSnapshot {
 	private String locale;
 
 	@Schema(description = "When the form was rendered/submitted, per the client clock", examples = "2026-06-24T10:15:30+02:00")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime capturedAt;
 
 	@Schema(description = "The form title the applicant saw", examples = "Ansökan om ekonomiskt bistånd")
@@ -44,7 +49,7 @@ public class FormSnapshot {
 
 	@Valid
 	@NotEmpty
-	@Schema(description = "The sections of the form, in render order", requiredMode = Schema.RequiredMode.REQUIRED)
+	@ArraySchema(arraySchema = @Schema(description = "The sections of the form, in render order", requiredMode = Schema.RequiredMode.REQUIRED), schema = @Schema(implementation = FormSnapshotSection.class))
 	private List<FormSnapshotSection> sections;
 
 	@Valid

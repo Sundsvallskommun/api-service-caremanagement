@@ -9,17 +9,20 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
-import se.sundsvall.caremanagement.core.integration.db.model.ErrandEntity;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
+import se.sundsvall.caremanagement.decisions.service.event.DecisionCreated;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.caremanagement.shared.NotificationRequest;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -36,7 +39,7 @@ class DecisionServiceTest {
 	private static final String DECISION_ID = "22222222-2222-2222-2222-222222222222";
 
 	@Mock
-	private ErrandRepository errandRepositoryMock;
+	private ErrandQueryService errandQueryServiceMock;
 
 	@Mock
 	private DecisionRepository decisionRepositoryMock;
@@ -44,14 +47,17 @@ class DecisionServiceTest {
 	@Mock
 	private ApplicationEventPublisher eventPublisherMock;
 
+	@Mock
+	private ErrandAccessGuard errandGuardMock;
+
 	@InjectMocks
 	private DecisionService service;
 
 	@Test
 	void createPublishesNotificationsAndReturnsId() {
-		final var errand = ErrandEntity.create().withId(ERRAND_ID).withReporterUserId("reporter").withAssignedUserId("assignee");
+		final var errand = Errand.create().withId(ERRAND_ID).withReporterUserId("reporter").withAssignedUserId("assignee");
 		final var saved = DecisionEntity.create().withId(DECISION_ID);
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(errand));
 		when(decisionRepositoryMock.save(any(DecisionEntity.class))).thenReturn(saved);
 
@@ -60,10 +66,13 @@ class DecisionServiceTest {
 
 		assertThat(id).isEqualTo(DECISION_ID);
 
-		final ArgumentCaptor<NotificationRequest> captor = ArgumentCaptor.forClass(NotificationRequest.class);
-		verify(eventPublisherMock, times(2)).publishEvent(captor.capture());
-		assertThat(captor.getAllValues()).extracting("ownerId").containsExactlyInAnyOrder("reporter", "assignee");
-		assertThat(captor.getAllValues()).allSatisfy(req -> {
+		verify(eventPublisherMock).publishEvent(isA(DecisionCreated.class));
+		final ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+		verify(eventPublisherMock, times(3)).publishEvent(captor.capture());
+		final var notifications = captor.getAllValues().stream()
+			.filter(NotificationRequest.class::isInstance).map(NotificationRequest.class::cast).toList();
+		assertThat(notifications).extracting("ownerId").containsExactlyInAnyOrder("reporter", "assignee");
+		assertThat(notifications).allSatisfy(req -> {
 			assertThat(req.type()).isEqualTo("CREATE");
 			assertThat(req.subType()).isEqualTo("DECISION");
 			assertThat(req.description()).contains("PAYMENT").contains("APPROVED");
@@ -72,46 +81,47 @@ class DecisionServiceTest {
 
 	@Test
 	void createWithoutAnyRecipientsSkipsNotifications() {
-		final var errand = ErrandEntity.create().withId(ERRAND_ID);
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		final var errand = Errand.create().withId(ERRAND_ID);
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(errand));
 		when(decisionRepositoryMock.save(any(DecisionEntity.class)))
 			.thenReturn(DecisionEntity.create().withId(DECISION_ID));
 
 		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Decision.create().withDecisionType("X").withValue("Y"));
 
-		verify(eventPublisherMock, never()).publishEvent(any());
+		verify(eventPublisherMock).publishEvent(isA(DecisionCreated.class));
+		verify(eventPublisherMock, never()).publishEvent(isA(NotificationRequest.class));
 	}
 
 	@Test
 	void createWhenReporterEqualsAssigneeDedupesRecipients() {
-		final var errand = ErrandEntity.create().withId(ERRAND_ID).withReporterUserId("u").withAssignedUserId("u");
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		final var errand = Errand.create().withId(ERRAND_ID).withReporterUserId("u").withAssignedUserId("u");
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(errand));
 		when(decisionRepositoryMock.save(any(DecisionEntity.class)))
 			.thenReturn(DecisionEntity.create().withId(DECISION_ID));
 
 		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Decision.create().withDecisionType("X").withValue("Y"));
 
-		verify(eventPublisherMock, times(1)).publishEvent(any(NotificationRequest.class));
+		verify(eventPublisherMock).publishEvent(isA(DecisionCreated.class));
+		verify(eventPublisherMock).publishEvent(any(NotificationRequest.class));
 	}
 
 	@Test
 	void createWhenErrandMissingThrowsNotFound() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Decision.create()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No errand with id '11111111-1111-1111-1111-111111111111' found in namespace 'MY_NAMESPACE' for municipality id '2281'");
 
 		verifyNoInteractions(decisionRepositoryMock, eventPublisherMock);
 	}
 
 	@Test
 	void readReturnsMappedDecision() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID)));
 		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID))
 			.thenReturn(Optional.of(DecisionEntity.create().withId(DECISION_ID).withDecisionType("PAYMENT").withValue("APPROVED")));
 
@@ -124,19 +134,16 @@ class DecisionServiceTest {
 
 	@Test
 	void readWhenDecisionMissingThrowsNotFound() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID)));
 		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No decision with id '22222222-2222-2222-2222-222222222222' found on errand '11111111-1111-1111-1111-111111111111' in namespace 'MY_NAMESPACE' for municipality id '2281'");
 	}
 
 	@Test
 	void readAllReturnsList() {
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID)));
 		when(decisionRepositoryMock.findByErrandIdOrderByCreatedDesc(ERRAND_ID))
 			.thenReturn(List.of(DecisionEntity.create().withId(DECISION_ID)));
 
@@ -149,8 +156,6 @@ class DecisionServiceTest {
 	@Test
 	void deleteRemovesEntity() {
 		final var entity = DecisionEntity.create().withId(DECISION_ID);
-		when(errandRepositoryMock.findByIdAndNamespaceAndMunicipalityId(ERRAND_ID, NAMESPACE, MUNICIPALITY_ID))
-			.thenReturn(Optional.of(ErrandEntity.create().withId(ERRAND_ID)));
 		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.of(entity));
 
 		service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID);

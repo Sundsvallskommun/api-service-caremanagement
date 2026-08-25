@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import java.util.List;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
@@ -9,14 +10,13 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class CalculationResponseTest {
 
 	@Test
 	void testBean() {
-		assertThat(CalculationResponse.class, allOf(
+		MatcherAssert.assertThat(CalculationResponse.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -25,7 +25,7 @@ class CalculationResponseTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var response = CalculationResponse.create()
 			.withCalculationId(4711)
 			.withUnhandledIncomes(List.of("Bostadstillägg (NOT_ON_WHITELIST)"))
@@ -37,7 +37,7 @@ class CalculationResponseTest {
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
+	void testNoDirtOnCreatedBean() {
 		final var response = CalculationResponse.create();
 
 		assertThat(response.getCalculationId()).isNull();

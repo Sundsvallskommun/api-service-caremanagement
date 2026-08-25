@@ -1,31 +1,31 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
- * One income row of the draft calculation — an FC income type with the applicant's and co-applicant's amounts. Also
- * the persisted JSON shape (in the draft's {@code rows_json}). A caseworker edits these in Draken; on a decision they
- * are
- * posted to Lifecare.
+ * One income row of the draft calculation — a FamilyCare income type with the applicant's and co-applicant's
+ * amounts. Also the persisted JSON shape (in the draft's {@code rows_json}). A caseworker edits these in Draken; on a
+ * decision they are posted to Lifecare.
  */
-@Schema(description = "One income row of the draft calculation (FC income type + amounts).")
+@Schema(description = "One income row of the draft calculation (FamilyCare income type + amounts).")
 public class DraftIncomeRow {
 
-	@Schema(description = "The FC income-type id", examples = "20")
+	@Schema(description = "The FamilyCare income-type id", examples = "20")
 	private Integer typeId;
 
-	@Schema(description = "The FC income-type name", examples = "Bostadsbidrag")
+	@Schema(description = "The FamilyCare income-type name", examples = "Bostadsbidrag")
 	private String typeName;
 
 	@Schema(description = "The applicant's amount for this income type", examples = "1850.0")
-	private Double applicantAmount;
+	private BigDecimal applicantAmount;
 
 	@Schema(description = "The date the applicant's amount is attributed to (ISO)", examples = "2026-05-15T00:00:00Z")
 	private String applicantAmountDate;
 
 	@Schema(description = "The co-applicant's amount for this income type", examples = "0.0")
-	private Double coApplicantAmount;
+	private BigDecimal coApplicantAmount;
 
 	@Schema(description = "The date the co-applicant's amount is attributed to (ISO)")
 	private String coApplicantAmountDate;
@@ -63,15 +63,15 @@ public class DraftIncomeRow {
 		return this;
 	}
 
-	public Double getApplicantAmount() {
+	public BigDecimal getApplicantAmount() {
 		return applicantAmount;
 	}
 
-	public void setApplicantAmount(final Double applicantAmount) {
+	public void setApplicantAmount(final BigDecimal applicantAmount) {
 		this.applicantAmount = applicantAmount;
 	}
 
-	public DraftIncomeRow withApplicantAmount(final Double applicantAmount) {
+	public DraftIncomeRow withApplicantAmount(final BigDecimal applicantAmount) {
 		this.applicantAmount = applicantAmount;
 		return this;
 	}
@@ -89,15 +89,15 @@ public class DraftIncomeRow {
 		return this;
 	}
 
-	public Double getCoApplicantAmount() {
+	public BigDecimal getCoApplicantAmount() {
 		return coApplicantAmount;
 	}
 
-	public void setCoApplicantAmount(final Double coApplicantAmount) {
+	public void setCoApplicantAmount(final BigDecimal coApplicantAmount) {
 		this.coApplicantAmount = coApplicantAmount;
 	}
 
-	public DraftIncomeRow withCoApplicantAmount(final Double coApplicantAmount) {
+	public DraftIncomeRow withCoApplicantAmount(final BigDecimal coApplicantAmount) {
 		this.coApplicantAmount = coApplicantAmount;
 		return this;
 	}

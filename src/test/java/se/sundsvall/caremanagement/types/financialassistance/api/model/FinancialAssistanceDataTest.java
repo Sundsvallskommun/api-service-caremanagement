@@ -5,11 +5,18 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class FinancialAssistanceDataTest {
 
@@ -30,7 +37,17 @@ class FinancialAssistanceDataTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBean() {
+		MatcherAssert.assertThat(FinancialAssistanceData.class, allOf(
+			hasValidBeanConstructor(),
+			hasValidGettersAndSetters(),
+			hasValidBeanHashCode(),
+			hasValidBeanEquals(),
+			hasValidBeanToString()));
+	}
+
+	@Test
+	void testBuilderMethods() {
 		final var data = FinancialAssistanceData.create()
 			.withApplicationType("NEW")
 			.withMaritalStatus("SINGLE")
@@ -88,6 +105,45 @@ class FinancialAssistanceDataTest {
 		assertThat(data.getHasAssets()).isFalse();
 		assertThat(data.getStaysInMunicipality()).isTrue();
 		assertThat(data.getStayDescription()).isEqualTo("Lives at the registered address");
+	}
+
+	@Test
+	void testBuilderMethods2() {
+		final var data = FinancialAssistanceData.create()
+			.withApplicationType("NEW")
+			.withMaritalStatus("SINGLE")
+			.withPeriodMonth(6)
+			.withPeriodYear(2026)
+			.withPeriodChoice("CURRENT_MONTH")
+			.withNormType(List.of("NATIONAL_NORM"))
+			.withOtherBenefitDescription("Establishment benefit")
+			.withLivelihoodDescription("Söker arbete")
+			.withHasChildrenUnder21(true)
+			.withChildrenResidenceChanged(false)
+			.withChildrenResidenceChangeDescription("Barnen bor växelvis")
+			.withHousingForm("RENTAL")
+			.withHousingPersonCount(3)
+			.withHousingRoomsPlusKitchen(3)
+			.withHousingDescription("Trerumslägenhet")
+			.withHousingChanged(false)
+			.withHousingChangeDescription("Flyttade i maj")
+			.withHasIncomes(true)
+			.withHasPendingBenefits(false)
+			.withHasAssets(false)
+			.withStaysInMunicipality(true)
+			.withStayDescription("Lives at the registered address")
+			.withAttestation(true)
+			.withAttestedAt(ATTESTED_AT)
+			.withChildren(CHILDREN)
+			.withCosts(COSTS)
+			.withIncomes(INCOMES)
+			.withPendingBenefits(PENDING_BENEFITS)
+			.withAssets(ASSETS)
+			.withPersons(PERSONS)
+			.withPlannings(PLANNINGS)
+			.withPlannedActivities(PLANNED_ACTIVITIES)
+			.withJobApplications(JOB_APPLICATIONS);
+
 		assertThat(data.getAttestation()).isTrue();
 		assertThat(data.getAttestedAt()).isEqualTo(ATTESTED_AT);
 		assertThat(data.getChildren()).isEqualTo(CHILDREN);
@@ -103,63 +159,8 @@ class FinancialAssistanceDataTest {
 	}
 
 	@Test
-	void settersWork() {
-		final var data = FinancialAssistanceData.create();
-		data.setApplicationType("RENEWAL");
-		data.setMaritalStatus("COHABITING");
-		data.setPeriodMonth(7);
-		data.setPeriodYear(2027);
-		data.setPeriodChoice("NEXT_MONTH");
-		data.setNormType(List.of("OTHER_NORM"));
-		data.setOtherBenefitDescription("desc");
-		data.setLivelihoodDescription("livelihood");
-		data.setHasChildrenUnder21(false);
-		data.setChildrenResidenceChanged(true);
-		data.setChildrenResidenceChangeDescription("change");
-		data.setHousingForm("SUBLET");
-		data.setHousingPersonCount(3);
-		data.setHousingRoomsPlusKitchen(2);
-		data.setHousingDescription("housing");
-		data.setHousingChanged(true);
-		data.setHousingChangeDescription("housingChange");
-		data.setHasIncomes(false);
-		data.setHasPendingBenefits(true);
-		data.setHasAssets(true);
-		data.setStaysInMunicipality(false);
-		data.setStayDescription("stay");
-		data.setAttestation(false);
-		data.setAttestedAt(ATTESTED_AT);
-		data.setChildren(CHILDREN);
-		data.setCosts(COSTS);
-		data.setIncomes(INCOMES);
-		data.setPendingBenefits(PENDING_BENEFITS);
-		data.setAssets(ASSETS);
-		data.setPersons(PERSONS);
-		data.setPlannings(PLANNINGS);
-		data.setPlannedActivities(PLANNED_ACTIVITIES);
-		data.setJobApplications(JOB_APPLICATIONS);
-
-		assertThat(data.getApplicationType()).isEqualTo("RENEWAL");
-		assertThat(data.getMaritalStatus()).isEqualTo("COHABITING");
-		assertThat(data.getHousingForm()).isEqualTo("SUBLET");
-		assertThat(data.getHasPendingBenefits()).isTrue();
-		assertThat(data.getJobApplications()).isEqualTo(JOB_APPLICATIONS);
-	}
-
-	@Test
-	void createReturnsBlankInstance() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(FinancialAssistanceData.create()).hasAllNullFieldsOrProperties();
 	}
 
-	@Test
-	void equalsAndHashCode() {
-		final var a = FinancialAssistanceData.create().withApplicationType("NEW").withPeriodMonth(6).withChildren(CHILDREN);
-		final var b = FinancialAssistanceData.create().withApplicationType("NEW").withPeriodMonth(6).withChildren(CHILDREN);
-		final var c = FinancialAssistanceData.create().withApplicationType("RENEWAL");
-
-		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
-		assertThat(a).isNotEqualTo(c);
-		assertThat(a).isNotEqualTo(null);
-		assertThat(a).isNotEqualTo("string");
-	}
 }

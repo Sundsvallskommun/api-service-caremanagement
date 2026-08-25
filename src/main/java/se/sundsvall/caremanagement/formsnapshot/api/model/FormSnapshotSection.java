@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.formsnapshot.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -23,7 +24,7 @@ public class FormSnapshotSection {
 	@Schema(description = "Whether the section was visible to the applicant", examples = "true")
 	private boolean visible;
 
-	@Schema(description = "The fields in the section, in render order")
+	@ArraySchema(arraySchema = @Schema(description = "The fields in the section, in render order"), schema = @Schema(implementation = FormSnapshotField.class))
 	private List<FormSnapshotField> fields;
 
 	public static FormSnapshotSection create() {

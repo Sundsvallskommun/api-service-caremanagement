@@ -50,7 +50,9 @@ class FinancialAidIntegrationTest {
 
 		assertThatThrownBy(() -> integration.getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, FROM_DATE, TO_DATE))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Error fetching financial-aid basis: 504 Gateway Timeout: upstream timeout");
 
 		verify(clientMock).getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, FROM_DATE, TO_DATE);
 	}
@@ -62,8 +64,28 @@ class FinancialAidIntegrationTest {
 
 		assertThatThrownBy(() -> integration.getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, FROM_DATE, TO_DATE))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("Error fetching financial-aid basis: RuntimeException");
 
 		verify(clientMock).getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, FROM_DATE, TO_DATE);
+	}
+
+	@Test
+	void transportFailureMessageIsNotLeakedIntoProblemDetail() {
+		// A transport failure embeds the request URL (carrying personalNumber) in its message — must be dropped.
+		final var leaky = "GET http://financial-aid/2281/financial-aid?personalNumber=200001012384&fromDate=2026-04-01 failed";
+		when(clientMock.getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, FROM_DATE, TO_DATE))
+			.thenThrow(new RuntimeException(leaky));
+
+		assertThatThrownBy(() -> integration.getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, FROM_DATE, TO_DATE))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.satisfies(detail -> {
+				assertThat(detail).doesNotContain(leaky);
+				assertThat(detail).doesNotContain(PERSONAL_NUMBER);
+				assertThat(detail).isEqualTo("Error fetching financial-aid basis: RuntimeException");
+			});
 	}
 }

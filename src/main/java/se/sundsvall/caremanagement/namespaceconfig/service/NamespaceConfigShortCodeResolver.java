@@ -15,15 +15,15 @@ import se.sundsvall.caremanagement.namespaceconfig.integration.db.model.Namespac
 @Component
 class NamespaceConfigShortCodeResolver implements ErrandNumberPrefixResolver {
 
-	private final NamespaceConfigRepository repository;
+	private final NamespaceConfigRepository namespaceConfigRepository;
 
-	NamespaceConfigShortCodeResolver(final NamespaceConfigRepository repository) {
-		this.repository = repository;
+	NamespaceConfigShortCodeResolver(final NamespaceConfigRepository namespaceConfigRepository) {
+		this.namespaceConfigRepository = namespaceConfigRepository;
 	}
 
 	@Override
 	public Optional<String> resolvePrefix(final String municipalityId, final String namespace) {
-		return repository.findByNamespaceAndMunicipalityId(namespace, municipalityId)
+		return namespaceConfigRepository.findByNamespaceAndMunicipalityId(namespace, municipalityId)
 			.map(NamespaceConfigEntity::getShortCode)
 			.filter(StringUtils::hasText);
 	}

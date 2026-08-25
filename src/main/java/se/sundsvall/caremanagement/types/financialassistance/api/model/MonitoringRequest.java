@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -11,10 +12,11 @@ import se.sundsvall.dept44.common.validators.annotation.OneOf;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 
 /**
- * Request to create or replace an EB monitoring on an errand. The same body is used for create (POST) and update (PUT);
+ * Request to create or replace a financial assistance monitoring on an errand. The same body is used for create (POST)
+ * and update (PUT);
  * the monitoring has no acknowledge lifecycle, so every mutable field is supplied each time.
  */
-@Schema(description = "Request to create or replace an EB monitoring on an errand.")
+@Schema(description = "Request to create or replace a financial assistance monitoring on an errand.")
 public class MonitoringRequest {
 
 	@Schema(description = "Provenance, defaults to CASEWORKER when omitted. RPA POSTs LIFECARE (with lifecareId) to surface a "
@@ -28,10 +30,12 @@ public class MonitoringRequest {
 
 	@Schema(description = "The monitoring's id in Lifecare. Set by RPA when surfacing a LIFECARE-sourced monitoring (the idempotency "
 		+ "key) or when stamping back the id of a mirrored caseworker monitoring.", examples = "987654")
+	@Size(max = 64)
 	private String lifecareId;
 
 	@Schema(description = "Short headline for the monitoring", examples = "Follow up income details from CSN", requiredMode = Schema.RequiredMode.REQUIRED)
 	@NotBlank
+	@Size(max = 255)
 	private String title;
 
 	@Schema(description = "Free-text details of what to watch for", examples = "Awaiting supplementary documentation before a decision can be made.")
@@ -47,6 +51,7 @@ public class MonitoringRequest {
 	private LocalDate endDate;
 
 	@Schema(description = "The caseworker who created the monitoring", examples = "joe01doe")
+	@Size(max = 64)
 	private String createdBy;
 
 	public static MonitoringRequest create() {

@@ -1,9 +1,13 @@
 package se.sundsvall.caremanagement.formsnapshot.service;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -14,6 +18,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -45,7 +50,7 @@ class FormSnapshotServiceTest {
 		when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(false);
 		when(repositoryMock.save(any(FormSnapshotEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, VALID_PAYLOAD);
+		service.saveErrandFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, VALID_PAYLOAD);
 
 		final ArgumentCaptor<FormSnapshotEntity> captor = ArgumentCaptor.forClass(FormSnapshotEntity.class);
 		verify(repositoryMock).save(captor.capture());
@@ -58,51 +63,34 @@ class FormSnapshotServiceTest {
 		assertThat(entity.getCreated()).isNotNull();
 	}
 
-	@Test
-	void captureRejectsBlankPayload() {
-		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "  "))
+	@ParameterizedTest(name = "rejects {2}")
+	@MethodSource
+	void captureRejects(final String payload, final boolean alreadyExists, final String expectedMessage) {
+		if (alreadyExists) {
+			when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(true);
+		}
+
+		assertThatThrownBy(() -> service.saveErrandFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, payload))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage(expectedMessage);
 		verify(repositoryMock, never()).save(any());
 	}
 
-	@Test
-	void captureRejectsWhenSnapshotAlreadyExists() {
-		when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(true);
-
-		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, VALID_PAYLOAD))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
-		verify(repositoryMock, never()).save(any());
-	}
-
-	@Test
-	void captureRejectsMalformedJson() {
-		when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(false);
-
-		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{not json"))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
-		verify(repositoryMock, never()).save(any());
-	}
-
-	@Test
-	void captureRejectsMissingSchemaVersion() {
-		when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(false);
-
-		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{\"sections\":[{\"id\":\"x\"}]}"))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
-		verify(repositoryMock, never()).save(any());
+	static Stream<Arguments> captureRejects() {
+		return Stream.of(
+			arguments("  ", false, "Bad Request: formSnapshot is blank"),
+			arguments("{not json", false, "Bad Request: formSnapshot is not valid JSON"),
+			arguments("{\"sections\":[{\"id\":\"x\"}]}", false, "Bad Request: formSnapshot.schemaVersion is required"),
+			arguments(VALID_PAYLOAD, true, "Bad Request: A form snapshot already exists on errand 'errand-1'"));
 	}
 
 	@Test
 	void captureRejectsEmptySections() {
-		when(repositoryMock.existsByErrandId(ERRAND_ID)).thenReturn(false);
-
-		assertThatThrownBy(() -> service.capture(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{\"schemaVersion\":\"form-snapshot/1\",\"sections\":[]}"))
+		assertThatThrownBy(() -> service.saveErrandFormSnapshot(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, SLUG, "{\"schemaVersion\":\"form-snapshot/1\",\"sections\":[]}"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: formSnapshot.sections must not be empty");
 		verify(repositoryMock, never()).save(any());
 	}
 
@@ -111,7 +99,7 @@ class FormSnapshotServiceTest {
 		when(repositoryMock.findByErrandId(ERRAND_ID))
 			.thenReturn(Optional.of(FormSnapshotEntity.create().withErrandId(ERRAND_ID).withPayload(VALID_PAYLOAD)));
 
-		final var snapshot = service.read(ERRAND_ID);
+		final var snapshot = service.readErrandFormSnapshot(ERRAND_ID);
 
 		assertThat(snapshot.getSchemaVersion()).isEqualTo("form-snapshot/1");
 		assertThat(snapshot.getTitle()).isEqualTo("Ansökan");
@@ -123,8 +111,9 @@ class FormSnapshotServiceTest {
 	void readThrowsNotFoundWhenMissing() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.read(ERRAND_ID))
+		assertThatThrownBy(() -> service.readErrandFormSnapshot(ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No form snapshot for errand 'errand-1'");
 	}
 }

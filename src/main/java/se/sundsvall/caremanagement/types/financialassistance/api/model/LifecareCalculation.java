@@ -2,14 +2,15 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * A Lifecare normberäkning with the full breakdown — sums, household members, incomes and expenses — the read model the
+ * A Lifecare calculation with the full breakdown — sums, household members, incomes and expenses — the read model the
  * frontend renders so a caseworker can review the calculation behind a decision.
  */
-@Schema(description = "A Lifecare normberäkning, full breakdown.")
+@Schema(description = "A Lifecare calculation, full breakdown.")
 public class LifecareCalculation {
 
 	@Schema(description = "The Lifecare calculation id", examples = "7001")
@@ -25,28 +26,28 @@ public class LifecareCalculation {
 	private String toDate;
 
 	@Schema(description = "The sum of all incomes", examples = "12000.0")
-	private Double incomeSum;
+	private BigDecimal incomeSum;
 
 	@Schema(description = "The sum of all regular expenses", examples = "9500.0")
-	private Double expenseSum;
+	private BigDecimal expenseSum;
 
 	@Schema(description = "The sum of all special expenses", examples = "500.0")
-	private Double specialExpenseSum;
+	private BigDecimal specialExpenseSum;
 
 	@Schema(description = "The sum of the norm", examples = "10500.0")
-	private Double normSum;
+	private BigDecimal normSum;
 
 	@Schema(description = "The common household cost", examples = "1200.0")
-	private Double commonHouseholdCost;
+	private BigDecimal commonHouseholdCost;
 
 	@Schema(description = "The family cost", examples = "800.0")
-	private Double familyCost;
+	private BigDecimal familyCost;
 
 	@Schema(description = "The balance of the calculation", examples = "-2000.0")
-	private Double balance;
+	private BigDecimal balance;
 
 	@Schema(description = "The total sum of the calculation", examples = "8500.0")
-	private Double totalSum;
+	private BigDecimal totalSum;
 
 	@Schema(description = "Whether the calculation is final", examples = "true")
 	private Boolean isFinal;
@@ -119,106 +120,106 @@ public class LifecareCalculation {
 		return this;
 	}
 
-	public Double getIncomeSum() {
+	public BigDecimal getIncomeSum() {
 		return incomeSum;
 	}
 
-	public void setIncomeSum(final Double incomeSum) {
+	public void setIncomeSum(final BigDecimal incomeSum) {
 		this.incomeSum = incomeSum;
 	}
 
-	public LifecareCalculation withIncomeSum(final Double incomeSum) {
+	public LifecareCalculation withIncomeSum(final BigDecimal incomeSum) {
 		this.incomeSum = incomeSum;
 		return this;
 	}
 
-	public Double getExpenseSum() {
+	public BigDecimal getExpenseSum() {
 		return expenseSum;
 	}
 
-	public void setExpenseSum(final Double expenseSum) {
+	public void setExpenseSum(final BigDecimal expenseSum) {
 		this.expenseSum = expenseSum;
 	}
 
-	public LifecareCalculation withExpenseSum(final Double expenseSum) {
+	public LifecareCalculation withExpenseSum(final BigDecimal expenseSum) {
 		this.expenseSum = expenseSum;
 		return this;
 	}
 
-	public Double getSpecialExpenseSum() {
+	public BigDecimal getSpecialExpenseSum() {
 		return specialExpenseSum;
 	}
 
-	public void setSpecialExpenseSum(final Double specialExpenseSum) {
+	public void setSpecialExpenseSum(final BigDecimal specialExpenseSum) {
 		this.specialExpenseSum = specialExpenseSum;
 	}
 
-	public LifecareCalculation withSpecialExpenseSum(final Double specialExpenseSum) {
+	public LifecareCalculation withSpecialExpenseSum(final BigDecimal specialExpenseSum) {
 		this.specialExpenseSum = specialExpenseSum;
 		return this;
 	}
 
-	public Double getNormSum() {
+	public BigDecimal getNormSum() {
 		return normSum;
 	}
 
-	public void setNormSum(final Double normSum) {
+	public void setNormSum(final BigDecimal normSum) {
 		this.normSum = normSum;
 	}
 
-	public LifecareCalculation withNormSum(final Double normSum) {
+	public LifecareCalculation withNormSum(final BigDecimal normSum) {
 		this.normSum = normSum;
 		return this;
 	}
 
-	public Double getCommonHouseholdCost() {
+	public BigDecimal getCommonHouseholdCost() {
 		return commonHouseholdCost;
 	}
 
-	public void setCommonHouseholdCost(final Double commonHouseholdCost) {
+	public void setCommonHouseholdCost(final BigDecimal commonHouseholdCost) {
 		this.commonHouseholdCost = commonHouseholdCost;
 	}
 
-	public LifecareCalculation withCommonHouseholdCost(final Double commonHouseholdCost) {
+	public LifecareCalculation withCommonHouseholdCost(final BigDecimal commonHouseholdCost) {
 		this.commonHouseholdCost = commonHouseholdCost;
 		return this;
 	}
 
-	public Double getFamilyCost() {
+	public BigDecimal getFamilyCost() {
 		return familyCost;
 	}
 
-	public void setFamilyCost(final Double familyCost) {
+	public void setFamilyCost(final BigDecimal familyCost) {
 		this.familyCost = familyCost;
 	}
 
-	public LifecareCalculation withFamilyCost(final Double familyCost) {
+	public LifecareCalculation withFamilyCost(final BigDecimal familyCost) {
 		this.familyCost = familyCost;
 		return this;
 	}
 
-	public Double getBalance() {
+	public BigDecimal getBalance() {
 		return balance;
 	}
 
-	public void setBalance(final Double balance) {
+	public void setBalance(final BigDecimal balance) {
 		this.balance = balance;
 	}
 
-	public LifecareCalculation withBalance(final Double balance) {
+	public LifecareCalculation withBalance(final BigDecimal balance) {
 		this.balance = balance;
 		return this;
 	}
 
-	public Double getTotalSum() {
+	public BigDecimal getTotalSum() {
 		return totalSum;
 	}
 
-	public void setTotalSum(final Double totalSum) {
+	public void setTotalSum(final BigDecimal totalSum) {
 		this.totalSum = totalSum;
 	}
 
-	public LifecareCalculation withTotalSum(final Double totalSum) {
+	public LifecareCalculation withTotalSum(final BigDecimal totalSum) {
 		this.totalSum = totalSum;
 		return this;
 	}

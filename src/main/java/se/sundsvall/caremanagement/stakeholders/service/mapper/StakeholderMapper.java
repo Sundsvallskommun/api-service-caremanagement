@@ -82,9 +82,4 @@ public final class StakeholderMapper {
 			.toList();
 	}
 
-	public static List<StakeholderEntity> toStakeholderEntityList(final List<Stakeholder> stakeholders, final String errandId) {
-		return ofNullable(stakeholders).orElse(emptyList()).stream()
-			.map(stakeholder -> toStakeholderEntity(stakeholder, errandId))
-			.toList();
-	}
 }

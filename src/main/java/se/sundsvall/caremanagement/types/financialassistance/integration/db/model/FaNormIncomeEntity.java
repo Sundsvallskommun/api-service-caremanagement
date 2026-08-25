@@ -9,6 +9,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
@@ -17,13 +18,12 @@ import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * One income row of the calculation draft — one FC income type, with a applicant (applicant, "S") side and a
- * co-applicant
- * (co-applicant, "M") side, mirroring the Lifecare INCOMES tab and FC {@code CalculationIncomes}. Each side keeps the
- * amount the process decided (from the classified SSBTEK income, written only by the daily prepare) separate from the
- * amount a caseworker decided (written only from Draken); the effective amount per side is the caseworker amount when
- * set, otherwise the process amount. A row can be soft-deleted and is then excluded but never resurrected by the daily
- * refresh. Subtracted from the norm.
+ * One income row of the calculation draft — one FamilyCare income type, with a applicant (applicant, "S") side and a
+ * co-applicant (co-applicant, "M") side, mirroring the Lifecare INCOMES tab and FamilyCare {@code CalculationIncomes}.
+ * Each side keeps the amount the process decided (from the classified SSBTEK income, written only by the daily prepare)
+ * separate from the amount a caseworker decided (written only from Draken); the effective amount per side is the
+ * caseworker amount when set, otherwise the process amount. A row can be soft-deleted and is then excluded but never
+ * resurrected by the daily refresh. Subtracted from the norm.
  */
 @Entity
 @Table(name = "errand_fa_norm_income", indexes = {
@@ -91,14 +91,14 @@ public class FaNormIncomeEntity {
 
 	@PrePersist
 	void prePersist() {
-		final var now = OffsetDateTime.now();
+		final var now = OffsetDateTime.now(ZoneId.systemDefault());
 		created = now;
 		updated = now;
 	}
 
 	@PreUpdate
 	void preUpdate() {
-		updated = OffsetDateTime.now();
+		updated = OffsetDateTime.now(ZoneId.systemDefault());
 	}
 
 	public String getId() {
@@ -309,6 +309,8 @@ public class FaNormIncomeEntity {
 		return this;
 	}
 
+	// 'note' (a LONG32 column) is deliberately excluded from equals/hashCode/toString — it can be large and is not part of
+	// the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -320,13 +322,13 @@ public class FaNormIncomeEntity {
 			&& Objects.equals(applicantProcessAmount, that.applicantProcessAmount) && Objects.equals(applicantCaseworkerAmount, that.applicantCaseworkerAmount)
 			&& Objects.equals(applicantAmountDate, that.applicantAmountDate) && Objects.equals(coapplicantProcessAmount, that.coapplicantProcessAmount)
 			&& Objects.equals(coapplicantCaseworkerAmount, that.coapplicantCaseworkerAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate)
-			&& Objects.equals(note, that.note) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
+			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, origin, position, typeId, typeName, applicantProcessAmount, applicantCaseworkerAmount, applicantAmountDate,
-			coapplicantProcessAmount, coapplicantCaseworkerAmount, coapplicantAmountDate, deleted, note, created, updated);
+			coapplicantProcessAmount, coapplicantCaseworkerAmount, coapplicantAmountDate, deleted, created, updated);
 	}
 
 	@Override
@@ -345,7 +347,6 @@ public class FaNormIncomeEntity {
 			", coapplicantCaseworkerAmount=" + coapplicantCaseworkerAmount +
 			", coapplicantAmountDate=" + coapplicantAmountDate +
 			", deleted=" + deleted +
-			", note='" + note + '\'' +
 			", created=" + created +
 			", updated=" + updated +
 			'}';

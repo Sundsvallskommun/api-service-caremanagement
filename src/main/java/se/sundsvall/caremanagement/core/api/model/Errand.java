@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.core.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Null;
+import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -24,45 +25,59 @@ public class Errand {
 	private String id;
 
 	@Schema(description = "Municipality id", examples = "2281", accessMode = READ_ONLY)
+	@Null(groups = OnCreate.class)
 	private String municipalityId;
 
 	@Schema(description = "Namespace", examples = "MY_NAMESPACE", accessMode = READ_ONLY)
+	@Null(groups = OnCreate.class)
 	private String namespace;
 
 	@Schema(description = "Human-readable errand number", examples = "EB-26060071", accessMode = READ_ONLY)
 	@Null(groups = OnCreate.class)
 	private String errandNumber;
 
-	@Schema(description = "Registered errand type slug — validated against ErrandTypeRegistry", examples = "case-type-slug")
+	@Schema(description = "Errand type slug. Types whose module owns a dedicated create endpoint (e.g. financial-assistance) are rejected on this generic endpoint and must be created through that endpoint; any other slug is accepted as-is.",
+		examples = "case-type-slug")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 64)
 	private String typeSlug;
 
 	@Schema(description = "Title for the errand", examples = "Title of the errand")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 255)
 	private String title;
 
 	@Schema(description = "Status of the errand", examples = "NEW")
+	@Size(max = 64)
 	private String status;
 
 	@Schema(description = "Description of the errand", examples = "Long description text")
 	private String description;
 
 	@Schema(description = "Priority of the errand", examples = "HIGH")
+	@Size(max = 16)
 	private String priority;
 
 	@Schema(description = "User id of the reporter", examples = "joe01doe")
+	@Size(max = 64)
 	private String reporterUserId;
 
 	@Schema(description = "User id of the assignee", examples = "jane02doe")
+	@Size(max = 64)
 	private String assignedUserId;
 
-	@Schema(description = "Denormalized display name of the errand's applicant, maintained from the APPLICANT stakeholder. "
-		+ "Sortable and searchable on the errand list (e.g. ?sort=applicantName,asc). Null for errand types with no applicant.",
+	@Schema(description = """
+		Denormalized display name of the errand's applicant, maintained from the APPLICANT stakeholder. \
+		Sortable and searchable on the errand list (e.g. ?sort=applicantName,asc). Null for errand types with no applicant.""",
 		examples = "Anna Andersson",
 		accessMode = READ_ONLY)
+	@Null(groups = OnCreate.class)
 	private String applicantName;
 
-	@Schema(description = "Name of the Operaton process definition to start when the errand is created", examples = "Handläggning av ärende")
+	@Schema(
+		description = "Name of the Operaton process definition associated with the errand. Recorded on the errand; the core create endpoint does not itself start a process — process start, when applicable, is handled per errand type by a type module reacting to the errand-created domain event.",
+		examples = "Handläggning av ärende")
+	@Size(max = 128)
 	private String processDefinitionName;
 
 	@Schema(description = "Id of the Operaton process instance started for this errand", examples = "a-process-instance-id", accessMode = READ_ONLY)
@@ -71,14 +86,17 @@ public class Errand {
 
 	@Schema(description = "Created timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
+	@Null(groups = OnCreate.class)
 	private OffsetDateTime created;
 
 	@Schema(description = "Modified timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
+	@Null(groups = OnCreate.class)
 	private OffsetDateTime modified;
 
 	@Schema(description = "Touched timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
+	@Null(groups = OnCreate.class)
 	private OffsetDateTime touched;
 
 	public static Errand create() {
@@ -153,72 +171,72 @@ public class Errand {
 		return touched;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setMunicipalityId(final String v) {
-		this.municipalityId = v;
+	public void setMunicipalityId(final String municipalityId) {
+		this.municipalityId = municipalityId;
 	}
 
-	public void setNamespace(final String v) {
-		this.namespace = v;
+	public void setNamespace(final String namespace) {
+		this.namespace = namespace;
 	}
 
-	public void setErrandNumber(final String v) {
-		this.errandNumber = v;
+	public void setErrandNumber(final String errandNumber) {
+		this.errandNumber = errandNumber;
 	}
 
-	public void setTypeSlug(final String v) {
-		this.typeSlug = v;
+	public void setTypeSlug(final String typeSlug) {
+		this.typeSlug = typeSlug;
 	}
 
-	public void setTitle(final String v) {
-		this.title = v;
+	public void setTitle(final String title) {
+		this.title = title;
 	}
 
-	public void setStatus(final String v) {
-		this.status = v;
+	public void setStatus(final String status) {
+		this.status = status;
 	}
 
-	public void setDescription(final String v) {
-		this.description = v;
+	public void setDescription(final String description) {
+		this.description = description;
 	}
 
-	public void setPriority(final String v) {
-		this.priority = v;
+	public void setPriority(final String priority) {
+		this.priority = priority;
 	}
 
-	public void setReporterUserId(final String v) {
-		this.reporterUserId = v;
+	public void setReporterUserId(final String reporterUserId) {
+		this.reporterUserId = reporterUserId;
 	}
 
-	public void setAssignedUserId(final String v) {
-		this.assignedUserId = v;
+	public void setAssignedUserId(final String assignedUserId) {
+		this.assignedUserId = assignedUserId;
 	}
 
-	public void setApplicantName(final String v) {
-		this.applicantName = v;
+	public void setApplicantName(final String applicantName) {
+		this.applicantName = applicantName;
 	}
 
-	public void setProcessDefinitionName(final String v) {
-		this.processDefinitionName = v;
+	public void setProcessDefinitionName(final String processDefinitionName) {
+		this.processDefinitionName = processDefinitionName;
 	}
 
-	public void setProcessInstanceId(final String v) {
-		this.processInstanceId = v;
+	public void setProcessInstanceId(final String processInstanceId) {
+		this.processInstanceId = processInstanceId;
 	}
 
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
 	}
 
-	public void setModified(final OffsetDateTime v) {
-		this.modified = v;
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
 	}
 
-	public void setTouched(final OffsetDateTime v) {
-		this.touched = v;
+	public void setTouched(final OffsetDateTime touched) {
+		this.touched = touched;
 	}
 
 	public Errand withId(final String id) {

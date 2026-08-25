@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -49,16 +50,16 @@ public class CalculationDraft {
 	@Schema(description = "The household size used for the norm", examples = "3")
 	private Integer householdSize;
 
-	@Schema(description = "The person rows (persons)")
+	@ArraySchema(arraySchema = @Schema(description = "The person rows (persons)"), schema = @Schema(implementation = NormPersonRow.class))
 	private List<NormPersonRow> persons = new ArrayList<>();
 
-	@Schema(description = "The income rows (incomes)")
+	@ArraySchema(arraySchema = @Schema(description = "The income rows (incomes)"), schema = @Schema(implementation = NormIncomeRow.class))
 	private List<NormIncomeRow> incomes = new ArrayList<>();
 
-	@Schema(description = "The expense rows (expenses)")
+	@ArraySchema(arraySchema = @Schema(description = "The expense rows (expenses)"), schema = @Schema(implementation = NormExpenseRow.class))
 	private List<NormExpenseRow> expenses = new ArrayList<>();
 
-	@Schema(description = "The special expense rows")
+	@ArraySchema(arraySchema = @Schema(description = "The special expense rows"), schema = @Schema(implementation = NormExpenseRow.class))
 	private List<NormExpenseRow> specialExpenses = new ArrayList<>();
 
 	@Schema(description = "The sum of the effective income amounts", accessMode = Schema.AccessMode.READ_ONLY)

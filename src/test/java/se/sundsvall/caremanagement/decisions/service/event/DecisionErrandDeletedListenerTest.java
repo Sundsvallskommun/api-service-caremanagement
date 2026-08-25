@@ -24,7 +24,7 @@ class DecisionErrandDeletedListenerTest {
 
 	@Test
 	void deletesAllDecisionsForErrand() {
-		listener.on(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", FIXED_TIMESTAMP));
+		listener.deleteDecisionsForErrand(new ErrandDeleted("e1", "type", "2281", "MY_NAMESPACE", "user", FIXED_TIMESTAMP));
 
 		verify(repositoryMock).deleteByErrandId("e1");
 		verifyNoMoreInteractions(repositoryMock);

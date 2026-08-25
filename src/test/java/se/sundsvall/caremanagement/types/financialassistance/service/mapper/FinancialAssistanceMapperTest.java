@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.core.api.model.Errand;
@@ -43,10 +44,9 @@ class FinancialAssistanceMapperTest {
 	@Test
 	void toEntityMapsEverything() {
 		final var data = fullData();
-
 		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
 
-		assertThat(entity).isNotNull();
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("lastDailyRunAt", "created", "modified");
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
 		assertThat(entity.getApplicationType()).isEqualTo("NEW");
 		assertThat(entity.getMaritalStatus()).isEqualTo("SINGLE");
@@ -68,11 +68,17 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getHasIncomes()).isTrue();
 		assertThat(entity.getHasPendingBenefits()).isTrue();
 		assertThat(entity.getHasAssets()).isTrue();
+	}
+
+	@Test
+	void toEntityMapsEverything2() {
+		final var data = fullData();
+		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
+
 		assertThat(entity.getStaysInMunicipality()).isTrue();
 		assertThat(entity.getStayDescription()).isEqualTo("Lives at the registered address");
 		assertThat(entity.getAttestation()).isTrue();
 		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);
-
 		assertThat(entity.getChildren()).hasSize(1);
 		assertThat(entity.getChildren().getFirst().getPartyId()).isEqualTo("20180101-1234");
 		assertThat(entity.getChildren().getFirst().getFirstName()).isEqualTo("Kid");
@@ -80,24 +86,27 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getChildren().getFirst().getSchoolName()).isEqualTo("Skolan");
 		assertThat(entity.getChildren().getFirst().getResidenceExtent()).isEqualTo("FULL");
 		assertThat(entity.getChildren().getFirst().getDaysInHome()).isEqualTo(30);
-
 		assertThat(entity.getCosts()).hasSize(1);
 		assertThat(entity.getCosts().getFirst().getCostType()).isEqualTo("RENT");
 		assertThat(entity.getCosts().getFirst().getAppliedAmount()).isEqualByComparingTo("5000.00");
 		assertThat(entity.getCosts().getFirst().getOtherSubType()).isEqualTo("OTHER_SUB");
 		assertThat(entity.getCosts().getFirst().getSpecification()).isEqualTo("Spec");
 		assertThat(entity.getCosts().getFirst().getRecipientOrPeriod()).isEqualTo("Juni");
-
 		assertThat(entity.getIncomes()).hasSize(1);
 		assertThat(entity.getIncomes().getFirst().getIncomeType()).isEqualTo("SALARY");
 		assertThat(entity.getIncomes().getFirst().getAmount()).isEqualByComparingTo("12000.00");
 		assertThat(entity.getIncomes().getFirst().getIncomeDate()).isEqualTo(DATE);
 		assertThat(entity.getIncomes().getFirst().getRecipient()).isEqualTo("Anna");
+	}
+
+	@Test
+	void toEntityMapsEverything3() {
+		final var data = fullData();
+		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
 
 		assertThat(entity.getPendingBenefits()).hasSize(1);
 		assertThat(entity.getPendingBenefits().getFirst().getBenefitName()).isEqualTo("BOSTADSBIDRAG");
 		assertThat(entity.getPendingBenefits().getFirst().getApplicantName()).isEqualTo("Anna");
-
 		assertThat(entity.getAssets()).hasSize(1);
 		assertThat(entity.getAssets().getFirst().getAssetCategory()).isEqualTo("VEHICLE");
 		assertThat(entity.getAssets().getFirst().getDescription()).isEqualTo("Bil");
@@ -110,7 +119,6 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getAssets().getFirst().getVehicleType()).isEqualTo("CAR");
 		assertThat(entity.getAssets().getFirst().getRegistrationNumber()).isEqualTo("ABC123");
 		assertThat(entity.getAssets().getFirst().getPurchaseDate()).isEqualTo(DATE);
-
 		assertThat(entity.getPersons()).hasSize(1);
 		assertThat(entity.getPersons().getFirst().getRole()).isEqualTo("APPLICANT");
 		assertThat(entity.getPersons().getFirst().getPartyId()).isEqualTo("19900101-1234");
@@ -118,6 +126,13 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getPersons().getFirst().getInterpreterLanguage()).isEqualTo("Arabiska");
 		assertThat(entity.getPersons().getFirst().getHadWorkLast12Months()).isFalse();
 		assertThat(entity.getPersons().getFirst().getHadWorkDescription()).isEqualTo("Inget arbete");
+	}
+
+	@Test
+	void toEntityMapsEverything4() {
+		final var data = fullData();
+		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
+
 		assertThat(entity.getPersons().getFirst().getPaymentMethod()).isEqualTo("BANK");
 		assertThat(entity.getPersons().getFirst().getClearingNumber()).isEqualTo("1234");
 		assertThat(entity.getPersons().getFirst().getAccountNumber()).isEqualTo("567890");
@@ -127,7 +142,6 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getPersons().getFirst().getPhone()).isEqualTo("+46701234567");
 		assertThat(entity.getPersons().getFirst().getNotifyByEmail()).isTrue();
 		assertThat(entity.getPersons().getFirst().getNotifyBySms()).isFalse();
-
 		assertThat(entity.getPlannings()).hasSize(1);
 		assertThat(entity.getPlannings().getFirst().getPerson()).isEqualTo("Anna");
 		assertThat(entity.getPlannings().getFirst().getPlanningType()).isEqualTo("WORK");
@@ -137,13 +151,18 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getPlannings().getFirst().getSfiStudyPath()).isEqualTo("PATH_1");
 		assertThat(entity.getPlannings().getFirst().getSfiCourse()).isEqualTo("KURS_A");
 		assertThat(entity.getPlannings().getFirst().getOtherDescription()).isEqualTo("Other");
-
 		assertThat(entity.getPlannedActivities()).hasSize(1);
 		assertThat(entity.getPlannedActivities().getFirst().getPerson()).isEqualTo("Anna");
 		assertThat(entity.getPlannedActivities().getFirst().getActivity()).isEqualTo("Jobbsökning");
 		assertThat(entity.getPlannedActivities().getFirst().getPeriodFrom()).isEqualTo(DATE);
-		assertThat(entity.getPlannedActivities().getFirst().getPeriodTo()).isEqualTo(DATE.plusMonths(1));
+	}
 
+	@Test
+	void toEntityMapsEverything5() {
+		final var data = fullData();
+		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
+
+		assertThat(entity.getPlannedActivities().getFirst().getPeriodTo()).isEqualTo(DATE.plusMonths(1));
 		assertThat(entity.getJobApplications()).hasSize(1);
 		assertThat(entity.getJobApplications().getFirst().getPerson()).isEqualTo("Anna");
 		assertThat(entity.getJobApplications().getFirst().getApplicationDate()).isEqualTo(DATE);
@@ -152,12 +171,90 @@ class FinancialAssistanceMapperTest {
 	}
 
 	@Test
+	void updateEntityAppliesClientFieldsAndKeepsServerOwned() {
+		final var entity = FinancialAssistanceEntity.create()
+			.withErrandId("errand-1")
+			.withApplicationType("RENEWAL")
+			.withMaritalStatus("MARRIED")
+			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withCreated(CREATED)
+			.withModified(MODIFIED);
+
+		final var result = FinancialAssistanceMapper.updateEntity(entity, fullData());
+
+		assertThat(result).isSameAs(entity);
+		// server-owned fields untouched (fullData carries applicationType NEW — must be ignored)
+		assertThat(result.getErrandId()).isEqualTo("errand-1");
+		assertThat(result.getApplicationType()).isEqualTo("RENEWAL");
+		assertThat(result.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
+		assertThat(result.getCreated()).isEqualTo(CREATED);
+		assertThat(result.getModified()).isEqualTo(MODIFIED);
+		// client fields replaced
+		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getMaritalStatus()).isEqualTo("SINGLE");
+		assertThat(result.getPeriodMonth()).isEqualTo(6);
+		assertThat(result.getPeriodYear()).isEqualTo(2026);
+		assertThat(result.getPeriodChoice()).isEqualTo("CURRENT_MONTH");
+		assertThat(result.getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
+		assertThat(result.getOtherBenefitDescription()).isEqualTo("Establishment benefit");
+		assertThat(result.getLivelihoodDescription()).isEqualTo("Söker arbete");
+		assertThat(result.getHasChildrenUnder21()).isTrue();
+		assertThat(result.getChildrenResidenceChanged()).isFalse();
+		assertThat(result.getChildrenResidenceChangeDescription()).isEqualTo("Bor växelvis");
+		assertThat(result.getHousingForm()).isEqualTo("RENTAL");
+		assertThat(result.getHousingPersonCount()).isEqualTo(3);
+		assertThat(result.getHousingRoomsPlusKitchen()).isEqualTo(3);
+		assertThat(result.getHousingDescription()).isEqualTo("Trerumslägenhet");
+		assertThat(result.getHousingChanged()).isFalse();
+		assertThat(result.getHousingChangeDescription()).isEqualTo("Flyttade i maj");
+		assertThat(result.getHasIncomes()).isTrue();
+		assertThat(result.getHasPendingBenefits()).isTrue();
+		assertThat(result.getHasAssets()).isTrue();
+		assertThat(result.getStaysInMunicipality()).isTrue();
+		assertThat(result.getStayDescription()).isEqualTo("Lives at the registered address");
+		assertThat(result.getAttestation()).isTrue();
+		assertThat(result.getAttestedAt()).isEqualTo(ATTESTED_AT);
+		assertThat(result.getChildren()).hasSize(1);
+		assertThat(result.getCosts()).hasSize(1);
+		assertThat(result.getIncomes()).hasSize(1);
+		assertThat(result.getPendingBenefits()).hasSize(1);
+		assertThat(result.getAssets()).hasSize(1);
+		assertThat(result.getPersons()).hasSize(1);
+		assertThat(result.getPlannings()).hasSize(1);
+		assertThat(result.getPlannedActivities()).hasSize(1);
+		assertThat(result.getJobApplications()).hasSize(1);
+	}
+
+	@Test
+	void updateEntityLeavesEverythingUntouchedWhenSourceIsEmpty() {
+		final var entity = FinancialAssistanceMapper.toEntity(fullData(), "errand-1")
+			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withCreated(CREATED)
+			.withModified(MODIFIED);
+		final var expected = FinancialAssistanceMapper.toEntity(fullData(), "errand-1")
+			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withCreated(CREATED)
+			.withModified(MODIFIED);
+
+		final var result = FinancialAssistanceMapper.updateEntity(entity, FinancialAssistanceData.create());
+
+		assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+	}
+
+	@Test
+	void updateEntityNullSafe() {
+		final var entity = FinancialAssistanceEntity.create().withErrandId("errand-1");
+
+		assertThat(FinancialAssistanceMapper.updateEntity(null, fullData())).isNull();
+		assertThat(FinancialAssistanceMapper.updateEntity(entity, null)).isSameAs(entity);
+	}
+
+	@Test
 	void toDataMapsEverything() {
 		final var entity = fullEntity();
-
 		final var data = FinancialAssistanceMapper.toData(entity);
 
-		assertThat(data).isNotNull();
+		assertThat(data).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(data.getApplicationType()).isEqualTo("RENEWAL");
 		assertThat(data.getMaritalStatus()).isEqualTo("COHABITING");
 		assertThat(data.getPeriodMonth()).isEqualTo(7);
@@ -179,10 +276,16 @@ class FinancialAssistanceMapperTest {
 		assertThat(data.getHasPendingBenefits()).isFalse();
 		assertThat(data.getHasAssets()).isFalse();
 		assertThat(data.getStaysInMunicipality()).isFalse();
+	}
+
+	@Test
+	void toDataMapsEverything2() {
+		final var entity = fullEntity();
+		final var data = FinancialAssistanceMapper.toData(entity);
+
 		assertThat(data.getStayDescription()).isEqualTo("Bor utomlands");
 		assertThat(data.getAttestation()).isFalse();
 		assertThat(data.getAttestedAt()).isEqualTo(ATTESTED_AT);
-
 		assertThat(data.getChildren()).hasSize(1);
 		assertThat(data.getChildren().getFirst().getFirstName()).isEqualTo("Kid");
 		assertThat(data.getCosts()).hasSize(1);
@@ -202,6 +305,13 @@ class FinancialAssistanceMapperTest {
 		assertThat(data.getPlannings()).hasSize(1);
 		assertThat(data.getPlannings().getFirst().getPlanningType()).isEqualTo("WORK");
 		assertThat(data.getPlannedActivities()).hasSize(1);
+	}
+
+	@Test
+	void toDataMapsEverything3() {
+		final var entity = fullEntity();
+		final var data = FinancialAssistanceMapper.toData(entity);
+
 		assertThat(data.getPlannedActivities().getFirst().getActivity()).isEqualTo("Jobbsökning");
 		assertThat(data.getJobApplications()).hasSize(1);
 		assertThat(data.getJobApplications().getFirst().getJobTitle()).isEqualTo("Snickare");
@@ -228,7 +338,7 @@ class FinancialAssistanceMapperTest {
 
 		final var view = FinancialAssistanceMapper.toView(envelope, entity);
 
-		assertThat(view).isNotNull();
+		assertThat(view).isNotNull().hasNoNullFieldsOrPropertiesExcept("applicantName", "recommendation", "sectionApprovals");
 		assertThat(view.getId()).isEqualTo("errand-1");
 		assertThat(view.getErrandNumber()).isEqualTo("EB-26060042");
 		assertThat(view.getMunicipalityId()).isEqualTo("2281");
@@ -244,7 +354,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(view.getModified()).isEqualTo(MODIFIED);
 		assertThat(view.getTouched()).isEqualTo(TOUCHED);
 		assertThat(view.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
-		assertThat(view.getData()).isNotNull();
+		assertThat(view.getData()).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(view.getData().getApplicationType()).isEqualTo("RENEWAL");
 	}
 
@@ -261,10 +371,49 @@ class FinancialAssistanceMapperTest {
 	}
 
 	@Test
+	void collectionElementMappersAreNullSafe() {
+		final var data = FinancialAssistanceData.create()
+			.withChildren(Arrays.asList(Child.create().withPartyId("child-1"), null))
+			.withCosts(Arrays.asList(Cost.create().withCostType("RENT"), null))
+			.withIncomes(Arrays.asList(Income.create().withIncomeType("SALARY"), null))
+			.withPendingBenefits(Arrays.asList(PendingBenefit.create().withBenefitName("BOSTADSBIDRAG"), null))
+			.withAssets(Arrays.asList(Asset.create().withAssetCategory("VEHICLE"), null))
+			.withPersons(Arrays.asList(Person.create().withRole("APPLICANT"), null))
+			.withPlannings(Arrays.asList(Planning.create().withPlanningType("WORK"), null))
+			.withPlannedActivities(Arrays.asList(PlannedActivity.create().withActivity("Jobbsökning"), null))
+			.withJobApplications(Arrays.asList(JobApplication.create().withJobTitle("Snickare"), null));
+
+		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
+
+		assertThat(entity.getChildren()).hasSize(1);
+		assertThat(entity.getCosts()).hasSize(1);
+		assertThat(entity.getIncomes()).hasSize(1);
+		assertThat(entity.getPendingBenefits()).hasSize(1);
+		assertThat(entity.getAssets()).hasSize(1);
+		assertThat(entity.getPersons()).hasSize(1);
+		assertThat(entity.getPlannings()).hasSize(1);
+		assertThat(entity.getPlannedActivities()).hasSize(1);
+		assertThat(entity.getJobApplications()).hasSize(1);
+
+		final var roundTripped = FinancialAssistanceMapper.toData(entity);
+
+		assertThat(roundTripped.getChildren()).hasSize(1);
+		assertThat(roundTripped.getCosts()).hasSize(1);
+		assertThat(roundTripped.getIncomes()).hasSize(1);
+		assertThat(roundTripped.getPendingBenefits()).hasSize(1);
+		assertThat(roundTripped.getAssets()).hasSize(1);
+		assertThat(roundTripped.getPersons()).hasSize(1);
+		assertThat(roundTripped.getPlannings()).hasSize(1);
+		assertThat(roundTripped.getPlannedActivities()).hasSize(1);
+		assertThat(roundTripped.getJobApplications()).hasSize(1);
+	}
+
+	@Test
 	void toStakeholdersMapsRolePartyIdAndContactChannels() {
-		final var persons = List.of(
+		final var persons = Arrays.asList(
 			Person.create().withRole("APPLICANT").withPartyId("pid-1").withEmail("a@b.se").withPhone("070"),
 			Person.create().withRole("CO_APPLICANT").withPartyId("pid-2"),
+			null,
 			Person.create().withPartyId("pid-3")); // no role → filtered out
 
 		final var result = FinancialAssistanceMapper.toStakeholders(persons);
@@ -284,6 +433,7 @@ class FinancialAssistanceMapperTest {
 	@Test
 	void toStakeholdersNullSafe() {
 		assertThat(FinancialAssistanceMapper.toStakeholders(null)).isEmpty();
+		assertThat(FinancialAssistanceMapper.toStakeholder(null)).isNull();
 	}
 
 	@Test

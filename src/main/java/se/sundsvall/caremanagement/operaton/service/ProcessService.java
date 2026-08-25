@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.operaton.integration.OperatonClient;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRequest;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
@@ -27,9 +28,11 @@ public class ProcessService {
 	private static final String NO_DEFINITION_FOUND_MESSAGE = "No Operaton process definition found with name '%s'";
 
 	private final OperatonClient operatonClient;
+	private final ErrandAccessGuard errandGuard;
 
-	ProcessService(final OperatonClient operatonClient) {
+	ProcessService(final OperatonClient operatonClient, final ErrandAccessGuard errandGuard) {
 		this.operatonClient = operatonClient;
+		this.errandGuard = errandGuard;
 	}
 
 	/**
@@ -52,11 +55,16 @@ public class ProcessService {
 	}
 
 	/**
-	 * Correlates a BPMN message to the process instance identified by {@code businessKey}. Used to resume a
+	 * Correlates a BPMN message to the process instance identified by {@code businessKey} (the errandId). Used to resume a
 	 * process waiting on a receive task or message catch event, e.g. when a caseworker clicks Approve/Reject.
 	 * The {@code variables} map (if non-null) is set on the process instance as part of the correlation.
+	 *
+	 * <p>
+	 * Asserts the errand exists in the caller's tenant first, so a caller cannot nudge a process by naming an errandId
+	 * that does not belong to their (municipalityId, namespace).
 	 */
-	public void correlateMessage(final String municipalityId, final String messageName, final String businessKey, final Map<String, Object> variables) {
+	public void correlateMessage(final String municipalityId, final String namespace, final String messageName, final String businessKey, final Map<String, Object> variables) {
+		errandGuard.verifyExistingErrand(municipalityId, namespace, businessKey);
 		operatonClient.correlateMessage(municipalityId, new CorrelationMessageRequest()
 			.messageName(messageName)
 			.businessKey(businessKey)

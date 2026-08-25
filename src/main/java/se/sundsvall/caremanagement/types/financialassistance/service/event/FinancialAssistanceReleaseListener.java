@@ -3,18 +3,23 @@ package se.sundsvall.caremanagement.types.financialassistance.service.event;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.core.service.event.ErrandStatusChanged;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_NEEDS_MANUAL_REVIEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_UNDER_REVIEW;
 
 /**
- * Releases a manually-reviewed EB errand for processing. After a caseworker has reopened the previous insats in
+ * Releases a manually-reviewed financial assistance errand for processing. After a caseworker has reopened the previous
+ * intervention in
  * Lifecare
- * and moves the frozen errand {@code NEEDS_MANUAL_REVIEW → UNDER_REVIEW}, this starts the EB process on the same errand
- * so it runs like a normal renewal (SSBTEK → normberäkning → recommendation → caseworker in the loop).
+ * and moves the frozen errand {@code NEEDS_MANUAL_REVIEW → UNDER_REVIEW}, this starts the process belonging to the
+ * errand's own application type, so it runs exactly as it would have at creation had the recently-closed freeze not
+ * held it back. A frozen renewal resumes the full decision-support flow (SSBTEK → calculation → recommendation →
+ * caseworker in the loop); a frozen new application still builds its normberäkning from what the citizen declared. The
+ * freeze defers a start, it never rewrites the application type — a household that applied as a couple after a
+ * single-applicant case is a new application, and the eligibility check has already routed it as one.
  *
  * <p>
  * The trigger is scoped precisely to that one edge so the normal renewal flow — which already starts its process at
@@ -24,26 +29,26 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 @Component
 class FinancialAssistanceReleaseListener {
 
-	private final FinancialAssistanceRepository repository;
-	private final ErrandRepository errandRepository;
+	private final FinancialAssistanceRepository financialAssistanceRepository;
+	private final ErrandQueryService errandQueryService;
 	private final FinancialAssistanceProcessStarter processStarter;
 
-	FinancialAssistanceReleaseListener(final FinancialAssistanceRepository repository, final ErrandRepository errandRepository,
+	FinancialAssistanceReleaseListener(final FinancialAssistanceRepository financialAssistanceRepository, final ErrandQueryService errandQueryService,
 		final FinancialAssistanceProcessStarter processStarter) {
-		this.repository = repository;
-		this.errandRepository = errandRepository;
+		this.financialAssistanceRepository = financialAssistanceRepository;
+		this.errandQueryService = errandQueryService;
 		this.processStarter = processStarter;
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandStatusChanged event) {
+	void startProcessOnRelease(final ErrandStatusChanged event) {
 		if (!isReleaseTransition(event)) {
 			return;
 		}
-		errandRepository.findByIdAndNamespaceAndMunicipalityId(event.errandId(), event.namespace(), event.municipalityId())
+		errandQueryService.findErrand(event.municipalityId(), event.namespace(), event.errandId())
 			.filter(errand -> !StringUtils.hasText(errand.getProcessInstanceId())) // defensive: never start a second instance
-			.flatMap(errand -> repository.findByErrandId(event.errandId()))
-			.ifPresent(entity -> processStarter.start(event.municipalityId(), event.namespace(), event.errandId(), entity));
+			.flatMap(errand -> financialAssistanceRepository.findByErrandId(event.errandId()))
+			.ifPresent(entity -> processStarter.startFor(event.typeSlug(), event.municipalityId(), event.namespace(), event.errandId(), entity));
 	}
 
 	/**

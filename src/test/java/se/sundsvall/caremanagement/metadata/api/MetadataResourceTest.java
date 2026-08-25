@@ -22,6 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.ALL;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -48,7 +49,9 @@ class MetadataResourceTest {
 			.uri(uri -> uri.path(PATH).queryParam("kind", kind).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(Lookup.create().withName(NAME).withDisplayName("dn"))
 			.exchange()
-			.expectStatus().isCreated();
+			.expectStatus().isCreated()
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/metadata/" + NAME + "?kind=" + kind);
 
 		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(kind), any(Lookup.class));
 		verifyNoMoreInteractions(serviceMock);

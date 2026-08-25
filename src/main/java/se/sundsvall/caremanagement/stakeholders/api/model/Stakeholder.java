@@ -1,9 +1,11 @@
 package se.sundsvall.caremanagement.stakeholders.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Null;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.Objects;
 import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
@@ -22,41 +24,50 @@ public class Stakeholder {
 	private String id;
 
 	@Schema(description = "External id for the stakeholder", examples = "81471222-5798-11e9-ae24-57fa13b361e1")
+	@Size(max = 255)
 	private String externalId;
 
 	@Schema(description = "Type of external id", examples = "PRIVATE")
+	@Size(max = 32)
 	private String externalIdType;
 
-	@Schema(description = "Role of the stakeholder — validated against StakeholderRoleRegistry for the errand's typeSlug",
-		examples = "FOSTER_PARENT")
+	@Schema(description = "Role of the stakeholder on the errand", examples = "FOSTER_PARENT")
 	@NotBlank(groups = OnCreate.class)
 	private String role;
 
 	@Schema(description = "First name", examples = "Joe")
+	@Size(max = 100)
 	private String firstName;
 
 	@Schema(description = "Last name", examples = "Doe")
+	@Size(max = 100)
 	private String lastName;
 
 	@Schema(description = "Organization name", examples = "Sundsvalls kommun")
+	@Size(max = 255)
 	private String organizationName;
 
 	@Schema(description = "Address", examples = "Storgatan 1")
+	@Size(max = 255)
 	private String address;
 
 	@Schema(description = "Care of", examples = "c/o Doe")
+	@Size(max = 255)
 	private String careOf;
 
 	@Schema(description = "Zip code", examples = "85248")
+	@Size(max = 10)
 	private String zipCode;
 
 	@Schema(description = "City", examples = "Sundsvall")
+	@Size(max = 100)
 	private String city;
 
 	@Schema(description = "Country", examples = "Sweden")
+	@Size(max = 100)
 	private String country;
 
-	@Schema(description = "Contact channels for the stakeholder")
+	@ArraySchema(arraySchema = @Schema(description = "Contact channels for the stakeholder"), schema = @Schema(implementation = ContactChannel.class))
 	@Valid
 	private List<ContactChannel> contactChannels;
 
@@ -116,56 +127,56 @@ public class Stakeholder {
 		return contactChannels;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setExternalId(final String v) {
-		this.externalId = v;
+	public void setExternalId(final String externalId) {
+		this.externalId = externalId;
 	}
 
-	public void setExternalIdType(final String v) {
-		this.externalIdType = v;
+	public void setExternalIdType(final String externalIdType) {
+		this.externalIdType = externalIdType;
 	}
 
-	public void setRole(final String v) {
-		this.role = v;
+	public void setRole(final String role) {
+		this.role = role;
 	}
 
-	public void setFirstName(final String v) {
-		this.firstName = v;
+	public void setFirstName(final String firstName) {
+		this.firstName = firstName;
 	}
 
-	public void setLastName(final String v) {
-		this.lastName = v;
+	public void setLastName(final String lastName) {
+		this.lastName = lastName;
 	}
 
-	public void setOrganizationName(final String v) {
-		this.organizationName = v;
+	public void setOrganizationName(final String organizationName) {
+		this.organizationName = organizationName;
 	}
 
-	public void setAddress(final String v) {
-		this.address = v;
+	public void setAddress(final String address) {
+		this.address = address;
 	}
 
-	public void setCareOf(final String v) {
-		this.careOf = v;
+	public void setCareOf(final String careOf) {
+		this.careOf = careOf;
 	}
 
-	public void setZipCode(final String v) {
-		this.zipCode = v;
+	public void setZipCode(final String zipCode) {
+		this.zipCode = zipCode;
 	}
 
-	public void setCity(final String v) {
-		this.city = v;
+	public void setCity(final String city) {
+		this.city = city;
 	}
 
-	public void setCountry(final String v) {
-		this.country = v;
+	public void setCountry(final String country) {
+		this.country = country;
 	}
 
-	public void setContactChannels(final List<ContactChannel> v) {
-		this.contactChannels = v;
+	public void setContactChannels(final List<ContactChannel> contactChannels) {
+		this.contactChannels = contactChannels;
 	}
 
 	public Stakeholder withId(final String id) {

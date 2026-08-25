@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.decisions.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Null;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -12,6 +13,7 @@ import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
 
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 @Schema(
 	description = "Decision recorded against an errand. Both system-generated decisions (e.g. a DMN-evaluated recommendation produced by a BPMN process) and human decisions (e.g. a caseworker approving a payment) are stored here, distinguished by `decisionType`. The list on the errand grows over time and is the audit trail of every decision made on the case.")
@@ -23,27 +25,31 @@ public class Decision {
 
 	@Schema(description = "Decision category. Free-form string; conventionally `RECOMMENDATION` for DMN-produced suggestions and `PAYMENT` for caseworker APPROVE/REJECT decisions, but namespaces are encouraged to define their own.", examples = "PAYMENT")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 32)
 	private String decisionType;
 
 	@Schema(description = "Decision value. For binary outcomes use `APPROVED`/`REJECTED`; for richer outputs (e.g. a calculated amount) use the value itself or a short label.", examples = "APPROVED")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 255)
 	private String value;
 
 	@Schema(description = "Optional human-readable description or motivation for the decision", examples = "Decision proposal per ruleset: 7900 kr, no warning")
+	@Size(max = 4096)
 	private String description;
 
-	@Schema(description = "Optional decision amount, in SEK. For a financial-assistance beslut this is the granted belopp (0 for a rejection); for a recommendation it is the recommended amount when the pipeline has computed one.", examples = "7900.00")
+	@Schema(description = "Optional decision amount, in SEK. For a financial-assistance decision this is the granted amount (0 for a rejection); for a recommendation it is the recommended amount when the pipeline has computed one.", examples = "7900.00")
 	private BigDecimal amount;
 
-	@Schema(description = "Optional decision message (beslutsmeddelande) communicated to the applicant — the free-text justification shown on the decision letter, kept separate from the internal `description`.",
-		examples = "Du beviljas financial assistance för juni 2026 enligt riksnorm.")
+	@Schema(description = "Optional decision message communicated to the applicant — the free-text justification shown on the decision letter, kept separate from the internal `description`.",
+		examples = "Du beviljas ekonomiskt bistånd för juni 2026 enligt riksnorm.")
+	@Size(max = 8192)
 	private String decisionMessage;
 
 	@Schema(description = "Optional date the decision applies (the caseworker-chosen decision date), distinct from the server-assigned `created` audit timestamp.", examples = "2026-06-18")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate decisionDate;
 
-	@Schema(description = "Optional start of the period the decision covers (the month applied for, for a financial-assistance beslut).", examples = "2026-06-01")
+	@Schema(description = "Optional start of the period the decision covers (the month applied for, for a financial-assistance decision).", examples = "2026-06-01")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate periodFrom;
 
@@ -52,10 +58,12 @@ public class Decision {
 	private LocalDate periodTo;
 
 	@Schema(description = "Identifier of the actor that produced the decision. Use the caseworker userId for human decisions or a system identifier (e.g. `operaton`, `dmn-engine`) for automated ones.", examples = "jane01doe")
+	@Size(max = 64)
 	private String createdBy;
 
 	@Schema(description = "Timestamp the decision was recorded (server-assigned)", accessMode = READ_ONLY)
 	@Null(groups = OnCreate.class)
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
 	public static Decision create() {

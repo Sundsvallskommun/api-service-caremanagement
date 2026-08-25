@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.Objects;
 
@@ -11,18 +12,20 @@ import java.util.Objects;
 @Schema(description = "What a caseworker sends to add or patch an expense row (identity + caseworker-writable fields only).")
 public class NormExpenseInput {
 
-	@Schema(description = "The cost type")
+	@Schema(description = "The cost type", examples = "Hyra")
+	@Size(max = 64)
 	private String costType;
 
-	@Schema(description = "Which Lifecare bucket the expense posts to", allowableValues = {
+	@Schema(description = "Which Lifecare bucket the expense posts to", examples = "EXPENSE", allowableValues = {
 		"EXPENSE", "SPECIAL_EXPENSE"
 	})
 	private String bucket;
 
-	@Schema(description = "The other sub-type (when the cost type is 'other')")
+	@Schema(description = "The other sub-type (when the cost type is 'other')", examples = "Övrigt")
+	@Size(max = 32)
 	private String otherSubType;
 
-	@Schema(description = "The cost specification")
+	@Schema(description = "The cost specification", examples = "Hyra för juni 2026")
 	private String specification;
 
 	@Schema(description = "The amount applied for (ansökt). Honoured on both create and patch.", examples = "1100.00")
@@ -31,7 +34,7 @@ public class NormExpenseInput {
 	@Schema(description = "The amount the caseworker decided", examples = "1100.00")
 	private BigDecimal caseworkerAmount;
 
-	@Schema(description = "Free-text note")
+	@Schema(description = "Free-text note", examples = "Godkänd enligt underlag")
 	private String note;
 
 	public static NormExpenseInput create() {

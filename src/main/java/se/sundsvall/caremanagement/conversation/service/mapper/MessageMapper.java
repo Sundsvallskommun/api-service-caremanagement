@@ -9,6 +9,7 @@ import se.sundsvall.caremanagement.conversation.api.model.MessageAttachment;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentDataEntity;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageAttachmentEntity;
 import se.sundsvall.caremanagement.conversation.integration.db.model.MessageEntity;
+import se.sundsvall.caremanagement.conversation.spi.Direction;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.OffsetDateTime.now;
@@ -75,7 +76,10 @@ public final class MessageMapper {
 
 	/** INBOUND messages come from the applicant (CLIENT); everything else is the caseworker (CASEWORKER). */
 	private static String senderRoleFromDirection(final String direction) {
-		return "INBOUND".equals(direction) ? "CLIENT" : "CASEWORKER";
+		if (Direction.INBOUND.name().equals(direction)) {
+			return Direction.INBOUND.role();
+		}
+		return Direction.OUTBOUND.role();
 	}
 
 	/**

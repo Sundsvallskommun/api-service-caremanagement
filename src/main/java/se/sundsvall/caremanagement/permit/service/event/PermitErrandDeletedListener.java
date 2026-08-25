@@ -13,14 +13,14 @@ import se.sundsvall.caremanagement.permit.integration.db.PermitRepository;
 @Component
 class PermitErrandDeletedListener {
 
-	private final PermitRepository repository;
+	private final PermitRepository permitRepository;
 
-	PermitErrandDeletedListener(final PermitRepository repository) {
-		this.repository = repository;
+	PermitErrandDeletedListener(final PermitRepository permitRepository) {
+		this.permitRepository = permitRepository;
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandDeleted event) {
-		repository.deleteByErrandId(event.errandId());
+	void deletePermitsForErrand(final ErrandDeleted event) {
+		permitRepository.deleteByErrandId(event.errandId());
 	}
 }

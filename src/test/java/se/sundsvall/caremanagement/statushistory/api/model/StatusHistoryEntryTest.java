@@ -9,7 +9,7 @@ class StatusHistoryEntryTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		final var changedAt = FIXED_TIMESTAMP;
 		final var entry = new StatusHistoryEntry("id-1", "errand-1", "OPEN", "CLOSED", "user-1", changedAt);
 
@@ -22,7 +22,7 @@ class StatusHistoryEntryTest {
 	}
 
 	@Test
-	void initialTransitionHasNullFromStatus() {
+	void testInitialTransitionHasNullFromStatus() {
 		final var entry = new StatusHistoryEntry("id", "e", null, "OPEN", null, FIXED_TIMESTAMP);
 		assertThat(entry.fromStatus()).isNull();
 		assertThat(entry.changedBy()).isNull();

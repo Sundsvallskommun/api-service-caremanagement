@@ -1,30 +1,31 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringProposalDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsFromWhoDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInfoDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsInvestigationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsOrganizationDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsReasonDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsServiceDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsSpecifyTypeDTO;
-import generated.se.sundsvall.lifecarefc.PersonBasedAktualiseringsWorkingStatusDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsFromWhoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInfoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInvestigationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsOrganizationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsReasonDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsSpecifyTypeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsWorkingStatusDTO;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 
+import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ActualisationAssemblerTest {
 
 	private static final String PERSON_ID = "198001012389";
-	private static final LocalDate DATE = LocalDate.of(2026, 6, 1);
+	private static final LocalDate DATE = LocalDate.of(2026, JUNE, 1);
 
 	@Test
 	void assemblesPersonAndDateWithoutProposal() {
 		final var body = ActualisationAssembler.assemble(PERSON_ID, null, DATE, null);
 
 		assertThat(body.getPersonId()).isEqualTo(PERSON_ID);
-		assertThat(body.getDate()).isEqualTo("2026-06-01");
+		assertThat(body.getDate()).isEqualTo("2026-06-01T00:00:00");
 		// No proposal → no codes resolved.
 		assertThat(body.getType()).isNull();
 		assertThat(body.getReason()).isNull();

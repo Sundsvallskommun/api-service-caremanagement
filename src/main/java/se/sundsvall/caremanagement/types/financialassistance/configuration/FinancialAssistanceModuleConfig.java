@@ -10,7 +10,7 @@ import se.sundsvall.caremanagement.stakeholders.api.model.RoleDefinition;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderRoleContribution;
 
 /**
- * Registers the three financial assistance (EB) errand types and their stakeholder roles.
+ * Registers the three financial assistance errand types and their stakeholder roles.
  *
  * <p>
  * Per the frontend contract there is one slug per application type — {@code financial-assistance-new} (new
@@ -24,8 +24,9 @@ import se.sundsvall.caremanagement.stakeholders.service.StakeholderRoleContribut
  * <p>
  * Status lifecycle (Swedish codes; bifall/avslag split — outcome detail lives on the {@code Decision} row, not the
  * status): {@code RECEIVED → UNDER_REVIEW → AWAITING_DECISION → GRANTED → PAID → CLOSED}, with
- * {@code SUPPLEMENT_REQUESTED}, {@code REJECTED} and {@code WITHDRAWN} branches. Maps onto the canonical EB BPMN:
- * UNDER_REVIEW = recommendation write, AWAITING_DECISION = the receiveTask pause (caseworkern i loopen),
+ * {@code SUPPLEMENT_REQUESTED}, {@code REJECTED} and {@code WITHDRAWN} branches. Maps onto the canonical financial
+ * assistance BPMN:
+ * UNDER_REVIEW = recommendation write, AWAITING_DECISION = the receiveTask pause (caseworker in the loop),
  * GRANTED/REJECTED = the gateway after the caseworker's process-message.
  * </p>
  */
@@ -48,9 +49,9 @@ public class FinancialAssistanceModuleConfig {
 		SLUG_RENEWAL, APPLICATION_TYPE_RENEWAL,
 		SLUG_SUPPLEMENTARY, APPLICATION_TYPE_SUPPLEMENTARY);
 
-	public static final Set<String> SLUGS = SLUG_TO_APPLICATION_TYPE.keySet();
+	public static final Set<String> SLUGS = Set.copyOf(SLUG_TO_APPLICATION_TYPE.keySet());
 
-	// Application-type ("ansökningstyp") display names — the Swedish labels Draken shows the handläggare.
+	// Application-type display names — the Swedish labels Draken shows the caseworker.
 	// Mirrored into the editable lookup store (kind=TYPE) for the Drakel tenant by
 	// V5_30__seed_financial_assistance_type_lookups.sql — keep the two in sync if you change a label.
 	private static final String DISPLAY_NEW = "Nyansökan";
@@ -72,7 +73,7 @@ public class FinancialAssistanceModuleConfig {
 	public static final String STATUS_CLOSED = "CLOSED";
 	public static final String STATUS_WITHDRAWN = "WITHDRAWN";
 
-	// Status display names (Swedish — the labels Draken shows the handläggare)
+	// Status display names (Swedish — the labels Draken shows the caseworker)
 	private static final String DISPLAY_RECEIVED = "Inkommen";
 	private static final String DISPLAY_NEEDS_MANUAL_REVIEW = "Kräver manuell granskning";
 	private static final String DISPLAY_UNDER_REVIEW = "Under utredning";
@@ -138,10 +139,14 @@ public class FinancialAssistanceModuleConfig {
 		return FinancialAssistanceSchema.contribution(SLUG_SUPPLEMENTARY, APPLICATION_TYPE_SUPPLEMENTARY);
 	}
 
-	/** Identical status lifecycle for every EB slug — only the slug and display name differ. */
+	/** Identical status lifecycle for every financial assistance slug — only the slug and display name differ. */
 	private static ErrandTypeContribution typeContribution(final String slug, final String displayName) {
 		return ErrandTypeContribution.builder(slug)
 			.displayName(displayName)
+			// Financial assistance errands must be created via POST /errands/{typeSlug} (which writes the FA data + starts the
+			// process);
+			// the generic POST /errands rejects these slugs so it can't produce a half-formed, process-less errand.
+			.typedCreateOnly(true)
 			// Declared in lifecycle order — the order the frontend renders them in
 			.status(STATUS_RECEIVED, DISPLAY_RECEIVED)
 			.status(STATUS_NEEDS_MANUAL_REVIEW, DISPLAY_NEEDS_MANUAL_REVIEW)
@@ -165,7 +170,7 @@ public class FinancialAssistanceModuleConfig {
 			.build();
 	}
 
-	/** Identical roles for every EB slug. */
+	/** Identical roles for every financial assistance slug. */
 	private static StakeholderRoleContribution roleContribution(final String slug) {
 		return new StakeholderRoleContribution(slug, Set.of(
 			new RoleDefinition(ROLE_APPLICANT, "Applicant", 1, true),

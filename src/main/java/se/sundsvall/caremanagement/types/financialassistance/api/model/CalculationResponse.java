@@ -6,16 +6,15 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Result of building and posting an SSBTEK-driven calculation: the id of the calculation created in Lifecare FC, plus
- * the warnings the caseworker must review — incomes Drakel could not auto-transfer ({@code unhandledIncomes}) and
- * benefits whose net income changed beyond the threshold between the rule periods ({@code changeWarnings}). The
- * warnings
- * are human-readable lines; the structured form lives in the service layer.
+ * Result of building and posting an SSBTEK-driven calculation: the id of the calculation created in Lifecare
+ * FamilyCare, plus the warnings the caseworker must review — incomes Drakel could not auto-transfer ({@code
+ * unhandledIncomes}) and benefits whose net income changed beyond the threshold between the rule periods ({@code
+ * changeWarnings}). The warnings are human-readable lines; the structured form lives in the service layer.
  */
 @Schema(description = "The created Lifecare calculation id plus the income warnings to review.")
 public class CalculationResponse {
 
-	@Schema(description = "The id of the calculation created in Lifecare FC", examples = "4711")
+	@Schema(description = "The id of the calculation created in Lifecare FamilyCare", examples = "4711")
 	private Integer calculationId;
 
 	@Schema(description = "SSBTEK incomes that could not be auto-transferred and must be reviewed", examples = "[\"Bostadstillägg (NOT_ON_WHITELIST)\"]")

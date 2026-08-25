@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -15,7 +16,7 @@ import java.util.Objects;
 @Schema(description = "Pre-fill data for a financial assistance renewal (renewal): household children read from Lifecare.")
 public class RenewalPrefill {
 
-	@Schema(description = "Children in the household from the most recent calculation")
+	@ArraySchema(arraySchema = @Schema(description = "Children in the household from the most recent calculation"), schema = @Schema(implementation = PrefilledChild.class))
 	private List<PrefilledChild> children;
 
 	@Schema(description = "True when the Lifecare lookup succeeded. False means the answer is degraded (empty children).", examples = "true")

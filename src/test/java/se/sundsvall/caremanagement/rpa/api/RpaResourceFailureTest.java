@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.rpa.api;
 
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -10,12 +11,18 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.rpa.api.model.RpaTaskRequest;
 import se.sundsvall.caremanagement.rpa.service.RpaService;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
+import se.sundsvall.dept44.problem.violations.Violation;
 
 import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
-@SpringBootTest(classes = Application.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
 @ActiveProfiles("junit")
 class RpaResourceFailureTest {
@@ -38,7 +45,10 @@ class RpaResourceFailureTest {
 			.contentType(APPLICATION_JSON)
 			.bodyValue(RpaTaskRequest.create().withAction("NOT_A_REAL_ACTION"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("action", "must be one of: [REGISTER_PAYMENT, WRITE_DECISION, FETCH_SUPPLEMENTS, WRITE_DOCUMENT, WRITE_JOURNAL, WRITE_NORMBERAKNING, WRITE_MONITORING]")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -50,7 +60,11 @@ class RpaResourceFailureTest {
 			.contentType(APPLICATION_JSON)
 			.bodyValue(RpaTaskRequest.create().withAction(" "))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("action", "must not be blank"),
+				tuple("action", "must be one of: [REGISTER_PAYMENT, WRITE_DECISION, FETCH_SUPPLEMENTS, WRITE_DOCUMENT, WRITE_JOURNAL, WRITE_NORMBERAKNING, WRITE_MONITORING]")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -62,7 +76,10 @@ class RpaResourceFailureTest {
 			.contentType(APPLICATION_JSON)
 			.bodyValue(RpaTaskRequest.create().withAction("FETCH_SUPPLEMENTS"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("enqueue.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -74,8 +91,24 @@ class RpaResourceFailureTest {
 			.contentType(APPLICATION_JSON)
 			.bodyValue(RpaTaskRequest.create().withAction("FETCH_SUPPLEMENTS"))
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("enqueue.municipalityId", "not a valid municipality ID")));
 
 		verifyNoInteractions(serviceMock);
+	}
+
+	private static void assertConstraintViolation(final ConstraintViolationProblem response, final Tuple... violations) {
+		assertThat(response).isNotNull();
+		assertThat(response.getTitle()).isEqualTo("Constraint Violation");
+		assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
+		assertThat(response.getViolations())
+			.isNotEmpty()
+			.allSatisfy(violation -> assertThat(violation.field()).isNotBlank())
+			.allSatisfy(violation -> assertThat(violation.message()).isNotBlank());
+		assertThat(response.getViolations())
+			.extracting(Violation::field, Violation::message)
+			.containsExactlyInAnyOrder(violations);
 	}
 }

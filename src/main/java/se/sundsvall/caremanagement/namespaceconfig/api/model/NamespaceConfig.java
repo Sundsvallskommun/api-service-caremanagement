@@ -2,6 +2,8 @@ package se.sundsvall.caremanagement.namespaceconfig.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Null;
+import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -14,21 +16,26 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 public class NamespaceConfig {
 
 	@Schema(description = "Unique identifier", examples = "1", accessMode = READ_ONLY)
+	@Null(groups = OnCreate.class)
 	private Long id;
 
 	@Schema(description = "Display name of the namespace", examples = "My namespace")
 	@NotBlank(groups = OnCreate.class)
+	@Size(max = 255)
 	private String displayName;
 
 	@Schema(description = "Short code for the namespace", examples = "MY")
+	@Size(max = 16)
 	private String shortCode;
 
 	@Schema(description = "Created timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
+	@Null(groups = OnCreate.class)
 	private OffsetDateTime created;
 
 	@Schema(description = "Modified timestamp", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
+	@Null(groups = OnCreate.class)
 	private OffsetDateTime modified;
 
 	public static NamespaceConfig create() {

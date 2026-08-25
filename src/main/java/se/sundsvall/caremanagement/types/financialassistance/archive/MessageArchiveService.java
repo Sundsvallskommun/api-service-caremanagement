@@ -9,8 +9,8 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
-import se.sundsvall.caremanagement.attachments.service.CombineSource;
 import se.sundsvall.caremanagement.conversation.spi.ConversationMessageView;
 import se.sundsvall.caremanagement.conversation.spi.ConversationThreadQueryService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
@@ -18,14 +18,15 @@ import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
+import se.sundsvall.caremanagement.shared.SourceFile;
 
 import static java.time.OffsetDateTime.now;
 import static java.time.ZoneId.systemDefault;
-import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_CLOSED;
 
 /**
- * Archives the conversation of every closed EB errand into a single PDF — the rendered message pages first, then each
+ * Archives the conversation of every closed financial assistance errand into a single PDF — the rendered message pages
+ * first, then each
  * conversation attachment appended in full, introduced by a numbered {@code Bilaga {n}} divider so two
  * identically-named
  * files can be told apart. The PDF is named
@@ -100,7 +101,7 @@ public class MessageArchiveService {
 
 			final var actualisationId = resolveActualisationId(errand);
 			if (actualisationId.isEmpty()) {
-				LOG.warn("Skipping errand {} - no Lifecare actualisation id recorded, cannot upload the meddelandehistorik", errand.getErrandNumber());
+				LOG.warn("Skipping errand {} - no Lifecare actualisation id recorded, cannot upload the message history", errand.getErrandNumber());
 				return;
 			}
 
@@ -108,14 +109,19 @@ public class MessageArchiveService {
 			final var fileName = fileName(errand.getErrandNumber(), thread);
 			final var title = fileName.substring(0, fileName.length() - PDF_EXTENSION.length());
 
+			// Record the local message-history marker FIRST — it is the idempotency guard checked at the top of this
+			// method. Ordering it before the (non-idempotent) Lifecare upload means: if the marker write fails, nothing
+			// has been pushed to Lifecare yet and the next run retries cleanly; if the Lifecare upload fails, the marker
+			// is already set so the job won't re-run and upload a duplicate Lifecare document. Nothing after the upload
+			// throws, so a "Failed to archive" log can no longer coincide with a document actually created in Lifecare.
+			attachmentService.createMessageHistoryAttachment(errand.getMunicipalityId(), errand.getNamespace(), errand.getId(), fileName, pdf);
+
 			actualisationService.uploadAttachment(actualisationId.get(), fileName, pdf,
 				properties.lifecareDocumentType(), properties.lifecareDocumentSenderType(), title, properties.lifecareSenderName());
 
-			attachmentService.createMessageHistoryAttachment(errand.getMunicipalityId(), errand.getNamespace(), errand.getId(), fileName, pdf);
-
-			LOG.info("Archived meddelandehistorik for errand {} ({} message(s)) to Lifecare actualisation {}", errand.getErrandNumber(), thread.size(), actualisationId.get());
+			LOG.info("Archived message history for errand {} ({} message(s)) to Lifecare actualisation {}", errand.getErrandNumber(), thread.size(), actualisationId.get());
 		} catch (final Exception e) {
-			LOG.error("Failed to archive meddelandehistorik for errand {}: {}", errand.getErrandNumber(), e.getMessage(), e);
+			LOG.error("Failed to archive message history for errand {}: {}", errand.getErrandNumber(), e.getMessage(), e);
 		}
 	}
 
@@ -123,11 +129,11 @@ public class MessageArchiveService {
 	private byte[] assemble(final String errandNumber, final List<ConversationMessageView> thread) {
 		final var attachments = ThreadAttachments.flatten(thread);
 
-		final var sources = new ArrayList<CombineSource>();
-		sources.add(new CombineSource("meddelanden.pdf", PDF_MIME_TYPE, MeddelandehistorikPdfRenderer.renderMessages(errandNumber, thread, attachments)));
+		final var sources = new ArrayList<SourceFile>();
+		sources.add(new SourceFile("meddelanden.pdf", PDF_MIME_TYPE, MessageHistoryPdfRenderer.renderMessages(errandNumber, thread, attachments)));
 		attachments.forEach(attachment -> {
-			sources.add(new CombineSource("bilaga-%d-rubrik.pdf".formatted(attachment.number()), PDF_MIME_TYPE, MeddelandehistorikPdfRenderer.renderSeparator(attachment)));
-			sources.add(new CombineSource(attachment.fileName(), attachment.mimeType(), attachment.content()));
+			sources.add(new SourceFile("bilaga-%d-rubrik.pdf".formatted(attachment.number()), PDF_MIME_TYPE, MessageHistoryPdfRenderer.renderSeparator(attachment)));
+			sources.add(new SourceFile(attachment.fileName(), attachment.mimeType(), attachment.content()));
 		});
 
 		return attachmentService.combineToPdf(sources);
@@ -149,7 +155,7 @@ public class MessageArchiveService {
 		return decisionService.readAll(errand.getMunicipalityId(), errand.getNamespace(), errand.getId()).stream()
 			.filter(decision -> ACTUALISATION_DECISION_TYPE.equals(decision.getDecisionType()))
 			.map(Decision::getValue)
-			.filter(value -> hasText(value))
+			.filter(StringUtils::hasText)
 			.map(MessageArchiveService::parseId)
 			.flatMap(Optional::stream)
 			.findFirst();

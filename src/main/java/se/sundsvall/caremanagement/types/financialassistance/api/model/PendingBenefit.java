@@ -1,15 +1,18 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.util.Objects;
 
 @Schema(description = "A benefit the applicant has applied for but not yet received a decision on.")
 public class PendingBenefit {
 
 	@Schema(description = "Name of the pending benefit", examples = "Bostadsbidrag")
+	@Size(max = 255)
 	private String benefitName;
 
 	@Schema(description = "Name of the person who applied for the benefit", examples = "Anna Andersson")
+	@Size(max = 255)
 	private String applicantName;
 
 	public static PendingBenefit create() {

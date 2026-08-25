@@ -20,7 +20,8 @@ import static java.util.Optional.ofNullable;
 
 /**
  * Projects the lifecare-module case-history records ({@code CalculationView}, {@code DecisionView},
- * {@code DocumentView} and their nested rows) onto the EB API read models the frontend consumes. Null-safe; nested
+ * {@code DocumentView} and their nested rows) onto the financial assistance API read models the frontend consumes.
+ * Null-safe; nested
  * lists default to empty.
  */
 public final class LifecareHistoryMapper {

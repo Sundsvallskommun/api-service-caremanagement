@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -25,7 +26,7 @@ public class NoteEntity {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "body", nullable = false, length = LONG32)
@@ -77,6 +78,34 @@ public class NoteEntity {
 		return modified;
 	}
 
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public void setBody(final String body) {
+		this.body = body;
+	}
+
+	public void setAuthor(final String author) {
+		this.author = author;
+	}
+
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
+	public void setModifiedBy(final String modifiedBy) {
+		this.modifiedBy = modifiedBy;
+	}
+
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
+	}
+
 	public NoteEntity withId(final String id) {
 		this.id = id;
 		return this;
@@ -110,5 +139,30 @@ public class NoteEntity {
 	public NoteEntity withModified(final OffsetDateTime modified) {
 		this.modified = modified;
 		return this;
+	}
+
+	// 'body' (a LONG32 column) is deliberately excluded from equals/hashCode/toString — it can be large and is not part of
+	// the entity's identity.
+	@Override
+	public boolean equals(final Object obj) {
+		if (this == obj)
+			return true;
+		if (!(obj instanceof final NoteEntity other))
+			return false;
+		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
+			&& Objects.equals(author, other.author)
+			&& Objects.equals(created, other.created) && Objects.equals(modifiedBy, other.modifiedBy)
+			&& Objects.equals(modified, other.modified);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, errandId, author, created, modifiedBy, modified);
+	}
+
+	@Override
+	public String toString() {
+		return "NoteEntity{id='" + id + "', errandId='" + errandId + "', author='" + author
+			+ "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified=" + modified + '}';
 	}
 }

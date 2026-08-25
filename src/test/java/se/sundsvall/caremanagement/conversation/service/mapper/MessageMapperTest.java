@@ -33,7 +33,7 @@ class MessageMapperTest {
 
 		final var message = MessageMapper.toMessage(entity, List.of(attachment));
 
-		assertThat(message).isNotNull();
+		assertThat(message).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(message.getId()).isEqualTo("m1");
 		assertThat(message.getErrandId()).isEqualTo("e1");
 		assertThat(message.getDirection()).isEqualTo("OUTBOUND");
@@ -66,7 +66,7 @@ class MessageMapperTest {
 
 		final var attachment = MessageMapper.toMessageAttachment(entity);
 
-		assertThat(attachment).isNotNull();
+		assertThat(attachment).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(attachment.getId()).isEqualTo("a1");
 		assertThat(attachment.getFileName()).isEqualTo("f.pdf");
 		assertThat(attachment.getMimeType()).isEqualTo("application/pdf");
@@ -99,7 +99,7 @@ class MessageMapperTest {
 
 		final var entity = MessageMapper.toMessageAttachmentEntity("m1", "INBOUND", file);
 
-		assertThat(entity).isNotNull();
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id");
 		assertThat(entity.getMessageId()).isEqualTo("m1");
 		assertThat(entity.getFileName()).isEqualTo("hello.txt");
 		assertThat(entity.getMimeType()).isEqualTo("text/plain");
@@ -114,7 +114,7 @@ class MessageMapperTest {
 
 		final var entity = MessageMapper.toMessageAttachmentEntity("m1", "OUTBOUND", file);
 
-		assertThat(entity).isNotNull();
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id");
 		assertThat(entity.getSenderRole()).isEqualTo("CASEWORKER");
 	}
 
@@ -136,7 +136,7 @@ class MessageMapperTest {
 
 		final var entity = MessageMapper.toMessageAttachmentDataEntity("a1", file);
 
-		assertThat(entity).isNotNull();
+		assertThat(entity).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(entity.getMessageAttachmentId()).isEqualTo("a1");
 		assertThat(entity.getFile()).isNotNull();
 	}

@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
@@ -8,14 +9,13 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class SectionApprovalsTest {
 
 	@Test
 	void testBean() {
-		assertThat(SectionApprovals.class, allOf(
+		MatcherAssert.assertThat(SectionApprovals.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -24,7 +24,7 @@ class SectionApprovalsTest {
 	}
 
 	@Test
-	void builderMethods() {
+	void testBuilderMethods() {
 		final var calculation = SectionApproval.create().withSection("CALCULATION").withApproved(true);
 		final var payment = SectionApproval.create().withSection("PAYMENT").withApproved(false);
 		final var decision = SectionApproval.create().withSection("DECISION").withApproved(false);
@@ -34,14 +34,14 @@ class SectionApprovalsTest {
 			.withPayment(payment)
 			.withDecision(decision);
 
-		org.assertj.core.api.Assertions.assertThat(approvals.getCalculation()).isEqualTo(calculation);
-		org.assertj.core.api.Assertions.assertThat(approvals.getPayment()).isEqualTo(payment);
-		org.assertj.core.api.Assertions.assertThat(approvals.getDecision()).isEqualTo(decision);
-		org.assertj.core.api.Assertions.assertThat(approvals).hasNoNullFieldsOrProperties();
+		assertThat(approvals.getCalculation()).isEqualTo(calculation);
+		assertThat(approvals.getPayment()).isEqualTo(payment);
+		assertThat(approvals.getDecision()).isEqualTo(decision);
+		assertThat(approvals).hasNoNullFieldsOrProperties();
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
-		org.assertj.core.api.Assertions.assertThat(SectionApprovals.create()).hasAllNullFieldsOrProperties();
+	void testNoDirtOnCreatedBean() {
+		assertThat(SectionApprovals.create()).hasAllNullFieldsOrProperties();
 	}
 }

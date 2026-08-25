@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.ALL;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -48,7 +49,8 @@ class NotificationResourceTest {
 			.bodyValue(Notification.create().withOwnerId("jane01doe").withType("CREATE").withSubType("ERRAND").withDescription("d"))
 			.exchange()
 			.expectStatus().isCreated()
-			.expectHeader().exists("Location");
+			.expectHeader().contentType(ALL)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/" + ERRAND_ID + "/notifications/" + NOTIFICATION_ID);
 
 		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Notification.class));
 	}

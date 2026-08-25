@@ -5,17 +5,18 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToStringExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class DecisionEntityTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
@@ -29,18 +30,12 @@ class DecisionEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(DecisionEntity.class, allOf(
+		MatcherAssert.assertThat(DecisionEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
-			hasValidBeanEquals()));
-	}
-
-	@Test
-	void testToString() {
-		final var entity = DecisionEntity.create().withId("id").withErrandId("e1");
-		org.assertj.core.api.Assertions.assertThat(entity.toString())
-			.contains("DecisionEntity{").contains("id='id'").contains("errandId='e1'");
+			hasValidBeanEquals(),
+			hasValidBeanToStringExcluding("description", "decisionMessage")));
 	}
 
 	@Test
@@ -65,31 +60,31 @@ class DecisionEntityTest {
 			.withCreated(created);
 
 		assertThat(entity).hasNoNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(entity.getId()).isEqualTo("id");
-		org.assertj.core.api.Assertions.assertThat(entity.getErrandId()).isEqualTo("errand");
-		org.assertj.core.api.Assertions.assertThat(entity.getDecisionType()).isEqualTo("type");
-		org.assertj.core.api.Assertions.assertThat(entity.getValue()).isEqualTo("value");
-		org.assertj.core.api.Assertions.assertThat(entity.getDescription()).isEqualTo("desc");
-		org.assertj.core.api.Assertions.assertThat(entity.getAmount()).isEqualTo(amount);
-		org.assertj.core.api.Assertions.assertThat(entity.getDecisionMessage()).isEqualTo("message");
-		org.assertj.core.api.Assertions.assertThat(entity.getDecisionDate()).isEqualTo(decisionDate);
-		org.assertj.core.api.Assertions.assertThat(entity.getPeriodFrom()).isEqualTo(periodFrom);
-		org.assertj.core.api.Assertions.assertThat(entity.getPeriodTo()).isEqualTo(periodTo);
-		org.assertj.core.api.Assertions.assertThat(entity.getCreatedBy()).isEqualTo("user");
-		org.assertj.core.api.Assertions.assertThat(entity.getCreated()).isEqualTo(created);
+		assertThat(entity.getId()).isEqualTo("id");
+		assertThat(entity.getErrandId()).isEqualTo("errand");
+		assertThat(entity.getDecisionType()).isEqualTo("type");
+		assertThat(entity.getValue()).isEqualTo("value");
+		assertThat(entity.getDescription()).isEqualTo("desc");
+		assertThat(entity.getAmount()).isEqualTo(amount);
+		assertThat(entity.getDecisionMessage()).isEqualTo("message");
+		assertThat(entity.getDecisionDate()).isEqualTo(decisionDate);
+		assertThat(entity.getPeriodFrom()).isEqualTo(periodFrom);
+		assertThat(entity.getPeriodTo()).isEqualTo(periodTo);
+		assertThat(entity.getCreatedBy()).isEqualTo("user");
+		assertThat(entity.getCreated()).isEqualTo(created);
 	}
 
 	@Test
 	void testNoDirtOnCreatedBean() {
-		org.assertj.core.api.Assertions.assertThat(DecisionEntity.create()).hasAllNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(new DecisionEntity()).hasAllNullFieldsOrProperties();
+		assertThat(DecisionEntity.create()).hasAllNullFieldsOrProperties();
+		assertThat(new DecisionEntity()).hasAllNullFieldsOrProperties();
 	}
 
 	@Test
 	void prePersistSetsCreatedWhenMissing() {
 		final var entity = new DecisionEntity();
 		entity.prePersist();
-		org.assertj.core.api.Assertions.assertThat(entity.getCreated()).isNotNull();
+		assertThat(entity.getCreated()).isNotNull();
 	}
 
 	@Test
@@ -97,6 +92,6 @@ class DecisionEntityTest {
 		final var existing = FIXED_TIMESTAMP.minusDays(1);
 		final var entity = DecisionEntity.create().withCreated(existing);
 		entity.prePersist();
-		org.assertj.core.api.Assertions.assertThat(entity.getCreated()).isEqualTo(existing);
+		assertThat(entity.getCreated()).isEqualTo(existing);
 	}
 }

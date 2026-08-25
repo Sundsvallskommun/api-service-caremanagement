@@ -16,6 +16,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Monitorin
 import se.sundsvall.caremanagement.types.financialassistance.api.model.MonitoringRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.MonitoringService;
 
+import static java.time.Month.JULY;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,6 +24,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -32,16 +34,22 @@ class MonitoringResourceTest {
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = randomUUID().toString();
+	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance";
+
 	private static final String MONITORING_ID = randomUUID().toString();
-	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/monitorings";
+	private static final String MONITORING_PATH = PATH + "/{errandId}/monitorings";
 
 	@MockitoBean
-	private MonitoringService serviceMock;
+	private MonitoringService monitoringServiceMock;
 
 	@Autowired
 	private WebTestClient webTestClient;
 
-	private Map<String, ?> base() {
+	private static MonitoringRequest request() {
+		return MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, JULY, 1)).withEndDate(LocalDate.of(2026, JULY, 31));
+	}
+
+	private Map<String, ?> monitoringBase() {
 		return Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID);
 	}
 
@@ -49,37 +57,34 @@ class MonitoringResourceTest {
 		return Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "monitoringId", MONITORING_ID);
 	}
 
-	private static MonitoringRequest request() {
-		return MonitoringRequest.create().withTitle("Följ upp").withStartDate(LocalDate.of(2026, 7, 1)).withEndDate(LocalDate.of(2026, 7, 31));
-	}
-
 	@Test
 	void createMonitoring() {
-		when(serviceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(MonitoringRequest.class)))
+		when(monitoringServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(MonitoringRequest.class)))
 			.thenReturn(Monitoring.create().withId(MONITORING_ID).withTitle("Följ upp"));
 
 		final var response = webTestClient.post()
-			.uri(uri -> uri.path(PATH).build(base()))
+			.uri(uri -> uri.path(MONITORING_PATH).build(monitoringBase()))
 			.bodyValue(request())
 			.exchange()
 			.expectStatus().isCreated()
-			.expectHeader().exists("Location")
+			.expectHeader().contentType(APPLICATION_JSON)
+			.expectHeader().location("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/financial-assistance/" + ERRAND_ID + "/monitorings/" + MONITORING_ID)
 			.expectBody(Monitoring.class)
 			.returnResult()
 			.getResponseBody();
 
 		assertThat(response).isNotNull();
 		assertThat(response.getId()).isEqualTo(MONITORING_ID);
-		verify(serviceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(MonitoringRequest.class));
+		verify(monitoringServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(MonitoringRequest.class));
 	}
 
 	@Test
 	void listMonitorings() {
-		when(serviceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+		when(monitoringServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(List.of(Monitoring.create().withId(MONITORING_ID).withTitle("Följ upp")));
 
 		final var response = webTestClient.get()
-			.uri(uri -> uri.path(PATH).build(base()))
+			.uri(uri -> uri.path(MONITORING_PATH).build(monitoringBase()))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBodyList(Monitoring.class)
@@ -88,15 +93,15 @@ class MonitoringResourceTest {
 
 		assertThat(response).hasSize(1);
 		assertThat(response.getFirst().getTitle()).isEqualTo("Följ upp");
-		verify(serviceMock).list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(monitoringServiceMock).list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
 	void countMonitorings() {
-		when(serviceMock.count(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(2L);
+		when(monitoringServiceMock.count(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(2L);
 
 		final var body = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/count").build(base()))
+			.uri(uri -> uri.path(MONITORING_PATH + "/count").build(monitoringBase()))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(MonitoringCount.class)
@@ -105,16 +110,16 @@ class MonitoringResourceTest {
 
 		assertThat(body).isNotNull();
 		assertThat(body.count()).isEqualTo(2L);
-		verify(serviceMock).count(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(monitoringServiceMock).count(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
 	void getMonitoring() {
-		when(serviceMock.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, MONITORING_ID))
+		when(monitoringServiceMock.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, MONITORING_ID))
 			.thenReturn(Monitoring.create().withId(MONITORING_ID).withTitle("Följ upp"));
 
 		final var response = webTestClient.get()
-			.uri(uri -> uri.path(PATH + "/{monitoringId}").build(withMonitoring()))
+			.uri(uri -> uri.path(MONITORING_PATH + "/{monitoringId}").build(withMonitoring()))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(Monitoring.class)
@@ -123,16 +128,16 @@ class MonitoringResourceTest {
 
 		assertThat(response).isNotNull();
 		assertThat(response.getId()).isEqualTo(MONITORING_ID);
-		verify(serviceMock).get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, MONITORING_ID);
+		verify(monitoringServiceMock).get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, MONITORING_ID);
 	}
 
 	@Test
 	void updateMonitoring() {
-		when(serviceMock.update(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(MONITORING_ID), any(MonitoringRequest.class)))
+		when(monitoringServiceMock.update(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(MONITORING_ID), any(MonitoringRequest.class)))
 			.thenReturn(Monitoring.create().withId(MONITORING_ID).withTitle("Ändrad"));
 
 		final var response = webTestClient.put()
-			.uri(uri -> uri.path(PATH + "/{monitoringId}").build(withMonitoring()))
+			.uri(uri -> uri.path(MONITORING_PATH + "/{monitoringId}").build(withMonitoring()))
 			.bodyValue(request().withTitle("Ändrad"))
 			.exchange()
 			.expectStatus().isOk()
@@ -142,16 +147,16 @@ class MonitoringResourceTest {
 
 		assertThat(response).isNotNull();
 		assertThat(response.getTitle()).isEqualTo("Ändrad");
-		verify(serviceMock).update(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(MONITORING_ID), any(MonitoringRequest.class));
+		verify(monitoringServiceMock).update(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(MONITORING_ID), any(MonitoringRequest.class));
 	}
 
 	@Test
 	void deleteMonitoring() {
 		webTestClient.delete()
-			.uri(uri -> uri.path(PATH + "/{monitoringId}").build(withMonitoring()))
+			.uri(uri -> uri.path(MONITORING_PATH + "/{monitoringId}").build(withMonitoring()))
 			.exchange()
 			.expectStatus().isNoContent();
 
-		verify(serviceMock).delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, MONITORING_ID);
+		verify(monitoringServiceMock).delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, MONITORING_ID);
 	}
 }

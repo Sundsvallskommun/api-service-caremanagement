@@ -1,10 +1,11 @@
 package se.sundsvall.caremanagement.journal.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
  * A journalanteckning (case-journal entry) attached to an errand — the Lifecare journal shape, captured so it can later
@@ -19,42 +20,43 @@ public class JournalEntry {
 	@Schema(description = "Errand id this journal entry belongs to")
 	private String errandId;
 
-	@Schema(description = "Journal entry type (Lifecare 'Typ'/Journaltyp). A municipality-configured value; see the metadata catalogue for a provisional set.", example = "Journalfört meddelande")
+	@Schema(description = "Journal entry type (Lifecare 'Typ'/Journaltyp). A municipality-configured value; see the metadata catalogue for a provisional set.", examples = "Journalfört meddelande")
 	private String type;
 
-	@Schema(description = "Heading (Lifecare 'Rubrik')", example = "Journalfört meddelande: 2025-05-30 Info")
+	@Schema(description = "Heading (Lifecare 'Rubrik')", examples = "Journalfört meddelande: 2025-05-30 Info")
 	private String heading;
 
-	@Schema(description = "Free-text body of the journal entry", example = "Hej! Vill bara informera att jag fått jobb på Mejeriet.")
+	@Schema(description = "Free-text body of the journal entry", examples = "Hej! Vill bara informera att jag fått jobb på Mejeriet.")
 	private String text;
 
-	@Schema(description = "Documented date (Lifecare 'Datum'), distinct from the system created timestamp", example = "2025-05-30")
-	private LocalDate entryDate;
+	@Schema(description = "Documented date and time (Lifecare 'Datum'/'Tid'), distinct from the system created timestamp", examples = "2025-05-30T14:30:00+02:00")
+	@DateTimeFormat(iso = DATE_TIME)
+	private OffsetDateTime entryDateTime;
 
-	@Schema(description = "Documented time (Lifecare 'Tid'); optional", example = "14:30")
-	private LocalTime entryTime;
-
-	@Schema(description = "Skrivskydd status — WORKING is an editable arbetsanteckning, LOCKED is an upprättad handling", allowableValues = {
+	@Schema(description = "Write-protection status — WORKING is an editable working note, LOCKED is a finalised record", allowableValues = {
 		"WORKING", "LOCKED"
-	}, example = "WORKING")
+	}, examples = "WORKING")
 	private String status;
 
-	@Schema(description = "User id of the author (Lifecare 'Upprättad av'/'Ägare')", example = "carola01winberg")
+	@Schema(description = "User id of the author (Lifecare 'Upprättad av'/'Ägare')", examples = "carola01winberg")
 	private String createdBy;
 
 	@Schema(description = "Created timestamp")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime created;
 
-	@Schema(description = "User id of the last editor (Lifecare 'Ändrat av'); null until the entry has been edited", example = "ebb14eri")
+	@Schema(description = "User id of the last editor (Lifecare 'Ändrat av'); null until the entry has been edited", examples = "ebb14eri")
 	private String modifiedBy;
 
 	@Schema(description = "Last modified timestamp; null until the entry has been edited")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime modified;
 
-	@Schema(description = "User id of whoever locked the entry; null while WORKING", example = "carola01winberg")
+	@Schema(description = "User id of whoever locked the entry; null while WORKING", examples = "carola01winberg")
 	private String lockedBy;
 
 	@Schema(description = "Timestamp when the entry was locked (became an upprättad handling); null while WORKING")
+	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime locked;
 
 	public static JournalEntry create() {
@@ -81,12 +83,8 @@ public class JournalEntry {
 		return text;
 	}
 
-	public LocalDate getEntryDate() {
-		return entryDate;
-	}
-
-	public LocalTime getEntryTime() {
-		return entryTime;
+	public OffsetDateTime getEntryDateTime() {
+		return entryDateTime;
 	}
 
 	public String getStatus() {
@@ -117,60 +115,56 @@ public class JournalEntry {
 		return locked;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setErrandId(final String v) {
-		this.errandId = v;
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
 	}
 
-	public void setType(final String v) {
-		this.type = v;
+	public void setType(final String type) {
+		this.type = type;
 	}
 
-	public void setHeading(final String v) {
-		this.heading = v;
+	public void setHeading(final String heading) {
+		this.heading = heading;
 	}
 
-	public void setText(final String v) {
-		this.text = v;
+	public void setText(final String text) {
+		this.text = text;
 	}
 
-	public void setEntryDate(final LocalDate v) {
-		this.entryDate = v;
+	public void setEntryDateTime(final OffsetDateTime entryDateTime) {
+		this.entryDateTime = entryDateTime;
 	}
 
-	public void setEntryTime(final LocalTime v) {
-		this.entryTime = v;
+	public void setStatus(final String status) {
+		this.status = status;
 	}
 
-	public void setStatus(final String v) {
-		this.status = v;
+	public void setCreatedBy(final String createdBy) {
+		this.createdBy = createdBy;
 	}
 
-	public void setCreatedBy(final String v) {
-		this.createdBy = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
 	}
 
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setModifiedBy(final String modifiedBy) {
+		this.modifiedBy = modifiedBy;
 	}
 
-	public void setModifiedBy(final String v) {
-		this.modifiedBy = v;
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
 	}
 
-	public void setModified(final OffsetDateTime v) {
-		this.modified = v;
+	public void setLockedBy(final String lockedBy) {
+		this.lockedBy = lockedBy;
 	}
 
-	public void setLockedBy(final String v) {
-		this.lockedBy = v;
-	}
-
-	public void setLocked(final OffsetDateTime v) {
-		this.locked = v;
+	public void setLocked(final OffsetDateTime locked) {
+		this.locked = locked;
 	}
 
 	public JournalEntry withId(final String id) {
@@ -198,13 +192,8 @@ public class JournalEntry {
 		return this;
 	}
 
-	public JournalEntry withEntryDate(final LocalDate entryDate) {
-		this.entryDate = entryDate;
-		return this;
-	}
-
-	public JournalEntry withEntryTime(final LocalTime entryTime) {
-		this.entryTime = entryTime;
+	public JournalEntry withEntryDateTime(final OffsetDateTime entryDateTime) {
+		this.entryDateTime = entryDateTime;
 		return this;
 	}
 
@@ -250,8 +239,8 @@ public class JournalEntry {
 		final JournalEntry that = (JournalEntry) o;
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
 			&& Objects.equals(type, that.type) && Objects.equals(heading, that.heading)
-			&& Objects.equals(text, that.text) && Objects.equals(entryDate, that.entryDate)
-			&& Objects.equals(entryTime, that.entryTime) && Objects.equals(status, that.status)
+			&& Objects.equals(text, that.text) && Objects.equals(entryDateTime, that.entryDateTime)
+			&& Objects.equals(status, that.status)
 			&& Objects.equals(createdBy, that.createdBy) && Objects.equals(created, that.created)
 			&& Objects.equals(modifiedBy, that.modifiedBy) && Objects.equals(modified, that.modified)
 			&& Objects.equals(lockedBy, that.lockedBy) && Objects.equals(locked, that.locked);
@@ -259,6 +248,14 @@ public class JournalEntry {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, heading, text, entryDate, entryTime, status, createdBy, created, modifiedBy, modified, lockedBy, locked);
+		return Objects.hash(id, errandId, type, heading, text, entryDateTime, status, createdBy, created, modifiedBy, modified, lockedBy, locked);
+	}
+
+	@Override
+	public String toString() {
+		return "JournalEntry{id='" + id + "', errandId='" + errandId + "', type='" + type + "', heading='" + heading
+			+ "', text='" + text + "', entryDateTime=" + entryDateTime + ", status='" + status + "', createdBy='"
+			+ createdBy + "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified=" + modified
+			+ ", lockedBy='" + lockedBy + "', locked=" + locked + "}";
 	}
 }

@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Objects;
@@ -15,27 +16,28 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 @Schema(description = "What a caseworker sends to add or patch an income row (identity + caseworker-writable fields only).")
 public class NormIncomeInput {
 
-	@Schema(description = "The FC income-type id", examples = "20")
+	@Schema(description = "The FamilyCare income-type id", examples = "20")
 	private Integer typeId;
 
-	@Schema(description = "The FC income-type name", examples = "Bostadsbidrag")
+	@Schema(description = "The FamilyCare income-type name", examples = "Bostadsbidrag")
+	@Size(max = 255)
 	private String typeName;
 
 	@Schema(description = "The amount the caseworker decided for the applicant", examples = "1900.00")
 	private BigDecimal applicantCaseworkerAmount;
 
-	@Schema(description = "The date the applicant amount is attributed to")
+	@Schema(description = "The date the applicant amount is attributed to", examples = "2026-06-01T00:00:00Z")
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime applicantAmountDate;
 
 	@Schema(description = "The amount the caseworker decided for the co-applicant", examples = "1900.00")
 	private BigDecimal coapplicantCaseworkerAmount;
 
-	@Schema(description = "The date the co-applicant amount is attributed to")
+	@Schema(description = "The date the co-applicant amount is attributed to", examples = "2026-06-01T00:00:00Z")
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime coapplicantAmountDate;
 
-	@Schema(description = "Free-text note")
+	@Schema(description = "Free-text note", examples = "Justerat belopp enligt underlag")
 	private String note;
 
 	public static NormIncomeInput create() {

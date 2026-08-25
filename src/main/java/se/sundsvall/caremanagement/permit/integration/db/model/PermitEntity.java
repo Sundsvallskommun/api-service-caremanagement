@@ -28,7 +28,7 @@ public class PermitEntity implements Auditable {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "permit_type", length = 64)

@@ -1,48 +1,34 @@
 package se.sundsvall.caremanagement.rpa.service;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Arrays;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.rpa.api.model.RpaTaskRequest;
-import se.sundsvall.dept44.common.validators.annotation.OneOf;
+import se.sundsvall.dept44.common.validators.annotation.MemberOf;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Guards that the {@code @OneOf} allow-list on {@link RpaTaskRequest#getAction()} stays in sync with
- * {@link RpaAction#ACTIONS} — so the API validation and the action catalogue can't drift.
+ * Guards that {@link RpaTaskRequest#getAction()} is validated against the {@link RpaAction} enum, and that its
+ * documented {@code @Schema} allow-list stays in sync with the enum — so the API validation, the OpenAPI doc and the
+ * action catalogue can't drift apart.
  */
 class RpaActionTest {
 
 	@Test
-	void oneOfMatchesActionCatalogue() throws Exception {
-		final var field = RpaTaskRequest.class.getDeclaredField("action");
-		final var oneOf = field.getAnnotation(OneOf.class);
+	void actionIsValidatedAgainstTheEnum() throws Exception {
+		final var memberOf = RpaTaskRequest.class.getDeclaredField("action").getAnnotation(MemberOf.class);
 
-		assertThat(oneOf).isNotNull();
-		assertThat(Set.of(oneOf.value())).isEqualTo(RpaAction.ACTIONS);
+		assertThat(memberOf).isNotNull();
+		assertThat(memberOf.value()).isEqualTo(RpaAction.class);
 	}
 
 	@Test
-	void actionsAreDistinctNonBlank() {
-		assertThat(RpaAction.ACTIONS).allSatisfy(a -> assertThat(a).isNotBlank());
-		assertThat(RpaAction.ACTIONS).contains(RpaAction.FETCH_SUPPLEMENTS, RpaAction.WRITE_NORMBERAKNING);
-	}
+	void schemaAllowableValuesMatchTheEnum() throws Exception {
+		final var schema = RpaTaskRequest.class.getDeclaredField("action").getAnnotation(Schema.class);
 
-	@Test
-	void writeActionsAreInTheCatalogue() {
-		// every WRITE_*/REGISTER_* constant declared on RpaAction is part of ACTIONS (catches a forgotten registration)
-		final var declared = Arrays.stream(RpaAction.class.getDeclaredFields())
-			.filter(f -> f.getType() == String.class)
-			.map(f -> {
-				try {
-					return (String) f.get(null);
-				} catch (final IllegalAccessException e) {
-					throw new IllegalStateException(e);
-				}
-			})
-			.toList();
-
-		assertThat(RpaAction.ACTIONS).containsAll(declared);
+		assertThat(schema).isNotNull();
+		assertThat(schema.allowableValues()).containsExactlyInAnyOrder(
+			Arrays.stream(RpaAction.values()).map(Enum::name).toArray(String[]::new));
 	}
 }

@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CreateMessageTest {
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		final var message = new CreateMessage("OUTBOUND", "message body", "joe01doe", "f47ac10b-58cc-4372-a567-0e02b2c3d479");
 
 		assertThat(message.direction()).isEqualTo("OUTBOUND");
@@ -17,7 +17,7 @@ class CreateMessageTest {
 	}
 
 	@Test
-	void authorAndInReplyToAreOptional() {
+	void testAuthorAndInReplyToAreOptional() {
 		final var message = new CreateMessage("INBOUND", "message body", null, null);
 
 		assertThat(message.direction()).isEqualTo("INBOUND");

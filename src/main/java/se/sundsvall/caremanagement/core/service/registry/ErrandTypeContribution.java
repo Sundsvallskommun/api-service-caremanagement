@@ -18,6 +18,7 @@ public final class ErrandTypeContribution {
 	private final Map<String, String> statusDisplayNames;
 	private final Set<String> allowedStatuses;
 	private final Map<String, Set<String>> allowedTransitions;
+	private final boolean typedCreateOnly;
 
 	private ErrandTypeContribution(final Builder builder) {
 		this.typeSlug = builder.typeSlug;
@@ -25,6 +26,7 @@ public final class ErrandTypeContribution {
 		this.statusDisplayNames = Collections.unmodifiableMap(new LinkedHashMap<>(builder.statusDisplayNames));
 		this.allowedStatuses = Set.copyOf(builder.statusDisplayNames.keySet());
 		this.allowedTransitions = Map.copyOf(builder.allowedTransitions);
+		this.typedCreateOnly = builder.typedCreateOnly;
 	}
 
 	public String typeSlug() {
@@ -42,6 +44,15 @@ public final class ErrandTypeContribution {
 
 	public Set<String> allowedStatuses() {
 		return allowedStatuses;
+	}
+
+	/**
+	 * Whether errands of this type may only be created through the type module's own dedicated endpoint (which seeds the
+	 * type-specific data and starts its process), never via the generic {@code POST /errands}. The generic create rejects
+	 * such slugs so they can't produce a half-formed, process-less errand.
+	 */
+	public boolean typedCreateOnly() {
+		return typedCreateOnly;
 	}
 
 	public boolean isValidStatus(final String status) {
@@ -63,6 +74,7 @@ public final class ErrandTypeContribution {
 		private String displayName;
 		private final Map<String, String> statusDisplayNames = new LinkedHashMap<>();
 		private final Map<String, Set<String>> allowedTransitions = new HashMap<>();
+		private boolean typedCreateOnly;
 
 		private Builder(final String typeSlug) {
 			this.typeSlug = typeSlug;
@@ -70,6 +82,12 @@ public final class ErrandTypeContribution {
 
 		public Builder displayName(final String displayName) {
 			this.displayName = displayName;
+			return this;
+		}
+
+		/** Mark this type as creatable only via its module's dedicated endpoint, not the generic POST /errands. */
+		public Builder typedCreateOnly(final boolean typedCreateOnly) {
+			this.typedCreateOnly = typedCreateOnly;
 			return this;
 		}
 

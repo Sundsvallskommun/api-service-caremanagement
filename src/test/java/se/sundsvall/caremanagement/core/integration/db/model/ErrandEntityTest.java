@@ -4,18 +4,18 @@ import com.google.code.beanmatchers.BeanMatchers;
 import java.time.OffsetDateTime;
 import java.util.Random;
 import java.util.UUID;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
-import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
-import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
-import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEqualsExcluding;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCodeExcluding;
+import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToStringExcluding;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class ErrandEntityTest {
 	private static final OffsetDateTime FIXED_TIMESTAMP = OffsetDateTime.parse("2024-01-01T12:00:00Z");
@@ -27,16 +27,16 @@ class ErrandEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(ErrandEntity.class, allOf(
+		MatcherAssert.assertThat(ErrandEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
-			hasValidBeanHashCode(),
-			hasValidBeanEquals(),
-			hasValidBeanToString()));
+			hasValidBeanHashCodeExcluding("description"),
+			hasValidBeanEqualsExcluding("description"),
+			hasValidBeanToStringExcluding("description")));
 	}
 
 	@Test
-	void hasValidBuilderMethods() {
+	void testBuilderMethods() {
 		final var now = FIXED_TIMESTAMP;
 
 		final var id = UUID.randomUUID().toString();
@@ -125,7 +125,7 @@ class ErrandEntityTest {
 	}
 
 	@Test
-	void hasNoDirtOnCreatedBean() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(ErrandEntity.create()).hasAllNullFieldsOrProperties();
 		assertThat(new ErrandEntity()).hasAllNullFieldsOrProperties();
 	}

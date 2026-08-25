@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import com.google.code.beanmatchers.BeanMatchers;
 import java.time.LocalDate;
 import java.util.Random;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -11,8 +12,9 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static java.time.Month.JULY;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class MonitoringRequestTest {
 
@@ -23,7 +25,7 @@ class MonitoringRequestTest {
 
 	@Test
 	void testBean() {
-		assertThat(MonitoringRequest.class, allOf(
+		MatcherAssert.assertThat(MonitoringRequest.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -32,9 +34,9 @@ class MonitoringRequestTest {
 	}
 
 	@Test
-	void builderMethods() {
-		final var startDate = LocalDate.of(2026, 7, 1);
-		final var endDate = LocalDate.of(2026, 7, 31);
+	void testBuilderMethods() {
+		final var startDate = LocalDate.of(2026, JULY, 1);
+		final var endDate = LocalDate.of(2026, JULY, 31);
 		final var request = MonitoringRequest.create()
 			.withSource("LIFECARE")
 			.withLifecareId("987654")
@@ -44,17 +46,17 @@ class MonitoringRequestTest {
 			.withEndDate(endDate)
 			.withCreatedBy("joe01doe");
 
-		org.assertj.core.api.Assertions.assertThat(request).hasNoNullFieldsOrProperties();
-		org.assertj.core.api.Assertions.assertThat(request.getSource()).isEqualTo("LIFECARE");
-		org.assertj.core.api.Assertions.assertThat(request.getLifecareId()).isEqualTo("987654");
-		org.assertj.core.api.Assertions.assertThat(request.getTitle()).isEqualTo("Följ upp");
-		org.assertj.core.api.Assertions.assertThat(request.getStartDate()).isEqualTo(startDate);
-		org.assertj.core.api.Assertions.assertThat(request.getEndDate()).isEqualTo(endDate);
-		org.assertj.core.api.Assertions.assertThat(request.getCreatedBy()).isEqualTo("joe01doe");
+		assertThat(request).hasNoNullFieldsOrProperties();
+		assertThat(request.getSource()).isEqualTo("LIFECARE");
+		assertThat(request.getLifecareId()).isEqualTo("987654");
+		assertThat(request.getTitle()).isEqualTo("Följ upp");
+		assertThat(request.getStartDate()).isEqualTo(startDate);
+		assertThat(request.getEndDate()).isEqualTo(endDate);
+		assertThat(request.getCreatedBy()).isEqualTo("joe01doe");
 	}
 
 	@Test
-	void createReturnsEmptyInstance() {
-		org.assertj.core.api.Assertions.assertThat(MonitoringRequest.create()).hasAllNullFieldsOrProperties();
+	void testNoDirtOnCreatedBean() {
+		assertThat(MonitoringRequest.create()).hasAllNullFieldsOrProperties();
 	}
 }

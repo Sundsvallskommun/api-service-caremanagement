@@ -4,11 +4,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * The three approvable sections of the Draken EB view bundled into one object, so the frontend can render — and the
+ * The three approvable sections of the Draken financial assistance view bundled into one object, so the frontend can
+ * render — and the
  * caseworker can acknowledge — each tab's approval state in a single place. Always carries all three (a section never
  * approved is present with {@code approved=false}).
  */
-@Schema(description = "The caseworker approval state of the three EB view sections (calculation, payment, decision).")
+@Schema(description = "The caseworker approval state of the three financial assistance view sections (calculation, payment, decision).")
 public class SectionApprovals {
 
 	@Schema(description = "Approval of the calculation (calculation) section")

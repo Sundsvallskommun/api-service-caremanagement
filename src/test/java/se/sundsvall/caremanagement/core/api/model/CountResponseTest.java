@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CountResponseTest {
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		final var countResponse = new CountResponse(42L);
 
 		assertThat(countResponse.count()).isEqualTo(42L);

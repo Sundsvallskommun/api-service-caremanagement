@@ -3,7 +3,8 @@ package se.sundsvall.caremanagement.attachments.service.event;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
-import se.sundsvall.caremanagement.conversation.service.event.MessagePosted;
+import se.sundsvall.caremanagement.conversation.service.event.MessageCreated;
+import se.sundsvall.caremanagement.conversation.spi.Direction;
 
 /**
  * Keeps the consolidated client-attachment PDF current. Whenever the applicant posts an INBOUND message that carries
@@ -15,8 +16,6 @@ import se.sundsvall.caremanagement.conversation.service.event.MessagePosted;
 @Component
 class AttachmentConversationListener {
 
-	private static final String INBOUND = "INBOUND";
-
 	private final AttachmentService attachmentService;
 
 	AttachmentConversationListener(final AttachmentService attachmentService) {
@@ -24,8 +23,8 @@ class AttachmentConversationListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final MessagePosted event) {
-		if (INBOUND.equals(event.direction()) && event.hasAttachments()) {
+	void regenerateCombinedPdfOnInboundAttachments(final MessageCreated event) {
+		if (Direction.INBOUND.name().equals(event.direction()) && event.hasAttachments()) {
 			attachmentService.regenerateClientAttachmentPdf(event.municipalityId(), event.namespace(), event.errandId());
 		}
 	}

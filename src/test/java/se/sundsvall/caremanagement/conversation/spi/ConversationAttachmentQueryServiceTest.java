@@ -71,7 +71,7 @@ class ConversationAttachmentQueryServiceTest {
 
 		assertThat(result).hasSize(1);
 		assertThat(result.getFirst().fileName()).isEqualTo("intyg.pdf");
-		assertThat(result.getFirst().mimeType()).isEqualTo("application/pdf");
+		assertThat(result.getFirst().contentType()).isEqualTo("application/pdf");
 		assertThat(new String(result.getFirst().content(), UTF_8)).isEqualTo("hello");
 		// The caseworker attachment's blob is never loaded.
 		verify(attachmentDataRepositoryMock, never()).findByMessageAttachmentId("a2");
@@ -97,6 +97,7 @@ class ConversationAttachmentQueryServiceTest {
 
 		assertThatThrownBy(() -> service.clientAttachmentContentsForErrand(ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", INTERNAL_SERVER_ERROR);
+			.hasFieldOrPropertyWithValue("status", INTERNAL_SERVER_ERROR)
+			.hasMessage("Internal Server Error: Could not read conversation attachment content for attachment id 'a1': boom");
 	}
 }

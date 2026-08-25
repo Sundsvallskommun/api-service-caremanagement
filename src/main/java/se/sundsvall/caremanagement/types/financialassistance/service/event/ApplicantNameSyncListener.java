@@ -5,7 +5,8 @@ import java.util.stream.Stream;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
+import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.stakeholders.service.event.StakeholderMutated;
@@ -14,35 +15,40 @@ import static java.util.stream.Collectors.joining;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_APPLICANT;
 
 /**
- * Keeps the errand envelope's denormalized {@code applicantName} in sync with the EB applicant. The errand envelope has
+ * Keeps the errand envelope's denormalized {@code applicantName} in sync with the financial assistance applicant. The
+ * errand envelope has
  * no JPA relation to stakeholders (separate module/table), so the errand list can't otherwise be sorted or searched by
  * applicant — this listener maintains a sortable read-model copy on the envelope.
  *
  * <p>
  * Runs asynchronously after the stakeholder write commits ({@code @ApplicationModuleListener}, durably staged in the
  * Spring Modulith outbox). It recomputes the name from the errand's current {@code APPLICANT} stakeholder and writes it
- * via a targeted update that does <b>not</b> bump {@code touched}. Since only the EB type contributes an
- * {@code APPLICANT} role, non-EB errands resolve to no applicant and are left untouched (null stays null). Errands that
+ * via a targeted update that does <b>not</b> bump {@code touched}. Since only the financial assistance type contributes
+ * an
+ * {@code APPLICANT} role, non-financial-assistance errands resolve to no applicant and are left untouched (null stays
+ * null). Errands that
  * have vanished by the time the event is handled (e.g. deleted) are skipped, so a delete never gets stuck retrying.
  */
 @Component
 class ApplicantNameSyncListener {
 
-	private final ErrandRepository errandRepository;
+	private final ErrandQueryService errandQueryService;
+	private final ErrandService errandService;
 	private final StakeholderService stakeholderService;
 
-	ApplicantNameSyncListener(final ErrandRepository errandRepository, final StakeholderService stakeholderService) {
-		this.errandRepository = errandRepository;
+	ApplicantNameSyncListener(final ErrandQueryService errandQueryService, final ErrandService errandService, final StakeholderService stakeholderService) {
+		this.errandQueryService = errandQueryService;
+		this.errandService = errandService;
 		this.stakeholderService = stakeholderService;
 	}
 
 	@ApplicationModuleListener
-	void on(final StakeholderMutated event) {
-		errandRepository.findByIdAndNamespaceAndMunicipalityId(event.errandId(), event.namespace(), event.municipalityId())
+	void syncApplicantName(final StakeholderMutated event) {
+		errandQueryService.findErrand(event.municipalityId(), event.namespace(), event.errandId())
 			.ifPresent(errand -> {
 				final var applicantName = resolveApplicantName(event);
 				if (!Objects.equals(errand.getApplicantName(), applicantName)) {
-					errandRepository.updateApplicantName(event.errandId(), applicantName);
+					errandService.updateApplicantName(event.errandId(), applicantName);
 				}
 			});
 	}

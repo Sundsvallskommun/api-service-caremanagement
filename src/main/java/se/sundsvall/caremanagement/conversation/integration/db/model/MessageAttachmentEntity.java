@@ -26,10 +26,10 @@ public class MessageAttachmentEntity {
 
 	@Id
 	@UuidGenerator
-	@Column(name = "id")
+	@Column(name = "id", length = 36)
 	private String id;
 
-	@Column(name = "message_id", nullable = false, length = 255)
+	@Column(name = "message_id", nullable = false, length = 36)
 	private String messageId;
 
 	@Column(name = "file_name")
@@ -80,32 +80,32 @@ public class MessageAttachmentEntity {
 		return created;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setMessageId(final String v) {
-		this.messageId = v;
+	public void setMessageId(final String messageId) {
+		this.messageId = messageId;
 	}
 
-	public void setFileName(final String v) {
-		this.fileName = v;
+	public void setFileName(final String fileName) {
+		this.fileName = fileName;
 	}
 
-	public void setMimeType(final String v) {
-		this.mimeType = v;
+	public void setMimeType(final String mimeType) {
+		this.mimeType = mimeType;
 	}
 
-	public void setFileSize(final Integer v) {
-		this.fileSize = v;
+	public void setFileSize(final Integer fileSize) {
+		this.fileSize = fileSize;
 	}
 
-	public void setSenderRole(final String v) {
-		this.senderRole = v;
+	public void setSenderRole(final String senderRole) {
+		this.senderRole = senderRole;
 	}
 
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
 	}
 
 	public MessageAttachmentEntity withId(final String id) {

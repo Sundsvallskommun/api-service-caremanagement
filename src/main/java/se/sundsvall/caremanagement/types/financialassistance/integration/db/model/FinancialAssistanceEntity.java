@@ -19,7 +19,7 @@ import se.sundsvall.caremanagement.shared.AuditableListener;
 import static org.hibernate.Length.LONG32;
 
 /**
- * Financial assistance (EB) application data. One row per errand, sharing the primary key with {@code errand.id}
+ * Financial assistance application data. One row per errand, sharing the primary key with {@code errand.id}
  * ({@code errand_id} is set from the envelope id, not generated). Repeating groups — children, costs, incomes, pending
  * benefits, assets, per-person details, planning, planned activities and job applications — are owned
  * {@code @ElementCollection} value tables ({@code errand_fa_*}) that cascade with the row.
@@ -30,7 +30,7 @@ import static org.hibernate.Length.LONG32;
 public class FinancialAssistanceEntity implements Auditable {
 
 	@Id
-	@Column(name = "errand_id", length = 255)
+	@Column(name = "errand_id", length = 36)
 	private String errandId;
 
 	@Column(name = "application_type", length = 32)
@@ -643,6 +643,10 @@ public class FinancialAssistanceEntity implements Auditable {
 		return this;
 	}
 
+	// The free-text description fields (otherBenefitDescription, livelihoodDescription, childrenResidenceChangeDescription,
+	// housingDescription, housingChangeDescription, stayDescription) are LONG32 columns and are deliberately excluded from
+	// equals/hashCode — they can be large, are not part of the errand's identity, and their boolean/type siblings already
+	// carry the distinguishing signal. toString omits them for the same reason.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -651,16 +655,13 @@ public class FinancialAssistanceEntity implements Auditable {
 		return Objects.equals(errandId, that.errandId) && Objects.equals(applicationType, that.applicationType)
 			&& Objects.equals(maritalStatus, that.maritalStatus) && Objects.equals(periodMonth, that.periodMonth)
 			&& Objects.equals(periodYear, that.periodYear) && Objects.equals(periodChoice, that.periodChoice)
-			&& Objects.equals(normType, that.normType) && Objects.equals(otherBenefitDescription, that.otherBenefitDescription)
-			&& Objects.equals(livelihoodDescription, that.livelihoodDescription) && Objects.equals(hasChildrenUnder21, that.hasChildrenUnder21)
+			&& Objects.equals(normType, that.normType) && Objects.equals(hasChildrenUnder21, that.hasChildrenUnder21)
 			&& Objects.equals(childrenResidenceChanged, that.childrenResidenceChanged)
-			&& Objects.equals(childrenResidenceChangeDescription, that.childrenResidenceChangeDescription)
 			&& Objects.equals(housingForm, that.housingForm) && Objects.equals(housingPersonCount, that.housingPersonCount)
 			&& Objects.equals(housingRoomsPlusKitchen, that.housingRoomsPlusKitchen)
-			&& Objects.equals(housingDescription, that.housingDescription) && Objects.equals(housingChanged, that.housingChanged)
-			&& Objects.equals(housingChangeDescription, that.housingChangeDescription) && Objects.equals(hasIncomes, that.hasIncomes)
+			&& Objects.equals(housingChanged, that.housingChanged) && Objects.equals(hasIncomes, that.hasIncomes)
 			&& Objects.equals(hasPendingBenefits, that.hasPendingBenefits) && Objects.equals(hasAssets, that.hasAssets)
-			&& Objects.equals(staysInMunicipality, that.staysInMunicipality) && Objects.equals(stayDescription, that.stayDescription)
+			&& Objects.equals(staysInMunicipality, that.staysInMunicipality)
 			&& Objects.equals(attestation, that.attestation) && Objects.equals(attestedAt, that.attestedAt)
 			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt)
 			&& Objects.equals(children, that.children) && Objects.equals(costs, that.costs) && Objects.equals(incomes, that.incomes)
@@ -673,9 +674,8 @@ public class FinancialAssistanceEntity implements Auditable {
 	@Override
 	public int hashCode() {
 		return Objects.hash(errandId, applicationType, maritalStatus, periodMonth, periodYear, periodChoice, normType,
-			otherBenefitDescription, livelihoodDescription, hasChildrenUnder21, childrenResidenceChanged, childrenResidenceChangeDescription,
-			housingForm, housingPersonCount, housingRoomsPlusKitchen, housingDescription, housingChanged,
-			housingChangeDescription, hasIncomes, hasPendingBenefits, hasAssets, staysInMunicipality, stayDescription, attestation,
+			hasChildrenUnder21, childrenResidenceChanged, housingForm, housingPersonCount, housingRoomsPlusKitchen, housingChanged,
+			hasIncomes, hasPendingBenefits, hasAssets, staysInMunicipality, attestation,
 			attestedAt, lastDailyRunAt, children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
 			created, modified);
 	}

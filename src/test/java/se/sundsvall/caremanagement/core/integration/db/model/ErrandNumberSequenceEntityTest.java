@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.core.integration.db.model;
 
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanConstructor;
@@ -8,14 +9,13 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.AllOf.allOf;
+import static org.hamcrest.CoreMatchers.allOf;
 
 class ErrandNumberSequenceEntityTest {
 
 	@Test
 	void testBean() {
-		assertThat(ErrandNumberSequenceEntity.class, allOf(
+		MatcherAssert.assertThat(ErrandNumberSequenceEntity.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -24,7 +24,7 @@ class ErrandNumberSequenceEntityTest {
 	}
 
 	@Test
-	void hasValidBuilderMethods() {
+	void testBuilderMethods() {
 		final var id = 1L;
 		final var municipalityId = "2281";
 		final var namespace = "FINANCIAL_ASSISTANCE";
@@ -50,7 +50,7 @@ class ErrandNumberSequenceEntityTest {
 	}
 
 	@Test
-	void hasNoDirtOnCreatedBean() {
+	void testNoDirtOnCreatedBean() {
 		assertThat(ErrandNumberSequenceEntity.create()).hasAllNullFieldsOrProperties();
 		assertThat(new ErrandNumberSequenceEntity()).hasAllNullFieldsOrProperties();
 	}

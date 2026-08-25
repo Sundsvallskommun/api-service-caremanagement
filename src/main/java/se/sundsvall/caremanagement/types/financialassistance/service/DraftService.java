@@ -1,17 +1,10 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -31,41 +24,40 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
+import se.sundsvall.caremanagement.types.financialassistance.service.mapper.CalculationDraftMapper;
 import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
 import se.sundsvall.dept44.problem.Problem;
 
-import static java.util.Comparator.comparing;
-import static java.util.Comparator.naturalOrder;
-import static java.util.Comparator.nullsLast;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_EXPENSE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_SPECIAL_EXPENSE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
-import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 
 /**
- * The editable draft calculation across its sections — persons, incomes, expenses and other living costs
- * (the expense bucket {@code SPECIAL_EXPENSE}) — mirroring the Lifecare Calculation tabs. The daily prepare
- * {@link #refresh refreshes} the process columns from the freshly computed rows; the per-row caseworker operations
- * touch only the caseworker columns and the soft-delete flag, and {@link #patchHeader} sets the norm, the calculation
- * dates and the custom household size (common costs). The merge invariant lives in {@link SectionReconciler};
- * effective value = caseworker value when set, otherwise process value.
+ * The editable draft calculation across its sections — persons, incomes, expenses and other living costs (the expense
+ * bucket {@code SPECIAL_EXPENSE}) — mirroring the Lifecare Calculation tabs. The daily prepare {@link #refresh
+ * refreshes}
+ * the process columns from the freshly computed rows (delegated per section to {@link SectionReconciler}); the per-row
+ * caseworker operations touch only the caseworker columns and the soft-delete flag, and {@link #patchHeader} sets the
+ * norm, the calculation dates and the custom household size (common costs). The entity ↔ API mapping lives in
+ * {@link CalculationDraftMapper}; effective value = caseworker value when set, otherwise process value.
  */
 @Service
 public class DraftService {
 
-	private final FaCalculationDraftRepository headerRepository;
+	private static final String NO_DRAFT_FOR_ERRAND = "No draft calculation for errand";
+
+	private final FaCalculationDraftRepository calculationDraftRepository;
 	private final FaNormIncomeRepository incomeRepository;
 	private final FaNormExpenseRepository expenseRepository;
 	private final FaNormPersonRepository personRepository;
+	private final SectionReconciler sectionReconciler;
 
-	DraftService(final FaCalculationDraftRepository headerRepository, final FaNormIncomeRepository incomeRepository,
-		final FaNormExpenseRepository expenseRepository, final FaNormPersonRepository personRepository) {
-		this.headerRepository = headerRepository;
+	DraftService(final FaCalculationDraftRepository calculationDraftRepository, final FaNormIncomeRepository incomeRepository,
+		final FaNormExpenseRepository expenseRepository, final FaNormPersonRepository personRepository, final SectionReconciler sectionReconciler) {
+		this.calculationDraftRepository = calculationDraftRepository;
 		this.incomeRepository = incomeRepository;
 		this.expenseRepository = expenseRepository;
 		this.personRepository = personRepository;
+		this.sectionReconciler = sectionReconciler;
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -84,29 +76,15 @@ public class DraftService {
 
 		upsertHeader(errandId, applicationMonth, normId, normType);
 
-		// New rows inserted by the reconcile get the next stable position appended after the existing rows; refreshed rows
-		// keep the position they already have.
-		final var personSaver = positioningSaver(personRepository.nextPositionForErrand(errandId), FaNormPersonEntity::getPosition, FaNormPersonEntity::setPosition,
-			personRepository::save);
-		final var incomeSaver = positioningSaver(incomeRepository.nextPositionForErrand(errandId), FaNormIncomeEntity::getPosition, FaNormIncomeEntity::setPosition,
-			incomeRepository::save);
-		final var expenseSaver = positioningSaver(expenseRepository.nextPositionForErrand(errandId), FaNormExpenseEntity::getPosition, FaNormExpenseEntity::setPosition,
-			expenseRepository::save);
-
-		final var persons = SectionReconciler.reconcile(personRepository.findByErrandId(errandId), nullSafe(freshPersons),
-			DraftService::personKey, isSystem(FaNormPersonEntity::getOrigin), DraftService::copyPersonProcess, DraftService::personLabel, personSaver);
-
-		final var incomes = SectionReconciler.reconcile(incomeRepository.findByErrandId(errandId), nullSafe(freshIncomes),
-			DraftService::incomeKey, isSystem(FaNormIncomeEntity::getOrigin), DraftService::copyIncomeProcess, DraftService::incomeLabel, incomeSaver);
-
-		final var expenses = SectionReconciler.reconcile(expenseRepository.findByErrandId(errandId), nullSafe(freshExpenses),
-			DraftService::expenseKey, isSystem(FaNormExpenseEntity::getOrigin), DraftService::copyExpenseProcess, DraftService::expenseLabel, expenseSaver);
+		final var persons = sectionReconciler.reconcilePersons(errandId, freshPersons);
+		final var incomes = sectionReconciler.reconcileIncomes(errandId, freshIncomes);
+		final var expenses = sectionReconciler.reconcileExpenses(errandId, freshExpenses);
 
 		return new DraftChanges(incomes.added(), incomes.dropped(), expenses.added(), expenses.dropped(), persons.added(), persons.dropped());
 	}
 
 	private void upsertHeader(final String errandId, final String applicationMonth, final Integer normId, final List<String> normType) {
-		final var header = headerRepository.findById(errandId).orElseGet(() -> FaCalculationDraftEntity.create().withErrandId(errandId));
+		final var header = calculationDraftRepository.findById(errandId).orElseGet(() -> FaCalculationDraftEntity.create().withErrandId(errandId));
 		ofNullable(applicationMonth).filter(StringUtils::hasText).ifPresent(month -> {
 			header.setApplicationMonth(month);
 			final var parsed = YearMonth.parse(month);
@@ -115,15 +93,15 @@ public class DraftService {
 		});
 		ofNullable(normId).ifPresent(header::setNormId);
 		ofNullable(normType).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
-		header.setCalculationDate(LocalDate.now());
-		headerRepository.save(header);
+		header.setCalculationDate(LocalDate.now(ZoneId.systemDefault()));
+		calculationDraftRepository.save(header);
 	}
 
 	/** Caseworker edit of the header — the norm, the calculation date window and the custom household size. */
 	@Transactional
 	public CalculationDraft patchHeader(final String errandId, final NormHeaderInput input) {
-		final var header = headerRepository.findById(errandId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft calculation for errand"));
+		final var header = calculationDraftRepository.findById(errandId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND));
 		ofNullable(input.getNormId()).ifPresent(header::setNormId);
 		ofNullable(input.getNormType()).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
 		ofNullable(input.getCalculationFromDate()).ifPresent(header::setCalculationFromDate);
@@ -131,8 +109,8 @@ public class DraftService {
 		ofNullable(input.getCalculationDate()).ifPresent(header::setCalculationDate);
 		ofNullable(input.getHasCustomHouseholdSize()).ifPresent(header::setHasCustomHouseholdSize);
 		ofNullable(input.getHouseholdSize()).ifPresent(header::setHouseholdSize);
-		headerRepository.save(header);
-		return get(errandId);
+		calculationDraftRepository.save(header);
+		return loadDraft(errandId);
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -141,37 +119,16 @@ public class DraftService {
 
 	@Transactional(readOnly = true)
 	public CalculationDraft get(final String errandId) {
-		final var header = headerRepository.findById(errandId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft calculation for errand"));
+		return loadDraft(errandId);
+	}
 
-		final var incomes = incomeRepository.findByErrandId(errandId).stream()
-			.sorted(comparing(FaNormIncomeEntity::getPosition, nullsLast(naturalOrder()))).map(DraftService::toIncomeRow).toList();
-		final var allExpenses = expenseRepository.findByErrandId(errandId).stream()
-			.sorted(comparing(FaNormExpenseEntity::getPosition, nullsLast(naturalOrder()))).map(DraftService::toExpenseRow).toList();
-		final var expenses = allExpenses.stream().filter(row -> !BUCKET_SPECIAL_EXPENSE.equals(row.getBucket())).toList();
-		final var specialExpenses = allExpenses.stream().filter(row -> BUCKET_SPECIAL_EXPENSE.equals(row.getBucket())).toList();
-		final var persons = personRepository.findByErrandId(errandId).stream()
-			.sorted(comparing(FaNormPersonEntity::getPosition, nullsLast(naturalOrder()))).map(DraftService::toPersonRow).toList();
-
-		return CalculationDraft.create()
-			.withErrandId(header.getErrandId())
-			.withApplicationMonth(header.getApplicationMonth())
-			.withNormId(header.getNormId())
-			.withNormType(header.getNormType())
-			.withCalculationFromDate(header.getCalculationFromDate())
-			.withCalculationToDate(header.getCalculationToDate())
-			.withCalculationDate(header.getCalculationDate())
-			.withHasCustomHouseholdSize(header.getHasCustomHouseholdSize())
-			.withHouseholdSize(header.getHouseholdSize())
-			.withPersons(persons)
-			.withIncomes(incomes)
-			.withExpenses(expenses)
-			.withSpecialExpenses(specialExpenses)
-			.withIncomeSum(sum(incomes.stream().filter(row -> !row.isDeleted()).flatMap(DraftService::incomeEffectiveAmounts)))
-			.withExpenseSum(sum(expenses.stream().filter(row -> !row.isDeleted()).map(NormExpenseRow::getEffectiveAmount)))
-			.withSpecialExpenseSum(sum(specialExpenses.stream().filter(row -> !row.isDeleted()).map(NormExpenseRow::getEffectiveAmount)))
-			.withCreated(header.getCreated())
-			.withUpdated(header.getUpdated());
+	// Shared read used by both the public read endpoint and the write methods. Kept out of @Transactional self-invocation:
+	// a write method calling the readOnly get() via 'this' would bypass the proxy and ignore the readOnly hint anyway.
+	private CalculationDraft loadDraft(final String errandId) {
+		final var header = calculationDraftRepository.findById(errandId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND));
+		return CalculationDraftMapper.toCalculationDraft(header,
+			incomeRepository.findByErrandId(errandId), expenseRepository.findByErrandId(errandId), personRepository.findByErrandId(errandId));
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -181,13 +138,8 @@ public class DraftService {
 	@Transactional
 	public NormIncomeRow addIncome(final String errandId, final NormIncomeInput input) {
 		requireHeader(errandId);
-		final var entity = incomeRepository.save(FaNormIncomeEntity.create()
-			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER).withPosition(incomeRepository.nextPositionForErrand(errandId))
-			.withTypeId(input.getTypeId()).withTypeName(input.getTypeName())
-			.withApplicantCaseworkerAmount(input.getApplicantCaseworkerAmount()).withApplicantAmountDate(input.getApplicantAmountDate())
-			.withCoapplicantCaseworkerAmount(input.getCoapplicantCaseworkerAmount()).withCoapplicantAmountDate(input.getCoapplicantAmountDate())
-			.withNote(input.getNote()));
-		return toIncomeRow(entity);
+		final var entity = incomeRepository.save(CalculationDraftMapper.toNewIncomeEntity(errandId, incomeRepository.nextPositionForErrand(errandId), input));
+		return CalculationDraftMapper.toIncomeRow(entity);
 	}
 
 	@Transactional
@@ -196,55 +148,47 @@ public class DraftService {
 		entity.setApplicantCaseworkerAmount(input.getApplicantCaseworkerAmount());
 		entity.setCoapplicantCaseworkerAmount(input.getCoapplicantCaseworkerAmount());
 		entity.setNote(input.getNote());
-		return toIncomeRow(incomeRepository.save(entity));
+		return CalculationDraftMapper.toIncomeRow(incomeRepository.save(entity));
 	}
 
 	@Transactional
 	public NormIncomeRow setIncomeDeleted(final String errandId, final String rowId, final boolean deleted) {
 		final var entity = requireIncome(errandId, rowId);
 		entity.setDeleted(deleted);
-		return toIncomeRow(incomeRepository.save(entity));
+		return CalculationDraftMapper.toIncomeRow(incomeRepository.save(entity));
 	}
 
 	@Transactional
 	public NormExpenseRow addExpense(final String errandId, final NormExpenseInput input) {
 		requireHeader(errandId);
-		final var entity = expenseRepository.save(FaNormExpenseEntity.create()
-			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER).withPosition(expenseRepository.nextPositionForErrand(errandId)).withBucket(bucketOrDefault(input.getBucket()))
-			.withCostType(input.getCostType()).withOtherSubType(input.getOtherSubType()).withSpecification(input.getSpecification())
-			.withAppliedAmount(input.getAppliedAmount()).withCaseworkerAmount(input.getCaseworkerAmount()).withNote(input.getNote()));
-		return toExpenseRow(entity);
+		final var entity = expenseRepository.save(CalculationDraftMapper.toNewExpenseEntity(errandId, expenseRepository.nextPositionForErrand(errandId), input));
+		return CalculationDraftMapper.toExpenseRow(entity);
 	}
 
 	@Transactional
 	public NormExpenseRow patchExpense(final String errandId, final String rowId, final NormExpenseInput input) {
 		final var entity = requireExpense(errandId, rowId);
 		// appliedAmount is the citizen's declared (ansökt) figure and is write-once — preserved across the daily refresh
-		// (see copyExpenseProcess). Only overwrite it when the patch actually supplies a value, so a partial patch that
-		// omits it cannot silently erase it (which the refresh would then never restore).
+		// (see SectionReconciler#copyExpenseProcess). Only overwrite it when the patch actually supplies a value, so a
+		// partial patch that omits it cannot silently erase it (which the refresh would then never restore).
 		ofNullable(input.getAppliedAmount()).ifPresent(entity::setAppliedAmount);
 		entity.setCaseworkerAmount(input.getCaseworkerAmount());
 		entity.setNote(input.getNote());
-		return toExpenseRow(expenseRepository.save(entity));
+		return CalculationDraftMapper.toExpenseRow(expenseRepository.save(entity));
 	}
 
 	@Transactional
 	public NormExpenseRow setExpenseDeleted(final String errandId, final String rowId, final boolean deleted) {
 		final var entity = requireExpense(errandId, rowId);
 		entity.setDeleted(deleted);
-		return toExpenseRow(expenseRepository.save(entity));
+		return CalculationDraftMapper.toExpenseRow(expenseRepository.save(entity));
 	}
 
 	@Transactional
 	public NormPersonRow addPerson(final String errandId, final NormPersonInput input) {
 		requireHeader(errandId);
-		final var entity = personRepository.save(FaNormPersonEntity.create()
-			.withErrandId(errandId).withOrigin(ORIGIN_CASEWORKER).withPosition(personRepository.nextPositionForErrand(errandId))
-			.withPartyId(input.getPartyId()).withRole(input.getRole()).withName(input.getName())
-			.withCaseworkerDays(input.getCaseworkerDays()).withIncluded(input.getIncluded() == null || input.getIncluded())
-			.withDeviationFromDate(input.getDeviationFromDate()).withDeviationToDate(input.getDeviationToDate())
-			.withNormInterval(input.getNormInterval()).withJobStimulusAmount(input.getJobStimulusAmount()).withNote(input.getNote()));
-		return toPersonRow(entity);
+		final var entity = personRepository.save(CalculationDraftMapper.toNewPersonEntity(errandId, personRepository.nextPositionForErrand(errandId), input));
+		return CalculationDraftMapper.toPersonRow(entity);
 	}
 
 	@Transactional
@@ -257,14 +201,14 @@ public class DraftService {
 		entity.setNormInterval(input.getNormInterval());
 		entity.setJobStimulusAmount(input.getJobStimulusAmount());
 		entity.setNote(input.getNote());
-		return toPersonRow(personRepository.save(entity));
+		return CalculationDraftMapper.toPersonRow(personRepository.save(entity));
 	}
 
 	@Transactional
 	public NormPersonRow setPersonDeleted(final String errandId, final String rowId, final boolean deleted) {
 		final var entity = requirePerson(errandId, rowId);
 		entity.setDeleted(deleted);
-		return toPersonRow(personRepository.save(entity));
+		return CalculationDraftMapper.toPersonRow(personRepository.save(entity));
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -273,7 +217,7 @@ public class DraftService {
 
 	@Transactional(readOnly = true)
 	public Optional<FaCalculationDraftEntity> header(final String errandId) {
-		return headerRepository.findById(errandId);
+		return calculationDraftRepository.findById(errandId);
 	}
 
 	@Transactional(readOnly = true)
@@ -292,39 +236,12 @@ public class DraftService {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
-	// Effective-value helpers
-	// ------------------------------------------------------------------------------------------------------------------
-
-	public static BigDecimal effectiveAmount(final BigDecimal caseworkerAmount, final BigDecimal processAmount) {
-		return caseworkerAmount != null ? caseworkerAmount : processAmount;
-	}
-
-	public static Integer effectiveDays(final Integer caseworkerDays, final Integer processDays) {
-		return caseworkerDays != null ? caseworkerDays : processDays;
-	}
-
-	/**
-	 * A save consumer that stamps a stable position on any row that doesn't have one yet, handing out consecutive
-	 * positions from {@code start} (the next free position for the errand) so new rows append after the existing ones.
-	 */
-	private static <E> Consumer<E> positioningSaver(final int start, final Function<E, Integer> getPosition, final BiConsumer<E, Integer> setPosition,
-		final Consumer<E> save) {
-		final var next = new AtomicInteger(start);
-		return entity -> {
-			if (getPosition.apply(entity) == null) {
-				setPosition.accept(entity, next.getAndIncrement());
-			}
-			save.accept(entity);
-		};
-	}
-
-	// ------------------------------------------------------------------------------------------------------------------
 	// Internals
 	// ------------------------------------------------------------------------------------------------------------------
 
 	private void requireHeader(final String errandId) {
-		if (!headerRepository.existsById(errandId)) {
-			throw Problem.valueOf(NOT_FOUND, "No draft calculation for errand");
+		if (!calculationDraftRepository.existsById(errandId)) {
+			throw Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND);
 		}
 	}
 
@@ -338,108 +255,5 @@ public class DraftService {
 
 	private FaNormPersonEntity requirePerson(final String errandId, final String rowId) {
 		return personRepository.findByIdAndErrandId(rowId, errandId).orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No such person row on the errand's draft"));
-	}
-
-	private static String bucketOrDefault(final String bucket) {
-		return BUCKET_SPECIAL_EXPENSE.equals(bucket) ? BUCKET_SPECIAL_EXPENSE : BUCKET_EXPENSE;
-	}
-
-	private static <E> List<E> nullSafe(final List<E> list) {
-		return ofNullable(list).orElseGet(List::of);
-	}
-
-	private static <E> Predicate<E> isSystem(final Function<E, String> originOf) {
-		return entity -> ORIGIN_SYSTEM.equals(originOf.apply(entity));
-	}
-
-	private static Stream<BigDecimal> incomeEffectiveAmounts(final NormIncomeRow row) {
-		return Stream.of(row.getApplicantEffectiveAmount(), row.getCoapplicantEffectiveAmount());
-	}
-
-	private static BigDecimal sum(final Stream<BigDecimal> amounts) {
-		return amounts.filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
-	}
-
-	// --- identity keys ---
-
-	private static String incomeKey(final FaNormIncomeEntity e) {
-		return String.valueOf(e.getTypeId());
-	}
-
-	private static String expenseKey(final FaNormExpenseEntity e) {
-		return e.getCostType() + "|" + ofNullable(e.getOtherSubType()).orElse("") + "|" + ofNullable(e.getSpecification()).orElse("") + "|" + ofNullable(e.getBucket()).orElse("");
-	}
-
-	private static String personKey(final FaNormPersonEntity e) {
-		return e.getPartyId() + "|" + e.getRole();
-	}
-
-	// --- process-column copy (refresh) ---
-
-	private static void copyIncomeProcess(final FaNormIncomeEntity target, final FaNormIncomeEntity fresh) {
-		target.setTypeName(fresh.getTypeName());
-		target.setApplicantProcessAmount(fresh.getApplicantProcessAmount());
-		target.setApplicantAmountDate(fresh.getApplicantAmountDate());
-		target.setCoapplicantProcessAmount(fresh.getCoapplicantProcessAmount());
-		target.setCoapplicantAmountDate(fresh.getCoapplicantAmountDate());
-	}
-
-	private static void copyExpenseProcess(final FaNormExpenseEntity target, final FaNormExpenseEntity fresh) {
-		// appliedAmount is write-once — it is what the citizen applied for, set when the row is first inserted and editable
-		// by a caseworker (patchExpense). The daily refresh must NOT overwrite it, or a caseworker correction on a system
-		// row is lost next loop. Only the genuine process columns (the rules cap + its bucket) refresh.
-		target.setProcessAmount(fresh.getProcessAmount());
-		target.setBucket(fresh.getBucket());
-	}
-
-	private static void copyPersonProcess(final FaNormPersonEntity target, final FaNormPersonEntity fresh) {
-		target.setName(fresh.getName());
-		target.setProcessDays(fresh.getProcessDays());
-	}
-
-	// --- warning labels ---
-
-	private static String incomeLabel(final FaNormIncomeEntity e) {
-		return ofNullable(e.getTypeName()).orElse("Income");
-	}
-
-	private static String expenseLabel(final FaNormExpenseEntity e) {
-		return ofNullable(e.getCostType()).orElse("Expense") + ofNullable(e.getSpecification()).map(spec -> " – " + spec).orElse("");
-	}
-
-	private static String personLabel(final FaNormPersonEntity e) {
-		return ofNullable(e.getName()).orElse(ofNullable(e.getPartyId()).orElse("Person")) + " (" + e.getRole() + ")";
-	}
-
-	// --- entity -> view row ---
-
-	private static NormIncomeRow toIncomeRow(final FaNormIncomeEntity e) {
-		return NormIncomeRow.create()
-			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withTypeId(e.getTypeId()).withTypeName(e.getTypeName())
-			.withApplicantProcessAmount(e.getApplicantProcessAmount()).withApplicantCaseworkerAmount(e.getApplicantCaseworkerAmount())
-			.withApplicantEffectiveAmount(effectiveAmount(e.getApplicantCaseworkerAmount(), e.getApplicantProcessAmount())).withApplicantAmountDate(e.getApplicantAmountDate())
-			.withCoapplicantProcessAmount(e.getCoapplicantProcessAmount()).withCoapplicantCaseworkerAmount(e.getCoapplicantCaseworkerAmount())
-			.withCoapplicantEffectiveAmount(effectiveAmount(e.getCoapplicantCaseworkerAmount(), e.getCoapplicantProcessAmount())).withCoapplicantAmountDate(e.getCoapplicantAmountDate())
-			.withDeleted(e.isDeleted()).withNote(e.getNote()).withCreated(e.getCreated()).withUpdated(e.getUpdated());
-	}
-
-	private static NormExpenseRow toExpenseRow(final FaNormExpenseEntity e) {
-		final var effective = effectiveAmount(e.getCaseworkerAmount(), e.getProcessAmount());
-		return NormExpenseRow.create()
-			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withBucket(e.getBucket()).withCostType(e.getCostType()).withOtherSubType(e.getOtherSubType())
-			.withSpecification(e.getSpecification())
-			.withAppliedAmount(e.getAppliedAmount()).withProcessAmount(e.getProcessAmount()).withCaseworkerAmount(e.getCaseworkerAmount())
-			.withEffectiveAmount(effective).withDeleted(e.isDeleted()).withNote(e.getNote())
-			.withCreated(e.getCreated()).withUpdated(e.getUpdated());
-	}
-
-	private static NormPersonRow toPersonRow(final FaNormPersonEntity e) {
-		final var effective = effectiveDays(e.getCaseworkerDays(), e.getProcessDays());
-		return NormPersonRow.create()
-			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withPartyId(e.getPartyId()).withRole(e.getRole()).withName(e.getName())
-			.withProcessDays(e.getProcessDays()).withCaseworkerDays(e.getCaseworkerDays()).withEffectiveDays(effective)
-			.withIncluded(e.isIncluded()).withDeviationFromDate(e.getDeviationFromDate()).withDeviationToDate(e.getDeviationToDate())
-			.withNormInterval(e.getNormInterval()).withJobStimulusAmount(e.getJobStimulusAmount())
-			.withDeleted(e.isDeleted()).withNote(e.getNote()).withCreated(e.getCreated()).withUpdated(e.getUpdated());
 	}
 }

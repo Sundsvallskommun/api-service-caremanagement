@@ -15,9 +15,6 @@ import se.sundsvall.caremanagement.types.financialassistance.service.DefaultAssi
 import se.sundsvall.caremanagement.types.financialassistance.service.RecentlyClosedErrandService;
 
 import static org.springframework.transaction.annotation.Propagation.REQUIRES_NEW;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_NEEDS_MANUAL_REVIEW;
 
 /**
@@ -26,10 +23,10 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * REQUIRES_NEW}).
  *
  * <p>
- * The errand-envelope writes here ({@link #assignAndClassify} — default-handläggare assignment and the recently-closed
+ * The errand-envelope writes here ({@link #assignAndClassify} — default-caseworker assignment and the recently-closed
  * freeze) race the {@link ApplicantNameSyncListener}, which updates the same {@code errand} row from a sibling
- * {@code StakeholderMutated} event the moment the errand is created. On MariaDB 11 (InnoDB snapshot isolation) that
- * concurrency surfaces as a hard {@code 1020 "Record has changed since last read"} on the losing writer rather than a
+ * {@code StakeholderMutated} event the moment the errand is created. MariaDB/InnoDB can surface that concurrency as a
+ * hard {@code 1020 "Record has changed since last read"} on the losing writer rather than a
  * silent last-writer-wins. Running in a fresh transaction lets the listener simply retry: the next attempt reads the
  * row
  * after the sibling write committed and proceeds cleanly. The process start lives in its own method so a retry of the
@@ -40,24 +37,24 @@ class FinancialAssistanceErrandCreatedProcessor {
 
 	/** What the create classification decided, driving whether the listener goes on to start a process. */
 	enum Outcome {
-		/** Not an EB errand (no typed FA data) — nothing to do. */
-		NOT_EB,
+		/** Not a financial assistance errand (no typed FA data) — nothing to do. */
+		NOT_FINANCIAL_ASSISTANCE,
 		/** A recently-closed re-application — frozen for manual review, no process. */
 		FROZEN,
-		/** A normal EB errand — the listener should start the type's process. */
+		/** A normal financial assistance errand — the listener should start the type's process. */
 		PROCEED
 	}
 
-	private final FinancialAssistanceRepository repository;
+	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final ErrandService errandService;
 	private final DefaultAssigneeService defaultAssigneeService;
 	private final RecentlyClosedErrandService recentlyClosedErrandService;
 	private final FinancialAssistanceProcessStarter processStarter;
 
-	FinancialAssistanceErrandCreatedProcessor(final FinancialAssistanceRepository repository, final ErrandService errandService,
+	FinancialAssistanceErrandCreatedProcessor(final FinancialAssistanceRepository financialAssistanceRepository, final ErrandService errandService,
 		final DefaultAssigneeService defaultAssigneeService, final RecentlyClosedErrandService recentlyClosedErrandService,
 		final FinancialAssistanceProcessStarter processStarter) {
-		this.repository = repository;
+		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.errandService = errandService;
 		this.defaultAssigneeService = defaultAssigneeService;
 		this.recentlyClosedErrandService = recentlyClosedErrandService;
@@ -70,7 +67,7 @@ class FinancialAssistanceErrandCreatedProcessor {
 	 */
 	@Transactional(propagation = REQUIRES_NEW)
 	Outcome assignAndClassify(final ErrandCreated event) {
-		return repository.findByErrandId(event.errandId())
+		return financialAssistanceRepository.findByErrandId(event.errandId())
 			.map(entity -> {
 				assignDefaultHandlaggare(event);
 
@@ -81,7 +78,7 @@ class FinancialAssistanceErrandCreatedProcessor {
 				}
 				return Outcome.PROCEED;
 			})
-			.orElse(Outcome.NOT_EB);
+			.orElse(Outcome.NOT_FINANCIAL_ASSISTANCE);
 	}
 
 	/**
@@ -90,23 +87,13 @@ class FinancialAssistanceErrandCreatedProcessor {
 	 */
 	@Transactional(propagation = REQUIRES_NEW)
 	void startProcess(final ErrandCreated event) {
-		repository.findByErrandId(event.errandId()).ifPresent(entity -> {
-			if (SLUG_RENEWAL.equals(event.typeSlug())) {
-				processStarter.start(event.municipalityId(), event.namespace(), event.errandId(), entity); // renewal starts the full decision-support process
-			} else if (SLUG_SUPPLEMENTARY.equals(event.typeSlug())) {
-				// A supplementary application supplements an ongoing bistånd: start the tilläggsansökan process so its
-				// actualisation step attaches the previous återansökan's Lifecare caseworker, not the default assignee.
-				processStarter.startSupplementary(event.municipalityId(), event.namespace(), event.errandId(), entity);
-			} else if (SLUG_NEW.equals(event.typeSlug())) {
-				// A new application starts the nyansökan process (status + actualisation, then a normberäkning built
-				// straight from what the citizen declared). It has no prior insats, so the default assignee above stands.
-				processStarter.startNew(event.municipalityId(), event.namespace(), event.errandId(), entity);
-			}
-		});
+		financialAssistanceRepository.findByErrandId(event.errandId())
+			.ifPresent(entity -> processStarter.startFor(event.typeSlug(), event.municipalityId(), event.namespace(), event.errandId(), entity));
 	}
 
 	/**
-	 * Route an EB errand that arrived without an assignee to the modeler-configured default handläggare (best-effort).
+	 * Route a financial assistance errand that arrived without an assignee to the modeler-configured default handläggare
+	 * (best-effort).
 	 * Respects an assignee the application already carried; a renewal/supplement that later resolves a real Lifecare
 	 * caseworker overwrites this in the actualisation flow.
 	 */

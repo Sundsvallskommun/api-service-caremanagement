@@ -5,7 +5,8 @@ import org.springframework.stereotype.Component;
 import se.sundsvall.dept44.scheduling.Dept44Scheduled;
 
 /**
- * Nightly job that archives the conversation of every long-closed EB errand into a Lifecare-bound meddelandehistorik
+ * Nightly job that archives the conversation of every long-closed financial assistance errand into a Lifecare-bound
+ * message history
  * PDF. Thin trigger — all work (and per-errand error isolation) lives in {@link MessageArchiveService}. ShedLock keeps
  * a single node running it at a time.
  */

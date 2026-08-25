@@ -8,6 +8,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Objects;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
@@ -16,13 +17,13 @@ import static org.hibernate.Length.LONG32;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * A single EB income warning on an errand — an acknowledgeable object the caseworker reviews in Draken. The daily
+ * A single financial assistance income warning on an errand — an acknowledgeable object the caseworker reviews in
+ * Draken. The daily
  * prepare step reconciles these against the current SSBTEK picture (creating new ones, auto-closing resolved ones);
  * dedup is on {@code (errandId, type, sourceKey)}.
  */
 @Entity
 @Table(name = "errand_financial_assistance_warning", indexes = {
-	@Index(name = "idx_fa_warning_errand", columnList = "errand_id"),
 	@Index(name = "idx_fa_warning_dedup", columnList = "errand_id, type, source_key")
 })
 public class FaWarningEntity {
@@ -64,14 +65,14 @@ public class FaWarningEntity {
 
 	@PrePersist
 	void prePersist() {
-		final var now = OffsetDateTime.now();
+		final var now = OffsetDateTime.now(ZoneId.systemDefault());
 		created = now;
 		updated = now;
 	}
 
 	@PreUpdate
 	void preUpdate() {
-		updated = OffsetDateTime.now();
+		updated = OffsetDateTime.now(ZoneId.systemDefault());
 	}
 
 	public String getId() {
@@ -191,19 +192,21 @@ public class FaWarningEntity {
 		return this;
 	}
 
+	// 'message' (a LONG32 column) is deliberately excluded from equals/hashCode/toString — it can be large and is not part
+	// of the entity's identity.
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FaWarningEntity that = (FaWarningEntity) o;
 		return autoResolved == that.autoResolved && Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(type, that.type)
-			&& Objects.equals(sourceKey, that.sourceKey) && Objects.equals(message, that.message) && Objects.equals(status, that.status)
+			&& Objects.equals(sourceKey, that.sourceKey) && Objects.equals(status, that.status)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, sourceKey, message, status, autoResolved, created, updated);
+		return Objects.hash(id, errandId, type, sourceKey, status, autoResolved, created, updated);
 	}
 
 	@Override
@@ -213,7 +216,6 @@ public class FaWarningEntity {
 			", errandId='" + errandId + '\'' +
 			", type='" + type + '\'' +
 			", sourceKey='" + sourceKey + '\'' +
-			", message='" + message + '\'' +
 			", status='" + status + '\'' +
 			", autoResolved=" + autoResolved +
 			", created=" + created +

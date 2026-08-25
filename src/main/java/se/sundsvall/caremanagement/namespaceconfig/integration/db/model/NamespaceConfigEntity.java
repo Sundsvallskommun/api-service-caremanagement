@@ -19,11 +19,14 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 @Entity
 @Table(name = "namespace_config", indexes = {
-	@Index(name = "idx_namespace_config_namespace_municipality_id", columnList = "namespace, municipality_id"),
 	@Index(name = "idx_namespace_config_municipality_id", columnList = "municipality_id")
 }, uniqueConstraints = {
 	@UniqueConstraint(name = "uq_namespace_config_namespace_municipality_id", columnNames = {
 		"namespace", "municipality_id"
+	}),
+	// A short code duplicated within a municipality would mint colliding errand numbers (the prefix segment).
+	@UniqueConstraint(name = "uq_namespace_config_municipality_id_short_code", columnNames = {
+		"municipality_id", "short_code"
 	})
 })
 @EntityListeners(AuditableListener.class)

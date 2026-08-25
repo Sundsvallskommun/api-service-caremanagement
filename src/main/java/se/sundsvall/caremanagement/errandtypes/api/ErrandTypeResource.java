@@ -27,6 +27,12 @@ import static org.springframework.http.ResponseEntity.ok;
 import static se.sundsvall.caremanagement.Constants.NAMESPACE_REGEXP;
 import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE;
 
+/**
+ * Read-only descriptors of the registered errand types. The {@code municipalityId} and {@code namespace} path variables
+ * are validated for URL consistency with the rest of the API, but the errand-type catalogue is a global registry
+ * (contributed by {@code ErrandTypeSchemaContribution} beans, resolved in {@link ErrandTypeService}), so it is
+ * intentionally the same for every tenant and the path variables are not forwarded to the service.
+ */
 @RestController
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errand-types")

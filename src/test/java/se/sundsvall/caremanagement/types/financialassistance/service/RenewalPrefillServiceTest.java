@@ -7,8 +7,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
-import se.sundsvall.caremanagement.lifecare.service.LifecareEbCaseService;
-import se.sundsvall.caremanagement.lifecare.service.LifecareEbRoster;
+import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
+import se.sundsvall.caremanagement.lifecare.service.LifecareRoster;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PrefilledChild;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -34,21 +34,21 @@ class RenewalPrefillServiceTest {
 	private CitizenService citizenServiceMock;
 
 	@Mock
-	private LifecareEbCaseService lifecareEbCaseServiceMock;
+	private LifecareCaseService lifecareCaseServiceMock;
 
 	private RenewalPrefillService service() {
-		return new RenewalPrefillService(citizenServiceMock, lifecareEbCaseServiceMock);
+		return new RenewalPrefillService(citizenServiceMock, lifecareCaseServiceMock);
 	}
 
 	@Test
 	void prefillsOnlyChildrenExcludingApplicantAndCoApplicantAndResolvesPartyId() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CHILD_PNR)).thenReturn(Optional.of(CHILD_PARTY_ID));
-		final var roster = new LifecareEbRoster(APPLICANT_PNR, CO_APPLICANT_PNR, List.of(
-			new LifecareEbRoster.Member(APPLICANT_PNR, "Anna Andersson"),
-			new LifecareEbRoster.Member(CO_APPLICANT_PNR, "Björn Andersson"),
-			new LifecareEbRoster.Member(CHILD_PNR, "Kid Andersson")));
-		when(lifecareEbCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any())).thenReturn(roster);
+		final var roster = new LifecareRoster(APPLICANT_PNR, CO_APPLICANT_PNR, List.of(
+			new LifecareRoster.Member(APPLICANT_PNR, "Anna Andersson"),
+			new LifecareRoster.Member(CO_APPLICANT_PNR, "Björn Andersson"),
+			new LifecareRoster.Member(CHILD_PNR, "Kid Andersson")));
+		when(lifecareCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any())).thenReturn(roster);
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
 
@@ -62,10 +62,10 @@ class RenewalPrefillServiceTest {
 	void childWithUnresolvablePartyIdKeepsNullPartyId() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CHILD_PNR)).thenReturn(Optional.empty());
-		final var roster = new LifecareEbRoster(APPLICANT_PNR, null, List.of(
-			new LifecareEbRoster.Member(APPLICANT_PNR, "Anna Andersson"),
-			new LifecareEbRoster.Member(CHILD_PNR, "Kid Andersson")));
-		when(lifecareEbCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any())).thenReturn(roster);
+		final var roster = new LifecareRoster(APPLICANT_PNR, null, List.of(
+			new LifecareRoster.Member(APPLICANT_PNR, "Anna Andersson"),
+			new LifecareRoster.Member(CHILD_PNR, "Kid Andersson")));
+		when(lifecareCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any())).thenReturn(roster);
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
 
@@ -77,8 +77,8 @@ class RenewalPrefillServiceTest {
 	@Test
 	void emptyRosterYieldsNoChildren() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
-		when(lifecareEbCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any()))
-			.thenReturn(new LifecareEbRoster(APPLICANT_PNR, null, List.of()));
+		when(lifecareCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any()))
+			.thenReturn(new LifecareRoster(APPLICANT_PNR, null, List.of()));
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
 
@@ -94,13 +94,13 @@ class RenewalPrefillServiceTest {
 
 		assertThat(prefill.isLifecareChecked()).isFalse();
 		assertThat(prefill.getChildren()).isEmpty();
-		verifyNoInteractions(lifecareEbCaseServiceMock);
+		verifyNoInteractions(lifecareCaseServiceMock);
 	}
 
 	@Test
 	void lifecareFailureDegradesToEmptyResult() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
-		when(lifecareEbCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any()))
+		when(lifecareCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any()))
 			.thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare unreachable"));
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);

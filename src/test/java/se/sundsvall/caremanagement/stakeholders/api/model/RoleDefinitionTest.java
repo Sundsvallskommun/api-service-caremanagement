@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class RoleDefinitionTest {
 
 	@Test
-	void accessors() {
+	void testAccessors() {
 		final var def = new RoleDefinition("FOSTER_PARENT", "Familjehemsförälder", 2, true);
 
 		assertThat(def.code()).isEqualTo("FOSTER_PARENT");
@@ -18,21 +18,21 @@ class RoleDefinitionTest {
 	}
 
 	@Test
-	void unboundedOccurrencesAllowed() {
+	void testUnboundedOccurrencesAllowed() {
 		final var def = new RoleDefinition("OBSERVER", "Observer", 0, false);
 		assertThat(def.maxOccurrences()).isZero();
 		assertThat(def.required()).isFalse();
 	}
 
 	@Test
-	void blankCodeRejected() {
+	void testBlankCodeRejected() {
 		assertThatThrownBy(() -> new RoleDefinition("  ", "x", 1, true))
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessageContaining("code");
 	}
 
 	@Test
-	void nullCodeRejected() {
+	void testNullCodeRejected() {
 		assertThatThrownBy(() -> new RoleDefinition(null, "x", 1, true))
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessageContaining("code");

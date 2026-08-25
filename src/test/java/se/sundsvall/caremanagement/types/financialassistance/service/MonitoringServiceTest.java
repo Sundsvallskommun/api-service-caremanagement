@@ -14,8 +14,10 @@ import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.MonitoringRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaMonitoringRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaMonitoringEntity;
+import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static java.time.Month.JULY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,12 +45,12 @@ class MonitoringServiceTest {
 
 	private static FaMonitoringEntity entity(final String id, final OffsetDateTime created) {
 		return FaMonitoringEntity.create().withId(id).withErrandId(ERRAND_ID).withTitle("t-" + id)
-			.withStartDate(LocalDate.of(2026, 7, 1)).withCreated(created);
+			.withStartDate(LocalDate.of(2026, JULY, 1)).withCreated(created);
 	}
 
 	private static MonitoringRequest request() {
 		return MonitoringRequest.create().withTitle("Följ upp").withDescription("Inväntar underlag")
-			.withStartDate(LocalDate.of(2026, 7, 1)).withEndDate(LocalDate.of(2026, 7, 31)).withCreatedBy("joe01doe");
+			.withStartDate(LocalDate.of(2026, JULY, 1)).withEndDate(LocalDate.of(2026, JULY, 31)).withCreatedBy("joe01doe");
 	}
 
 	@Test
@@ -88,7 +90,8 @@ class MonitoringServiceTest {
 
 		assertThatThrownBy(() -> service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: Monitoring not found on errand");
 	}
 
 	@Test
@@ -102,8 +105,8 @@ class MonitoringServiceTest {
 		final var saved = captor.getValue();
 		assertThat(saved.getErrandId()).isEqualTo(ERRAND_ID);
 		assertThat(saved.getTitle()).isEqualTo("Följ upp");
-		assertThat(saved.getStartDate()).isEqualTo(LocalDate.of(2026, 7, 1));
-		assertThat(saved.getEndDate()).isEqualTo(LocalDate.of(2026, 7, 31));
+		assertThat(saved.getStartDate()).isEqualTo(LocalDate.of(2026, JULY, 1));
+		assertThat(saved.getEndDate()).isEqualTo(LocalDate.of(2026, JULY, 31));
 		assertThat(saved.getCreatedBy()).isEqualTo("joe01doe");
 		assertThat(result.getTitle()).isEqualTo("Följ upp");
 		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
@@ -195,7 +198,7 @@ class MonitoringServiceTest {
 		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
 		// startDate null (the NotNull guard lives at the API layer) → the range check short-circuits, no 400
-		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request().withStartDate(null).withEndDate(LocalDate.of(2026, 7, 31)));
+		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request().withStartDate(null).withEndDate(LocalDate.of(2026, JULY, 31)));
 
 		verify(repositoryMock).save(any());
 	}
@@ -203,9 +206,10 @@ class MonitoringServiceTest {
 	@Test
 	void createWithEndDateBeforeStartYields400() {
 		assertThatThrownBy(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			request().withStartDate(LocalDate.of(2026, 7, 31)).withEndDate(LocalDate.of(2026, 7, 1))))
+			request().withStartDate(LocalDate.of(2026, JULY, 31)).withEndDate(LocalDate.of(2026, JULY, 1))))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: endDate must not be before startDate");
 
 		verify(repositoryMock, never()).save(any());
 	}
@@ -219,7 +223,7 @@ class MonitoringServiceTest {
 		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1", request());
 
 		assertThat(result.getTitle()).isEqualTo("Följ upp");
-		assertThat(result.getEndDate()).isEqualTo(LocalDate.of(2026, 7, 31));
+		assertThat(result.getEndDate()).isEqualTo(LocalDate.of(2026, JULY, 31));
 		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
@@ -229,15 +233,17 @@ class MonitoringServiceTest {
 
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing", request()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: Monitoring not found on errand");
 	}
 
 	@Test
 	void updateWithEndDateBeforeStartYields400() {
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
-			request().withStartDate(LocalDate.of(2026, 7, 31)).withEndDate(LocalDate.of(2026, 7, 1))))
+			request().withStartDate(LocalDate.of(2026, JULY, 31)).withEndDate(LocalDate.of(2026, JULY, 1))))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: endDate must not be before startDate");
 
 		verify(repositoryMock, never()).findByIdAndErrandId(any(), any());
 	}
@@ -259,7 +265,8 @@ class MonitoringServiceTest {
 
 		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: Monitoring not found on errand");
 
 		verify(repositoryMock, never()).delete(any());
 	}
@@ -267,11 +274,12 @@ class MonitoringServiceTest {
 	@Test
 	void scopeCheckPropagatesWhenErrandMissing() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
-			.thenThrow(se.sundsvall.dept44.problem.Problem.valueOf(NOT_FOUND, "Errand not found"));
+			.thenThrow(Problem.valueOf(NOT_FOUND, "Errand not found"));
 
 		assertThatThrownBy(() -> service.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: Errand not found");
 
 		verify(repositoryMock, never()).findByErrandId(any());
 	}

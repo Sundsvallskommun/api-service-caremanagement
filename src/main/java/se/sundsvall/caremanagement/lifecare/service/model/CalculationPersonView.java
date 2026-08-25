@@ -1,5 +1,7 @@
 package se.sundsvall.caremanagement.lifecare.service.model;
 
+import java.math.BigDecimal;
+
 /**
  * A single household member on a Lifecare normberäkning, as read for display. The {@code personId} (personnummer) is
  * passed through for the handläggare-facing case view (the same audience that sees it in Lifecare).
@@ -7,7 +9,7 @@ package se.sundsvall.caremanagement.lifecare.service.model;
 public record CalculationPersonView(
 	String personId,
 	String name,
-	Double amount,
+	BigDecimal amount,
 	String deviationFromDate,
 	String deviationToDate) {
 }

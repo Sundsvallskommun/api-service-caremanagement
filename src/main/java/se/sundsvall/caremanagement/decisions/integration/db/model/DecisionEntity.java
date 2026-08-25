@@ -3,7 +3,6 @@ package se.sundsvall.caremanagement.decisions.integration.db.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
@@ -11,13 +10,13 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Objects;
+import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.UuidGenerator;
 
+import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
+
 @Entity
-@Table(name = "decision",
-	indexes = {
-		@Index(name = "idx_decision_errand_id", columnList = "errand_id")
-	})
+@Table(name = "decision")
 public class DecisionEntity {
 
 	@Id
@@ -25,7 +24,7 @@ public class DecisionEntity {
 	@Column(name = "id")
 	private String id;
 
-	@Column(name = "errand_id", nullable = false, length = 255)
+	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
 
 	@Column(name = "decision_type")
@@ -56,6 +55,7 @@ public class DecisionEntity {
 	private String createdBy;
 
 	@Column(name = "created")
+	@TimeZoneStorage(NORMALIZE)
 	private OffsetDateTime created;
 
 	@PrePersist
@@ -117,52 +117,52 @@ public class DecisionEntity {
 		return created;
 	}
 
-	public void setId(final String v) {
-		this.id = v;
+	public void setId(final String id) {
+		this.id = id;
 	}
 
-	public void setErrandId(final String v) {
-		this.errandId = v;
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
 	}
 
-	public void setDecisionType(final String v) {
-		this.decisionType = v;
+	public void setDecisionType(final String decisionType) {
+		this.decisionType = decisionType;
 	}
 
-	public void setValue(final String v) {
-		this.value = v;
+	public void setValue(final String value) {
+		this.value = value;
 	}
 
-	public void setDescription(final String v) {
-		this.description = v;
+	public void setDescription(final String description) {
+		this.description = description;
 	}
 
-	public void setAmount(final BigDecimal v) {
-		this.amount = v;
+	public void setAmount(final BigDecimal amount) {
+		this.amount = amount;
 	}
 
-	public void setDecisionMessage(final String v) {
-		this.decisionMessage = v;
+	public void setDecisionMessage(final String decisionMessage) {
+		this.decisionMessage = decisionMessage;
 	}
 
-	public void setDecisionDate(final LocalDate v) {
-		this.decisionDate = v;
+	public void setDecisionDate(final LocalDate decisionDate) {
+		this.decisionDate = decisionDate;
 	}
 
-	public void setPeriodFrom(final LocalDate v) {
-		this.periodFrom = v;
+	public void setPeriodFrom(final LocalDate periodFrom) {
+		this.periodFrom = periodFrom;
 	}
 
-	public void setPeriodTo(final LocalDate v) {
-		this.periodTo = v;
+	public void setPeriodTo(final LocalDate periodTo) {
+		this.periodTo = periodTo;
 	}
 
-	public void setCreatedBy(final String v) {
-		this.createdBy = v;
+	public void setCreatedBy(final String createdBy) {
+		this.createdBy = createdBy;
 	}
 
-	public void setCreated(final OffsetDateTime v) {
-		this.created = v;
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
 	}
 
 	public DecisionEntity withId(final String id) {

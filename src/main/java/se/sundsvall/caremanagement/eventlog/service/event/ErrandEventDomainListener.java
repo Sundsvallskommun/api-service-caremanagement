@@ -35,7 +35,7 @@ class ErrandEventDomainListener {
 	}
 
 	@ApplicationModuleListener
-	void on(final ErrandEvent event) {
+	void recordErrandEvent(final ErrandEvent event) {
 		final var entity = base(event);
 
 		switch (event) {
@@ -54,11 +54,10 @@ class ErrandEventDomainListener {
 				.withTarget("assignment")
 				.withDescription("Tilldelad " + Optional.ofNullable(assigned.previousAssignee()).orElse("ingen") + " → " + Optional.ofNullable(assigned.newAssignee()).orElse("ingen"))
 				.withActor(actorOr(assigned.changedBy())));
-			case final ErrandDeleted deleted -> service.recordDomainEvent(entity
-				.withAction("DELETE")
-				.withTarget("errand")
-				.withDescription("Ärende borttaget")
-				.withActor(actorOr(deleted.deletedBy())));
+			// The errand is being deleted (gallrat): dispose its whole activity log rather than appending a delete row —
+			// the log is a legal record kept for the life of the errand, and the other modules likewise clean up their
+			// errand-scoped data on ErrandDeleted. Without this, every deleted errand's history would linger forever.
+			case final ErrandDeleted deleted -> service.deleteForErrand(deleted.municipalityId(), deleted.namespace(), deleted.errandId());
 		}
 	}
 

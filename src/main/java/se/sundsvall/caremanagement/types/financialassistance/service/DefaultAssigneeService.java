@@ -11,11 +11,12 @@ import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import static java.util.Optional.ofNullable;
 
 /**
- * Resolves the default handläggare for an EB errand that arrived without an assignee — evaluates the
+ * Resolves the default caseworker for a financial assistance errand that arrived without an assignee — evaluates the
  * modeler-editable {@code Decision_defaultAssignee} DMN in the operaton engine (the same place the income raw list,
  * expense rules and the renewal delta rules live) and returns the configured assignee: the network/AD user id used as
  * the errand {@code assignedUserId}. This is the fallback for cases the Lifecare {@code CaseworkerResolver} can't place
- * (a nyansökan has no prior insats; a renewal whose previous caseworker can't be matched), giving verksamheten one
+ * (a new application has no prior intervention; a renewal whose previous caseworker can't be matched), giving the
+ * business unit one
  * editable place to route incoming errands without a code change.
  *
  * <p>

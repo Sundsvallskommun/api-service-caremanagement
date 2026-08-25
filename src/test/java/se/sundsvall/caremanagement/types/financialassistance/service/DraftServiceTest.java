@@ -24,9 +24,11 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
@@ -40,106 +42,67 @@ class DraftServiceTest {
 	private static final String ROW_ID = "row-1";
 
 	@Mock
-	private FaCalculationDraftRepository headerRepository;
+	private FaCalculationDraftRepository headerRepositoryMock;
 	@Mock
-	private FaNormIncomeRepository incomeRepository;
+	private FaNormIncomeRepository incomeRepositoryMock;
 	@Mock
-	private FaNormExpenseRepository expenseRepository;
+	private FaNormExpenseRepository expenseRepositoryMock;
 	@Mock
-	private FaNormPersonRepository personRepository;
+	private FaNormPersonRepository personRepositoryMock;
+	@Mock
+	private SectionReconciler sectionReconcilerMock;
 
 	@InjectMocks
 	private DraftService service;
 
 	@Test
-	void effectiveValueHelpersPreferCaseworker() {
-		assertThat(DraftService.effectiveAmount(new BigDecimal("5"), new BigDecimal("9"))).isEqualByComparingTo("5");
-		assertThat(DraftService.effectiveAmount(null, new BigDecimal("9"))).isEqualByComparingTo("9");
-		assertThat(DraftService.effectiveDays(12, 30)).isEqualTo(12);
-		assertThat(DraftService.effectiveDays(null, 30)).isEqualTo(30);
-	}
+	void refreshUpsertsHeaderThenDelegatesEachSectionAndAssemblesChanges() {
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.empty());
 
-	@Test
-	void refreshUpsertsHeaderAndReportsAddedRows() {
-		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		final var freshPersons = List.of(FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD));
+		final var freshIncomes = List.of(FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20));
+		final var freshExpenses = List.<FaNormExpenseEntity>of();
+		when(sectionReconcilerMock.reconcilePersons(ERRAND_ID, freshPersons)).thenReturn(new SectionReconciler.Diff(List.of(), List.of("Gone child")));
+		when(sectionReconcilerMock.reconcileIncomes(ERRAND_ID, freshIncomes)).thenReturn(new SectionReconciler.Diff(List.of("Bostadsbidrag"), List.of()));
+		when(sectionReconcilerMock.reconcileExpenses(ERRAND_ID, freshExpenses)).thenReturn(new SectionReconciler.Diff(List.of("Rent"), List.of("Old rent")));
 
-		final var income = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag");
+		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), freshPersons, freshIncomes, freshExpenses);
 
-		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(income), List.of());
-
+		// each section's Diff is assembled into DraftChanges in section order
 		assertThat(changes.addedIncomes()).containsExactly("Bostadsbidrag");
+		assertThat(changes.droppedIncomes()).isEmpty();
+		assertThat(changes.addedExpenses()).containsExactly("Rent");
+		assertThat(changes.droppedExpenses()).containsExactly("Old rent");
+		assertThat(changes.addedPersons()).isEmpty();
+		assertThat(changes.droppedPersons()).containsExactly("Gone child");
+
+		// the header is upserted with the norm before the sections are reconciled
 		final var header = ArgumentCaptor.forClass(FaCalculationDraftEntity.class);
-		verifySaved(header);
+		verify(headerRepositoryMock).save(header.capture());
 		assertThat(header.getValue().getNormId()).isEqualTo(7);
 		assertThat(header.getValue().getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
 	}
 
-	private void verifySaved(final ArgumentCaptor<FaCalculationDraftEntity> captor) {
-		org.mockito.Mockito.verify(headerRepository).save(captor.capture());
-	}
-
-	@Test
-	void refreshKeepsExistingRowPositionAndAppendsNewRow() {
-		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
-		final var existing = FaNormIncomeEntity.create().withId("inc-0").withErrandId(ERRAND_ID).withOrigin(ORIGIN_SYSTEM).withPosition(0).withTypeId(20)
-			.withTypeName("Bostadsbidrag");
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(existing));
-		when(incomeRepository.nextPositionForErrand(ERRAND_ID)).thenReturn(1);
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-
-		final var refreshedFresh = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag");
-		final var newFresh = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(99).withTypeName("Underhållsstöd");
-
-		service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(refreshedFresh, newFresh), List.of());
-
-		assertThat(existing.getPosition()).isEqualTo(0);  // a refreshed row keeps the position it already had
-		assertThat(newFresh.getPosition()).isEqualTo(1);  // a genuinely new row is appended at the next free position
-	}
-
-	@Test
-	void refreshPreservesCaseworkerEditedAppliedAmountOnSystemExpenseRow() {
-		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-
-		// a system expense row whose appliedAmount a caseworker has corrected (9999) since the last loop
-		final var existing = FaNormExpenseEntity.create().withId("exp-0").withErrandId(ERRAND_ID).withOrigin(ORIGIN_SYSTEM).withPosition(0)
-			.withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9999")).withProcessAmount(new BigDecimal("8000"));
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(existing));
-
-		// the freshly computed row for the same expense carries the original applied amount (9000) and a new process cap
-		final var fresh = FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM)
-			.withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8500"));
-
-		service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(), List.of(fresh));
-
-		assertThat(existing.getAppliedAmount()).isEqualByComparingTo("9999"); // caseworker edit survives the daily refresh
-		assertThat(existing.getProcessAmount()).isEqualByComparingTo("8500"); // process column is still refreshed
-	}
-
 	@Test
 	void getThrows404WhenNoHeader() {
-		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.get(ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No draft calculation for errand");
 	}
 
 	@Test
 	void getBuildsViewWithEffectiveValuesAndSumsExcludingDeleted() {
-		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.of(
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.of(
 			FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withApplicationMonth("2026-06").withNormId(7).withNormType(List.of("NATIONAL_NORM"))));
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withApplicantProcessAmount(new BigDecimal("1000")).withApplicantCaseworkerAmount(new BigDecimal("1200")),
 			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(21).withApplicantProcessAmount(new BigDecimal("500")).withDeleted(true)));
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+		when(expenseRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
-		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+		when(personRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withProcessDays(15).withCaseworkerDays(20)));
 
 		final var draft = service.get(ERRAND_ID);
@@ -155,8 +118,8 @@ class DraftServiceTest {
 
 	@Test
 	void addIncomeRequiresHeaderThenSavesCaseworkerRow() {
-		when(headerRepository.existsById(ERRAND_ID)).thenReturn(true);
-		when(incomeRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(headerRepositoryMock.existsById(ERRAND_ID)).thenReturn(true);
+		when(incomeRepositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
 		final var input = new NormIncomeInput().withTypeId(20).withTypeName("Lön").withApplicantCaseworkerAmount(new BigDecimal("3000")).withNote("manuell");
 		final var row = service.addIncome(ERRAND_ID, input);
@@ -169,18 +132,19 @@ class DraftServiceTest {
 
 	@Test
 	void addIncomeThrows404WhenNoHeader() {
-		when(headerRepository.existsById(ERRAND_ID)).thenReturn(false);
+		when(headerRepositoryMock.existsById(ERRAND_ID)).thenReturn(false);
 
 		assertThatThrownBy(() -> service.addIncome(ERRAND_ID, new NormIncomeInput()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No draft calculation for errand");
 	}
 
 	@Test
 	void patchIncomeSetsOnlyCaseworkerFields() {
 		final var existing = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withApplicantProcessAmount(new BigDecimal("1000"));
-		when(incomeRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(existing));
-		when(incomeRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(incomeRepositoryMock.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(existing));
+		when(incomeRepositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
 		final var row = service.patchIncome(ERRAND_ID, ROW_ID, new NormIncomeInput().withApplicantCaseworkerAmount(new BigDecimal("1100")).withNote("ok"));
 
@@ -191,29 +155,30 @@ class DraftServiceTest {
 
 	@Test
 	void patchIncomeThrows404WhenRowMissing() {
-		when(incomeRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.empty());
+		when(incomeRepositoryMock.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.patchIncome(ERRAND_ID, ROW_ID, new NormIncomeInput()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No such income row on the errand's draft");
 	}
 
 	@Test
 	void setIncomeDeletedTogglesFlag() {
 		final var existing = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM);
-		when(incomeRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(existing));
-		when(incomeRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(incomeRepositoryMock.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(existing));
+		when(incomeRepositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
 		assertThat(service.setIncomeDeleted(ERRAND_ID, ROW_ID, true).isDeleted()).isTrue();
 	}
 
 	@Test
 	void expenseAndPersonEditPathsWork() {
-		when(headerRepository.existsById(ERRAND_ID)).thenReturn(true);
-		when(expenseRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-		when(personRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-		when(expenseRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withProcessAmount(new BigDecimal("8000"))));
-		when(personRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withProcessDays(30)));
+		when(headerRepositoryMock.existsById(ERRAND_ID)).thenReturn(true);
+		when(expenseRepositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(personRepositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(expenseRepositoryMock.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withProcessAmount(new BigDecimal("8000"))));
+		when(personRepositoryMock.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withProcessDays(30)));
 
 		final var added = service.addExpense(ERRAND_ID, new NormExpenseInput().withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000")).withCaseworkerAmount(new BigDecimal("7500")));
 		assertThat(added.getEffectiveAmount()).isEqualByComparingTo("7500");
@@ -230,8 +195,8 @@ class DraftServiceTest {
 
 	@Test
 	void patchExpenseWithoutAppliedAmountPreservesTheCitizensFigure() {
-		when(expenseRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-		when(expenseRepository.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(
+		when(expenseRepositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(expenseRepositoryMock.findByIdAndErrandId(ROW_ID, ERRAND_ID)).thenReturn(Optional.of(
 			FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("HOUSING_COST").withAppliedAmount(new BigDecimal("9000"))));
 
 		// A partial patch (no appliedAmount) must not erase the write-once citizen figure — the daily refresh never restores
@@ -244,10 +209,10 @@ class DraftServiceTest {
 
 	@Test
 	void liveReadersFilterOutSoftDeletedRows() {
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			FaNormIncomeEntity.create().withTypeId(20), FaNormIncomeEntity.create().withTypeId(21).withDeleted(true)));
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("HOUSING_COST")));
-		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+		when(expenseRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("HOUSING_COST")));
+		when(personRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			FaNormPersonEntity.create().withPartyId("p1").withIncluded(true), FaNormPersonEntity.create().withPartyId("p2").withIncluded(false)));
 
 		assertThat(service.liveIncomes(ERRAND_ID)).hasSize(1);
@@ -258,7 +223,7 @@ class DraftServiceTest {
 	@Test
 	void headerDelegatesToRepository() {
 		final var header = FaCalculationDraftEntity.create().withErrandId(ERRAND_ID);
-		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.of(header));
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.of(header));
 
 		assertThat(service.header(ERRAND_ID)).contains(header);
 	}
@@ -266,14 +231,14 @@ class DraftServiceTest {
 	@Test
 	void patchHeaderUpdatesNormAndHouseholdThenReturnsDraft() {
 		final var header = FaCalculationDraftEntity.create().withErrandId(ERRAND_ID);
-		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.of(header));
-		when(headerRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-		when(incomeRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(expenseRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(personRepository.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.of(header));
+		when(headerRepositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		when(expenseRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		when(personRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
 		final var draft = service.patchHeader(ERRAND_ID, new NormHeaderInput().withNormId(9).withNormType(List.of("NATIONAL_NORM"))
-			.withCalculationFromDate(LocalDate.of(2026, 6, 1)).withCalculationToDate(LocalDate.of(2026, 6, 30)).withCalculationDate(LocalDate.of(2026, 6, 18))
+			.withCalculationFromDate(LocalDate.of(2026, JUNE, 1)).withCalculationToDate(LocalDate.of(2026, JUNE, 30)).withCalculationDate(LocalDate.of(2026, JUNE, 18))
 			.withHasCustomHouseholdSize(true).withHouseholdSize(1));
 
 		assertThat(header.getNormId()).isEqualTo(9);
@@ -284,10 +249,11 @@ class DraftServiceTest {
 
 	@Test
 	void patchHeaderThrows404WhenNoHeader() {
-		when(headerRepository.findById(ERRAND_ID)).thenReturn(Optional.empty());
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.patchHeader(ERRAND_ID, new NormHeaderInput()))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No draft calculation for errand");
 	}
 }

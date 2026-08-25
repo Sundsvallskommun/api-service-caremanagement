@@ -27,7 +27,7 @@ public class MessageAttachmentDataEntity {
 	@Column(name = "id")
 	private int id;
 
-	@Column(name = "message_attachment_id", nullable = false, length = 255)
+	@Column(name = "message_attachment_id", nullable = false, length = 36)
 	private String messageAttachmentId;
 
 	@Column(name = "file", columnDefinition = "longblob")
@@ -86,16 +86,19 @@ public class MessageAttachmentDataEntity {
 			return false;
 		}
 		final MessageAttachmentDataEntity that = (MessageAttachmentDataEntity) o;
-		return id == that.id && Objects.equals(messageAttachmentId, that.messageAttachmentId) && Objects.equals(file, that.file);
+		// The blob is intentionally excluded — comparing it would read the whole longblob (same reason it is left out
+		// of toString).
+		return id == that.id && Objects.equals(messageAttachmentId, that.messageAttachmentId);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, messageAttachmentId, file);
+		return Objects.hash(id, messageAttachmentId);
 	}
 
 	@Override
 	public String toString() {
-		return "MessageAttachmentDataEntity{id='" + id + "', messageAttachmentId='" + messageAttachmentId + "', file" + file + '}';
+		// The LOB itself is intentionally omitted from toString (debug noise / lazy proxy).
+		return "MessageAttachmentDataEntity{id='" + id + "', messageAttachmentId='" + messageAttachmentId + "'}";
 	}
 }
