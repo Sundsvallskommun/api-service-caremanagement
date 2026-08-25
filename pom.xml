@@ -17,7 +17,7 @@
 		<!-- Modulith 2.x targets Spring Boot 4 (which dept44 8.x runs).
 				Verify the latest GA at https://spring.io/projects/spring-modulith
 				before bumping. -->
-		<spring-modulith.version>2.0.0</spring-modulith.version>
+		<spring-modulith.version>2.1.0</spring-modulith.version>
 		<!-- Combining errand attachments into a single PDF: PDFBox merges/rasterises,
 				POI + XDocReport render DOCX. Versions aligned with the rest of the fleet
 				(api-service-digital-registered-letter / api-service-templating). -->
