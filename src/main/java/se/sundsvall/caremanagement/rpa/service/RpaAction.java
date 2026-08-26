@@ -9,13 +9,17 @@ package se.sundsvall.caremanagement.rpa.service;
  * action catalogue.
  *
  * <p>
- * One <em>fetch</em> action (the robot reads Lifecare and writes the supplements back onto the errand via the existing
- * CareManagement endpoints) and a set of <em>write</em> actions (the robot types CareManagement-held data into
- * Lifecare).
+ * One <em>fetch</em> action (the robot reads Lifecare and delivers the supplements back in one POST to the errand's
+ * {@code lifecare-supplements} endpoint) and a set of <em>write</em> actions (the robot types CareManagement-held data
+ * into Lifecare).
  */
 public enum RpaAction {
 
-	/** Fetch watches/reminders / journal / documents from Lifecare and feed them back into the errand. */
+	/**
+	 * Fetch watches/reminders, the document list (journal notes included) and jobbstimulans from Lifecare and deliver
+	 * them back in one near-raw dump: {@code POST .../errands/financial-assistance/{errandId}/lifecare-supplements}.
+	 * The queue item carries the applicant's {@code personId} so the robot can find the client in Lifecare.
+	 */
 	FETCH_SUPPLEMENTS,
 
 	/** Write the committed calculation into Lifecare. */

@@ -31,4 +31,11 @@ public interface DocumentRepository extends JpaRepository<DocumentEntity, String
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select e from DocumentEntity e where e.id = :id and e.errandId = :errandId")
 	Optional<DocumentEntity> findByIdAndErrandIdForUpdate(@Param("id") String id, @Param("errandId") String errandId);
+
+	/**
+	 * Loads the document mirroring the given Lifecare record on the errand — the upsert lookup the RPA supplements
+	 * ingest uses so a re-delivered document refreshes its mirror instead of duplicating it. Backed by the unique
+	 * {@code (errand_id, lifecare_id)} key.
+	 */
+	Optional<DocumentEntity> findByErrandIdAndLifecareId(String errandId, String lifecareId);
 }

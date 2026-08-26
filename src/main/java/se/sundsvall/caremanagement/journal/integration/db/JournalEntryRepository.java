@@ -31,4 +31,11 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntryEntity
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select e from JournalEntryEntity e where e.id = :id and e.errandId = :errandId")
 	Optional<JournalEntryEntity> findByIdAndErrandIdForUpdate(@Param("id") String id, @Param("errandId") String errandId);
+
+	/**
+	 * Loads the entry mirroring the given Lifecare record on the errand — the upsert lookup the RPA supplements ingest
+	 * uses so a re-delivered journal entry refreshes its mirror instead of duplicating it. Backed by the unique
+	 * {@code (errand_id, lifecare_id)} key.
+	 */
+	Optional<JournalEntryEntity> findByErrandIdAndLifecareId(String errandId, String lifecareId);
 }

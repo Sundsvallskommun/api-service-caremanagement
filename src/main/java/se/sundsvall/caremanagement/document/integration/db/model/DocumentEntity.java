@@ -19,7 +19,10 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 @Table(name = "errand_document",
 	indexes = {
 		@Index(name = "idx_document_errand_id", columnList = "errand_id"),
-		@Index(name = "idx_document_document_date_time", columnList = "document_date_time")
+		@Index(name = "idx_document_document_date_time", columnList = "document_date_time"),
+		// Unique: lifecareId is the idempotency key the RPA supplements ingest upserts on — a duplicate pair would break
+		// the upsert lookup.
+		@Index(name = "uq_document_errand_id_lifecare_id", columnList = "errand_id, lifecare_id", unique = true)
 	})
 public class DocumentEntity {
 
@@ -30,6 +33,12 @@ public class DocumentEntity {
 
 	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
+
+	@Column(name = "source", length = 16)
+	private String source;
+
+	@Column(name = "lifecare_id", length = 64)
+	private String lifecareId;
 
 	@Column(name = "document_type", nullable = false, length = 255)
 	private String type;
@@ -79,6 +88,14 @@ public class DocumentEntity {
 
 	public String getErrandId() {
 		return errandId;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
 	}
 
 	public String getType() {
@@ -133,6 +150,14 @@ public class DocumentEntity {
 		this.errandId = errandId;
 	}
 
+	public void setSource(final String source) {
+		this.source = source;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
 	public void setType(final String type) {
 		this.type = type;
 	}
@@ -184,6 +209,16 @@ public class DocumentEntity {
 
 	public DocumentEntity withErrandId(final String errandId) {
 		this.errandId = errandId;
+		return this;
+	}
+
+	public DocumentEntity withSource(final String source) {
+		this.source = source;
+		return this;
+	}
+
+	public DocumentEntity withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
 		return this;
 	}
 
@@ -251,6 +286,7 @@ public class DocumentEntity {
 		if (!(obj instanceof final DocumentEntity other))
 			return false;
 		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
+			&& Objects.equals(source, other.source) && Objects.equals(lifecareId, other.lifecareId)
 			&& Objects.equals(type, other.type) && Objects.equals(heading, other.heading)
 			&& Objects.equals(documentDateTime, other.documentDateTime)
 			&& status == other.status
@@ -261,13 +297,13 @@ public class DocumentEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, heading, documentDateTime, status, createdBy, created,
+		return Objects.hash(id, errandId, source, lifecareId, type, heading, documentDateTime, status, createdBy, created,
 			modifiedBy, modified, lockedBy, locked);
 	}
 
 	@Override
 	public String toString() {
-		return "DocumentEntity{id='" + id + "', errandId='" + errandId + "', type='" + type + "', heading='" + heading
+		return "DocumentEntity{id='" + id + "', errandId='" + errandId + "', source='" + source + "', lifecareId='" + lifecareId + "', type='" + type + "', heading='" + heading
 			+ "', documentDateTime=" + documentDateTime + ", status=" + status
 			+ ", createdBy='" + createdBy + "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified="
 			+ modified + ", lockedBy='" + lockedBy + "', locked=" + locked + '}';

@@ -44,6 +44,8 @@ class JournalEntryEntityTest {
 		final var entity = JournalEntryEntity.create()
 			.withId("je1")
 			.withErrandId("e1")
+			.withSource("LIFECARE")
+			.withLifecareId("27")
 			.withType("Journalfört meddelande")
 			.withHeading("Rubrik")
 			.withText("body")
@@ -59,6 +61,8 @@ class JournalEntryEntityTest {
 		assertThat(entity).hasNoNullFieldsOrProperties();
 		assertThat(entity.getId()).isEqualTo("je1");
 		assertThat(entity.getErrandId()).isEqualTo("e1");
+		assertThat(entity.getSource()).isEqualTo("LIFECARE");
+		assertThat(entity.getLifecareId()).isEqualTo("27");
 		assertThat(entity.getType()).isEqualTo("Journalfört meddelande");
 		assertThat(entity.getHeading()).isEqualTo("Rubrik");
 		assertThat(entity.getText()).isEqualTo("body");

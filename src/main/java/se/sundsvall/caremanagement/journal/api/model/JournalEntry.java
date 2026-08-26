@@ -20,6 +20,12 @@ public class JournalEntry {
 	@Schema(description = "Errand id this journal entry belongs to")
 	private String errandId;
 
+	@Schema(description = "Provenance — CASEWORKER for a journal entry authored in Draken, LIFECARE for one read out of Lifecare by RPA and mirrored onto the errand", examples = "CASEWORKER")
+	private String source;
+
+	@Schema(description = "The journal entry's id in Lifecare's document list — set on LIFECARE-sourced mirrors (the RPA upsert key)", examples = "27")
+	private String lifecareId;
+
 	@Schema(description = "Journal entry type (Lifecare 'Typ'/Journaltyp). A municipality-configured value; see the metadata catalogue for a provisional set.", examples = "Journalfört meddelande")
 	private String type;
 
@@ -69,6 +75,14 @@ public class JournalEntry {
 
 	public String getErrandId() {
 		return errandId;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
 	}
 
 	public String getType() {
@@ -123,6 +137,14 @@ public class JournalEntry {
 		this.errandId = errandId;
 	}
 
+	public void setSource(final String source) {
+		this.source = source;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
 	public void setType(final String type) {
 		this.type = type;
 	}
@@ -174,6 +196,16 @@ public class JournalEntry {
 
 	public JournalEntry withErrandId(final String errandId) {
 		this.errandId = errandId;
+		return this;
+	}
+
+	public JournalEntry withSource(final String source) {
+		this.source = source;
+		return this;
+	}
+
+	public JournalEntry withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
 		return this;
 	}
 
@@ -238,6 +270,7 @@ public class JournalEntry {
 			return false;
 		final JournalEntry that = (JournalEntry) o;
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
+			&& Objects.equals(source, that.source) && Objects.equals(lifecareId, that.lifecareId)
 			&& Objects.equals(type, that.type) && Objects.equals(heading, that.heading)
 			&& Objects.equals(text, that.text) && Objects.equals(entryDateTime, that.entryDateTime)
 			&& Objects.equals(status, that.status)
@@ -248,12 +281,12 @@ public class JournalEntry {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, heading, text, entryDateTime, status, createdBy, created, modifiedBy, modified, lockedBy, locked);
+		return Objects.hash(id, errandId, source, lifecareId, type, heading, text, entryDateTime, status, createdBy, created, modifiedBy, modified, lockedBy, locked);
 	}
 
 	@Override
 	public String toString() {
-		return "JournalEntry{id='" + id + "', errandId='" + errandId + "', type='" + type + "', heading='" + heading
+		return "JournalEntry{id='" + id + "', errandId='" + errandId + "', source='" + source + "', lifecareId='" + lifecareId + "', type='" + type + "', heading='" + heading
 			+ "', text='" + text + "', entryDateTime=" + entryDateTime + ", status='" + status + "', createdBy='"
 			+ createdBy + "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified=" + modified
 			+ ", lockedBy='" + lockedBy + "', locked=" + locked + "}";

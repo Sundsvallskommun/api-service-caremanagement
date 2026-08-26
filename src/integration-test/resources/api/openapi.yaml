@@ -7,9 +7,13 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:51698
+- url: http://localhost:49297
   description: Generated server url
 tags:
+- name: Financial Assistance · Lifecare supplements
+  description: "The RPA robot's single delivery endpoint — one near-raw Lifecare dump\
+    \ per errand (bevakningar, document list, jobbstimulans), routed and upserted\
+    \ by CareManagement, answered with a per-item receipt."
 - name: Statistics
   description: Read-only errand statistics for the caseworker interface
 - name: Permits
@@ -57,6 +61,10 @@ tags:
 - name: Errand Types
   description: "Describes the errand types: their statuses, stakeholder roles and\
     \ the fields a type's data payload should carry, as form guidance for clients."
+- name: Financial Assistance · Job stimulus periods
+  description: "The errand's jobbstimulans periods, mirrored out of Lifecare by the\
+    \ RPA supplements delivery. Read-only — the set is replaced wholesale by each\
+    \ delivery."
 - name: Referrals
   description: "Referrals/consultations on an errand: receiving authority, due date,\
     \ free-text response and status (SENT → RESPONDED)."
@@ -2586,6 +2594,70 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Monitoring"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare-supplements:
+    post:
+      tags:
+      - Financial Assistance · Lifecare supplements
+      summary: Deliver a Lifecare supplements dump for an errand
+      description: "Ingests one near-raw dump of the Lifecare Professional Web responses\
+        \ for the errand's client. Sections: reminders[] (upserted as LIFECARE-sourced\
+        \ monitorings per reminderId), documents[] (routed on documentType — 3 to\
+        \ journal, 0 to documents — and upserted per row id), jobStimulus (the errand's\
+        \ full period set is replaced). Omit a section to leave that area untouched;\
+        \ deliver it empty to mean 'fetched, nothing there'. Returns 200 with a per-item\
+        \ receipt even when individual items fail — only a structurally unreadable\
+        \ envelope is rejected."
+      operationId: deliverSupplements
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LifecareSupplements"
+        required: true
+      responses:
+        "200":
+          description: Delivery processed — see the per-item receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplementsIngestResult"
         "400":
           description: Bad request
           content:
@@ -6419,6 +6491,58 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/job-stimulus-periods:
+    get:
+      tags:
+      - Financial Assistance · Job stimulus periods
+      summary: List the errand's jobbstimulans periods
+      operationId: listJobStimulusPeriods
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JobStimulusPeriod"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/form-snapshot:
     get:
       tags:
@@ -7261,10 +7385,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -8798,6 +8922,18 @@ components:
         errandId:
           type: string
           description: Errand id this journal entry belongs to
+        source:
+          type: string
+          description: "Provenance — CASEWORKER for a journal entry authored in Draken,\
+            \ LIFECARE for one read out of Lifecare by RPA and mirrored onto the errand"
+          examples:
+          - CASEWORKER
+        lifecareId:
+          type: string
+          description: The journal entry's id in Lifecare's document list — set on
+            LIFECARE-sourced mirrors (the RPA upsert key)
+          examples:
+          - "27"
         type:
           type: string
           description: Journal entry type (Lifecare 'Typ'/Journaltyp). A municipality-configured
@@ -8920,6 +9056,18 @@ components:
         errandId:
           type: string
           description: Errand id this document belongs to
+        source:
+          type: string
+          description: "Provenance — CASEWORKER for a document authored in Draken,\
+            \ LIFECARE for one read out of Lifecare by RPA and mirrored onto the errand"
+          examples:
+          - CASEWORKER
+        lifecareId:
+          type: string
+          description: The document's id in Lifecare's document list — set on LIFECARE-sourced
+            mirrors (the RPA upsert key)
+          examples:
+          - "27"
         type:
           type: string
           description: Document type (Lifecare 'Typ'/Dokumenttyp). A municipality-configured
@@ -9185,6 +9333,266 @@ components:
           format: date-time
           description: When the warning was last updated
           readOnly: true
+    LifecareDocumentRow:
+      type: object
+      description: One row from Lifecare's document list — journal notes (documentType
+        3) and regular documents (documentType 0) share this shape.
+      properties:
+        id:
+          type: string
+          description: The row's id in Lifecare's document list — the upsert key together
+            with documentType. Rows without it are skipped.
+          examples:
+          - "27"
+        title:
+          type: string
+          description: Title (Lifecare 'Rubrik'); becomes the mirrored heading
+          examples:
+          - Journalanteckning
+        date:
+          type: string
+          description: Documented date (yyyy-MM-dd). Required — rows without a parseable
+            date are reported FAILED.
+          examples:
+          - 2026-08-05
+        time:
+          type: string
+          description: "Documented time (HH:mm); optional, midnight when absent"
+          examples:
+          - 11:06
+        type:
+          type: string
+          description: "Type display text (Lifecare 'Typ'); becomes the mirrored type,\
+            \ falling back to typeCode"
+          examples:
+          - Journalanteckning
+        typeCode:
+          type: string
+          description: "Type code (Lifecare notes: 1 Journalanteckning; documents:\
+            \ e.g. 13 BE Brev, 14 BE Dokument)"
+          examples:
+          - "1"
+        documentType:
+          type: string
+          description: "Row discriminator: 3 = journal note, 0 = regular document.\
+            \ Other values are reported SKIPPED."
+          examples:
+          - "3"
+        content:
+          type: string
+          description: Body as Lifecare returns it — HTML with entities. Decoded and
+            stripped to plain text before storage.
+          examples:
+          - <p>Hej! Vill bara informera att jag f&aring;tt jobb.</p>
+        updateSignature:
+          type: string
+          description: The signature of the last writer in Lifecare; becomes the mirrored
+            author
+          examples:
+          - carola01winberg
+        updateDate:
+          type: string
+          description: "Lifecare's last-update date (yyyy-MM-dd, day precision only);\
+            \ informational"
+          examples:
+          - 2026-08-05
+        documentType_Name:
+          type: string
+          description: Lifecare's textual name for documentType; informational
+          examples:
+          - JournalNote
+    LifecareJobStimulus:
+      type: object
+      description: "The jobbstimulans periods from Lifecare's GetJobStimulusForService\
+        \ — the applicant's and, when present, the co-applicant's."
+      properties:
+        applicant:
+          $ref: "#/components/schemas/LifecareJobStimulusParty"
+          description: The applicant's period set
+        coApplicant:
+          $ref: "#/components/schemas/LifecareJobStimulusParty"
+          description: The co-applicant's period set; null or an empty object when
+            there is no co-applicant
+    LifecareJobStimulusParty:
+      type: object
+      description: One party's jobbstimulans periods.
+      properties:
+        periods:
+          type: array
+          description: The party's periods
+          items:
+            $ref: "#/components/schemas/LifecareJobStimulusPeriod"
+    LifecareJobStimulusPeriod:
+      type: object
+      description: One jobbstimulans period. Lifecare's unstable jobStimulusId is
+        intentionally absent.
+      properties:
+        fromDate:
+          type: string
+          description: Period start (yyyy-MM-dd). Required — periods without a parseable
+            date are reported FAILED.
+          examples:
+          - 2021-01-01
+        toDate:
+          type: string
+          description: Period end (yyyy-MM-dd); optional
+          examples:
+          - 2021-12-31
+        markedForRemoval:
+          type: boolean
+          description: Lifecare's removal flag — a period marked for removal is dropped
+            on ingest
+          examples:
+          - false
+    LifecareReminder:
+      type: object
+      description: One bevakning row as Lifecare's ListRemindersByServiceId returns
+        it. The stable reminderId is the upsert key.
+      properties:
+        reminderId:
+          type: string
+          description: Lifecare's stable reminder id — the idempotency key. Rows without
+            it are skipped.
+          examples:
+          - "4"
+        reminderDate:
+          type: string
+          description: The monitoring date (yyyy-MM-dd). Required — rows without a
+            parseable date are reported FAILED.
+          examples:
+          - 2026-10-17
+        status:
+          type: string
+          description: "Status code (Lifecare: 1 Pågår, 2 Klar, 3 Ej påbörjad, 4 Vä\
+            ntar — a snapshot, not a definition)"
+          examples:
+          - "1"
+        statusText:
+          type: string
+          description: Status display text; may be null
+          examples:
+          - Pågår
+        priority:
+          type: string
+          description: "Priority code (Lifecare: 1 Hög, 2 Normal, 3 Låg)"
+          examples:
+          - "2"
+        priorityText:
+          type: string
+          description: Priority display text; may be null
+          examples:
+          - Normal
+        type:
+          type: string
+          description: Reminder type code
+          examples:
+          - "3"
+        typeText:
+          type: string
+          description: Reminder type display text; may be null
+          examples:
+          - Manuell bevakning insats
+        text:
+          type: string
+          description: The caseworker's free text
+          examples:
+          - Följ upp inkomstuppgifter från CSN
+        caseworkerId:
+          type: string
+          description: The caseworker id in Lifecare
+          examples:
+          - TEST
+        caseworkerName:
+          type: string
+          description: The caseworker's display name
+          examples:
+          - Test Handläggare
+        objectType:
+          type: string
+          description: "What the reminder sits on (Lifecare: 7083 IFO.Insats, 7040\
+            \ IFO.Aktualisering)"
+          examples:
+          - "7083"
+        objectTypeName:
+          type: string
+          description: Object type display name
+          examples:
+          - IFO.Insats
+    LifecareSupplements:
+      type: object
+      description: "RPA supplements delivery envelope — a near-raw dump of the Lifecare\
+        \ Professional Web responses for the errand's client. An omitted section means\
+        \ 'not fetched this run'; an empty section means 'fetched, nothing there'.\
+        \ Unknown fields are ignored."
+      properties:
+        capturedAt:
+          type: string
+          description: The robot's capture date (day precision — Lifecare's own timestamps
+            carry no more)
+          examples:
+          - 2026-08-25
+        reminders:
+          type: array
+          description: "Rows from Lifecare's ListRemindersByServiceId (bevakningar).\
+            \ Upserted as LIFECARE-sourced monitorings on the errand, keyed per reminderId."
+          items:
+            $ref: "#/components/schemas/LifecareReminder"
+        documents:
+          type: array
+          description: Rows from Lifecare's document list — journal notes (documentType
+            3) and regular documents (documentType 0) alike. CareManagement routes
+            each row on documentType; the robot does not need to tell them apart.
+          items:
+            $ref: "#/components/schemas/LifecareDocumentRow"
+        jobStimulus:
+          $ref: "#/components/schemas/LifecareJobStimulus"
+          description: "The response from Lifecare's GetJobStimulusForService. Replaces\
+            \ the errand's full jobbstimulans period set — Lifecare regenerates all\
+            \ period ids on every save, so ids are never used as keys."
+    SupplementsIngestOutcome:
+      type: object
+      description: Receipt for one delivered item in a supplements ingest.
+      properties:
+        section:
+          type: string
+          description: The envelope section the item came from
+          enum:
+          - reminders
+          - documents
+          - jobStimulus
+          examples:
+          - documents
+        lifecareId:
+          type: string
+          description: "The item's Lifecare id, when it has one"
+          examples:
+          - "27"
+        outcome:
+          type: string
+          description: What happened to the item
+          enum:
+          - CREATED
+          - UPDATED
+          - REPLACED
+          - SKIPPED
+          - FAILED
+          examples:
+          - CREATED
+        detail:
+          type: string
+          description: "Human-readable detail — the skip/failure reason, or a summary\
+            \ for REPLACED"
+          examples:
+          - 3 periods
+    SupplementsIngestResult:
+      type: object
+      description: Receipt for a supplements ingest — one outcome per delivered item.
+      properties:
+        results:
+          type: array
+          description: "One outcome per delivered item, in delivery order"
+          items:
+            $ref: "#/components/schemas/SupplementsIngestOutcome"
     NormPersonInput:
       type: object
       description: What a caseworker sends to add or patch a person row (identity
@@ -10890,6 +11298,30 @@ components:
           description: Number of monitorings on the errand
           examples:
           - 2
+    JobStimulusPeriod:
+      type: object
+      description: "A jobbstimulans period on the errand, mirrored out of Lifecare."
+      properties:
+        role:
+          type: string
+          description: Whose period it is
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          examples:
+          - APPLICANT
+        fromDate:
+          type: string
+          format: date
+          description: Period start
+          examples:
+          - 2021-01-01
+        toDate:
+          type: string
+          format: date
+          description: Period end; null for an open period
+          examples:
+          - 2021-12-31
     FormSnapshot:
       type: object
       description: Self-describing snapshot of the form as it was rendered and answered.

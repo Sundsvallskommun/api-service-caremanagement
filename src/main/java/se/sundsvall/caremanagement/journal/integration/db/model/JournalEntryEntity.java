@@ -18,7 +18,10 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 @Table(name = "errand_journal_entry",
 	indexes = {
 		@Index(name = "idx_journal_entry_errand_id", columnList = "errand_id"),
-		@Index(name = "idx_journal_entry_entry_date_time", columnList = "entry_date_time")
+		@Index(name = "idx_journal_entry_entry_date_time", columnList = "entry_date_time"),
+		// Unique: lifecareId is the idempotency key the RPA supplements ingest upserts on — a duplicate pair would break
+		// the upsert lookup.
+		@Index(name = "uq_journal_entry_errand_id_lifecare_id", columnList = "errand_id, lifecare_id", unique = true)
 	})
 public class JournalEntryEntity {
 
@@ -29,6 +32,12 @@ public class JournalEntryEntity {
 
 	@Column(name = "errand_id", nullable = false, length = 36)
 	private String errandId;
+
+	@Column(name = "source", length = 16)
+	private String source;
+
+	@Column(name = "lifecare_id", length = 64)
+	private String lifecareId;
 
 	@Column(name = "entry_type", nullable = false, length = 255)
 	private String type;
@@ -78,6 +87,14 @@ public class JournalEntryEntity {
 
 	public String getErrandId() {
 		return errandId;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
 	}
 
 	public String getType() {
@@ -132,6 +149,14 @@ public class JournalEntryEntity {
 		this.errandId = errandId;
 	}
 
+	public void setSource(final String source) {
+		this.source = source;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
 	public void setType(final String type) {
 		this.type = type;
 	}
@@ -183,6 +208,16 @@ public class JournalEntryEntity {
 
 	public JournalEntryEntity withErrandId(final String errandId) {
 		this.errandId = errandId;
+		return this;
+	}
+
+	public JournalEntryEntity withSource(final String source) {
+		this.source = source;
+		return this;
+	}
+
+	public JournalEntryEntity withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
 		return this;
 	}
 
@@ -248,6 +283,7 @@ public class JournalEntryEntity {
 		if (!(obj instanceof final JournalEntryEntity other))
 			return false;
 		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
+			&& Objects.equals(source, other.source) && Objects.equals(lifecareId, other.lifecareId)
 			&& Objects.equals(type, other.type) && Objects.equals(heading, other.heading)
 			&& Objects.equals(text, other.text) && Objects.equals(entryDateTime, other.entryDateTime)
 			&& status == other.status
@@ -258,13 +294,14 @@ public class JournalEntryEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, heading, text, entryDateTime, status, createdBy, created,
+		return Objects.hash(id, errandId, source, lifecareId, type, heading, text, entryDateTime, status, createdBy, created,
 			modifiedBy, modified, lockedBy, locked);
 	}
 
 	@Override
 	public String toString() {
-		return "JournalEntryEntity{id='" + id + "', errandId='" + errandId + "', type='" + type + "', heading='"
+		return "JournalEntryEntity{id='" + id + "', errandId='" + errandId + "', source='" + source
+			+ "', lifecareId='" + lifecareId + "', type='" + type + "', heading='"
 			+ heading + "', entryDateTime=" + entryDateTime + ", status=" + status
 			+ ", createdBy='" + createdBy + "', created=" + created + ", modifiedBy='" + modifiedBy + "', modified="
 			+ modified + ", lockedBy='" + lockedBy + "', locked=" + locked + '}';

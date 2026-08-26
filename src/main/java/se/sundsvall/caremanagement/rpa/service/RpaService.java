@@ -2,15 +2,19 @@ package se.sundsvall.caremanagement.rpa.service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.rpa.integration.RpaClient;
 import se.sundsvall.caremanagement.rpa.integration.configuration.RpaProperties;
 import se.sundsvall.caremanagement.rpa.integration.model.AddQueueItemParameters;
 import se.sundsvall.caremanagement.rpa.integration.model.QueueItemData;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
+import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
+import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.util.Optional.ofNullable;
@@ -43,15 +47,23 @@ public class RpaService {
 	private static final String KEY_ERRAND_ID = "errandId";
 	private static final String KEY_MUNICIPALITY_ID = "municipalityId";
 	private static final String KEY_NAMESPACE = "namespace";
+	private static final String KEY_PERSON_ID = "personId";
+	/** The applicant stakeholder role as the financial assistance module registers it. */
+	private static final String ROLE_APPLICANT = "APPLICANT";
 
 	private final RpaClient rpaClient;
 	private final RpaProperties properties;
 	private final ErrandAccessGuard errandGuard;
+	private final StakeholderService stakeholderService;
+	private final CitizenService citizenService;
 
-	public RpaService(final RpaClient rpaClient, final RpaProperties properties, final ErrandAccessGuard errandGuard) {
+	public RpaService(final RpaClient rpaClient, final RpaProperties properties, final ErrandAccessGuard errandGuard,
+		final StakeholderService stakeholderService, final CitizenService citizenService) {
 		this.rpaClient = rpaClient;
 		this.properties = properties;
 		this.errandGuard = errandGuard;
+		this.stakeholderService = stakeholderService;
+		this.citizenService = citizenService;
 	}
 
 	/**
@@ -98,6 +110,16 @@ public class RpaService {
 		content.put(KEY_MUNICIPALITY_ID, municipalityId);
 		ofNullable(namespace).ifPresent(value -> content.put(KEY_NAMESPACE, value));
 
+		// A supplements fetch sends the robot into Lifecare to *find* the client, so the queue item carries the
+		// applicant's personal number (resolved from the errand's APPLICANT stakeholder via the citizen lookup).
+		// Best-effort: an unresolvable personal number still enqueues — the robot surfaces the miss on its side.
+		if (action == RpaAction.FETCH_SUPPLEMENTS && namespace != null && !content.containsKey(KEY_PERSON_ID)) {
+			resolveApplicantPersonalNumber(municipalityId, namespace, errandId)
+				.ifPresentOrElse(personalNumber -> content.put(KEY_PERSON_ID, personalNumber),
+					() -> LOG.warn("No applicant personal number resolvable for errand {} — enqueuing {} without personId",
+						sanitizeForLogging(errandId), sanitizeForLogging(actionName)));
+		}
+
 		// Reference is per-(namespace, errand, action) so the Orchestrator's unique-reference dedup only collapses re-runs
 		// of the same action — distinct actions on the same errand remain separate queue items, and the same action on the
 		// same errandId in different namespaces stays distinct too.
@@ -113,6 +135,21 @@ public class RpaService {
 				return;
 			}
 			throw e;
+		}
+	}
+
+	/** The applicant's personal number: APPLICANT stakeholder → externalId (partyId) → citizen lookup. Never throws. */
+	private Optional<String> resolveApplicantPersonalNumber(final String municipalityId, final String namespace, final String errandId) {
+		try {
+			return stakeholderService.readAll(municipalityId, namespace, errandId).stream()
+				.filter(stakeholder -> ROLE_APPLICANT.equals(stakeholder.getRole()))
+				.map(Stakeholder::getExternalId)
+				.filter(Objects::nonNull)
+				.findFirst()
+				.flatMap(partyId -> citizenService.getPersonalNumber(municipalityId, partyId));
+		} catch (final Exception e) {
+			LOG.warn("Applicant personal number lookup failed for errand {}: {}", sanitizeForLogging(errandId), sanitizeForLogging(String.valueOf(e.getMessage())));
+			return Optional.empty();
 		}
 	}
 

@@ -301,4 +301,55 @@ class JournalEntryServiceTest {
 
 		verify(repositoryMock, never()).save(any());
 	}
+
+	@Test
+	void mirrorFromLifecareCreatesLockedMirrorAndPublishesEvent() {
+		when(repositoryMock.findByErrandIdAndLifecareId(ERRAND_ID, "27")).thenReturn(Optional.empty());
+		when(repositoryMock.save(any(JournalEntryEntity.class))).thenAnswer(invocation -> ((JournalEntryEntity) invocation.getArgument(0)).withId("je-1"));
+
+		final var outcome = service.mirrorFromLifecare(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			new LifecareJournalEntryMirror("27", "Journalanteckning", "Rubrik", "text", ENTRY_DATE_TIME, "RPA_031DEV"));
+
+		assertThat(outcome.id()).isEqualTo("je-1");
+		assertThat(outcome.created()).isTrue();
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		final ArgumentCaptor<JournalEntryEntity> entityCaptor = ArgumentCaptor.forClass(JournalEntryEntity.class);
+		verify(repositoryMock).save(entityCaptor.capture());
+		final var captured = entityCaptor.getValue();
+		assertThat(captured.getSource()).isEqualTo("LIFECARE");
+		assertThat(captured.getLifecareId()).isEqualTo("27");
+		assertThat(captured.getStatus()).isEqualTo(LOCKED);
+		assertThat(captured.getType()).isEqualTo("Journalanteckning");
+		assertThat(captured.getHeading()).isEqualTo("Rubrik");
+		assertThat(captured.getText()).isEqualTo("text");
+		assertThat(captured.getEntryDateTime()).isEqualTo(ENTRY_DATE_TIME);
+		assertThat(captured.getCreatedBy()).isEqualTo("RPA_031DEV");
+		assertThat(captured.getLockedBy()).isEqualTo("RPA_031DEV");
+		assertThat(captured.getLocked()).isNotNull();
+		assertThat(captured.getModified()).isNull();
+
+		verify(eventsMock).publishEvent(any(JournalEntryCreated.class));
+	}
+
+	@Test
+	void mirrorFromLifecareRefreshesExistingMirrorWithoutEvent() {
+		final var existing = JournalEntryEntity.create().withId("je-1").withErrandId(ERRAND_ID)
+			.withSource("LIFECARE").withLifecareId("27").withStatus(LOCKED)
+			.withCreatedBy("RPA_031DEV").withCreated(FIXED_TIMESTAMP).withLockedBy("RPA_031DEV").withLocked(FIXED_TIMESTAMP);
+		when(repositoryMock.findByErrandIdAndLifecareId(ERRAND_ID, "27")).thenReturn(Optional.of(existing));
+		when(repositoryMock.save(any(JournalEntryEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var outcome = service.mirrorFromLifecare(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			new LifecareJournalEntryMirror("27", "Journalanteckning", "Ny rubrik", "ny text", ENTRY_DATE_TIME, "RPA_031DEV"));
+
+		assertThat(outcome.id()).isEqualTo("je-1");
+		assertThat(outcome.created()).isFalse();
+		assertThat(existing.getHeading()).isEqualTo("Ny rubrik");
+		assertThat(existing.getText()).isEqualTo("ny text");
+		assertThat(existing.getStatus()).isEqualTo(LOCKED);
+		assertThat(existing.getModifiedBy()).isEqualTo("RPA_031DEV");
+		assertThat(existing.getModified()).isNotNull();
+		verify(eventsMock, never()).publishEvent(any());
+	}
 }

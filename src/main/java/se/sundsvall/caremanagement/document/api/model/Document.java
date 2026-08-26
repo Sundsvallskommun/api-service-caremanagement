@@ -20,6 +20,12 @@ public class Document {
 	@Schema(description = "Errand id this document belongs to")
 	private String errandId;
 
+	@Schema(description = "Provenance — CASEWORKER for a document authored in Draken, LIFECARE for one read out of Lifecare by RPA and mirrored onto the errand", examples = "CASEWORKER")
+	private String source;
+
+	@Schema(description = "The document's id in Lifecare's document list — set on LIFECARE-sourced mirrors (the RPA upsert key)", examples = "27")
+	private String lifecareId;
+
 	@Schema(description = "Document type (Lifecare 'Typ'/Dokumenttyp). A municipality-configured value; see the metadata catalogue for a provisional set.", examples = "Brev")
 	private String type;
 
@@ -69,6 +75,14 @@ public class Document {
 
 	public String getErrandId() {
 		return errandId;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
 	}
 
 	public String getType() {
@@ -123,6 +137,14 @@ public class Document {
 		this.errandId = errandId;
 	}
 
+	public void setSource(final String source) {
+		this.source = source;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
 	public void setType(final String type) {
 		this.type = type;
 	}
@@ -174,6 +196,16 @@ public class Document {
 
 	public Document withErrandId(final String errandId) {
 		this.errandId = errandId;
+		return this;
+	}
+
+	public Document withSource(final String source) {
+		this.source = source;
+		return this;
+	}
+
+	public Document withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
 		return this;
 	}
 
@@ -238,6 +270,7 @@ public class Document {
 			return false;
 		final Document that = (Document) o;
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId)
+			&& Objects.equals(source, that.source) && Objects.equals(lifecareId, that.lifecareId)
 			&& Objects.equals(type, that.type) && Objects.equals(heading, that.heading)
 			&& Objects.equals(text, that.text) && Objects.equals(documentDateTime, that.documentDateTime)
 			&& Objects.equals(status, that.status)
@@ -248,12 +281,12 @@ public class Document {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, type, heading, text, documentDateTime, status, createdBy, created, modifiedBy, modified, lockedBy, locked);
+		return Objects.hash(id, errandId, source, lifecareId, type, heading, text, documentDateTime, status, createdBy, created, modifiedBy, modified, lockedBy, locked);
 	}
 
 	@Override
 	public String toString() {
-		return "Document{id='" + id + "', errandId='" + errandId + "', type='" + type + "', heading='" + heading
+		return "Document{id='" + id + "', errandId='" + errandId + "', source='" + source + "', lifecareId='" + lifecareId + "', type='" + type + "', heading='" + heading
 			+ "', text='" + text + "', documentDateTime=" + documentDateTime + ", status='"
 			+ status + "', createdBy='" + createdBy + "', created=" + created + ", modifiedBy='" + modifiedBy
 			+ "', modified=" + modified + ", lockedBy='" + lockedBy + "', locked=" + locked + "}";

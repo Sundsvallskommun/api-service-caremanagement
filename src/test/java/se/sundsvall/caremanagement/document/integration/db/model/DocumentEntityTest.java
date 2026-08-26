@@ -44,6 +44,8 @@ class DocumentEntityTest {
 		final var entity = DocumentEntity.create()
 			.withId("d1")
 			.withErrandId("e1")
+			.withSource("LIFECARE")
+			.withLifecareId("28")
 			.withType("Brev")
 			.withHeading("Rubrik")
 			.withText("body")
@@ -59,6 +61,8 @@ class DocumentEntityTest {
 		assertThat(entity).hasNoNullFieldsOrProperties();
 		assertThat(entity.getId()).isEqualTo("d1");
 		assertThat(entity.getErrandId()).isEqualTo("e1");
+		assertThat(entity.getSource()).isEqualTo("LIFECARE");
+		assertThat(entity.getLifecareId()).isEqualTo("28");
 		assertThat(entity.getType()).isEqualTo("Brev");
 		assertThat(entity.getHeading()).isEqualTo("Rubrik");
 		assertThat(entity.getText()).isEqualTo("body");

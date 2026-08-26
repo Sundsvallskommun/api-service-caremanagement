@@ -12,6 +12,7 @@ import se.sundsvall.caremanagement.journal.integration.db.JournalEntryRepository
 import se.sundsvall.caremanagement.journal.integration.db.model.JournalEntryEntity;
 import se.sundsvall.caremanagement.journal.service.event.JournalEntryCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
+import se.sundsvall.caremanagement.shared.MirrorOutcome;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.OffsetDateTime.now;
@@ -37,6 +38,9 @@ import static se.sundsvall.caremanagement.journal.integration.db.model.JournalEn
 @Transactional
 public class JournalEntryService {
 
+	static final String SOURCE_CASEWORKER = "CASEWORKER";
+	static final String SOURCE_LIFECARE = "LIFECARE";
+
 	private final JournalEntryRepository journalEntryRepository;
 	private final ApplicationEventPublisher publisher;
 	private final ErrandAccessGuard errandGuard;
@@ -53,6 +57,7 @@ public class JournalEntryService {
 		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
 		final var saved = journalEntryRepository.save(JournalEntryEntity.create()
 			.withErrandId(errandId)
+			.withSource(SOURCE_CASEWORKER)
 			.withType(request.type())
 			.withHeading(request.heading())
 			.withText(request.text())
@@ -102,6 +107,46 @@ public class JournalEntryService {
 		journalEntryRepository.delete(requireWorking(findForUpdate(errandId, journalEntryId), "deleted"));
 	}
 
+	/**
+	 * Upsert the mirror of a Lifecare journal entry onto the errand — the receiving end of the RPA supplements ingest.
+	 * The Lifecare record is authoritative: on the first delivery a {@code LOCKED} {@code LIFECARE}-sourced entry is
+	 * created (a mirror is never editable in Draken), and a re-delivery of the same {@code (errandId, lifecareId)}
+	 * refreshes the mirrored fields in place — deliberately bypassing the write-protection that guards caseworker
+	 * edits, since the update represents Lifecare's own state, not a user edit.
+	 */
+	public MirrorOutcome mirrorFromLifecare(final String municipalityId, final String namespace, final String errandId, final LifecareJournalEntryMirror mirror) {
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
+
+		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
+		final var existing = journalEntryRepository.findByErrandIdAndLifecareId(errandId, mirror.lifecareId());
+
+		final var entity = existing.orElseGet(() -> JournalEntryEntity.create()
+			.withErrandId(errandId)
+			.withSource(SOURCE_LIFECARE)
+			.withLifecareId(mirror.lifecareId())
+			.withStatus(LOCKED)
+			.withCreatedBy(mirror.createdBy())
+			.withCreated(timestamp)
+			.withLockedBy(mirror.createdBy())
+			.withLocked(timestamp));
+		entity
+			.withType(mirror.type())
+			.withHeading(mirror.heading())
+			.withText(mirror.text())
+			.withEntryDateTime(mirror.entryDateTime());
+		if (existing.isPresent()) {
+			entity
+				.withModifiedBy(mirror.createdBy())
+				.withModified(timestamp);
+		}
+
+		final var saved = journalEntryRepository.save(entity);
+		if (existing.isEmpty()) {
+			publisher.publishEvent(new JournalEntryCreated(saved.getId(), errandId, municipalityId, namespace, mirror.type(), mirror.createdBy(), timestamp));
+		}
+		return new MirrorOutcome(saved.getId(), existing.isEmpty());
+	}
+
 	/** Lock the entry (write-protection) — it becomes an immutable finalised record. Already-locked entries 409. */
 	public JournalEntry lock(final String municipalityId, final String namespace, final String errandId, final String journalEntryId, final LockJournalEntry request) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
@@ -144,6 +189,8 @@ public class JournalEntryService {
 		return JournalEntry.create()
 			.withId(e.getId())
 			.withErrandId(e.getErrandId())
+			.withSource(e.getSource())
+			.withLifecareId(e.getLifecareId())
 			.withType(e.getType())
 			.withHeading(e.getHeading())
 			.withText(e.getText())
