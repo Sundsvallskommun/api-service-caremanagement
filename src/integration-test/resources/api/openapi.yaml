@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:49297
+- url: http://localhost:52314
   description: Generated server url
 tags:
 - name: Financial Assistance · Lifecare supplements
@@ -68,6 +68,11 @@ tags:
 - name: Referrals
   description: "Referrals/consultations on an errand: receiving authority, due date,\
     \ free-text response and status (SENT → RESPONDED)."
+- name: Financial Assistance · RPA context
+  description: "The context an RPA robot needs to act on an errand in Lifecare — the\
+    \ errand number and the household's personal numbers, served on demand so they\
+    \ never persist in the Orchestrator queue store. Every read lands in the errand's\
+    \ event log."
 - name: Event Log
   description: "Who/what/when activity log for an errand — every read and write, with\
     \ the acting user"
@@ -6439,6 +6444,59 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/rpa-context:
+    get:
+      tags:
+      - Financial Assistance · RPA context
+      summary: Read the RPA context for an errand
+      description: "The robot's first call after picking up a queue item: resolves\
+        \ the errand number and the applicant's (and any co-applicant's) personal\
+        \ number for the Lifecare lookup."
+      operationId: getRpaContext
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RpaContext"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/monitorings/count:
     get:
       tags:
@@ -7385,10 +7443,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -11288,6 +11346,31 @@ components:
           description: Number of active warnings — closed ones are not counted
           examples:
           - 3
+    RpaContext:
+      type: object
+      description: The context an RPA robot needs to act on an errand in Lifecare.
+        Fetched per queue item so personal numbers never persist in the Orchestrator
+        queue store; every read is recorded in the errand's event log.
+      properties:
+        errandNumber:
+          type: string
+          description: The errand's human-readable number — what a person searches
+            for in Draken
+          examples:
+          - EB-2026-000123
+        applicantPersonId:
+          type: string
+          description: "The applicant's personal number (12 characters, may contain\
+            \ letters). Null when it could not be resolved — treat as an error on\
+            \ the robot side."
+          examples:
+          - 19800101T001
+        coApplicantPersonId:
+          type: string
+          description: The co-applicant's personal number; null when there is no co-applicant
+            or it could not be resolved
+          examples:
+          - 19850505T002
     MonitoringCount:
       type: object
       description: The number of monitorings on the errand

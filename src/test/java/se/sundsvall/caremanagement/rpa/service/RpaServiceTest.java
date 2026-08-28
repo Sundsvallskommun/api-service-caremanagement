@@ -1,20 +1,16 @@
 package se.sundsvall.caremanagement.rpa.service;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
+import se.sundsvall.caremanagement.core.api.model.Errand;
+import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.rpa.integration.RpaClient;
 import se.sundsvall.caremanagement.rpa.integration.configuration.RpaProperties;
 import se.sundsvall.caremanagement.rpa.integration.model.AddQueueItemParameters;
-import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
-import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
-import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +25,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
 class RpaServiceTest {
@@ -36,48 +33,58 @@ class RpaServiceTest {
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = "errand-1";
+	private static final String ERRAND_NUMBER = "EB-2026-000123";
 	private static final String FOLDER_ID = "7";
 
 	@Mock
-	private ErrandAccessGuard errandGuardMock;
-
-	@Mock
-	private StakeholderService stakeholderServiceMock;
-
-	@Mock
-	private CitizenService citizenServiceMock;
+	private ErrandService errandServiceMock;
 
 	private static RpaProperties properties(final boolean enabled) {
 		return new RpaProperties(enabled, "RakelEkonomisktBistand", Map.of(MUNICIPALITY_ID, FOLDER_ID), 5, 30);
 	}
 
 	@Test
-	void enqueueAddsQueueItem() {
+	void enqueueWithNamespaceReadsErrandAndCarriesErrandNumber() {
 		final var client = mock(RpaClient.class);
-		final var service = new RpaService(client, properties(true), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
+		final var service = new RpaService(client, properties(true), errandServiceMock);
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Errand.create().withId(ERRAND_ID).withErrandNumber(ERRAND_NUMBER));
 
-		service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.WRITE_NORMBERAKNING, Map.of("hint", "x"));
+		service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.FETCH_SUPPLEMENTS, Map.of("hint", "x"));
 
-		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		final var captor = ArgumentCaptor.forClass(AddQueueItemParameters.class);
 		verify(client).addQueueItem(eq(FOLDER_ID), captor.capture());
 
 		final var data = captor.getValue().itemData();
 		assertThat(data.name()).isEqualTo("RakelEkonomisktBistand");
-		assertThat(data.reference()).isEqualTo(NAMESPACE + ":" + ERRAND_ID + ":" + RpaAction.WRITE_NORMBERAKNING);
+		assertThat(data.reference()).isEqualTo(NAMESPACE + ":" + ERRAND_ID + ":" + RpaAction.FETCH_SUPPLEMENTS);
 		assertThat(data.priority()).isEqualTo("Normal");
 		assertThat(data.specificContent())
-			.containsEntry("action", RpaAction.WRITE_NORMBERAKNING.name())
+			.containsEntry("action", RpaAction.FETCH_SUPPLEMENTS.name())
 			.containsEntry("errandId", ERRAND_ID)
 			.containsEntry("municipalityId", MUNICIPALITY_ID)
 			.containsEntry("namespace", NAMESPACE)
-			.containsEntry("hint", "x");
+			.containsEntry("errandNumber", ERRAND_NUMBER)
+			.containsEntry("hint", "x")
+			.doesNotContainKey("personId");
 	}
 
 	@Test
-	void enqueueWithoutNamespaceOmitsNamespaceAndKeepsErrandActionReference() {
+	void enqueueWithUnknownErrandPropagatesNotFound() {
 		final var client = mock(RpaClient.class);
-		final var service = new RpaService(client, properties(true), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
+		final var service = new RpaService(client, properties(true), errandServiceMock);
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenThrow(Problem.valueOf(NOT_FOUND, "No errand"));
+
+		assertThatThrownBy(() -> service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.FETCH_SUPPLEMENTS, Map.of()))
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+		verifyNoInteractions(client);
+	}
+
+	@Test
+	void enqueueWithoutNamespaceOmitsNamespaceAndErrandNumberAndKeepsErrandActionReference() {
+		final var client = mock(RpaClient.class);
+		final var service = new RpaService(client, properties(true), errandServiceMock);
 
 		service.enqueue(MUNICIPALITY_ID, null, ERRAND_ID, RpaAction.WRITE_DECISION, Map.of());
 
@@ -86,14 +93,16 @@ class RpaServiceTest {
 
 		final var data = captor.getValue().itemData();
 		assertThat(data.reference()).isEqualTo(ERRAND_ID + ":" + RpaAction.WRITE_DECISION);
-		assertThat(data.specificContent()).doesNotContainKey("namespace");
-		verifyNoInteractions(errandGuardMock);
+		assertThat(data.specificContent())
+			.doesNotContainKey("namespace")
+			.doesNotContainKey("errandNumber");
+		verifyNoInteractions(errandServiceMock);
 	}
 
 	@Test
 	void differentActionsOnSameErrandGetDistinctReferences() {
 		final var client = mock(RpaClient.class);
-		final var service = new RpaService(client, properties(true), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
+		final var service = new RpaService(client, properties(true), errandServiceMock);
 
 		service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.FETCH_SUPPLEMENTS);
 		service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.WRITE_DECISION);
@@ -110,7 +119,7 @@ class RpaServiceTest {
 	@Test
 	void enqueueWithoutSpecificContentUsesDefaults() {
 		final var client = mock(RpaClient.class);
-		final var service = new RpaService(client, properties(true), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
+		final var service = new RpaService(client, properties(true), errandServiceMock);
 
 		service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.FETCH_SUPPLEMENTS);
 
@@ -120,7 +129,7 @@ class RpaServiceTest {
 	@Test
 	void disabledIsNoOp() {
 		final var client = mock(RpaClient.class);
-		final var service = new RpaService(client, properties(false), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
+		final var service = new RpaService(client, properties(false), errandServiceMock);
 
 		service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.WRITE_DECISION);
 
@@ -132,7 +141,7 @@ class RpaServiceTest {
 		final var client = mock(RpaClient.class);
 		doThrow(Problem.valueOf(CONFLICT, "Queue item already exists, error code 1016"))
 			.when(client).addQueueItem(any(), any());
-		final var service = new RpaService(client, properties(true), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
+		final var service = new RpaService(client, properties(true), errandServiceMock);
 
 		// no exception
 		service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.WRITE_DECISION);
@@ -143,69 +152,16 @@ class RpaServiceTest {
 		final var client = mock(RpaClient.class);
 		doThrow(Problem.valueOf(INTERNAL_SERVER_ERROR, "boom"))
 			.when(client).addQueueItem(any(), any());
-		final var service = new RpaService(client, properties(true), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
+		final var service = new RpaService(client, properties(true), errandServiceMock);
 
 		assertThatThrownBy(() -> service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.WRITE_DECISION))
 			.hasMessageContaining("boom");
 	}
 
 	@Test
-	void fetchSupplementsWithNamespaceCarriesApplicantPersonalNumber() {
-		final var client = mock(RpaClient.class);
-		final var service = new RpaService(client, properties(true), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
-		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
-			Stakeholder.create().withRole("CO_APPLICANT").withExternalId("party-2"),
-			Stakeholder.create().withRole("APPLICANT").withExternalId("party-1")));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "party-1")).thenReturn(Optional.of("19800101T001"));
-
-		service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.FETCH_SUPPLEMENTS, Map.of());
-
-		final var captor = ArgumentCaptor.forClass(AddQueueItemParameters.class);
-		verify(client).addQueueItem(eq(FOLDER_ID), captor.capture());
-		assertThat(captor.getValue().itemData().specificContent()).containsEntry("personId", "19800101T001");
-	}
-
-	@Test
-	void fetchSupplementsWithUnresolvablePersonalNumberStillEnqueues() {
-		final var client = mock(RpaClient.class);
-		final var service = new RpaService(client, properties(true), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
-		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(new IllegalStateException("down"));
-
-		service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.FETCH_SUPPLEMENTS, Map.of());
-
-		final var captor = ArgumentCaptor.forClass(AddQueueItemParameters.class);
-		verify(client).addQueueItem(eq(FOLDER_ID), captor.capture());
-		assertThat(captor.getValue().itemData().specificContent()).doesNotContainKey("personId");
-	}
-
-	@Test
-	void fetchSupplementsWithSuppliedPersonIdSkipsResolution() {
-		final var client = mock(RpaClient.class);
-		final var service = new RpaService(client, properties(true), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
-
-		service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.FETCH_SUPPLEMENTS, Map.of("personId", "19800101T001"));
-
-		final var captor = ArgumentCaptor.forClass(AddQueueItemParameters.class);
-		verify(client).addQueueItem(eq(FOLDER_ID), captor.capture());
-		assertThat(captor.getValue().itemData().specificContent()).containsEntry("personId", "19800101T001");
-		verifyNoInteractions(stakeholderServiceMock, citizenServiceMock);
-	}
-
-	@Test
-	void writeActionsSkipPersonalNumberResolution() {
-		final var client = mock(RpaClient.class);
-		final var service = new RpaService(client, properties(true), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
-
-		service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.WRITE_NORMBERAKNING, Map.of());
-
-		verify(client).addQueueItem(eq(FOLDER_ID), any());
-		verifyNoInteractions(stakeholderServiceMock, citizenServiceMock);
-	}
-
-	@Test
 	void missingFolderIdFails() {
 		final var client = mock(RpaClient.class);
-		final var service = new RpaService(client, new RpaProperties(true, "q", Map.of(), 5, 30), errandGuardMock, stakeholderServiceMock, citizenServiceMock);
+		final var service = new RpaService(client, new RpaProperties(true, "q", Map.of(), 5, 30), errandServiceMock);
 
 		assertThatThrownBy(() -> service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.WRITE_DECISION))
 			.isInstanceOf(IllegalStateException.class)
