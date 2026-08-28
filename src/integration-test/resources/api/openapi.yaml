@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:51698
+- url: http://localhost:59747
   description: Generated server url
 tags:
 - name: Statistics
@@ -9709,14 +9709,13 @@ components:
           type: integer
           format: int32
           description: "Month (1-12) the suggested application concerns. Null for\
-            \ a new application (new application), which has no prior period."
+            \ a new application, which has no prior period."
           examples:
           - 7
         periodYear:
           type: integer
           format: int32
-          description: Year the suggested application concerns. Null for a new application
-            (new application).
+          description: Year the suggested application concerns. Null for a new application.
           examples:
           - 2026
         recommended:
@@ -9729,7 +9728,14 @@ components:
           type: string
           description: Human-readable Swedish label for the suggestion
           examples:
-          - Renewal for July 2026
+          - Återansökan för juli 2026
+        description:
+          type: string
+          description: "Swedish explanation of when this application type applies,\
+            \ shown to the citizen next to the label. Null when no wording has been\
+            \ agreed for the type."
+          examples:
+          - du har ansökt tidigare och inte haft ett längre uppehåll
     EligibilityResponse:
       type: object
       description: "Eligibility result: which application(s) the citizen should be\
@@ -9747,6 +9753,8 @@ components:
           - NO_EXISTING_CASE
           - MARITAL_STATUS_CHANGED
           - RECENTLY_CLOSED
+          - NO_RECENT_DECISION
+          - ONGOING_APPLICATION
           - EXISTING_CASE
           - ALL_TYPES_TEST
           examples:
@@ -9755,7 +9763,15 @@ components:
           type: string
           description: Human-readable Swedish explanation of the suggestion
           examples:
-          - Open errand without a decision for the current month. Suggesting a renewal.
+          - Befintligt ärende utan beslut för aktuell månad. Föreslår en återansökan
+            för aktuell månad.
+        introText:
+          type: string
+          description: "Swedish introduction shown to the citizen above the suggestion\
+            \ list, phrased for one or two applicants. Null when no application can\
+            \ be offered."
+          examples:
+          - "Utifrån dina uppgifter kan du göra någon av följande ansökningar:"
         existsInCm:
           type: boolean
           description: True when the applicant already has a financial assistance
@@ -9768,6 +9784,13 @@ components:
             in Lifecare (actualisation/decision/calculation)
           examples:
           - true
+        hasOpenCase:
+          type: boolean
+          description: "True when Lifecare shows an actualisation with an open status,\
+            \ false when the statuses were readable but none is open, null when no\
+            \ actualisation carried a readable status (or Lifecare was not reached)."
+          examples:
+          - true
         maritalStatusMatches:
           type: boolean
           description: Whether the requested marital status (alone vs with a partner)
@@ -9778,25 +9801,37 @@ components:
         windowDays:
           type: integer
           format: int32
-          description: The duplicate-application window in days that was applied to
-            the per-month check
+          description: The staleness bound in days applied to ongoing caremanagement
+            applications in the per-month check
           examples:
           - 90
         applicationExistsThisMonth:
           type: boolean
-          description: True when an application/decision already exists for the current
-            month
+          description: "True when the current month is already taken — an ongoing\
+            \ application in caremanagement, or a decision in Lifecare"
           examples:
           - false
         applicationExistsNextMonth:
           type: boolean
-          description: True when an application/decision already exists for next month
+          description: "True when next month is already taken — an ongoing application\
+            \ in caremanagement, or a decision in Lifecare"
           examples:
           - false
         currentMonthDecided:
           type: boolean
           description: True when Lifecare shows a decision for the current month (the
             current month is decided/closed)
+          examples:
+          - false
+        previousMonthDecided:
+          type: boolean
+          description: True when Lifecare shows a decision for the previous month
+          examples:
+          - true
+        monthBeforePreviousDecided:
+          type: boolean
+          description: True when Lifecare shows a decision for the month before the
+            previous one
           examples:
           - false
         latestDecisionPeriodMonth:

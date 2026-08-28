@@ -73,6 +73,13 @@ public class FinancialAssistanceModuleConfig {
 	public static final String STATUS_CLOSED = "CLOSED";
 	public static final String STATUS_WITHDRAWN = "WITHDRAWN";
 
+	/**
+	 * The statuses at which an application is no longer in progress. An errand in one of these no longer occupies the
+	 * period it concerns, so the common-entry-point eligibility check does not treat it as an ongoing application for
+	 * that month. A rejected application is decided but not pending — the citizen may apply for the month again.
+	 */
+	public static final Set<String> TERMINAL_STATUSES = Set.of(STATUS_CLOSED, STATUS_WITHDRAWN, STATUS_REJECTED);
+
 	// Status display names (Swedish — the labels Draken shows the caseworker)
 	private static final String DISPLAY_RECEIVED = "Inkommen";
 	private static final String DISPLAY_NEEDS_MANUAL_REVIEW = "Kräver manuell granskning";
