@@ -10,6 +10,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
+import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
@@ -34,6 +36,9 @@ class RpaContextServiceTest {
 	private ErrandService errandServiceMock;
 
 	@Mock
+	private StakeholderService stakeholderServiceMock;
+
+	@Mock
 	private FinancialAssistanceRepository repositoryMock;
 
 	@Mock
@@ -43,9 +48,10 @@ class RpaContextServiceTest {
 	private RpaContextService service;
 
 	@Test
-	void resolvesHouseholdPersonalNumbers() {
+	void resolvesHouseholdPersonalNumbersFromApplicationPersons() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Errand.create().withId(ERRAND_ID).withErrandNumber(ERRAND_NUMBER));
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()
 			.withPersons(List.of(
 				FaPerson.create().withRole("APPLICANT").withPartyId("party-1"),
@@ -64,6 +70,7 @@ class RpaContextServiceTest {
 	void missingCoApplicantAndUnresolvableApplicantYieldNulls() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Errand.create().withId(ERRAND_ID).withErrandNumber(ERRAND_NUMBER));
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("party-1")))));
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "party-1")).thenReturn(Optional.empty());
@@ -76,9 +83,27 @@ class RpaContextServiceTest {
 	}
 
 	@Test
+	void stakeholderPartyIdWinsOverEmptyApplicationPersons() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Errand.create().withId(ERRAND_ID).withErrandNumber(ERRAND_NUMBER));
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Stakeholder.create().withRole("APPLICANT").withExternalId("party-1").withExternalIdType("PRIVATE")));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()
+			.withPersons(List.of())));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "party-1")).thenReturn(Optional.of("19800101T001"));
+
+		final var context = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(context.errandNumber()).isEqualTo(ERRAND_NUMBER);
+		assertThat(context.applicantPersonId()).isEqualTo("19800101T001");
+		assertThat(context.coApplicantPersonId()).isNull();
+	}
+
+	@Test
 	void missingApplicationPayloadYieldsErrandNumberOnly() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Errand.create().withId(ERRAND_ID).withErrandNumber(ERRAND_NUMBER));
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
 
 		final var context = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
