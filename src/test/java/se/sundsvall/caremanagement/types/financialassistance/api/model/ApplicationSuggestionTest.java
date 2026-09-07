@@ -30,7 +30,8 @@ class ApplicationSuggestionTest {
 		final var periodMonth = 7;
 		final var periodYear = 2026;
 		final var recommended = true;
-		final var label = "Renewal for July 2026";
+		final var label = "Återansökan för juli 2026";
+		final var description = "du har ansökt tidigare och inte haft ett längre uppehåll";
 
 		final var result = ApplicationSuggestion.create()
 			.withTypeSlug(typeSlug)
@@ -38,7 +39,8 @@ class ApplicationSuggestionTest {
 			.withPeriodMonth(periodMonth)
 			.withPeriodYear(periodYear)
 			.withRecommended(recommended)
-			.withLabel(label);
+			.withLabel(label)
+			.withDescription(description);
 
 		assertThat(result).hasNoNullFieldsOrProperties();
 		assertThat(result.getTypeSlug()).isEqualTo(typeSlug);
@@ -47,6 +49,7 @@ class ApplicationSuggestionTest {
 		assertThat(result.getPeriodYear()).isEqualTo(periodYear);
 		assertThat(result.isRecommended()).isEqualTo(recommended);
 		assertThat(result.getLabel()).isEqualTo(label);
+		assertThat(result.getDescription()).isEqualTo(description);
 	}
 
 	@Test

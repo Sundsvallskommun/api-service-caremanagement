@@ -34,10 +34,18 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_REJECTED;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_UNDER_REVIEW;
+import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.DESCRIPTION_NEW;
+import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.DESCRIPTION_RENEWAL;
+import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.INTRO_TEXT_JOINT;
+import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.INTRO_TEXT_SINGLE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_ALL_TYPES_TEST;
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_EXISTING_CASE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_MARITAL_STATUS_CHANGED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_NO_EXISTING_CASE;
+import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_NO_RECENT_DECISION;
+import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_ONGOING_APPLICATION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.EligibilityService.REASON_RECENTLY_CLOSED;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,6 +61,9 @@ class EligibilityServiceTest {
 
 	private static final YearMonth CURRENT = YearMonth.now();
 	private static final YearMonth NEXT = CURRENT.plusMonths(1);
+	private static final YearMonth PREVIOUS = CURRENT.minusMonths(1);
+	private static final YearMonth TWO_MONTHS_BACK = CURRENT.minusMonths(2);
+	private static final YearMonth FIVE_MONTHS_BACK = CURRENT.minusMonths(5);
 
 	@Mock
 	private ErrandQueryService errandQueryServiceMock;
@@ -71,13 +82,19 @@ class EligibilityServiceTest {
 
 	private EligibilityService service() {
 		return new EligibilityService(errandQueryServiceMock, financialAssistanceRepositoryMock, lifecareCaseServiceMock,
-			citizenServiceMock, recentlyClosedErrandServiceMock, 90, false);
+			citizenServiceMock, recentlyClosedErrandServiceMock, 90, false, false);
+	}
+
+	/** The service with the open-case requirement on — off in every other test, as in production. */
+	private EligibilityService serviceRequiringOpenCase() {
+		return new EligibilityService(errandQueryServiceMock, financialAssistanceRepositoryMock, lifecareCaseServiceMock,
+			citizenServiceMock, recentlyClosedErrandServiceMock, 90, true, false);
 	}
 
 	/** The service with the return-all-types test override on — off in every other test, as in production. */
 	private EligibilityService serviceReturningAllTypes() {
 		return new EligibilityService(errandQueryServiceMock, financialAssistanceRepositoryMock, lifecareCaseServiceMock,
-			citizenServiceMock, recentlyClosedErrandServiceMock, 90, true);
+			citizenServiceMock, recentlyClosedErrandServiceMock, 90, false, true);
 	}
 
 	@BeforeEach
@@ -94,6 +111,12 @@ class EligibilityServiceTest {
 		return EligibilityRequest.create().withApplicant(APPLICANT).withCoApplicant(CO_APPLICANT);
 	}
 
+	/** A Lifecare footprint with the given decided months, no co-applicant. */
+	private static LifecareCaseSummary lifecare(final Set<YearMonth> decisionMonths) {
+		return new LifecareCaseSummary(true, true, decisionMonths, decisionMonths.stream().max(YearMonth::compareTo).orElse(null),
+			false, false);
+	}
+
 	private static ApplicationSuggestion recommended(final List<ApplicationSuggestion> suggestions) {
 		return suggestions.stream().filter(ApplicationSuggestion::isRecommended).findFirst().orElseThrow();
 	}
@@ -104,10 +127,15 @@ class EligibilityServiceTest {
 	}
 
 	private void cmErrandWithPeriod(final YearMonth period, final OffsetDateTime created, final FaPerson... persons) {
+		cmErrandWithPeriodAndStatus(period, created, STATUS_UNDER_REVIEW, persons);
+	}
+
+	private void cmErrandWithPeriodAndStatus(final YearMonth period, final OffsetDateTime created, final String status,
+		final FaPerson... persons) {
 		when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(APPLICANT)).thenReturn(List.of(ERRAND_ID));
 		lenient().when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(CO_APPLICANT)).thenReturn(List.of(ERRAND_ID));
 		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
-			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL)
+			.thenReturn(Optional.of(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_RENEWAL).withStatus(status)
 				.withCreated(Optional.ofNullable(created).orElseGet(OffsetDateTime::now))));
 		final var fa = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withPersons(List.of(persons));
 		Optional.ofNullable(period).ifPresent(p -> fa.withPeriodMonth(p.getMonthValue()).withPeriodYear(p.getYear()));
@@ -131,10 +159,11 @@ class EligibilityServiceTest {
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
-		// No application offered, and the protected status must not leak — no reasonCode, no message.
+		// No application offered, and the protected status must not leak — no reasonCode, no message, no intro text.
 		assertThat(response.getSuggestions()).isEmpty();
 		assertThat(response.getReasonCode()).isNull();
 		assertThat(response.getMessage()).isNull();
+		assertThat(response.getIntroText()).isNull();
 	}
 
 	@Test
@@ -195,8 +224,7 @@ class EligibilityServiceTest {
 	@Test
 	void existsInLifecareOnlyPassesExistence() {
 		noCmErrands();
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
-			.thenReturn(new LifecareCaseSummary(true, Set.of(), null, false, false));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -211,7 +239,7 @@ class EligibilityServiceTest {
 		// Re-stub co lookup to empty so the co-applicant is absent from CM, and absent from LC.
 		when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(CO_APPLICANT)).thenReturn(List.of());
 		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
-			.thenReturn(new LifecareCaseSummary(true, Set.of(), null, false, true));
+			.thenReturn(new LifecareCaseSummary(true, true, Set.of(), null, false, true));
 		when(lifecareCaseServiceMock.summarize(eq(CO_APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		// errand only lists the applicant so co-applicant isn't found in CM either
@@ -224,6 +252,44 @@ class EligibilityServiceTest {
 		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_EXISTING_CASE);
 	}
 
+	@Test
+	void openCaseFlagIsReportedFromLifecare() {
+		noCmErrands();
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
+			.thenReturn(new LifecareCaseSummary(true, false, Set.of(PREVIOUS), PREVIOUS, false, false));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		// Reported, but not acted on: with require-open-case off, the footprint still carries the existence gate.
+		assertThat(response.getHasOpenCase()).isFalse();
+		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
+	}
+
+	@Test
+	void requireOpenCaseRejectsAFootprintWithoutAnOpenCase() {
+		noCmErrands();
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
+			.thenReturn(new LifecareCaseSummary(true, false, Set.of(PREVIOUS), PREVIOUS, false, false));
+
+		final var response = serviceRequiringOpenCase().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_EXISTING_CASE);
+	}
+
+	@Test
+	void requireOpenCaseFallsBackToTheFootprintWhenTheStatusIsUnknown() {
+		// No readable actualisation status → hasOpenCase null → the footprint decides, so nobody is locked out by an
+		// unrecognised FamilyCare status vocabulary.
+		noCmErrands();
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
+			.thenReturn(new LifecareCaseSummary(true, null, Set.of(PREVIOUS), PREVIOUS, false, false));
+
+		final var response = serviceRequiringOpenCase().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getHasOpenCase()).isNull();
+		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
+	}
+
 	// ---- 2) Marital status gate
 	// ------------------------------------------------------------------------------------------
 
@@ -232,8 +298,7 @@ class EligibilityServiceTest {
 		// Previous CM application was solo; now applying together → marital status changed → NY.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
 		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
-		when(lifecareCaseServiceMock.summarize(eq(CO_APPLICANT_PNR), any()))
-			.thenReturn(new LifecareCaseSummary(true, Set.of(), null, false, false)); // co exists in LC
+		when(lifecareCaseServiceMock.summarize(eq(CO_APPLICANT_PNR), any())).thenReturn(lifecare(Set.of())); // co exists in LC
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
 
@@ -247,7 +312,7 @@ class EligibilityServiceTest {
 	void sameCivilstandTogetherPasses() {
 		// Previous CM application also had a co-applicant → same marital status → continue to month logic.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT), person(ROLE_CO_APPLICANT, CO_APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 		when(lifecareCaseServiceMock.summarize(eq(CO_APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
@@ -271,8 +336,7 @@ class EligibilityServiceTest {
 				.withPersons(List.of(person(ROLE_APPLICANT, APPLICANT), person(ROLE_CO_APPLICANT, CO_APPLICANT)))));
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, otherCo)).thenReturn(Optional.of(otherCoPnr));
 		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
-		when(lifecareCaseServiceMock.summarize(eq(otherCoPnr), any()))
-			.thenReturn(new LifecareCaseSummary(true, Set.of(), null, false, false));
+		when(lifecareCaseServiceMock.summarize(eq(otherCoPnr), any())).thenReturn(lifecare(Set.of()));
 		final var request = EligibilityRequest.create().withApplicant(APPLICANT).withCoApplicant(otherCo);
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, request);
@@ -288,8 +352,7 @@ class EligibilityServiceTest {
 	void recentlyClosedSuggestsRenewalAndSurfacesErrand() {
 		final var closedAt = OffsetDateTime.now().minusDays(5);
 		cmErrand(person(ROLE_APPLICANT, APPLICANT)); // applicant exists → passes existence + marital (alone)
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
-			.thenReturn(new LifecareCaseSummary(true, Set.of(), null, false, false));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
 		when(recentlyClosedErrandServiceMock.findRecentlyClosed(eq(MUNICIPALITY_ID), eq(NAMESPACE), any()))
 			.thenReturn(Optional.of(new RecentlyClosedErrandService.RecentlyClosed(ERRAND_ID, closedAt)));
 
@@ -308,8 +371,7 @@ class EligibilityServiceTest {
 	void noRecentlyClosedFallsThroughToPerMonth() {
 		// Recently-closed service finds nothing → routing continues to the normal per-month logic.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
-			.thenReturn(new LifecareCaseSummary(true, Set.of(), null, false, false));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 		when(recentlyClosedErrandServiceMock.findRecentlyClosed(eq(MUNICIPALITY_ID), eq(NAMESPACE), any())).thenReturn(Optional.empty());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
@@ -321,27 +383,10 @@ class EligibilityServiceTest {
 	// ---- 3) Per-month logic ------------------------------------------------------------------------------------------
 
 	@Test
-	void existingCaseNoDecisionThisMonthRecommendsRenewalThisMonth() {
-		cmErrand(person(ROLE_APPLICANT, APPLICANT)); // no period → no application for this/next month
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
-			.thenReturn(new LifecareCaseSummary(true, Set.of(), null, false, false));
-
-		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
-
-		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
-		assertThat(response.isCurrentMonthDecided()).isFalse();
-		assertThat(response.getSuggestions()).hasSize(2);
-		final var primary = recommended(response.getSuggestions());
-		assertThat(primary.getTypeSlug()).isEqualTo(SLUG_RENEWAL);
-		assertThat(primary.getPeriodMonth()).isEqualTo(CURRENT.getMonthValue());
-		assertThat(response.getSuggestions().get(1).getPeriodMonth()).isEqualTo(NEXT.getMonthValue());
-	}
-
-	@Test
 	void decisionForCurrentMonthRecommendsNextMonthAndSupplementThis() {
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
 		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
-			.thenReturn(new LifecareCaseSummary(true, Set.of(CURRENT), CURRENT, true, false));
+			.thenReturn(new LifecareCaseSummary(true, true, Set.of(CURRENT), CURRENT, true, false));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -360,11 +405,107 @@ class EligibilityServiceTest {
 	}
 
 	@Test
-	void cmApplicationForThisMonthYieldsSupplement() {
-		// A CM application already exists for the current month within the window → supplementary application this month.
+	void decisionForPreviousMonthRecommendsRenewalThisMonthOrNext() {
+		cmErrand(person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
+		assertThat(response.isCurrentMonthDecided()).isFalse();
+		assertThat(response.isPreviousMonthDecided()).isTrue();
+		assertThat(response.isMonthBeforePreviousDecided()).isFalse();
+		assertThat(response.getSuggestions()).hasSize(2);
+		final var primary = recommended(response.getSuggestions());
+		assertThat(primary.getTypeSlug()).isEqualTo(SLUG_RENEWAL);
+		assertThat(primary.getPeriodMonth()).isEqualTo(CURRENT.getMonthValue());
+		assertThat(response.getSuggestions().get(1))
+			.satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_RENEWAL))
+			.satisfies(s -> assertThat(s.getPeriodMonth()).isEqualTo(NEXT.getMonthValue()));
+	}
+
+	@Test
+	void decisionTwoMonthsBackStillRecommendsRenewal() {
+		// Nothing for the current or previous month, but the month before that is decided → the run is unbroken.
+		cmErrand(person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(TWO_MONTHS_BACK)));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
+		assertThat(response.isPreviousMonthDecided()).isFalse();
+		assertThat(response.isMonthBeforePreviousDecided()).isTrue();
+		final var primary = recommended(response.getSuggestions());
+		assertThat(primary.getTypeSlug()).isEqualTo(SLUG_RENEWAL);
+		assertThat(primary.getPeriodMonth()).isEqualTo(CURRENT.getMonthValue());
+	}
+
+	@Test
+	void noDecisionForTheLastTwoMonthsSuggestsNew() {
+		// A known applicant whose latest decision is months old — too long a gap for a renewal.
+		cmErrand(person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(FIVE_MONTHS_BACK)));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_RECENT_DECISION);
+		assertThat(response.isPreviousMonthDecided()).isFalse();
+		assertThat(response.isMonthBeforePreviousDecided()).isFalse();
+		assertThat(response.getLatestDecisionPeriodMonth()).isEqualTo(FIVE_MONTHS_BACK.getMonthValue());
+		assertThat(response.getSuggestions()).singleElement()
+			.satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_NEW))
+			.satisfies(s -> assertThat(s.isRecommended()).isTrue());
+	}
+
+	@Test
+	void noDecisionsAtAllForAnExistingApplicantSuggestsNew() {
+		cmErrand(person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_NO_RECENT_DECISION);
+		assertThat(response.getSuggestions()).singleElement().satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_NEW));
+	}
+
+	@Test
+	void ongoingApplicationOverridesTheNewApplicationFallback() {
+		// The decision run is broken, but an application for the current month is already in progress in caremanagement —
+		// a second one of the same kind is not allowed, so only a supplementary application remains.
 		cmErrandWithPeriod(CURRENT, OffsetDateTime.now(), person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
-			.thenReturn(new LifecareCaseSummary(true, Set.of(), null, false, false));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_ONGOING_APPLICATION);
+		assertThat(response.isApplicationExistsThisMonth()).isTrue();
+		assertThat(response.getSuggestions()).singleElement()
+			.satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_SUPPLEMENTARY))
+			.satisfies(s -> assertThat(s.getPeriodMonth()).isEqualTo(CURRENT.getMonthValue()))
+			.satisfies(s -> assertThat(s.isRecommended()).isTrue());
+	}
+
+	@Test
+	void ongoingApplicationForNextMonthOnlyOffersASupplementForThatMonth() {
+		cmErrandWithPeriod(NEXT, OffsetDateTime.now(), person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getReasonCode()).isEqualTo(REASON_ONGOING_APPLICATION);
+		assertThat(response.isApplicationExistsThisMonth()).isFalse();
+		assertThat(response.isApplicationExistsNextMonth()).isTrue();
+		assertThat(response.getSuggestions()).singleElement()
+			.satisfies(s -> assertThat(s.getTypeSlug()).isEqualTo(SLUG_SUPPLEMENTARY))
+			.satisfies(s -> assertThat(s.getPeriodMonth()).isEqualTo(NEXT.getMonthValue()))
+			.satisfies(s -> assertThat(s.isRecommended()).isTrue());
+	}
+
+	@Test
+	void cmApplicationForThisMonthYieldsSupplement() {
+		// A CM application already exists for the current month → supplementary application this month.
+		cmErrandWithPeriod(CURRENT, OffsetDateTime.now(), person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -375,11 +516,10 @@ class EligibilityServiceTest {
 	}
 
 	@Test
-	void cmApplicationOutsideWindowDoesNotCount() {
-		// Same-month CM application but created long ago → outside 90-day window → still renewal.
-		cmErrandWithPeriod(CURRENT, OffsetDateTime.now().minusDays(200), person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
-			.thenReturn(new LifecareCaseSummary(true, Set.of(), null, false, false));
+	void terminalCmApplicationDoesNotOccupyTheMonth() {
+		// A rejected application for the current month is decided, not pending — it must not force a supplementary one.
+		cmErrandWithPeriodAndStatus(CURRENT, OffsetDateTime.now(), STATUS_REJECTED, person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -387,18 +527,84 @@ class EligibilityServiceTest {
 		assertThat(recommended(response.getSuggestions()).getTypeSlug()).isEqualTo(SLUG_RENEWAL);
 	}
 
+	@Test
+	void cmApplicationOutsideWindowDoesNotCount() {
+		// Same-month CM application but left non-terminal since long ago → stale → still renewal.
+		cmErrandWithPeriod(CURRENT, OffsetDateTime.now().minusDays(200), person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.isApplicationExistsThisMonth()).isFalse();
+		assertThat(recommended(response.getSuggestions()).getTypeSlug()).isEqualTo(SLUG_RENEWAL);
+	}
+
+	// ---- Citizen-facing texts ----------------------------------------------------------------------------------------
+
+	@Test
+	void introTextIsPhrasedForASingleApplicant() {
+		noCmErrands();
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getIntroText()).isEqualTo(INTRO_TEXT_SINGLE);
+	}
+
+	@Test
+	void introTextIsPhrasedForTwoApplicants() {
+		noCmErrands();
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(CO_APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
+
+		assertThat(response.getIntroText()).isEqualTo(INTRO_TEXT_JOINT);
+	}
+
+	@Test
+	void newApplicationCarriesItsCitizenDescription() {
+		noCmErrands();
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getSuggestions()).singleElement()
+			.satisfies(s -> assertThat(s.getDescription()).isEqualTo(DESCRIPTION_NEW));
+	}
+
+	@Test
+	void renewalCarriesItsCitizenDescriptionAndSupplementaryHasNoneYet() {
+		cmErrandWithPeriod(CURRENT, OffsetDateTime.now(), person(ROLE_APPLICANT, APPLICANT));
+		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
+
+		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
+
+		assertThat(response.getSuggestions())
+			.filteredOn(s -> SLUG_RENEWAL.equals(s.getTypeSlug()))
+			.allSatisfy(s -> assertThat(s.getDescription()).isEqualTo(DESCRIPTION_RENEWAL));
+		// The supplementary application's wording is still pending from the business — offered without one.
+		assertThat(response.getSuggestions())
+			.filteredOn(s -> SLUG_SUPPLEMENTARY.equals(s.getTypeSlug()))
+			.allSatisfy(s -> assertThat(s.getDescription()).isNull());
+	}
+
 	// ---- Degradation -------------------------------------------------------------------------------------------------
 
 	@Test
 	void lifecareUnavailableButExistsInCmStillRoutes() {
+		// The decision history is unknown, so an existing applicant keeps the renewal instead of being pushed into a new
+		// application on unread data.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
 		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "FamilyCare down"));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
 		assertThat(response.isLifecareChecked()).isFalse();
+		assertThat(response.getHasOpenCase()).isNull();
 		assertThat(response.isExistsInCm()).isTrue();
 		assertThat(response.getReasonCode()).isEqualTo(REASON_EXISTING_CASE);
+		assertThat(response.getMessage()).contains("Lifecare kunde inte nås");
 		assertThat(recommended(response.getSuggestions()).getTypeSlug()).isEqualTo(SLUG_RENEWAL);
 	}
 
@@ -420,6 +626,7 @@ class EligibilityServiceTest {
 
 		assertThat(response.getReasonCode()).isEqualTo(REASON_ALL_TYPES_TEST);
 		assertThat(response.isHasCoApplicant()).isTrue();
+		assertThat(response.getIntroText()).isEqualTo(INTRO_TEXT_JOINT);
 		assertThat(response.getSuggestions()).extracting(ApplicationSuggestion::getTypeSlug)
 			.containsExactly(SLUG_NEW, SLUG_RENEWAL, SLUG_SUPPLEMENTARY);
 		assertThat(recommended(response.getSuggestions()).getTypeSlug()).isEqualTo(SLUG_NEW);

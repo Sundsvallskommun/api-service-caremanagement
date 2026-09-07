@@ -12,9 +12,10 @@ class LifecareCaseSummaryTest {
 	@Test
 	void accessors() {
 		final var period = YearMonth.of(2026, MAY);
-		final var summary = new LifecareCaseSummary(true, Set.of(period), period, true, true);
+		final var summary = new LifecareCaseSummary(true, true, Set.of(period), period, true, true);
 
 		assertThat(summary.hasFootprint()).isTrue();
+		assertThat(summary.hasOpenCase()).isTrue();
 		assertThat(summary.decisionMonths()).containsExactly(period);
 		assertThat(summary.latestDecisionPeriod()).isEqualTo(period);
 		assertThat(summary.hasCalculation()).isTrue();
@@ -26,6 +27,7 @@ class LifecareCaseSummaryTest {
 		final var none = LifecareCaseSummary.none();
 
 		assertThat(none.hasFootprint()).isFalse();
+		assertThat(none.hasOpenCase()).isNull();
 		assertThat(none.decisionMonths()).isEmpty();
 		assertThat(none.latestDecisionPeriod()).isNull();
 		assertThat(none.hasCalculation()).isFalse();

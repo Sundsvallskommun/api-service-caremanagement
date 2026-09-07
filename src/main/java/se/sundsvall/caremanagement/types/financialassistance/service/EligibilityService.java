@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +41,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_RENEWAL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.TERMINAL_STATUSES;
 
 /**
  * Application-eligibility (common entry point) routing for financial assistance, encoding the agreed decision flow:
@@ -50,12 +52,20 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * carries <em>no</em> reason or flag — the protected status must not leak across the API edge — so the frontend
  * simply sees that nothing can be recommended and directs the citizen to a caseworker.</li>
  * <li><b>Exists in CM? + LC</b> — does the applicant already exist (a financial assistance errand in caremanagement,
- * or a Lifecare footprint)? When applying together, <em>both</em> must exist. If not → new application.</li>
+ * or a Lifecare case)? When applying together, <em>both</em> must exist. If not → new application.</li>
  * <li><b>Same marital status?</b> — does the requested constellation (alone vs with a partner, inferred from the
  * co-applicant) match the previous application's? If it changed → new application.</li>
- * <li><b>Per-month</b> — for the current and next month, is there already an application/decision (within the
- * window)? If yes → supplementary application for that month; if no → renewal. The current month being decided in
- * Lifecare makes the next-month option the recommended one.</li>
+ * <li><b>Per-month</b> — driven by which months Lifecare has decided:
+ * <ul>
+ * <li>the <em>current</em> month is decided → renewal for next month, or a supplementary application for the current
+ * one (the next-month option is the recommended one);</li>
+ * <li>the current month is undecided but the <em>previous</em> month or the one before it is decided → the run of
+ * applications is unbroken, so a renewal for the current month (recommended) or next month;</li>
+ * <li>none of the three is decided → the run is broken, so a <em>new</em> application — unless an application is
+ * already in progress for one of the months, in which case only a supplementary application remains for it.</li>
+ * </ul>
+ * A month is "taken" when caremanagement holds an ongoing (non-terminal, non-stale) application for it, or Lifecare
+ * holds a decision covering it; a taken month is offered as a supplementary application rather than a renewal.</li>
  * </ol>
  *
  * The decision is advisory — the caseworker stays in the loop — so the result carries the facts each gate was
@@ -68,8 +78,17 @@ public class EligibilityService {
 	static final String REASON_NO_EXISTING_CASE = "NO_EXISTING_CASE";
 	static final String REASON_MARITAL_STATUS_CHANGED = "MARITAL_STATUS_CHANGED";
 	static final String REASON_RECENTLY_CLOSED = "RECENTLY_CLOSED";
+	static final String REASON_NO_RECENT_DECISION = "NO_RECENT_DECISION";
+	static final String REASON_ONGOING_APPLICATION = "ONGOING_APPLICATION";
 	static final String REASON_EXISTING_CASE = "EXISTING_CASE";
 	static final String REASON_ALL_TYPES_TEST = "ALL_TYPES_TEST";
+
+	// Citizen-facing texts (Swedish, from the common-entry-point specification). Kept here as constants so the wording
+	// can be adjusted without touching the routing.
+	static final String INTRO_TEXT_SINGLE = "Utifrån dina uppgifter kan du göra någon av följande ansökningar:";
+	static final String INTRO_TEXT_JOINT = "Utifrån era uppgifter kan ni göra någon av följande ansökningar:";
+	static final String DESCRIPTION_NEW = "första gången du ansöker eller om det var längesen du ansökte";
+	static final String DESCRIPTION_RENEWAL = "du har ansökt tidigare och inte haft ett längre uppehåll";
 
 	private static final String[] MONTHS_SV = {
 		"januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"
@@ -81,12 +100,14 @@ public class EligibilityService {
 	private final CitizenService citizenService;
 	private final RecentlyClosedErrandService recentlyClosedErrandService;
 	private final int windowDays;
+	private final boolean requireOpenCase;
 	private final boolean returnAllTypes;
 
 	EligibilityService(final ErrandQueryService errandQueryService, final FinancialAssistanceRepository financialAssistanceRepository,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService,
 		final RecentlyClosedErrandService recentlyClosedErrandService,
 		@Value("${financial-assistance.eligibility.duplicate-window-days:90}") final int windowDays,
+		@Value("${financial-assistance.eligibility.require-open-case:false}") final boolean requireOpenCase,
 		@Value("${financial-assistance.eligibility.return-all-types:false}") final boolean returnAllTypes) {
 		this.errandQueryService = errandQueryService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
@@ -94,6 +115,7 @@ public class EligibilityService {
 		this.citizenService = citizenService;
 		this.recentlyClosedErrandService = recentlyClosedErrandService;
 		this.windowDays = windowDays;
+		this.requireOpenCase = requireOpenCase;
 		this.returnAllTypes = returnAllTypes;
 	}
 
@@ -122,12 +144,13 @@ public class EligibilityService {
 
 		final var response = EligibilityResponse.create()
 			.withWindowDays(windowDays)
-			.withHasCoApplicant(hasCoApplicant);
+			.withHasCoApplicant(hasCoApplicant)
+			.withIntroText(introText(hasCoApplicant));
 
 		final var lifecare = loadLifecare(municipalityId, request, today, hasCoApplicant);
 		applyLifecareFacts(response, lifecare);
 
-		// Caremanagement (Druken) financial assistance errands for the applicant (+ co-applicant), scoped to this
+		// Caremanagement (Draken) financial assistance errands for the applicant (+ co-applicant), scoped to this
 		// namespace/municipality.
 		final var cmRecords = loadCmRecords(municipalityId, namespace, request);
 		final var existsInCm = cmRecords.stream().anyMatch(cm -> personIn(cm.fa(), request.getApplicant()));
@@ -135,7 +158,7 @@ public class EligibilityService {
 		response.setExistsInLc(lifecare.applicant().hasFootprint());
 
 		// 1) Finns i CM? + LC — applicant must exist; when applying together the co-applicant must too.
-		if (!bothPartiesExist(cmRecords, lifecare, request, existsInCm, hasCoApplicant)) {
+		if (!bothPartiesExist(cmRecords, lifecare, request, existsInCm, hasCoApplicant, requireOpenCase)) {
 			return newApplication(response, REASON_NO_EXISTING_CASE,
 				"Inget befintligt ärende hittades" + lifecareNote(lifecare.checked()) + ". Föreslår en nyansökan.");
 		}
@@ -158,7 +181,7 @@ public class EligibilityService {
 		// 3) Per-month (when not recently closed) — application/decision already present for this/next month?
 		return recentlyClosed
 			.map(closed -> recentlyClosedResponse(response, closed, currentMonth))
-			.orElseGet(() -> perMonthResponse(response, cmRecords, lifecare.applicant(), currentMonth, nextMonth, cutoff));
+			.orElseGet(() -> perMonthResponse(response, cmRecords, lifecare, currentMonth, nextMonth, cutoff));
 	}
 
 	/** Protected-identity gate across both parties (best-effort per source). */
@@ -188,6 +211,7 @@ public class EligibilityService {
 	/** Stamp the response's Lifecare-derived facts (checked flag, previous calculation, latest decision period). */
 	private static void applyLifecareFacts(final EligibilityResponse response, final LifecareFacts lifecare) {
 		response.setLifecareChecked(lifecare.checked());
+		response.setHasOpenCase(lifecare.applicant().hasOpenCase());
 		response.setHasPreviousCalculation(lifecare.applicant().hasCalculation());
 		ofNullable(lifecare.applicant().latestDecisionPeriod()).ifPresent(period -> {
 			response.setLatestDecisionPeriodMonth(period.getMonthValue());
@@ -197,12 +221,33 @@ public class EligibilityService {
 
 	/** Gate 1: the applicant must exist (CM or LC); when applying together the co-applicant must too. */
 	private static boolean bothPartiesExist(final List<CmRecord> cmRecords, final LifecareFacts lifecare, final EligibilityRequest request,
-		final boolean existsInCm, final boolean hasCoApplicant) {
-		final var applicantExists = existsInCm || lifecare.applicant().hasFootprint();
+		final boolean existsInCm, final boolean hasCoApplicant, final boolean requireOpenCase) {
+		final var applicantExists = existsInCm || existsInLifecare(lifecare.applicant(), requireOpenCase);
 		final var coApplicantExists = !hasCoApplicant
 			|| cmRecords.stream().anyMatch(cm -> personIn(cm.fa(), request.getCoApplicant()))
-			|| (lifecare.coApplicant() != null && lifecare.coApplicant().hasFootprint());
+			|| ((lifecare.coApplicant() != null) && existsInLifecare(lifecare.coApplicant(), requireOpenCase));
 		return applicantExists && coApplicantExists;
+	}
+
+	/**
+	 * Whether a Lifecare summary counts as an existing case. By default any footprint does; with
+	 * {@code financial-assistance.eligibility.require-open-case} the actualisation status decides instead — but an
+	 * unknown status falls back to the footprint, so an unrecognised FamilyCare status vocabulary never locks an
+	 * applicant out of applying.
+	 */
+	private static boolean existsInLifecare(final LifecareCaseSummary summary, final boolean requireOpenCase) {
+		if (!requireOpenCase) {
+			return summary.hasFootprint();
+		}
+		return ofNullable(summary.hasOpenCase()).orElseGet(summary::hasFootprint);
+	}
+
+	/** The citizen-facing introduction above the suggestion list, phrased for one or two applicants. */
+	private static String introText(final boolean hasCoApplicant) {
+		if (hasCoApplicant) {
+			return INTRO_TEXT_JOINT;
+		}
+		return INTRO_TEXT_SINGLE;
 	}
 
 	private static String lifecareNote(final boolean lifecareChecked) {
@@ -225,36 +270,88 @@ public class EligibilityService {
 	}
 
 	/**
-	 * Gate 3 response: the per-month renewal/supplementary suggestions, recommended by whether the current month is
-	 * decided.
+	 * Gate 3 response: which months are decided in Lifecare decides the suggestions. A decided current month settles
+	 * it (renew next month); an undecided current month still counts as an unbroken run when either of the two
+	 * preceding months is decided; when none of the three is decided the run is broken and a new application applies.
 	 */
 	private static EligibilityResponse perMonthResponse(final EligibilityResponse response, final List<CmRecord> cmRecords,
-		final LifecareCaseSummary applicantLc, final YearMonth currentMonth, final YearMonth nextMonth, final OffsetDateTime cutoff) {
+		final LifecareFacts lifecare, final YearMonth currentMonth, final YearMonth nextMonth, final OffsetDateTime cutoff) {
 
+		final var applicantLc = lifecare.applicant();
 		final var existsThisMonth = applicationExists(cmRecords, applicantLc, currentMonth, cutoff);
 		final var existsNextMonth = applicationExists(cmRecords, applicantLc, nextMonth, cutoff);
 		final var currentMonthDecided = applicantLc.decisionMonths().contains(currentMonth);
+		final var previousMonthDecided = applicantLc.decisionMonths().contains(currentMonth.minusMonths(1));
+		final var monthBeforePreviousDecided = applicantLc.decisionMonths().contains(currentMonth.minusMonths(2));
 
 		response.setApplicationExistsThisMonth(existsThisMonth);
 		response.setApplicationExistsNextMonth(existsNextMonth);
 		response.setCurrentMonthDecided(currentMonthDecided);
+		response.setPreviousMonthDecided(previousMonthDecided);
+		response.setMonthBeforePreviousDecided(monthBeforePreviousDecided);
 
 		final var thisMonth = monthSuggestion(currentMonth, existsThisMonth, !currentMonthDecided);
 		final var nextMonthSuggestion = monthSuggestion(nextMonth, existsNextMonth, currentMonthDecided);
 
-		// Recommended = the current month while it's still open; next month once the current month is decided.
-		final List<ApplicationSuggestion> suggestions;
-		final String message;
+		// The current month is decided: renew for next month (recommended), or supplement the settled current month.
 		if (currentMonthDecided) {
-			suggestions = List.of(nextMonthSuggestion, thisMonth);
-			message = "Beslut finns för aktuell månad. Föreslår en återansökan för nästa månad eller en tilläggsansökan.";
-		} else {
-			suggestions = List.of(thisMonth, nextMonthSuggestion);
-			message = "Befintligt ärende utan beslut för aktuell månad. Föreslår en återansökan för aktuell månad.";
+			return existingCase(response, List.of(nextMonthSuggestion, thisMonth),
+				"Beslut finns för aktuell månad. Föreslår en återansökan för nästa månad eller en tilläggsansökan.");
 		}
+
+		// Undecided current month, but a decision for the previous month or the one before it: the run of applications
+		// is unbroken, so a renewal for the current month (recommended) or next month.
+		if (previousMonthDecided || monthBeforePreviousDecided) {
+			return existingCase(response, List.of(thisMonth, nextMonthSuggestion),
+				"Senaste beslutet avser en tidigare månad. Föreslår en återansökan för innevarande eller nästa månad.");
+		}
+
+		// An absent decision only means a gap when Lifecare was actually read. With Lifecare unreachable the decision
+		// history is unknown, so an applicant who demonstrably exists keeps the renewal rather than being pushed into a
+		// new application on unread data.
+		if (!lifecare.checked()) {
+			return existingCase(response, List.of(thisMonth, nextMonthSuggestion),
+				"Befintligt ärende utan beslut för aktuell månad (Lifecare kunde inte nås). Föreslår en återansökan för aktuell månad.");
+		}
+
+		// No decision for the current month nor either of the two before it — too long a gap for a renewal.
+		return noRecentDecisionResponse(response, existsThisMonth, existsNextMonth, currentMonth, nextMonth);
+	}
+
+	/** Gate 3 response: the plain "existing case" outcome, with the suggestions already ordered. */
+	private static EligibilityResponse existingCase(final EligibilityResponse response,
+		final List<ApplicationSuggestion> suggestions, final String message) {
 		response.setSuggestions(suggestions);
 		response.setReasonCode(REASON_EXISTING_CASE);
 		response.setMessage(message);
+		return response;
+	}
+
+	/**
+	 * Gate 3 response when no decision exists for the current month or the two before it: a new application — unless a
+	 * month is already taken by an application in progress, in which case a second application of the same kind is not
+	 * allowed and a supplementary application is what remains for that month.
+	 */
+	private static EligibilityResponse noRecentDecisionResponse(final EligibilityResponse response, final boolean existsThisMonth,
+		final boolean existsNextMonth, final YearMonth currentMonth, final YearMonth nextMonth) {
+
+		if (!existsThisMonth && !existsNextMonth) {
+			response.setSuggestions(List.of(suggestion(SLUG_NEW, null, true)));
+			response.setReasonCode(REASON_NO_RECENT_DECISION);
+			response.setMessage("Inget beslut finns för de två senaste månaderna. Föreslår en nyansökan.");
+			return response;
+		}
+
+		final var suggestions = new ArrayList<ApplicationSuggestion>();
+		if (existsThisMonth) {
+			suggestions.add(suggestion(SLUG_SUPPLEMENTARY, currentMonth, true));
+		}
+		if (existsNextMonth) {
+			suggestions.add(suggestion(SLUG_SUPPLEMENTARY, nextMonth, suggestions.isEmpty()));
+		}
+		response.setSuggestions(List.copyOf(suggestions));
+		response.setReasonCode(REASON_ONGOING_APPLICATION);
+		response.setMessage("Det finns redan en pågående ansökan för perioden. Föreslår en tilläggsansökan.");
 		return response;
 	}
 
@@ -269,6 +366,7 @@ public class EligibilityService {
 	private static EligibilityResponse allTypesResponse(final boolean hasCoApplicant, final YearMonth currentMonth) {
 		return EligibilityResponse.create()
 			.withHasCoApplicant(hasCoApplicant)
+			.withIntroText(introText(hasCoApplicant))
 			.withReasonCode(REASON_ALL_TYPES_TEST)
 			.withMessage("Testläge: alla ansökningstyper returneras (gemensam-ingång-routningen kringgås).")
 			.withSuggestions(List.of(
@@ -334,12 +432,26 @@ public class EligibilityService {
 	}
 
 	/**
-	 * Is there an application for {@code month} — a CM errand for that period within the window, or a Lifecare decision?
+	 * Is {@code month} already taken — an ongoing application in caremanagement, or a Lifecare decision covering it?
 	 */
 	private static boolean applicationExists(final List<CmRecord> cmRecords, final LifecareCaseSummary applicantLc,
 		final YearMonth month, final OffsetDateTime cutoff) {
-		final var inCm = cmRecords.stream().anyMatch(cm -> periodEquals(cm.fa(), month) && createdWithin(cm.errand(), cutoff));
-		return inCm || applicantLc.decisionMonths().contains(month);
+		return ongoingInCm(cmRecords, month, cutoff) || applicantLc.decisionMonths().contains(month);
+	}
+
+	/**
+	 * An application in progress in caremanagement (Draken) for {@code month}: it concerns that period, has not
+	 * reached a terminal status (a closed, withdrawn or rejected application no longer occupies the month) and is not
+	 * stale — one left non-terminal for longer than the duplicate window no longer blocks a fresh application.
+	 */
+	private static boolean ongoingInCm(final List<CmRecord> cmRecords, final YearMonth month, final OffsetDateTime cutoff) {
+		return cmRecords.stream()
+			.anyMatch(cm -> periodEquals(cm.fa(), month) && isOngoing(cm.errand()) && createdWithin(cm.errand(), cutoff));
+	}
+
+	/** An errand is in progress unless it has reached a terminal status; an unset status counts as in progress. */
+	private static boolean isOngoing(final Errand errand) {
+		return ofNullable(errand.getStatus()).map(status -> !TERMINAL_STATUSES.contains(status)).orElse(true);
 	}
 
 	/**
@@ -438,7 +550,20 @@ public class EligibilityService {
 			.withPeriodMonth(ofNullable(period).map(YearMonth::getMonthValue).orElse(null))
 			.withPeriodYear(ofNullable(period).map(YearMonth::getYear).orElse(null))
 			.withRecommended(recommended)
-			.withLabel(label(slug, period));
+			.withLabel(label(slug, period))
+			.withDescription(description(slug));
+	}
+
+	/**
+	 * The citizen-facing explanation of when an application type applies. The supplementary application has no agreed
+	 * wording yet, so it is offered without one.
+	 */
+	private static String description(final String slug) {
+		return switch (slug) {
+			case SLUG_NEW -> DESCRIPTION_NEW;
+			case SLUG_RENEWAL -> DESCRIPTION_RENEWAL;
+			default -> null;
+		};
 	}
 
 	private static String applicationTypeFor(final String slug) {

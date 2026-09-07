@@ -5,6 +5,7 @@ import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBas
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.CommonCalculationExpenseDTO;
 import generated.se.sundsvall.lifecarefamilycare.CommonCalculationIncomeDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
@@ -16,6 +17,7 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -54,11 +56,17 @@ public class LifecareCaseService {
 
 	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
 	private final int lookbackMonths;
+	private final Set<String> openActualisationStatuses;
 
 	LifecareCaseService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration,
-		@Value("${integration.lifecare-familycare.lookback-months:13}") final int lookbackMonths) {
+		@Value("${integration.lifecare-familycare.lookback-months:13}") final int lookbackMonths,
+		@Value("${integration.lifecare-familycare.open-actualisation-statuses:Aktuell}") final List<String> openActualisationStatuses) {
 		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
 		this.lookbackMonths = lookbackMonths;
+		this.openActualisationStatuses = openActualisationStatuses.stream()
+			.filter(StringUtils::hasText)
+			.map(LifecareCaseService::normalize)
+			.collect(toSet());
 	}
 
 	/**
@@ -93,10 +101,35 @@ public class LifecareCaseService {
 
 		return new LifecareCaseSummary(
 			hasFootprint,
+			hasOpenCase(actualisations),
 			Set.copyOf(decisionMonths),
 			latestDecision.map(LifecareCaseService::periodOf).orElse(null),
 			!calculations.isEmpty(),
 			latestDecision.map(LifecareCaseService::hasCoApplicant).orElse(false));
+	}
+
+	/**
+	 * Whether any actualisation in the window is still open, read from FamilyCare's {@code Status} against the
+	 * configured open-status vocabulary ({@code integration.lifecare-familycare.open-actualisation-statuses}).
+	 * Returns {@code null} when no actualisation carried a readable status — the vocabulary is not fully confirmed
+	 * against production data, so "unknown" is reported as such rather than guessed at.
+	 */
+	private Boolean hasOpenCase(final List<PersonBasedAktualiseringDTO> actualisations) {
+		final var statuses = actualisations.stream()
+			.map(PersonBasedAktualiseringDTO::getStatus)
+			.filter(StringUtils::hasText)
+			.map(LifecareCaseService::normalize)
+			.toList();
+
+		if (statuses.isEmpty()) {
+			return null;
+		}
+		return statuses.stream().anyMatch(openActualisationStatuses::contains);
+	}
+
+	/** Status comparison is case- and whitespace-insensitive — FamilyCare's casing is not guaranteed. */
+	private static String normalize(final String status) {
+		return status.trim().toLowerCase(Locale.ROOT);
 	}
 
 	/**

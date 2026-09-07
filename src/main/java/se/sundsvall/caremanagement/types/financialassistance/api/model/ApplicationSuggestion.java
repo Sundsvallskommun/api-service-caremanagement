@@ -26,17 +26,21 @@ public class ApplicationSuggestion {
 		})
 	private String applicationType;
 
-	@Schema(description = "Month (1-12) the suggested application concerns. Null for a new application (new application), which has no prior period.", examples = "7")
+	@Schema(description = "Month (1-12) the suggested application concerns. Null for a new application, which has no prior period.", examples = "7")
 	private Integer periodMonth;
 
-	@Schema(description = "Year the suggested application concerns. Null for a new application (new application).", examples = "2026")
+	@Schema(description = "Year the suggested application concerns. Null for a new application.", examples = "2026")
 	private Integer periodYear;
 
 	@Schema(description = "True for the primary suggestion the citizen should be guided towards", examples = "true")
 	private boolean recommended;
 
-	@Schema(description = "Human-readable Swedish label for the suggestion", examples = "Renewal for July 2026")
+	@Schema(description = "Human-readable Swedish label for the suggestion", examples = "Återansökan för juli 2026")
 	private String label;
+
+	@Schema(description = "Swedish explanation of when this application type applies, shown to the citizen next to the label. Null when no wording has been agreed for the type.",
+		examples = "du har ansökt tidigare och inte haft ett längre uppehåll")
+	private String description;
 
 	public static ApplicationSuggestion create() {
 		return new ApplicationSuggestion();
@@ -120,6 +124,19 @@ public class ApplicationSuggestion {
 		return this;
 	}
 
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(final String description) {
+		this.description = description;
+	}
+
+	public ApplicationSuggestion withDescription(final String description) {
+		this.description = description;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -127,17 +144,19 @@ public class ApplicationSuggestion {
 		final ApplicationSuggestion that = (ApplicationSuggestion) o;
 		return recommended == that.recommended && Objects.equals(typeSlug, that.typeSlug)
 			&& Objects.equals(applicationType, that.applicationType) && Objects.equals(periodMonth, that.periodMonth)
-			&& Objects.equals(periodYear, that.periodYear) && Objects.equals(label, that.label);
+			&& Objects.equals(periodYear, that.periodYear) && Objects.equals(label, that.label)
+			&& Objects.equals(description, that.description);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(typeSlug, applicationType, periodMonth, periodYear, recommended, label);
+		return Objects.hash(typeSlug, applicationType, periodMonth, periodYear, recommended, label, description);
 	}
 
 	@Override
 	public String toString() {
 		return "ApplicationSuggestion{typeSlug='" + typeSlug + "', applicationType='" + applicationType + "', periodMonth="
-			+ periodMonth + ", periodYear=" + periodYear + ", recommended=" + recommended + ", label='" + label + "'}";
+			+ periodMonth + ", periodYear=" + periodYear + ", recommended=" + recommended + ", label='" + label
+			+ "', description='" + description + "'}";
 	}
 }

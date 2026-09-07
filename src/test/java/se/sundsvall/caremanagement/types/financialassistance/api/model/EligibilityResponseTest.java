@@ -42,13 +42,17 @@ class EligibilityResponseTest {
 			.withSuggestions(SUGGESTIONS)
 			.withReasonCode("EXISTING_CASE")
 			.withMessage("Befintligt errand")
+			.withIntroText("Utifrån dina uppgifter kan du göra någon av följande ansökningar:")
 			.withExistsInCm(true)
 			.withExistsInLc(true)
+			.withHasOpenCase(true)
 			.withMaritalStatusMatches(true)
 			.withWindowDays(90)
 			.withApplicationExistsThisMonth(true)
 			.withApplicationExistsNextMonth(false)
 			.withCurrentMonthDecided(true)
+			.withPreviousMonthDecided(true)
+			.withMonthBeforePreviousDecided(false)
 			.withLatestDecisionPeriodMonth(5)
 			.withLatestDecisionPeriodYear(2026)
 			.withHasPreviousCalculation(true)
@@ -60,13 +64,17 @@ class EligibilityResponseTest {
 		assertThat(response.getSuggestions()).isEqualTo(SUGGESTIONS);
 		assertThat(response.getReasonCode()).isEqualTo("EXISTING_CASE");
 		assertThat(response.getMessage()).isEqualTo("Befintligt errand");
+		assertThat(response.getIntroText()).isEqualTo("Utifrån dina uppgifter kan du göra någon av följande ansökningar:");
 		assertThat(response.isExistsInCm()).isTrue();
 		assertThat(response.isExistsInLc()).isTrue();
+		assertThat(response.getHasOpenCase()).isTrue();
 		assertThat(response.getMaritalStatusMatches()).isTrue();
 		assertThat(response.getWindowDays()).isEqualTo(90);
 		assertThat(response.isApplicationExistsThisMonth()).isTrue();
 		assertThat(response.isApplicationExistsNextMonth()).isFalse();
 		assertThat(response.isCurrentMonthDecided()).isTrue();
+		assertThat(response.isPreviousMonthDecided()).isTrue();
+		assertThat(response.isMonthBeforePreviousDecided()).isFalse();
 		assertThat(response.getLatestDecisionPeriodMonth()).isEqualTo(5);
 		assertThat(response.getLatestDecisionPeriodYear()).isEqualTo(2026);
 		assertThat(response.isHasPreviousCalculation()).isTrue();
@@ -81,10 +89,10 @@ class EligibilityResponseTest {
 	void testNoDirtOnCreatedBean() {
 		assertThat(EligibilityResponse.create()).hasAllNullFieldsOrPropertiesExcept(
 			"existsInCm", "existsInLc", "windowDays", "applicationExistsThisMonth", "applicationExistsNextMonth", "currentMonthDecided",
-			"hasPreviousCalculation", "lifecareChecked", "hasCoApplicant");
+			"previousMonthDecided", "monthBeforePreviousDecided", "hasPreviousCalculation", "lifecareChecked", "hasCoApplicant");
 		assertThat(new EligibilityResponse()).hasAllNullFieldsOrPropertiesExcept(
 			"existsInCm", "existsInLc", "windowDays", "applicationExistsThisMonth", "applicationExistsNextMonth", "currentMonthDecided",
-			"hasPreviousCalculation", "lifecareChecked", "hasCoApplicant");
+			"previousMonthDecided", "monthBeforePreviousDecided", "hasPreviousCalculation", "lifecareChecked", "hasCoApplicant");
 	}
 
 }
