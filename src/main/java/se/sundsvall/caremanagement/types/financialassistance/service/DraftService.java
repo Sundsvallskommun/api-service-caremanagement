@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -92,7 +93,9 @@ public class DraftService {
 			header.setCalculationToDate(parsed.atEndOfMonth());
 		});
 		ofNullable(normId).ifPresent(header::setNormId);
-		ofNullable(normType).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
+		// Copy: the norm types come straight off the managed errand entity, and handing its own collection instance to a
+		// second entity makes Hibernate fail the flush with "Found shared references to a collection".
+		ofNullable(normType).filter(list -> !list.isEmpty()).ifPresent(list -> header.setNormType(new ArrayList<>(list)));
 		header.setCalculationDate(LocalDate.now(ZoneId.systemDefault()));
 		calculationDraftRepository.save(header);
 	}

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -81,6 +82,25 @@ class DraftServiceTest {
 		verify(headerRepositoryMock).save(header.capture());
 		assertThat(header.getValue().getNormId()).isEqualTo(7);
 		assertThat(header.getValue().getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
+	}
+
+	@Test
+	void refreshCopiesTheNormTypesInsteadOfSharingTheErrandsCollection() {
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.empty());
+		when(sectionReconcilerMock.reconcilePersons(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileIncomes(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileExpenses(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+
+		// the caller hands in the errand entity's own collection - Hibernate fails the flush if the draft keeps that instance
+		final var errandNormTypes = new ArrayList<>(List.of("NATIONAL_NORM"));
+
+		service.refresh(ERRAND_ID, "2026-06", 7, errandNormTypes, List.of(), List.of(), List.of());
+
+		final var header = ArgumentCaptor.forClass(FaCalculationDraftEntity.class);
+		verify(headerRepositoryMock).save(header.capture());
+		assertThat(header.getValue().getNormType())
+			.isEqualTo(errandNormTypes)
+			.isNotSameAs(errandNormTypes);
 	}
 
 	@Test
