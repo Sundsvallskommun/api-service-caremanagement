@@ -8446,6 +8446,18 @@ components:
           - "25"
           examples:
           - "100"
+        sickLeaveFrom:
+          type: string
+          format: date
+          description: First day of the sick-leave period stated on the medical certificate
+          examples:
+          - 2026-09-01
+        sickLeaveTo:
+          type: string
+          format: date
+          description: Last day of the sick-leave period stated on the medical certificate
+          examples:
+          - 2026-09-30
         sfiStudyPath:
           type: string
           description: SFI study path

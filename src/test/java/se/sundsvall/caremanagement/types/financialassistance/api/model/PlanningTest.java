@@ -39,6 +39,8 @@ class PlanningTest {
 		final var workExtent = "FULL";
 		final var workDescription = "Permanent employment";
 		final var sickLeaveLevel = "100";
+		final var sickLeaveFrom = LocalDate.of(2026, 9, 1);
+		final var sickLeaveTo = LocalDate.of(2026, 9, 30);
 		final var sfiStudyPath = "1";
 		final var sfiCourse = "B";
 		final var otherDescription = "Internship";
@@ -49,6 +51,8 @@ class PlanningTest {
 			.withWorkExtent(workExtent)
 			.withWorkDescription(workDescription)
 			.withSickLeaveLevel(sickLeaveLevel)
+			.withSickLeaveFrom(sickLeaveFrom)
+			.withSickLeaveTo(sickLeaveTo)
 			.withSfiStudyPath(sfiStudyPath)
 			.withSfiCourse(sfiCourse)
 			.withOtherDescription(otherDescription);
@@ -59,6 +63,8 @@ class PlanningTest {
 		assertThat(result.getWorkExtent()).isEqualTo(workExtent);
 		assertThat(result.getWorkDescription()).isEqualTo(workDescription);
 		assertThat(result.getSickLeaveLevel()).isEqualTo(sickLeaveLevel);
+		assertThat(result.getSickLeaveFrom()).isEqualTo(sickLeaveFrom);
+		assertThat(result.getSickLeaveTo()).isEqualTo(sickLeaveTo);
 		assertThat(result.getSfiStudyPath()).isEqualTo(sfiStudyPath);
 		assertThat(result.getSfiCourse()).isEqualTo(sfiCourse);
 		assertThat(result.getOtherDescription()).isEqualTo(otherDescription);
