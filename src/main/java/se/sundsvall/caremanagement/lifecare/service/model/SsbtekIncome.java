@@ -23,6 +23,9 @@ import java.time.LocalDate;
  * @param amountType the SSBTEK amountType ({@code beloppstyp}), may be {@code null}
  * @param netAmount  the net amount (nettobelopp) to transfer
  * @param period     the date the income is attributed to (e.g. payment date / period start)
+ * @param periodFrom the first day of the period the payment covers ({@code periodFran}), may be {@code null}
+ * @param periodTo   the last day of the period the payment covers ({@code periodTill}), may be {@code null}
+ * @param days       the number of days the payment is for ({@code dagar}), may be {@code null}
  * @param role       whether this income belongs to the applicant or the co-applicant
  */
 public record SsbtekIncome(
@@ -31,5 +34,14 @@ public record SsbtekIncome(
 	@JsonProperty("beloppstyp") String amountType,
 	BigDecimal netAmount,
 	LocalDate period,
+	@JsonProperty("periodFran") LocalDate periodFrom,
+	@JsonProperty("periodTill") LocalDate periodTo,
+	@JsonProperty("dagar") Integer days,
 	ApplicantRole role) {
+
+	/** The payment-date-only shape, for tests and callers with no period or day information. */
+	public SsbtekIncome(final String benefit, final String subBenefit, final String amountType,
+		final BigDecimal netAmount, final LocalDate period, final ApplicantRole role) {
+		this(benefit, subBenefit, amountType, netAmount, period, null, null, null, role);
+	}
 }
