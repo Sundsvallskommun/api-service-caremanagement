@@ -104,6 +104,53 @@ class DraftServiceTest {
 	}
 
 	@Test
+	void duplicateIncomeWarnsWhenTheSameTypeComesFromBothTheProcessAndTheCaseworker() {
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag"),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeId(20).withTypeName("Bostadsbidrag")));
+
+		final var warnings = service.duplicateIncomeWarnings(ERRAND_ID);
+
+		assertThat(warnings).singleElement().satisfies(warning -> {
+			assertThat(warning.type()).isEqualTo(WarningService.TYPE_INCOME_DUPLICATED);
+			assertThat(warning.sourceKey()).isEqualTo("income-duplicate:20");
+			assertThat(warning.message()).contains("Bostadsbidrag").contains("räknas två gånger");
+		});
+	}
+
+	@Test
+	void duplicateIncomeIsSilentWhenAllRowsComeFromTheProcess() {
+		// two SSBTEK rows of the same type are summed by the feeder, not double-counted - nothing to warn about
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag"),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(21).withTypeName("Barnbidrag")));
+
+		assertThat(service.duplicateIncomeWarnings(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void duplicateIncomeClearsOnceTheCaseworkerDeletesOneSideOfThePair() {
+		// deleting the duplicate row is how the warning is resolved; the source key stops being produced and it auto-closes
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag"),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeId(20).withTypeName("Bostadsbidrag").withDeleted(true)));
+
+		assertThat(service.duplicateIncomeWarnings(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void duplicateIncomeIgnoresRowsWithoutATypeAndFallsBackOnAMissingTypeName() {
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(null),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeId(null),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(30),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeId(30)));
+
+		assertThat(service.duplicateIncomeWarnings(ERRAND_ID)).singleElement()
+			.satisfies(warning -> assertThat(warning.message()).startsWith("Möjlig dubbelföring: Inkomst"));
+	}
+
+	@Test
 	void getThrows404WhenNoHeader() {
 		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.empty());
 

@@ -20,7 +20,8 @@ public class Warning {
 
 	@Schema(description = "The warning type (machine code; use typeDisplayName for the label)", examples = "EXPENSE_CAPPED", allowableValues = {
 		"UNHANDLED_INCOME", "INCOME_CHANGE", "MISSING_SSBTEK", "NEW_INCOME", "NEW_EXPENSE", "NEW_PERSON",
-		"INCOME_DROPPED", "HOUSEHOLD_CHANGE", "HOUSING_COST_CHANGE", "EXPENSE_REVIEW", "EXPENSE_CAPPED"
+		"INCOME_DROPPED", "HOUSEHOLD_CHANGE", "HOUSING_COST_CHANGE", "EXPENSE_REVIEW", "EXPENSE_CAPPED",
+		"INCOME_DUPLICATED"
 	})
 	private String type;
 

@@ -4,8 +4,10 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -31,6 +33,8 @@ import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 
 /**
  * The editable draft calculation across its sections — persons, incomes, expenses and other living costs (the expense
@@ -82,6 +86,43 @@ public class DraftService {
 		final var expenses = sectionReconciler.reconcileExpenses(errandId, freshExpenses);
 
 		return new DraftChanges(incomes.added(), incomes.dropped(), expenses.added(), expenses.dropped(), persons.added(), persons.dropped());
+	}
+
+	/**
+	 * The regelverk requires every SSBTEK income to be checked against the calculation so it has not been entered twice:
+	 * "Alla inkomster från SSBTEK måste jämföras i normberäkningen så dom inte blivit dubbelt."
+	 * <p>
+	 * An income type carried by both a {@code SYSTEM} row (the SSBTEK/process feed) and a {@code CASEWORKER} row (added
+	 * by hand in Draken) is summed twice into the norm, which understates the benefit without anything failing. Both
+	 * rows are legitimate on their own, so this warns rather than merges - only the caseworker can tell whether the two
+	 * are the same money or genuinely separate incomes of the same type.
+	 * <p>
+	 * Soft-deleted rows are ignored: removing one side of the pair is exactly how a caseworker resolves this, and the
+	 * warning auto-closes on the next run because its source key stops being produced.
+	 */
+	@Transactional(readOnly = true)
+	public List<WarningService.WarningInput> duplicateIncomeWarnings(final String errandId) {
+		final var byType = incomeRepository.findByErrandId(errandId).stream()
+			.filter(row -> !row.isDeleted())
+			.filter(row -> row.getTypeId() != null)
+			.collect(Collectors.groupingBy(FaNormIncomeEntity::getTypeId, LinkedHashMap::new, Collectors.toList()));
+
+		return byType.values().stream()
+			.filter(DraftService::hasBothOrigins)
+			.map(rows -> {
+				final var label = ofNullable(rows.getFirst().getTypeName()).filter(StringUtils::hasText).orElse("Inkomst");
+				return new WarningService.WarningInput(WarningService.TYPE_INCOME_DUPLICATED,
+					"income-duplicate:" + rows.getFirst().getTypeId(),
+					"Möjlig dubbelföring: " + label + " finns både från SSBTEK och tillagd av handläggare "
+						+ "— kontrollera att inkomsten inte räknas två gånger");
+			})
+			.toList();
+	}
+
+	/** True when the same income type is present both from the process feed and from a caseworker edit. */
+	private static boolean hasBothOrigins(final List<FaNormIncomeEntity> rows) {
+		final var origins = rows.stream().map(FaNormIncomeEntity::getOrigin).collect(Collectors.toSet());
+		return origins.contains(ORIGIN_SYSTEM) && origins.contains(ORIGIN_CASEWORKER);
 	}
 
 	private void upsertHeader(final String errandId, final String applicationMonth, final Integer normId, final List<String> normType) {

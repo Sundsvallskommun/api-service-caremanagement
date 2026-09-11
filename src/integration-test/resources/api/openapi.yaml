@@ -9340,6 +9340,7 @@ components:
           - HOUSING_COST_CHANGE
           - EXPENSE_REVIEW
           - EXPENSE_CAPPED
+          - INCOME_DUPLICATED
           examples:
           - EXPENSE_CAPPED
         typeDisplayName:

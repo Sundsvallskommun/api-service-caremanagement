@@ -158,7 +158,12 @@ public class FinancialAssistanceCalculationService {
 
 		final var deltaWarnings = calculationFeeder.householdDeltaWarnings(municipalityId, input.errand(), personRows,
 			previousHousehold(input.applicant(), input.applicationMonth()));
-		return new DraftRefresh(changes, Stream.concat(expenseFeed.warnings().stream(), deltaWarnings.stream()).toList());
+		// Read after the merge, not before: the duplicate only exists once the refreshed process rows sit alongside
+		// whatever the caseworker has added by hand.
+		final var duplicateWarnings = draftService.duplicateIncomeWarnings(input.errandId());
+		return new DraftRefresh(changes, Stream.of(expenseFeed.warnings(), deltaWarnings, duplicateWarnings)
+			.flatMap(List::stream)
+			.toList());
 	}
 
 	/** The verdict the process asked for: does this month cover every income type the previous calculation had? */

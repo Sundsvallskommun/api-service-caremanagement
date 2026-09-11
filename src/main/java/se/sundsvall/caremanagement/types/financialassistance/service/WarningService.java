@@ -40,6 +40,7 @@ public class WarningService {
 	public static final String TYPE_HOUSING_COST_CHANGE = "HOUSING_COST_CHANGE";
 	public static final String TYPE_EXPENSE_REVIEW = "EXPENSE_REVIEW";
 	public static final String TYPE_EXPENSE_CAPPED = "EXPENSE_CAPPED";
+	public static final String TYPE_INCOME_DUPLICATED = "INCOME_DUPLICATED";
 
 	public static final String STATUS_OPEN = "OPEN";
 	public static final String STATUS_ACKNOWLEDGED = "ACKNOWLEDGED";
@@ -57,7 +58,8 @@ public class WarningService {
 		Map.entry(TYPE_HOUSEHOLD_CHANGE, "Förändrat hushåll"),
 		Map.entry(TYPE_HOUSING_COST_CHANGE, "Förändrad boendekostnad"),
 		Map.entry(TYPE_EXPENSE_REVIEW, "Manuell skälighetsbedömning"),
-		Map.entry(TYPE_EXPENSE_CAPPED, "Kapad kostnad"));
+		Map.entry(TYPE_EXPENSE_CAPPED, "Kapad kostnad"),
+		Map.entry(TYPE_INCOME_DUPLICATED, "Möjlig dubbelförd inkomst"));
 
 	/** Warning status → Swedish display name. */
 	private static final Map<String, String> STATUS_DISPLAY_NAME = Map.ofEntries(
