@@ -148,7 +148,7 @@ public class FinancialAssistanceCalculationService {
 	 * comparison also raise the section warnings reconciled in {@link #publish}.
 	 */
 	private DraftRefresh refreshDraft(final String municipalityId, final PrepareInput input) {
-		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(input.applicant(), input.classifiedIncomes()));
+		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
 		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, input.errandId(), input.errand(),
 			previousExpenseAmounts(input.applicant(), input.applicationMonth()), ageFromPnr(input.applicant()));
 		final var personRows = calculationFeeder.personRows(input.errandId(), input.errand());

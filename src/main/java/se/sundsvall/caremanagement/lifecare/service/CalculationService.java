@@ -63,11 +63,28 @@ public class CalculationService {
 
 	/**
 	 * The process-derived income lines for the draft — one per (FamilyCare income type, recipient) — from the
-	 * operaton-classified incomes resolved against the applicant's calculation proposal. Writes nothing to Lifecare.
+	 * operaton-classified incomes resolved against the applicant's calculation proposal. Comparison-period incomes the
+	 * previous month already transferred are dropped first. Writes nothing to Lifecare.
 	 */
-	public List<FamilyCareIncomeLine> incomeLines(final String applicantPersonId, final String classifiedIncomesJson) {
+	public List<FamilyCareIncomeLine> incomeLines(final String applicantPersonId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
 		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(applicantPersonId);
-		return ClassifiedIncomeToFamilyCareMapper.toIncomeLines(parse(classifiedIncomesJson), proposal);
+		final var transferable = ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
+			parse(classifiedIncomesJson), previousIncomeTypes(applicantPersonId, applicationMonth));
+		return ClassifiedIncomeToFamilyCareMapper.toIncomeLines(transferable, proposal);
+	}
+
+	/**
+	 * The income types on the previous month's calculation, best-effort. A failed read yields none, which transfers the
+	 * comparison-period incomes as before: an income counted twice shows up as a duplicate warning on the case, an
+	 * income silently withheld shows up as nothing at all.
+	 */
+	private List<String> previousIncomeTypes(final String applicantPersonId, final YearMonth applicationMonth) {
+		try {
+			return lifecareCaseService.previousCalculationIncomeTypes(applicantPersonId, applicationMonth);
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not read the previous month's calculation — transferring the comparison period unfiltered", e);
+			return List.of();
+		}
 	}
 
 	/**

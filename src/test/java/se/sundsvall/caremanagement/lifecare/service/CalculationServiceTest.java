@@ -70,8 +70,9 @@ class CalculationServiceTest {
 			bostadsbidrag()
 		});
 		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of());
 
-		final var lines = service.incomeLines(APPLICANT, "[json]");
+		final var lines = service.incomeLines(APPLICANT, MONTH, "[json]");
 
 		assertThat(lines).singleElement().satisfies(line -> {
 			assertThat(line.typeId()).isEqualTo(20);
@@ -79,6 +80,19 @@ class CalculationServiceTest {
 			assertThat(line.recipient()).isEqualTo("APPLICANT");
 			assertThat(line.amount()).isEqualByComparingTo("1850");
 		});
+	}
+
+	@Test
+	void incomeLinesTransfersTheComparisonPeriodUnfilteredWhenThePreviousMonthCannotBeRead() {
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			bostadsbidrag()
+		});
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH))
+			.thenThrow(new IllegalStateException("Lifecare unavailable"));
+
+		// an income counted twice surfaces as a duplicate warning; one silently withheld surfaces as nothing
+		assertThat(service.incomeLines(APPLICANT, MONTH, "[json]")).hasSize(1);
 	}
 
 	@Test

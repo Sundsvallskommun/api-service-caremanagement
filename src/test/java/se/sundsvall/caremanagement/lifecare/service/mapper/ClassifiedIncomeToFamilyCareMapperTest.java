@@ -28,6 +28,50 @@ class ClassifiedIncomeToFamilyCareMapperTest {
 		return new ClassifiedIncome(new SsbtekIncome(benefit, null, "Månad", new BigDecimal(amount), LocalDate.of(2026, MAY, 15), role), atgard, calculation, false, "note");
 	}
 
+	/** A classified income picked up from the comparison period rather than the control period. */
+	private static ClassifiedIncome fromComparisonPeriod(final String benefit, final String calculation, final String amount) {
+		return new ClassifiedIncome(new SsbtekIncome(benefit, null, "Månad", new BigDecimal(amount), LocalDate.of(2026, MAY, 15), APPLICANT),
+			"TA_MED", calculation, false, "note", true);
+	}
+
+	@Test
+	void dropsAComparisonPeriodIncomeThePreviousMonthAlreadyTransferred() {
+		final var kept = ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
+			List.of(fromComparisonPeriod("Underhållsstöd", "Underhållsstöd", "1673")),
+			List.of("Underhållsstöd"));
+
+		// the comparison period was last month's control period - taking it again counts the same money twice
+		assertThat(kept).isEmpty();
+	}
+
+	@Test
+	void keepsAComparisonPeriodIncomeThePreviousMonthMissed() {
+		final var kept = ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
+			List.of(fromComparisonPeriod("Underhållsstöd", "Underhållsstöd", "1673")),
+			List.of("Bostadsbidrag"));
+
+		// the regelverk's "nödlösning": an income that never made it across last month still has to come along
+		assertThat(kept).hasSize(1);
+	}
+
+	@Test
+	void neverDropsAControlPeriodIncomeEvenWhenThePreviousMonthHadTheSameType() {
+		final var kept = ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
+			List.of(classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED_KVITTNING", "1850", APPLICANT)),
+			List.of("Bostadsbidrag"));
+
+		// the control period transfers in full every month; last month's calculation says nothing about it
+		assertThat(kept).hasSize(1);
+	}
+
+	@Test
+	void dropsNothingWhenThePreviousMonthIsUnknown() {
+		final var incomes = List.of(fromComparisonPeriod("Underhållsstöd", "Underhållsstöd", "1673"));
+
+		assertThat(ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(incomes, null)).hasSize(1);
+		assertThat(ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(incomes, List.of())).hasSize(1);
+	}
+
 	@Test
 	void resolvesCategoryToFamilyCareTypeIdAndMergesByRole() {
 		final var rows = ClassifiedIncomeToFamilyCareMapper.toCalculationIncomes(List.of(

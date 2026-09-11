@@ -41,6 +41,37 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 	private ClassifiedIncomeToFamilyCareMapper() {}
 
 	/**
+	 * Drop the comparison-period incomes that were already transferred in the previous month's calculation.
+	 * <p>
+	 * The regelverk transfers the control period in full, plus the comparison period incomes "som inte togs med månaden
+	 * innan". The comparison period is the month before last - which was the <em>previous</em> application's control
+	 * period, so its incomes have normally been transferred once already. Transferring them again counts the same money
+	 * twice and understates the benefit. The exception the regelverk calls a "nödlösning" is the one that matters: an
+	 * income that was not taken last month, because the amount differed from the preliminary or the date did not match,
+	 * still has to come along.
+	 * <p>
+	 * "Was it taken?" is answered by the income types on the previous calculation. An empty or unavailable previous
+	 * month drops nothing - over-transferring is visible to the caseworker as a duplicate warning, while silently
+	 * withholding an income is not.
+	 *
+	 * @param  classified        this month's classified incomes, control period and comparison period alike
+	 * @param  previousTypeNames the FamilyCare income-type names on the previous month's calculation
+	 * @return                   the incomes to transfer
+	 */
+	public static List<ClassifiedIncome> withoutAlreadyTransferred(final List<ClassifiedIncome> classified, final List<String> previousTypeNames) {
+		final var alreadyTransferred = ofNullable(previousTypeNames).orElseGet(List::of).stream()
+			.filter(name -> (name != null) && !name.isBlank())
+			.map(MapperUtil::normalize)
+			.collect(toSet());
+
+		return ofNullable(classified).orElseGet(List::of).stream()
+			.filter(Objects::nonNull)
+			.filter(income -> !income.isFromComparisonPeriod()
+				|| !alreadyTransferred.contains(MapperUtil.normalize(income.calculation())))
+			.toList();
+	}
+
+	/**
 	 * Map the classified incomes to FamilyCare calculation rows for the given calculation proposal.
 	 *
 	 * @param  classified the incomes classified by the operaton rules (maybe {@code null})
