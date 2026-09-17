@@ -335,7 +335,7 @@ class CalculationFeederTest {
 	@Test
 	void householdDeltaWarningsFlagsSizeChangeWhenDmnFlags() {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, null);
+		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, null, null);
 		final var errand = FinancialAssistanceEntity.create();
 
 		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSEHOLD_SIZE"), eq(-1), any()))
@@ -357,7 +357,7 @@ class CalculationFeederTest {
 		final var current = List.of(
 			FaNormPersonEntity.create().withPartyId("p-1"),
 			FaNormPersonEntity.create().withPartyId("p-2"));
-		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, null);
+		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, null, null);
 		final var errand = FinancialAssistanceEntity.create();
 
 		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSEHOLD_SIZE"), eq(1), any()))
@@ -369,7 +369,7 @@ class CalculationFeederTest {
 	@Test
 	void householdDeltaWarningsFlagsHousingCostChange() {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, BigDecimal.valueOf(5000.0));
+		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, BigDecimal.valueOf(5000.0), null);
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6600"))));
 
@@ -391,7 +391,7 @@ class CalculationFeederTest {
 	@Test
 	void householdDeltaWarningsFlagsBothSizeAndHousing() {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, BigDecimal.valueOf(5000.0));
+		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, BigDecimal.valueOf(5000.0), null);
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("2500"))));
 
@@ -409,7 +409,7 @@ class CalculationFeederTest {
 	@Test
 	void householdDeltaWarningsSkipsHousingWhenNoPreviousCost() {
 		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, null);
+		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, null, null);
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6000"))));
 

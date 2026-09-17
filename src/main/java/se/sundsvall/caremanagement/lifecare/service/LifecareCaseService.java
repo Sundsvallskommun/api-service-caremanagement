@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
+import se.sundsvall.caremanagement.lifecare.service.mapper.IncomeTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 
 import static java.lang.Boolean.TRUE;
@@ -192,16 +193,7 @@ public class LifecareCaseService {
 	 * @return                  the previous calculation's distinct income-type names, or empty
 	 */
 	public List<String> previousCalculationIncomeTypes(final String personId, final YearMonth applicationMonth) {
-		final var referenceDate = applicationMonth.atDay(1);
-		final var start = referenceDate.minusMonths(lookbackMonths);
-
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
-			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
-			.orElseGet(List::of).stream()
-			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
-			.toList();
-
-		return latestCalculation(calculations)
+		return latestCalculationBefore(personId, applicationMonth)
 			.map(PersonBasedCalculationDTO::getCalculationIncomesDTOs)
 			.orElseGet(List::of).stream()
 			.map(CommonCalculationIncomeDTO::getType)
@@ -211,16 +203,41 @@ public class LifecareCaseService {
 	}
 
 	/**
-	 * The household on the person's most recent calculation strictly before {@code applicationMonth} — its person ids,
-	 * member count and norm sum — the baseline the current application's household is compared against to warn on drift.
-	 * Empty when there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the
-	 * caller decides whether to treat the lookup as best-effort.
+	 * The summed amount per financial assistance income type on the person's most recent calculation strictly before
+	 * {@code applicationMonth} — the baseline the återansökan income comparison
+	 * ({@code Decision_inkomstMotForegaende}) holds the application's own declared incomes against. Each FamilyCare
+	 * income row contributes {@code amountApplicant + amountCoApplicant} (a missing side counts as zero), keyed by the
+	 * application income type its FamilyCare name resolves to via {@link IncomeTypeMapper}; rows whose name resolves to
+	 * none of the four compared types are skipped, so a type absent from the map means "the previous calculation had no
+	 * such income". Empty when there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem
+	 * on failure; the caller decides whether to treat the lookup as best-effort.
 	 *
 	 * @param  personId         the applicant's personal identity number
 	 * @param  applicationMonth the month being applied for; only calculations before it are considered
-	 * @return                  the previous household (empty when none)
+	 * @return                  the summed amount keyed by financial assistance income type (empty when none)
 	 */
-	public PreviousHousehold previousHousehold(final String personId, final YearMonth applicationMonth) {
+	public Map<String, BigDecimal> previousCalculationIncomeAmounts(final String personId, final YearMonth applicationMonth) {
+		final var amounts = new HashMap<String, BigDecimal>();
+		latestCalculationBefore(personId, applicationMonth)
+			.map(PersonBasedCalculationDTO::getCalculationIncomesDTOs)
+			.orElseGet(List::of)
+			.forEach(income -> IncomeTypeMapper.incomeTypeForFamilyCareName(income.getType())
+				.ifPresent(incomeType -> amounts.merge(incomeType, incomeAmount(income), BigDecimal::add)));
+		return amounts;
+	}
+
+	/** An income row's amount across both sides — applicant + co-applicant, a missing side counting as zero. */
+	private static BigDecimal incomeAmount(final CommonCalculationIncomeDTO income) {
+		final var applicant = ofNullable(toAmount(income.getAmountApplicant())).orElse(BigDecimal.ZERO);
+		final var coApplicant = ofNullable(toAmount(income.getAmountCoApplicant())).orElse(BigDecimal.ZERO);
+		return applicant.add(coApplicant);
+	}
+
+	/**
+	 * The person's most recent calculation strictly before {@code applicationMonth} over the lookback window — the
+	 * shared "föregående normberäkning" read the income/household/expense baselines are all taken from.
+	 */
+	private Optional<PersonBasedCalculationDTO> latestCalculationBefore(final String personId, final YearMonth applicationMonth) {
 		final var referenceDate = applicationMonth.atDay(1);
 		final var start = referenceDate.minusMonths(lookbackMonths);
 
@@ -230,7 +247,22 @@ public class LifecareCaseService {
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
 			.toList();
 
-		final var latest = latestCalculation(calculations);
+		return latestCalculation(calculations);
+	}
+
+	/**
+	 * The household on the person's most recent calculation strictly before {@code applicationMonth} — its person ids,
+	 * member count, norm sum, housing cost and free-text norm — the baseline the current application's household is
+	 * compared against to warn on drift.
+	 * Empty when there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the
+	 * caller decides whether to treat the lookup as best-effort.
+	 *
+	 * @param  personId         the applicant's personal identity number
+	 * @param  applicationMonth the month being applied for; only calculations before it are considered
+	 * @return                  the previous household (empty when none)
+	 */
+	public PreviousHousehold previousHousehold(final String personId, final YearMonth applicationMonth) {
+		final var latest = latestCalculationBefore(personId, applicationMonth);
 		final var personIds = latest
 			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
 			.orElseGet(List::of).stream()
@@ -247,7 +279,7 @@ public class LifecareCaseService {
 			.reduce(BigDecimal::add)
 			.orElse(null);
 
-		return new PreviousHousehold(personIds, personIds.size(), normSum, housingCost);
+		return new PreviousHousehold(personIds, personIds.size(), normSum, housingCost, latest.map(PersonBasedCalculationDTO::getNorm).orElse(null));
 	}
 
 	/**
@@ -263,16 +295,7 @@ public class LifecareCaseService {
 	 * @return                  approved amount keyed by financial assistance cost type (empty when none)
 	 */
 	public Map<String, BigDecimal> previousExpenseAmounts(final String personId, final YearMonth applicationMonth) {
-		final var referenceDate = applicationMonth.atDay(1);
-		final var start = referenceDate.minusMonths(lookbackMonths);
-
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
-			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
-			.orElseGet(List::of).stream()
-			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
-			.toList();
-
-		final var latest = latestCalculation(calculations);
+		final var latest = latestCalculationBefore(personId, applicationMonth);
 		final var amounts = new HashMap<String, BigDecimal>();
 		latest.map(PersonBasedCalculationDTO::getCalculationExpensesDTOs).orElseGet(List::of)
 			.forEach(expense -> ExpenseTypeMapper.costTypeForFamilyCareName(expense.getType()).ifPresent(costType -> {

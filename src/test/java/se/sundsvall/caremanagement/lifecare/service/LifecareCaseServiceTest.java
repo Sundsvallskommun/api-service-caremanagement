@@ -323,7 +323,8 @@ class LifecareCaseServiceTest {
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("  ")) // blank filtered out
 			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Hyra/Rent").approvedAmount(6000.0))
 			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Housing").appliedAmount(1500.0)) // approved null -> applied
-			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Electricity").approvedAmount(900.0)); // not housing
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Electricity").approvedAmount(900.0)) // not housing
+			.norm("Riksnorm 2026");
 		final var current = new PersonBasedCalculationDTO().toDate("2026-06-30"); // not strictly before June -> excluded
 		when(integrationMock.getCalculations(eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, current)));
@@ -334,6 +335,7 @@ class LifecareCaseServiceTest {
 		assertThat(household.memberCount()).isEqualTo(2);
 		assertThat(household.normSum()).isEqualTo(BigDecimal.valueOf(12345.0));
 		assertThat(household.housingCost()).isEqualTo(BigDecimal.valueOf(7500.0)); // 6000 (approved) + 1500 (applied fallback)
+		assertThat(household.norm()).isEqualTo("Riksnorm 2026");
 	}
 
 	@Test
@@ -346,6 +348,37 @@ class LifecareCaseServiceTest {
 		assertThat(household.memberCount()).isZero();
 		assertThat(household.normSum()).isNull();
 		assertThat(household.housingCost()).isNull();
+		assertThat(household.norm()).isNull();
+	}
+
+	@Test
+	void previousCalculationIncomeAmountsSumsBothSidesPerMappedType() {
+		final var older = new PersonBasedCalculationDTO().toDate("2026-03-31")
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Lön").amountApplicant(999.0));
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Lön efter skatt").amountApplicant(12000.0).amountCoApplicant(3000.0))
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Lön").amountApplicant(500.0)) // same careM type -> merged
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("PLV").amountCoApplicant(1800.0)) // applicant side null -> 0
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Underhållsstöd").amountApplicant(1500.0))
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Barnbidrag/Flerbarnstillägg").amountApplicant(1250.0)) // unmapped
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Barnpension").amountApplicant(2000.0)); // never a pension insurance
+		final var current = new PersonBasedCalculationDTO().toDate("2026-06-30"); // not strictly before June
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, current)));
+
+		final var amounts = service().previousCalculationIncomeAmounts(APPLICANT, YearMonth.of(2026, JUNE));
+
+		assertThat(amounts).containsOnlyKeys("SALARY", "OCCUPATIONAL_PENSION_INSURANCE", "CHILD_SUPPORT");
+		assertThat(amounts.get("SALARY")).isEqualByComparingTo("15500");
+		assertThat(amounts.get("OCCUPATIONAL_PENSION_INSURANCE")).isEqualByComparingTo("1800");
+		assertThat(amounts.get("CHILD_SUPPORT")).isEqualByComparingTo("1500");
+	}
+
+	@Test
+	void previousCalculationIncomeAmountsEmptyWhenNoPriorCalculation() {
+		when(integrationMock.getCalculations(eq(APPLICANT), any(), any())).thenReturn(null);
+
+		assertThat(service().previousCalculationIncomeAmounts(APPLICANT, YearMonth.of(2026, JUNE))).isEmpty();
 	}
 
 	@Test
