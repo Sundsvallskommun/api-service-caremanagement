@@ -25,7 +25,10 @@ import java.time.LocalDate;
  * @param period     the date the income is attributed to (e.g. payment date / period start)
  * @param periodFrom the first day of the period the payment covers ({@code periodFran}), may be {@code null}
  * @param periodTo   the last day of the period the payment covers ({@code periodTill}), may be {@code null}
- * @param days       the number of days the payment is for ({@code dagar}), may be {@code null}
+ * @param days       the number of days the payment is for ({@code dagar}), may be {@code null}. A decimal, not a whole
+ *                   number: the SO contract types {@code Ersattningsdagar} as {@code xs:decimal} and FK sends partial
+ *                   parental-benefit days, so half and quarter days are native to both. Reading it as an int truncated
+ *                   4.5 days to 4 and 0.5 days to none.
  * @param role       whether this income belongs to the applicant or the co-applicant
  */
 public record SsbtekIncome(
@@ -36,7 +39,7 @@ public record SsbtekIncome(
 	LocalDate period,
 	@JsonProperty("periodFran") LocalDate periodFrom,
 	@JsonProperty("periodTill") LocalDate periodTo,
-	@JsonProperty("dagar") Integer days,
+	@JsonProperty("dagar") BigDecimal days,
 	ApplicantRole role) {
 
 	/** The payment-date-only shape, for tests and callers with no period or day information. */
