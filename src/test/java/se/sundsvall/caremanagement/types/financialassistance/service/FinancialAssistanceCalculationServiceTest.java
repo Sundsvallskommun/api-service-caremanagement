@@ -89,6 +89,9 @@ class FinancialAssistanceCalculationServiceTest {
 	private CalculationFeeder calculationFeederMock;
 
 	@Mock
+	private ApplicationRuleFeeder applicationRuleFeederMock;
+
+	@Mock
 	private RpaService rpaServiceMock;
 
 	@InjectMocks

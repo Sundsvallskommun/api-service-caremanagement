@@ -1,7 +1,12 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaWarningRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaWarningEntity;
 import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
@@ -127,6 +133,30 @@ class WarningServiceTest {
 		verify(repositoryMock, never()).findByIdAndErrandId(any(), any());
 	}
 
+	/**
+	 * Every {@code TYPE_*} constant must carry a Swedish display name and be exposed on {@code Warning.type}, or the
+	 * frontend gets a warning it cannot label or a value the contract does not admit. The återansökan rule types come
+	 * straight from the DMN's {@code varningskod} column, which makes this the guard that keeps the three in step.
+	 */
+	@Test
+	void everyWarningTypeConstantHasADisplayNameAndIsOnTheApiContract() throws Exception {
+		final var allowableValues = List.of(Warning.class.getDeclaredField("type").getAnnotation(Schema.class).allowableValues());
+		final var displayNames = displayNames();
+
+		final var types = Arrays.stream(WarningService.class.getDeclaredFields())
+			.filter(field -> Modifier.isPublic(field.getModifiers()) && Modifier.isStatic(field.getModifiers()))
+			.filter(field -> (field.getType() == String.class) && field.getName().startsWith("TYPE_"))
+			.map(WarningServiceTest::readConstant)
+			.toList();
+
+		assertThat(types).hasSize(28);
+		assertThat(types).allSatisfy(type -> {
+			assertThat(displayNames).as("display name for %s", type).containsKey(type);
+			assertThat(displayNames.get(type)).as("display name for %s", type).isNotBlank();
+			assertThat(allowableValues).as("Warning.type allowableValues must contain %s", type).contains(type);
+		});
+	}
+
 	@Test
 	void reconcileCalculationWarningsFoldsAllSections() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
@@ -175,5 +205,20 @@ class WarningServiceTest {
 		final var result = service.list(ERRAND_ID);
 
 		assertThat(result).extracting("type").containsExactly("UNHANDLED_INCOME", "MISSING_SSBTEK"); // sorted by created asc
+	}
+
+	private static String readConstant(final Field field) {
+		try {
+			return (String) field.get(null);
+		} catch (final IllegalAccessException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Map<String, String> displayNames() throws Exception {
+		final var field = WarningService.class.getDeclaredField("TYPE_DISPLAY_NAME");
+		field.setAccessible(true);
+		return (Map<String, String>) field.get(null);
 	}
 }

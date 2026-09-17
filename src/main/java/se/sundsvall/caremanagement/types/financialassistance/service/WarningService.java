@@ -42,6 +42,25 @@ public class WarningService {
 	public static final String TYPE_EXPENSE_CAPPED = "EXPENSE_CAPPED";
 	public static final String TYPE_INCOME_DUPLICATED = "INCOME_DUPLICATED";
 
+	// Återansökan rule warnings — the varningskod values the rakel-eb-ateransokan DMN tables emit (see
+	// ApplicationRulesService). APPLICATION_REVIEW is the fallback for a rule that flags without naming a code.
+	public static final String TYPE_CHILD_NOT_FULL_TIME = "CHILD_NOT_FULL_TIME";
+	public static final String TYPE_CHILDREN_RESIDENCE_CHANGED = "CHILDREN_RESIDENCE_CHANGED";
+	public static final String TYPE_HOUSING_SITUATION_CHANGED = "HOUSING_SITUATION_CHANGED";
+	public static final String TYPE_SALARY_JOB_STIMULUS = "SALARY_JOB_STIMULUS";
+	public static final String TYPE_PENDING_BENEFIT = "PENDING_BENEFIT";
+	public static final String TYPE_NEW_ASSETS = "NEW_ASSETS";
+	public static final String TYPE_PLANNING_REVIEW = "PLANNING_REVIEW";
+	public static final String TYPE_PAYMENT_METHOD_CHANGED = "PAYMENT_METHOD_CHANGED";
+	public static final String TYPE_ATTACHMENTS_PRESENT = "ATTACHMENTS_PRESENT";
+	public static final String TYPE_STAY_OUTSIDE_MUNICIPALITY = "STAY_OUTSIDE_MUNICIPALITY";
+	public static final String TYPE_APPLICATION_REVIEW = "APPLICATION_REVIEW";
+	public static final String TYPE_INCOME_MISSING_VS_PREVIOUS_CALCULATION = "INCOME_MISSING_VS_PREVIOUS_CALCULATION";
+	public static final String TYPE_INCOME_AMOUNT_MISMATCH_PREVIOUS_CALCULATION = "INCOME_AMOUNT_MISMATCH_PREVIOUS_CALCULATION";
+	public static final String TYPE_CHILDREN_MISMATCH_PREVIOUS_CALCULATION = "CHILDREN_MISMATCH_PREVIOUS_CALCULATION";
+	public static final String TYPE_HOUSEHOLD_COUNT_MISMATCH_PREVIOUS_CALCULATION = "HOUSEHOLD_COUNT_MISMATCH_PREVIOUS_CALCULATION";
+	public static final String TYPE_NORM_MISMATCH_PREVIOUS_CALCULATION = "NORM_MISMATCH_PREVIOUS_CALCULATION";
+
 	public static final String STATUS_OPEN = "OPEN";
 	public static final String STATUS_ACKNOWLEDGED = "ACKNOWLEDGED";
 	public static final String STATUS_CLOSED = "CLOSED";
@@ -59,7 +78,23 @@ public class WarningService {
 		Map.entry(TYPE_HOUSING_COST_CHANGE, "Förändrad boendekostnad"),
 		Map.entry(TYPE_EXPENSE_REVIEW, "Manuell skälighetsbedömning"),
 		Map.entry(TYPE_EXPENSE_CAPPED, "Kapad kostnad"),
-		Map.entry(TYPE_INCOME_DUPLICATED, "Möjlig dubbelförd inkomst"));
+		Map.entry(TYPE_INCOME_DUPLICATED, "Möjlig dubbelförd inkomst"),
+		Map.entry(TYPE_CHILD_NOT_FULL_TIME, "Barn bor inte heltid"),
+		Map.entry(TYPE_CHILDREN_RESIDENCE_CHANGED, "Barns boende ändrat"),
+		Map.entry(TYPE_HOUSING_SITUATION_CHANGED, "Boendesituation ändrad"),
+		Map.entry(TYPE_SALARY_JOB_STIMULUS, "Lön – jobbstimulans"),
+		Map.entry(TYPE_PENDING_BENEFIT, "Väntar på annan ersättning"),
+		Map.entry(TYPE_NEW_ASSETS, "Nya tillgångar"),
+		Map.entry(TYPE_PLANNING_REVIEW, "Kontrollera planering"),
+		Map.entry(TYPE_PAYMENT_METHOD_CHANGED, "Nytt utbetalningssätt"),
+		Map.entry(TYPE_ATTACHMENTS_PRESENT, "Bilagor att kontrollera"),
+		Map.entry(TYPE_STAY_OUTSIDE_MUNICIPALITY, "Vistelse utanför kommunen"),
+		Map.entry(TYPE_APPLICATION_REVIEW, "Kontrollera ansökan"),
+		Map.entry(TYPE_INCOME_MISSING_VS_PREVIOUS_CALCULATION, "Inkomst saknas mot föregående beräkning"),
+		Map.entry(TYPE_INCOME_AMOUNT_MISMATCH_PREVIOUS_CALCULATION, "Inkomstbelopp skiljer mot föregående beräkning"),
+		Map.entry(TYPE_CHILDREN_MISMATCH_PREVIOUS_CALCULATION, "Barn stämmer inte mot föregående beräkning"),
+		Map.entry(TYPE_HOUSEHOLD_COUNT_MISMATCH_PREVIOUS_CALCULATION, "Antal i bostaden stämmer inte mot föregående beräkning"),
+		Map.entry(TYPE_NORM_MISMATCH_PREVIOUS_CALCULATION, "Norm stämmer inte mot föregående beräkning"));
 
 	/** Warning status → Swedish display name. */
 	private static final Map<String, String> STATUS_DISPLAY_NAME = Map.ofEntries(

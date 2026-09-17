@@ -31,8 +31,9 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
  * Builds the freshly computed process rows for the calculation sections from the errand: the income rows (one per
  * FamilyCare income type, with a applicant and co-applicant side) from the operaton-classified incomes, the expense
  * rows from the application's costs — each given a process amount + bucket by the {@link ExpenseRulesService} — and
- * the person rows from the household (visitation child = part-time children). Also compares the household against the
- * previous calculation in Lifecare to produce drift warnings. Every row is stamped {@code origin = SYSTEM}; the {@link
+ * the person rows from the household (visitation child = part-time children). Also compares the housing cost against
+ * the
+ * previous calculation in Lifecare to produce a drift warning. Every row is stamped {@code origin = SYSTEM}; the {@link
  * DraftService} merge then refreshes only the process columns.
  */
 @Service
@@ -41,7 +42,6 @@ public class CalculationFeeder {
 	private static final int FULL_MONTH_DAYS = 30;
 	private static final String RESIDENCE_FULL_TIME = "FULL_TIME";
 	private static final String COST_TYPE_RENT = "RENT";
-	private static final String CHANGE_HOUSEHOLD_SIZE = "HOUSEHOLD_SIZE";
 	private static final String CHANGE_HOUSING_COST = "HOUSING_COST";
 	private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
@@ -253,47 +253,27 @@ public class CalculationFeeder {
 	}
 
 	/**
-	 * Renewal delta warnings against the previous calculation in Lifecare — household-size drift (members added/removed,
-	 * count changed) and housing-cost drift. Each candidate delta is classified by the {@code Decision_ateransokanDelta}
-	 * DMN, which decides — by what changed and how much — whether it is worth flagging and the note to show; a small
-	 * change passes silently. New members are surfaced separately as NEW_PERSON warnings from the merge.
+	 * Housing-cost drift against the previous calculation in Lifecare, classified by the
+	 * {@code Decision_ateransokanDelta} DMN, which decides — by how much the cost moved — whether it is worth flagging
+	 * and the note to show; a small change passes silently.
+	 *
+	 * <p>
+	 * Household drift is <em>not</em> handled here any more. The verksamhet's återansökan regelverk replaced the
+	 * delta DMN's tiered {@code HOUSEHOLD_SIZE} judgement with an exact comparison of the number of persons in the
+	 * home ({@code ANTAL_I_BOSTADEN} in {@link ApplicationRulesService}), so that branch lives in
+	 * {@link ApplicationRuleFeeder} now; new members are still surfaced as NEW_PERSON warnings from the merge.
+	 * </p>
 	 */
-	public List<WarningService.WarningInput> householdDeltaWarnings(final String municipalityId, final FinancialAssistanceEntity errand,
-		final List<FaNormPersonEntity> currentPersons, final PreviousHousehold previous) {
+	public List<WarningService.WarningInput> housingDeltaWarnings(final String municipalityId, final FinancialAssistanceEntity errand,
+		final PreviousHousehold previous) {
 
 		if ((previous == null) || (previous.memberCount() == 0)) {
 			return List.of();
 		}
 
 		final var warnings = new ArrayList<WarningService.WarningInput>();
-		householdSizeWarning(municipalityId, currentPersons, previous).ifPresent(warnings::add);
 		housingCostWarning(municipalityId, errand, previous).ifPresent(warnings::add);
 		return List.copyOf(warnings);
-	}
-
-	/** The household-size delta (count change + members no longer present), classified by the DMN. */
-	private Optional<WarningService.WarningInput> householdSizeWarning(final String municipalityId,
-		final List<FaNormPersonEntity> currentPersons, final PreviousHousehold previous) {
-
-		final var currentPartyIds = ofNullable(currentPersons).orElseGet(List::of).stream()
-			.map(FaNormPersonEntity::getPartyId).filter(partyId -> (partyId != null) && !partyId.isBlank()).collect(Collectors.toSet());
-		final var missingPartyIds = previous.personIds().stream().filter(partyId -> !currentPartyIds.contains(partyId)).toList();
-		final var sizeDelta = currentPartyIds.size() - previous.memberCount();
-
-		if ((sizeDelta == 0) && missingPartyIds.isEmpty()) {
-			return Optional.empty();
-		}
-
-		final var verdict = renewalDeltaService.classify(municipalityId, CHANGE_HOUSEHOLD_SIZE, sizeDelta, BigDecimal.ZERO);
-		if (!verdict.warning()) {
-			return Optional.empty();
-		}
-
-		var detail = "Antal hushållsmedlemmar har ändrats sedan föregående beräkning (tidigare " + previous.memberCount() + ", nu " + currentPartyIds.size() + ")";
-		if (!missingPartyIds.isEmpty()) {
-			detail += " — saknas nu: " + String.join(", ", missingPartyIds);
-		}
-		return Optional.of(new WarningService.WarningInput(WarningService.TYPE_HOUSEHOLD_CHANGE, "household-size", withRule(detail, verdict.rule())));
 	}
 
 	/** The housing-cost delta (previous Rent vs current applied RENT, as a signed percent), classified by the DMN. */

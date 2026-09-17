@@ -75,11 +75,12 @@ public class FinancialAssistanceCalculationService {
 	private final WarningService warningService;
 	private final DraftService draftService;
 	private final CalculationFeeder calculationFeeder;
+	private final ApplicationRuleFeeder applicationRuleFeeder;
 	private final RpaService rpaService;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
-		final DraftService draftService, final CalculationFeeder calculationFeeder, final RpaService rpaService) {
+		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final RpaService rpaService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
@@ -89,6 +90,7 @@ public class FinancialAssistanceCalculationService {
 		this.warningService = warningService;
 		this.draftService = draftService;
 		this.calculationFeeder = calculationFeeder;
+		this.applicationRuleFeeder = applicationRuleFeeder;
 		this.rpaService = rpaService;
 	}
 
@@ -156,12 +158,20 @@ public class FinancialAssistanceCalculationService {
 		final var changes = draftService.refresh(input.errandId(), input.applicationMonthValue(), normId, input.errand().getNormType(),
 			personRows, incomeRows, expenseFeed.rows());
 
-		final var deltaWarnings = calculationFeeder.householdDeltaWarnings(municipalityId, input.errand(), personRows,
-			previousHousehold(input.applicant(), input.applicationMonth()));
+		final var previous = previousHousehold(input.applicant(), input.applicationMonth());
+		final var housingWarnings = calculationFeeder.housingDeltaWarnings(municipalityId, input.errand(), previous);
+		// The verksamhet's återansökan regelverk, evaluated in the engine: the warnings that follow from the answers in
+		// the application, the income comparison against the previous normberäkning, and the children/household-count/norm
+		// comparisons against it.
+		final var questionWarnings = applicationRuleFeeder.applicationQuestionWarnings(municipalityId, input.errandId(), input.errand());
+		final var incomeWarnings = applicationRuleFeeder.incomeComparisonWarnings(municipalityId, input.errand(),
+			previousIncomeAmounts(input.applicant(), input.applicationMonth()));
+		final var comparisonWarnings = applicationRuleFeeder.previousCalculationWarnings(municipalityId, input.errand(), previous);
 		// Read after the merge, not before: the duplicate only exists once the refreshed process rows sit alongside
 		// whatever the caseworker has added by hand.
 		final var duplicateWarnings = draftService.duplicateIncomeWarnings(input.errandId());
-		return new DraftRefresh(changes, Stream.of(expenseFeed.warnings(), deltaWarnings, duplicateWarnings)
+		return new DraftRefresh(changes, Stream.of(expenseFeed.warnings(), housingWarnings, questionWarnings, incomeWarnings,
+			comparisonWarnings, duplicateWarnings)
 			.flatMap(List::stream)
 			.toList());
 	}
@@ -198,6 +208,16 @@ public class FinancialAssistanceCalculationService {
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation household — skipping the household drift check", e);
 			return PreviousHousehold.empty();
+		}
+	}
+
+	/** The previous calculation's per-income-type amounts, best-effort — a failed Lifecare read degrades to none. */
+	private Map<String, BigDecimal> previousIncomeAmounts(final String applicant, final YearMonth applicationMonth) {
+		try {
+			return lifecareCaseService.previousCalculationIncomeAmounts(applicant, applicationMonth);
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not read the previous calculation income amounts — the income comparison is skipped", e);
+			return Map.of();
 		}
 	}
 
