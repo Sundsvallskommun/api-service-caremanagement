@@ -134,6 +134,22 @@ class AttachmentServiceTest {
 	}
 
 	@Test
+	void applicationAttachmentsExistDelegatesToRepository() {
+		when(attachmentRepositoryMock.existsByErrandIdAndDocumentType(ERRAND_ID, "APPLICATION")).thenReturn(true);
+
+		assertThat(service.applicationAttachmentsExist(ERRAND_ID)).isTrue();
+		verify(attachmentRepositoryMock).existsByErrandIdAndDocumentType(ERRAND_ID, "APPLICATION");
+	}
+
+	@Test
+	void applicationAttachmentsExistIsFalseWithoutApplicationFiles() {
+		when(attachmentRepositoryMock.existsByErrandIdAndDocumentType(ERRAND_ID, "APPLICATION")).thenReturn(false);
+
+		assertThat(service.applicationAttachmentsExist(ERRAND_ID)).isFalse();
+		verify(attachmentRepositoryMock).existsByErrandIdAndDocumentType(ERRAND_ID, "APPLICATION");
+	}
+
+	@Test
 	void messageHistoryExistsDelegatesToRepository() {
 		when(attachmentRepositoryMock.existsByErrandIdAndDocumentType(ERRAND_ID, "MESSAGE_HISTORY")).thenReturn(true);
 

@@ -104,6 +104,16 @@ public class AttachmentService {
 	}
 
 	/**
+	 * Whether the errand carries any of the citizen's own uploaded application files ({@code documentType = APPLICATION})
+	 * — the existence question a type module needs (e.g. the financial assistance återansökan attachment rule) without
+	 * listing the attachments, so the {@code Attachment} model never crosses the module boundary.
+	 */
+	@Transactional(readOnly = true)
+	public boolean applicationAttachmentsExist(final String errandId) {
+		return attachmentRepository.existsByErrandIdAndDocumentType(errandId, DOCUMENT_TYPE_APPLICATION);
+	}
+
+	/**
 	 * Whether the errand already carries its message-history archive. Used by the archiving job as
 	 * its idempotency guard — an errand whose conversation has already been archived is skipped.
 	 */
