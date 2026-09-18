@@ -61,6 +61,10 @@ public class WarningService {
 	public static final String TYPE_HOUSEHOLD_COUNT_MISMATCH_PREVIOUS_CALCULATION = "HOUSEHOLD_COUNT_MISMATCH_PREVIOUS_CALCULATION";
 	public static final String TYPE_NORM_MISMATCH_PREVIOUS_CALCULATION = "NORM_MISMATCH_PREVIOUS_CALCULATION";
 
+	/** The rakel-eb-periodkontroll tables: the table's own text says which branch fired, so one type per decision. */
+	public static final String TYPE_SSBTEK_DAY_CHECK = "SSBTEK_DAY_CHECK";
+	public static final String TYPE_PARENTAL_BENEFIT_PERIOD_CHECK = "PARENTAL_BENEFIT_PERIOD_CHECK";
+
 	public static final String STATUS_OPEN = "OPEN";
 	public static final String STATUS_ACKNOWLEDGED = "ACKNOWLEDGED";
 	public static final String STATUS_CLOSED = "CLOSED";
@@ -94,6 +98,8 @@ public class WarningService {
 		Map.entry(TYPE_INCOME_AMOUNT_MISMATCH_PREVIOUS_CALCULATION, "Inkomstbelopp skiljer mot föregående beräkning"),
 		Map.entry(TYPE_CHILDREN_MISMATCH_PREVIOUS_CALCULATION, "Barn stämmer inte mot föregående beräkning"),
 		Map.entry(TYPE_HOUSEHOLD_COUNT_MISMATCH_PREVIOUS_CALCULATION, "Antal i bostaden stämmer inte mot föregående beräkning"),
+		Map.entry(TYPE_SSBTEK_DAY_CHECK, "Kontrollera antal dagar"),
+		Map.entry(TYPE_PARENTAL_BENEFIT_PERIOD_CHECK, "Kontrollera föräldrapenningperiod"),
 		Map.entry(TYPE_NORM_MISMATCH_PREVIOUS_CALCULATION, "Norm stämmer inte mot föregående beräkning"));
 
 	/** Warning status → Swedish display name. */

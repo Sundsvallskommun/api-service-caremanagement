@@ -62,6 +62,19 @@ public class CalculationService {
 	}
 
 	/**
+	 * The classified incomes as the engine sent them — both periods, nothing filtered. The transfer path narrows this
+	 * ({@link #incomeLines} drops what the previous month already took); the period checks need the unfiltered list,
+	 * because a comparison-period föräldrapenning is what the gap is measured against whether or not it was
+	 * transferred.
+	 *
+	 * @param  classifiedIncomesJson the {@code classifiedIncomes} payload
+	 * @return                       the parsed incomes
+	 */
+	public List<ClassifiedIncome> classifiedIncomes(final String classifiedIncomesJson) {
+		return parse(classifiedIncomesJson);
+	}
+
+	/**
 	 * The process-derived income lines for the draft — one per (FamilyCare income type, recipient) — from the
 	 * operaton-classified incomes resolved against the applicant's calculation proposal. Comparison-period incomes the
 	 * previous month already transferred are dropped first. Writes nothing to Lifecare.
