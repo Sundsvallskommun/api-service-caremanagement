@@ -152,7 +152,7 @@ class CalculationServiceTest {
 	@Test
 	void commitEffectiveAssemblesIncomesExpensesAndPersonsAndPosts() {
 		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal()
-			.addCalculationExpenseTypesItem(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Rent")));
+			.addCalculationExpenseTypesItem(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Boendekostnad")));
 		when(lifecareFamilyCareIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(5000);
 
 		final var incomes = List.of(new EffectiveIncome(20, BigDecimal.valueOf(1850.0), null, null, null, "SSBTEK"));

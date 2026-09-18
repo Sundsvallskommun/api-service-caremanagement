@@ -5,6 +5,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalD
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationSpecialExpenseTypeDTO;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceTypes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper.BUCKET_SPECIAL_EXPENSE;
@@ -32,10 +33,23 @@ class ExpenseTypeMapperTest {
 	}
 
 	@Test
+	void namesAgreeWithTheFinancialAssistanceCostCatalogue() {
+		// The Lifecare dropdown labels live in FinancialAssistanceTypes.COST_TYPES; this mapper cannot read them
+		// (types.financialassistance already depends on lifecare, so that would be a module cycle), so the two are
+		// held together here instead. They had drifted -- this mapper said "Rent"/"El"/"Bredband"/"A-kassa"/"Resor"/
+		// "Ovrigt", none of which FamilyCare offers, and every one of those costs was dropped at commit.
+		final var expected = FinancialAssistanceTypes.COST_TYPES.stream()
+			.filter(option -> option.getInternalDisplayName() != null)
+			.collect(java.util.stream.Collectors.toMap(option -> option.getCode(), option -> option.getInternalDisplayName()));
+
+		assertThat(ExpenseTypeMapper.familyCareNameByCostType()).containsExactlyInAnyOrderEntriesOf(expected);
+	}
+
+	@Test
 	void resolvesKnownCostTypeToMatchingExpenseTypeId() {
 		final var proposal = proposalWith(
-			new PersonBasedCalculationExpenseTypeDTO().id(42).name("Rent"),
-			new PersonBasedCalculationExpenseTypeDTO().id(7).name("El"));
+			new PersonBasedCalculationExpenseTypeDTO().id(42).name("Boendekostnad"),
+			new PersonBasedCalculationExpenseTypeDTO().id(7).name("El 1"));
 
 		final var result = ExpenseTypeMapper.resolveExpenseTypeId("RENT", proposal, null);
 
@@ -44,7 +58,7 @@ class ExpenseTypeMapperTest {
 
 	@Test
 	void resolvesCaseInsensitively() {
-		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(7).name("  el  "));
+		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(7).name("  el 1  "));
 
 		final var result = ExpenseTypeMapper.resolveExpenseTypeId("ELECTRICITY", proposal, null);
 
@@ -53,7 +67,7 @@ class ExpenseTypeMapperTest {
 
 	@Test
 	void returnsEmptyForUnmappedCostType() {
-		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Rent"));
+		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Boendekostnad"));
 
 		final var result = ExpenseTypeMapper.resolveExpenseTypeId("NONSENSE", proposal, null);
 
@@ -62,7 +76,7 @@ class ExpenseTypeMapperTest {
 
 	@Test
 	void returnsEmptyWhenMappedNameAbsentFromCatalogue() {
-		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(7).name("El"));
+		final var proposal = proposalWith(new PersonBasedCalculationExpenseTypeDTO().id(7).name("El 1"));
 
 		final var result = ExpenseTypeMapper.resolveExpenseTypeId("RENT", proposal, null);
 
@@ -88,7 +102,7 @@ class ExpenseTypeMapperTest {
 	@Test
 	void specialExpenseBucketResolvesAgainstSpecialCatalogue() {
 		final var proposal = new PersonBasedCalculationProposalDTO()
-			.calculationExpenseTypes(List.of(new PersonBasedCalculationExpenseTypeDTO().id(7).name("El"))) // wrong catalogue
+			.calculationExpenseTypes(List.of(new PersonBasedCalculationExpenseTypeDTO().id(7).name("El 1"))) // wrong catalogue
 			.calculationSpecialExpenseTypes(List.of(new PersonBasedCalculationSpecialExpenseTypeDTO().id(88).name("Läkarvård")));
 
 		assertThat(ExpenseTypeMapper.resolveExpenseTypeId("MEDICAL_CARE", proposal, BUCKET_SPECIAL_EXPENSE)).contains(88);

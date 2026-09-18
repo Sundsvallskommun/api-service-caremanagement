@@ -354,11 +354,11 @@ class LifecareCaseServiceTest {
 	@Test
 	void previousCalculationIncomeAmountsSumsBothSidesPerMappedType() {
 		final var older = new PersonBasedCalculationDTO().toDate("2026-03-31")
-			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Lön").amountApplicant(999.0));
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Lön efter skatt").amountApplicant(999.0));
 		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Lön efter skatt").amountApplicant(12000.0).amountCoApplicant(3000.0))
-			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Lön").amountApplicant(500.0)) // same careM type -> merged
-			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("PLV").amountCoApplicant(1800.0)) // applicant side null -> 0
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Lön efter skatt").amountApplicant(500.0)) // same careM type -> merged
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Pension/SA/Livränta/Omvårdnadsbidrag").amountCoApplicant(1800.0)) // applicant side null -> 0
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Underhållsstöd").amountApplicant(1500.0))
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Barnbidrag/Flerbarnstillägg").amountApplicant(1250.0)) // unmapped
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Barnpension").amountApplicant(2000.0)); // never a pension insurance
