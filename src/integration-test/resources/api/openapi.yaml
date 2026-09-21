@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:54092
+- url: http://localhost:60406
   description: Generated server url
 tags:
 - name: Financial Assistance · Lifecare supplements
@@ -7994,10 +7994,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -8074,6 +8074,15 @@ components:
           examples:
           - 2026-08
           pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
+        accountingCode:
+          type: string
+          description: "The accounting code (kontering) the bistånd is booked against.\
+            \ Free text: FamilyCare exposes no catalogue of accounting codes over\
+            \ the API."
+          examples:
+          - 4631-1234
+          maxLength: 64
+          minLength: 0
         reportedOnStakeholderIds:
           type: array
           description: Stakeholder ids the payment is reported on
@@ -8247,6 +8256,13 @@ components:
           description: "The application month the payment concerns, yyyy-MM"
           examples:
           - 2026-08
+        accountingCode:
+          type: string
+          description: "The accounting code (kontering) the bistånd is booked against.\
+            \ Free text: FamilyCare exposes no catalogue of accounting codes over\
+            \ the API."
+          examples:
+          - 4631-1234
         reportedOnStakeholderIds:
           type: array
           description: Stakeholder ids the payment is reported on
@@ -10767,13 +10783,19 @@ components:
           description: Id of the PAYMENT decision recorded on the errand
           examples:
           - cb20c51f-fcf3-42c0-b613-de563634a8ec
-        processMessageCorrelated:
-          type: boolean
-          description: Whether the PaymentDecisionReceived message reached the process.
-            False means the engine could not be reached — the errand stays AWAITING_DECISION
-            and the message must be re-sent via the process-messages endpoint.
+        paymentIds:
+          type: array
+          description: "The ids of the Payment rows the finalize created, in request\
+            \ order. The REGISTER_PAYMENT queue items carry these and nothing else\
+            \ - the robot reads each payment through GET .../payments/{paymentId}."
           examples:
           - true
+          items:
+            type: string
+            examples:
+            - f47ac10b-58cc-4372-a567-0e02b2c3d479
+        processMessageCorrelated:
+          type: boolean
         rpaTasks:
           type: array
           description: "The RPA write-back tasks the finalize step tried to enqueue,\
