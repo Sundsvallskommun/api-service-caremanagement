@@ -17,6 +17,12 @@ public class PreviousDecision {
 	@Schema(description = "The Lifecare decision reason / orsak (free text)", examples = "Arbetslös, ingen ersättning/stöd")
 	private String reason;
 
+	@Schema(description = "The co-applicant (medsökande) the decision also concerned, as Lifecare names them. Null when the decision had none", examples = "Astrid Testsson")
+	private String coApplicant;
+
+	@Schema(description = "The co-applicant's own reason / orsak on the decision (free text). Null when the decision had no co-applicant", examples = "Sjukskriven m läkarintyg, otillräcklig sjukpenning")
+	private String coApplicantReason;
+
 	@Schema(description = "The decision period start (raw Lifecare string)", examples = "2026-05-01")
 	private String periodFrom;
 
@@ -56,6 +62,32 @@ public class PreviousDecision {
 
 	public PreviousDecision withReason(final String reason) {
 		this.reason = reason;
+		return this;
+	}
+
+	public String getCoApplicant() {
+		return coApplicant;
+	}
+
+	public void setCoApplicant(final String coApplicant) {
+		this.coApplicant = coApplicant;
+	}
+
+	public PreviousDecision withCoApplicant(final String coApplicant) {
+		this.coApplicant = coApplicant;
+		return this;
+	}
+
+	public String getCoApplicantReason() {
+		return coApplicantReason;
+	}
+
+	public void setCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
+	}
+
+	public PreviousDecision withCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
 		return this;
 	}
 
@@ -117,13 +149,14 @@ public class PreviousDecision {
 			return false;
 		}
 		final PreviousDecision that = (PreviousDecision) o;
-		return Objects.equals(type, that.type) && Objects.equals(reason, that.reason) && Objects.equals(periodFrom, that.periodFrom)
+		return Objects.equals(type, that.type) && Objects.equals(reason, that.reason) && Objects.equals(coApplicant, that.coApplicant)
+			&& Objects.equals(coApplicantReason, that.coApplicantReason) && Objects.equals(periodFrom, that.periodFrom)
 			&& Objects.equals(periodTo, that.periodTo) && Objects.equals(amount, that.amount) && Objects.equals(date, that.date);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(type, reason, periodFrom, periodTo, amount, date);
+		return Objects.hash(type, reason, coApplicant, coApplicantReason, periodFrom, periodTo, amount, date);
 	}
 
 	@Override
@@ -131,6 +164,8 @@ public class PreviousDecision {
 		return "PreviousDecision{" +
 			"type='" + type + '\'' +
 			", reason='" + reason + '\'' +
+			", coApplicant='" + coApplicant + '\'' +
+			", coApplicantReason='" + coApplicantReason + '\'' +
 			", periodFrom='" + periodFrom + '\'' +
 			", periodTo='" + periodTo + '\'' +
 			", amount=" + amount +

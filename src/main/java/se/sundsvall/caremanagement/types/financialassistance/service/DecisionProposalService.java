@@ -25,7 +25,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Warn
 /**
  * The decision proposal (beslutsförslag) — verksamheten's rule for the DECISION tab once the normberäkning is
  * komplett-markerad: propose the outcome from the calculation (BIFALL / DELAVSLAG / AVSLAG), the calculation's period,
- * the previous Lifecare decision's orsak (plus every other orsak to pick from), and the frastext; and raise the
+ * the previous Lifecare decision's orsak — the applicant's and the co-applicant's alike, each from the same catalogue
+ * of every other orsak to pick from — and the frastext; and raise the
  * DECISION-section warnings — the previous decision being förskott på förmån, and one per expense not approved in
  * full.
  *
@@ -103,6 +104,7 @@ public class DecisionProposalService {
 		final var partiallyRejected = ProposalMapper.partiallyRejectedExpenses(draft);
 		final var outcome = basis.estimatedAmount().map(amount -> ProposalMapper.outcome(amount, partiallyRejected));
 		final var reason = previousDecision.map(DecisionView::reason).filter(text -> hasText(text));
+		final var coApplicantReason = previousDecision.map(DecisionView::reasonCoApplicant).filter(text -> hasText(text));
 
 		final var warnings = warningService.reconcileByTypes(errandId, DECISION_PROPOSAL_TYPES, warningInputs(previousDecision, partiallyRejected));
 
@@ -119,7 +121,8 @@ public class DecisionProposalService {
 			.withSpecialExpenseSum(draft.getSpecialExpenseSum())
 			.withExplanation(explanation(basis))
 			.withReason(reason.orElse(null))
-			.withReasonOptions(reasonOptions(reason))
+			.withReasonOptions(reasonOptions(reason, coApplicantReason))
+			.withCoApplicantReason(coApplicantReason.orElse(null))
 			.withPhraseText(outcome.map(value -> ProposalMapper.phraseText(value, ProposalMapper.childrenInCalculation(draft))).orElse(null))
 			.withPreviousDecision(previousDecision.map(ProposalMapper::toPreviousDecision).orElse(null))
 			.withWarnings(warnings);
@@ -132,9 +135,14 @@ public class DecisionProposalService {
 		return EXPLANATION_NO_NORM;
 	}
 
-	private static List<String> reasonOptions(final Optional<String> previousReason) {
+	/**
+	 * The catalogue both dropdowns are picked from — the applicant's and the co-applicant's. A previous reason outside
+	 * the catalogue is appended so a decision older than the current catalogue stays proposable for either of them.
+	 */
+	private static List<String> reasonOptions(final Optional<String> previousReason, final Optional<String> previousCoApplicantReason) {
 		final var options = new LinkedHashSet<>(DEFAULT_REASON_OPTIONS);
 		previousReason.ifPresent(options::add);
+		previousCoApplicantReason.ifPresent(options::add);
 		return List.copyOf(options);
 	}
 

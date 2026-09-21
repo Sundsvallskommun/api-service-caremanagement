@@ -67,7 +67,11 @@ class DecisionProposalServiceTest {
 	}
 
 	private static DecisionView decision(final String type, final String reason) {
-		return new DecisionView(1, "2026-04-28", type, "2026-05-01", "2026-05-31", reason, "Anna", "IFO", new BigDecimal("8500"), null, null, List.of());
+		return decision(type, reason, null, null);
+	}
+
+	private static DecisionView decision(final String type, final String reason, final String coApplicant, final String coApplicantReason) {
+		return new DecisionView(1, "2026-04-28", type, "2026-05-01", "2026-05-31", reason, "Anna", "IFO", new BigDecimal("8500"), coApplicant, coApplicantReason, List.of());
 	}
 
 	@Test
@@ -93,6 +97,7 @@ class DecisionProposalServiceTest {
 		assertThat(proposal.getExplanation()).isNull();
 		assertThat(proposal.getReason()).isEqualTo("Boendekostnad");
 		assertThat(proposal.getReasonOptions()).containsExactlyElementsOf(withPreviousReason("Boendekostnad")); // outside the catalogue → appended
+		assertThat(proposal.getCoApplicantReason()).isNull(); // the decision had no co-applicant
 		assertThat(proposal.getPhraseText()).isEqualTo("Bifall månad med barn");
 		assertThat(proposal.getPreviousDecision().getType()).isEqualTo("Bifall");
 		assertThat(proposal.getWarnings()).isEmpty();
@@ -164,6 +169,35 @@ class DecisionProposalServiceTest {
 		assertThat(proposal.getOutcome()).isEqualTo("BIFALL");
 		assertThat(proposal.getPreviousDecision()).isNull();
 		verify(warningServiceMock).reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of());
+	}
+
+	@Test
+	void theCoApplicantsOrsakIsProposedFromTheSamePreviousDecision() {
+		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
+		when(lifecareCaseHistoryServiceMock.listDecisions(APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
+			.thenReturn(List.of(decision("Bifall", "Arbetslös, ingen ersättning/stöd", "Astrid Testsson", "Hemarbetande")));
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+
+		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(proposal.getReason()).isEqualTo("Arbetslös, ingen ersättning/stöd"); // in the catalogue
+		assertThat(proposal.getCoApplicantReason()).isEqualTo("Hemarbetande");
+		assertThat(proposal.getReasonOptions()).containsExactlyElementsOf(withPreviousReason("Hemarbetande")); // only the co-applicant's is outside it
+		assertThat(proposal.getPreviousDecision().getCoApplicant()).isEqualTo("Astrid Testsson");
+		assertThat(proposal.getPreviousDecision().getCoApplicantReason()).isEqualTo("Hemarbetande");
+	}
+
+	@Test
+	void aBlankCoApplicantReasonIsNoProposal() {
+		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
+		when(lifecareCaseHistoryServiceMock.listDecisions(APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
+			.thenReturn(List.of(decision("Bifall", "Utan försörjningshinder", "Astrid Testsson", "  ")));
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+
+		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(proposal.getCoApplicantReason()).isNull();
+		assertThat(proposal.getReasonOptions()).containsExactlyElementsOf(DEFAULT_REASON_OPTIONS);
 	}
 
 	@Test

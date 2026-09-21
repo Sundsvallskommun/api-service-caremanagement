@@ -43,6 +43,8 @@ class PreviousDecisionTest {
 		final var result = PreviousDecision.create()
 			.withType("Bifall")
 			.withReason("Försörjningsstöd")
+			.withCoApplicant("Astrid Testsson")
+			.withCoApplicantReason("Sjukskriven m läkarintyg, otillräcklig sjukpenning")
 			.withPeriodFrom("2026-05-01")
 			.withPeriodTo("2026-05-31")
 			.withAmount(BigDecimal.valueOf(8500))
@@ -51,6 +53,8 @@ class PreviousDecisionTest {
 		assertThat(result).hasNoNullFieldsOrProperties();
 		assertThat(result.getType()).isEqualTo("Bifall");
 		assertThat(result.getReason()).isEqualTo("Försörjningsstöd");
+		assertThat(result.getCoApplicant()).isEqualTo("Astrid Testsson");
+		assertThat(result.getCoApplicantReason()).isEqualTo("Sjukskriven m läkarintyg, otillräcklig sjukpenning");
 		assertThat(result.getPeriodFrom()).isEqualTo("2026-05-01");
 		assertThat(result.getPeriodTo()).isEqualTo("2026-05-31");
 		assertThat(result.getAmount()).isEqualTo(BigDecimal.valueOf(8500));

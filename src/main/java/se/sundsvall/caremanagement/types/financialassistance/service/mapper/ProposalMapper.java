@@ -127,6 +127,8 @@ public final class ProposalMapper {
 		return PreviousDecision.create()
 			.withType(view.type())
 			.withReason(view.reason())
+			.withCoApplicant(view.coApplicant())
+			.withCoApplicantReason(view.reasonCoApplicant())
 			.withPeriodFrom(view.fromDate())
 			.withPeriodTo(view.toDate())
 			.withAmount(view.amount())

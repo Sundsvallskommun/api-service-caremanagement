@@ -70,8 +70,12 @@ public class DecisionProposal {
 
 	@ArraySchema(schema = @Schema(implementation = String.class),
 		arraySchema = @Schema(
-			description = "Every orsak the caseworker can pick instead — Lifecare's orsak-catalogue (försörjningshinder) in Lifecare's order, plus the previous decision's reason when that is not in the catalogue (FamilyCare exposes no reason catalogue over the API)"))
+			description = "Every orsak the caseworker can pick instead — Lifecare's orsak-catalogue (försörjningshinder) in Lifecare's order, plus the previous decision's reason(s) when those are not in the catalogue (FamilyCare exposes no reason catalogue over the API). The same catalogue applies to the applicant and the co-applicant"))
 	private List<String> reasonOptions = new ArrayList<>();
+
+	@Schema(description = "The proposed orsak for the co-applicant (medsökande): the previous Lifecare decision's co-applicant reason, or null when there is none. Picked from the same reasonOptions catalogue as the applicant's",
+		examples = "Sjukskriven m läkarintyg, otillräcklig sjukpenning")
+	private String coApplicantReason;
 
 	@Schema(description = "The proposed frastext: on BIFALL/DELAVSLAG, \"Bifall månad med barn\" when children are in the calculation, else \"Bifall månad utan barn\". Null otherwise", examples = "Bifall månad utan barn")
 	private String phraseText;
@@ -255,6 +259,19 @@ public class DecisionProposal {
 		return this;
 	}
 
+	public String getCoApplicantReason() {
+		return coApplicantReason;
+	}
+
+	public void setCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
+	}
+
+	public DecisionProposal withCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
+		return this;
+	}
+
 	public String getPhraseText() {
 		return phraseText;
 	}
@@ -305,13 +322,14 @@ public class DecisionProposal {
 			&& Objects.equals(estimatedAmount, that.estimatedAmount) && Objects.equals(normSum, that.normSum) && Objects.equals(incomeSum, that.incomeSum)
 			&& Objects.equals(expenseSum, that.expenseSum) && Objects.equals(specialExpenseSum, that.specialExpenseSum)
 			&& Objects.equals(explanation, that.explanation) && Objects.equals(reason, that.reason) && Objects.equals(reasonOptions, that.reasonOptions)
-			&& Objects.equals(phraseText, that.phraseText) && Objects.equals(previousDecision, that.previousDecision)
-			&& Objects.equals(warnings, that.warnings);
+			&& Objects.equals(coApplicantReason, that.coApplicantReason) && Objects.equals(phraseText, that.phraseText)
+			&& Objects.equals(previousDecision, that.previousDecision) && Objects.equals(warnings, that.warnings);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(outcome, outcomeOptions, periodFrom, periodTo, concernedMonth, estimatedAmount, normSum, incomeSum, expenseSum, specialExpenseSum, explanation, reason, reasonOptions, phraseText, previousDecision, warnings);
+		return Objects.hash(outcome, outcomeOptions, periodFrom, periodTo, concernedMonth, estimatedAmount, normSum, incomeSum, expenseSum, specialExpenseSum, explanation, reason, reasonOptions,
+			coApplicantReason, phraseText, previousDecision, warnings);
 	}
 
 	@Override
@@ -330,6 +348,7 @@ public class DecisionProposal {
 			", explanation='" + explanation + '\'' +
 			", reason='" + reason + '\'' +
 			", reasonOptions=" + reasonOptions +
+			", coApplicantReason='" + coApplicantReason + '\'' +
 			", phraseText='" + phraseText + '\'' +
 			", previousDecision=" + previousDecision +
 			", warnings=" + warnings +

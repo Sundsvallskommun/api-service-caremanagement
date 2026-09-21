@@ -113,7 +113,7 @@ class ProposalMapperTest {
 	}
 
 	private static DecisionView decision(final String type, final String reason) {
-		return new DecisionView(1, "2026-04-28", type, "2026-05-01", "2026-05-31", reason, "Anna", "IFO", new BigDecimal("8500"), null, null, List.of());
+		return new DecisionView(1, "2026-04-28", type, "2026-05-01", "2026-05-31", reason, "Anna", "IFO", new BigDecimal("8500"), "Astrid Testsson", "Hemarbetande", List.of());
 	}
 
 	@Test
@@ -122,6 +122,8 @@ class ProposalMapperTest {
 
 		assertThat(result.getType()).isEqualTo("Bifall");
 		assertThat(result.getReason()).isEqualTo("Försörjningsstöd");
+		assertThat(result.getCoApplicant()).isEqualTo("Astrid Testsson");
+		assertThat(result.getCoApplicantReason()).isEqualTo("Hemarbetande");
 		assertThat(result.getPeriodFrom()).isEqualTo("2026-05-01");
 		assertThat(result.getPeriodTo()).isEqualTo("2026-05-31");
 		assertThat(result.getAmount()).isEqualByComparingTo("8500");
