@@ -67,6 +67,16 @@ class FinancialAssistanceTypesTest {
 
 		assertThat(metadata.getIncomeTypes()).isEqualTo(FinancialAssistanceTypes.INCOME_TYPES);
 		assertThat(metadata.getCostTypes()).isEqualTo(FinancialAssistanceTypes.COST_TYPES);
+		assertThat(metadata.getMoneyTypes()).isEqualTo(FinancialAssistanceTypes.MONEY_TYPES);
+		assertThat(metadata.getPaymentMethods()).isEqualTo(FinancialAssistanceTypes.PAYMENT_METHODS);
+	}
+
+	@Test
+	void moneyTypesAndPaymentMethodsArePlaceholdersUntilLifecareCatalogueIsKnown() {
+		// Payment.moneyType / Payment.paymentMethod are deliberately unconstrained strings — the real value sets come
+		// from Lifecare and aren't known yet, so these catalogues start empty rather than guessing at codes.
+		assertThat(FinancialAssistanceTypes.MONEY_TYPES).isEmpty();
+		assertThat(FinancialAssistanceTypes.PAYMENT_METHODS).isEmpty();
 	}
 
 	@Test

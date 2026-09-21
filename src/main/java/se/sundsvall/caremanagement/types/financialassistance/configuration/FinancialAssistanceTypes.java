@@ -94,11 +94,24 @@ public final class FinancialAssistanceTypes {
 		caseworkerOnly("VISITATION_COST", "Kostnad i samband med umgänge"),
 		caseworkerOnly("DENTAL_CARE", "Tandvård"));
 
-	/** The assembled metadata response — the income + cost catalogues the metadata endpoint returns. */
+	/**
+	 * Payment money types ({@code Payment.moneyType}) and payment methods ({@code Payment.paymentMethod}). Deliberately
+	 * empty placeholders: unlike income/cost types, Lifecare's real value sets for these two are not known yet (see
+	 * {@code Payment}/{@code PaymentRequest} javadoc — the fields are left as unconstrained strings for the same
+	 * reason). Populate these lists once the Lifecare catalogue is confirmed, following the {@code caseworkerOnly}/
+	 * {@code income}/{@code cost} helper pattern above.
+	 */
+	public static final List<TypeOption> MONEY_TYPES = List.of();
+
+	public static final List<TypeOption> PAYMENT_METHODS = List.of();
+
+	/** The assembled metadata response — the income + cost + payment catalogues the metadata endpoint returns. */
 	public static FinancialAssistanceMetadata metadata() {
 		return FinancialAssistanceMetadata.create()
 			.withIncomeTypes(INCOME_TYPES)
-			.withCostTypes(COST_TYPES);
+			.withCostTypes(COST_TYPES)
+			.withMoneyTypes(MONEY_TYPES)
+			.withPaymentMethods(PAYMENT_METHODS);
 	}
 
 	private static TypeOption income(final String code, final String externalDisplayName, final String internalDisplayName) {
