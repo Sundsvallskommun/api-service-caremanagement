@@ -26,7 +26,7 @@ public class FinalizeRequest {
 	@Valid
 	private CommunicationChannels communication;
 
-	@Schema(description = "The payments to register in Lifecare. Required (at least one) when the outcome carries an amount; must be empty for AVSLAG/AVVISNING.")
+	@Schema(description = "The payments to register in Lifecare. Required (at least one) when the outcome carries an amount; must be empty for AVSLAG.")
 	@Valid
 	private List<FinalizePayment> payments;
 

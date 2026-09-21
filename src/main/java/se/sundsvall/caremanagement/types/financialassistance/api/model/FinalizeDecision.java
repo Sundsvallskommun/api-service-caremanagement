@@ -18,11 +18,15 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 @Schema(description = "The caseworker's decision on the application — outcome, period, amount and what is communicated to the applicant.")
 public class FinalizeDecision {
 
-	@Schema(description = "Decision outcome code. BIFALL/DELAVSLAG grant an amount (and require payments); AVSLAG/AVVISNING grant nothing.", examples = "BIFALL", allowableValues = {
-		"BIFALL", "DELAVSLAG", "AVSLAG", "AVVISNING"
-	}, requiredMode = Schema.RequiredMode.REQUIRED)
+	@Schema(
+		description = "Decision outcome code. BIFALL/DELAVSLAG grant an amount (and require payments); AVSLAG grants nothing. DELAVSLAG is labelled \"Delvis bifall\" in the dropdown (see the errand type's decision options). AVVISNING was dropped 2026-09-21 and is no longer accepted.",
+		examples = "BIFALL",
+		allowableValues = {
+			"BIFALL", "DELAVSLAG", "AVSLAG"
+		},
+		requiredMode = Schema.RequiredMode.REQUIRED)
 	@OneOf({
-		"BIFALL", "DELAVSLAG", "AVSLAG", "AVVISNING"
+		"BIFALL", "DELAVSLAG", "AVSLAG"
 	})
 	private String outcome;
 

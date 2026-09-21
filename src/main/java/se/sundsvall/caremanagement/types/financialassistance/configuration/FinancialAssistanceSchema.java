@@ -9,7 +9,6 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_RENEWAL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_SUPPLEMENTARY;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.OUTCOME_AVSLAG;
-import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.OUTCOME_AVVISNING;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.OUTCOME_BIFALL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.OUTCOME_DELAVSLAG;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.outcomeCarriesAmount;
@@ -44,13 +43,17 @@ public final class FinancialAssistanceSchema {
 	 * The allowed decision alternatives for every financial assistance type (the Decision-form outcome dropdown).
 	 * {@code carriesAmount} is
 	 * false
-	 * for the outcomes that imply a 0 belopp (avslag/avvisning), which the frontend uses to zero the amount.
+	 * for the outcomes that imply a 0 belopp (avslag), which the frontend uses to zero the amount.
+	 *
+	 * <p>
+	 * The {@code DELAVSLAG} code keeps its name while the label reads "Delvis bifall" — verksamheten's own wording,
+	 * asked for 2026-09-21 along with dropping {@code AVVISNING} altogether.
+	 * </p>
 	 */
 	private static final List<DecisionOption> DECISION_OPTIONS = List.of(
 		decisionOption(OUTCOME_BIFALL, "Bifall"),
-		decisionOption(OUTCOME_DELAVSLAG, "Delavslag"),
-		decisionOption(OUTCOME_AVSLAG, "Avslag"),
-		decisionOption(OUTCOME_AVVISNING, "Avvisning"));
+		decisionOption(OUTCOME_DELAVSLAG, "Delvis bifall"),
+		decisionOption(OUTCOME_AVSLAG, "Avslag"));
 
 	/** The superset of collectable fields, in form order. */
 	private static final List<FieldDescriptor> CATALOG = List.of(

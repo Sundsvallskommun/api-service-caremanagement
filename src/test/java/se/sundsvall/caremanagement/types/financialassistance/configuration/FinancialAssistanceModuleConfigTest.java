@@ -77,7 +77,7 @@ class FinancialAssistanceModuleConfigTest {
 		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount("BIFALL")).isTrue();
 		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount("DELAVSLAG")).isTrue();
 		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount("AVSLAG")).isFalse();
-		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount("AVVISNING")).isFalse();
+		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount("AVVISNING")).isFalse(); // dropped outcome — still no amount
 		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount(null)).isFalse();
 		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount("bifall")).isFalse();
 	}

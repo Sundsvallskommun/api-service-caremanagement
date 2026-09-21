@@ -66,7 +66,7 @@ class FinalizeMapperTest {
 			Arguments.of("DELAVSLAG", new BigDecimal("3000"), new BigDecimal("3000")),
 			Arguments.of("BIFALL", null, BigDecimal.ZERO),
 			Arguments.of("AVSLAG", new BigDecimal("500"), BigDecimal.ZERO),
-			Arguments.of("AVVISNING", null, BigDecimal.ZERO));
+			Arguments.of("AVSLAG", null, BigDecimal.ZERO));
 	}
 
 	@Test
@@ -117,10 +117,10 @@ class FinalizeMapperTest {
 
 	@Test
 	void toDecisionContentLeavesNullsOut() {
-		final var request = FinalizeRequest.create().withDecision(FinalizeDecision.create().withOutcome("AVVISNING"));
+		final var request = FinalizeRequest.create().withDecision(FinalizeDecision.create().withOutcome("AVSLAG"));
 
 		assertThat(FinalizeMapper.toDecisionContent(request, null)).containsOnly(
-			java.util.Map.entry("outcome", "AVVISNING"),
+			java.util.Map.entry("outcome", "AVSLAG"),
 			java.util.Map.entry("amount", "0"),
 			java.util.Map.entry("communicationChannels", ""),
 			java.util.Map.entry("householdSizeChanged", "false"));

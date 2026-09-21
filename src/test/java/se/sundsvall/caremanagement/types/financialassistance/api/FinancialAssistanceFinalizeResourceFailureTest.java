@@ -122,7 +122,7 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 		request.getDecision().withOutcome("BEVILJAD").withAmount(new BigDecimal("-1"));
 
 		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
-			tuple("decision.outcome", "must be one of: [BIFALL, DELAVSLAG, AVSLAG, AVVISNING]"),
+			tuple("decision.outcome", "must be one of: [BIFALL, DELAVSLAG, AVSLAG]"),
 			tuple("decision.amount", "must be greater than or equal to 0"));
 		verifyNoInteractions(finalizeServiceMock);
 	}
@@ -144,7 +144,7 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 		request.getDecision().withOutcome("AVSLAG");
 
 		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
-			tuple("payments", "must be empty when the outcome carries no amount (AVSLAG/AVVISNING)"));
+			tuple("payments", "must be empty when the outcome carries no amount (AVSLAG)"));
 		verifyNoInteractions(finalizeServiceMock);
 	}
 

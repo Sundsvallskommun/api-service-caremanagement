@@ -76,9 +76,8 @@ class FinancialAssistanceSchemaTest {
 				.extracting("code", "displayName", "carriesAmount")
 				.containsExactly(
 					tuple("BIFALL", "Bifall", true),
-					tuple("DELAVSLAG", "Delavslag", true),
-					tuple("AVSLAG", "Avslag", false),
-					tuple("AVVISNING", "Avvisning", false));
+					tuple("DELAVSLAG", "Delvis bifall", true), // verksamheten's wording; the code is unchanged
+					tuple("AVSLAG", "Avslag", false));
 		}
 	}
 
@@ -93,6 +92,11 @@ class FinancialAssistanceSchemaTest {
 	@Test
 	void decisionOptionsAreTheCatalogueTheProposalsUse() {
 		assertThat(FinancialAssistanceSchema.decisionOptions()).extracting("code", "carriesAmount")
-			.containsExactly(tuple("BIFALL", true), tuple("DELAVSLAG", true), tuple("AVSLAG", false), tuple("AVVISNING", false));
+			.containsExactly(tuple("BIFALL", true), tuple("DELAVSLAG", true), tuple("AVSLAG", false));
+	}
+
+	@Test
+	void avvisningIsNoLongerOffered() {
+		assertThat(FinancialAssistanceSchema.decisionOptions()).extracting("code").doesNotContain("AVVISNING");
 	}
 }

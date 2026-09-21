@@ -78,7 +78,7 @@ class ValidFinalizeRequestConstraintValidatorTest {
 	@Test
 	void nonGrantingOutcomeRejectsPayments() {
 		final var request = FinalizeRequest.create()
-			.withDecision(FinalizeDecision.create().withOutcome("AVVISNING"))
+			.withDecision(FinalizeDecision.create().withOutcome("AVSLAG"))
 			.withPayments(List.of(PAYMENT));
 
 		assertThat(validator.isValid(request, contextMock)).isFalse();

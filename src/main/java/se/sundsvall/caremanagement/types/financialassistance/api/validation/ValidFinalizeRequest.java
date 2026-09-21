@@ -12,7 +12,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  * The cross-field rules of a finalize request: a granting outcome (BIFALL/DELAVSLAG) needs an amount and at least one
- * payment, a non-granting one (AVSLAG/AVVISNING) must carry no payments, and the decision period must not end before it
+ * payment, a non-granting one (AVSLAG) must carry no payments, and the decision period must not end before it
  * starts. Each broken rule is reported as its own violation on the field it concerns.
  */
 @Documented

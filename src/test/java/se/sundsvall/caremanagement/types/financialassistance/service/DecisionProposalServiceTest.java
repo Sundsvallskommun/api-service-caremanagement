@@ -85,7 +85,7 @@ class DecisionProposalServiceTest {
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		assertThat(proposal.getOutcome()).isEqualTo("BIFALL");
-		assertThat(proposal.getOutcomeOptions()).extracting("code").containsExactly("BIFALL", "DELAVSLAG", "AVSLAG", "AVVISNING");
+		assertThat(proposal.getOutcomeOptions()).extracting("code").containsExactly("BIFALL", "DELAVSLAG", "AVSLAG");
 		assertThat(proposal.getPeriodFrom()).isEqualTo(LocalDate.parse("2026-06-01"));
 		assertThat(proposal.getPeriodTo()).isEqualTo(LocalDate.parse("2026-06-30"));
 		assertThat(proposal.getConcernedMonth()).isEqualTo("2026-06");

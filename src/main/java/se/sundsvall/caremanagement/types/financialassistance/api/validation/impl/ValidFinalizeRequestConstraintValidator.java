@@ -19,7 +19,7 @@ public class ValidFinalizeRequestConstraintValidator implements ConstraintValida
 
 	static final String ERROR_AMOUNT_REQUIRED = "must be given when the outcome carries an amount (BIFALL/DELAVSLAG)";
 	static final String ERROR_PAYMENTS_REQUIRED = "at least one payment is required when the outcome carries an amount (BIFALL/DELAVSLAG)";
-	static final String ERROR_PAYMENTS_FORBIDDEN = "must be empty when the outcome carries no amount (AVSLAG/AVVISNING)";
+	static final String ERROR_PAYMENTS_FORBIDDEN = "must be empty when the outcome carries no amount (AVSLAG)";
 	static final String ERROR_PERIOD_ORDER = "must not be before periodFrom";
 
 	@Override

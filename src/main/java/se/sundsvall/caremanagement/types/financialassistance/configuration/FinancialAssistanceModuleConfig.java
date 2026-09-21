@@ -84,14 +84,16 @@ public class FinancialAssistanceModuleConfig {
 	public static final String OUTCOME_BIFALL = "BIFALL";
 	public static final String OUTCOME_DELAVSLAG = "DELAVSLAG";
 	public static final String OUTCOME_AVSLAG = "AVSLAG";
-	public static final String OUTCOME_AVVISNING = "AVVISNING";
-
-	/** Every recognised decision outcome. */
-	public static final Set<String> OUTCOMES = Set.of(OUTCOME_BIFALL, OUTCOME_DELAVSLAG, OUTCOME_AVSLAG, OUTCOME_AVVISNING);
 
 	/**
-	 * The outcomes that grant something and therefore carry a belopp and one or more utbetalningar. Avslag/avvisning
-	 * imply 0 kr, no payment, and take the process's rejected path.
+	 * Every recognised decision outcome. {@code AVVISNING} was dropped 2026-09-21 at verksamheten's request — they do
+	 * not use it for ekonomiskt bistånd, so it is no longer offered or accepted.
+	 */
+	public static final Set<String> OUTCOMES = Set.of(OUTCOME_BIFALL, OUTCOME_DELAVSLAG, OUTCOME_AVSLAG);
+
+	/**
+	 * The outcomes that grant something and therefore carry a belopp and one or more utbetalningar. Avslag implies
+	 * 0 kr, no payment, and takes the process's rejected path.
 	 */
 	public static final Set<String> OUTCOMES_CARRYING_AMOUNT = Set.of(OUTCOME_BIFALL, OUTCOME_DELAVSLAG);
 
