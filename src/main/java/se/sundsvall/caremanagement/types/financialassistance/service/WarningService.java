@@ -1,5 +1,8 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -90,9 +93,28 @@ public class WarningService {
 	public static final String TYPE_SSBTEK_READ_FAILED = "SSBTEK_READ_FAILED";
 
 	/**
-	 * Verksamhetens own wording for a failed read — the handläggare is told a retry is coming, not that data is missing.
+	 * Verksamhetens own wording for a failed read — the handläggare is told a retry is coming, not that data is missing
+	 * — carrying the time of the attempt, so "nytt försök görs snart igen" can be judged against a clock rather than
+	 * taken on faith. Each failed run refreshes the text, so the time is always the most recent attempt; the warning's
+	 * {@code created} still says when the run of failures started.
 	 */
-	public static final String MESSAGE_SSBTEK_READ_FAILED = "Fel att läsa SSBTEK, nytt försök görs snart igen och ärendet kommer uppdateras med ny information";
+	static final String MESSAGE_SSBTEK_READ_FAILED_PREFIX = "Fel att läsa SSBTEK ";
+	static final String MESSAGE_SSBTEK_READ_FAILED_SUFFIX = ", nytt försök görs snart igen och ärendet kommer uppdateras med ny information";
+
+	/**
+	 * The failed read is timestamped in Swedish wall-clock time: the services run on UTC containers, and a handläggare
+	 * reading "14:53" off the screen at 14:55 must not be told 12:53. Same reason {@code ErrandNumberGenerator} pins
+	 * the zone rather than taking the system default.
+	 */
+	private static final ZoneId SSBTEK_READ_FAILED_ZONE = ZoneId.of("Europe/Stockholm");
+	private static final DateTimeFormatter SSBTEK_READ_FAILED_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+	/** Verksamhetens wording for a read that failed at the given moment. */
+	public static String ssbtekReadFailureMessage(final OffsetDateTime failedAt) {
+		return MESSAGE_SSBTEK_READ_FAILED_PREFIX
+			+ SSBTEK_READ_FAILED_TIME.format(failedAt.atZoneSameInstant(SSBTEK_READ_FAILED_ZONE))
+			+ MESSAGE_SSBTEK_READ_FAILED_SUFFIX;
+	}
 
 	/**
 	 * One warning per errand regardless of how many agencies failed — the handläggare cannot act per agency, and a
@@ -232,7 +254,7 @@ public class WarningService {
 	@Transactional
 	public void reconcileSsbtekReadFailure(final String errandId, final boolean readFailed) {
 		final var current = readFailed
-			? List.of(new WarningInput(TYPE_SSBTEK_READ_FAILED, SOURCE_KEY_SSBTEK, MESSAGE_SSBTEK_READ_FAILED))
+			? List.of(new WarningInput(TYPE_SSBTEK_READ_FAILED, SOURCE_KEY_SSBTEK, ssbtekReadFailureMessage(OffsetDateTime.now(SSBTEK_READ_FAILED_ZONE))))
 			: List.<WarningInput>of();
 		reconcile(errandId, current, SSBTEK_READ_FAILURE_TYPES::contains);
 	}

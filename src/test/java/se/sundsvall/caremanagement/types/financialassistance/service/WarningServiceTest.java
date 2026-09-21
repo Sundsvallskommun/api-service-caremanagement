@@ -299,7 +299,28 @@ class WarningServiceTest {
 		assertThat(captor.getValue().getType()).isEqualTo("SSBTEK_READ_FAILED");
 		assertThat(captor.getValue().getSourceKey()).isEqualTo("SSBTEK");
 		assertThat(captor.getValue().getStatus()).isEqualTo("OPEN");
-		assertThat(captor.getValue().getMessage()).isEqualTo(WarningService.MESSAGE_SSBTEK_READ_FAILED);
+		// The text carries the time of the attempt, so it is matched on its two fixed halves rather than verbatim.
+		assertThat(captor.getValue().getMessage())
+			.startsWith(WarningService.MESSAGE_SSBTEK_READ_FAILED_PREFIX)
+			.endsWith(WarningService.MESSAGE_SSBTEK_READ_FAILED_SUFFIX)
+			.matches("^\\QFel att läsa SSBTEK \\E\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2},.*");
+	}
+
+	@Test
+	void theReadFailureMessageCarriesTheAttemptTimeInSwedishWallClockTime() {
+		// The services run on UTC containers; a handläggare reading the warning must see 14:53, not 12:53.
+		final var failedAt = OffsetDateTime.parse("2026-09-21T12:53:38Z");
+
+		assertThat(WarningService.ssbtekReadFailureMessage(failedAt))
+			.isEqualTo("Fel att läsa SSBTEK 2026-09-21 14:53, nytt försök görs snart igen och ärendet kommer uppdateras med ny information");
+	}
+
+	@Test
+	void theReadFailureMessageKeepsSwedishTimeAcrossTheWinterOffset() {
+		// Same instant in January is +01:00, not +02:00 — the zone is honoured, not a fixed offset.
+		final var failedAt = OffsetDateTime.parse("2026-01-15T12:53:38Z");
+
+		assertThat(WarningService.ssbtekReadFailureMessage(failedAt)).contains("2026-01-15 13:53");
 	}
 
 	@Test
