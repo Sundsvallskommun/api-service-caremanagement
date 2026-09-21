@@ -10624,12 +10624,13 @@ components:
         outcome:
           type: string
           description: Decision outcome code. BIFALL/DELAVSLAG grant an amount (and
-            require payments); AVSLAG/AVVISNING grant nothing.
+            require payments); AVSLAG grants nothing. DELAVSLAG is labelled "Delvis
+            bifall" in the dropdown (see the errand type's decision options). AVVISNING
+            was dropped 2026-09-21 and is no longer accepted.
           enum:
           - BIFALL
           - DELAVSLAG
           - AVSLAG
-          - AVVISNING
           examples:
           - BIFALL
         reason:
@@ -10723,7 +10724,7 @@ components:
         payments:
           type: array
           description: The payments to register in Lifecare. Required (at least one)
-            when the outcome carries an amount; must be empty for AVSLAG/AVVISNING.
+            when the outcome carries an amount; must be empty for AVSLAG.
           items:
             $ref: "#/components/schemas/FinalizePayment"
         householdSizeChanged:
