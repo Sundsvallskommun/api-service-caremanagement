@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:62351
+- url: http://localhost:54092
   description: Generated server url
 tags:
 - name: Financial Assistance · Lifecare supplements
@@ -10250,6 +10250,7 @@ components:
           - EXPENSE_PARTIALLY_REJECTED
           - CO_APPLICANT_SPLIT_PAYMENT
           - SSBTEK_READ_FAILED
+          - INCOME_MISSING_PREVIOUS_PERIOD
           examples:
           - EXPENSE_CAPPED
         typeDisplayName:
