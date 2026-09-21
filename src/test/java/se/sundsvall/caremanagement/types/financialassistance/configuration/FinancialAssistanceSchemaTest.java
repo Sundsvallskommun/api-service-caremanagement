@@ -89,4 +89,10 @@ class FinancialAssistanceSchemaTest {
 	private static FieldDescriptor field(final List<FieldDescriptor> fields, final String name) {
 		return fields.stream().filter(field -> name.equals(field.getName())).findFirst().orElseThrow();
 	}
+
+	@Test
+	void decisionOptionsAreTheCatalogueTheProposalsUse() {
+		assertThat(FinancialAssistanceSchema.decisionOptions()).extracting("code", "carriesAmount")
+			.containsExactly(tuple("BIFALL", true), tuple("DELAVSLAG", true), tuple("AVSLAG", false), tuple("AVVISNING", false));
+	}
 }

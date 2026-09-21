@@ -23,6 +23,8 @@ final class FinancialAssistanceApiTags {
 	static final String APPROVALS_DESC = "Caseworker approval state of the three financial assistance view sections (CALCULATION / PAYMENT / DECISION) — read all three, or set/withdraw one.";
 	static final String PAYMENT = "Financial Assistance · Payment";
 	static final String PAYMENT_DESC = "Read whether the manual Lifecare payment for the applicant and application month has been effectuated. caremanagement makes no payment itself.";
+	static final String PROPOSALS = "Financial Assistance · Proposals";
+	static final String PROPOSALS_DESC = "The decision proposal (beslutsförslag) and payment proposal (utbetalningsförslag) — derived on every read from the calculation draft, the application and the applicant's Lifecare history; only the section warnings they raise are stored. Recomputed when the CALCULATION (→ decision) and DECISION (→ payment) sections are approved.";
 	static final String LIFECARE = "Financial Assistance · Lifecare history";
 	static final String LIFECARE_DESC = "Read the applicant's case history straight from Lifecare — the calculations, decisions and documents — plus a single document's PDF content. Keyed by partyId (resolved to a personnummer via the citizen service); the period defaults to the last 24 months. caremanagement only forwards the reads.";
 }

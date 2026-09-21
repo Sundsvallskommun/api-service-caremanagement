@@ -68,7 +68,7 @@ public class RpaContextService {
 	 * The partyId for a household role: the errand's stakeholder of that role first (the canonical promoted identity),
 	 * falling back to the application payload's person row — some intake flows populate only one of the two.
 	 */
-	private static Optional<String> resolvePartyId(final List<Stakeholder> stakeholders, final List<FaPerson> persons, final String role) {
+	static Optional<String> resolvePartyId(final List<Stakeholder> stakeholders, final List<FaPerson> persons, final String role) {
 		return stakeholders.stream()
 			.filter(stakeholder -> role.equals(stakeholder.getRole()))
 			.map(Stakeholder::getExternalId)

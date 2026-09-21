@@ -26,12 +26,21 @@ public class Warning {
 		"ATTACHMENTS_PRESENT", "STAY_OUTSIDE_MUNICIPALITY", "APPLICATION_REVIEW",
 		"INCOME_MISSING_VS_PREVIOUS_CALCULATION", "INCOME_AMOUNT_MISMATCH_PREVIOUS_CALCULATION",
 		"CHILDREN_MISMATCH_PREVIOUS_CALCULATION", "HOUSEHOLD_COUNT_MISMATCH_PREVIOUS_CALCULATION",
-		"NORM_MISMATCH_PREVIOUS_CALCULATION", "SSBTEK_DAY_CHECK", "PARENTAL_BENEFIT_PERIOD_CHECK"
+		"NORM_MISMATCH_PREVIOUS_CALCULATION", "SSBTEK_DAY_CHECK", "PARENTAL_BENEFIT_PERIOD_CHECK",
+		"PREVIOUS_DECISION_ADVANCE_ON_BENEFIT", "EXPENSE_PARTIALLY_REJECTED", "CO_APPLICANT_SPLIT_PAYMENT"
 	})
 	private String type;
 
 	@Schema(description = "Swedish display name for the warning type", examples = "Kapad kostnad", accessMode = Schema.AccessMode.READ_ONLY)
 	private String typeDisplayName;
+
+	@Schema(description = "The Draken view section (tab) the warning belongs to — derived from the type: the decision proposal's types are DECISION, the payment proposal's are PAYMENT, everything else is CALCULATION",
+		examples = "CALCULATION",
+		allowableValues = {
+			"CALCULATION", "DECISION", "PAYMENT"
+		},
+		accessMode = Schema.AccessMode.READ_ONLY)
+	private String section;
 
 	@Schema(description = "A stable key for the income the warning concerns (benefit/incomeType) — the dedup key", examples = "Bostadsbidrag")
 	private String sourceKey;
@@ -98,6 +107,19 @@ public class Warning {
 
 	public Warning withTypeDisplayName(final String typeDisplayName) {
 		this.typeDisplayName = typeDisplayName;
+		return this;
+	}
+
+	public String getSection() {
+		return section;
+	}
+
+	public void setSection(final String section) {
+		this.section = section;
+	}
+
+	public Warning withSection(final String section) {
+		this.section = section;
 		return this;
 	}
 
@@ -197,14 +219,14 @@ public class Warning {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final Warning warning = (Warning) o;
-		return autoResolved == warning.autoResolved && Objects.equals(id, warning.id) && Objects.equals(type, warning.type) && Objects.equals(typeDisplayName, warning.typeDisplayName)
+		return autoResolved == warning.autoResolved && Objects.equals(id, warning.id) && Objects.equals(type, warning.type) && Objects.equals(typeDisplayName, warning.typeDisplayName) && Objects.equals(section, warning.section)
 			&& Objects.equals(sourceKey, warning.sourceKey) && Objects.equals(message, warning.message) && Objects.equals(status, warning.status)
 			&& Objects.equals(statusDisplayName, warning.statusDisplayName) && Objects.equals(created, warning.created) && Objects.equals(updated, warning.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, type, typeDisplayName, sourceKey, message, status, statusDisplayName, autoResolved, created, updated);
+		return Objects.hash(id, type, typeDisplayName, section, sourceKey, message, status, statusDisplayName, autoResolved, created, updated);
 	}
 
 	@Override
@@ -213,6 +235,7 @@ public class Warning {
 			"id='" + id + '\'' +
 			", type='" + type + '\'' +
 			", typeDisplayName='" + typeDisplayName + '\'' +
+			", section='" + section + '\'' +
 			", sourceKey='" + sourceKey + '\'' +
 			", message='" + message + '\'' +
 			", status='" + status + '\'' +

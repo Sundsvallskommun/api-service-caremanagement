@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.lifecare.service;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDocumentDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedPaymentDTO;
 import generated.se.sundsvall.lifecarefamilycare.CommonCalculationExpenseDTO;
 import generated.se.sundsvall.lifecarefamilycare.CommonCalculationIncomeDTO;
 import generated.se.sundsvall.lifecarefamilycare.CommonCalculationSpecialExpenseDTO;
@@ -11,6 +12,8 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonDTO
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDocumentDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedPaymentDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedPaymentPersonDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
@@ -114,6 +117,41 @@ class LifecareCaseHistoryServiceTest {
 			assertThat(document.title()).isEqualTo("Beslut");
 			assertThat(document.documentType()).isEqualTo("Beslut");
 		});
+	}
+
+	@Test
+	void listPaymentsMapsHeaderAndPayeeButNotPersons() {
+		final var dto = new PersonBasedPaymentDTO()
+			.id(4711).amount(8500.0).paymentMethod("Bankkonto").payDate("2026-05-27").clearing("1234").accountNumber("5678901")
+			.name("Anna Andersson").streetAddress("Storgatan 1").careOfAddress("c/o Test").postalCode("85230").postalAddress("Sundsvall")
+			.message("Ekonomiskt bistånd").concernedMonth("2026-06")
+			.addPaymentPersonDTOsItem(new PersonBasedPaymentPersonDTO().personId("198001019999").name("Sven"));
+		when(lifecareFamilyCareIntegrationMock.getPayments(PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
+			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().addResultItem(dto));
+
+		assertThat(service.listPayments(PERSON_ID, FROM, TO)).singleElement().satisfies(payment -> {
+			assertThat(payment.id()).isEqualTo(4711);
+			assertThat(payment.amount()).isEqualTo(BigDecimal.valueOf(8500.0));
+			assertThat(payment.paymentMethod()).isEqualTo("Bankkonto");
+			assertThat(payment.payDate()).isEqualTo("2026-05-27");
+			assertThat(payment.clearing()).isEqualTo("1234");
+			assertThat(payment.accountNumber()).isEqualTo("5678901");
+			assertThat(payment.name()).isEqualTo("Anna Andersson");
+			assertThat(payment.streetAddress()).isEqualTo("Storgatan 1");
+			assertThat(payment.careOfAddress()).isEqualTo("c/o Test");
+			assertThat(payment.postalCode()).isEqualTo("85230");
+			assertThat(payment.postalAddress()).isEqualTo("Sundsvall");
+			assertThat(payment.message()).isEqualTo("Ekonomiskt bistånd");
+			assertThat(payment.concernedMonth()).isEqualTo("2026-06");
+			assertThat(payment.toString()).doesNotContain("198001019999");
+		});
+	}
+
+	@Test
+	void listPaymentsEmptyWhenLifecareReturnsNothing() {
+		when(lifecareFamilyCareIntegrationMock.getPayments(PERSON_ID, FROM, TO)).thenReturn(null);
+
+		assertThat(service.listPayments(PERSON_ID, FROM, TO)).isEmpty();
 	}
 
 	@Test
