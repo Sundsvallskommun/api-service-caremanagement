@@ -136,6 +136,36 @@ class FinalizeMapperTest {
 	}
 
 	@Test
+	void toLegacyPaymentContentCarriesTheOldFieldsBesideThePaymentId() {
+		// The bridge form. It writes the payee's bank details to the queue - that is the cost of keeping an
+		// unreleased robot working, and why the flag defaults off once the robot is over.
+		final var payment = FinalizePayment.create()
+			.withPaymentDate(LocalDate.of(2026, 6, 25))
+			.withAmount(new BigDecimal("6000.00"))
+			.withConcernedMonth("2026-06")
+			.withAccountingCode("5011")
+			.withPayee(Payee.create().withName("Hyresvärden AB").withPaymentMethod("BANKGIRO").withClearing("6000").withAccountNumber("123-4567"));
+
+		assertThat(FinalizeMapper.toLegacyPaymentContent("p-1", payment, 2)).containsOnly(
+			java.util.Map.entry("paymentId", "p-1"),
+			java.util.Map.entry("sequence", "2"),
+			java.util.Map.entry("paymentDate", "2026-06-25"),
+			java.util.Map.entry("amount", "6000.00"),
+			java.util.Map.entry("concernedMonth", "2026-06"),
+			java.util.Map.entry("accountingCode", "5011"),
+			java.util.Map.entry("payeeName", "Hyresvärden AB"),
+			java.util.Map.entry("paymentMethod", "BANKGIRO"),
+			java.util.Map.entry("clearing", "6000"),
+			java.util.Map.entry("accountNumber", "123-4567"));
+	}
+
+	@Test
+	void toLegacyPaymentContentStillCarriesThePaymentIdWithNoPayment() {
+		assertThat(FinalizeMapper.toLegacyPaymentContent("p-1", null, 1))
+			.containsOnly(java.util.Map.entry("paymentId", "p-1"), java.util.Map.entry("sequence", "1"));
+	}
+
+	@Test
 	void toPaymentRequestBridgesTheTwoModelsNaming() {
 		final var payment = FinalizePayment.create()
 			.withPaymentDate(LocalDate.of(2026, 6, 25))

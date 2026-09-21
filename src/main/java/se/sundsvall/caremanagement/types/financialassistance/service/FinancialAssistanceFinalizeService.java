@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.core.service.ErrandService;
@@ -46,6 +47,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.even
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.DECISION_TYPE_PAYMENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toDecisionContent;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toIdListContent;
+import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toLegacyPaymentContent;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentDecision;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentIdContent;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentRequest;
@@ -100,11 +102,13 @@ public class FinancialAssistanceFinalizeService {
 	private final JournalEntryService journalEntryService;
 	private final DocumentService documentService;
 	private final PaymentService paymentService;
+	private final boolean legacyPaymentFields;
 
 	FinancialAssistanceFinalizeService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository,
 		final SectionApprovalService sectionApprovalService, final DecisionService decisionService, final RpaService rpaService,
 		final ProcessService processService, final MonitoringService monitoringService, final JournalEntryService journalEntryService,
-		final DocumentService documentService, final PaymentService paymentService) {
+		final DocumentService documentService, final PaymentService paymentService,
+		@Value("${financial-assistance.rpa.register-payment.legacy-fields:true}") final boolean legacyPaymentFields) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.sectionApprovalService = sectionApprovalService;
@@ -115,6 +119,7 @@ public class FinancialAssistanceFinalizeService {
 		this.journalEntryService = journalEntryService;
 		this.documentService = documentService;
 		this.paymentService = paymentService;
+		this.legacyPaymentFields = legacyPaymentFields;
 	}
 
 	/**
@@ -223,13 +228,36 @@ public class FinancialAssistanceFinalizeService {
 
 		// The reference suffix is the payment id rather than a position in the list, so the Orchestrator's dedup keys
 		// on the row the item is actually about.
-		paymentIds.forEach(paymentId -> tasks.add(
-			enqueue(municipalityId, namespace, errandId, REGISTER_PAYMENT, paymentId, toPaymentIdContent(paymentId))));
+		final List<FinalizePayment> payments = ofNullable(request.getPayments()).orElseGet(List::of);
+		for (var index = 0; index < paymentIds.size(); index++) {
+			final var paymentId = paymentIds.get(index);
+			tasks.add(enqueue(municipalityId, namespace, errandId, REGISTER_PAYMENT, paymentId,
+				paymentContent(paymentId, payments.get(index), index + 1)));
+		}
 
 		enqueueIfAny(tasks, municipalityId, namespace, errandId, WRITE_MONITORING, KEY_MONITORING_IDS, () -> localMonitoringIds(municipalityId, namespace, errandId));
 		enqueueIfAny(tasks, municipalityId, namespace, errandId, WRITE_JOURNAL, KEY_JOURNAL_ENTRY_IDS, () -> journalEntryService.listLocallyAuthoredIds(municipalityId, namespace, errandId));
 		enqueueIfAny(tasks, municipalityId, namespace, errandId, WRITE_DOCUMENT, KEY_DOCUMENT_IDS, () -> documentService.listLocallyAuthoredIds(municipalityId, namespace, errandId));
 		return tasks;
+	}
+
+	/**
+	 * The queue item for one payment. The contract is {@code paymentId} and nothing else — the robot reads the payment
+	 * through {@code GET .../payments/{paymentId}}, which is what keeps the payee's name, clearing and account number
+	 * out of the Orchestrator queue store.
+	 *
+	 * <p>
+	 * While {@code financial-assistance.rpa.register-payment.legacy-fields} is on, the pre-2026-09-21 fields ride
+	 * along as well, so a robot that has not been released against the new contract keeps working. That form does
+	 * write the personal data, so the flag is a bridge, not a setting: release the robot, set it to {@code false},
+	 * and the leak is closed without another careM deploy.
+	 * </p>
+	 */
+	private Map<String, String> paymentContent(final String paymentId, final FinalizePayment payment, final int sequence) {
+		if (legacyPaymentFields) {
+			return toLegacyPaymentContent(paymentId, payment, sequence);
+		}
+		return toPaymentIdContent(paymentId);
 	}
 
 	/**

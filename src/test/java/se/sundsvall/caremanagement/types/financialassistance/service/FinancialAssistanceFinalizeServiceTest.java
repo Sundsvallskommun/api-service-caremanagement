@@ -6,11 +6,11 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.core.api.model.Errand;
@@ -115,8 +115,23 @@ class FinancialAssistanceFinalizeServiceTest {
 	@Mock
 	private PaymentService paymentServiceMock;
 
-	@InjectMocks
+	/**
+	 * Built by hand rather than with {@code @InjectMocks}: the service takes a primitive {@code boolean}, which
+	 * Mockito cannot supply. {@code false} is the <strong>target</strong> contract — paymentId only. The transitional
+	 * form has its own test.
+	 */
 	private FinancialAssistanceFinalizeService service;
+
+	@BeforeEach
+	void setUp() {
+		service = finalizeService(false);
+	}
+
+	private FinancialAssistanceFinalizeService finalizeService(final boolean legacyPaymentFields) {
+		return new FinancialAssistanceFinalizeService(errandServiceMock, repositoryMock, sectionApprovalServiceMock,
+			decisionServiceMock, rpaServiceMock, processServiceMock, monitoringServiceMock, journalEntryServiceMock,
+			documentServiceMock, paymentServiceMock, legacyPaymentFields);
+	}
 
 	private static FinalizeRequest grantingRequest() {
 		return FinalizeRequest.create()
@@ -430,5 +445,32 @@ class FinancialAssistanceFinalizeServiceTest {
 
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 		verifyNoInteractions(rpaServiceMock, processServiceMock);
+	}
+
+	@Test
+	void theLegacyQueueFormCarriesTheOldFieldsAlongsideThePaymentId() {
+		// The bridge for a robot that has not been released against the paymentId contract yet. It writes the payee's
+		// bank details to the queue, which is what the flag exists to switch off once the robot is over.
+		final var legacyService = finalizeService(true);
+		readyErrand();
+		rpaEnqueuesEverything();
+		when(monitoringServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(journalEntryServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(documentServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+
+		legacyService.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
+
+		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(REGISTER_PAYMENT), eq("pay-1"), contentCaptor.capture());
+		assertThat(contentCaptor.getValue())
+			.containsEntry("paymentId", "pay-1")
+			.containsEntry("sequence", "1")
+			.containsEntry("paymentDate", "2026-06-25")
+			.containsEntry("amount", "6000.00")
+			.containsEntry("concernedMonth", "2026-06")
+			.containsEntry("payeeName", "Hyresvärden AB")
+			.containsEntry("paymentMethod", "BANKGIRO")
+			.containsEntry("accountNumber", "123-4567");
+		// the rows are still created, so switching the flag off later needs no data migration
+		verify(paymentServiceMock, times(2)).createForDecision(eq(ERRAND_ID), any(PaymentRequest.class));
 	}
 }

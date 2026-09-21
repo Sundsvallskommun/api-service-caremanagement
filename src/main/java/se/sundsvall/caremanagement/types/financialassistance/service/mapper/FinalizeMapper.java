@@ -45,8 +45,19 @@ public final class FinalizeMapper {
 	static final String KEY_AMOUNT = "amount";
 	static final String KEY_COMMUNICATION_CHANNELS = "communicationChannels";
 	static final String KEY_HOUSEHOLD_SIZE_CHANGED = "householdSizeChanged";
-	/** The only key on a REGISTER_PAYMENT item: the robot reads the payment itself through the Payment resource. */
+	/** The only key a REGISTER_PAYMENT item needs: the robot reads the payment itself through the Payment resource. */
 	static final String KEY_PAYMENT_ID = "paymentId";
+
+	// The pre-2026-09-21 REGISTER_PAYMENT keys, kept for a robot that has not been released against the paymentId
+	// contract yet. Transitional: see toLegacyPaymentContent.
+	static final String KEY_SEQUENCE = "sequence";
+	static final String KEY_PAYMENT_DATE = "paymentDate";
+	static final String KEY_CONCERNED_MONTH = "concernedMonth";
+	static final String KEY_ACCOUNTING_CODE = "accountingCode";
+	static final String KEY_PAYEE_NAME = "payeeName";
+	static final String KEY_PAYMENT_METHOD = "paymentMethod";
+	static final String KEY_CLEARING = "clearing";
+	static final String KEY_ACCOUNT_NUMBER = "accountNumber";
 	static final String KEY_COUNT = "count";
 
 	private FinalizeMapper() {}
@@ -124,6 +135,36 @@ public final class FinalizeMapper {
 	public static Map<String, String> toPaymentIdContent(final String paymentId) {
 		final var content = new HashMap<String, String>();
 		put(content, KEY_PAYMENT_ID, paymentId);
+		return content;
+	}
+
+	/**
+	 * The transitional {@code REGISTER_PAYMENT} content: the {@code paymentId} <strong>plus</strong> the fields the
+	 * item carried before 2026-09-21, so a robot written against either contract can process it.
+	 *
+	 * <p>
+	 * <strong>This form puts the payee's name, clearing and account number in the Orchestrator queue store, which is
+	 * exactly what the paymentId-only contract exists to stop.</strong> It is a bridge for the window where careM has
+	 * been released and the robot has not: the robot is moved over to reading
+	 * {@code GET .../payments/{paymentId}}, and then {@code financial-assistance.rpa.register-payment.legacy-fields}
+	 * is set to {@code false} and the personal data stops being written. Deleting this method is the point.
+	 * </p>
+	 */
+	public static Map<String, String> toLegacyPaymentContent(final String paymentId, final FinalizePayment payment, final int sequence) {
+		final var content = toPaymentIdContent(paymentId);
+		put(content, KEY_SEQUENCE, sequence);
+		ofNullable(payment).ifPresent(source -> {
+			put(content, KEY_PAYMENT_DATE, source.getPaymentDate());
+			put(content, KEY_AMOUNT, source.getAmount());
+			put(content, KEY_CONCERNED_MONTH, source.getConcernedMonth());
+			put(content, KEY_ACCOUNTING_CODE, source.getAccountingCode());
+			ofNullable(source.getPayee()).ifPresent(payee -> {
+				put(content, KEY_PAYEE_NAME, payee.getName());
+				put(content, KEY_PAYMENT_METHOD, payee.getPaymentMethod());
+				put(content, KEY_CLEARING, payee.getClearing());
+				put(content, KEY_ACCOUNT_NUMBER, payee.getAccountNumber());
+			});
+		});
 		return content;
 	}
 
