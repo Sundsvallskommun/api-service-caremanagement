@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:62107
+- url: http://localhost:51276
   description: Generated server url
 tags:
 - name: Financial Assistance · Lifecare supplements
@@ -105,6 +105,10 @@ tags:
     \ the last 24 months. caremanagement only forwards the reads."
 - name: Documents
   description: Formal case documents attached to an errand
+- name: Financial Assistance · Payments
+  description: "Financial assistance payments (utbetalningar) on an errand, with full\
+    \ CRUD. Created as DRAFT and never auto-queued for RPA — queuing the REGISTER_PAYMENT\
+    \ robot task is a separate POST .../rpa-tasks call."
 - name: Errands
   description: Errand operations
 - name: Financial Assistance · Payment
@@ -161,6 +165,173 @@ paths:
                 oneOf:
                 - $ref: "#/components/schemas/Problem"
                 - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payments/{paymentId}:
+    get:
+      tags:
+      - Financial Assistance · Payments
+      summary: Read a payment on an errand
+      operationId: getPayment
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+      - Financial Assistance · Payments
+      summary: Replace a payment on an errand
+      description: Replaces the payment's mutable fields. status is server-managed
+        and never changed here.
+      operationId: updatePayment
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+      - Financial Assistance · Payments
+      summary: Delete a payment on an errand
+      operationId: deletePayment
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Successful operation
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "500":
           description: Internal server error
           content:
@@ -2510,6 +2681,120 @@ paths:
                 oneOf:
                 - $ref: "#/components/schemas/Problem"
                 - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payments:
+    get:
+      tags:
+      - Financial Assistance · Payments
+      summary: List the payments on an errand
+      operationId: listPayments
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payment"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+      - Financial Assistance · Payments
+      summary: Create a payment on an errand
+      description: Creates a payment on the errand as a DRAFT. Does not queue any
+        RPA task. Returns the created payment and its Location.
+      operationId: createPayment
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRequest"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "500":
           description: Internal server error
           content:
@@ -6583,6 +6868,58 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payments/count:
+    get:
+      tags:
+      - Financial Assistance · Payments
+      summary: Count the payments on an errand
+      description: How many payments are on the errand. Not recorded in the event
+        log.
+      operationId: countPayments
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentCount"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payment-proposal:
     get:
       tags:
@@ -7657,10 +7994,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -7688,6 +8025,324 @@ components:
           type: string
         message:
           type: string
+    PaymentRequest:
+      type: object
+      description: Request to create or replace a financial assistance payment on
+        an errand.
+      properties:
+        source:
+          type: string
+          description: "Provenance, defaults to CASEWORKER when omitted. RPA POSTs\
+            \ LIFECARE (with lifecareId) to surface a payment read out of Lifecare\
+            \ onto the errand."
+          enum:
+          - CASEWORKER
+          - LIFECARE
+          examples:
+          - CASEWORKER
+        lifecareId:
+          type: string
+          description: The payment's id in Lifecare. Set by RPA when surfacing a LIFECARE-sourced
+            payment (the idempotency key) or when stamping back the id of a registered
+            caseworker payment.
+          examples:
+          - "987654"
+          maxLength: 64
+          minLength: 0
+        moneyType:
+          type: string
+          description: The type of money paid out. Unconstrained — the value set comes
+            from Lifecare and isn't known yet.
+          examples:
+          - FORSORJNINGSSTOD
+          maxLength: 64
+          minLength: 0
+        paymentDate:
+          type: string
+          format: date
+          description: The date the payment is/was made
+          examples:
+          - 2026-08-25
+        amount:
+          type: number
+          description: The payment amount
+          examples:
+          - 4500.0
+        applicationMonth:
+          type: string
+          description: The application month the payment concerns
+          examples:
+          - 2026-08
+          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
+        reportedOnStakeholderIds:
+          type: array
+          description: Stakeholder ids the payment is reported on
+          items:
+            type: string
+            examples:
+            - f47ac10b-58cc-4372-a567-0e02b2c3d479
+            maxLength: 64
+            minLength: 0
+        accountingDate:
+          type: string
+          format: date
+          description: The accounting date for the payment
+          examples:
+          - 2026-08-25
+        excludedFromPayment:
+          type: boolean
+          description: Whether the payment is excluded from being paid out
+          examples:
+          - false
+        payeeStakeholderId:
+          type: string
+          description: The stakeholder id of the payee
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+          maxLength: 64
+          minLength: 0
+        paymentMethod:
+          type: string
+          description: How the payment is made. Unconstrained — the value set comes
+            from Lifecare and isn't known yet.
+          examples:
+          - BANK_TRANSFER
+          maxLength: 64
+          minLength: 0
+        payeeName:
+          type: string
+          description: The payee's name
+          examples:
+          - Anna Andersson
+          maxLength: 255
+          minLength: 0
+        payeeAddress:
+          type: string
+          description: The payee's address
+          examples:
+          - Storgatan 1
+          maxLength: 255
+          minLength: 0
+        payeeCareOf:
+          type: string
+          description: The payee's c/o line
+          examples:
+          - c/o Bertil Bertilsson
+          maxLength: 255
+          minLength: 0
+        payeeZipCode:
+          type: string
+          description: The payee's zip code
+          examples:
+          - "85230"
+          maxLength: 16
+          minLength: 0
+        payeeCity:
+          type: string
+          description: The payee's city
+          examples:
+          - Sundsvall
+          maxLength: 255
+          minLength: 0
+        clearingNumber:
+          type: string
+          description: The payee's bank clearing number
+          examples:
+          - 8327-9
+          maxLength: 64
+          minLength: 0
+        accountNumber:
+          type: string
+          description: The payee's bank account number
+          examples:
+          - 123 456 789-0
+          maxLength: 64
+          minLength: 0
+        localPaymentNumber:
+          type: string
+          description: "The local payment number, when applicable"
+          examples:
+          - "4711"
+          maxLength: 64
+          minLength: 0
+        invoiceNumber:
+          type: string
+          description: "The invoice number, when applicable"
+          examples:
+          - 2026-00417
+          maxLength: 64
+          minLength: 0
+        usesOcr:
+          type: boolean
+          description: Whether the payment uses OCR
+          examples:
+          - false
+        messageLines:
+          type: array
+          description: Free-text message lines printed on the payment
+          items:
+            type: string
+            examples:
+            - Ekonomiskt bistånd augusti 2026
+            maxLength: 255
+            minLength: 0
+    Payment:
+      type: object
+      description: A financial assistance payment (utbetalning) on an errand.
+      properties:
+        id:
+          type: string
+          description: The payment id
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+          readOnly: true
+        source:
+          type: string
+          description: "Provenance: CASEWORKER for one authored in Draken, LIFECARE\
+            \ for one read out of Lifecare by RPA and surfaced here on the errand."
+          enum:
+          - CASEWORKER
+          - LIFECARE
+          examples:
+          - CASEWORKER
+        lifecareId:
+          type: string
+          description: The payment's id in Lifecare once it exists there — null until
+            RPA has registered a caseworker-authored payment; always set for a LIFECARE-sourced
+            one.
+          examples:
+          - "987654"
+        status:
+          type: string
+          description: Server-managed lifecycle status. DRAFT on create; moves to
+            QUEUED / EFFECTUATED / FAILED as the robot processes the REGISTER_PAYMENT
+            RPA task.
+          enum:
+          - DRAFT
+          - QUEUED
+          - EFFECTUATED
+          - FAILED
+          examples:
+          - DRAFT
+          readOnly: true
+        moneyType:
+          type: string
+          description: The type of money paid out. Unconstrained — the value set comes
+            from Lifecare and isn't known yet.
+          examples:
+          - FORSORJNINGSSTOD
+        paymentDate:
+          type: string
+          format: date
+          description: The date the payment is/was made
+          examples:
+          - 2026-08-25
+        amount:
+          type: number
+          description: The payment amount
+          examples:
+          - 4500.0
+        applicationMonth:
+          type: string
+          description: "The application month the payment concerns, yyyy-MM"
+          examples:
+          - 2026-08
+        reportedOnStakeholderIds:
+          type: array
+          description: Stakeholder ids the payment is reported on
+          items:
+            type: string
+            examples:
+            - f47ac10b-58cc-4372-a567-0e02b2c3d479
+        accountingDate:
+          type: string
+          format: date
+          description: The accounting date for the payment
+          examples:
+          - 2026-08-25
+        excludedFromPayment:
+          type: boolean
+          description: Whether the payment is excluded from being paid out
+          examples:
+          - false
+        payeeStakeholderId:
+          type: string
+          description: The stakeholder id of the payee
+          examples:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+        paymentMethod:
+          type: string
+          description: How the payment is made. Unconstrained — the value set comes
+            from Lifecare and isn't known yet.
+          examples:
+          - BANK_TRANSFER
+        payeeName:
+          type: string
+          description: The payee's name
+          examples:
+          - Anna Andersson
+        payeeAddress:
+          type: string
+          description: The payee's address
+          examples:
+          - Storgatan 1
+        payeeCareOf:
+          type: string
+          description: The payee's c/o line
+          examples:
+          - c/o Bertil Bertilsson
+        payeeZipCode:
+          type: string
+          description: The payee's zip code
+          examples:
+          - "85230"
+        payeeCity:
+          type: string
+          description: The payee's city
+          examples:
+          - Sundsvall
+        clearingNumber:
+          type: string
+          description: The payee's bank clearing number
+          examples:
+          - 8327-9
+        accountNumber:
+          type: string
+          description: The payee's bank account number
+          examples:
+          - 123 456 789-0
+        localPaymentNumber:
+          type: string
+          description: "The local payment number, when applicable"
+          examples:
+          - "4711"
+        invoiceNumber:
+          type: string
+          description: "The invoice number, when applicable"
+          examples:
+          - 2026-00417
+        usesOcr:
+          type: boolean
+          description: Whether the payment uses OCR
+          examples:
+          - false
+        messageLines:
+          type: array
+          description: Free-text message lines printed on the payment
+          items:
+            type: string
+            examples:
+            - Ekonomiskt bistånd augusti 2026
+        created:
+          type: string
+          format: date-time
+          description: When the payment was created
+          readOnly: true
+        modified:
+          type: string
+          format: date-time
+          description: When the payment was last modified
+          readOnly: true
     MonitoringRequest:
       type: object
       description: Request to create or replace a financial assistance monitoring
@@ -8825,7 +9480,13 @@ components:
           additionalProperties:
             type: string
           description: "Optional extra hints for the robot, merged into the queue\
-            \ item SpecificContent"
+            \ item SpecificContent. For REGISTER_PAYMENT, carries only the key 'paymentId'\
+            \ (the payment's id on the errand) — the robot fetches everything else\
+            \ via GET .../payments/{paymentId}, instead of putting payee names, account\
+            \ numbers or other personal data on the Orchestrator queue, the same reason\
+            \ RpaContext is fetched per queue item rather than riding along in it."
+          examples:
+          - paymentId: f47ac10b-58cc-4372-a567-0e02b2c3d479
       required:
       - action
     Referral:
@@ -11909,6 +12570,16 @@ components:
             or it could not be resolved
           examples:
           - 19850505T002
+    PaymentCount:
+      type: object
+      description: The number of payments on the errand
+      properties:
+        count:
+          type: integer
+          format: int64
+          description: Number of payments on the errand
+          examples:
+          - 2
     PaymentProposal:
       type: object
       description: "The payment proposal (utbetalningsförslag) — derived data, recomputed\
@@ -12508,6 +13179,18 @@ components:
         costTypes:
           type: array
           description: "The cost types, grouped by their Mina-sidor form section"
+          items:
+            $ref: "#/components/schemas/TypeOption"
+        moneyTypes:
+          type: array
+          description: The payment money types (Payment.moneyType allowed values).
+            Placeholder — the real catalogue comes from Lifecare and isn't known yet.
+          items:
+            $ref: "#/components/schemas/TypeOption"
+        paymentMethods:
+          type: array
+          description: The payment methods (Payment.paymentMethod allowed values).
+            Placeholder — the real catalogue comes from Lifecare and isn't known yet.
           items:
             $ref: "#/components/schemas/TypeOption"
     TypeOption:
