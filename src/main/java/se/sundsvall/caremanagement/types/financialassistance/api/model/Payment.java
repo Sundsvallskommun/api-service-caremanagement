@@ -1,0 +1,512 @@
+package se.sundsvall.caremanagement.types.financialassistance.api.model;
+
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Objects;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
+import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
+
+/**
+ * A financial assistance payment (utbetalning) on an errand — a caseworker-drafted or Lifecare-mirrored payment row.
+ * {@code status} is entirely server-managed (always {@code DRAFT} on create); queuing the robot to register it in
+ * Lifecare is a separate {@code POST .../rpa-tasks} call with the {@code REGISTER_PAYMENT} action.
+ */
+@Schema(description = "A financial assistance payment (utbetalning) on an errand.")
+public class Payment {
+
+	@Schema(description = "The payment id", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", accessMode = Schema.AccessMode.READ_ONLY)
+	private String id;
+
+	@Schema(description = "Provenance: CASEWORKER for one authored in Draken, LIFECARE for one read out of Lifecare by RPA and "
+		+ "surfaced here on the errand.", examples = "CASEWORKER", allowableValues = {
+			"CASEWORKER", "LIFECARE"
+	})
+	private String source;
+
+	@Schema(description = "The payment's id in Lifecare once it exists there — null until RPA has registered a caseworker-authored "
+		+ "payment; always set for a LIFECARE-sourced one.", examples = "987654")
+	private String lifecareId;
+
+	@Schema(description = "Server-managed lifecycle status. DRAFT on create; moves to QUEUED / EFFECTUATED / FAILED as the robot "
+		+ "processes the REGISTER_PAYMENT RPA task.", examples = "DRAFT", allowableValues = {
+			"DRAFT", "QUEUED", "EFFECTUATED", "FAILED"
+	}, accessMode = Schema.AccessMode.READ_ONLY)
+	private String status;
+
+	@Schema(description = "The type of money paid out. Unconstrained — the value set comes from Lifecare and isn't known yet.",
+		examples = "FORSORJNINGSSTOD")
+	private String moneyType;
+
+	@Schema(description = "The date the payment is/was made", examples = "2026-08-25")
+	@DateTimeFormat(iso = DATE)
+	private LocalDate paymentDate;
+
+	@Schema(description = "The payment amount", examples = "4500.00")
+	private BigDecimal amount;
+
+	@Schema(description = "The application month the payment concerns, yyyy-MM", examples = "2026-08")
+	private String applicationMonth;
+
+	@ArraySchema(arraySchema = @Schema(description = "Stakeholder ids the payment is reported on"), schema = @Schema(implementation = String.class, examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479"))
+	private List<String> reportedOnStakeholderIds;
+
+	@Schema(description = "The accounting date for the payment", examples = "2026-08-25")
+	@DateTimeFormat(iso = DATE)
+	private LocalDate accountingDate;
+
+	@Schema(description = "Whether the payment is excluded from being paid out", examples = "false")
+	private boolean excludedFromPayment;
+
+	@Schema(description = "The stakeholder id of the payee", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479")
+	private String payeeStakeholderId;
+
+	@Schema(description = "How the payment is made. Unconstrained — the value set comes from Lifecare and isn't known yet.",
+		examples = "BANK_TRANSFER")
+	private String paymentMethod;
+
+	@Schema(description = "The payee's name", examples = "Anna Andersson")
+	private String payeeName;
+
+	@Schema(description = "The payee's address", examples = "Storgatan 1")
+	private String payeeAddress;
+
+	@Schema(description = "The payee's c/o line", examples = "c/o Bertil Bertilsson")
+	private String payeeCareOf;
+
+	@Schema(description = "The payee's zip code", examples = "85230")
+	private String payeeZipCode;
+
+	@Schema(description = "The payee's city", examples = "Sundsvall")
+	private String payeeCity;
+
+	@Schema(description = "The payee's bank clearing number", examples = "8327-9")
+	private String clearingNumber;
+
+	@Schema(description = "The payee's bank account number", examples = "123 456 789-0")
+	private String accountNumber;
+
+	@Schema(description = "The local payment number, when applicable", examples = "4711")
+	private String localPaymentNumber;
+
+	@Schema(description = "The invoice number, when applicable", examples = "2026-00417")
+	private String invoiceNumber;
+
+	@Schema(description = "Whether the payment uses OCR", examples = "false")
+	private boolean usesOcr;
+
+	@ArraySchema(arraySchema = @Schema(description = "Free-text message lines printed on the payment"), schema = @Schema(implementation = String.class, examples = "Ekonomiskt bistånd augusti 2026"))
+	private List<String> messageLines;
+
+	@Schema(description = "When the payment was created", accessMode = Schema.AccessMode.READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
+	private OffsetDateTime created;
+
+	@Schema(description = "When the payment was last modified", accessMode = Schema.AccessMode.READ_ONLY)
+	@DateTimeFormat(iso = DATE_TIME)
+	private OffsetDateTime modified;
+
+	public static Payment create() {
+		return new Payment();
+	}
+
+	public String getId() {
+		return id;
+	}
+
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public Payment withId(final String id) {
+		this.id = id;
+		return this;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public void setSource(final String source) {
+		this.source = source;
+	}
+
+	public Payment withSource(final String source) {
+		this.source = source;
+		return this;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
+	public Payment withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+		return this;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(final String status) {
+		this.status = status;
+	}
+
+	public Payment withStatus(final String status) {
+		this.status = status;
+		return this;
+	}
+
+	public String getMoneyType() {
+		return moneyType;
+	}
+
+	public void setMoneyType(final String moneyType) {
+		this.moneyType = moneyType;
+	}
+
+	public Payment withMoneyType(final String moneyType) {
+		this.moneyType = moneyType;
+		return this;
+	}
+
+	public LocalDate getPaymentDate() {
+		return paymentDate;
+	}
+
+	public void setPaymentDate(final LocalDate paymentDate) {
+		this.paymentDate = paymentDate;
+	}
+
+	public Payment withPaymentDate(final LocalDate paymentDate) {
+		this.paymentDate = paymentDate;
+		return this;
+	}
+
+	public BigDecimal getAmount() {
+		return amount;
+	}
+
+	public void setAmount(final BigDecimal amount) {
+		this.amount = amount;
+	}
+
+	public Payment withAmount(final BigDecimal amount) {
+		this.amount = amount;
+		return this;
+	}
+
+	public String getApplicationMonth() {
+		return applicationMonth;
+	}
+
+	public void setApplicationMonth(final String applicationMonth) {
+		this.applicationMonth = applicationMonth;
+	}
+
+	public Payment withApplicationMonth(final String applicationMonth) {
+		this.applicationMonth = applicationMonth;
+		return this;
+	}
+
+	public List<String> getReportedOnStakeholderIds() {
+		return reportedOnStakeholderIds;
+	}
+
+	public void setReportedOnStakeholderIds(final List<String> reportedOnStakeholderIds) {
+		this.reportedOnStakeholderIds = reportedOnStakeholderIds;
+	}
+
+	public Payment withReportedOnStakeholderIds(final List<String> reportedOnStakeholderIds) {
+		this.reportedOnStakeholderIds = reportedOnStakeholderIds;
+		return this;
+	}
+
+	public LocalDate getAccountingDate() {
+		return accountingDate;
+	}
+
+	public void setAccountingDate(final LocalDate accountingDate) {
+		this.accountingDate = accountingDate;
+	}
+
+	public Payment withAccountingDate(final LocalDate accountingDate) {
+		this.accountingDate = accountingDate;
+		return this;
+	}
+
+	public boolean isExcludedFromPayment() {
+		return excludedFromPayment;
+	}
+
+	public void setExcludedFromPayment(final boolean excludedFromPayment) {
+		this.excludedFromPayment = excludedFromPayment;
+	}
+
+	public Payment withExcludedFromPayment(final boolean excludedFromPayment) {
+		this.excludedFromPayment = excludedFromPayment;
+		return this;
+	}
+
+	public String getPayeeStakeholderId() {
+		return payeeStakeholderId;
+	}
+
+	public void setPayeeStakeholderId(final String payeeStakeholderId) {
+		this.payeeStakeholderId = payeeStakeholderId;
+	}
+
+	public Payment withPayeeStakeholderId(final String payeeStakeholderId) {
+		this.payeeStakeholderId = payeeStakeholderId;
+		return this;
+	}
+
+	public String getPaymentMethod() {
+		return paymentMethod;
+	}
+
+	public void setPaymentMethod(final String paymentMethod) {
+		this.paymentMethod = paymentMethod;
+	}
+
+	public Payment withPaymentMethod(final String paymentMethod) {
+		this.paymentMethod = paymentMethod;
+		return this;
+	}
+
+	public String getPayeeName() {
+		return payeeName;
+	}
+
+	public void setPayeeName(final String payeeName) {
+		this.payeeName = payeeName;
+	}
+
+	public Payment withPayeeName(final String payeeName) {
+		this.payeeName = payeeName;
+		return this;
+	}
+
+	public String getPayeeAddress() {
+		return payeeAddress;
+	}
+
+	public void setPayeeAddress(final String payeeAddress) {
+		this.payeeAddress = payeeAddress;
+	}
+
+	public Payment withPayeeAddress(final String payeeAddress) {
+		this.payeeAddress = payeeAddress;
+		return this;
+	}
+
+	public String getPayeeCareOf() {
+		return payeeCareOf;
+	}
+
+	public void setPayeeCareOf(final String payeeCareOf) {
+		this.payeeCareOf = payeeCareOf;
+	}
+
+	public Payment withPayeeCareOf(final String payeeCareOf) {
+		this.payeeCareOf = payeeCareOf;
+		return this;
+	}
+
+	public String getPayeeZipCode() {
+		return payeeZipCode;
+	}
+
+	public void setPayeeZipCode(final String payeeZipCode) {
+		this.payeeZipCode = payeeZipCode;
+	}
+
+	public Payment withPayeeZipCode(final String payeeZipCode) {
+		this.payeeZipCode = payeeZipCode;
+		return this;
+	}
+
+	public String getPayeeCity() {
+		return payeeCity;
+	}
+
+	public void setPayeeCity(final String payeeCity) {
+		this.payeeCity = payeeCity;
+	}
+
+	public Payment withPayeeCity(final String payeeCity) {
+		this.payeeCity = payeeCity;
+		return this;
+	}
+
+	public String getClearingNumber() {
+		return clearingNumber;
+	}
+
+	public void setClearingNumber(final String clearingNumber) {
+		this.clearingNumber = clearingNumber;
+	}
+
+	public Payment withClearingNumber(final String clearingNumber) {
+		this.clearingNumber = clearingNumber;
+		return this;
+	}
+
+	public String getAccountNumber() {
+		return accountNumber;
+	}
+
+	public void setAccountNumber(final String accountNumber) {
+		this.accountNumber = accountNumber;
+	}
+
+	public Payment withAccountNumber(final String accountNumber) {
+		this.accountNumber = accountNumber;
+		return this;
+	}
+
+	public String getLocalPaymentNumber() {
+		return localPaymentNumber;
+	}
+
+	public void setLocalPaymentNumber(final String localPaymentNumber) {
+		this.localPaymentNumber = localPaymentNumber;
+	}
+
+	public Payment withLocalPaymentNumber(final String localPaymentNumber) {
+		this.localPaymentNumber = localPaymentNumber;
+		return this;
+	}
+
+	public String getInvoiceNumber() {
+		return invoiceNumber;
+	}
+
+	public void setInvoiceNumber(final String invoiceNumber) {
+		this.invoiceNumber = invoiceNumber;
+	}
+
+	public Payment withInvoiceNumber(final String invoiceNumber) {
+		this.invoiceNumber = invoiceNumber;
+		return this;
+	}
+
+	public boolean isUsesOcr() {
+		return usesOcr;
+	}
+
+	public void setUsesOcr(final boolean usesOcr) {
+		this.usesOcr = usesOcr;
+	}
+
+	public Payment withUsesOcr(final boolean usesOcr) {
+		this.usesOcr = usesOcr;
+		return this;
+	}
+
+	public List<String> getMessageLines() {
+		return messageLines;
+	}
+
+	public void setMessageLines(final List<String> messageLines) {
+		this.messageLines = messageLines;
+	}
+
+	public Payment withMessageLines(final List<String> messageLines) {
+		this.messageLines = messageLines;
+		return this;
+	}
+
+	public OffsetDateTime getCreated() {
+		return created;
+	}
+
+	public void setCreated(final OffsetDateTime created) {
+		this.created = created;
+	}
+
+	public Payment withCreated(final OffsetDateTime created) {
+		this.created = created;
+		return this;
+	}
+
+	public OffsetDateTime getModified() {
+		return modified;
+	}
+
+	public void setModified(final OffsetDateTime modified) {
+		this.modified = modified;
+	}
+
+	public Payment withModified(final OffsetDateTime modified) {
+		this.modified = modified;
+		return this;
+	}
+
+	@Override
+	public boolean equals(final Object o) {
+		if (o == null || getClass() != o.getClass())
+			return false;
+		final Payment that = (Payment) o;
+		return excludedFromPayment == that.excludedFromPayment && usesOcr == that.usesOcr && Objects.equals(id, that.id)
+			&& Objects.equals(source, that.source) && Objects.equals(lifecareId, that.lifecareId) && Objects.equals(status, that.status)
+			&& Objects.equals(moneyType, that.moneyType) && Objects.equals(paymentDate, that.paymentDate) && Objects.equals(amount, that.amount)
+			&& Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(reportedOnStakeholderIds, that.reportedOnStakeholderIds)
+			&& Objects.equals(accountingDate, that.accountingDate) && Objects.equals(payeeStakeholderId, that.payeeStakeholderId)
+			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(payeeName, that.payeeName)
+			&& Objects.equals(payeeAddress, that.payeeAddress) && Objects.equals(payeeCareOf, that.payeeCareOf)
+			&& Objects.equals(payeeZipCode, that.payeeZipCode) && Objects.equals(payeeCity, that.payeeCity)
+			&& Objects.equals(clearingNumber, that.clearingNumber) && Objects.equals(accountNumber, that.accountNumber)
+			&& Objects.equals(localPaymentNumber, that.localPaymentNumber) && Objects.equals(invoiceNumber, that.invoiceNumber)
+			&& Objects.equals(messageLines, that.messageLines) && Objects.equals(created, that.created) && Objects.equals(modified, that.modified);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, source, lifecareId, status, moneyType, paymentDate, amount, applicationMonth, reportedOnStakeholderIds,
+			accountingDate, excludedFromPayment, payeeStakeholderId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode,
+			payeeCity, clearingNumber, accountNumber, localPaymentNumber, invoiceNumber, usesOcr, messageLines, created, modified);
+	}
+
+	@Override
+	public String toString() {
+		return "Payment{" +
+			"id='" + id + '\'' +
+			", source='" + source + '\'' +
+			", lifecareId='" + lifecareId + '\'' +
+			", status='" + status + '\'' +
+			", moneyType='" + moneyType + '\'' +
+			", paymentDate=" + paymentDate +
+			", amount=" + amount +
+			", applicationMonth='" + applicationMonth + '\'' +
+			", reportedOnStakeholderIds=" + reportedOnStakeholderIds +
+			", accountingDate=" + accountingDate +
+			", excludedFromPayment=" + excludedFromPayment +
+			", payeeStakeholderId='" + payeeStakeholderId + '\'' +
+			", paymentMethod='" + paymentMethod + '\'' +
+			", payeeName='" + payeeName + '\'' +
+			", payeeAddress='" + payeeAddress + '\'' +
+			", payeeCareOf='" + payeeCareOf + '\'' +
+			", payeeZipCode='" + payeeZipCode + '\'' +
+			", payeeCity='" + payeeCity + '\'' +
+			", clearingNumber='" + clearingNumber + '\'' +
+			", accountNumber='" + accountNumber + '\'' +
+			", localPaymentNumber='" + localPaymentNumber + '\'' +
+			", invoiceNumber='" + invoiceNumber + '\'' +
+			", usesOcr=" + usesOcr +
+			", messageLines=" + messageLines +
+			", created=" + created +
+			", modified=" + modified +
+			'}';
+	}
+}

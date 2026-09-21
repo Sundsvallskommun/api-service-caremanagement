@@ -21,7 +21,11 @@ public class RpaTaskRequest {
 	@MemberOf(RpaAction.class)
 	private String action;
 
-	@Schema(description = "Optional extra hints for the robot, merged into the queue item SpecificContent")
+	@Schema(description = "Optional extra hints for the robot, merged into the queue item SpecificContent. For REGISTER_PAYMENT, carries "
+		+ "only the key 'paymentId' (the payment's id on the errand) — the robot fetches everything else via "
+		+ "GET .../payments/{paymentId}, instead of putting payee names, account numbers or other personal data on the "
+		+ "Orchestrator queue, the same reason RpaContext is fetched per queue item rather than riding along in it.",
+		examples = "{\"paymentId\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\"}")
 	private Map<String, String> parameters;
 
 	public static RpaTaskRequest create() {
