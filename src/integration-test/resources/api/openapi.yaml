@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:50787
+- url: http://localhost:62351
   description: Generated server url
 tags:
 - name: Financial Assistance · Lifecare supplements
@@ -7994,10 +7994,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -10249,6 +10249,7 @@ components:
           - PREVIOUS_DECISION_ADVANCE_ON_BENEFIT
           - EXPENSE_PARTIALLY_REJECTED
           - CO_APPLICANT_SPLIT_PAYMENT
+          - SSBTEK_READ_FAILED
           examples:
           - EXPENSE_CAPPED
         typeDisplayName:
@@ -11543,6 +11544,15 @@ components:
             \ recorded on the errand recommendation"
           items:
             type: string
+        ssbtekError:
+          type: boolean
+          description: "Whether SSBTEK could not be read for this run. True means\
+            \ the rules were deliberately not evaluated: the calculation is left exactly\
+            \ as it stands and the errand carries the read-failure warning until a\
+            \ later run succeeds. Absent is read as false, so a caller that does not\
+            \ know about the flag behaves as before."
+          examples:
+          - false
       required:
       - applicant
       - applicationMonth
