@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.lifecare.service;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDocumentDTO;
+import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedPaymentDTO;
 import generated.se.sundsvall.lifecarefamilycare.CommonCalculationExpenseDTO;
 import generated.se.sundsvall.lifecarefamilycare.CommonCalculationIncomeDTO;
 import generated.se.sundsvall.lifecarefamilycare.CommonCalculationSpecialExpenseDTO;
@@ -11,6 +12,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonDTO
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDocumentDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedPaymentDTO;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -22,12 +24,13 @@ import se.sundsvall.caremanagement.lifecare.service.model.CalculationView;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionPersonView;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.lifecare.service.model.DocumentView;
+import se.sundsvall.caremanagement.lifecare.service.model.PaymentView;
 
 import static java.util.Optional.ofNullable;
 import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.toAmount;
 
 /**
- * Reads a person's Lifecare FamilyCare case history — calculations, decisions and documents — for the
+ * Reads a person's Lifecare FamilyCare case history — calculations, decisions, documents and payments — for the
  * caseworker-facing case view, and fetches a single document's content. Wraps {@link LifecareFamilyCareIntegration},
  * reducing the generated FamilyCare DTOs to the display projections in {@code lifecare.service.model} so the generated
  * types never leave the integration boundary.
@@ -100,6 +103,24 @@ public class LifecareCaseHistoryService {
 	}
 
 	/**
+	 * List the payments registered on a person in the given period, as Lifecare returns them. The payment's person list
+	 * (personal numbers) is not projected — see {@link PaymentView}.
+	 *
+	 * @param  personId the person's personal identity number (the payment owner)
+	 * @param  fromDate the inclusive start of the listing period
+	 * @param  toDate   the inclusive end of the listing period
+	 * @return          the person's payments in the period (empty when none)
+	 */
+	public List<PaymentView> listPayments(final String personId, final LocalDate fromDate, final LocalDate toDate) {
+		return ofNullable(lifecareFamilyCareIntegration.getPayments(personId, fromDate, toDate))
+			.map(ApiPaginationCompositePersonBasedPaymentDTO::getResult)
+			.orElseGet(List::of)
+			.stream()
+			.map(LifecareCaseHistoryService::toPayment)
+			.toList();
+	}
+
+	/**
 	 * Fetch a single document's content (the generated PDF) by its document id.
 	 *
 	 * @param  id the document id ({@code DocumentView.id})
@@ -168,5 +189,22 @@ public class LifecareCaseHistoryService {
 
 	private static DocumentView toDocument(final PersonBasedDocumentDTO dto) {
 		return new DocumentView(dto.getId(), dto.getTitle(), dto.getDate(), dto.getDocumentType(), dto.getOwnerId(), dto.getOwnerType());
+	}
+
+	private static PaymentView toPayment(final PersonBasedPaymentDTO dto) {
+		return new PaymentView(
+			dto.getId(),
+			toAmount(dto.getAmount()),
+			dto.getPaymentMethod(),
+			dto.getPayDate(),
+			dto.getClearing(),
+			dto.getAccountNumber(),
+			dto.getName(),
+			dto.getStreetAddress(),
+			dto.getCareOfAddress(),
+			dto.getPostalCode(),
+			dto.getPostalAddress(),
+			dto.getMessage(),
+			dto.getConcernedMonth());
 	}
 }

@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:52314
+- url: http://localhost:53063
   description: Generated server url
 tags:
 - name: Financial Assistance · Lifecare supplements
@@ -25,6 +25,12 @@ tags:
   description: "Financial assistance monitorings — date-bound watch/reminder objects\
     \ on an errand, with full CRUD. Unlike the income warnings they carry no acknowledge\
     \ lifecycle."
+- name: Financial Assistance · Proposals
+  description: "The decision proposal (beslutsförslag) and payment proposal (utbetalningsfö\
+    rslag) — derived on every read from the calculation draft, the application and\
+    \ the applicant's Lifecare history; only the section warnings they raise are stored.\
+    \ Recomputed when the CALCULATION (→ decision) and DECISION (→ payment) sections\
+    \ are approved."
 - name: Notifications
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen; expired ones are purged by a daily background job.
@@ -6497,6 +6503,71 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payment-proposal:
+    get:
+      tags:
+      - Financial Assistance · Proposals
+      summary: Read the payment proposal (utbetalningsförslag)
+      description: "The proposed payment for the PAYMENT tab, derived on every read\
+        \ from the calculation draft, the application and the applicant's previous\
+        \ Lifecare payments — never stored. Returned as a 'payments' list with one\
+        \ entry so the frontend can split it into several payments. Payment date =\
+        \ the 27th of the calculation's month, moved to the Friday before when the\
+        \ 27th is a Saturday (26th) or Sunday (25th); public holidays are not considered.\
+        \ Amount = the whole estimated bistånd (same estimate as the decision proposal;\
+        \ null with an 'explanation' when no norm is known). Payee = the account the\
+        \ applicant stated in the application when paymentSameAsPrevious=false, else\
+        \ the previous Lifecare payment's payee ('payeeSource' says which); 'payeeOptions'\
+        \ lists every distinct payee on the applicant's payments in the last 12 months\
+        \ (FamilyCare has no payee register). accountingCode (kontering) is always\
+        \ null — not available from FamilyCare. Reading also reconciles the PAYMENT-section\
+        \ warnings (a medsökande exists → check for delad utbetalning) and returns\
+        \ them. 404 when the errand has no calculation draft."
+      operationId: getPaymentProposal
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentProposal"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/monitorings/count:
     get:
       tags:
@@ -6651,6 +6722,69 @@ paths:
                 oneOf:
                 - $ref: "#/components/schemas/Problem"
                 - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/decision-proposal:
+    get:
+      tags:
+      - Financial Assistance · Proposals
+      summary: Read the decision proposal (beslutsförslag)
+      description: "The proposed decision for the DECISION tab, derived on every read\
+        \ from the calculation draft and the applicant's most recent Lifecare decision\
+        \ — never stored. Outcome rule: estimatedAmount <= 0 → AVSLAG; > 0 and every\
+        \ expense fully approved → BIFALL; > 0 and any expense approved below its\
+        \ applied amount → DELAVSLAG. The amount is an estimate: normSum (the applicant's\
+        \ previous Lifecare calculation's norm) + expenseSum + specialExpenseSum −\
+        \ incomeSum from the draft; when no previous norm is known the outcome and\
+        \ amount are null and 'explanation' says why. Period = the calculation's period;\
+        \ reason = the previous decision's orsak (with a list of alternatives); phraseText\
+        \ = 'Bifall månad med/utan barn' on an approved outcome. Reading also reconciles\
+        \ the DECISION-section warnings (previous decision was förskott på förmån;\
+        \ one per expense not approved in full) and returns them. 404 when the errand\
+        \ has no calculation draft."
+      operationId: getDecisionProposal
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionProposal"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "500":
           description: Internal server error
           content:
@@ -9371,6 +9505,9 @@ components:
           - NORM_MISMATCH_PREVIOUS_CALCULATION
           - SSBTEK_DAY_CHECK
           - PARENTAL_BENEFIT_PERIOD_CHECK
+          - PREVIOUS_DECISION_ADVANCE_ON_BENEFIT
+          - EXPENSE_PARTIALLY_REJECTED
+          - CO_APPLICANT_SPLIT_PAYMENT
           examples:
           - EXPENSE_CAPPED
         typeDisplayName:
@@ -9378,6 +9515,18 @@ components:
           description: Swedish display name for the warning type
           examples:
           - Kapad kostnad
+          readOnly: true
+        section:
+          type: string
+          description: "The Draken view section (tab) the warning belongs to — derived\
+            \ from the type: the decision proposal's types are DECISION, the payment\
+            \ proposal's are PAYMENT, everything else is CALCULATION"
+          enum:
+          - CALCULATION
+          - DECISION
+          - PAYMENT
+          examples:
+          - CALCULATION
           readOnly: true
         sourceKey:
           type: string
@@ -11437,6 +11586,156 @@ components:
             or it could not be resolved
           examples:
           - 19850505T002
+    Payee:
+      type: object
+      description: A payment recipient — name and account details.
+      properties:
+        name:
+          type: string
+          description: The payee name as registered on the payment
+          examples:
+          - Anna Andersson
+        paymentMethod:
+          type: string
+          description: The payment method as Lifecare names it (free text)
+          examples:
+          - Bankkonto
+        clearing:
+          type: string
+          description: "The clearing number, when the method is a bank account"
+          examples:
+          - "1234"
+        accountNumber:
+          type: string
+          description: "The account number, when the method is a bank account"
+          examples:
+          - "5678901"
+    PaymentProposal:
+      type: object
+      description: "The payment proposal (utbetalningsförslag) — derived data, recomputed\
+        \ on every read."
+      properties:
+        payments:
+          type: array
+          description: The proposed payments — always exactly one entry from the service;
+            the frontend may split it into several before registering
+          items:
+            $ref: "#/components/schemas/ProposedPayment"
+        payeeOptions:
+          type: array
+          description: "Every distinct payee seen on the applicant's Lifecare payments\
+            \ in the last 12 months — the dropdown alternatives. FamilyCare has no\
+            \ payee register, so this is the only source"
+          items:
+            $ref: "#/components/schemas/Payee"
+        payeeSource:
+          type: string
+          description: "Where the proposed payee came from: PREVIOUS_PAYMENT (the\
+            \ most recent Lifecare payment) or APPLICATION (the applicant stated a\
+            \ new account in the application, paymentSameAsPrevious=false). Null when\
+            \ no payee could be proposed"
+          enum:
+          - PREVIOUS_PAYMENT
+          - APPLICATION
+          examples:
+          - PREVIOUS_PAYMENT
+        previousPayment:
+          $ref: "#/components/schemas/PreviousPayment"
+          description: "The applicant's most recent Lifecare payment, or null when\
+            \ none was found (or Lifecare could not be read)"
+        explanation:
+          type: string
+          description: "Why the proposal is incomplete (Swedish), e.g. no norm is\
+            \ known so no amount could be estimated. Null when the proposal is complete"
+          examples:
+          - Ingen norm kunde läsas från Lifecare – beloppet kunde inte beräknas.
+        warnings:
+          type: array
+          description: The PAYMENT-section warnings this proposal raised (reconciled
+            on every read)
+          items:
+            $ref: "#/components/schemas/Warning"
+    PreviousPayment:
+      type: object
+      description: The applicant's most recent Lifecare payment.
+      properties:
+        payDate:
+          type: string
+          description: The Lifecare pay date (raw Lifecare string)
+          examples:
+          - 2026-05-27
+        amount:
+          type: number
+          description: The paid amount
+          examples:
+          - 8500
+        concernedMonth:
+          type: string
+          description: The month the payment concerned (raw Lifecare string)
+          examples:
+          - 2026-06
+        paymentMethod:
+          type: string
+          description: The payment method as Lifecare names it
+          examples:
+          - Bankkonto
+        name:
+          type: string
+          description: The payee name
+          examples:
+          - Anna Andersson
+        clearing:
+          type: string
+          description: "The clearing number, when a bank account"
+          examples:
+          - "1234"
+        accountNumber:
+          type: string
+          description: "The account number, when a bank account"
+          examples:
+          - "5678901"
+        message:
+          type: string
+          description: The payment message
+          examples:
+          - Ekonomiskt bistånd juni
+    ProposedPayment:
+      type: object
+      description: One proposed payment (a proposal always starts with a single entry;
+        the frontend may split it).
+      properties:
+        paymentDate:
+          type: string
+          format: date
+          description: "The proposed payment date: the 27th of the concerned month,\
+            \ moved to the Friday before when the 27th is a Saturday (→ 26th) or Sunday\
+            \ (→ 25th). Swedish public holidays (röda dagar) are not considered —\
+            \ an open question with verksamheten"
+          examples:
+          - 2026-06-26
+        amount:
+          type: number
+          description: The proposed amount — the whole estimated bistånd (see DecisionProposal.estimatedAmount).
+            Null when no norm is known
+          examples:
+          - 4250
+        concernedMonth:
+          type: string
+          description: The month the payment concerns (YYYY-MM) — the calculation's
+            application month
+          examples:
+          - 2026-06
+        payee:
+          $ref: "#/components/schemas/Payee"
+          description: "The proposed payee, or null when neither a previous payment\
+            \ nor the application names one"
+        accountingCode:
+          type:
+          - string
+          - "null"
+          description: "Kontering. Always null for now: the FamilyCare API exposes\
+            \ no accounting code, so the caseworker fills it in. The field exists\
+            \ so the frontend can render and post it"
     MonitoringCount:
       type: object
       description: The number of monitorings on the errand
@@ -11703,6 +12002,168 @@ components:
           description: "The fields in the section, in render order"
           items:
             $ref: "#/components/schemas/FormSnapshotField"
+    DecisionOption:
+      type: object
+      description: An allowed decision outcome (decision alternatives) for an errand
+        type.
+      properties:
+        code:
+          type: string
+          description: "The decision outcome code, stored on the Decision row's value"
+          examples:
+          - BIFALL
+        displayName:
+          type: string
+          description: Human-readable label for the outcome
+          examples:
+          - Bifall
+        carriesAmount:
+          type: boolean
+          description: "Whether the outcome carries an amount — true for outcomes\
+            \ that grant an amount, false for ones that imply 0 (e.g. a rejection)"
+          examples:
+          - true
+    DecisionProposal:
+      type: object
+      description: "The decision proposal (beslutsförslag) — derived data, recomputed\
+        \ on every read."
+      properties:
+        outcome:
+          type: string
+          description: "The proposed decision outcome. Rule: estimatedAmount <= 0\
+            \ → AVSLAG; estimatedAmount > 0 and every expense fully approved → BIFALL;\
+            \ estimatedAmount > 0 and any expense approved below the applied amount\
+            \ → DELAVSLAG. Null when no amount could be estimated (see explanation)"
+          enum:
+          - BIFALL
+          - DELAVSLAG
+          - AVSLAG
+          examples:
+          - BIFALL
+        outcomeOptions:
+          type: array
+          description: Every outcome the caseworker can pick instead — the errand
+            type's decision catalogue
+          items:
+            $ref: "#/components/schemas/DecisionOption"
+        periodFrom:
+          type: string
+          format: date
+          description: The proposed decision period start — the calculation's period
+          examples:
+          - 2026-06-01
+        periodTo:
+          type: string
+          format: date
+          description: The proposed decision period end — the calculation's period
+          examples:
+          - 2026-06-30
+        concernedMonth:
+          type: string
+          description: The calculation's application month (YYYY-MM)
+          examples:
+          - 2026-06
+        estimatedAmount:
+          type: number
+          description: "The estimated bistånd: normSum + expenseSum + specialExpenseSum\
+            \ − incomeSum, all from the calculation draft except the norm. The draft\
+            \ carries no norm sum, so it is taken from the applicant's most recent\
+            \ Lifecare calculation before the application month (previous household\
+            \ norm); the final amount is what Lifecare computes when the calculation\
+            \ is committed. Null when no previous norm is known (see explanation)"
+          examples:
+          - 4250
+        normSum:
+          type: number
+          description: The norm sum the estimate is based on (the previous Lifecare
+            calculation's norm). Null when unknown
+          examples:
+          - 6200
+        incomeSum:
+          type: number
+          description: The draft's income sum (effective amounts)
+          examples:
+          - 3000
+        expenseSum:
+          type: number
+          description: The draft's expense sum (effective = approved amounts)
+          examples:
+          - 800
+        specialExpenseSum:
+          type: number
+          description: The draft's special-expense sum (effective = approved amounts)
+          examples:
+          - 250
+        explanation:
+          type: string
+          description: Why the proposal is incomplete (Swedish) — e.g. no previous
+            norm could be read so no amount/outcome was proposed. Null when the proposal
+            is complete
+          examples:
+          - Ingen norm kunde läsas från Lifecare – beloppet kunde inte beräknas.
+        reason:
+          type: string
+          description: "The proposed orsak: the previous Lifecare decision's reason,\
+            \ or null when there is none"
+          examples:
+          - Försörjningsstöd
+        reasonOptions:
+          type: array
+          description: Every orsak the caseworker can pick instead — a seeded EB list
+            plus the previous decision's reason (FamilyCare has no reason catalogue)
+          items:
+            type: string
+        phraseText:
+          type: string
+          description: "The proposed frastext: on BIFALL/DELAVSLAG, \"Bifall månad\
+            \ med barn\" when children are in the calculation, else \"Bifall månad\
+            \ utan barn\". Null otherwise"
+          examples:
+          - Bifall månad utan barn
+        previousDecision:
+          $ref: "#/components/schemas/PreviousDecision"
+          description: "The applicant's most recent Lifecare decision, or null when\
+            \ none was found (or Lifecare could not be read)"
+        warnings:
+          type: array
+          description: The DECISION-section warnings this proposal raised (reconciled
+            on every read)
+          items:
+            $ref: "#/components/schemas/Warning"
+    PreviousDecision:
+      type: object
+      description: The applicant's most recent Lifecare decision.
+      properties:
+        type:
+          type: string
+          description: The Lifecare decision type (free text as Lifecare names it)
+          examples:
+          - Bifall
+        reason:
+          type: string
+          description: The Lifecare decision reason / orsak (free text)
+          examples:
+          - Försörjningsstöd
+        periodFrom:
+          type: string
+          description: The decision period start (raw Lifecare string)
+          examples:
+          - 2026-05-01
+        periodTo:
+          type: string
+          description: The decision period end (raw Lifecare string)
+          examples:
+          - 2026-05-31
+        amount:
+          type: number
+          description: The decided amount
+          examples:
+          - 8500
+        date:
+          type: string
+          description: The decision date (raw Lifecare string)
+          examples:
+          - 2026-04-28
     PrefilledChild:
       type: object
       description: "A child pre-filled from Lifecare for a financial assistance renewal.\
@@ -12175,27 +12636,6 @@ components:
           description: Number of matching errands
           examples:
           - 42
-    DecisionOption:
-      type: object
-      description: An allowed decision outcome (decision alternatives) for an errand
-        type.
-      properties:
-        code:
-          type: string
-          description: "The decision outcome code, stored on the Decision row's value"
-          examples:
-          - BIFALL
-        displayName:
-          type: string
-          description: Human-readable label for the outcome
-          examples:
-          - Bifall
-        carriesAmount:
-          type: boolean
-          description: "Whether the outcome carries an amount — true for outcomes\
-            \ that grant an amount, false for ones that imply 0 (e.g. a rejection)"
-          examples:
-          - true
     ErrandTypeSchema:
       type: object
       description: "Form descriptor for an errand type slug — statuses, roles and\

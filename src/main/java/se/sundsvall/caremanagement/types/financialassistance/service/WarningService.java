@@ -3,6 +3,8 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -65,6 +67,22 @@ public class WarningService {
 	public static final String TYPE_SSBTEK_DAY_CHECK = "SSBTEK_DAY_CHECK";
 	public static final String TYPE_PARENTAL_BENEFIT_PERIOD_CHECK = "PARENTAL_BENEFIT_PERIOD_CHECK";
 
+	// Section proposal warnings — raised by the decision proposal (DECISION tab) and the payment proposal (PAYMENT tab),
+	// recomputed on every proposal read and on section approval. They are reconciled per owning section
+	// ({@link #reconcileByTypes}), so the daily calculation reconcile never touches them and vice versa.
+	public static final String TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT = "PREVIOUS_DECISION_ADVANCE_ON_BENEFIT";
+	public static final String TYPE_EXPENSE_PARTIALLY_REJECTED = "EXPENSE_PARTIALLY_REJECTED";
+	public static final String TYPE_CO_APPLICANT_SPLIT_PAYMENT = "CO_APPLICANT_SPLIT_PAYMENT";
+
+	/** The warning types the decision proposal owns (shown on the DECISION tab). */
+	public static final Set<String> DECISION_PROPOSAL_TYPES = Set.of(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT, TYPE_EXPENSE_PARTIALLY_REJECTED);
+	/** The warning types the payment proposal owns (shown on the PAYMENT tab). */
+	public static final Set<String> PAYMENT_PROPOSAL_TYPES = Set.of(TYPE_CO_APPLICANT_SPLIT_PAYMENT);
+
+	public static final String SECTION_CALCULATION = "CALCULATION";
+	public static final String SECTION_DECISION = "DECISION";
+	public static final String SECTION_PAYMENT = "PAYMENT";
+
 	public static final String STATUS_OPEN = "OPEN";
 	public static final String STATUS_ACKNOWLEDGED = "ACKNOWLEDGED";
 	public static final String STATUS_CLOSED = "CLOSED";
@@ -100,7 +118,10 @@ public class WarningService {
 		Map.entry(TYPE_HOUSEHOLD_COUNT_MISMATCH_PREVIOUS_CALCULATION, "Antal i bostaden stämmer inte mot föregående beräkning"),
 		Map.entry(TYPE_SSBTEK_DAY_CHECK, "Kontrollera antal dagar"),
 		Map.entry(TYPE_PARENTAL_BENEFIT_PERIOD_CHECK, "Kontrollera föräldrapenningperiod"),
-		Map.entry(TYPE_NORM_MISMATCH_PREVIOUS_CALCULATION, "Norm stämmer inte mot föregående beräkning"));
+		Map.entry(TYPE_NORM_MISMATCH_PREVIOUS_CALCULATION, "Norm stämmer inte mot föregående beräkning"),
+		Map.entry(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT, "Föregående beslut var förskott på förmån"),
+		Map.entry(TYPE_EXPENSE_PARTIALLY_REJECTED, "Utgift delvis ej godkänd – delavslag"),
+		Map.entry(TYPE_CO_APPLICANT_SPLIT_PAYMENT, "Medsökande – kontrollera delad utbetalning"));
 
 	/** Warning status → Swedish display name. */
 	private static final Map<String, String> STATUS_DISPLAY_NAME = Map.ofEntries(
@@ -141,21 +162,64 @@ public class WarningService {
 		}
 
 		ofNullable(sectionWarnings).ifPresent(inputs::addAll);
-		reconcile(errandId, inputs);
+		// The calculation owns every type except the ones the section proposals raise — those live and die with their
+		// own reconcile, so the daily prepare must neither create nor auto-close them.
+		reconcile(errandId, inputs, type -> !isProposalType(type));
 	}
 
 	/**
-	 * Reconcile the errand's warnings against {@code current}: create the ones that are new, refresh the message of ones
-	 * still OPEN/ACKNOWLEDGED, and auto-close ones whose cause has resolved (no longer in {@code current}). A CLOSED
-	 * warning is never re-opened.
+	 * Reconcile one section proposal's warnings — only the rows whose {@code type} is in {@code ownedTypes} are
+	 * created, refreshed or auto-closed; every other warning on the errand is left untouched. The same semantics as the
+	 * calculation reconcile otherwise: insert OPEN when new, refresh the message when still OPEN/ACKNOWLEDGED, never
+	 * re-open a CLOSED one, auto-close when absent. Every {@code current} input must carry one of the owned types.
+	 * Returns the errand's warnings of the owned types after the reconcile, oldest first.
+	 */
+	@Transactional
+	public List<Warning> reconcileByTypes(final String errandId, final Set<String> ownedTypes, final List<WarningInput> current) {
+		current.stream()
+			.filter(input -> !ownedTypes.contains(input.type()))
+			.findFirst()
+			.ifPresent(input -> {
+				throw new IllegalArgumentException("warning type " + input.type() + " is not owned by this reconcile");
+			});
+		reconcile(errandId, current, ownedTypes::contains);
+		return warningRepository.findByErrandId(errandId).stream()
+			.filter(entity -> ownedTypes.contains(entity.getType()))
+			.sorted(comparing(FaWarningEntity::getCreated, nullsLast(naturalOrder())))
+			.map(WarningService::toWarning)
+			.toList();
+	}
+
+	private static boolean isProposalType(final String type) {
+		return DECISION_PROPOSAL_TYPES.contains(type) || PAYMENT_PROPOSAL_TYPES.contains(type);
+	}
+
+	/** The Draken tab a warning type belongs to — the section proposals own theirs, everything else is the calculation. */
+	static String sectionOf(final String type) {
+		if (DECISION_PROPOSAL_TYPES.contains(type)) {
+			return SECTION_DECISION;
+		}
+		if (PAYMENT_PROPOSAL_TYPES.contains(type)) {
+			return SECTION_PAYMENT;
+		}
+		return SECTION_CALCULATION;
+	}
+
+	/**
+	 * Reconcile the errand's warnings of the types {@code owned} accepts against {@code current}: create the ones that
+	 * are new, refresh the message of ones still OPEN/ACKNOWLEDGED, and auto-close ones whose cause has resolved (no
+	 * longer in {@code current}). A CLOSED warning is never re-opened. Existing warnings of a type outside {@code owned}
+	 * are invisible to the reconcile — neither refreshed nor closed.
 	 *
 	 * <p>
 	 * Package-private and intentionally not {@code @Transactional}: it is only ever invoked by the public
-	 * {@code reconcile*Warnings} entry points above, which carry the transaction — a self-invoked {@code @Transactional}
+	 * {@code reconcile*} entry points above, which carry the transaction — a self-invoked {@code @Transactional}
 	 * method would bypass the Spring proxy and silently run without one.
 	 */
-	void reconcile(final String errandId, final List<WarningInput> current) {
-		final var existing = warningRepository.findByErrandId(errandId);
+	void reconcile(final String errandId, final List<WarningInput> current, final Predicate<String> owned) {
+		final var existing = warningRepository.findByErrandId(errandId).stream()
+			.filter(entity -> owned.test(entity.getType()))
+			.toList();
 		final var currentKeys = current.stream().map(input -> key(input.type(), input.sourceKey())).collect(toSet());
 
 		for (final var input : current) {
@@ -251,6 +315,7 @@ public class WarningService {
 			.withId(entity.getId())
 			.withType(entity.getType())
 			.withTypeDisplayName(TYPE_DISPLAY_NAME.get(entity.getType()))
+			.withSection(sectionOf(entity.getType()))
 			.withSourceKey(entity.getSourceKey())
 			.withMessage(entity.getMessage())
 			.withStatus(entity.getStatus())

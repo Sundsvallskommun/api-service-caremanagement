@@ -1,7 +1,9 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import com.google.code.beanmatchers.BeanMatchers;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Random;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
@@ -16,16 +18,18 @@ import static java.time.OffsetDateTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
 
-class WarningTest {
+class PayeeTest {
 
 	@BeforeAll
 	static void setup() {
 		BeanMatchers.registerValueGenerator(() -> now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+		BeanMatchers.registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(10000)), LocalDate.class);
+		BeanMatchers.registerValueGenerator(() -> List.of("item-" + new Random().nextInt()), List.class);
 	}
 
 	@Test
 	void testBean() {
-		MatcherAssert.assertThat(Warning.class, allOf(
+		MatcherAssert.assertThat(Payee.class, allOf(
 			hasValidBeanConstructor(),
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
@@ -35,26 +39,21 @@ class WarningTest {
 
 	@Test
 	void testBuilderMethods() {
-		final var created = OffsetDateTime.parse("2026-06-01T12:00:00Z");
-		final var warning = Warning.create()
-			.withId("id")
-			.withType("MISSING_SSBTEK")
-			.withSection("CALCULATION")
-			.withSourceKey("Dagersättning")
-			.withMessage("Saknas fortfarande i SSBTEK: Dagersättning")
-			.withStatus("OPEN")
-			.withAutoResolved(false)
-			.withCreated(created)
-			.withUpdated(created);
+		final var result = Payee.create()
+			.withName("Anna Andersson")
+			.withPaymentMethod("Bankkonto")
+			.withClearing("1234")
+			.withAccountNumber("5678901");
 
-		assertThat(warning.getId()).isEqualTo("id");
-		assertThat(warning.getType()).isEqualTo("MISSING_SSBTEK");
-		assertThat(warning.getStatus()).isEqualTo("OPEN");
-		assertThat(warning.getMessage()).isEqualTo("Saknas fortfarande i SSBTEK: Dagersättning");
+		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getName()).isEqualTo("Anna Andersson");
+		assertThat(result.getPaymentMethod()).isEqualTo("Bankkonto");
+		assertThat(result.getClearing()).isEqualTo("1234");
+		assertThat(result.getAccountNumber()).isEqualTo("5678901");
 	}
 
 	@Test
 	void testNoDirtOnCreatedBean() {
-		assertThat(Warning.create()).hasAllNullFieldsOrPropertiesExcept("autoResolved");
+		assertThat(Payee.create()).hasAllNullFieldsOrProperties();
 	}
 }

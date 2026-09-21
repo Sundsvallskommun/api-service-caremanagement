@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -22,6 +23,8 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -149,7 +152,7 @@ class WarningServiceTest {
 			.map(WarningServiceTest::readConstant)
 			.toList();
 
-		assertThat(types).hasSize(30);
+		assertThat(types).hasSize(33);
 		assertThat(types).allSatisfy(type -> {
 			assertThat(displayNames).as("display name for %s", type).containsKey(type);
 			assertThat(displayNames.get(type)).as("display name for %s", type).isNotBlank();
@@ -220,5 +223,74 @@ class WarningServiceTest {
 		final var field = WarningService.class.getDeclaredField("TYPE_DISPLAY_NAME");
 		field.setAccessible(true);
 		return (Map<String, String>) field.get(null);
+	}
+
+	@Test
+	void calculationReconcileLeavesProposalWarningsAlone() {
+		final var proposalWarning = warning("EXPENSE_PARTIALLY_REJECTED", "RENT", "OPEN");
+		final var calculationWarning = warning("MISSING_SSBTEK", "Dagersättning", "OPEN");
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(proposalWarning, calculationWarning));
+
+		service.reconcileCalculationWarnings(ERRAND_ID, List.of(), List.of(), List.of(), null, null);
+
+		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
+		verify(repositoryMock).save(captor.capture()); // only the calculation one auto-closes
+		assertThat(captor.getValue().getType()).isEqualTo("MISSING_SSBTEK");
+		assertThat(proposalWarning.getStatus()).isEqualTo("OPEN");
+	}
+
+	@Test
+	void reconcileByTypesTouchesOnlyTheOwnedTypes() {
+		final var stale = warning("EXPENSE_PARTIALLY_REJECTED", "INTERNET", "ACKNOWLEDGED"); // no longer computed → auto-close
+		final var open = warning("EXPENSE_PARTIALLY_REJECTED", "RENT", "OPEN"); // still computed → refresh
+		final var closed = warning("PREVIOUS_DECISION_ADVANCE_ON_BENEFIT", "previous-decision", "CLOSED"); // computed again → never re-opened
+		final var paymentWarning = warning("CO_APPLICANT_SPLIT_PAYMENT", "co-applicant", "OPEN"); // another section → untouched
+		final var calculationWarning = warning("MISSING_SSBTEK", "Dagersättning", "OPEN"); // untouched
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(stale, open, closed, paymentWarning, calculationWarning));
+		when(repositoryMock.save(any(FaWarningEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.reconcileByTypes(ERRAND_ID, WarningService.DECISION_PROPOSAL_TYPES, List.of(
+			new WarningService.WarningInput("EXPENSE_PARTIALLY_REJECTED", "RENT", "new text"),
+			new WarningService.WarningInput("PREVIOUS_DECISION_ADVANCE_ON_BENEFIT", "previous-decision", "förskott")));
+
+		verify(repositoryMock, times(2)).save(any(FaWarningEntity.class)); // refresh + auto-close
+		assertThat(open.getMessage()).isEqualTo("new text");
+		assertThat(stale.getStatus()).isEqualTo("CLOSED");
+		assertThat(stale.isAutoResolved()).isTrue();
+		assertThat(closed.getStatus()).isEqualTo("CLOSED");
+		assertThat(paymentWarning.getStatus()).isEqualTo("OPEN");
+		assertThat(calculationWarning.getStatus()).isEqualTo("OPEN");
+		assertThat(result).extracting(Warning::getType, Warning::getSection).containsExactlyInAnyOrder(
+			tuple("EXPENSE_PARTIALLY_REJECTED", "DECISION"), tuple("EXPENSE_PARTIALLY_REJECTED", "DECISION"), tuple("PREVIOUS_DECISION_ADVANCE_ON_BENEFIT", "DECISION"));
+	}
+
+	@Test
+	void reconcileByTypesCreatesNewWarningsOpen() {
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		when(repositoryMock.save(any(FaWarningEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.reconcileByTypes(ERRAND_ID, Set.of("CO_APPLICANT_SPLIT_PAYMENT"), List.of(new WarningService.WarningInput("CO_APPLICANT_SPLIT_PAYMENT", "co-applicant", "text")));
+
+		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
+		verify(repositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getType()).isEqualTo("CO_APPLICANT_SPLIT_PAYMENT");
+		assertThat(captor.getValue().getStatus()).isEqualTo("OPEN");
+		assertThat(captor.getValue().getMessage()).isEqualTo("text");
+	}
+
+	@Test
+	void reconcileByTypesRejectsAnInputOfAnotherType() {
+		final var input = List.of(new WarningService.WarningInput("MISSING_SSBTEK", "x", "text"));
+		final var owned = WarningService.PAYMENT_PROPOSAL_TYPES;
+
+		assertThrows(IllegalArgumentException.class, () -> service.reconcileByTypes(ERRAND_ID, owned, input));
+		verify(repositoryMock, never()).save(any());
+	}
+
+	@Test
+	void sectionOfDerivesTheTabFromTheType() {
+		assertThat(WarningService.sectionOf("EXPENSE_PARTIALLY_REJECTED")).isEqualTo("DECISION");
+		assertThat(WarningService.sectionOf("CO_APPLICANT_SPLIT_PAYMENT")).isEqualTo("PAYMENT");
+		assertThat(WarningService.sectionOf("MISSING_SSBTEK")).isEqualTo("CALCULATION");
 	}
 }

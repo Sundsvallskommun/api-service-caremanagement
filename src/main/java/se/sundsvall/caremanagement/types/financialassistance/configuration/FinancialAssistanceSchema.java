@@ -22,7 +22,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * server timestamp) are deliberately omitted from the collectable fields.
  * </p>
  */
-final class FinancialAssistanceSchema {
+public final class FinancialAssistanceSchema {
 
 	private FinancialAssistanceSchema() {}
 
@@ -95,6 +95,11 @@ final class FinancialAssistanceSchema {
 	 */
 	static ErrandTypeSchemaContribution contribution(final String typeSlug, final String applicationType) {
 		return new Contribution(typeSlug, applicationType, forApplicationType(applicationType), DECISION_OPTIONS);
+	}
+
+	/** The decision outcomes a caseworker can pick — the same catalogue the errand-type schema exposes. */
+	public static List<DecisionOption> decisionOptions() {
+		return DECISION_OPTIONS;
 	}
 
 	private record Contribution(String typeSlug, String applicationType, List<FieldDescriptor> fields, List<DecisionOption> decisionOptions)
