@@ -13076,11 +13076,13 @@ components:
           description: "The proposed orsak: the previous Lifecare decision's reason,\
             \ or null when there is none"
           examples:
-          - Försörjningsstöd
+          - "Arbetslös, ingen ersättning/stöd"
         reasonOptions:
           type: array
-          description: Every orsak the caseworker can pick instead — a seeded EB list
-            plus the previous decision's reason (FamilyCare has no reason catalogue)
+          description: "Every orsak the caseworker can pick instead — Lifecare's orsak-catalogue\
+            \ (försörjningshinder) in Lifecare's order, plus the previous decision's\
+            \ reason when that is not in the catalogue (FamilyCare exposes no reason\
+            \ catalogue over the API)"
           items:
             type: string
         phraseText:
@@ -13113,7 +13115,7 @@ components:
           type: string
           description: The Lifecare decision reason / orsak (free text)
           examples:
-          - Försörjningsstöd
+          - "Arbetslös, ingen ersättning/stöd"
         periodFrom:
           type: string
           description: The decision period start (raw Lifecare string)

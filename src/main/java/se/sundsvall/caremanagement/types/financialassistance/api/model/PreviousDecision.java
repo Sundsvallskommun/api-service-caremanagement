@@ -14,7 +14,7 @@ public class PreviousDecision {
 	@Schema(description = "The Lifecare decision type (free text as Lifecare names it)", examples = "Bifall")
 	private String type;
 
-	@Schema(description = "The Lifecare decision reason / orsak (free text)", examples = "Försörjningsstöd")
+	@Schema(description = "The Lifecare decision reason / orsak (free text)", examples = "Arbetslös, ingen ersättning/stöd")
 	private String reason;
 
 	@Schema(description = "The decision period start (raw Lifecare string)", examples = "2026-05-01")

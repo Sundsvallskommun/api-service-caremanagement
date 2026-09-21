@@ -45,14 +45,36 @@ public class DecisionProposalService {
 	static final int PREVIOUS_DECISION_LOOKBACK_MONTHS = 12;
 
 	/**
-	 * The seeded orsak list. FamilyCare exposes no reason catalogue, so this is the EB set verksamheten works with; the
-	 * previous decision's reason is added on top when it is not already here. Extend as verksamheten names more.
+	 * The orsak catalogue — Lifecare's own "Orsak"-list (försörjningshinder) as verksamheten sees it in the beslutsbild,
+	 * transcribed 2026-09-21 from screenshots of the live dropdown, in Lifecare's order. FamilyCare exposes no reason
+	 * catalogue over the API, so this list is maintained here; the group headings in the dropdown are optgroup labels
+	 * and cannot be picked, so they are not options. The previous decision's reason is added on top when it is not
+	 * already here — a decision older than the current catalogue must still be proposable.
 	 */
 	static final List<String> DEFAULT_REASON_OPTIONS = List.of(
-		"Försörjningsstöd",
-		"Livsföring i övrigt",
-		"Ekonomiskt bistånd",
-		"Förskott på förmån");
+		"Arbetar deltid ofrivilligt, otillräcklig inkomst",
+		"Arbetar deltid ofrivilligt, väntar på inkomst",
+		"Arbetar heltid, otillräcklig inkomst",
+		"Arbetar heltid, väntar på inkomst",
+		"Arbetshinder, sociala skäl",
+		"Arbetslös, ingen ersättning/stöd",
+		"Arbetslös, otillräcklig ersättning/stöd",
+		"Arbetslös, väntar på ersättning/stöd",
+		"Ensamkommande ungdom 18-20 år, gymnasiestuderande",
+		"Etableringsers. saknas (prestationsförmåga <25%)",
+		"Etableringsersättning otillräcklig",
+		"Etableringsersättning, väntar på",
+		"Föräldrapenning otillräcklig",
+		"Föräldrapenning, väntar på",
+		"Pension/Äldreförsörjningsstöd otillräcklig",
+		"Pension/Äldreförsörjningsstöd, Väntar på",
+		"Saknar barnomsorg",
+		"Sjuk/Aktivitetsersättning, otillräcklig ersättning",
+		"Sjuk/Aktivitetsersättning, väntar på ersättning",
+		"Sjukskriven m läkarintyg, ingen sjukpenning",
+		"Sjukskriven m läkarintyg, otillräcklig sjukpenning",
+		"Sjukskriven m läkarintyg, väntar på sjukpenning",
+		"Utan försörjningshinder");
 
 	static final String WARNING_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT = "Föregående beslut i Lifecare var förskott på förmån – kontrollera vilket beslut som ska fattas";
 	static final String WARNING_EXPENSE_PARTIALLY_REJECTED = "Ansökt belopp för %s är %s kronor, %s kronor har inte godkänts – delavslag";

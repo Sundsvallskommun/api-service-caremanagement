@@ -65,10 +65,12 @@ public class DecisionProposal {
 		examples = "Ingen norm kunde läsas från Lifecare – beloppet kunde inte beräknas.")
 	private String explanation;
 
-	@Schema(description = "The proposed orsak: the previous Lifecare decision's reason, or null when there is none", examples = "Försörjningsstöd")
+	@Schema(description = "The proposed orsak: the previous Lifecare decision's reason, or null when there is none", examples = "Arbetslös, ingen ersättning/stöd")
 	private String reason;
 
-	@ArraySchema(schema = @Schema(implementation = String.class), arraySchema = @Schema(description = "Every orsak the caseworker can pick instead — a seeded EB list plus the previous decision's reason (FamilyCare has no reason catalogue)"))
+	@ArraySchema(schema = @Schema(implementation = String.class),
+		arraySchema = @Schema(
+			description = "Every orsak the caseworker can pick instead — Lifecare's orsak-catalogue (försörjningshinder) in Lifecare's order, plus the previous decision's reason when that is not in the catalogue (FamilyCare exposes no reason catalogue over the API)"))
 	private List<String> reasonOptions = new ArrayList<>();
 
 	@Schema(description = "The proposed frastext: on BIFALL/DELAVSLAG, \"Bifall månad med barn\" when children are in the calculation, else \"Bifall månad utan barn\". Null otherwise", examples = "Bifall månad utan barn")

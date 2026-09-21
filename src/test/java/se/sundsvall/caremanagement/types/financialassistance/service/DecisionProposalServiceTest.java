@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static se.sundsvall.caremanagement.types.financialassistance.service.DecisionProposalService.DEFAULT_REASON_OPTIONS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.DECISION_PROPOSAL_TYPES;
 
 @ExtendWith(MockitoExtension.class)
@@ -90,7 +92,7 @@ class DecisionProposalServiceTest {
 		assertThat(proposal.getSpecialExpenseSum()).isEqualByComparingTo("250");
 		assertThat(proposal.getExplanation()).isNull();
 		assertThat(proposal.getReason()).isEqualTo("Boendekostnad");
-		assertThat(proposal.getReasonOptions()).containsExactly("Försörjningsstöd", "Livsföring i övrigt", "Ekonomiskt bistånd", "Förskott på förmån", "Boendekostnad");
+		assertThat(proposal.getReasonOptions()).containsExactlyElementsOf(withPreviousReason("Boendekostnad")); // outside the catalogue → appended
 		assertThat(proposal.getPhraseText()).isEqualTo("Bifall månad med barn");
 		assertThat(proposal.getPreviousDecision().getType()).isEqualTo("Bifall");
 		assertThat(proposal.getWarnings()).isEmpty();
@@ -103,7 +105,7 @@ class DecisionProposalServiceTest {
 			NormExpenseRow.create().withCostType("OTHER").withOtherSubType("Busskort").withAppliedAmount(new BigDecimal("500"))));
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft, Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
 		when(lifecareCaseHistoryServiceMock.listDecisions(eq(APPLICANT), eq(LocalDate.parse("2025-06-01")), eq(LocalDate.parse("2026-06-30"))))
-			.thenReturn(List.of(decision("Förskott på förmån", "Försörjningsstöd")));
+			.thenReturn(List.of(decision("Förskott på förmån", "Arbetslös, ingen ersättning/stöd")));
 		final var reconciled = List.of(Warning.create().withType("EXPENSE_PARTIALLY_REJECTED"));
 		final var captor = ArgumentCaptor.forClass(List.class);
 		when(warningServiceMock.reconcileByTypes(eq(ERRAND_ID), eq(DECISION_PROPOSAL_TYPES), captor.capture())).thenReturn(reconciled);
@@ -112,8 +114,8 @@ class DecisionProposalServiceTest {
 
 		assertThat(proposal.getOutcome()).isEqualTo("DELAVSLAG");
 		assertThat(proposal.getPhraseText()).isEqualTo("Bifall månad utan barn");
-		assertThat(proposal.getReason()).isEqualTo("Försörjningsstöd");
-		assertThat(proposal.getReasonOptions()).containsExactly("Försörjningsstöd", "Livsföring i övrigt", "Ekonomiskt bistånd", "Förskott på förmån"); // no duplicate
+		assertThat(proposal.getReason()).isEqualTo("Arbetslös, ingen ersättning/stöd");
+		assertThat(proposal.getReasonOptions()).containsExactlyElementsOf(DEFAULT_REASON_OPTIONS); // already in the catalogue → no duplicate
 		assertThat(proposal.getWarnings()).isSameAs(reconciled);
 		@SuppressWarnings("unchecked")
 		final List<WarningService.WarningInput> inputs = captor.getValue();
@@ -162,5 +164,20 @@ class DecisionProposalServiceTest {
 		assertThat(proposal.getOutcome()).isEqualTo("BIFALL");
 		assertThat(proposal.getPreviousDecision()).isNull();
 		verify(warningServiceMock).reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of());
+	}
+
+	@Test
+	void theOrsakCatalogueIsLifecaresOwnList() {
+		assertThat(DEFAULT_REASON_OPTIONS)
+			.hasSize(23)
+			.doesNotHaveDuplicates()
+			.startsWith("Arbetar deltid ofrivilligt, otillräcklig inkomst")
+			.contains("Sjukskriven m läkarintyg, ingen sjukpenning", "Etableringsers. saknas (prestationsförmåga <25%)")
+			.endsWith("Utan försörjningshinder")
+			.doesNotContain("Arbetar deltid, ofrivilligt", "Arbetslös", "Sjukskriven med läkarintyg"); // dropdown group headings are not pickable
+	}
+
+	private static List<String> withPreviousReason(final String reason) {
+		return Stream.concat(DEFAULT_REASON_OPTIONS.stream(), Stream.of(reason)).toList();
 	}
 }
