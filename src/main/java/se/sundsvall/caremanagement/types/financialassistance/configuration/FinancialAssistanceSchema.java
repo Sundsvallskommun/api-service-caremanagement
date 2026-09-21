@@ -8,6 +8,11 @@ import se.sundsvall.caremanagement.errandtypes.service.ErrandTypeSchemaContribut
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_RENEWAL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_SUPPLEMENTARY;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.OUTCOME_AVSLAG;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.OUTCOME_AVVISNING;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.OUTCOME_BIFALL;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.OUTCOME_DELAVSLAG;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.outcomeCarriesAmount;
 
 /**
  * The financial assistance form-field catalogue: the superset of {@code data.*} fields the three application types
@@ -42,10 +47,10 @@ public final class FinancialAssistanceSchema {
 	 * for the outcomes that imply a 0 belopp (avslag/avvisning), which the frontend uses to zero the amount.
 	 */
 	private static final List<DecisionOption> DECISION_OPTIONS = List.of(
-		decisionOption("BIFALL", "Bifall", true),
-		decisionOption("DELAVSLAG", "Delavslag", true),
-		decisionOption("AVSLAG", "Avslag", false),
-		decisionOption("AVVISNING", "Avvisning", false));
+		decisionOption(OUTCOME_BIFALL, "Bifall"),
+		decisionOption(OUTCOME_DELAVSLAG, "Delavslag"),
+		decisionOption(OUTCOME_AVSLAG, "Avslag"),
+		decisionOption(OUTCOME_AVVISNING, "Avvisning"));
 
 	/** The superset of collectable fields, in form order. */
 	private static final List<FieldDescriptor> CATALOG = List.of(
@@ -106,11 +111,11 @@ public final class FinancialAssistanceSchema {
 		implements
 		ErrandTypeSchemaContribution {}
 
-	private static DecisionOption decisionOption(final String code, final String displayName, final boolean carriesAmount) {
+	private static DecisionOption decisionOption(final String code, final String displayName) {
 		return DecisionOption.create()
 			.withCode(code)
 			.withDisplayName(displayName)
-			.withCarriesAmount(carriesAmount);
+			.withCarriesAmount(outcomeCarriesAmount(code));
 	}
 
 	private static FieldDescriptor scalar(final String name, final String type, final boolean required,

@@ -80,6 +80,26 @@ public class FinancialAssistanceModuleConfig {
 	 */
 	public static final Set<String> TERMINAL_STATUSES = Set.of(STATUS_CLOSED, STATUS_WITHDRAWN, STATUS_REJECTED);
 
+	// Decision outcome codes — the value stored on the PAYMENT Decision row and the Decision-form dropdown
+	public static final String OUTCOME_BIFALL = "BIFALL";
+	public static final String OUTCOME_DELAVSLAG = "DELAVSLAG";
+	public static final String OUTCOME_AVSLAG = "AVSLAG";
+	public static final String OUTCOME_AVVISNING = "AVVISNING";
+
+	/** Every recognised decision outcome. */
+	public static final Set<String> OUTCOMES = Set.of(OUTCOME_BIFALL, OUTCOME_DELAVSLAG, OUTCOME_AVSLAG, OUTCOME_AVVISNING);
+
+	/**
+	 * The outcomes that grant something and therefore carry a belopp and one or more utbetalningar. Avslag/avvisning
+	 * imply 0 kr, no payment, and take the process's rejected path.
+	 */
+	public static final Set<String> OUTCOMES_CARRYING_AMOUNT = Set.of(OUTCOME_BIFALL, OUTCOME_DELAVSLAG);
+
+	/** Whether a decision outcome grants an amount — see {@link #OUTCOMES_CARRYING_AMOUNT}. */
+	public static boolean outcomeCarriesAmount(final String outcome) {
+		return outcome != null && OUTCOMES_CARRYING_AMOUNT.contains(outcome);
+	}
+
 	// Status display names (Swedish — the labels Draken shows the caseworker)
 	private static final String DISPLAY_RECEIVED = "Inkommen";
 	private static final String DISPLAY_NEEDS_MANUAL_REVIEW = "Kräver manuell granskning";

@@ -112,6 +112,24 @@ public class FinancialAssistanceEntity implements Auditable {
 	@TimeZoneStorage(TimeZoneStorageType.NORMALIZE)
 	private OffsetDateTime lastDailyRunAt;
 
+	// Set by "Besluta och utbetala" (finalize) — null until the caseworker has finalized the errand.
+
+	/**
+	 * Whether the caseworker changed the household size (gemensamma kostnader) — forwarded to the WRITE_NORMBERAKNING
+	 * robot.
+	 */
+	@Column(name = "household_size_changed")
+	private Boolean householdSizeChanged;
+
+	@Column(name = "notify_mina_sidor")
+	private Boolean notifyMinaSidor;
+
+	@Column(name = "notify_digital_mailbox")
+	private Boolean notifyDigitalMailbox;
+
+	@Column(name = "notify_letter")
+	private Boolean notifyLetter;
+
 	@ElementCollection
 	@CollectionTable(name = "errand_fa_child", joinColumns = @JoinColumn(name = "errand_id"))
 	private List<FaChild> children;
@@ -368,6 +386,38 @@ public class FinancialAssistanceEntity implements Auditable {
 		this.lastDailyRunAt = lastDailyRunAt;
 	}
 
+	public Boolean getHouseholdSizeChanged() {
+		return householdSizeChanged;
+	}
+
+	public void setHouseholdSizeChanged(final Boolean householdSizeChanged) {
+		this.householdSizeChanged = householdSizeChanged;
+	}
+
+	public Boolean getNotifyMinaSidor() {
+		return notifyMinaSidor;
+	}
+
+	public void setNotifyMinaSidor(final Boolean notifyMinaSidor) {
+		this.notifyMinaSidor = notifyMinaSidor;
+	}
+
+	public Boolean getNotifyDigitalMailbox() {
+		return notifyDigitalMailbox;
+	}
+
+	public void setNotifyDigitalMailbox(final Boolean notifyDigitalMailbox) {
+		this.notifyDigitalMailbox = notifyDigitalMailbox;
+	}
+
+	public Boolean getNotifyLetter() {
+		return notifyLetter;
+	}
+
+	public void setNotifyLetter(final Boolean notifyLetter) {
+		this.notifyLetter = notifyLetter;
+	}
+
 	public List<FaChild> getChildren() {
 		return children;
 	}
@@ -588,6 +638,26 @@ public class FinancialAssistanceEntity implements Auditable {
 		return this;
 	}
 
+	public FinancialAssistanceEntity withHouseholdSizeChanged(final Boolean householdSizeChanged) {
+		this.householdSizeChanged = householdSizeChanged;
+		return this;
+	}
+
+	public FinancialAssistanceEntity withNotifyMinaSidor(final Boolean notifyMinaSidor) {
+		this.notifyMinaSidor = notifyMinaSidor;
+		return this;
+	}
+
+	public FinancialAssistanceEntity withNotifyDigitalMailbox(final Boolean notifyDigitalMailbox) {
+		this.notifyDigitalMailbox = notifyDigitalMailbox;
+		return this;
+	}
+
+	public FinancialAssistanceEntity withNotifyLetter(final Boolean notifyLetter) {
+		this.notifyLetter = notifyLetter;
+		return this;
+	}
+
 	public FinancialAssistanceEntity withChildren(final List<FaChild> children) {
 		this.children = children;
 		return this;
@@ -664,6 +734,8 @@ public class FinancialAssistanceEntity implements Auditable {
 			&& Objects.equals(staysInMunicipality, that.staysInMunicipality)
 			&& Objects.equals(attestation, that.attestation) && Objects.equals(attestedAt, that.attestedAt)
 			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt)
+			&& Objects.equals(householdSizeChanged, that.householdSizeChanged) && Objects.equals(notifyMinaSidor, that.notifyMinaSidor)
+			&& Objects.equals(notifyDigitalMailbox, that.notifyDigitalMailbox) && Objects.equals(notifyLetter, that.notifyLetter)
 			&& Objects.equals(children, that.children) && Objects.equals(costs, that.costs) && Objects.equals(incomes, that.incomes)
 			&& Objects.equals(pendingBenefits, that.pendingBenefits) && Objects.equals(assets, that.assets)
 			&& Objects.equals(persons, that.persons) && Objects.equals(plannings, that.plannings)
@@ -676,7 +748,8 @@ public class FinancialAssistanceEntity implements Auditable {
 		return Objects.hash(errandId, applicationType, maritalStatus, periodMonth, periodYear, periodChoice, normType,
 			hasChildrenUnder21, childrenResidenceChanged, housingForm, housingPersonCount, housingRoomsPlusKitchen, housingChanged,
 			hasIncomes, hasPendingBenefits, hasAssets, staysInMunicipality, attestation,
-			attestedAt, lastDailyRunAt, children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
+			attestedAt, lastDailyRunAt, householdSizeChanged, notifyMinaSidor, notifyDigitalMailbox, notifyLetter,
+			children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
 			created, modified);
 	}
 

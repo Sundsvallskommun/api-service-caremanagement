@@ -43,7 +43,8 @@ class FinancialAssistanceEntityTest {
 			hasValidBeanToStringExcluding("periodChoice", "otherBenefitDescription", "livelihoodDescription", "hasChildrenUnder21", "childrenResidenceChanged",
 				"childrenResidenceChangeDescription", "housingPersonCount", "housingRoomsPlusKitchen", "housingDescription", "housingChanged",
 				"housingChangeDescription", "hasIncomes", "hasPendingBenefits", "hasAssets", "staysInMunicipality", "stayDescription",
-				"attestedAt", "children", "costs", "incomes", "pendingBenefits", "assets", "persons", "plannings", "plannedActivities", "jobApplications")));
+				"attestedAt", "householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter",
+				"children", "costs", "incomes", "pendingBenefits", "assets", "persons", "plannings", "plannedActivities", "jobApplications")));
 	}
 
 	@Test
@@ -85,6 +86,10 @@ class FinancialAssistanceEntityTest {
 			.withAttestation(true)
 			.withAttestedAt(ATTESTED_AT)
 			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withHouseholdSizeChanged(true)
+			.withNotifyMinaSidor(true)
+			.withNotifyDigitalMailbox(false)
+			.withNotifyLetter(false)
 			.withChildren(children)
 			.withCosts(costs)
 			.withIncomes(incomes)
@@ -125,6 +130,10 @@ class FinancialAssistanceEntityTest {
 			.returns(true, FinancialAssistanceEntity::getAttestation)
 			.returns(ATTESTED_AT, FinancialAssistanceEntity::getAttestedAt)
 			.returns(LAST_DAILY_RUN_AT, FinancialAssistanceEntity::getLastDailyRunAt)
+			.returns(true, FinancialAssistanceEntity::getHouseholdSizeChanged)
+			.returns(true, FinancialAssistanceEntity::getNotifyMinaSidor)
+			.returns(false, FinancialAssistanceEntity::getNotifyDigitalMailbox)
+			.returns(false, FinancialAssistanceEntity::getNotifyLetter)
 			.returns(children, FinancialAssistanceEntity::getChildren)
 			.returns(costs, FinancialAssistanceEntity::getCosts)
 			.returns(incomes, FinancialAssistanceEntity::getIncomes)

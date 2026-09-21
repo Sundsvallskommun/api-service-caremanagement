@@ -117,6 +117,52 @@ class RpaServiceTest {
 	}
 
 	@Test
+	void referenceSuffixKeepsRepeatedActionsDistinctAndReportsTheReference() {
+		final var client = mock(RpaClient.class);
+		final var service = new RpaService(client, properties(true), errandServiceMock);
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withErrandNumber(ERRAND_NUMBER));
+
+		final var first = service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.REGISTER_PAYMENT, "1", Map.of("sequence", "1"));
+		final var second = service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.REGISTER_PAYMENT, "2", Map.of("sequence", "2"));
+		final var blank = service.enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, RpaAction.WRITE_DECISION, " ", Map.of());
+
+		assertThat(first).isEqualTo(new RpaService.EnqueueOutcome(NAMESPACE + ":" + ERRAND_ID + ":REGISTER_PAYMENT:1", true));
+		assertThat(second).isEqualTo(new RpaService.EnqueueOutcome(NAMESPACE + ":" + ERRAND_ID + ":REGISTER_PAYMENT:2", true));
+		assertThat(blank).isEqualTo(new RpaService.EnqueueOutcome(NAMESPACE + ":" + ERRAND_ID + ":WRITE_DECISION", true)); // blank suffix = none
+
+		final var captor = ArgumentCaptor.forClass(AddQueueItemParameters.class);
+		verify(client, times(3)).addQueueItem(eq(FOLDER_ID), captor.capture());
+		assertThat(captor.getAllValues().stream().map(p -> p.itemData().reference()).toList()).containsExactly(
+			NAMESPACE + ":" + ERRAND_ID + ":REGISTER_PAYMENT:1",
+			NAMESPACE + ":" + ERRAND_ID + ":REGISTER_PAYMENT:2",
+			NAMESPACE + ":" + ERRAND_ID + ":WRITE_DECISION");
+		assertThat(captor.getAllValues().getFirst().itemData().specificContent()).containsEntry("sequence", "1").containsEntry("errandNumber", ERRAND_NUMBER);
+	}
+
+	@Test
+	void disabledReportsTheReferenceButNotEnqueued() {
+		final var client = mock(RpaClient.class);
+		final var service = new RpaService(client, properties(false), errandServiceMock);
+
+		final var outcome = service.enqueue(MUNICIPALITY_ID, null, ERRAND_ID, RpaAction.WRITE_DECISION, null, Map.of());
+
+		assertThat(outcome).isEqualTo(new RpaService.EnqueueOutcome(ERRAND_ID + ":WRITE_DECISION", false));
+		verifyNoInteractions(client);
+	}
+
+	@Test
+	void duplicateReportsEnqueued() {
+		final var client = mock(RpaClient.class);
+		doThrow(Problem.valueOf(CONFLICT, "Queue item already exists, error code 1016"))
+			.when(client).addQueueItem(any(), any());
+		final var service = new RpaService(client, properties(true), errandServiceMock);
+
+		final var outcome = service.enqueue(MUNICIPALITY_ID, null, ERRAND_ID, RpaAction.WRITE_DECISION, null, Map.of());
+
+		assertThat(outcome).isEqualTo(new RpaService.EnqueueOutcome(ERRAND_ID + ":WRITE_DECISION", true)); // already there = on the queue
+	}
+
+	@Test
 	void enqueueWithoutSpecificContentUsesDefaults() {
 		final var client = mock(RpaClient.class);
 		final var service = new RpaService(client, properties(true), errandServiceMock);

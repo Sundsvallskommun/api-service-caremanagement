@@ -117,6 +117,19 @@ class DocumentServiceTest {
 	}
 
 	@Test
+	void listLocallyAuthoredIdsLeavesOutLifecareMirrors() {
+		when(repositoryMock.findByErrandIdOrderByDocumentDateTimeDescCreatedDesc(ERRAND_ID)).thenReturn(List.of(
+			DocumentEntity.create().withId("d1").withErrandId(ERRAND_ID).withSource("CASEWORKER"),
+			DocumentEntity.create().withId("d2").withErrandId(ERRAND_ID).withSource("LIFECARE").withLifecareId("27"),
+			DocumentEntity.create().withId("d3").withErrandId(ERRAND_ID))); // pre-provenance row: authored here
+
+		final var result = service.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(result).containsExactly("d1", "d3");
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	@Test
 	void readReturnsDocument() {
 		when(repositoryMock.findByIdAndErrandId("d1", ERRAND_ID)).thenReturn(Optional.of(
 			DocumentEntity.create().withId("d1").withErrandId(ERRAND_ID).withHeading("H").withStatus(WORKING)));

@@ -10,6 +10,7 @@ import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Asset;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Child;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Cost;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Income;
@@ -46,7 +47,9 @@ class FinancialAssistanceMapperTest {
 		final var data = fullData();
 		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
 
-		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("lastDailyRunAt", "created", "modified");
+		// the finalize-owned fields (household flag, notify channels) are never set from client data
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("lastDailyRunAt", "created", "modified",
+			"householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter");
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
 		assertThat(entity.getApplicationType()).isEqualTo("NEW");
 		assertThat(entity.getMaritalStatus()).isEqualTo("SINGLE");
@@ -189,8 +192,8 @@ class FinancialAssistanceMapperTest {
 		assertThat(result.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
 		assertThat(result.getCreated()).isEqualTo(CREATED);
 		assertThat(result.getModified()).isEqualTo(MODIFIED);
-		// client fields replaced
-		assertThat(result).hasNoNullFieldsOrProperties();
+		// client fields replaced; the finalize-owned fields are not client data and stay untouched (null here)
+		assertThat(result).hasNoNullFieldsOrPropertiesExcept("householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter");
 		assertThat(result.getMaritalStatus()).isEqualTo("SINGLE");
 		assertThat(result.getPeriodMonth()).isEqualTo(6);
 		assertThat(result.getPeriodYear()).isEqualTo(2026);
@@ -356,6 +359,24 @@ class FinancialAssistanceMapperTest {
 		assertThat(view.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
 		assertThat(view.getData()).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(view.getData().getApplicationType()).isEqualTo("RENEWAL");
+		assertThat(view.getHouseholdSizeChanged()).isTrue();
+		assertThat(view.getCommunication()).isEqualTo(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(true));
+	}
+
+	@Test
+	void toViewLeavesFinalizeFieldsNullUntilFinalized() {
+		final var view = FinancialAssistanceMapper.toView(Errand.create().withId("errand-1"), FinancialAssistanceEntity.create().withErrandId("errand-1"));
+
+		assertThat(view.getCommunication()).isNull();
+		assertThat(view.getHouseholdSizeChanged()).isNull();
+	}
+
+	@Test
+	void toCommunicationChannelsIsNullUntilAnyFlagIsSet() {
+		assertThat(FinancialAssistanceMapper.toCommunicationChannels(null)).isNull();
+		assertThat(FinancialAssistanceMapper.toCommunicationChannels(FinancialAssistanceEntity.create())).isNull();
+		assertThat(FinancialAssistanceMapper.toCommunicationChannels(FinancialAssistanceEntity.create().withNotifyLetter(false)))
+			.isEqualTo(CommunicationChannels.create().withLetter(false));
 	}
 
 	@Test
@@ -368,6 +389,8 @@ class FinancialAssistanceMapperTest {
 		assertThat(view).isNotNull();
 		assertThat(view.getId()).isEqualTo("errand-1");
 		assertThat(view.getData()).isNull();
+		assertThat(view.getCommunication()).isNull();
+		assertThat(view.getHouseholdSizeChanged()).isNull();
 	}
 
 	@Test
@@ -570,6 +593,10 @@ class FinancialAssistanceMapperTest {
 			.withAttestation(false)
 			.withAttestedAt(ATTESTED_AT)
 			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withHouseholdSizeChanged(true)
+			.withNotifyMinaSidor(true)
+			.withNotifyDigitalMailbox(false)
+			.withNotifyLetter(true)
 			.withChildren(List.of(FaChild.create()
 				.withPartyId("20180101-1234")
 				.withFirstName("Kid")

@@ -79,6 +79,23 @@ public class DocumentService {
 			.toList();
 	}
 
+	/**
+	 * The ids of the errand's documents that were authored here rather than mirrored from Lifecare — everything whose
+	 * {@code source} is not {@code LIFECARE}. These are the documents Lifecare does not yet have, so they are what the
+	 * financial assistance finalize step hands to the RPA {@code WRITE_DOCUMENT} item; the robot fetches each document
+	 * back through the document API by id. Exposed as ids only so the caller (another module) needs no document model
+	 * type.
+	 */
+	@Transactional(readOnly = true)
+	public List<String> listLocallyAuthoredIds(final String municipalityId, final String namespace, final String errandId) {
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
+
+		return documentRepository.findByErrandIdOrderByDocumentDateTimeDescCreatedDesc(errandId).stream()
+			.filter(entity -> !SOURCE_LIFECARE.equals(entity.getSource()))
+			.map(DocumentEntity::getId)
+			.toList();
+	}
+
 	@Transactional(readOnly = true)
 	public Document read(final String municipalityId, final String namespace, final String errandId, final String documentId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);

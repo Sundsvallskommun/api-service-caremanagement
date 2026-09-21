@@ -79,6 +79,22 @@ public class JournalEntryService {
 			.toList();
 	}
 
+	/**
+	 * The ids of the errand's journal entries that were authored here rather than mirrored from Lifecare — everything
+	 * whose {@code source} is not {@code LIFECARE}. These are the entries Lifecare does not yet have, so they are what the
+	 * financial assistance finalize step hands to the RPA {@code WRITE_JOURNAL} item; the robot fetches each entry back
+	 * through the journal API by id. Exposed as ids only so the caller (another module) needs no journal model type.
+	 */
+	@Transactional(readOnly = true)
+	public List<String> listLocallyAuthoredIds(final String municipalityId, final String namespace, final String errandId) {
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
+
+		return journalEntryRepository.findByErrandIdOrderByEntryDateTimeDescCreatedDesc(errandId).stream()
+			.filter(entity -> !SOURCE_LIFECARE.equals(entity.getSource()))
+			.map(JournalEntryEntity::getId)
+			.toList();
+	}
+
 	@Transactional(readOnly = true)
 	public JournalEntry read(final String municipalityId, final String namespace, final String errandId, final String journalEntryId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
