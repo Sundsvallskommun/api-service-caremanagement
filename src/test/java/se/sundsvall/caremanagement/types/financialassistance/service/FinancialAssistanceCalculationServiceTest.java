@@ -98,6 +98,9 @@ class FinancialAssistanceCalculationServiceTest {
 	private PeriodRuleFeeder periodRuleFeederMock;
 
 	@Mock
+	private MissingIncomeFeeder missingIncomeFeederMock;
+
+	@Mock
 	private RpaService rpaServiceMock;
 
 	@InjectMocks

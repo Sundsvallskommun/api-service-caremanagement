@@ -63,6 +63,14 @@ public class WarningService {
 	public static final String TYPE_HOUSEHOLD_COUNT_MISMATCH_PREVIOUS_CALCULATION = "HOUSEHOLD_COUNT_MISMATCH_PREVIOUS_CALCULATION";
 	public static final String TYPE_NORM_MISMATCH_PREVIOUS_CALCULATION = "NORM_MISMATCH_PREVIOUS_CALCULATION";
 
+	/**
+	 * An income SSBTEK reported in the comparison period and not in the control period — verksamhetens "föregående
+	 * månad = facit". Distinct from {@link #TYPE_INCOME_MISSING_VS_PREVIOUS_CALCULATION}, which compares against the
+	 * previous normberäkning in Lifecare (what a caseworker transferred) rather than against the previous SSBTEK
+	 * answer (what the agencies reported).
+	 */
+	public static final String TYPE_INCOME_MISSING_PREVIOUS_PERIOD = "INCOME_MISSING_PREVIOUS_PERIOD";
+
 	/** The rakel-eb-periodkontroll tables: the table's own text says which branch fired, so one type per decision. */
 	public static final String TYPE_SSBTEK_DAY_CHECK = "SSBTEK_DAY_CHECK";
 	public static final String TYPE_PARENTAL_BENEFIT_PERIOD_CHECK = "PARENTAL_BENEFIT_PERIOD_CHECK";
@@ -146,7 +154,8 @@ public class WarningService {
 		Map.entry(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT, "Föregående beslut var förskott på förmån"),
 		Map.entry(TYPE_EXPENSE_PARTIALLY_REJECTED, "Utgift delvis ej godkänd – delavslag"),
 		Map.entry(TYPE_CO_APPLICANT_SPLIT_PAYMENT, "Medsökande – kontrollera delad utbetalning"),
-		Map.entry(TYPE_SSBTEK_READ_FAILED, "SSBTEK kunde inte läsas"));
+		Map.entry(TYPE_SSBTEK_READ_FAILED, "SSBTEK kunde inte läsas"),
+		Map.entry(TYPE_INCOME_MISSING_PREVIOUS_PERIOD, "Inkomst saknas mot föregående SSBTEK-period"));
 
 	/** Warning status → Swedish display name. */
 	private static final Map<String, String> STATUS_DISPLAY_NAME = Map.ofEntries(

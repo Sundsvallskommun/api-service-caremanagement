@@ -80,12 +80,13 @@ public class FinancialAssistanceCalculationService {
 	private final CalculationFeeder calculationFeeder;
 	private final ApplicationRuleFeeder applicationRuleFeeder;
 	private final PeriodRuleFeeder periodRuleFeeder;
+	private final MissingIncomeFeeder missingIncomeFeeder;
 	private final RpaService rpaService;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
-		final RpaService rpaService) {
+		final MissingIncomeFeeder missingIncomeFeeder, final RpaService rpaService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
@@ -97,6 +98,7 @@ public class FinancialAssistanceCalculationService {
 		this.calculationFeeder = calculationFeeder;
 		this.applicationRuleFeeder = applicationRuleFeeder;
 		this.periodRuleFeeder = periodRuleFeeder;
+		this.missingIncomeFeeder = missingIncomeFeeder;
 		this.rpaService = rpaService;
 	}
 
@@ -204,15 +206,19 @@ public class FinancialAssistanceCalculationService {
 		final var incomeWarnings = applicationRuleFeeder.incomeComparisonWarnings(municipalityId, input.errand(),
 			previousIncomeAmounts(input.applicant(), input.applicationMonth()));
 		final var comparisonWarnings = applicationRuleFeeder.previousCalculationWarnings(municipalityId, input.errand(), previous);
+		// Parsed once and handed to both feeders below - it was parsed twice here until the missing-income feeder
+		// arrived and made the duplication obvious.
+		final var classifiedIncomes = calculationService.classifiedIncomes(input.classifiedIncomes());
 		// The SSBTEK period checks (rakel-eb-periodkontroll): day counts for aktivitetsstöd/etablerings-/
 		// utvecklingsersättning, and day count + gap-to-last-month for föräldrapenning.
-		final var periodWarnings = periodRuleFeeder.periodWarnings(municipalityId,
-			calculationService.classifiedIncomes(input.classifiedIncomes()));
+		final var periodWarnings = periodRuleFeeder.periodWarnings(municipalityId, classifiedIncomes);
+		// Verksamhetens "föregående månad = facit": an income SSBTEK reported last month and not this one.
+		final var missingIncomeWarnings = missingIncomeFeeder.missingIncomeWarnings(classifiedIncomes);
 		// Read after the merge, not before: the duplicate only exists once the refreshed process rows sit alongside
 		// whatever the caseworker has added by hand.
 		final var duplicateWarnings = draftService.duplicateIncomeWarnings(input.errandId());
 		return new DraftRefresh(changes, Stream.of(expenseFeed.warnings(), housingWarnings, questionWarnings, incomeWarnings,
-			comparisonWarnings, periodWarnings, duplicateWarnings)
+			comparisonWarnings, periodWarnings, missingIncomeWarnings, duplicateWarnings)
 			.flatMap(List::stream)
 			.toList());
 	}
