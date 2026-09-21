@@ -15,7 +15,7 @@ import se.sundsvall.dept44.common.validators.annotation.MemberOf;
 public class RpaTaskRequest {
 
 	@Schema(description = "The RPA action — selects the Lifecare flow the robot runs", examples = "FETCH_SUPPLEMENTS", requiredMode = Schema.RequiredMode.REQUIRED, allowableValues = {
-		"FETCH_SUPPLEMENTS", "WRITE_NORMBERAKNING", "WRITE_DECISION", "WRITE_JOURNAL", "WRITE_DOCUMENT", "WRITE_MONITORING", "REGISTER_PAYMENT"
+		"FETCH_SUPPLEMENTS", "WRITE_NORMBERAKNING", "WRITE_DECISION", "WRITE_JOURNAL", "WRITE_DOCUMENT", "WRITE_MONITORING", "REGISTER_PAYMENT", "ADD_PAYEE"
 	})
 	@NotBlank
 	@MemberOf(RpaAction.class)
@@ -24,7 +24,8 @@ public class RpaTaskRequest {
 	@Schema(description = "Optional extra hints for the robot, merged into the queue item SpecificContent. For REGISTER_PAYMENT, carries "
 		+ "only the key 'paymentId' (the payment's id on the errand) — the robot fetches everything else via "
 		+ "GET .../payments/{paymentId}, instead of putting payee names, account numbers or other personal data on the "
-		+ "Orchestrator queue, the same reason RpaContext is fetched per queue item rather than riding along in it.",
+		+ "Orchestrator queue, the same reason RpaContext is fetched per queue item rather than riding along in it. ADD_PAYEE carries only "
+		+ "the key 'payeeId' for the same reason.",
 		examples = "{\"paymentId\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\"}")
 	private Map<String, String> parameters;
 

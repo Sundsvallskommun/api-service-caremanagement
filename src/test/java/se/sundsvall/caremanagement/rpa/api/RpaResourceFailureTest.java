@@ -48,7 +48,7 @@ class RpaResourceFailureTest {
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
-				tuple("action", "must be one of: [REGISTER_PAYMENT, WRITE_DECISION, FETCH_SUPPLEMENTS, WRITE_DOCUMENT, WRITE_JOURNAL, WRITE_NORMBERAKNING, WRITE_MONITORING]")));
+				tuple("action", "must be one of: [ADD_PAYEE, REGISTER_PAYMENT, WRITE_DECISION, FETCH_SUPPLEMENTS, WRITE_DOCUMENT, WRITE_JOURNAL, WRITE_NORMBERAKNING, WRITE_MONITORING]")));
 
 		verifyNoInteractions(serviceMock);
 	}
@@ -64,7 +64,7 @@ class RpaResourceFailureTest {
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
 				tuple("action", "must not be blank"),
-				tuple("action", "must be one of: [REGISTER_PAYMENT, WRITE_DECISION, FETCH_SUPPLEMENTS, WRITE_DOCUMENT, WRITE_JOURNAL, WRITE_NORMBERAKNING, WRITE_MONITORING]")));
+				tuple("action", "must be one of: [ADD_PAYEE, REGISTER_PAYMENT, WRITE_DECISION, FETCH_SUPPLEMENTS, WRITE_DOCUMENT, WRITE_JOURNAL, WRITE_NORMBERAKNING, WRITE_MONITORING]")));
 
 		verifyNoInteractions(serviceMock);
 	}

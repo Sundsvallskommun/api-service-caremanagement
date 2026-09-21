@@ -38,5 +38,13 @@ public enum RpaAction {
 	WRITE_MONITORING,
 
 	/** Register the utbetalning in Lifecare (the handläggare's manual step, when automated). */
-	REGISTER_PAYMENT
+	REGISTER_PAYMENT,
+
+	/**
+	 * Add a betalningsmottagare the caseworker entered by hand to the client in Lifecare, so it becomes selectable on a
+	 * payment. Queued per payee (the payee id is the reference suffix), and the queue item carries only that id — the
+	 * robot reads the name and account via {@code GET .../payees/{payeeId}} and reports back to
+	 * {@code POST .../payees/{payeeId}/lifecare-result}.
+	 */
+	ADD_PAYEE
 }
