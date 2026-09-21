@@ -152,7 +152,7 @@ class WarningServiceTest {
 			.map(WarningServiceTest::readConstant)
 			.toList();
 
-		assertThat(types).hasSize(33);
+		assertThat(types).hasSize(34);
 		assertThat(types).allSatisfy(type -> {
 			assertThat(displayNames).as("display name for %s", type).containsKey(type);
 			assertThat(displayNames.get(type)).as("display name for %s", type).isNotBlank();
@@ -285,6 +285,50 @@ class WarningServiceTest {
 
 		assertThrows(IllegalArgumentException.class, () -> service.reconcileByTypes(ERRAND_ID, owned, input));
 		verify(repositoryMock, never()).save(any());
+	}
+
+	@Test
+	void reconcileSsbtekReadFailureRaisesOneWarningPerErrand() {
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		when(repositoryMock.save(any(FaWarningEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.reconcileSsbtekReadFailure(ERRAND_ID, true);
+
+		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
+		verify(repositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getType()).isEqualTo("SSBTEK_READ_FAILED");
+		assertThat(captor.getValue().getSourceKey()).isEqualTo("SSBTEK");
+		assertThat(captor.getValue().getStatus()).isEqualTo("OPEN");
+		assertThat(captor.getValue().getMessage()).isEqualTo(WarningService.MESSAGE_SSBTEK_READ_FAILED);
+	}
+
+	@Test
+	void reconcileSsbtekReadFailureClosesItselfOnARunThatSucceeded() {
+		// The whole point of the type: the handläggare never has to dismiss it, the next readable day removes it.
+		final var readFailure = warning("SSBTEK_READ_FAILED", "SSBTEK", "OPEN");
+		final var unrelated = warning("MISSING_SSBTEK", "Dagersättning", "OPEN");
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(readFailure, unrelated));
+		when(repositoryMock.save(any(FaWarningEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.reconcileSsbtekReadFailure(ERRAND_ID, false);
+
+		verify(repositoryMock).save(readFailure);
+		assertThat(readFailure.getStatus()).isEqualTo("CLOSED");
+		assertThat(readFailure.isAutoResolved()).isTrue();
+		assertThat(unrelated.getStatus()).isEqualTo("OPEN");
+	}
+
+	@Test
+	void calculationReconcileLeavesTheReadFailureWarningAlone() {
+		// A failed day runs no calculation reconcile at all; a later successful one must not close a warning that is
+		// still true, nor re-raise one that the read-failure reconcile has already closed.
+		final var readFailure = warning("SSBTEK_READ_FAILED", "SSBTEK", "OPEN");
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(readFailure));
+
+		service.reconcileCalculationWarnings(ERRAND_ID, List.of(), List.of(), List.of(), null, List.of());
+
+		assertThat(readFailure.getStatus()).isEqualTo("OPEN");
+		verify(repositoryMock, never()).save(readFailure);
 	}
 
 	@Test

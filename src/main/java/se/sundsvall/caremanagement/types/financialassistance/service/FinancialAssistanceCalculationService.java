@@ -38,6 +38,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.mapper.Calc
 import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
 import se.sundsvall.dept44.problem.Problem;
 
+import static java.lang.Boolean.TRUE;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -110,6 +111,9 @@ public class FinancialAssistanceCalculationService {
 	 * No Lifecare calculation is created here — that happens only after a decision, via {@link #commitCalculation}.
 	 */
 	public CalculationResponse prepareCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
+		if (TRUE.equals(request.getSsbtekError())) {
+			return prepareAfterReadFailure(municipalityId, namespace, request);
+		}
 		final var input = gather(municipalityId, namespace, request);
 		final var refresh = refreshDraft(municipalityId, input);
 		final var response = completeness(request, input);
@@ -117,6 +121,34 @@ public class FinancialAssistanceCalculationService {
 		publish(municipalityId, namespace, input, refresh, response);
 		stampDailyRun(input.errand());
 		return response;
+	}
+
+	/**
+	 * The run where SSBTEK could not be read. Verksamhetens regelverk is explicit: do not run the rules, tell the
+	 * handläggare a retry is coming, and leave everything else alone. So the draft is not refreshed (an empty income
+	 * feed would clear rows the previous run transferred), no recommendation is recorded (it is written once and would
+	 * freeze "no warnings" onto an errand we never managed to check) and the status is not touched (an errand waiting
+	 * for a decision must not be knocked back to komplettering by a transient outage). Only the warning and the
+	 * daily-run stamp happen — the warning closes itself on the next run that succeeds.
+	 */
+	private CalculationResponse prepareAfterReadFailure(final String municipalityId, final String namespace, final CalculationRequest request) {
+		final var errandId = request.getErrandId();
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		final var errand = financialAssistanceRepository.findByErrandId(errandId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No financial-assistance errand for id " + errandId));
+
+		warningService.reconcileSsbtekReadFailure(errandId, true);
+		stampDailyRun(errand);
+
+		LOG.warn("SSBTEK could not be read for errand {} — calculation left untouched, read-failure warning raised",
+			sanitizeForLogging(errandId));
+
+		// Not complete: a month we could not check must never report itself as checked and done.
+		return CalculationResponse.create()
+			.withUnhandledIncomes(List.of())
+			.withChangeWarnings(List.of())
+			.withInformationComplete(false)
+			.withMissingIncomeTypes(List.of());
 	}
 
 	/**
@@ -201,6 +233,8 @@ public class FinancialAssistanceCalculationService {
 		recordRecommendationOnce(municipalityId, namespace, input.errandId(), response);
 		warningService.reconcileCalculationWarnings(input.errandId(), response.getUnhandledIncomes(), response.getChangeWarnings(),
 			response.getMissingIncomeTypes(), refresh.changes(), refresh.warnings());
+		// This run read SSBTEK, so any read-failure warning from an earlier run has served its purpose and closes itself.
+		warningService.reconcileSsbtekReadFailure(input.errandId(), false);
 		applyCompletenessStatus(municipalityId, namespace, input.errandId(), response.isInformationComplete());
 	}
 

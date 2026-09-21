@@ -74,10 +74,34 @@ public class WarningService {
 	public static final String TYPE_EXPENSE_PARTIALLY_REJECTED = "EXPENSE_PARTIALLY_REJECTED";
 	public static final String TYPE_CO_APPLICANT_SPLIT_PAYMENT = "CO_APPLICANT_SPLIT_PAYMENT";
 
+	/**
+	 * SSBTEK could not be read on this run, so the income rules were deliberately not evaluated. Distinct from
+	 * {@link #TYPE_MISSING_SSBTEK}, which says SSBTEK answered and a specific income the previous normberäkning had was
+	 * not in the answer. This one says we have no answer to judge at all.
+	 */
+	public static final String TYPE_SSBTEK_READ_FAILED = "SSBTEK_READ_FAILED";
+
+	/**
+	 * Verksamhetens own wording for a failed read — the handläggare is told a retry is coming, not that data is missing.
+	 */
+	public static final String MESSAGE_SSBTEK_READ_FAILED = "Fel att läsa SSBTEK, nytt försök görs snart igen och ärendet kommer uppdateras med ny information";
+
+	/**
+	 * One warning per errand regardless of how many agencies failed — the handläggare cannot act per agency, and a
+	 * stable key is what lets the next successful run close exactly this row.
+	 */
+	private static final String SOURCE_KEY_SSBTEK = "SSBTEK";
+
 	/** The warning types the decision proposal owns (shown on the DECISION tab). */
 	public static final Set<String> DECISION_PROPOSAL_TYPES = Set.of(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT, TYPE_EXPENSE_PARTIALLY_REJECTED);
 	/** The warning types the payment proposal owns (shown on the PAYMENT tab). */
 	public static final Set<String> PAYMENT_PROPOSAL_TYPES = Set.of(TYPE_CO_APPLICANT_SPLIT_PAYMENT);
+	/**
+	 * The read-failure warning is reconciled on its own, because it is the one warning raised on a run where the
+	 * calculation reconcile does not happen at all. Leaving it to the calculation reconcile would auto-close it on the
+	 * very next run — including a run that failed the same way.
+	 */
+	public static final Set<String> SSBTEK_READ_FAILURE_TYPES = Set.of(TYPE_SSBTEK_READ_FAILED);
 
 	public static final String SECTION_CALCULATION = "CALCULATION";
 	public static final String SECTION_DECISION = "DECISION";
@@ -121,7 +145,8 @@ public class WarningService {
 		Map.entry(TYPE_NORM_MISMATCH_PREVIOUS_CALCULATION, "Norm stämmer inte mot föregående beräkning"),
 		Map.entry(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT, "Föregående beslut var förskott på förmån"),
 		Map.entry(TYPE_EXPENSE_PARTIALLY_REJECTED, "Utgift delvis ej godkänd – delavslag"),
-		Map.entry(TYPE_CO_APPLICANT_SPLIT_PAYMENT, "Medsökande – kontrollera delad utbetalning"));
+		Map.entry(TYPE_CO_APPLICANT_SPLIT_PAYMENT, "Medsökande – kontrollera delad utbetalning"),
+		Map.entry(TYPE_SSBTEK_READ_FAILED, "SSBTEK kunde inte läsas"));
 
 	/** Warning status → Swedish display name. */
 	private static final Map<String, String> STATUS_DISPLAY_NAME = Map.ofEntries(
@@ -162,9 +187,9 @@ public class WarningService {
 		}
 
 		ofNullable(sectionWarnings).ifPresent(inputs::addAll);
-		// The calculation owns every type except the ones the section proposals raise — those live and die with their
-		// own reconcile, so the daily prepare must neither create nor auto-close them.
-		reconcile(errandId, inputs, type -> !isProposalType(type));
+		// The calculation owns every type except the separately reconciled ones — those live and die with their own
+		// reconcile, so the daily prepare must neither create nor auto-close them.
+		reconcile(errandId, inputs, type -> !isSeparatelyReconciled(type));
 	}
 
 	/**
@@ -190,8 +215,25 @@ public class WarningService {
 			.toList();
 	}
 
-	private static boolean isProposalType(final String type) {
-		return DECISION_PROPOSAL_TYPES.contains(type) || PAYMENT_PROPOSAL_TYPES.contains(type);
+	/**
+	 * Raise or clear the SSBTEK read-failure warning for an errand. Called on every daily run: {@code true} on a run
+	 * where SSBTEK could not be read, {@code false} on one that succeeded — the reconcile then auto-closes the warning
+	 * without the caseworker having to do anything.
+	 */
+	@Transactional
+	public void reconcileSsbtekReadFailure(final String errandId, final boolean readFailed) {
+		final var current = readFailed
+			? List.of(new WarningInput(TYPE_SSBTEK_READ_FAILED, SOURCE_KEY_SSBTEK, MESSAGE_SSBTEK_READ_FAILED))
+			: List.<WarningInput>of();
+		reconcile(errandId, current, SSBTEK_READ_FAILURE_TYPES::contains);
+	}
+
+	/**
+	 * Types reconciled by something other than the daily calculation reconcile — the two section proposals and the
+	 * SSBTEK read failure. The calculation reconcile must neither create nor auto-close these.
+	 */
+	private static boolean isSeparatelyReconciled(final String type) {
+		return DECISION_PROPOSAL_TYPES.contains(type) || PAYMENT_PROPOSAL_TYPES.contains(type) || SSBTEK_READ_FAILURE_TYPES.contains(type);
 	}
 
 	/** The Draken tab a warning type belongs to — the section proposals own theirs, everything else is the calculation. */

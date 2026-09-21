@@ -44,6 +44,11 @@ public class CalculationRequest {
 	@Schema(description = "The period-over-period change warnings from the operaton rules, recorded on the errand recommendation")
 	private List<String> changeWarnings;
 
+	@Schema(
+		description = "Whether SSBTEK could not be read for this run. True means the rules were deliberately not evaluated: the calculation is left exactly as it stands and the errand carries the read-failure warning until a later run succeeds. Absent is read as false, so a caller that does not know about the flag behaves as before.",
+		examples = "false")
+	private Boolean ssbtekError;
+
 	public static CalculationRequest create() {
 		return new CalculationRequest();
 	}
@@ -139,6 +144,19 @@ public class CalculationRequest {
 		return this;
 	}
 
+	public Boolean getSsbtekError() {
+		return ssbtekError;
+	}
+
+	public void setSsbtekError(final Boolean ssbtekError) {
+		this.ssbtekError = ssbtekError;
+	}
+
+	public CalculationRequest withSsbtekError(final Boolean ssbtekError) {
+		this.ssbtekError = ssbtekError;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -146,17 +164,17 @@ public class CalculationRequest {
 		final CalculationRequest that = (CalculationRequest) o;
 		return Objects.equals(applicant, that.applicant) && Objects.equals(coApplicant, that.coApplicant) && Objects.equals(applicationMonth, that.applicationMonth)
 			&& Objects.equals(errandId, that.errandId) && Objects.equals(classifiedIncomes, that.classifiedIncomes) && Objects.equals(unhandledIncomes, that.unhandledIncomes)
-			&& Objects.equals(changeWarnings, that.changeWarnings);
+			&& Objects.equals(changeWarnings, that.changeWarnings) && Objects.equals(ssbtekError, that.ssbtekError);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(applicant, coApplicant, applicationMonth, errandId, classifiedIncomes, unhandledIncomes, changeWarnings);
+		return Objects.hash(applicant, coApplicant, applicationMonth, errandId, classifiedIncomes, unhandledIncomes, changeWarnings, ssbtekError);
 	}
 
 	@Override
 	public String toString() {
 		return "CalculationRequest{applicant='" + applicant + "', coApplicant='" + coApplicant + "', applicationMonth='" + applicationMonth + "', errandId='" + errandId
-			+ "', classifiedIncomes='" + classifiedIncomes + "', unhandledIncomes=" + unhandledIncomes + ", changeWarnings=" + changeWarnings + "}";
+			+ "', classifiedIncomes='" + classifiedIncomes + "', unhandledIncomes=" + unhandledIncomes + ", changeWarnings=" + changeWarnings + ", ssbtekError=" + ssbtekError + "}";
 	}
 }

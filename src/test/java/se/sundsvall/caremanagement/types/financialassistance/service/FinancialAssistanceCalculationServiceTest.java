@@ -224,6 +224,26 @@ class FinancialAssistanceCalculationServiceTest {
 	}
 
 	@Test
+	void prepareOnAnSsbtekReadFailureOnlyWarnsAndLeavesTheCalculationAlone() {
+		// Verksamhetens regelverk: do not run the rules on data we could not read. Refreshing the draft with no incomes
+		// would clear rows a previous run transferred, and the once-only recommendation would freeze "no warnings" onto
+		// an errand nobody managed to check.
+		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
+		final var request = CalculationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withSsbtekError(true);
+
+		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
+
+		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, true);
+		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any());
+		verifyNoInteractions(draftServiceMock, calculationFeederMock, decisionServiceMock);
+		assertThat(response.isInformationComplete()).isFalse();
+		assertThat(errand.getLastDailyRunAt()).isNotNull();
+	}
+
+	@Test
 	void prepareMissingErrandYields404() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
@@ -298,6 +318,9 @@ class FinancialAssistanceCalculationServiceTest {
 		final var entityCaptor = ArgumentCaptor.forClass(FinancialAssistanceEntity.class);
 		verify(repositoryMock).save(entityCaptor.capture());
 		assertThat(entityCaptor.getValue().getLastDailyRunAt()).isCloseTo(OffsetDateTime.now(), within(10, SECONDS));
+
+		// A run that read SSBTEK closes any read-failure warning an earlier run left behind.
+		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, false);
 	}
 
 	@Test
