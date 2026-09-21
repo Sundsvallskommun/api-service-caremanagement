@@ -20,6 +20,7 @@ import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -325,6 +326,7 @@ class JournalEntryServiceTest {
 
 		assertThat(outcome.id()).isEqualTo("je-1");
 		assertThat(outcome.created()).isTrue();
+		assertThat(outcome.changed()).isTrue();
 		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		final ArgumentCaptor<JournalEntryEntity> entityCaptor = ArgumentCaptor.forClass(JournalEntryEntity.class);
@@ -358,11 +360,31 @@ class JournalEntryServiceTest {
 
 		assertThat(outcome.id()).isEqualTo("je-1");
 		assertThat(outcome.created()).isFalse();
+		assertThat(outcome.changed()).isTrue();
 		assertThat(existing.getHeading()).isEqualTo("Ny rubrik");
 		assertThat(existing.getText()).isEqualTo("ny text");
 		assertThat(existing.getStatus()).isEqualTo(LOCKED);
 		assertThat(existing.getModifiedBy()).isEqualTo("RPA_031DEV");
 		assertThat(existing.getModified()).isNotNull();
+		verify(eventsMock, never()).publishEvent(any());
+	}
+
+	@Test
+	void mirrorFromLifecareLeavesAnIdenticalMirrorUntouched() {
+		final var existing = JournalEntryEntity.create().withId("je-1").withErrandId(ERRAND_ID)
+			.withSource("LIFECARE").withLifecareId("27").withStatus(LOCKED)
+			.withType("Journalanteckning").withHeading("Rubrik").withText("text").withEntryDateTime(ENTRY_DATE_TIME.withOffsetSameInstant(UTC))
+			.withCreatedBy("RPA_031DEV").withCreated(FIXED_TIMESTAMP).withLockedBy("RPA_031DEV").withLocked(FIXED_TIMESTAMP);
+		when(repositoryMock.findByErrandIdAndLifecareId(ERRAND_ID, "27")).thenReturn(Optional.of(existing));
+		when(repositoryMock.save(any(JournalEntryEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var outcome = service.mirrorFromLifecare(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			new LifecareJournalEntryMirror("27", "Journalanteckning", "Rubrik", "text", ENTRY_DATE_TIME, "RPA_031DEV"));
+
+		assertThat(outcome.created()).isFalse();
+		assertThat(outcome.changed()).isFalse();
+		assertThat(existing.getModified()).isNull();
+		assertThat(existing.getModifiedBy()).isNull();
 		verify(eventsMock, never()).publishEvent(any());
 	}
 }

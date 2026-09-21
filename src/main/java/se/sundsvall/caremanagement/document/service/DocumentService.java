@@ -1,6 +1,8 @@
 package se.sundsvall.caremanagement.document.service;
 
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -145,12 +147,13 @@ public class DocumentService {
 			.withCreated(timestamp)
 			.withLockedBy(mirror.createdBy())
 			.withLocked(timestamp));
+		final var changed = existing.isEmpty() || !mirrors(entity, mirror);
 		entity
 			.withType(mirror.type())
 			.withHeading(mirror.heading())
 			.withText(mirror.text())
 			.withDocumentDateTime(mirror.documentDateTime());
-		if (existing.isPresent()) {
+		if (existing.isPresent() && changed) {
 			entity
 				.withModifiedBy(mirror.createdBy())
 				.withModified(timestamp);
@@ -160,7 +163,26 @@ public class DocumentService {
 		if (existing.isEmpty()) {
 			publisher.publishEvent(new DocumentCreated(saved.getId(), errandId, municipalityId, namespace, mirror.type(), mirror.createdBy(), timestamp));
 		}
-		return new MirrorOutcome(saved.getId(), existing.isEmpty());
+		return new MirrorOutcome(saved.getId(), existing.isEmpty(), changed);
+	}
+
+	/**
+	 * Does the stored mirror already carry exactly what Lifecare delivered? The robot re-delivers the same rows on every
+	 * fetch, and a re-delivery that changes nothing must not touch the modification stamp.
+	 */
+	private static boolean mirrors(final DocumentEntity entity, final LifecareDocumentMirror mirror) {
+		return Objects.equals(entity.getType(), mirror.type())
+			&& Objects.equals(entity.getHeading(), mirror.heading())
+			&& Objects.equals(entity.getText(), mirror.text())
+			&& sameMoment(entity.getDocumentDateTime(), mirror.documentDateTime());
+	}
+
+	/** Instant equality — a stored timestamp read back from the database may carry a different offset than delivered. */
+	private static boolean sameMoment(final OffsetDateTime stored, final OffsetDateTime delivered) {
+		if (stored == null || delivered == null) {
+			return (stored == null) && (delivered == null);
+		}
+		return stored.toInstant().equals(delivered.toInstant());
 	}
 
 	/** Lock the document (write-protection) — it becomes an immutable finalised record. Already-locked documents 409. */

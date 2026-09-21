@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +27,6 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Supplemen
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SupplementsIngestResult;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaMonitoringRepository;
 
-import static java.time.ZoneId.systemDefault;
 import static java.util.Optional.ofNullable;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
@@ -42,14 +42,17 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * <li>{@code documents[]} — routed on {@code documentType}: {@code 3} → journal mirror, {@code 0} → document mirror,
  * anything else SKIPPED. Body HTML is decoded and stripped to plain text.</li>
  * <li>{@code jobStimulus} — the errand's full period set is replaced (Lifecare regenerates all period ids on every
- * save, so there is no per-period identity to upsert on).</li>
+ * save, so there is no per-period identity to upsert on). The replace is all-or-nothing: if any delivered period is
+ * unreadable the stored set is left as it is, since a destructive rewrite must not run on a partial delivery.</li>
  * </ul>
  *
  * <p>
  * Partial success by design: one broken item never fails the batch — it is reported {@code FAILED} in the receipt and
  * the rest proceed, each in its own transaction (this service deliberately opens none of its own). An omitted section
  * means 'not fetched this run' and leaves the errand untouched. Re-deliveries are free: every path is an upsert or a
- * full replace, so two identical deliveries end in the same state.
+ * full replace, so two identical deliveries end in the same state — and a mirror that already holds what was
+ * delivered is reported {@code UNCHANGED} with its modification stamp untouched, so 'last modified' reflects Lifecare
+ * rather than how often the robot runs.
  * </p>
  */
 @Service
@@ -61,6 +64,7 @@ public class SupplementsIngestService {
 
 	static final String OUTCOME_CREATED = "CREATED";
 	static final String OUTCOME_UPDATED = "UPDATED";
+	static final String OUTCOME_UNCHANGED = "UNCHANGED";
 	static final String OUTCOME_REPLACED = "REPLACED";
 	static final String OUTCOME_SKIPPED = "SKIPPED";
 	static final String OUTCOME_FAILED = "FAILED";
@@ -69,6 +73,9 @@ public class SupplementsIngestService {
 	static final String ROLE_CO_APPLICANT = "CO_APPLICANT";
 
 	private static final Logger LOG = LoggerFactory.getLogger(SupplementsIngestService.class);
+
+	/** Lifecare's timestamps are Swedish wall-clock time, with no offset of their own. */
+	private static final ZoneId LIFECARE_ZONE = ZoneId.of("Europe/Stockholm");
 
 	private static final String SOURCE_LIFECARE = "LIFECARE";
 	private static final String DOCUMENT_TYPE_JOURNAL_NOTE = "3";
@@ -109,9 +116,16 @@ public class SupplementsIngestService {
 		ofNullable(supplements.jobStimulus())
 			.ifPresent(jobStimulus -> {
 				final var periods = new ArrayList<JobStimulusPeriod>();
-				collectPeriods(jobStimulus.applicant(), ROLE_APPLICANT, periods, results);
-				collectPeriods(jobStimulus.coApplicant(), ROLE_CO_APPLICANT, periods, results);
-				results.add(replaceJobStimulusPeriods(municipalityId, namespace, errandId, periods));
+				final var failures = new ArrayList<SupplementsIngestOutcome>();
+				collectPeriods(jobStimulus.applicant(), ROLE_APPLICANT, periods, failures);
+				collectPeriods(jobStimulus.coApplicant(), ROLE_CO_APPLICANT, periods, failures);
+				results.addAll(failures);
+				if (failures.isEmpty()) {
+					results.add(replaceJobStimulusPeriods(municipalityId, namespace, errandId, periods));
+				} else {
+					results.add(new SupplementsIngestOutcome(SECTION_JOB_STIMULUS, null, OUTCOME_SKIPPED,
+						failures.size() + " period(s) unreadable — the stored periods are left untouched rather than replaced from an incomplete delivery"));
+				}
 			});
 
 		LOG.info("Supplements ingest for errand {}: {} item(s) processed", sanitizeForLogging(errandId), results.size());
@@ -192,7 +206,10 @@ public class SupplementsIngestService {
 		if (outcome.created()) {
 			return new SupplementsIngestOutcome(SECTION_DOCUMENTS, lifecareId, OUTCOME_CREATED, null);
 		}
-		return new SupplementsIngestOutcome(SECTION_DOCUMENTS, lifecareId, OUTCOME_UPDATED, null);
+		if (outcome.changed()) {
+			return new SupplementsIngestOutcome(SECTION_DOCUMENTS, lifecareId, OUTCOME_UPDATED, null);
+		}
+		return new SupplementsIngestOutcome(SECTION_DOCUMENTS, lifecareId, OUTCOME_UNCHANGED, null);
 	}
 
 	private static String mirroredHeading(final LifecareDocumentRow row) {
@@ -225,7 +242,12 @@ public class SupplementsIngestService {
 		return LocalDate.parse(value.strip());
 	}
 
-	/** Lifecare's date + optional {@code HH:mm} time, combined at the system zone; midnight when the time is absent. */
+	/**
+	 * Lifecare's date + optional {@code HH:mm} time, combined at {@link #LIFECARE_ZONE}; midnight when the time is
+	 * absent. The zone is pinned rather than taken from the JVM: Lifecare sends Swedish wall-clock time, while the
+	 * container runs in UTC, so reading it at the system zone stamped every mirrored note two hours ahead of when it
+	 * was written.
+	 */
 	private static OffsetDateTime parseDateTime(final String date, final String time) {
 		final var day = parseRequiredDate(date, "date");
 		final LocalTime timeOfDay;
@@ -239,7 +261,7 @@ public class SupplementsIngestService {
 			timeOfDay = LocalTime.MIDNIGHT;
 		}
 		final var local = day.atTime(timeOfDay);
-		return local.atOffset(systemDefault().getRules().getOffset(local));
+		return local.atOffset(LIFECARE_ZONE.getRules().getOffset(local));
 	}
 
 	private static String firstNonBlankTruncated(final int maxLength, final String... candidates) {

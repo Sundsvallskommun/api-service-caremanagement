@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -70,8 +71,12 @@ class SupplementsIngestServiceTest {
 	}
 
 	private static LifecareDocumentRow documentRow(final String id, final String documentType) {
-		return new LifecareDocumentRow(id, "Journalanteckning", "2026-08-05", "11:06", "Journalanteckning", "1", documentType,
-			"<p>Hej! Vill bara informera att jag f&aring;tt jobb.</p>", "RPA_031DEV", "2026-08-05", "JournalNote");
+		return documentRow(id, documentType, "2026-08-05", "11:06");
+	}
+
+	private static LifecareDocumentRow documentRow(final String id, final String documentType, final String date, final String time) {
+		return new LifecareDocumentRow(id, "Journalanteckning", date, time, "Journalanteckning", "1", documentType,
+			"<p>Hej! Vill bara informera att jag f&aring;tt jobb.</p>", "RPA_031DEV", date, "JournalNote");
 	}
 
 	@Test
@@ -140,7 +145,7 @@ class SupplementsIngestServiceTest {
 	@Test
 	void journalNoteRowIsMirroredIntoTheJournalModule() {
 		when(journalEntryServiceMock.mirrorFromLifecare(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(LifecareJournalEntryMirror.class)))
-			.thenReturn(new MirrorOutcome("je-1", true));
+			.thenReturn(new MirrorOutcome("je-1", true, true));
 
 		final var result = service.ingest(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
 			new LifecareSupplements(null, null, List.of(documentRow("27", "3")), null));
@@ -156,6 +161,7 @@ class SupplementsIngestServiceTest {
 		assertThat(mirror.text()).isEqualTo("Hej! Vill bara informera att jag fått jobb.");
 		assertThat(mirror.entryDateTime().toLocalDate()).isEqualTo(LocalDate.parse("2026-08-05"));
 		assertThat(mirror.entryDateTime().toLocalTime()).isEqualTo(LocalTime.of(11, 6));
+		assertThat(mirror.entryDateTime()).isEqualTo(OffsetDateTime.parse("2026-08-05T11:06+02:00"));
 		assertThat(mirror.createdBy()).isEqualTo("RPA_031DEV");
 		verifyNoInteractions(documentServiceMock);
 	}
@@ -163,13 +169,37 @@ class SupplementsIngestServiceTest {
 	@Test
 	void regularDocumentRowIsMirroredIntoTheDocumentModule() {
 		when(documentServiceMock.mirrorFromLifecare(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(LifecareDocumentMirror.class)))
-			.thenReturn(new MirrorOutcome("doc-1", false));
+			.thenReturn(new MirrorOutcome("doc-1", false, true));
 
 		final var result = service.ingest(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
 			new LifecareSupplements(null, null, List.of(documentRow("28", "0")), null));
 
 		assertThat(result.results()).containsExactly(new SupplementsIngestOutcome("documents", "28", "UPDATED", null));
 		verifyNoInteractions(journalEntryServiceMock);
+	}
+
+	@Test
+	void unchangedMirrorIsReportedAsUnchanged() {
+		when(documentServiceMock.mirrorFromLifecare(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(LifecareDocumentMirror.class)))
+			.thenReturn(new MirrorOutcome("doc-1", false, false));
+
+		final var result = service.ingest(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			new LifecareSupplements(null, null, List.of(documentRow("28", "0")), null));
+
+		assertThat(result.results()).containsExactly(new SupplementsIngestOutcome("documents", "28", "UNCHANGED", null));
+	}
+
+	@Test
+	void lifecareWallClockTimeIsReadAtTheSwedishZoneNotTheJvmZone() {
+		when(journalEntryServiceMock.mirrorFromLifecare(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(LifecareJournalEntryMirror.class)))
+			.thenReturn(new MirrorOutcome("je-1", true, true));
+
+		service.ingest(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			new LifecareSupplements(null, null, List.of(documentRow("30", "3", "2026-01-15", "09:30")), null));
+
+		final ArgumentCaptor<LifecareJournalEntryMirror> captor = ArgumentCaptor.forClass(LifecareJournalEntryMirror.class);
+		verify(journalEntryServiceMock).mirrorFromLifecare(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), captor.capture());
+		assertThat(captor.getValue().entryDateTime()).isEqualTo(OffsetDateTime.parse("2026-01-15T09:30+01:00"));
 	}
 
 	@Test
@@ -197,7 +227,7 @@ class SupplementsIngestServiceTest {
 		when(journalEntryServiceMock.mirrorFromLifecare(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(LifecareJournalEntryMirror.class)))
 			.thenThrow(new IllegalStateException("boom"));
 		when(documentServiceMock.mirrorFromLifecare(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(LifecareDocumentMirror.class)))
-			.thenReturn(new MirrorOutcome("doc-1", true));
+			.thenReturn(new MirrorOutcome("doc-1", true, true));
 
 		final var result = service.ingest(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
 			new LifecareSupplements(null, null, List.of(documentRow("27", "3"), documentRow("28", "0")), null));
@@ -232,9 +262,7 @@ class SupplementsIngestServiceTest {
 	}
 
 	@Test
-	void jobStimulusPeriodWithoutFromDateFailsButTheRestReplace() {
-		when(jobStimulusPeriodServiceMock.replaceAll(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), anyList())).thenReturn(1);
-
+	void jobStimulusPeriodWithoutFromDateLeavesTheStoredSetAlone() {
 		final var jobStimulus = new LifecareJobStimulus(
 			new LifecareJobStimulusParty(List.of(
 				new LifecareJobStimulusPeriod("", "2021-12-31", false),
@@ -247,7 +275,9 @@ class SupplementsIngestServiceTest {
 		assertThat(result.results()).hasSize(2);
 		assertThat(result.results().getFirst().outcome()).isEqualTo("FAILED");
 		assertThat(result.results().getFirst().detail()).contains("APPLICANT");
-		assertThat(result.results().getLast().outcome()).isEqualTo("REPLACED");
+		assertThat(result.results().getLast().outcome()).isEqualTo("SKIPPED");
+		assertThat(result.results().getLast().detail()).contains("left untouched");
+		verifyNoInteractions(jobStimulusPeriodServiceMock);
 	}
 
 	@Test
