@@ -7158,11 +7158,12 @@ paths:
         \ previous Lifecare calculation's norm) + expenseSum + specialExpenseSum −\
         \ incomeSum from the draft; when no previous norm is known the outcome and\
         \ amount are null and 'explanation' says why. Period = the calculation's period;\
-        \ reason = the previous decision's orsak (with a list of alternatives); phraseText\
-        \ = 'Bifall månad med/utan barn' on an approved outcome. Reading also reconciles\
-        \ the DECISION-section warnings (previous decision was förskott på förmån;\
-        \ one per expense not approved in full) and returns them. 404 when the errand\
-        \ has no calculation draft."
+        \ reason = the previous decision's orsak and coApplicantReason the co-applicant's\
+        \ own orsak on that same decision (both picked from the one 'reasonOptions'\
+        \ catalogue); phraseText = 'Bifall månad med/utan barn' on an approved outcome.\
+        \ Reading also reconciles the DECISION-section warnings (previous decision\
+        \ was förskott på förmån; one per expense not approved in full) and returns\
+        \ them. 404 when the errand has no calculation draft."
       operationId: getDecisionProposal
       parameters:
       - name: municipalityId
@@ -10926,11 +10927,19 @@ components:
           readOnly: true
         role:
           type: string
-          description: The role of the household member
+          description: The role of the household member (machine code; use roleDisplayName
+            for the label)
           enum:
           - APPLICANT
           - CO_APPLICANT
           - CHILD
+          - VISITATION_CHILD
+          readOnly: true
+        roleDisplayName:
+          type: string
+          description: Swedish display name for the role
+          examples:
+          - Medsökande
           readOnly: true
         name:
           type: string
@@ -11220,7 +11229,17 @@ components:
           readOnly: true
         costType:
           type: string
-          description: The cost type
+          description: The cost type (machine code; use costTypeDisplayName for the
+            label)
+          examples:
+          - RENT
+          readOnly: true
+        costTypeDisplayName:
+          type: string
+          description: Swedish display name for the cost type — the Lifecare label
+            from the type catalogue
+          examples:
+          - Boendekostnad
           readOnly: true
         otherSubType:
           type: string
@@ -11979,9 +11998,24 @@ components:
           description: The selected norm id
         normType:
           type: array
-          description: The selected norm types
+          description: The selected norm types (machine codes; use normTypeDisplayNames
+            for the labels)
           items:
             type: string
+            enum:
+            - NATIONAL_NORM
+            - OTHER_NORM
+            examples:
+            - NATIONAL_NORM
+        normTypeDisplayNames:
+          type: array
+          description: "Swedish display names for the selected norm types, in the\
+            \ same order as normType"
+          items:
+            type: string
+            examples:
+            - Riksnorm
+            readOnly: true
         calculationFromDate:
           type: string
           format: date
@@ -13115,10 +13149,18 @@ components:
           type: array
           description: "Every orsak the caseworker can pick instead — Lifecare's orsak-catalogue\
             \ (försörjningshinder) in Lifecare's order, plus the previous decision's\
-            \ reason when that is not in the catalogue (FamilyCare exposes no reason\
-            \ catalogue over the API)"
+            \ reason(s) when those are not in the catalogue (FamilyCare exposes no\
+            \ reason catalogue over the API). The same catalogue applies to the applicant\
+            \ and the co-applicant"
           items:
             type: string
+        coApplicantReason:
+          type: string
+          description: "The proposed orsak for the co-applicant (medsökande): the\
+            \ previous Lifecare decision's co-applicant reason, or null when there\
+            \ is none. Picked from the same reasonOptions catalogue as the applicant's"
+          examples:
+          - "Sjukskriven m läkarintyg, otillräcklig sjukpenning"
         phraseText:
           type: string
           description: "The proposed frastext: on BIFALL/DELAVSLAG, \"Bifall månad\
@@ -13150,6 +13192,18 @@ components:
           description: The Lifecare decision reason / orsak (free text)
           examples:
           - "Arbetslös, ingen ersättning/stöd"
+        coApplicant:
+          type: string
+          description: "The co-applicant (medsökande) the decision also concerned,\
+            \ as Lifecare names them. Null when the decision had none"
+          examples:
+          - Astrid Testsson
+        coApplicantReason:
+          type: string
+          description: The co-applicant's own reason / orsak on the decision (free
+            text). Null when the decision had no co-applicant
+          examples:
+          - "Sjukskriven m läkarintyg, otillräcklig sjukpenning"
         periodFrom:
           type: string
           description: The decision period start (raw Lifecare string)
