@@ -172,6 +172,22 @@ archive:
     document-label: Meddelanden och bilagor från Draken
     lifecare-sender-name: Sundsvalls kommun
 #========================================
+# Lifecare actualisation settings
+#========================================
+# The catalogue entries verksamheten named for an EB återansökan (Regelverk Drakel 2026-09-21). Matched on the
+# catalogue entry's name, case- and space-insensitively. A name that is not in the person's proposal falls back to the
+# first offered value and is logged as a warning — an intake must never be blocked by a renamed catalogue entry, but a
+# silent fallback is exactly the guess this configuration removes. Override per environment if Lifecare renames one.
+# Not configured, and still "first offered": specify-type, working-status, service and investigation — verksamheten has
+# not named them. The caseworker is resolved from the applicant's previous Lifecare service, not set from here; the
+# regelverk's "Handläggare = Rakel" is an open question to verksamheten.
+lifecare:
+  actualisation:
+    type: ${LIFECARE_ACTUALISATION_TYPE:Ek Återansökan Digital Ekonomiskt bistånd}
+    from-who: ${LIFECARE_ACTUALISATION_FROM_WHO:Den enskilde}
+    reason: ${LIFECARE_ACTUALISATION_REASON:Ekonomiskt bistånd}
+    organisation: ${LIFECARE_ACTUALISATION_ORGANISATION:Ekonomiskt bistånd}
+#========================================
 # Financial assistance settings
 #========================================
 financial-assistance:

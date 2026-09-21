@@ -7,10 +7,10 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInfoDT
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
 import java.time.LocalDate;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
@@ -34,8 +34,16 @@ class ActualisationServiceTest {
 	@Mock
 	private CaseworkerResolver caseworkerResolverMock;
 
-	@InjectMocks
+	/** The real record, not a mock: it is configuration, and the assembler reads every field off it. */
+	private final ActualisationProperties names = new ActualisationProperties(
+		"Ek Återansökan Digital Ekonomiskt bistånd", "Den enskilde", "Ekonomiskt bistånd", "Ekonomiskt bistånd");
+
 	private ActualisationService service;
+
+	@BeforeEach
+	void setUp() {
+		service = new ActualisationService(lifecareFamilyCareIntegrationMock, caseworkerResolverMock, names);
+	}
 
 	@Test
 	void createResolvesCaseworkerAssemblesAndPosts() {

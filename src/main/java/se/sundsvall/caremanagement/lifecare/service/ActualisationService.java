@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ActualisationAssembler;
@@ -25,16 +26,20 @@ import static java.util.Optional.ofNullable;
  * integration layer. Mirrors {@link CalculationService}.
  */
 @Service
+@EnableConfigurationProperties(ActualisationProperties.class)
 public class ActualisationService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ActualisationService.class);
 
 	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
 	private final CaseworkerResolver caseworkerResolver;
+	private final ActualisationProperties actualisationProperties;
 
-	public ActualisationService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration, final CaseworkerResolver caseworkerResolver) {
+	public ActualisationService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration, final CaseworkerResolver caseworkerResolver,
+		final ActualisationProperties actualisationProperties) {
 		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
 		this.caseworkerResolver = caseworkerResolver;
+		this.actualisationProperties = actualisationProperties;
 	}
 
 	/**
@@ -52,9 +57,15 @@ public class ActualisationService {
 		final var caseworker = resolveCaseworker(applicantPersonId, date);
 
 		final var proposal = lifecareFamilyCareIntegration.getActualisationProposal(applicantPersonId);
-		final var body = ActualisationAssembler.assemble(applicantPersonId, proposal, date,
-			caseworker.map(ResolvedCaseworker::caseworkerId).orElse(null));
-		final var actualisationId = lifecareFamilyCareIntegration.createActualisation(body);
+		final var selection = ActualisationAssembler.assemble(applicantPersonId, proposal, date,
+			caseworker.map(ResolvedCaseworker::caseworkerId).orElse(null), actualisationProperties);
+		// A name that is not in the catalogue falls back to the first offered value, which is the guess the
+		// configuration exists to remove - so it must never pass silently.
+		if (!selection.misses().isEmpty()) {
+			LOG.warn("Lifecare's actualisation catalogue has no entry for {} - falling back to the first offered value. "
+				+ "Check the configured names against the catalogue.", String.join(", ", selection.misses()));
+		}
+		final var actualisationId = lifecareFamilyCareIntegration.createActualisation(selection.body());
 
 		return new ActualisationResult(actualisationId, caseworker.map(ResolvedCaseworker::assignedUserId).orElse(null));
 	}
