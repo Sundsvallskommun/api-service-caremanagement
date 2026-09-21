@@ -31,6 +31,7 @@ class FinalizeResponseTest {
 
 		final var response = FinalizeResponse.create()
 			.withDecisionId("decision-1")
+			.withPaymentIds(List.of("pay-1"))
 			.withProcessMessageCorrelated(true)
 			.withRpaTasks(tasks)
 			.withCommunication(communication);

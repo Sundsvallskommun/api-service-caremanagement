@@ -29,6 +29,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeP
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Monitoring;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RpaTask;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
@@ -46,7 +47,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -109,6 +112,9 @@ class FinancialAssistanceFinalizeServiceTest {
 	@Captor
 	private ArgumentCaptor<Map<String, Object>> variablesCaptor;
 
+	@Mock
+	private PaymentService paymentServiceMock;
+
 	@InjectMocks
 	private FinancialAssistanceFinalizeService service;
 
@@ -151,6 +157,10 @@ class FinancialAssistanceFinalizeServiceTest {
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Decision.create().withDecisionType("RECOMMENDATION").withValue("OK")));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
 		when(decisionServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Decision.class))).thenReturn(DECISION_ID);
+		// The payment rows finalize creates; their ids are what the queue items carry.
+		final var ids = new java.util.concurrent.atomic.AtomicInteger();
+		lenient().when(paymentServiceMock.createForDecision(eq(ERRAND_ID), any(PaymentRequest.class)))
+			.thenAnswer(invocation -> "pay-" + ids.incrementAndGet());
 	}
 
 	private void rpaEnqueuesEverything() {
@@ -187,8 +197,8 @@ class FinancialAssistanceFinalizeServiceTest {
 		assertThat(response.getCommunication()).isEqualTo(request.getCommunication());
 		assertThat(response.getRpaTasks()).extracting(RpaTask::getAction, RpaTask::getReference, RpaTask::getEnqueued).containsExactly(
 			tuple("WRITE_DECISION", REFERENCE_PREFIX + "WRITE_DECISION", true),
-			tuple("REGISTER_PAYMENT", REFERENCE_PREFIX + "REGISTER_PAYMENT:1", true),
-			tuple("REGISTER_PAYMENT", REFERENCE_PREFIX + "REGISTER_PAYMENT:2", true),
+			tuple("REGISTER_PAYMENT", REFERENCE_PREFIX + "REGISTER_PAYMENT:pay-1", true),
+			tuple("REGISTER_PAYMENT", REFERENCE_PREFIX + "REGISTER_PAYMENT:pay-2", true),
 			tuple("WRITE_MONITORING", REFERENCE_PREFIX + "WRITE_MONITORING", true),
 			tuple("WRITE_JOURNAL", REFERENCE_PREFIX + "WRITE_JOURNAL", true));
 
@@ -229,19 +239,18 @@ class FinancialAssistanceFinalizeServiceTest {
 			.containsEntry("communicationChannels", "MINA_SIDOR,LETTER")
 			.containsEntry("householdSizeChanged", "true");
 
-		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(REGISTER_PAYMENT), eq("1"), contentCaptor.capture());
-		assertThat(contentCaptor.getValue())
-			.containsEntry("sequence", "1")
-			.containsEntry("paymentDate", "2026-06-25")
-			.containsEntry("amount", "6000.00")
-			.containsEntry("concernedMonth", "2026-06")
-			.containsEntry("payeeName", "Hyresvärden AB")
-			.containsEntry("paymentMethod", "BANKGIRO")
-			.containsEntry("accountNumber", "123-4567")
-			.containsEntry("accountingCode", "5011")
-			.doesNotContainKey("clearing");
-		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(REGISTER_PAYMENT), eq("2"), contentCaptor.capture());
-		assertThat(contentCaptor.getValue()).containsEntry("sequence", "2").containsEntry("clearing", "6000").containsEntry("payeeName", "Anna Andersson");
+		// The payment rows are created first, and the queue item carries nothing but the id — no payee name, clearing or
+		// account number ever reaches the Orchestrator queue store.
+		final ArgumentCaptor<PaymentRequest> paymentRequestCaptor = ArgumentCaptor.captor();
+		verify(paymentServiceMock, times(2)).createForDecision(eq(ERRAND_ID), paymentRequestCaptor.capture());
+		assertThat(paymentRequestCaptor.getAllValues()).extracting(PaymentRequest::getPayeeName, PaymentRequest::getApplicationMonth, PaymentRequest::getClearingNumber)
+			.containsExactly(tuple("Hyresvärden AB", "2026-06", null), tuple("Anna Andersson", "2026-06", "6000"));
+		assertThat(response.getPaymentIds()).containsExactly("pay-1", "pay-2");
+
+		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(REGISTER_PAYMENT), eq("pay-1"), contentCaptor.capture());
+		assertThat(contentCaptor.getValue()).containsOnly(java.util.Map.entry("paymentId", "pay-1"));
+		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(REGISTER_PAYMENT), eq("pay-2"), contentCaptor.capture());
+		assertThat(contentCaptor.getValue()).containsOnly(java.util.Map.entry("paymentId", "pay-2"));
 
 		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(WRITE_MONITORING), isNull(), contentCaptor.capture());
 		assertThat(contentCaptor.getValue()).containsEntry("monitoringIds", "m-local").containsEntry("count", "1");

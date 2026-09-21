@@ -46,8 +46,9 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.even
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.DECISION_TYPE_PAYMENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toDecisionContent;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toIdListContent;
-import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentContent;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentDecision;
+import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentIdContent;
+import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentRequest;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toRpaTask;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.updateEntity;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
@@ -98,11 +99,12 @@ public class FinancialAssistanceFinalizeService {
 	private final MonitoringService monitoringService;
 	private final JournalEntryService journalEntryService;
 	private final DocumentService documentService;
+	private final PaymentService paymentService;
 
 	FinancialAssistanceFinalizeService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository,
 		final SectionApprovalService sectionApprovalService, final DecisionService decisionService, final RpaService rpaService,
 		final ProcessService processService, final MonitoringService monitoringService, final JournalEntryService journalEntryService,
-		final DocumentService documentService) {
+		final DocumentService documentService, final PaymentService paymentService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.sectionApprovalService = sectionApprovalService;
@@ -112,6 +114,7 @@ public class FinancialAssistanceFinalizeService {
 		this.monitoringService = monitoringService;
 		this.journalEntryService = journalEntryService;
 		this.documentService = documentService;
+		this.paymentService = paymentService;
 	}
 
 	/**
@@ -139,10 +142,14 @@ public class FinancialAssistanceFinalizeService {
 		final var decisionId = decisionService.create(municipalityId, namespace, errandId,
 			toPaymentDecision(request, decidedBy, LocalDate.now(ZoneId.systemDefault())));
 
-		// 3. The Lifecare write-backs, each its own best-effort queue item.
-		final var rpaTasks = enqueueWriteBacks(municipalityId, namespace, errandId, request, decisionId);
+		// 3. The payment rows, before the queue and inside this transaction: a row that fails to save has to roll the
+		// decision back with it, rather than leave an errand with a decision and no payments for the robot to find.
+		final var paymentIds = createPayments(errandId, request);
 
-		// 4. Resume the process.
+		// 4. The Lifecare write-backs, each its own best-effort queue item.
+		final var rpaTasks = enqueueWriteBacks(municipalityId, namespace, errandId, request, decisionId, paymentIds);
+
+		// 5. Resume the process.
 		final var correlated = correlatePaymentDecision(municipalityId, namespace, errandId, request.getDecision().getOutcome());
 
 		LOG.info("Finalized errand {} with outcome {} (decision {}, process correlated: {})", sanitizeForLogging(errandId),
@@ -150,6 +157,7 @@ public class FinancialAssistanceFinalizeService {
 
 		return FinalizeResponse.create()
 			.withDecisionId(decisionId)
+			.withPaymentIds(paymentIds)
 			.withProcessMessageCorrelated(correlated)
 			.withRpaTasks(rpaTasks)
 			.withCommunication(request.getCommunication());
@@ -207,20 +215,31 @@ public class FinancialAssistanceFinalizeService {
 	 * dedup does not collapse them), and the bevakningar / journal entries / documents authored here that Lifecare does
 	 * not have yet — the latter three only when there is anything to mirror.
 	 */
-	private List<RpaTask> enqueueWriteBacks(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request, final String decisionId) {
+	private List<RpaTask> enqueueWriteBacks(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request, final String decisionId,
+		final List<String> paymentIds) {
+
 		final var tasks = new ArrayList<RpaTask>();
 		tasks.add(enqueue(municipalityId, namespace, errandId, WRITE_DECISION, null, toDecisionContent(request, decisionId)));
 
-		final List<FinalizePayment> payments = ofNullable(request.getPayments()).orElseGet(List::of);
-		for (var index = 0; index < payments.size(); index++) {
-			final var sequence = index + 1;
-			tasks.add(enqueue(municipalityId, namespace, errandId, REGISTER_PAYMENT, String.valueOf(sequence), toPaymentContent(payments.get(index), sequence)));
-		}
+		// The reference suffix is the payment id rather than a position in the list, so the Orchestrator's dedup keys
+		// on the row the item is actually about.
+		paymentIds.forEach(paymentId -> tasks.add(
+			enqueue(municipalityId, namespace, errandId, REGISTER_PAYMENT, paymentId, toPaymentIdContent(paymentId))));
 
 		enqueueIfAny(tasks, municipalityId, namespace, errandId, WRITE_MONITORING, KEY_MONITORING_IDS, () -> localMonitoringIds(municipalityId, namespace, errandId));
 		enqueueIfAny(tasks, municipalityId, namespace, errandId, WRITE_JOURNAL, KEY_JOURNAL_ENTRY_IDS, () -> journalEntryService.listLocallyAuthoredIds(municipalityId, namespace, errandId));
 		enqueueIfAny(tasks, municipalityId, namespace, errandId, WRITE_DOCUMENT, KEY_DOCUMENT_IDS, () -> documentService.listLocallyAuthoredIds(municipalityId, namespace, errandId));
 		return tasks;
+	}
+
+	/**
+	 * Persist the decided payments and return their ids, in request order. Each becomes a {@code Payment} row the
+	 * robot — and Draken's payment tab — reads through the Payment resource; the queue item carries only the id.
+	 */
+	private List<String> createPayments(final String errandId, final FinalizeRequest request) {
+		return ofNullable(request.getPayments()).orElseGet(List::<FinalizePayment>of).stream()
+			.map(payment -> paymentService.createForDecision(errandId, toPaymentRequest(payment)))
+			.toList();
 	}
 
 	/** The monitorings created or changed in Draken — everything not mirrored from Lifecare. */

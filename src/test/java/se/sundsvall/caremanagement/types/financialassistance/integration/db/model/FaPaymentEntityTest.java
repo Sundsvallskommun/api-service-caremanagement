@@ -55,6 +55,7 @@ class FaPaymentEntityTest {
 			.withPaymentDate(paymentDate)
 			.withAmount(amount)
 			.withApplicationMonth("2026-08")
+			.withAccountingCode("4631-1234")
 			.withReportedOnStakeholderIds(List.of("stakeholder-1"))
 			.withAccountingDate(accountingDate)
 			.withExcludedFromPayment(true)

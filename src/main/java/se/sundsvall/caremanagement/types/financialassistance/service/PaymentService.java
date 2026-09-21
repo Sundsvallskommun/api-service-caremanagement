@@ -47,6 +47,12 @@ public class PaymentService {
 	static final String SOURCE_CASEWORKER = "CASEWORKER";
 	static final String SOURCE_LIFECARE = "LIFECARE";
 	static final String STATUS_DRAFT = "DRAFT";
+	/**
+	 * A payment created by "Besluta och utbetala" and queued to the robot. Deliberately not {@code DRAFT}: a row the
+	 * caseworker has decided on is not a draft, and calling it one would make the status useless for seeing what is
+	 * actually waiting to be registered in Lifecare. Nothing clears it yet — the robot has no callback (open question).
+	 */
+	static final String STATUS_PENDING_REGISTRATION = "PENDING_REGISTRATION";
 
 	private final ErrandService errandService;
 	private final FaPaymentRepository paymentRepository;
@@ -104,6 +110,25 @@ public class PaymentService {
 	}
 
 	/**
+	 * Create the payment a finalize ("Besluta och utbetala") decided on, as {@code PENDING_REGISTRATION}, and return
+	 * its id for the {@code REGISTER_PAYMENT} queue item. Separate from {@link #create} because that one is the
+	 * caseworker's draft-saving path and must keep yielding {@code DRAFT}.
+	 *
+	 * <p>
+	 * The errand is <em>not</em> scope-checked here: finalize has already read it, and this runs inside finalize's
+	 * transaction, so a failure has to roll the decision back with it rather than leave an errand with a decision and
+	 * no payments.
+	 * </p>
+	 */
+	@Transactional
+	public String createForDecision(final String errandId, final PaymentRequest request) {
+		return paymentRepository.save(applyRequest(FaPaymentEntity.create(), request)
+			.withErrandId(errandId)
+			.withSource(SOURCE_CASEWORKER)
+			.withStatus(STATUS_PENDING_REGISTRATION)).getId();
+	}
+
+	/**
 	 * Replace a payment's mutable fields. {@code status} is never touched here — it is server-managed. Scoped: throws
 	 * {@code 404} when the errand or payment is missing.
 	 */
@@ -147,6 +172,7 @@ public class PaymentService {
 			.withPaymentDate(request.getPaymentDate())
 			.withAmount(request.getAmount())
 			.withApplicationMonth(request.getApplicationMonth())
+			.withAccountingCode(request.getAccountingCode())
 			.withReportedOnStakeholderIds(request.getReportedOnStakeholderIds())
 			.withAccountingDate(request.getAccountingDate())
 			.withExcludedFromPayment(request.isExcludedFromPayment())
@@ -175,6 +201,7 @@ public class PaymentService {
 			.withPaymentDate(entity.getPaymentDate())
 			.withAmount(entity.getAmount())
 			.withApplicationMonth(entity.getApplicationMonth())
+			.withAccountingCode(entity.getAccountingCode())
 			.withReportedOnStakeholderIds(entity.getReportedOnStakeholderIds())
 			.withAccountingDate(entity.getAccountingDate())
 			.withExcludedFromPayment(entity.isExcludedFromPayment())

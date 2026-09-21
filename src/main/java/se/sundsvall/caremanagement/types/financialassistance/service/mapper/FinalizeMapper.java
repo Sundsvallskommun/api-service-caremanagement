@@ -12,7 +12,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Communica
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizePayment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RpaTask;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
@@ -45,14 +45,8 @@ public final class FinalizeMapper {
 	static final String KEY_AMOUNT = "amount";
 	static final String KEY_COMMUNICATION_CHANNELS = "communicationChannels";
 	static final String KEY_HOUSEHOLD_SIZE_CHANGED = "householdSizeChanged";
-	static final String KEY_PAYMENT_DATE = "paymentDate";
-	static final String KEY_CONCERNED_MONTH = "concernedMonth";
-	static final String KEY_PAYEE_NAME = "payeeName";
-	static final String KEY_PAYMENT_METHOD = "paymentMethod";
-	static final String KEY_CLEARING = "clearing";
-	static final String KEY_ACCOUNT_NUMBER = "accountNumber";
-	static final String KEY_ACCOUNTING_CODE = "accountingCode";
-	static final String KEY_SEQUENCE = "sequence";
+	/** The only key on a REGISTER_PAYMENT item: the robot reads the payment itself through the Payment resource. */
+	static final String KEY_PAYMENT_ID = "paymentId";
 	static final String KEY_COUNT = "count";
 
 	private FinalizeMapper() {}
@@ -121,18 +115,35 @@ public final class FinalizeMapper {
 		return content;
 	}
 
-	/** One {@code REGISTER_PAYMENT} queue item content; {@code sequence} is the 1-based position among the payments. */
-	public static Map<String, String> toPaymentContent(final FinalizePayment payment, final int sequence) {
+	/**
+	 * One {@code REGISTER_PAYMENT} queue item content: the {@code paymentId} and nothing else. The robot fetches the
+	 * rest via {@code GET .../payments/{paymentId}}, which is what keeps the payee's name, clearing and account number
+	 * out of the Orchestrator queue store — the same reason personal numbers are served through {@code rpa-context}
+	 * rather than carried on the item.
+	 */
+	public static Map<String, String> toPaymentIdContent(final String paymentId) {
 		final var content = new HashMap<String, String>();
-		put(content, KEY_SEQUENCE, sequence);
-		ofNullable(payment).ifPresent(source -> {
-			put(content, KEY_PAYMENT_DATE, source.getPaymentDate());
-			put(content, KEY_AMOUNT, source.getAmount());
-			put(content, KEY_CONCERNED_MONTH, source.getConcernedMonth());
-			put(content, KEY_ACCOUNTING_CODE, source.getAccountingCode());
-			ofNullable(source.getPayee()).ifPresent(payee -> putPayee(content, payee));
-		});
+		put(content, KEY_PAYMENT_ID, paymentId);
 		return content;
+	}
+
+	/** The finalize payment as a {@link PaymentRequest}, bridging the two models' naming. */
+	public static PaymentRequest toPaymentRequest(final FinalizePayment payment) {
+		final var request = PaymentRequest.create();
+		ofNullable(payment).ifPresent(source -> {
+			request.setPaymentDate(source.getPaymentDate());
+			request.setAmount(source.getAmount());
+			// concernedMonth on the finalize model, applicationMonth on the payment - same yyyy-MM, different word
+			request.setApplicationMonth(source.getConcernedMonth());
+			request.setAccountingCode(source.getAccountingCode());
+			ofNullable(source.getPayee()).ifPresent(payee -> {
+				request.setPayeeName(payee.getName());
+				request.setPaymentMethod(payee.getPaymentMethod());
+				request.setClearingNumber(payee.getClearing());
+				request.setAccountNumber(payee.getAccountNumber());
+			});
+		});
+		return request;
 	}
 
 	/**
@@ -169,13 +180,6 @@ public final class FinalizeMapper {
 			.withAction(ofNullable(action).map(RpaAction::name).orElse(null))
 			.withReference(reference)
 			.withEnqueued(enqueued);
-	}
-
-	private static void putPayee(final Map<String, String> content, final Payee payee) {
-		put(content, KEY_PAYEE_NAME, payee.getName());
-		put(content, KEY_PAYMENT_METHOD, payee.getPaymentMethod());
-		put(content, KEY_CLEARING, payee.getClearing());
-		put(content, KEY_ACCOUNT_NUMBER, payee.getAccountNumber());
 	}
 
 	/** Queue item content is a flat string map; nulls are left out rather than sent as "null". */

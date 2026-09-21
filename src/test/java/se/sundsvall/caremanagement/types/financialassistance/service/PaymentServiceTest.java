@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -261,5 +262,37 @@ class PaymentServiceTest {
 			.hasMessage("Not Found: Errand not found");
 
 		verify(repositoryMock, never()).findByErrandId(any());
+	}
+
+	@Test
+	void createForDecisionStampsPendingRegistrationAndReturnsTheId() {
+		// A row the caseworker has decided on is not a draft — the status has to say what is actually waiting for the
+		// robot. The errand is not scope-checked here: finalize has already read it, inside the same transaction.
+		when(repositoryMock.save(any(FaPaymentEntity.class)))
+			.thenAnswer(invocation -> invocation.<FaPaymentEntity>getArgument(0).withId("pay-1"));
+
+		final var id = service.createForDecision(ERRAND_ID, PaymentRequest.create()
+			.withAmount(new BigDecimal("6000.00")).withApplicationMonth("2026-06").withAccountingCode("5011").withPayeeName("Hyresvärden AB"));
+
+		assertThat(id).isEqualTo("pay-1");
+		final var captor = ArgumentCaptor.forClass(FaPaymentEntity.class);
+		verify(repositoryMock).save(captor.capture());
+		assertThat(captor.getValue())
+			.returns("PENDING_REGISTRATION", FaPaymentEntity::getStatus)
+			.returns("CASEWORKER", FaPaymentEntity::getSource)
+			.returns(ERRAND_ID, FaPaymentEntity::getErrandId)
+			.returns("2026-06", FaPaymentEntity::getApplicationMonth)
+			.returns("5011", FaPaymentEntity::getAccountingCode);
+		verifyNoInteractions(errandServiceMock);
+	}
+
+	@Test
+	void createStillYieldsADraft() {
+		// The caseworker's own save must keep working exactly as before — saving a draft never sets the robot off.
+		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var payment = service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PaymentRequest.create().withAmount(new BigDecimal("500.00")));
+
+		assertThat(payment.getStatus()).isEqualTo("DRAFT");
 	}
 }

@@ -79,6 +79,9 @@ public class FaPaymentEntity {
 	@Column(name = "application_month", length = 7)
 	private String applicationMonth;
 
+	@Column(name = "accounting_code", length = 64)
+	private String accountingCode;
+
 	@ElementCollection
 	@CollectionTable(name = "errand_financial_assistance_payment_stakeholder", joinColumns = @JoinColumn(name = "payment_id"))
 	@Column(name = "stakeholder_id", length = 64)
@@ -269,6 +272,19 @@ public class FaPaymentEntity {
 
 	public FaPaymentEntity withApplicationMonth(final String applicationMonth) {
 		this.applicationMonth = applicationMonth;
+		return this;
+	}
+
+	public String getAccountingCode() {
+		return accountingCode;
+	}
+
+	public void setAccountingCode(final String accountingCode) {
+		this.accountingCode = accountingCode;
+	}
+
+	public FaPaymentEntity withAccountingCode(final String accountingCode) {
+		this.accountingCode = accountingCode;
 		return this;
 	}
 
@@ -516,7 +532,7 @@ public class FaPaymentEntity {
 		return excludedFromPayment == that.excludedFromPayment && usesOcr == that.usesOcr && Objects.equals(id, that.id)
 			&& Objects.equals(errandId, that.errandId) && Objects.equals(source, that.source) && Objects.equals(lifecareId, that.lifecareId)
 			&& Objects.equals(status, that.status) && Objects.equals(moneyType, that.moneyType) && Objects.equals(paymentDate, that.paymentDate)
-			&& Objects.equals(amount, that.amount) && Objects.equals(applicationMonth, that.applicationMonth)
+			&& Objects.equals(amount, that.amount) && Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(accountingCode, that.accountingCode)
 			&& Objects.equals(accountingDate, that.accountingDate) && Objects.equals(payeeStakeholderId, that.payeeStakeholderId)
 			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(payeeName, that.payeeName)
 			&& Objects.equals(payeeAddress, that.payeeAddress) && Objects.equals(payeeCareOf, that.payeeCareOf)
@@ -528,7 +544,7 @@ public class FaPaymentEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, source, lifecareId, status, moneyType, paymentDate, amount, applicationMonth, accountingDate,
+		return Objects.hash(id, errandId, source, lifecareId, status, moneyType, paymentDate, amount, applicationMonth, accountingCode, accountingDate,
 			excludedFromPayment, payeeStakeholderId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode, payeeCity,
 			clearingNumber, accountNumber, localPaymentNumber, invoiceNumber, usesOcr, created, modified);
 	}
@@ -545,6 +561,7 @@ public class FaPaymentEntity {
 			", paymentDate=" + paymentDate +
 			", amount=" + amount +
 			", applicationMonth='" + applicationMonth + '\'' +
+			", accountingCode='" + accountingCode + '\'' +
 			", accountingDate=" + accountingDate +
 			", excludedFromPayment=" + excludedFromPayment +
 			", payeeStakeholderId='" + payeeStakeholderId + '\'' +

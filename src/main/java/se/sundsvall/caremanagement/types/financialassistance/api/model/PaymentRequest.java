@@ -51,6 +51,10 @@ public class PaymentRequest {
 	@Pattern(regexp = "^\\d{4}-(0[1-9]|1[0-2])$", message = "must be in the format yyyy-MM")
 	private String applicationMonth;
 
+	@Schema(description = "The accounting code (kontering) the bistånd is booked against. Free text: FamilyCare exposes no catalogue of accounting codes over the API.", examples = "4631-1234")
+	@Size(max = 64)
+	private String accountingCode;
+
 	@ArraySchema(arraySchema = @Schema(description = "Stakeholder ids the payment is reported on"), schema = @Schema(implementation = String.class, examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479"))
 	private List<@Size(max = 64) String> reportedOnStakeholderIds;
 
@@ -191,6 +195,19 @@ public class PaymentRequest {
 
 	public PaymentRequest withApplicationMonth(final String applicationMonth) {
 		this.applicationMonth = applicationMonth;
+		return this;
+	}
+
+	public String getAccountingCode() {
+		return accountingCode;
+	}
+
+	public void setAccountingCode(final String accountingCode) {
+		this.accountingCode = accountingCode;
+	}
+
+	public PaymentRequest withAccountingCode(final String accountingCode) {
+		this.accountingCode = accountingCode;
 		return this;
 	}
 
@@ -410,7 +427,7 @@ public class PaymentRequest {
 		return excludedFromPayment == that.excludedFromPayment && usesOcr == that.usesOcr && Objects.equals(source, that.source)
 			&& Objects.equals(lifecareId, that.lifecareId) && Objects.equals(moneyType, that.moneyType)
 			&& Objects.equals(paymentDate, that.paymentDate) && Objects.equals(amount, that.amount)
-			&& Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(reportedOnStakeholderIds, that.reportedOnStakeholderIds)
+			&& Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(accountingCode, that.accountingCode) && Objects.equals(reportedOnStakeholderIds, that.reportedOnStakeholderIds)
 			&& Objects.equals(accountingDate, that.accountingDate) && Objects.equals(payeeStakeholderId, that.payeeStakeholderId)
 			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(payeeName, that.payeeName)
 			&& Objects.equals(payeeAddress, that.payeeAddress) && Objects.equals(payeeCareOf, that.payeeCareOf)
@@ -422,7 +439,7 @@ public class PaymentRequest {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(source, lifecareId, moneyType, paymentDate, amount, applicationMonth, reportedOnStakeholderIds, accountingDate,
+		return Objects.hash(source, lifecareId, moneyType, paymentDate, amount, applicationMonth, accountingCode, reportedOnStakeholderIds, accountingDate,
 			excludedFromPayment, payeeStakeholderId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode, payeeCity,
 			clearingNumber, accountNumber, localPaymentNumber, invoiceNumber, usesOcr, messageLines);
 	}
@@ -436,6 +453,7 @@ public class PaymentRequest {
 			", paymentDate=" + paymentDate +
 			", amount=" + amount +
 			", applicationMonth='" + applicationMonth + '\'' +
+			", accountingCode='" + accountingCode + '\'' +
 			", reportedOnStakeholderIds=" + reportedOnStakeholderIds +
 			", accountingDate=" + accountingDate +
 			", excludedFromPayment=" + excludedFromPayment +

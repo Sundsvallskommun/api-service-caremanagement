@@ -128,7 +128,15 @@ class FinalizeMapperTest {
 	}
 
 	@Test
-	void toPaymentContentCarriesThePaymentAndPayee() {
+	void toPaymentIdContentCarriesNothingButTheId() {
+		// The whole point of the change: the payee's name, clearing and account number must not reach the Orchestrator
+		// queue store. The robot reads them through GET .../payments/{paymentId}.
+		assertThat(FinalizeMapper.toPaymentIdContent("p-1")).containsOnly(java.util.Map.entry("paymentId", "p-1"));
+		assertThat(FinalizeMapper.toPaymentIdContent(null)).isEmpty();
+	}
+
+	@Test
+	void toPaymentRequestBridgesTheTwoModelsNaming() {
 		final var payment = FinalizePayment.create()
 			.withPaymentDate(LocalDate.of(2026, 6, 25))
 			.withAmount(new BigDecimal("6000.00"))
@@ -136,22 +144,22 @@ class FinalizeMapperTest {
 			.withAccountingCode("5011")
 			.withPayee(Payee.create().withName("Hyresvärden AB").withPaymentMethod("BANKGIRO").withClearing("6000").withAccountNumber("123-4567"));
 
-		assertThat(FinalizeMapper.toPaymentContent(payment, 2)).containsOnly(
-			java.util.Map.entry("sequence", "2"),
-			java.util.Map.entry("paymentDate", "2026-06-25"),
-			java.util.Map.entry("amount", "6000.00"),
-			java.util.Map.entry("concernedMonth", "2026-06"),
-			java.util.Map.entry("accountingCode", "5011"),
-			java.util.Map.entry("payeeName", "Hyresvärden AB"),
-			java.util.Map.entry("paymentMethod", "BANKGIRO"),
-			java.util.Map.entry("clearing", "6000"),
-			java.util.Map.entry("accountNumber", "123-4567"));
+		final var request = FinalizeMapper.toPaymentRequest(payment);
+
+		assertThat(request.getPaymentDate()).isEqualTo(LocalDate.of(2026, 6, 25));
+		assertThat(request.getAmount()).isEqualByComparingTo("6000.00");
+		assertThat(request.getApplicationMonth()).isEqualTo("2026-06"); // concernedMonth → applicationMonth
+		assertThat(request.getAccountingCode()).isEqualTo("5011");
+		assertThat(request.getPayeeName()).isEqualTo("Hyresvärden AB");
+		assertThat(request.getPaymentMethod()).isEqualTo("BANKGIRO");
+		assertThat(request.getClearingNumber()).isEqualTo("6000"); // clearing → clearingNumber
+		assertThat(request.getAccountNumber()).isEqualTo("123-4567");
 	}
 
 	@Test
-	void toPaymentContentIsNullSafe() {
-		assertThat(FinalizeMapper.toPaymentContent(null, 1)).containsOnly(java.util.Map.entry("sequence", "1"));
-		assertThat(FinalizeMapper.toPaymentContent(FinalizePayment.create(), 1)).containsOnly(java.util.Map.entry("sequence", "1"));
+	void toPaymentRequestIsNullSafe() {
+		assertThat(FinalizeMapper.toPaymentRequest(null).getAmount()).isNull();
+		assertThat(FinalizeMapper.toPaymentRequest(FinalizePayment.create()).getPayeeName()).isNull();
 	}
 
 	@Test

@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -18,6 +19,10 @@ public class FinalizeResponse {
 
 	@Schema(description = "Whether the PaymentDecisionReceived message reached the process. False means the engine could not be reached — the errand stays AWAITING_DECISION and the message must be re-sent via the process-messages endpoint.",
 		examples = "true")
+	@ArraySchema(arraySchema = @Schema(description = "The ids of the Payment rows the finalize created, in request order. The REGISTER_PAYMENT queue items carry these and nothing else - the robot reads each payment through GET .../payments/{paymentId}."),
+		schema = @Schema(implementation = String.class, examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479"))
+	private List<String> paymentIds;
+
 	private Boolean processMessageCorrelated;
 
 	@Schema(description = "The RPA write-back tasks the finalize step tried to enqueue, one per Lifecare step")
@@ -40,6 +45,19 @@ public class FinalizeResponse {
 
 	public FinalizeResponse withDecisionId(final String decisionId) {
 		this.decisionId = decisionId;
+		return this;
+	}
+
+	public List<String> getPaymentIds() {
+		return paymentIds;
+	}
+
+	public void setPaymentIds(final List<String> paymentIds) {
+		this.paymentIds = paymentIds;
+	}
+
+	public FinalizeResponse withPaymentIds(final List<String> paymentIds) {
+		this.paymentIds = paymentIds;
 		return this;
 	}
 
@@ -87,19 +105,20 @@ public class FinalizeResponse {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FinalizeResponse that = (FinalizeResponse) o;
-		return Objects.equals(decisionId, that.decisionId) && Objects.equals(processMessageCorrelated, that.processMessageCorrelated)
+		return Objects.equals(decisionId, that.decisionId) && Objects.equals(paymentIds, that.paymentIds) && Objects.equals(processMessageCorrelated, that.processMessageCorrelated)
 			&& Objects.equals(rpaTasks, that.rpaTasks) && Objects.equals(communication, that.communication);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(decisionId, processMessageCorrelated, rpaTasks, communication);
+		return Objects.hash(decisionId, paymentIds, processMessageCorrelated, rpaTasks, communication);
 	}
 
 	@Override
 	public String toString() {
 		return "FinalizeResponse{" +
 			"decisionId='" + decisionId + '\'' +
+			", paymentIds=" + paymentIds +
 			", processMessageCorrelated=" + processMessageCorrelated +
 			", rpaTasks=" + rpaTasks +
 			", communication=" + communication +
