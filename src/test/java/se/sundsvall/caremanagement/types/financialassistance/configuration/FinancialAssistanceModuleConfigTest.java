@@ -71,4 +71,14 @@ class FinancialAssistanceModuleConfigTest {
 		assertThat(FinancialAssistanceModuleConfig.applicationTypeForSlug(SLUG_RENEWAL)).isEqualTo("RENEWAL");
 		assertThat(FinancialAssistanceModuleConfig.applicationTypeForSlug(SLUG_SUPPLEMENTARY)).isEqualTo("SUPPLEMENTARY");
 	}
+
+	@Test
+	void onlyGrantingOutcomesCarryAnAmount() {
+		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount("BIFALL")).isTrue();
+		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount("DELAVSLAG")).isTrue();
+		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount("AVSLAG")).isFalse();
+		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount("AVVISNING")).isFalse();
+		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount(null)).isFalse();
+		assertThat(FinancialAssistanceModuleConfig.outcomeCarriesAmount("bifall")).isFalse();
+	}
 }

@@ -29,6 +29,7 @@ class FinancialAssistanceViewTest {
 		.withCalculation(SectionApproval.create().withSection("CALCULATION").withApproved(true))
 		.withPayment(SectionApproval.create().withSection("PAYMENT").withApproved(false))
 		.withDecision(SectionApproval.create().withSection("DECISION").withApproved(false));
+	private static final CommunicationChannels COMMUNICATION = CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false);
 
 	@BeforeAll
 	static void setup() {
@@ -65,7 +66,9 @@ class FinancialAssistanceViewTest {
 			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
 			.withData(DATA)
 			.withRecommendation(RECOMMENDATION)
-			.withSectionApprovals(SECTION_APPROVALS);
+			.withSectionApprovals(SECTION_APPROVALS)
+			.withCommunication(COMMUNICATION)
+			.withHouseholdSizeChanged(true);
 
 		assertThat(view.getId()).isEqualTo("cb20c51f-fcf3-42c0-b613-de563634a8ec");
 		assertThat(view.getErrandNumber()).isEqualTo("EB-26060042");
@@ -85,6 +88,8 @@ class FinancialAssistanceViewTest {
 		assertThat(view.getData()).isEqualTo(DATA);
 		assertThat(view.getRecommendation()).isEqualTo(RECOMMENDATION);
 		assertThat(view.getSectionApprovals()).isEqualTo(SECTION_APPROVALS);
+		assertThat(view.getCommunication()).isEqualTo(COMMUNICATION);
+		assertThat(view.getHouseholdSizeChanged()).isTrue();
 		assertThat(view).hasNoNullFieldsOrProperties();
 	}
 

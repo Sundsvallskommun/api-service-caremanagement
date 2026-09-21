@@ -10,6 +10,7 @@ import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Asset;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Child;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Cost;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
@@ -198,7 +199,23 @@ public final class FinancialAssistanceMapper {
 				.withModified(env.getModified())
 				.withTouched(env.getTouched())
 				.withLastDailyRunAt(ofNullable(entity).map(FinancialAssistanceEntity::getLastDailyRunAt).orElse(null))
-				.withData(toData(entity)))
+				.withData(toData(entity))
+				.withCommunication(toCommunicationChannels(entity))
+				.withHouseholdSizeChanged(ofNullable(entity).map(FinancialAssistanceEntity::getHouseholdSizeChanged).orElse(null)))
+			.orElse(null);
+	}
+
+	/**
+	 * The communication channels chosen at finalize, or {@code null} while the errand has not been finalized (no channel
+	 * flag set yet) — so Draken can tell "not decided" from "decided and nothing to send".
+	 */
+	public static CommunicationChannels toCommunicationChannels(final FinancialAssistanceEntity entity) {
+		return ofNullable(entity)
+			.filter(e -> e.getNotifyMinaSidor() != null || e.getNotifyDigitalMailbox() != null || e.getNotifyLetter() != null)
+			.map(e -> CommunicationChannels.create()
+				.withMinaSidor(e.getNotifyMinaSidor())
+				.withDigitalMailbox(e.getNotifyDigitalMailbox())
+				.withLetter(e.getNotifyLetter()))
 			.orElse(null);
 	}
 

@@ -65,6 +65,8 @@ public class FinancialAssistanceCalculationService {
 	private static final String CREATED_BY = "drakel";
 	private static final String VALUE_REVIEW_REQUIRED = "REVIEW_REQUIRED";
 	private static final String VALUE_OK = "OK";
+	/** SpecificContent key on the WRITE_NORMBERAKNING item — the same key the finalize WRITE_DECISION item uses. */
+	static final String KEY_HOUSEHOLD_SIZE_CHANGED = "householdSizeChanged";
 
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
@@ -277,7 +279,7 @@ public class FinancialAssistanceCalculationService {
 		// The calculation is now in Lifecare via the FamilyCare API; ask RPA to mirror the rest of the decision surface that
 		// has no
 		// FamilyCare endpoint. Best-effort — the Lifecare write already succeeded, so a queue hiccup must not fail the commit.
-		triggerRpaWrite(municipalityId, errandId);
+		triggerRpaWrite(municipalityId, namespace, errandId);
 
 		return CalculationResponse.create()
 			.withCalculationId(calculationId)
@@ -315,7 +317,7 @@ public class FinancialAssistanceCalculationService {
 		final var header = new CalculationHeader(normId, applicationMonth.atDay(1), applicationMonth.atEndOfMonth(), LocalDate.now(ZoneId.systemDefault()), false, null);
 
 		final var calculationId = calculationService.commitEffective(applicant, applicationMonth, header, incomes, expenses, persons);
-		triggerRpaWrite(municipalityId, errandId);
+		triggerRpaWrite(municipalityId, namespace, errandId);
 
 		return CalculationResponse.create().withCalculationId(calculationId);
 	}
@@ -351,10 +353,19 @@ public class FinancialAssistanceCalculationService {
 		return draftService.patchHeader(errandId, input);
 	}
 
-	/** Enqueue an RPA write, swallowing any failure — RPA mirroring must never roll back a successful Lifecare write. */
-	private void triggerRpaWrite(final String municipalityId, final String errandId) {
+	/**
+	 * Enqueue the {@code WRITE_NORMBERAKNING} RPA item, swallowing any failure — RPA mirroring must never roll back a
+	 * successful Lifecare write. This is the <em>only</em> producer of that item: the finalize step deliberately does not
+	 * enqueue it, since the process reaches this commit right after the decision is correlated. The item carries the
+	 * {@code householdSizeChanged} flag finalize stored on the errand, so the robot knows to answer "Ja" when Lifecare asks
+	 * whether the changed gemensamma kostnader should be saved (absent before finalize → {@code false}).
+	 */
+	private void triggerRpaWrite(final String municipalityId, final String namespace, final String errandId) {
 		try {
-			rpaService.enqueue(municipalityId, errandId, WRITE_NORMBERAKNING);
+			final var householdSizeChanged = financialAssistanceRepository.findByErrandId(errandId)
+				.map(FinancialAssistanceEntity::getHouseholdSizeChanged)
+				.orElse(false);
+			rpaService.enqueue(municipalityId, namespace, errandId, WRITE_NORMBERAKNING, Map.of(KEY_HOUSEHOLD_SIZE_CHANGED, String.valueOf(householdSizeChanged)));
 		} catch (final Exception e) {
 			LOG.warn("RPA enqueue {} failed for errand {} — Lifecare write already committed, continuing", sanitizeForLogging(WRITE_NORMBERAKNING.name()), sanitizeForLogging(errandId), e);
 		}

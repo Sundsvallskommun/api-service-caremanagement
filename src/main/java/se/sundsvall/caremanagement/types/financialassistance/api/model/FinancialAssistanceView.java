@@ -74,6 +74,14 @@ public class FinancialAssistanceView {
 		accessMode = READ_ONLY)
 	private SectionApprovals sectionApprovals;
 
+	@Schema(
+		description = "The communication channels the caseworker chose when finalizing the errand (Besluta och utbetala), or null until then. The Draken BFF sends the decision through these; caremanagement only records the choice.",
+		accessMode = READ_ONLY)
+	private CommunicationChannels communication;
+
+	@Schema(description = "Whether the caseworker changed the household size (gemensamma kostnader) when finalizing — forwarded to the RPA normberäkning write. Null until the errand has been finalized.", accessMode = READ_ONLY)
+	private Boolean householdSizeChanged;
+
 	public static FinancialAssistanceView create() {
 		return new FinancialAssistanceView();
 	}
@@ -312,6 +320,32 @@ public class FinancialAssistanceView {
 		return this;
 	}
 
+	public CommunicationChannels getCommunication() {
+		return communication;
+	}
+
+	public void setCommunication(final CommunicationChannels communication) {
+		this.communication = communication;
+	}
+
+	public FinancialAssistanceView withCommunication(final CommunicationChannels communication) {
+		this.communication = communication;
+		return this;
+	}
+
+	public Boolean getHouseholdSizeChanged() {
+		return householdSizeChanged;
+	}
+
+	public void setHouseholdSizeChanged(final Boolean householdSizeChanged) {
+		this.householdSizeChanged = householdSizeChanged;
+	}
+
+	public FinancialAssistanceView withHouseholdSizeChanged(final Boolean householdSizeChanged) {
+		this.householdSizeChanged = householdSizeChanged;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -325,13 +359,15 @@ public class FinancialAssistanceView {
 			&& Objects.equals(processInstanceId, that.processInstanceId) && Objects.equals(created, that.created)
 			&& Objects.equals(modified, that.modified) && Objects.equals(touched, that.touched)
 			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt) && Objects.equals(data, that.data)
-			&& Objects.equals(recommendation, that.recommendation) && Objects.equals(sectionApprovals, that.sectionApprovals);
+			&& Objects.equals(recommendation, that.recommendation) && Objects.equals(sectionApprovals, that.sectionApprovals)
+			&& Objects.equals(communication, that.communication) && Objects.equals(householdSizeChanged, that.householdSizeChanged);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandNumber, municipalityId, namespace, typeSlug, title, status, priority, reporterUserId,
-			assignedUserId, processInstanceId, created, modified, touched, lastDailyRunAt, data, recommendation, sectionApprovals);
+			assignedUserId, processInstanceId, created, modified, touched, lastDailyRunAt, data, recommendation, sectionApprovals,
+			communication, householdSizeChanged);
 	}
 
 	@Override
@@ -341,6 +377,7 @@ public class FinancialAssistanceView {
 			+ "', status='" + status + "', priority='" + priority + "', reporterUserId='" + reporterUserId
 			+ "', assignedUserId='" + assignedUserId + "', processInstanceId='" + processInstanceId + "', created=" + created
 			+ ", modified=" + modified + ", touched=" + touched + ", lastDailyRunAt=" + lastDailyRunAt + ", data=" + data
-			+ ", recommendation=" + recommendation + ", sectionApprovals=" + sectionApprovals + '}';
+			+ ", recommendation=" + recommendation + ", sectionApprovals=" + sectionApprovals + ", communication=" + communication
+			+ ", householdSizeChanged=" + householdSizeChanged + '}';
 	}
 }

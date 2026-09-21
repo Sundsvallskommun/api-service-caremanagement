@@ -1,0 +1,185 @@
+package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import se.sundsvall.caremanagement.decisions.api.model.Decision;
+import se.sundsvall.caremanagement.rpa.service.RpaAction;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizePayment;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.RpaTask;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+
+import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.outcomeCarriesAmount;
+
+/**
+ * Mappings for the finalize ("Besluta och utbetala") step: the request → the {@code PAYMENT} decision row, the
+ * request → the entity's audit fields, and the request parts → the flat string maps the UiPath queue items carry.
+ *
+ * <p>
+ * The queue-item maps are deliberately compact: values Lifecare needs typed in, plus ids the robot fetches details for
+ * through the existing GET endpoints. They never carry personal numbers — the robot gets those from the errand's
+ * {@code rpa-context} endpoint.
+ */
+public final class FinalizeMapper {
+
+	/** The decision type of the caseworker's payment decision — the audit-trail row finalize records. */
+	public static final String DECISION_TYPE_PAYMENT = "PAYMENT";
+
+	static final String CHANNEL_MINA_SIDOR = "MINA_SIDOR";
+	static final String CHANNEL_DIGITAL_MAILBOX = "DIGITAL_MAILBOX";
+	static final String CHANNEL_LETTER = "LETTER";
+
+	static final String KEY_DECISION_ID = "decisionId";
+	static final String KEY_OUTCOME = "outcome";
+	static final String KEY_REASON = "reason";
+	static final String KEY_PERIOD_FROM = "periodFrom";
+	static final String KEY_PERIOD_TO = "periodTo";
+	static final String KEY_AMOUNT = "amount";
+	static final String KEY_COMMUNICATION_CHANNELS = "communicationChannels";
+	static final String KEY_HOUSEHOLD_SIZE_CHANGED = "householdSizeChanged";
+	static final String KEY_PAYMENT_DATE = "paymentDate";
+	static final String KEY_CONCERNED_MONTH = "concernedMonth";
+	static final String KEY_PAYEE_NAME = "payeeName";
+	static final String KEY_PAYMENT_METHOD = "paymentMethod";
+	static final String KEY_CLEARING = "clearing";
+	static final String KEY_ACCOUNT_NUMBER = "accountNumber";
+	static final String KEY_ACCOUNTING_CODE = "accountingCode";
+	static final String KEY_SEQUENCE = "sequence";
+	static final String KEY_COUNT = "count";
+
+	private FinalizeMapper() {}
+
+	/**
+	 * The {@code PAYMENT} decision the finalize records on the errand. The outcome is the value, the internal reason the
+	 * description, the underrättelse the decision message. A non-granting outcome is recorded with amount 0 whatever the
+	 * request carried, matching the decision model's "0 for a rejection".
+	 */
+	public static Decision toPaymentDecision(final FinalizeRequest request, final String decidedBy, final LocalDate decisionDate) {
+		return ofNullable(request)
+			.map(FinalizeRequest::getDecision)
+			.map(decision -> Decision.create()
+				.withDecisionType(DECISION_TYPE_PAYMENT)
+				.withValue(decision.getOutcome())
+				.withDescription(decision.getReason())
+				.withAmount(effectiveAmount(decision))
+				.withDecisionMessage(decision.getDecisionMessage())
+				.withDecisionDate(decisionDate)
+				.withPeriodFrom(decision.getPeriodFrom())
+				.withPeriodTo(decision.getPeriodTo())
+				.withCreatedBy(decidedBy))
+			.orElse(null);
+	}
+
+	/** The amount the decision grants: the request's for a granting outcome, 0 for avslag/avvisning. */
+	static BigDecimal effectiveAmount(final FinalizeDecision decision) {
+		if (outcomeCarriesAmount(decision.getOutcome())) {
+			return ofNullable(decision.getAmount()).orElse(BigDecimal.ZERO);
+		}
+		return BigDecimal.ZERO;
+	}
+
+	/**
+	 * Stamp the finalize choices on the errand: the communication channels (audit trail, surfaced on the view) and the
+	 * household-size flag the {@code WRITE_NORMBERAKNING} item forwards to the robot. A missing flag reads as false.
+	 */
+	public static FinancialAssistanceEntity updateEntity(final FinancialAssistanceEntity entity, final FinalizeRequest request) {
+		return ofNullable(entity)
+			.map(target -> {
+				final var channels = ofNullable(request).map(FinalizeRequest::getCommunication).orElseGet(CommunicationChannels::create);
+				return target
+					.withHouseholdSizeChanged(ofNullable(request).map(FinalizeRequest::getHouseholdSizeChanged).orElse(false))
+					.withNotifyMinaSidor(ofNullable(channels.getMinaSidor()).orElse(false))
+					.withNotifyDigitalMailbox(ofNullable(channels.getDigitalMailbox()).orElse(false))
+					.withNotifyLetter(ofNullable(channels.getLetter()).orElse(false));
+			})
+			.orElse(null);
+	}
+
+	/** The {@code WRITE_DECISION} queue item content — the decision as typed into Lifecare, plus the decision row's id. */
+	public static Map<String, String> toDecisionContent(final FinalizeRequest request, final String decisionId) {
+		final var content = new HashMap<String, String>();
+		put(content, KEY_DECISION_ID, decisionId);
+		ofNullable(request).map(FinalizeRequest::getDecision).ifPresent(decision -> {
+			put(content, KEY_OUTCOME, decision.getOutcome());
+			put(content, KEY_REASON, decision.getReason());
+			put(content, KEY_PERIOD_FROM, decision.getPeriodFrom());
+			put(content, KEY_PERIOD_TO, decision.getPeriodTo());
+			put(content, KEY_AMOUNT, effectiveAmount(decision));
+		});
+		ofNullable(request).ifPresent(source -> {
+			put(content, KEY_COMMUNICATION_CHANNELS, toChannelList(source.getCommunication()));
+			put(content, KEY_HOUSEHOLD_SIZE_CHANGED, ofNullable(source.getHouseholdSizeChanged()).orElse(false));
+		});
+		return content;
+	}
+
+	/** One {@code REGISTER_PAYMENT} queue item content; {@code sequence} is the 1-based position among the payments. */
+	public static Map<String, String> toPaymentContent(final FinalizePayment payment, final int sequence) {
+		final var content = new HashMap<String, String>();
+		put(content, KEY_SEQUENCE, sequence);
+		ofNullable(payment).ifPresent(source -> {
+			put(content, KEY_PAYMENT_DATE, source.getPaymentDate());
+			put(content, KEY_AMOUNT, source.getAmount());
+			put(content, KEY_CONCERNED_MONTH, source.getConcernedMonth());
+			put(content, KEY_ACCOUNTING_CODE, source.getAccountingCode());
+			ofNullable(source.getPayee()).ifPresent(payee -> putPayee(content, payee));
+		});
+		return content;
+	}
+
+	/**
+	 * The content of an id-list item ({@code WRITE_MONITORING} / {@code WRITE_JOURNAL} / {@code WRITE_DOCUMENT}): the
+	 * ids under {@code key} as a comma-separated list plus their count. The robot fetches each by id.
+	 */
+	public static Map<String, String> toIdListContent(final String key, final List<String> ids) {
+		final var content = new HashMap<String, String>();
+		final var values = ofNullable(ids).orElseGet(List::of);
+		put(content, key, String.join(",", values));
+		put(content, KEY_COUNT, values.size());
+		return content;
+	}
+
+	/** The comma-separated channel codes for the channels switched on, in a fixed order. */
+	public static String toChannelList(final CommunicationChannels channels) {
+		final var codes = new ArrayList<String>();
+		ofNullable(channels).ifPresent(source -> {
+			if (Boolean.TRUE.equals(source.getMinaSidor())) {
+				codes.add(CHANNEL_MINA_SIDOR);
+			}
+			if (Boolean.TRUE.equals(source.getDigitalMailbox())) {
+				codes.add(CHANNEL_DIGITAL_MAILBOX);
+			}
+			if (Boolean.TRUE.equals(source.getLetter())) {
+				codes.add(CHANNEL_LETTER);
+			}
+		});
+		return String.join(",", codes);
+	}
+
+	public static RpaTask toRpaTask(final RpaAction action, final String reference, final boolean enqueued) {
+		return RpaTask.create()
+			.withAction(ofNullable(action).map(RpaAction::name).orElse(null))
+			.withReference(reference)
+			.withEnqueued(enqueued);
+	}
+
+	private static void putPayee(final Map<String, String> content, final Payee payee) {
+		put(content, KEY_PAYEE_NAME, payee.getName());
+		put(content, KEY_PAYMENT_METHOD, payee.getPaymentMethod());
+		put(content, KEY_CLEARING, payee.getClearing());
+		put(content, KEY_ACCOUNT_NUMBER, payee.getAccountNumber());
+	}
+
+	/** Queue item content is a flat string map; nulls are left out rather than sent as "null". */
+	private static void put(final Map<String, String> content, final String key, final Object value) {
+		ofNullable(value).map(String::valueOf).ifPresent(text -> content.put(key, text));
+	}
+}

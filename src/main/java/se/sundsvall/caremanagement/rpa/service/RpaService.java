@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.rpa.integration.RpaClient;
@@ -78,6 +79,34 @@ public class RpaService {
 	 * @param specificContent additional key/values placed in the queue item's {@code SpecificContent}
 	 */
 	public void enqueue(final String municipalityId, final String namespace, final String errandId, final RpaAction action, final Map<String, String> specificContent) {
+		enqueue(municipalityId, namespace, errandId, action, null, specificContent);
+	}
+
+	/**
+	 * What one enqueue call ended in: the queue item reference the Orchestrator knows the task by, and whether the item
+	 * is now on the queue ({@code enqueued=false} only when the RPA integration is disabled — the reference is still
+	 * reported so a caller can show what <em>would</em> have been queued).
+	 */
+	public record EnqueueOutcome(String reference, boolean enqueued) {}
+
+	/**
+	 * Enqueue an RPA task for an errand with a reference suffix, for actions that legitimately occur more than once on
+	 * the same errand — e.g. one {@code REGISTER_PAYMENT} per utbetalning. The Orchestrator dedups on the reference, so
+	 * without a suffix the second payment would be swallowed as a duplicate of the first; with it the reference becomes
+	 * {@code <namespace>:<errandId>:<ACTION>:<suffix>} and each occurrence is its own item.
+	 *
+	 * @param  municipalityId  the municipality whose Orchestrator folder the item is added to
+	 * @param  namespace       the namespace the errand lives in (may be {@code null}, see
+	 *                         {@link #enqueue(String, String, String, RpaAction, Map)})
+	 * @param  errandId        the errand the robot acts on
+	 * @param  action          the {@link RpaAction} to enqueue
+	 * @param  referenceSuffix appended to the reference to keep repeated occurrences of the action distinct (blank/null
+	 *                         means none)
+	 * @param  specificContent additional key/values placed in the queue item's {@code SpecificContent}
+	 * @return                 the reference the item was (or would have been) queued under, and whether it was queued
+	 */
+	public EnqueueOutcome enqueue(final String municipalityId, final String namespace, final String errandId, final RpaAction action, final String referenceSuffix,
+		final Map<String, String> specificContent) {
 		// Inbound enqueues (via RpaResource) carry a namespace — reading the errand asserts it exists in that tenant (404
 		// otherwise) so a caller cannot enqueue a robot job against a foreign/unknown errandId, and yields the human-readable
 		// errand number for the queue item. Internal callers pass a null namespace and skip both (they act on an errand
@@ -87,9 +116,15 @@ public class RpaService {
 		// The action travels to the robot as its constant name — the wire value the SpecificContent and reference carry.
 		final var actionName = action.name();
 
+		// Reference is per-(namespace, errand, action[, suffix]) so the Orchestrator's unique-reference dedup only collapses
+		// re-runs of the same action — distinct actions on the same errand remain separate queue items, and the same action
+		// on the same errandId in different namespaces stays distinct too.
+		final var reference = ofNullable(namespace).map(value -> value + ":").orElse("") + errandId + ":" + actionName
+			+ ofNullable(referenceSuffix).filter(StringUtils::hasText).map(value -> ":" + value).orElse("");
+
 		if (!properties.enabled()) {
 			LOG.info("RPA disabled — skipping {} for errand {}", sanitizeForLogging(actionName), sanitizeForLogging(errandId));
-			return;
+			return new EnqueueOutcome(reference, false);
 		}
 
 		final var folderId = ofNullable(properties.folderIds().get(municipalityId))
@@ -105,10 +140,6 @@ public class RpaService {
 		// every disclosure lands in the errand's event log instead of persisting in the Orchestrator queue store.
 		errand.map(Errand::getErrandNumber).ifPresent(value -> content.put(KEY_ERRAND_NUMBER, value));
 
-		// Reference is per-(namespace, errand, action) so the Orchestrator's unique-reference dedup only collapses re-runs
-		// of the same action — distinct actions on the same errand remain separate queue items, and the same action on the
-		// same errandId in different namespaces stays distinct too.
-		final var reference = ofNullable(namespace).map(value -> value + ":").orElse("") + errandId + ":" + actionName;
 		final var item = new AddQueueItemParameters(new QueueItemData(properties.queue(), reference, NORMAL_PRIORITY, content));
 
 		try {
@@ -117,10 +148,11 @@ public class RpaService {
 		} catch (final ThrowableProblem e) {
 			if (isDuplicate(e)) {
 				LOG.info("RPA task {} for errand {} already queued — skipping", sanitizeForLogging(actionName), sanitizeForLogging(errandId));
-				return;
+				return new EnqueueOutcome(reference, true);
 			}
 			throw e;
 		}
+		return new EnqueueOutcome(reference, true);
 	}
 
 	private boolean isDuplicate(final ThrowableProblem e) {
