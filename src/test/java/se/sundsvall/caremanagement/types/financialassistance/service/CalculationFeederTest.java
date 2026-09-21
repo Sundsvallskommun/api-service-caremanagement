@@ -13,6 +13,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
+import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
+import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCost;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
@@ -31,6 +33,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
 class CalculationFeederTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
+	private static final String NAMESPACE = "FINANCIAL_ASSISTANCE";
 	private static final String ERRAND_ID = "errand-1";
 
 	@Mock
@@ -38,6 +41,9 @@ class CalculationFeederTest {
 
 	@Mock
 	private RenewalDeltaService renewalDeltaServiceMock;
+
+	@Mock
+	private StakeholderService stakeholderServiceMock;
 
 	@InjectMocks
 	private CalculationFeeder feeder;
@@ -131,7 +137,7 @@ class CalculationFeederTest {
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_CAPPED);
 		final var warning = feed.warnings().getFirst();
 		assertThat(warning.sourceKey()).isEqualTo("RENT");
-		assertThat(warning.message()).contains("Kapad kostnad: Hyra").contains("9000").contains("8500");
+		assertThat(warning.message()).contains("Kapad kostnad: Boendekostnad").contains("9000").contains("8500");
 	}
 
 	@Test
@@ -148,7 +154,7 @@ class CalculationFeederTest {
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
 		final var warning = feed.warnings().getFirst();
 		assertThat(warning.sourceKey()).isEqualTo("OTHER:BEGRAVNING");
-		assertThat(warning.message()).isEqualTo("Övrigt bistånd (BEGRAVNING): Övrigt bistånd – skälighet bedöms manuellt");
+		assertThat(warning.message()).isEqualTo("Övriga utgifter (BEGRAVNING): Övrigt bistånd – skälighet bedöms manuellt");
 	}
 
 	@Test
@@ -290,13 +296,15 @@ class CalculationFeederTest {
 	@Test
 	void personRowsMapsPersonsAndChildren() {
 		final var applicant = FaPerson.create().withRole("APPLICANT").withPartyId("p-1");
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Stakeholder.create().withRole("APPLICANT").withFirstName("Karin").withLastName("Nilsson")));
 		final var child = FaChild.create().withPartyId("c-1").withFirstName("Anna").withLastName("Svensson").withDaysInHome(15);
 		final var childNoDays = FaChild.create().withPartyId("c-2").withFirstName("Bo").withLastName(null).withDaysInHome(null);
 		final var errand = FinancialAssistanceEntity.create()
 			.withPersons(List.of(applicant))
 			.withChildren(List.of(child, childNoDays));
 
-		final var rows = feeder.personRows(ERRAND_ID, errand);
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand);
 
 		assertThat(rows).hasSize(3)
 			.allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
@@ -304,6 +312,7 @@ class CalculationFeederTest {
 		final var personRow = rows.getFirst();
 		assertThat(personRow.getPartyId()).isEqualTo("p-1");
 		assertThat(personRow.getRole()).isEqualTo("APPLICANT");
+		assertThat(personRow.getName()).isEqualTo("Karin Nilsson");
 		assertThat(personRow.getProcessDays()).isEqualTo(30);
 
 		final var childRow = rows.get(1);
@@ -319,7 +328,30 @@ class CalculationFeederTest {
 
 	@Test
 	void personRowsHandlesNullCollections() {
-		assertThat(feeder.personRows(ERRAND_ID, FinancialAssistanceEntity.create())).isEmpty();
+		assertThat(feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceEntity.create())).isEmpty();
+	}
+
+	@Test
+	void personRowsToleratesAPersonWithoutARole() {
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Stakeholder.create().withRole("APPLICANT").withFirstName("Karin").withLastName("Nilsson")));
+		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withPartyId("p-1")));
+
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand);
+
+		assertThat(rows).hasSize(1);
+		assertThat(rows.getFirst().getName()).isNull();
+	}
+
+	@Test
+	void personRowsLeavesTheNameNullWhenTheStakeholderReadFails() {
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(new IllegalStateException("boom"));
+		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
+
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand);
+
+		assertThat(rows).hasSize(1);
+		assertThat(rows.getFirst().getName()).isNull();
 	}
 
 	@Test

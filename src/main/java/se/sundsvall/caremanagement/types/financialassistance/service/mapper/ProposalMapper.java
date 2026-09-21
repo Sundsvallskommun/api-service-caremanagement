@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
@@ -13,14 +12,13 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPerso
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PreviousDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PreviousPayment;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.TypeOption;
-import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceTypes;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.springframework.util.StringUtils.hasText;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.costDisplayName;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_VISITATION_CHILD;
 
@@ -37,11 +35,6 @@ public final class ProposalMapper {
 
 	public static final String PHRASE_APPROVED_WITH_CHILDREN = "Bifall månad med barn";
 	public static final String PHRASE_APPROVED_WITHOUT_CHILDREN = "Bifall månad utan barn";
-
-	/** Cost type code → handläggare label (the Lifecare name), from the cost-type catalogue. */
-	private static final Map<String, String> COST_LABEL = FinancialAssistanceTypes.COST_TYPES.stream()
-		.filter(option -> hasText(option.getCode()))
-		.collect(toMap(TypeOption::getCode, option -> ofNullable(option.getInternalDisplayName()).orElse(option.getCode()), (a, _) -> a));
 
 	private ProposalMapper() {}
 
@@ -102,7 +95,7 @@ public final class ProposalMapper {
 	 * The handläggare label for an expense row: the cost type's Lifecare name, with the sub type / specification when set.
 	 */
 	public static String expenseLabel(final NormExpenseRow row) {
-		final var label = COST_LABEL.getOrDefault(row.getCostType(), ofNullable(row.getCostType()).orElse("Utgift"));
+		final var label = ofNullable(costDisplayName(row.getCostType())).orElse("Utgift");
 		final var detail = Stream.of(row.getOtherSubType(), row.getSpecification())
 			.filter(text -> hasText(text))
 			.findFirst();

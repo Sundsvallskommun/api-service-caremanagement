@@ -58,6 +58,26 @@ class CalculationDraftMapperTest {
 	}
 
 	@Test
+	void theViewRowsCarryTheLabelBesideTheCode() {
+		final var expense = FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("RENT");
+		final var person = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole("CO_APPLICANT");
+
+		assertThat(CalculationDraftMapper.toExpenseRow(expense).getCostTypeDisplayName()).isEqualTo("Boendekostnad");
+		assertThat(CalculationDraftMapper.toPersonRow(person).getRoleDisplayName()).isEqualTo("Medsökande");
+	}
+
+	@Test
+	void theDraftHeaderCarriesTheNormTypeLabels() {
+		final var header = FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withApplicationMonth("2026-06")
+			.withNormType(List.of("NATIONAL_NORM", "UNKNOWN_NORM"));
+
+		final var draft = CalculationDraftMapper.toCalculationDraft(header, List.of(), List.of(), List.of());
+
+		assertThat(draft.getNormType()).containsExactly("NATIONAL_NORM", "UNKNOWN_NORM");
+		assertThat(draft.getNormTypeDisplayNames()).containsExactly("Riksnorm", "UNKNOWN_NORM"); // an unlabelled code keeps its own value
+	}
+
+	@Test
 	void toCalculationDraftSplitsBucketsAndSumsTheLiveRows() {
 		final var header = FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withApplicationMonth("2026-06").withNormId(7);
 		final var incomes = List.of(

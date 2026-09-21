@@ -19,6 +19,8 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.costDisplayName;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.roleDisplayName;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 
 /**
@@ -186,11 +188,20 @@ class SectionReconciler {
 	}
 
 	private static String expenseLabel(final FaNormExpenseEntity e) {
-		return ofNullable(e.getCostType()).orElse("Expense") + ofNullable(e.getSpecification()).map(spec -> " – " + spec).orElse("");
+		return ofNullable(costDisplayName(e.getCostType())).orElse("Utgift") + ofNullable(e.getSpecification()).map(spec -> " – " + spec).orElse("");
 	}
 
+	/**
+	 * A household member as a handläggare reads them: the name when the row has one, qualified by the role. A row
+	 * without a name falls back to the role alone — never to the party id, which says nothing to the reader and puts an
+	 * identifier into a warning text that is displayed verbatim.
+	 */
 	private static String personLabel(final FaNormPersonEntity e) {
-		return ofNullable(e.getName()).orElse(ofNullable(e.getPartyId()).orElse("Person")) + " (" + e.getRole() + ")";
+		final var role = ofNullable(roleDisplayName(e.getRole())).orElse("Hushållsmedlem");
+		if (!StringUtils.hasText(e.getName())) {
+			return role;
+		}
+		return e.getName() + " (" + role + ")";
 	}
 
 	/**

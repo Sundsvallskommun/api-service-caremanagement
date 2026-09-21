@@ -33,10 +33,13 @@ public class NormPersonRow {
 	@Schema(description = "The party id of the household member", accessMode = Schema.AccessMode.READ_ONLY)
 	private String partyId;
 
-	@Schema(description = "The role of the household member", allowableValues = {
-		"APPLICANT", "CO_APPLICANT", "CHILD"
+	@Schema(description = "The role of the household member (machine code; use roleDisplayName for the label)", allowableValues = {
+		"APPLICANT", "CO_APPLICANT", "CHILD", "VISITATION_CHILD"
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String role;
+
+	@Schema(description = "Swedish display name for the role", examples = "Medsökande", accessMode = Schema.AccessMode.READ_ONLY)
+	private String roleDisplayName;
 
 	@Schema(description = "The name of the household member", accessMode = Schema.AccessMode.READ_ONLY)
 	private String name;
@@ -147,6 +150,19 @@ public class NormPersonRow {
 
 	public NormPersonRow withRole(final String role) {
 		this.role = role;
+		return this;
+	}
+
+	public String getRoleDisplayName() {
+		return roleDisplayName;
+	}
+
+	public void setRoleDisplayName(final String roleDisplayName) {
+		this.roleDisplayName = roleDisplayName;
+	}
+
+	public NormPersonRow withRoleDisplayName(final String roleDisplayName) {
+		this.roleDisplayName = roleDisplayName;
 		return this;
 	}
 
@@ -325,7 +341,8 @@ public class NormPersonRow {
 			return false;
 		final NormPersonRow that = (NormPersonRow) o;
 		return deleted == that.deleted && included == that.included && Objects.equals(id, that.id) && Objects.equals(origin, that.origin)
-			&& Objects.equals(position, that.position) && Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
+			&& Objects.equals(position, that.position) && Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role)
+			&& Objects.equals(roleDisplayName, that.roleDisplayName) && Objects.equals(name, that.name)
 			&& Objects.equals(processDays, that.processDays) && Objects.equals(caseworkerDays, that.caseworkerDays) && Objects.equals(effectiveDays, that.effectiveDays)
 			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
 			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount) && Objects.equals(note, that.note)
@@ -334,7 +351,7 @@ public class NormPersonRow {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, position, partyId, role, name, processDays, caseworkerDays, effectiveDays, included, deviationFromDate, deviationToDate, normInterval,
+		return Objects.hash(id, origin, position, partyId, role, roleDisplayName, name, processDays, caseworkerDays, effectiveDays, included, deviationFromDate, deviationToDate, normInterval,
 			jobStimulusAmount, deleted, note, created, updated);
 	}
 
@@ -346,6 +363,7 @@ public class NormPersonRow {
 			", position=" + position +
 			", partyId='" + partyId + '\'' +
 			", role='" + role + '\'' +
+			", roleDisplayName='" + roleDisplayName + '\'' +
 			", name='" + name + '\'' +
 			", processDays=" + processDays +
 			", caseworkerDays=" + caseworkerDays +

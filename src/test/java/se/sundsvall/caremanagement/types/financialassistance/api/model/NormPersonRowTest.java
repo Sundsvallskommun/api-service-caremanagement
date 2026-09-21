@@ -43,6 +43,7 @@ class NormPersonRowTest {
 		final var position = 3;
 		final var partyId = "partyId";
 		final var role = "APPLICANT";
+		final var roleDisplayName = "Sökande";
 		final var name = "name";
 		final var processDays = 30;
 		final var caseworkerDays = 15;
@@ -63,6 +64,7 @@ class NormPersonRowTest {
 			.withPosition(position)
 			.withPartyId(partyId)
 			.withRole(role)
+			.withRoleDisplayName(roleDisplayName)
 			.withName(name)
 			.withProcessDays(processDays)
 			.withCaseworkerDays(caseworkerDays)
@@ -83,6 +85,7 @@ class NormPersonRowTest {
 		assertThat(result.getPosition()).isEqualTo(position);
 		assertThat(result.getPartyId()).isEqualTo(partyId);
 		assertThat(result.getRole()).isEqualTo(role);
+		assertThat(result.getRoleDisplayName()).isEqualTo(roleDisplayName);
 		assertThat(result.getName()).isEqualTo(name);
 		assertThat(result.getProcessDays()).isEqualTo(processDays);
 		assertThat(result.getCaseworkerDays()).isEqualTo(caseworkerDays);

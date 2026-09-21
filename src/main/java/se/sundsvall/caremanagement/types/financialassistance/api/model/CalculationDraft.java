@@ -29,8 +29,15 @@ public class CalculationDraft {
 	@Schema(description = "The selected norm id")
 	private Integer normId;
 
-	@Schema(description = "The selected norm types")
+	@ArraySchema(arraySchema = @Schema(description = "The selected norm types (machine codes; use normTypeDisplayNames for the labels)"),
+		schema = @Schema(examples = "NATIONAL_NORM", allowableValues = {
+			"NATIONAL_NORM", "OTHER_NORM"
+		}))
 	private List<String> normType;
+
+	@ArraySchema(arraySchema = @Schema(description = "Swedish display names for the selected norm types, in the same order as normType"),
+		schema = @Schema(examples = "Riksnorm", accessMode = Schema.AccessMode.READ_ONLY))
+	private List<String> normTypeDisplayNames;
 
 	@Schema(description = "The start date of the calculation period")
 	@DateTimeFormat(iso = DATE)
@@ -132,6 +139,19 @@ public class CalculationDraft {
 
 	public CalculationDraft withNormType(final List<String> normType) {
 		this.normType = normType;
+		return this;
+	}
+
+	public List<String> getNormTypeDisplayNames() {
+		return normTypeDisplayNames;
+	}
+
+	public void setNormTypeDisplayNames(final List<String> normTypeDisplayNames) {
+		this.normTypeDisplayNames = normTypeDisplayNames;
+	}
+
+	public CalculationDraft withNormTypeDisplayNames(final List<String> normTypeDisplayNames) {
+		this.normTypeDisplayNames = normTypeDisplayNames;
 		return this;
 	}
 
@@ -323,7 +343,8 @@ public class CalculationDraft {
 			return false;
 		final CalculationDraft that = (CalculationDraft) o;
 		return Objects.equals(errandId, that.errandId) && Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(normId, that.normId)
-			&& Objects.equals(normType, that.normType) && Objects.equals(calculationFromDate, that.calculationFromDate)
+			&& Objects.equals(normType, that.normType) && Objects.equals(normTypeDisplayNames, that.normTypeDisplayNames)
+			&& Objects.equals(calculationFromDate, that.calculationFromDate)
 			&& Objects.equals(calculationToDate, that.calculationToDate) && Objects.equals(calculationDate, that.calculationDate)
 			&& Objects.equals(hasCustomHouseholdSize, that.hasCustomHouseholdSize) && Objects.equals(householdSize, that.householdSize)
 			&& Objects.equals(persons, that.persons) && Objects.equals(incomes, that.incomes) && Objects.equals(expenses, that.expenses)
@@ -333,7 +354,7 @@ public class CalculationDraft {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(errandId, applicationMonth, normId, normType, calculationFromDate, calculationToDate, calculationDate, hasCustomHouseholdSize, householdSize,
+		return Objects.hash(errandId, applicationMonth, normId, normType, normTypeDisplayNames, calculationFromDate, calculationToDate, calculationDate, hasCustomHouseholdSize, householdSize,
 			persons, incomes, expenses, specialExpenses, incomeSum, expenseSum, specialExpenseSum, created, updated);
 	}
 
@@ -344,6 +365,7 @@ public class CalculationDraft {
 			", applicationMonth='" + applicationMonth + '\'' +
 			", normId=" + normId +
 			", normType=" + normType +
+			", normTypeDisplayNames=" + normTypeDisplayNames +
 			", calculationFromDate=" + calculationFromDate +
 			", calculationToDate=" + calculationToDate +
 			", calculationDate=" + calculationDate +

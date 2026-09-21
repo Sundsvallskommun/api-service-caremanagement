@@ -128,6 +128,21 @@ class SectionReconcilerTest {
 	}
 
 	@Test
+	void reconcilePersonsLabelsAddedRowsByNameAndRoleNeverByPartyId() {
+		when(personRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		final var named = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole("CO_APPLICANT").withPartyId("f47ac10b-58cc-4372-a567-0e02b2c3d479")
+			.withName("Karin Nilsson").withProcessDays(30).withIncluded(true);
+		final var nameless = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole("APPLICANT").withPartyId("6f0e2b1c-1111-2222-3333-444455556666")
+			.withProcessDays(30).withIncluded(true);
+
+		final var diff = sectionReconciler.reconcilePersons(ERRAND_ID, List.of(named, nameless));
+
+		// The label is what the NEW_PERSON warning text is written from — a party id in it says nothing to a handläggare.
+		assertThat(diff.added()).containsExactly("Karin Nilsson (Medsökande)", "Sökande");
+		assertThat(diff.added()).noneMatch(label -> label.contains("f47ac10b") || label.contains("6f0e2b1c"));
+	}
+
+	@Test
 	void newRowGetsTheNextPositionWhileARefreshedRowKeepsItsOwn() {
 		final var existing = systemRow(20, "Bostadsbidrag", "1850").withPosition(0); // already positioned
 		final var refreshedFresh = systemRow(20, "Bostadsbidrag", "2000"); // matches existing (same typeId)
@@ -167,7 +182,7 @@ class SectionReconcilerTest {
 
 		final var diff = sectionReconciler.reconcileExpenses(ERRAND_ID, List.of(fresh));
 
-		assertThat(diff.added()).containsExactly("MEDICINE – Glasses"); // costType + specification
+		assertThat(diff.added()).containsExactly("Medicin – Glasses"); // costType + specification
 		assertThat(diff.dropped()).containsExactly("FOOD"); // costType only, no specification
 		verify(expenseRepositoryMock).save(fresh);
 	}

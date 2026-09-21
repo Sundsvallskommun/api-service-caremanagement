@@ -11,9 +11,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
+import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
+import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCost;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
@@ -21,6 +25,8 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
 import static java.util.Optional.ofNullable;
+import static org.springframework.util.StringUtils.hasText;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.costDisplayName;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.RECIPIENT_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.RECIPIENT_CO_APPLICANT;
@@ -39,32 +45,22 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
 @Service
 public class CalculationFeeder {
 
+	private static final Logger LOG = LoggerFactory.getLogger(CalculationFeeder.class);
+
 	private static final int FULL_MONTH_DAYS = 30;
 	private static final String RESIDENCE_FULL_TIME = "FULL_TIME";
 	private static final String COST_TYPE_RENT = "RENT";
 	private static final String CHANGE_HOUSING_COST = "HOUSING_COST";
 	private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
-	/** financial assistance cost type → Swedish label for caseworker-facing warning text. */
-	private static final Map<String, String> COST_LABEL = Map.ofEntries(
-		Map.entry("RENT", "Hyra"),
-		Map.entry("ELECTRICITY", "Hushållsel"),
-		Map.entry("HOME_INSURANCE", "Hemförsäkring"),
-		Map.entry("INTERNET", "Internet"),
-		Map.entry("UNEMPLOYMENT_FUND", "A-kasseavgift"),
-		Map.entry("UNION_FEE", "Fackavgift"),
-		Map.entry("TRAVEL_APPROVED", "Resor"),
-		Map.entry("TRAVEL_MEDICAL_TRANSPORT", "Sjukresor/färdtjänst"),
-		Map.entry("MEDICAL_CARE", "Hälso- och sjukvård"),
-		Map.entry("MEDICINE", "Medicin"),
-		Map.entry("OTHER", "Övrigt bistånd"));
-
 	private final ExpenseRulesService expenseRulesService;
 	private final RenewalDeltaService renewalDeltaService;
+	private final StakeholderService stakeholderService;
 
-	CalculationFeeder(final ExpenseRulesService expenseRulesService, final RenewalDeltaService renewalDeltaService) {
+	CalculationFeeder(final ExpenseRulesService expenseRulesService, final RenewalDeltaService renewalDeltaService, final StakeholderService stakeholderService) {
 		this.expenseRulesService = expenseRulesService;
 		this.renewalDeltaService = renewalDeltaService;
+		this.stakeholderService = stakeholderService;
 	}
 
 	/** The fresh expense process rows plus the expense warnings the rules raised for them. */
@@ -214,7 +210,7 @@ public class CalculationFeeder {
 	}
 
 	private static String expenseLabel(final FaCost cost) {
-		final var label = COST_LABEL.getOrDefault(cost.getCostType(), orEmpty(cost.getCostType()));
+		final var label = ofNullable(costDisplayName(cost.getCostType())).orElseGet(() -> orEmpty(cost.getCostType()));
 		final var sub = cost.getOtherSubType();
 		if ((sub == null) || sub.isBlank()) {
 			return label;
@@ -236,13 +232,22 @@ public class CalculationFeeder {
 	 * The fresh person process rows — applicant + co-applicant (full month) and each child (days in the home; a
 	 * part-time child becomes an visitation child). All start {@code included = true}; the caseworker may later exclude
 	 * one (is included).
+	 *
+	 * <p>
+	 * The applicant and co-applicant carry no name in the application payload, so the name is taken from the errand's
+	 * stakeholders (the promoted identities). Without it the row — and every warning written from it — would have
+	 * nothing but a party id to name the person by, which is an identifier, not something a handläggare reads. A
+	 * stakeholder read that fails or finds nothing leaves the name null; the row then falls back to its role label.
+	 * </p>
 	 */
-	public List<FaNormPersonEntity> personRows(final String errandId, final FinancialAssistanceEntity errand) {
+	public List<FaNormPersonEntity> personRows(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity errand) {
 		final var rows = new ArrayList<FaNormPersonEntity>();
+		final var names = householdNames(municipalityId, namespace, errandId);
 
 		ofNullable(errand.getPersons()).orElseGet(List::of).forEach(person -> rows.add(FaNormPersonEntity.create()
 			.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
-			.withPartyId(person.getPartyId()).withRole(person.getRole()).withProcessDays(FULL_MONTH_DAYS).withIncluded(true)));
+			.withPartyId(person.getPartyId()).withRole(person.getRole()).withName(nameFor(names, person.getRole()))
+			.withProcessDays(FULL_MONTH_DAYS).withIncluded(true)));
 
 		ofNullable(errand.getChildren()).orElseGet(List::of).forEach(child -> rows.add(FaNormPersonEntity.create()
 			.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
@@ -250,6 +255,41 @@ public class CalculationFeeder {
 			.withProcessDays(ofNullable(child.getDaysInHome()).orElse(FULL_MONTH_DAYS)).withIncluded(true)));
 
 		return rows;
+	}
+
+	/**
+	 * The household members' names by role, from the errand's stakeholders. Best-effort: a failed read reports no names
+	 * rather than failing the prepare run, which must not hinge on a label.
+	 */
+	private Map<String, String> householdNames(final String municipalityId, final String namespace, final String errandId) {
+		try {
+			return stakeholderService.readAll(municipalityId, namespace, errandId).stream()
+				.filter(stakeholder -> hasText(stakeholder.getRole()))
+				.filter(stakeholder -> hasText(stakeholderName(stakeholder)))
+				.collect(Collectors.toMap(Stakeholder::getRole, CalculationFeeder::stakeholderName, (first, _) -> first));
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not read the errand's stakeholders for the household member names", e);
+			return Map.of();
+		}
+	}
+
+	/** The name for a role, tolerating a role the application left unset — {@code Map.of()} rejects a null key outright. */
+	private static String nameFor(final Map<String, String> names, final String role) {
+		if (!hasText(role)) {
+			return null;
+		}
+		return names.get(role);
+	}
+
+	/** A stakeholder's display name — the organisation name when present, otherwise the given + family name. */
+	private static String stakeholderName(final Stakeholder stakeholder) {
+		if (hasText(stakeholder.getOrganizationName())) {
+			return stakeholder.getOrganizationName().trim();
+		}
+		return Stream.of(stakeholder.getFirstName(), stakeholder.getLastName())
+			.filter(part -> hasText(part))
+			.map(String::trim)
+			.collect(Collectors.joining(" "));
 	}
 
 	/**

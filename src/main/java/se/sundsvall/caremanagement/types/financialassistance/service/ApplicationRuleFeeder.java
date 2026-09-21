@@ -26,6 +26,8 @@ import static java.lang.Boolean.TRUE;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toCollection;
 import static org.springframework.util.StringUtils.hasText;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.normTypeDisplayName;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.roleDisplayName;
 
 /**
  * Turns the application (and the previous Lifecare normberäkning) into the återansökan rule warnings, delegating every
@@ -78,14 +80,10 @@ public class ApplicationRuleFeeder {
 
 	private static final String NORM_NATIONAL = "NATIONAL_NORM";
 	private static final String NORM_OTHER = "OTHER_NORM";
-	private static final String NORM_NATIONAL_LABEL = "Riksnorm";
-	private static final String NORM_OTHER_LABEL = "Annan norm";
 	/** FamilyCare's free-text norm starts with this when the previous calculation used the national norm. */
 	private static final String NORM_NATIONAL_PREFIX = "riksnorm";
 
-	private static final String ROLE_CO_APPLICANT = "CO_APPLICANT";
 	private static final String LABEL_APPLICANT = "Sökande";
-	private static final String LABEL_CO_APPLICANT = "Medsökande";
 
 	/** Placeholders the tables leave in their warning texts for the caller to fill. */
 	private static final String PLACEHOLDER_PERSONAL_NUMBER = "PERSONNUMMER";
@@ -399,10 +397,7 @@ public class ApplicationRuleFeeder {
 	}
 
 	private static String normLabel(final String normType) {
-		if (NORM_NATIONAL.equals(normType)) {
-			return NORM_NATIONAL_LABEL;
-		}
-		return NORM_OTHER_LABEL;
+		return ofNullable(normTypeDisplayName(normType)).orElseGet(() -> normTypeDisplayName(NORM_OTHER));
 	}
 
 	/**
@@ -490,10 +485,7 @@ public class ApplicationRuleFeeder {
 	}
 
 	private static String roleLabel(final String role) {
-		if (ROLE_CO_APPLICANT.equals(role)) {
-			return LABEL_CO_APPLICANT;
-		}
-		return LABEL_APPLICANT;
+		return ofNullable(roleDisplayName(role)).orElse(LABEL_APPLICANT);
 	}
 
 	private static String workExtentLabel(final String workExtent) {

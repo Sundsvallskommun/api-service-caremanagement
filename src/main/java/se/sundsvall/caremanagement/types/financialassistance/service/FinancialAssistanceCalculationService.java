@@ -157,7 +157,7 @@ public class FinancialAssistanceCalculationService {
 	 * What one prepare run works from: the request's resolved identifiers plus the errand it targets. The month is kept
 	 * both parsed (for the Lifecare reads) and verbatim (the draft header stores the request's own string).
 	 */
-	private record PrepareInput(String errandId, String applicant, YearMonth applicationMonth, String applicationMonthValue,
+	private record PrepareInput(String namespace, String errandId, String applicant, YearMonth applicationMonth, String applicationMonthValue,
 		String classifiedIncomes, FinancialAssistanceEntity errand) {}
 
 	/** What refreshing the draft produced: the per-row changes to reconcile, and the warnings the feed raised. */
@@ -180,7 +180,7 @@ public class FinancialAssistanceCalculationService {
 		final var errand = financialAssistanceRepository.findByErrandId(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No financial-assistance errand for id " + errandId));
 
-		return new PrepareInput(errandId, applicant, applicationMonth, request.getApplicationMonth(), classifiedIncomes, errand);
+		return new PrepareInput(namespace, errandId, applicant, applicationMonth, request.getApplicationMonth(), classifiedIncomes, errand);
 	}
 
 	/**
@@ -192,7 +192,7 @@ public class FinancialAssistanceCalculationService {
 		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
 		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, input.errandId(), input.errand(),
 			previousExpenseAmounts(input.applicant(), input.applicationMonth()), ageFromPnr(input.applicant()));
-		final var personRows = calculationFeeder.personRows(input.errandId(), input.errand());
+		final var personRows = calculationFeeder.personRows(municipalityId, input.namespace(), input.errandId(), input.errand());
 		final var normId = calculationService.selectNormId(input.applicant(), input.applicationMonth());
 		final var changes = draftService.refresh(input.errandId(), input.applicationMonthValue(), normId, input.errand().getNormType(),
 			personRows, incomeRows, expenseFeed.rows());
@@ -350,7 +350,7 @@ public class FinancialAssistanceCalculationService {
 			.map(CalculationDraftMapper::toEffectiveIncome).toList();
 		final var expenses = calculationFeeder.applicationExpenseRows(errandId, errand).stream()
 			.map(CalculationDraftMapper::toEffectiveExpense).toList();
-		final var persons = calculationFeeder.personRows(errandId, errand).stream()
+		final var persons = calculationFeeder.personRows(municipalityId, namespace, errandId, errand).stream()
 			.map(CalculationDraftMapper::toEffectivePerson).toList();
 
 		final var normId = calculationService.selectNormId(applicant, applicationMonth);
