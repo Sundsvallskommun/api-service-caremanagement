@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.util.Locale;
 import se.sundsvall.caremanagement.lifecare.service.model.PaymentView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeOption;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPayeeEntity;
@@ -60,11 +61,19 @@ public final class PayeeMapper {
 	 * added payee into its LIFECARE twin once the robot has put it into Lifecare and a payment has gone to it.
 	 */
 	public static PayeeKey key(final PayeeOption option) {
-		return new PayeeKey(
-			normalise(option.getName()),
-			normalise(option.getPaymentMethod()),
-			normalise(option.getClearing()),
-			normalise(option.getAccountNumber()));
+		return key(option.getName(), option.getPaymentMethod(), option.getClearing(), option.getAccountNumber());
+	}
+
+	/**
+	 * The same identity for the payee a finalize names on a payment, so a decided payment can be matched against the
+	 * payees stored on the errand.
+	 */
+	public static PayeeKey key(final Payee payee) {
+		return key(payee.getName(), payee.getPaymentMethod(), payee.getClearing(), payee.getAccountNumber());
+	}
+
+	private static PayeeKey key(final String name, final String paymentMethod, final String clearing, final String accountNumber) {
+		return new PayeeKey(normalise(name), normalise(paymentMethod), normalise(clearing), normalise(accountNumber));
 	}
 
 	/** The de-duplication identity of a payee — see {@link #key(PayeeOption)}. */

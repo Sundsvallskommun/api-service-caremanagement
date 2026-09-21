@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:59382
+- url: http://localhost:52321
   description: Generated server url
 tags:
 - name: Financial Assistance · Lifecare supplements
@@ -11275,6 +11275,20 @@ components:
           $ref: "#/components/schemas/CommunicationChannels"
           description: The communication channels chosen — the frontend sends the
             decision through these
+        payeeWarnings:
+          type: array
+          description: "Warnings about the payees the decision pays to — a payment\
+            \ cannot be registered in Lifecare against a payee that is not there yet.\
+            \ Present when a payment names a manually added payee whose ADD_PAYEE\
+            \ robot task has not reported SYNCED. Empty when every payee is in Lifecare.\
+            \ The finalize itself is not blocked by these; the decision, the payment\
+            \ rows and the queue items are created either way."
+          items:
+            type: string
+            examples:
+            - Betalningsmottagaren "Sundsvalls Hyresbostäder AB" är inte upplagd i
+              Lifecare ännu – utbetalningen kan inte registreras förrän roboten har
+              lagt upp den.
       readOnly: true
     RpaTask:
       type: object

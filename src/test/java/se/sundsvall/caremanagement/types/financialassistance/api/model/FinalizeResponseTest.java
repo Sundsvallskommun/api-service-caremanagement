@@ -34,12 +34,14 @@ class FinalizeResponseTest {
 			.withPaymentIds(List.of("pay-1"))
 			.withProcessMessageCorrelated(true)
 			.withRpaTasks(tasks)
-			.withCommunication(communication);
+			.withCommunication(communication)
+			.withPayeeWarnings(List.of("Betalningsmottagaren saknas i Lifecare"));
 
 		assertThat(response.getDecisionId()).isEqualTo("decision-1");
 		assertThat(response.getProcessMessageCorrelated()).isTrue();
 		assertThat(response.getRpaTasks()).isEqualTo(tasks);
 		assertThat(response.getCommunication()).isEqualTo(communication);
+		assertThat(response.getPayeeWarnings()).containsExactly("Betalningsmottagaren saknas i Lifecare");
 		assertThat(response).hasNoNullFieldsOrProperties();
 	}
 

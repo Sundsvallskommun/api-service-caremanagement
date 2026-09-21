@@ -42,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -115,6 +116,9 @@ class FinancialAssistanceFinalizeServiceTest {
 	@Mock
 	private PaymentService paymentServiceMock;
 
+	@Mock
+	private PayeeService payeeServiceMock;
+
 	/**
 	 * Built by hand rather than with {@code @InjectMocks}: the service takes a primitive {@code boolean}, which
 	 * Mockito cannot supply. {@code false} is the <strong>target</strong> contract — paymentId only. The transitional
@@ -130,7 +134,7 @@ class FinancialAssistanceFinalizeServiceTest {
 	private FinancialAssistanceFinalizeService finalizeService(final boolean legacyPaymentFields) {
 		return new FinancialAssistanceFinalizeService(errandServiceMock, repositoryMock, sectionApprovalServiceMock,
 			decisionServiceMock, rpaServiceMock, processServiceMock, monitoringServiceMock, journalEntryServiceMock,
-			documentServiceMock, paymentServiceMock, legacyPaymentFields);
+			documentServiceMock, paymentServiceMock, payeeServiceMock, legacyPaymentFields);
 	}
 
 	private static FinalizeRequest grantingRequest() {
@@ -176,6 +180,7 @@ class FinancialAssistanceFinalizeServiceTest {
 		final var ids = new java.util.concurrent.atomic.AtomicInteger();
 		lenient().when(paymentServiceMock.createForDecision(eq(ERRAND_ID), any(PaymentRequest.class)))
 			.thenAnswer(invocation -> "pay-" + ids.incrementAndGet());
+		lenient().when(payeeServiceMock.unsyncedPayeeWarnings(eq(ERRAND_ID), anyList())).thenReturn(List.of());
 	}
 
 	private void rpaEnqueuesEverything() {
@@ -472,5 +477,47 @@ class FinancialAssistanceFinalizeServiceTest {
 			.containsEntry("accountNumber", "123-4567");
 		// the rows are still created, so switching the flag off later needs no data migration
 		verify(paymentServiceMock, times(2)).createForDecision(eq(ERRAND_ID), any(PaymentRequest.class));
+	}
+
+	@Test
+	void finalizeCarriesTheWarningForAPayeeThatIsNotInLifecareYet() {
+		readyErrand();
+		rpaEnqueuesEverything();
+		when(payeeServiceMock.unsyncedPayeeWarnings(eq(ERRAND_ID), anyList()))
+			.thenReturn(List.of("Betalningsmottagaren \"Hyresvärden AB\" är inte upplagd i Lifecare ännu"));
+
+		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
+
+		assertThat(response.getPayeeWarnings()).containsExactly("Betalningsmottagaren \"Hyresvärden AB\" är inte upplagd i Lifecare ännu");
+		// The warning is not a guard: the decision, the payment rows and the queue items all still happened.
+		assertThat(response.getDecisionId()).isEqualTo(DECISION_ID);
+		assertThat(response.getPaymentIds()).containsExactly("pay-1", "pay-2");
+		verify(paymentServiceMock, times(2)).createForDecision(eq(ERRAND_ID), any(PaymentRequest.class));
+	}
+
+	@Test
+	void finalizeMatchesTheWarningsAgainstThePayeesTheDecisionPaysTo() {
+		readyErrand();
+		rpaEnqueuesEverything();
+		final var payees = ArgumentCaptor.forClass(List.class);
+
+		service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
+
+		verify(payeeServiceMock).unsyncedPayeeWarnings(eq(ERRAND_ID), payees.capture());
+		assertThat(payees.getValue()).extracting("name").containsExactly("Hyresvärden AB", "Anna Andersson");
+	}
+
+	@Test
+	void finalizeWithoutPaymentsAsksAboutNoPayees() {
+		readyErrand();
+		when(rpaServiceMock.enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(RpaAction.class), any(), anyMap()))
+			.thenReturn(new RpaService.EnqueueOutcome("ref", true));
+		final var payees = ArgumentCaptor.forClass(List.class);
+
+		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
+
+		verify(payeeServiceMock).unsyncedPayeeWarnings(eq(ERRAND_ID), payees.capture());
+		assertThat(payees.getValue()).isEmpty();
+		assertThat(response.getPayeeWarnings()).isEmpty();
 	}
 }

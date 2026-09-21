@@ -16,6 +16,7 @@ import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.PaymentView;
 import se.sundsvall.caremanagement.rpa.service.RpaService;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeLifecareResult;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPayeeRepository;
@@ -313,21 +314,80 @@ class PayeeServiceTest {
 		verify(payeeRepositoryMock).delete(entity);
 	}
 
-	@Test
-	void hasUnsyncedPayeeIsTrueWhileTheRobotHasNotReported() {
-		when(payeeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
-			manual(PAYEE_ID, "Synkad", "111", LIFECARE_STATUS_SYNCED),
-			manual(randomUUID().toString(), "Väntar", "222", LIFECARE_STATUS_PENDING)));
-
-		assertThat(service.hasUnsyncedPayee(ERRAND_ID)).isTrue();
+	private static Payee decided(final String name, final String account) {
+		return Payee.create().withName(name).withPaymentMethod("Personkonto").withClearing("6000").withAccountNumber(account);
 	}
 
 	@Test
-	void hasUnsyncedPayeeIsFalseWhenEveryPayeeIsInLifecare() {
+	void warnsForADecidedPayeeTheRobotHasNotReportedYet() {
 		when(payeeRepositoryMock.findByErrandId(ERRAND_ID))
-			.thenReturn(List.of(manual(PAYEE_ID, "Synkad", "111", LIFECARE_STATUS_SYNCED)));
+			.thenReturn(List.of(manual(PAYEE_ID, "Väntar AB", "222", LIFECARE_STATUS_PENDING)));
 
-		assertThat(service.hasUnsyncedPayee(ERRAND_ID)).isFalse();
+		final var result = service.unsyncedPayeeWarnings(ERRAND_ID, List.of(decided("Väntar AB", "222")));
+
+		assertThat(result).singleElement().asString()
+			.contains("Väntar AB")
+			.contains("inte upplagd i Lifecare ännu");
+	}
+
+	@Test
+	void warnsWithLifecaresOwnMessageWhenTheRobotFailed() {
+		when(payeeRepositoryMock.findByErrandId(ERRAND_ID))
+			.thenReturn(List.of(manual(PAYEE_ID, "Trasig AB", "222", LIFECARE_STATUS_FAILED)
+				.withLifecareDetail("Kontonummer har fel format")));
+
+		final var result = service.unsyncedPayeeWarnings(ERRAND_ID, List.of(decided("Trasig AB", "222")));
+
+		assertThat(result).singleElement().asString()
+			.contains("Trasig AB")
+			.contains("Kontonummer har fel format");
+	}
+
+	@Test
+	void doesNotWarnWhenTheDecidedPayeeIsInLifecare() {
+		when(payeeRepositoryMock.findByErrandId(ERRAND_ID))
+			.thenReturn(List.of(manual(PAYEE_ID, "Synkad AB", "111", LIFECARE_STATUS_SYNCED)));
+
+		assertThat(service.unsyncedPayeeWarnings(ERRAND_ID, List.of(decided("Synkad AB", "111")))).isEmpty();
+	}
+
+	@Test
+	void doesNotWarnAboutAnUnsyncedPayeeTheDecisionDoesNotPayTo() {
+		when(payeeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			manual(PAYEE_ID, "Oanvänd AB", "999", LIFECARE_STATUS_PENDING),
+			manual(randomUUID().toString(), "Synkad AB", "111", LIFECARE_STATUS_SYNCED)));
+
+		assertThat(service.unsyncedPayeeWarnings(ERRAND_ID, List.of(decided("Synkad AB", "111")))).isEmpty();
+	}
+
+	@Test
+	void doesNotWarnForAPayeeThatCameFromTheLifecareHistory() {
+		when(payeeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+
+		assertThat(service.unsyncedPayeeWarnings(ERRAND_ID, List.of(decided("Ur historiken AB", "111")))).isEmpty();
+	}
+
+	@Test
+	void warnsOncePerPayeeEvenWhenSeveralPaymentsGoToIt() {
+		when(payeeRepositoryMock.findByErrandId(ERRAND_ID))
+			.thenReturn(List.of(manual(PAYEE_ID, "Väntar AB", "222", LIFECARE_STATUS_PENDING)));
+
+		final var result = service.unsyncedPayeeWarnings(ERRAND_ID,
+			List.of(decided("Väntar AB", "222"), decided("väntar ab ", "222")));
+
+		assertThat(result).hasSize(1);
+	}
+
+	@Test
+	void toleratesAPaymentWithoutAPayee() {
+		when(payeeRepositoryMock.findByErrandId(ERRAND_ID))
+			.thenReturn(List.of(manual(PAYEE_ID, "Väntar AB", "222", LIFECARE_STATUS_PENDING)));
+
+		final var withNull = new java.util.ArrayList<Payee>();
+		withNull.add(null);
+
+		assertThat(service.unsyncedPayeeWarnings(ERRAND_ID, withNull)).isEmpty();
+		assertThat(service.unsyncedPayeeWarnings(ERRAND_ID, null)).isEmpty();
 	}
 
 	@Test

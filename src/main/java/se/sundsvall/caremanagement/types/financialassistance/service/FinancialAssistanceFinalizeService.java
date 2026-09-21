@@ -22,6 +22,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeP
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Monitoring;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.RpaTask;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
@@ -102,12 +103,13 @@ public class FinancialAssistanceFinalizeService {
 	private final JournalEntryService journalEntryService;
 	private final DocumentService documentService;
 	private final PaymentService paymentService;
+	private final PayeeService payeeService;
 	private final boolean legacyPaymentFields;
 
 	FinancialAssistanceFinalizeService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository,
 		final SectionApprovalService sectionApprovalService, final DecisionService decisionService, final RpaService rpaService,
 		final ProcessService processService, final MonitoringService monitoringService, final JournalEntryService journalEntryService,
-		final DocumentService documentService, final PaymentService paymentService,
+		final DocumentService documentService, final PaymentService paymentService, final PayeeService payeeService,
 		@Value("${financial-assistance.rpa.register-payment.legacy-fields:true}") final boolean legacyPaymentFields) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
@@ -119,6 +121,7 @@ public class FinancialAssistanceFinalizeService {
 		this.journalEntryService = journalEntryService;
 		this.documentService = documentService;
 		this.paymentService = paymentService;
+		this.payeeService = payeeService;
 		this.legacyPaymentFields = legacyPaymentFields;
 	}
 
@@ -154,6 +157,14 @@ public class FinancialAssistanceFinalizeService {
 		// 4. The Lifecare write-backs, each its own best-effort queue item.
 		final var rpaTasks = enqueueWriteBacks(municipalityId, namespace, errandId, request, decisionId, paymentIds);
 
+		// 4b. A payment cannot be registered in Lifecare against a payee that is not there yet, so the receipt says which
+		// of the decided payees the ADD_PAYEE robot has not reported SYNCED for. Deliberately a warning and not a guard:
+		// the decision is the caseworker's, and the rows and queue items above already exist — refusing here would strand
+		// an otherwise complete decision over something the robot may finish a second later.
+		final var payeeWarnings = payeeService.unsyncedPayeeWarnings(errandId, decidedPayees(request));
+		payeeWarnings.forEach(warning -> LOG.warn("Errand {} finalized with a payee that is not in Lifecare yet: {}",
+			sanitizeForLogging(errandId), sanitizeForLogging(warning)));
+
 		// 5. Resume the process.
 		final var correlated = correlatePaymentDecision(municipalityId, namespace, errandId, request.getDecision().getOutcome());
 
@@ -165,7 +176,8 @@ public class FinancialAssistanceFinalizeService {
 			.withPaymentIds(paymentIds)
 			.withProcessMessageCorrelated(correlated)
 			.withRpaTasks(rpaTasks)
-			.withCommunication(request.getCommunication());
+			.withCommunication(request.getCommunication())
+			.withPayeeWarnings(payeeWarnings);
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -239,6 +251,13 @@ public class FinancialAssistanceFinalizeService {
 		enqueueIfAny(tasks, municipalityId, namespace, errandId, WRITE_JOURNAL, KEY_JOURNAL_ENTRY_IDS, () -> journalEntryService.listLocallyAuthoredIds(municipalityId, namespace, errandId));
 		enqueueIfAny(tasks, municipalityId, namespace, errandId, WRITE_DOCUMENT, KEY_DOCUMENT_IDS, () -> documentService.listLocallyAuthoredIds(municipalityId, namespace, errandId));
 		return tasks;
+	}
+
+	/** The payees the decision actually pays to, in request order — what the payee warnings are matched against. */
+	private static List<Payee> decidedPayees(final FinalizeRequest request) {
+		return ofNullable(request.getPayments()).orElseGet(List::<FinalizePayment>of).stream()
+			.map(FinalizePayment::getPayee)
+			.toList();
 	}
 
 	/**

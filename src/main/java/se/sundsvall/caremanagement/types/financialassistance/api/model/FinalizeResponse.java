@@ -31,8 +31,26 @@ public class FinalizeResponse {
 	@Schema(description = "The communication channels chosen — the frontend sends the decision through these")
 	private CommunicationChannels communication;
 
+	@ArraySchema(arraySchema = @Schema(
+		description = "Warnings about the payees the decision pays to — a payment cannot be registered in Lifecare against a payee that is not there yet. Present when a payment names a manually added payee whose ADD_PAYEE robot task has not reported SYNCED. Empty when every payee is in Lifecare. The finalize itself is not blocked by these; the decision, the payment rows and the queue items are created either way."),
+		schema = @Schema(implementation = String.class, examples = "Betalningsmottagaren \"Sundsvalls Hyresbostäder AB\" är inte upplagd i Lifecare ännu – utbetalningen kan inte registreras förrän roboten har lagt upp den."))
+	private List<String> payeeWarnings;
+
 	public static FinalizeResponse create() {
 		return new FinalizeResponse();
+	}
+
+	public List<String> getPayeeWarnings() {
+		return payeeWarnings;
+	}
+
+	public void setPayeeWarnings(final List<String> payeeWarnings) {
+		this.payeeWarnings = payeeWarnings;
+	}
+
+	public FinalizeResponse withPayeeWarnings(final List<String> payeeWarnings) {
+		this.payeeWarnings = payeeWarnings;
+		return this;
 	}
 
 	public String getDecisionId() {
@@ -106,12 +124,12 @@ public class FinalizeResponse {
 			return false;
 		final FinalizeResponse that = (FinalizeResponse) o;
 		return Objects.equals(decisionId, that.decisionId) && Objects.equals(paymentIds, that.paymentIds) && Objects.equals(processMessageCorrelated, that.processMessageCorrelated)
-			&& Objects.equals(rpaTasks, that.rpaTasks) && Objects.equals(communication, that.communication);
+			&& Objects.equals(rpaTasks, that.rpaTasks) && Objects.equals(communication, that.communication) && Objects.equals(payeeWarnings, that.payeeWarnings);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(decisionId, paymentIds, processMessageCorrelated, rpaTasks, communication);
+		return Objects.hash(decisionId, paymentIds, processMessageCorrelated, rpaTasks, communication, payeeWarnings);
 	}
 
 	@Override
@@ -122,6 +140,7 @@ public class FinalizeResponse {
 			", processMessageCorrelated=" + processMessageCorrelated +
 			", rpaTasks=" + rpaTasks +
 			", communication=" + communication +
+			", payeeWarnings=" + payeeWarnings +
 			'}';
 	}
 }
