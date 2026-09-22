@@ -27,6 +27,8 @@ final class FinancialAssistanceApiTags {
 	static final String PAYMENT_DESC = "Read whether the manual Lifecare payment for the applicant and application month has been effectuated. caremanagement makes no payment itself.";
 	static final String PROPOSALS = "Financial Assistance · Proposals";
 	static final String PROPOSALS_DESC = "The decision proposal (beslutsförslag) and payment proposal (utbetalningsförslag) — derived on every read from the calculation draft, the application and the applicant's Lifecare history; only the section warnings they raise are stored. Recomputed when the CALCULATION (→ decision) and DECISION (→ payment) sections are approved.";
+	static final String SSBTEK = "Financial Assistance · SSBTEK";
+	static final String SSBTEK_DESC = "Read the applicant's SSBTEK basis live — the answer per responding agency (af/csn/fk/skv/so/tns/miv), forwarded verbatim so a caseworker can see the source behind the classified incomes. Keyed by partyId (resolved to a personnummer via the citizen service); the period defaults to the three rule periods (M−2 through M). caremanagement only forwards the read and stores nothing.";
 	static final String LIFECARE = "Financial Assistance · Lifecare history";
 	static final String LIFECARE_DESC = "Read the applicant's case history straight from Lifecare — the calculations, decisions and documents — plus a single document's PDF content. Keyed by partyId (resolved to a personnummer via the citizen service); the period defaults to the last 24 months. caremanagement only forwards the reads.";
 }
