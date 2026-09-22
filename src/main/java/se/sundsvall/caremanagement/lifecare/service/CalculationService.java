@@ -206,6 +206,13 @@ public class CalculationService {
 			.orElse(null);
 	}
 
+	/**
+	 * A household row for the FamilyCare body. The {@code personId} is deliberately careM's {@code partyId} and not a
+	 * personal identity number: it is the identity careM holds, it is what the integrator route wants unchanged, and
+	 * the direct route resolves it to a personal identity number at its own edge in
+	 * {@code LifecareFamilyCareIntegration.createCalculation}. Resolving it here instead would make the integrator
+	 * route round-trip party → personnummer → party for no gain, and fail where the reverse lookup does.
+	 */
 	private static PersonBasedCalculationPersonPostDTO toPersonDto(final EffectivePerson person) {
 		return new PersonBasedCalculationPersonPostDTO()
 			.personId(person.partyId())

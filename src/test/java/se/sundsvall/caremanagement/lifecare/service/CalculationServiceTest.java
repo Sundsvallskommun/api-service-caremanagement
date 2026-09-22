@@ -207,6 +207,8 @@ class CalculationServiceTest {
 			assertThat(expense.getAmount()).isEqualTo(9000.0);
 			assertThat(expense.getApprovedAmount()).isEqualTo(8000.0);
 		});
+		// The household row carries careM's partyId by design — the direct route resolves it to a personal identity
+		// number in LifecareFamilyCareIntegration.createCalculation, the integrator route wants it unchanged.
 		assertThat(body.getCalculationPersons()).singleElement().satisfies(person -> {
 			assertThat(person.getPersonId()).isEqualTo("p1");
 			assertThat(person.getNumberOfDays()).isEqualTo(30);

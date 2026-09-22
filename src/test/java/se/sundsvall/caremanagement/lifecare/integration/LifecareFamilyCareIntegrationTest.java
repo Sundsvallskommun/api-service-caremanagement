@@ -9,6 +9,7 @@ import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBas
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedResourceAllocationDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedServiceDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationPersonPostDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
@@ -17,6 +18,7 @@ import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.User;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -24,6 +26,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
+import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -31,6 +34,7 @@ import static java.time.Month.APRIL;
 import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -47,6 +51,9 @@ class LifecareFamilyCareIntegrationTest {
 	private static final String MUNICIPALITY_ID = "2281";
 
 	private static final String PERSON_ID = "200001012384";
+	private static final String CHILD_PERSON_ID = "201801012380";
+	private static final String APPLICANT_PARTY_ID = "6a5c3d18-1f3b-4c2a-9d9e-2b7f4a1c8e55";
+	private static final String CHILD_PARTY_ID = "f0c9b8a7-6d5e-4c3b-8a19-0e7d6c5b4a32";
 	private static final LocalDate START = LocalDate.of(2026, APRIL, 1);
 	private static final LocalDate END = LocalDate.of(2026, JUNE, 30);
 
@@ -57,6 +64,9 @@ class LifecareFamilyCareIntegrationTest {
 
 	@Mock
 	private LifecareFamilyCareClient clientMock;
+
+	@Mock
+	private CitizenService citizenServiceMock;
 
 	@InjectMocks
 	private LifecareFamilyCareIntegration integration;
@@ -289,6 +299,72 @@ class LifecareFamilyCareIntegrationTest {
 			.isEqualTo("Error creating calculation in Lifecare FamilyCare: 502 Bad Gateway: upstream down");
 
 		verify(clientMock).createCalculation(body);
+	}
+
+	/**
+	 * FamilyCare keys every {@code PersonId} on the personal identity number, including the ones on
+	 * {@code CalculationPersons} (confirmed with Tieto 2026-09-22). careM assembles those rows from party ids, so this
+	 * route resolves them before sending — otherwise the calculation would reach FamilyCare naming its household in an
+	 * identity space FamilyCare has never heard of.
+	 */
+	@Test
+	void createCalculationResolvesHouseholdPartyIdsToPersonalIdentityNumbers() {
+		final var body = new PostCalculationBodyRequest()
+			.personId(PERSON_ID)
+			.calculationPersons(List.of(
+				new PersonBasedCalculationPersonPostDTO().personId(APPLICANT_PARTY_ID).numberOfDays(30),
+				new PersonBasedCalculationPersonPostDTO().personId(CHILD_PARTY_ID).numberOfDays(15)));
+
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSON_ID));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CHILD_PARTY_ID)).thenReturn(Optional.of(CHILD_PERSON_ID));
+		when(clientMock.createCalculation(body)).thenReturn(99);
+
+		assertThat(integration.createCalculation(MUNICIPALITY_ID, body)).isEqualTo(99);
+
+		final var sent = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
+		verify(clientMock).createCalculation(sent.capture());
+		assertThat(sent.getValue().getPersonId()).isEqualTo(PERSON_ID);
+		assertThat(sent.getValue().getCalculationPersons())
+			.extracting(PersonBasedCalculationPersonPostDTO::getPersonId, PersonBasedCalculationPersonPostDTO::getNumberOfDays)
+			.containsExactly(tuple(PERSON_ID, 30), tuple(CHILD_PERSON_ID, 15));
+		verifyNoMoreInteractions(clientMock);
+	}
+
+	/**
+	 * A household member that cannot be resolved fails the whole calculation. Sending the calculation without the row
+	 * would shrink the household the norm is computed from, silently and with nothing on the errand to explain it.
+	 */
+	@Test
+	void createCalculationFailsWhenAHouseholdMemberHasNoPersonalIdentityNumber() {
+		final var body = new PostCalculationBodyRequest()
+			.personId(PERSON_ID)
+			.calculationPersons(List.of(
+				new PersonBasedCalculationPersonPostDTO().personId(APPLICANT_PARTY_ID),
+				new PersonBasedCalculationPersonPostDTO().personId(CHILD_PARTY_ID)));
+
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSON_ID));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CHILD_PARTY_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, body))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("No personal identity number could be resolved for a person on the calculation");
+
+		verifyNoInteractions(clientMock);
+	}
+
+	/** A row with no party id at all is the same failure, without spending a citizen lookup to discover it. */
+	@Test
+	void createCalculationFailsWhenAHouseholdMemberHasNoPartyId() {
+		final var body = new PostCalculationBodyRequest()
+			.calculationPersons(List.of(new PersonBasedCalculationPersonPostDTO().personId(" ")));
+
+		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, body))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+
+		verifyNoInteractions(clientMock, citizenServiceMock);
 	}
 
 	@Test

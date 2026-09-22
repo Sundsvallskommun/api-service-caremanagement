@@ -21,11 +21,13 @@ import java.util.List;
 import java.util.function.Supplier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.endOfDay;
 import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.startOfDay;
 
@@ -53,10 +55,14 @@ public class LifecareFamilyCareIntegration implements LifecareFamilyCare {
 	/** Everything uploaded to an actualisation is a generated or uploaded PDF. */
 	private static final String PDF_MIME_TYPE = "application/pdf";
 
-	private final LifecareFamilyCareClient lifecareFamilyCareClient;
+	private static final String NO_PERSONAL_NUMBER = "No personal identity number could be resolved for a person on the calculation";
 
-	public LifecareFamilyCareIntegration(final LifecareFamilyCareClient lifecareFamilyCareClient) {
+	private final LifecareFamilyCareClient lifecareFamilyCareClient;
+	private final CitizenService citizenService;
+
+	public LifecareFamilyCareIntegration(final LifecareFamilyCareClient lifecareFamilyCareClient, final CitizenService citizenService) {
 		this.lifecareFamilyCareClient = lifecareFamilyCareClient;
+		this.citizenService = citizenService;
 	}
 
 	// ---- Person-based reads ------------------------------------------------------------------------------------------
@@ -157,9 +163,42 @@ public class LifecareFamilyCareIntegration implements LifecareFamilyCare {
 		return call("fetching calculation proposal", () -> lifecareFamilyCareClient.getCalculationProposal(personId));
 	}
 
+	/**
+	 * Create the calculation, first resolving every household row's {@code personId} from a party id to the personal
+	 * identity number FamilyCare keys on (confirmed with Tieto 2026-09-22 — every {@code PersonId} in the FamilyCare
+	 * API is a personal identity number, including the one on {@code CalculationPersons}).
+	 *
+	 * <p>
+	 * careM assembles those rows from {@code EffectivePerson.partyId()}, because that is what the integrator route
+	 * wants and what careM itself holds. Translating here rather than in the shared assembly is what lets both routes
+	 * be right at once: each resolves in the one direction it needs — this one party id → personnummer for the
+	 * household, the integrator personnummer → party id for the applicant — and neither has to undo the other's work.
+	 *
+	 * <p>
+	 * The body is careM's own, built per call in {@code CalculationService.commitEffective} and used nowhere else, so
+	 * the rows are rewritten in place rather than copied.
+	 *
+	 * <p>
+	 * A row that does not resolve fails the whole calculation. Skipping it would silently shrink the household the
+	 * norm is computed from — a family of four paid as three, with nothing on the errand saying why.
+	 */
 	@Override
 	public Integer createCalculation(final String municipalityId, final PostCalculationBodyRequest body) {
+		resolveHouseholdPersonIds(municipalityId, body);
 		return call("creating calculation", () -> lifecareFamilyCareClient.createCalculation(body));
+	}
+
+	private void resolveHouseholdPersonIds(final String municipalityId, final PostCalculationBodyRequest body) {
+		ofNullable(body.getCalculationPersons()).orElseGet(List::of)
+			.forEach(person -> person.setPersonId(resolvePersonalNumber(municipalityId, person.getPersonId())));
+	}
+
+	private String resolvePersonalNumber(final String municipalityId, final String partyId) {
+		if (!hasText(partyId)) {
+			throw Problem.valueOf(BAD_GATEWAY, NO_PERSONAL_NUMBER);
+		}
+		return citizenService.getPersonalNumber(municipalityId, partyId)
+			.orElseThrow(() -> Problem.valueOf(BAD_GATEWAY, NO_PERSONAL_NUMBER));
 	}
 
 	/**
