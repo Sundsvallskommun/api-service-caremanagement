@@ -49,6 +49,20 @@ import java.util.List;
  */
 public interface LifecareFamilyCare {
 
+	/**
+	 * Whether the {@code personId} fields in this route's <em>responses</em> hold a {@code partyId} rather than a
+	 * personal identity number. Arguments are always personal identity numbers, on both routes; it is what comes back
+	 * that differs, because the integrator is keyed on {@code partyId} and never emits a personnummer.
+	 *
+	 * <p>
+	 * Anything that compares a person in a response against one it passed in, or resolves a person in a response
+	 * further, has to know which of the two it is holding — see {@code LifecareCaseService.latestRoster}. Getting it
+	 * wrong is silent: the comparison simply never matches.
+	 */
+	default boolean respondsWithPartyId() {
+		return false;
+	}
+
 	// ---- Person-based reads ------------------------------------------------------------------------------------------
 
 	PersonBasedPersonDTO getPerson(String municipalityId, String personId);

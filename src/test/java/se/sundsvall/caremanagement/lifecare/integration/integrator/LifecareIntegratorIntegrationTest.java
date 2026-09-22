@@ -1,11 +1,30 @@
 package se.sundsvall.caremanagement.lifecare.integration.integrator;
 
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.User;
+import generated.se.sundsvall.lifecareintegrator.Actualisation;
 import generated.se.sundsvall.lifecareintegrator.Calculation;
 import generated.se.sundsvall.lifecareintegrator.CalculationExpense;
 import generated.se.sundsvall.lifecareintegrator.CalculationIncome;
 import generated.se.sundsvall.lifecareintegrator.CalculationPerson;
+import generated.se.sundsvall.lifecareintegrator.CaseService;
+import generated.se.sundsvall.lifecareintegrator.Caseworker;
+import generated.se.sundsvall.lifecareintegrator.Contact;
+import generated.se.sundsvall.lifecareintegrator.Decision;
+import generated.se.sundsvall.lifecareintegrator.DecisionsResponse;
+import generated.se.sundsvall.lifecareintegrator.DocumentMetadata;
+import generated.se.sundsvall.lifecareintegrator.PagedActualisationResponse;
 import generated.se.sundsvall.lifecareintegrator.PagedCalculationResponse;
+import generated.se.sundsvall.lifecareintegrator.PagedDocumentResponse;
+import generated.se.sundsvall.lifecareintegrator.PagedPaymentResponse;
+import generated.se.sundsvall.lifecareintegrator.PagedServiceResponse;
 import generated.se.sundsvall.lifecareintegrator.PagingMetaData;
+import generated.se.sundsvall.lifecareintegrator.Payment;
+import generated.se.sundsvall.lifecareintegrator.Person;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -19,6 +38,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static generated.se.sundsvall.lifecareintegrator.Decision.SourceEnum.FAMILY_CARE;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.Month.APRIL;
 import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -176,31 +197,120 @@ class LifecareIntegratorIntegrationTest {
 			.hasMessageNotContaining(PARTY_ID);
 	}
 
+	// ---- The remaining ported reads ---------------------------------------------------------------------------------
+	//
+	// The field-by-field translation is IntegratorCaseMapperTest's job; what matters here is that each operation
+	// resolves the person to a party id first and hands the mapped result back.
+
+	@Test
+	void getDecisionsGoesThroughTheIntegrator() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.getDecisions(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new DecisionsResponse()
+			.decisions(List.of(new Decision().source(FAMILY_CARE).decisionId("4711"))));
+
+		assertThat(integration.getDecisions(MUNICIPALITY_ID, PERSON_ID, START, END).getResult())
+			.singleElement().extracting(PersonBasedDecisionDTO::getId).isEqualTo(4711);
+		verify(clientMock).getDecisions(MUNICIPALITY_ID, PARTY_ID, START, END);
+	}
+
+	@Test
+	void getActualisationsGoesThroughTheIntegrator() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.getActualisations(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new PagedActualisationResponse()
+			.actualisations(List.of(new Actualisation().id(12))));
+
+		assertThat(integration.getActualisations(MUNICIPALITY_ID, PERSON_ID, START, END).getResult())
+			.singleElement().extracting(PersonBasedAktualiseringDTO::getPersonId).isEqualTo(PARTY_ID);
+		verify(clientMock).getActualisations(MUNICIPALITY_ID, PARTY_ID, START, END);
+	}
+
+	@Test
+	void getPaymentsGoesThroughTheIntegrator() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.getPayments(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new PagedPaymentResponse()
+			.payments(List.of(new Payment().id(9))));
+
+		assertThat(integration.getPayments(MUNICIPALITY_ID, PERSON_ID, START, END).getResult()).hasSize(1);
+		verify(clientMock).getPayments(MUNICIPALITY_ID, PARTY_ID, START, END);
+	}
+
+	@Test
+	void getServicesGoesThroughTheIntegrator() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.getServices(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new PagedServiceResponse()
+			.services(List.of(new CaseService().id(3).caseworker("Karin Karlsson"))));
+
+		assertThat(integration.getServices(MUNICIPALITY_ID, PERSON_ID, START, END).getResult())
+			.singleElement().extracting(PersonBasedServiceDTO::getCaseworker).isEqualTo("Karin Karlsson");
+		verify(clientMock).getServices(MUNICIPALITY_ID, PARTY_ID, START, END);
+	}
+
+	@Test
+	void getDocumentsGoesThroughTheIntegrator() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.getDocuments(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new PagedDocumentResponse()
+			.documents(List.of(new DocumentMetadata().id("doc-1"))));
+
+		assertThat(integration.getDocuments(MUNICIPALITY_ID, PERSON_ID, START, END).getResult()).hasSize(1);
+		verify(clientMock).getDocuments(MUNICIPALITY_ID, PARTY_ID, START, END);
+	}
+
+	/** Document content is fetched by document id, so there is no person to resolve. */
+	@Test
+	void getDocumentContentNeedsNoPartyId() {
+		final var content = "%PDF-1.7".getBytes(UTF_8);
+		when(clientMock.getDocumentContent(MUNICIPALITY_ID, "doc-1")).thenReturn(content);
+
+		assertThat(integration.getDocumentContent(MUNICIPALITY_ID, "doc-1")).isEqualTo(content);
+		verifyNoInteractions(citizenServiceMock);
+	}
+
+	@Test
+	void getPersonGoesThroughTheIntegrator() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.getPerson(MUNICIPALITY_ID, PARTY_ID)).thenReturn(new Person().name("Berit Berg").addressProtection(true));
+
+		assertThat(integration.getPerson(MUNICIPALITY_ID, PERSON_ID))
+			.returns(PARTY_ID, PersonBasedPersonDTO::getPersonId)
+			.returns("Berit Berg", PersonBasedPersonDTO::getName)
+			.returns(true, PersonBasedPersonDTO::getAddressProtection);
+	}
+
+	@Test
+	void getContactsGoesThroughTheIntegrator() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.getContacts(MUNICIPALITY_ID, PARTY_ID)).thenReturn(List.of(new Contact().name("Anna Andersson")));
+
+		assertThat(integration.getContacts(MUNICIPALITY_ID, PERSON_ID))
+			.singleElement().extracting(PersonBasedContactDTO::getName).isEqualTo("Anna Andersson");
+	}
+
+	/** The caseworker directory is the one read with no person behind it. */
+	@Test
+	void getUsersNeedsNoPartyId() {
+		when(clientMock.getUsers(MUNICIPALITY_ID, 100, null, null, null)).thenReturn(List.of(new Caseworker().fullName("Karin Karlsson")));
+
+		assertThat(integration.getUsers(MUNICIPALITY_ID, 100, null, null, null))
+			.singleElement().extracting(User::getFullName).isEqualTo("Karin Karlsson");
+		verifyNoInteractions(citizenServiceMock);
+	}
+
 	/**
 	 * An operation that is not translated yet has to fail loudly. An empty result would be indistinguishable from "this
 	 * person has nothing", and a handläggare would be shown a normberäkning built on a silent gap.
 	 */
 	@Test
 	void unportedOperationsFailInsteadOfAnsweringEmpty() {
-		assertThatThrownBy(() -> integration.getDecisions(MUNICIPALITY_ID, PERSON_ID, START, END))
+		assertThatThrownBy(() -> integration.getCalculationProposal(MUNICIPALITY_ID, PERSON_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_IMPLEMENTED)
-			.hasMessageContaining("getDecisions");
+			.hasMessageContaining("getCalculationProposal");
 
-		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, PERSON_ID)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.getContacts(MUNICIPALITY_ID, PERSON_ID)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.getActualisations(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.getPayments(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.getInvestigations(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.getServices(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.getExecutions(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.getResourceAllocations(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.getUsers(MUNICIPALITY_ID, 100, 0, null, null)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.getDocuments(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.getDocumentContent(MUNICIPALITY_ID, "some-document-id")).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.getActualisationProposal(MUNICIPALITY_ID, PERSON_ID)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.createActualisation(MUNICIPALITY_ID, null)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.getCalculationProposal(MUNICIPALITY_ID, PERSON_ID)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, null)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.postActualisationAttachment(MUNICIPALITY_ID, 1, "type", "senderType", "title", "sender", "file.pdf", new byte[0]))
 			.isInstanceOf(ThrowableProblem.class);

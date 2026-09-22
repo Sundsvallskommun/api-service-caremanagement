@@ -26,6 +26,7 @@ import java.util.TreeSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.IncomeTypeMapper;
@@ -56,13 +57,16 @@ public class LifecareCaseService {
 	private static final int MAX_MONTHS_PER_DECISION = 36;
 
 	private final LifecareFamilyCare lifecareFamilyCareIntegration;
+	private final CitizenService citizenService;
 	private final int lookbackMonths;
 	private final Set<String> openActualisationStatuses;
 
 	LifecareCaseService(final LifecareFamilyCare lifecareFamilyCareIntegration,
+		final CitizenService citizenService,
 		@Value("${integration.lifecare-familycare.lookback-months:13}") final int lookbackMonths,
 		@Value("${integration.lifecare-familycare.open-actualisation-statuses:Aktuell}") final List<String> openActualisationStatuses) {
 		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
+		this.citizenService = citizenService;
 		this.lookbackMonths = lookbackMonths;
 		this.openActualisationStatuses = openActualisationStatuses.stream()
 			.filter(StringUtils::hasText)
@@ -153,6 +157,12 @@ public class LifecareCaseService {
 	 * Propagates the integration's {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup
 	 * as best-effort.
 	 *
+	 * <p>
+	 * Everyone in the returned roster is identified by {@code partyId}, whichever route answered: the direct FamilyCare
+	 * client hands back personal identity numbers, so those are resolved here, while the integrator already answers
+	 * with party ids and is passed through. Without that the applicant would not match himself on the integrator route
+	 * and would be pre-filled as one of his own children.
+	 *
 	 * @param  personId      the applicant's personal identity number
 	 * @param  referenceDate the date the lookup is evaluated against (bounds the lookback window)
 	 * @return               the roster (applicant, co-applicant and the calculation members); members empty when none
@@ -172,14 +182,35 @@ public class LifecareCaseService {
 			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
 			.orElseGet(List::of).stream()
 			.filter(person -> hasText(person.getPersonId()))
-			.map(person -> new LifecareRoster.Member(person.getPersonId(), person.getName()))
+			.map(person -> new LifecareRoster.Member(toPartyId(municipalityId, person.getPersonId()), person.getName()))
 			.toList();
 
-		final var coApplicant = latestDecision(decisions)
-			.flatMap(LifecareCaseService::coApplicantPersonId)
+		final var latestDecision = latestDecision(decisions);
+		final var coApplicant = latestDecision
+			.flatMap(LifecareCaseService::flaggedCoApplicant)
+			.map(identity -> toPartyId(municipalityId, identity))
+			.or(() -> latestDecision.flatMap(LifecareCaseService::namedCoApplicant))
 			.orElse(null);
 
-		return new LifecareRoster(personId, coApplicant, members);
+		final var applicant = citizenService.getPartyId(municipalityId, personId).orElse(null);
+
+		return new LifecareRoster(applicant, coApplicant, members);
+	}
+
+	/**
+	 * A person <em>from a FamilyCare response</em> as a {@code partyId}. The integrator route already answers with one,
+	 * so it is returned unchanged; the direct route answers with a personal identity number, which the citizen service
+	 * resolves. An unresolvable identity becomes {@code null} rather than being passed along as something it is not —
+	 * a personnummer leaking into a partyId field would reach the API, which never returns one.
+	 *
+	 * <p>
+	 * Not for arguments: those are personal identity numbers on both routes, so they are always resolved.
+	 */
+	private String toPartyId(final String municipalityId, final String identity) {
+		if (lifecareFamilyCareIntegration.respondsWithPartyId()) {
+			return identity;
+		}
+		return citizenService.getPartyId(municipalityId, identity).orElse(null);
 	}
 
 	/**
@@ -341,13 +372,21 @@ public class LifecareCaseService {
 	 * The co-applicant's personal identity number on a decision — a flagged participant, falling back to the scalar
 	 * field.
 	 */
-	private static Optional<String> coApplicantPersonId(final PersonBasedDecisionDTO decision) {
-		final var flagged = ofNullable(decision.getDecisionPersonDTOs()).orElseGet(List::of).stream()
+	private static Optional<String> flaggedCoApplicant(final PersonBasedDecisionDTO decision) {
+		return ofNullable(decision.getDecisionPersonDTOs()).orElseGet(List::of).stream()
 			.filter(person -> Boolean.TRUE.equals(person.getIsCoApplicant()))
 			.map(PersonBasedDecisionPersonDTO::getPersonId)
 			.filter(StringUtils::hasText)
 			.findFirst();
-		return flagged.or(() -> ofNullable(decision.getCoApplicant()).filter(StringUtils::hasText));
+	}
+
+	/**
+	 * FamilyCare's own co-applicant field on the decision, used when no person on it is flagged. It is free text, not
+	 * an identity, so it is left exactly as it came — resolving it would only ever produce {@code null} and throw away
+	 * the one thing it does say.
+	 */
+	private static Optional<String> namedCoApplicant(final PersonBasedDecisionDTO decision) {
+		return ofNullable(decision.getCoApplicant()).filter(StringUtils::hasText);
 	}
 
 	/** The calculation with the most recent period (to/from), whose persons form the household constellation. */

@@ -26,9 +26,9 @@ class RenewalPrefillServiceTest {
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String PARTY_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 	private static final String APPLICANT_PNR = "198001012389";
-	private static final String CO_APPLICANT_PNR = "198202022397";
-	private static final String CHILD_PNR = "201805054321";
+	private static final String CO_APPLICANT_PARTY_ID = "c0ffee00-0000-4000-8000-000000000002";
 	private static final String CHILD_PARTY_ID = "c0ffee00-0000-4000-8000-000000000001";
+	private static final String OTHER_CHILD_PARTY_ID = "c0ffee00-0000-4000-8000-000000000003";
 
 	@Mock
 	private CitizenService citizenServiceMock;
@@ -41,13 +41,12 @@ class RenewalPrefillServiceTest {
 	}
 
 	@Test
-	void prefillsOnlyChildrenExcludingApplicantAndCoApplicantAndResolvesPartyId() {
+	void prefillsOnlyChildrenExcludingApplicantAndCoApplicant() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CHILD_PNR)).thenReturn(Optional.of(CHILD_PARTY_ID));
-		final var roster = new LifecareRoster(APPLICANT_PNR, CO_APPLICANT_PNR, List.of(
-			new LifecareRoster.Member(APPLICANT_PNR, "Anna Andersson"),
-			new LifecareRoster.Member(CO_APPLICANT_PNR, "Björn Andersson"),
-			new LifecareRoster.Member(CHILD_PNR, "Kid Andersson")));
+		final var roster = new LifecareRoster(PARTY_ID, CO_APPLICANT_PARTY_ID, List.of(
+			new LifecareRoster.Member(PARTY_ID, "Anna Andersson"),
+			new LifecareRoster.Member(CO_APPLICANT_PARTY_ID, "Björn Andersson"),
+			new LifecareRoster.Member(CHILD_PARTY_ID, "Kid Andersson")));
 		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(roster);
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
@@ -58,13 +57,13 @@ class RenewalPrefillServiceTest {
 			.containsExactly(tuple(CHILD_PARTY_ID, "Kid Andersson"));
 	}
 
+	/** The roster resolves the party ids; an unresolvable one arrives as null and the child keeps only its name. */
 	@Test
 	void childWithUnresolvablePartyIdKeepsNullPartyId() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CHILD_PNR)).thenReturn(Optional.empty());
-		final var roster = new LifecareRoster(APPLICANT_PNR, null, List.of(
-			new LifecareRoster.Member(APPLICANT_PNR, "Anna Andersson"),
-			new LifecareRoster.Member(CHILD_PNR, "Kid Andersson")));
+		final var roster = new LifecareRoster(PARTY_ID, null, List.of(
+			new LifecareRoster.Member(PARTY_ID, "Anna Andersson"),
+			new LifecareRoster.Member(null, "Kid Andersson")));
 		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(roster);
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
@@ -74,11 +73,28 @@ class RenewalPrefillServiceTest {
 			.containsExactly(tuple(null, "Kid Andersson"));
 	}
 
+	/**
+	 * Two unidentifiable people are not the same person. Comparing null to null would drop the child from the form
+	 * whenever the applicant could not be resolved either — a silent loss the citizen has no way to notice.
+	 */
+	@Test
+	void anUnidentifiableChildIsNotMistakenForAnUnidentifiableApplicant() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
+		final var roster = new LifecareRoster(null, null, List.of(
+			new LifecareRoster.Member(null, "Kid Andersson"),
+			new LifecareRoster.Member(OTHER_CHILD_PARTY_ID, "Kid Two")));
+		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(roster);
+
+		assertThat(service().prefill(MUNICIPALITY_ID, PARTY_ID).getChildren())
+			.extracting(PrefilledChild::getPartyId, PrefilledChild::getName)
+			.containsExactly(tuple(null, "Kid Andersson"), tuple(OTHER_CHILD_PARTY_ID, "Kid Two"));
+	}
+
 	@Test
 	void emptyRosterYieldsNoChildren() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
 		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any()))
-			.thenReturn(new LifecareRoster(APPLICANT_PNR, null, List.of()));
+			.thenReturn(new LifecareRoster(PARTY_ID, null, List.of()));
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
 

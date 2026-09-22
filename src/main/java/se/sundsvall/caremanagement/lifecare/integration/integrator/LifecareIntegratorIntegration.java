@@ -64,6 +64,12 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 		this.citizenService = citizenService;
 	}
 
+	/** Everything this route hands back identifies a person by {@code partyId}; see {@link IntegratorCaseMapper}. */
+	@Override
+	public boolean respondsWithPartyId() {
+		return true;
+	}
+
 	@Override
 	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
 		final var partyId = resolvePartyId(municipalityId, personId);
@@ -71,41 +77,73 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 			client.getCalculations(municipalityId, partyId, startDate, endDate)));
 	}
 
-	// ---- Not translated yet ------------------------------------------------------------------------------------------
-
 	@Override
-	public PersonBasedPersonDTO getPerson(final String municipalityId, final String personId) {
-		throw notPorted("getPerson");
-	}
-
-	@Override
-	public List<PersonBasedContactDTO> getContacts(final String municipalityId, final String personId) {
-		throw notPorted("getContacts");
+	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
+		final var partyId = resolvePartyId(municipalityId, personId);
+		return call("fetching decisions", () -> IntegratorCaseMapper.toDecisions(
+			client.getDecisions(municipalityId, partyId, startDate, endDate)));
 	}
 
 	@Override
 	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		throw notPorted("getActualisations");
-	}
-
-	@Override
-	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		throw notPorted("getDecisions");
+		final var partyId = resolvePartyId(municipalityId, personId);
+		return call("fetching actualisations", () -> IntegratorCaseMapper.toActualisations(
+			client.getActualisations(municipalityId, partyId, startDate, endDate), partyId));
 	}
 
 	@Override
 	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		throw notPorted("getPayments");
-	}
-
-	@Override
-	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		throw notPorted("getInvestigations");
+		final var partyId = resolvePartyId(municipalityId, personId);
+		return call("fetching payments", () -> IntegratorCaseMapper.toPayments(
+			client.getPayments(municipalityId, partyId, startDate, endDate)));
 	}
 
 	@Override
 	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		throw notPorted("getServices");
+		final var partyId = resolvePartyId(municipalityId, personId);
+		return call("fetching services", () -> IntegratorCaseMapper.toServices(
+			client.getServices(municipalityId, partyId, startDate, endDate)));
+	}
+
+	@Override
+	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
+		final var partyId = resolvePartyId(municipalityId, personId);
+		return call("fetching documents", () -> IntegratorCaseMapper.toDocuments(
+			client.getDocuments(municipalityId, partyId, startDate, endDate)));
+	}
+
+	@Override
+	public byte[] getDocumentContent(final String municipalityId, final String id) {
+		return call("fetching document content", () -> client.getDocumentContent(municipalityId, id));
+	}
+
+	@Override
+	public PersonBasedPersonDTO getPerson(final String municipalityId, final String personId) {
+		final var partyId = resolvePartyId(municipalityId, personId);
+		return call("fetching the person", () -> IntegratorCaseMapper.toPerson(client.getPerson(municipalityId, partyId), partyId));
+	}
+
+	@Override
+	public List<PersonBasedContactDTO> getContacts(final String municipalityId, final String personId) {
+		final var partyId = resolvePartyId(municipalityId, personId);
+		return call("fetching contacts", () -> IntegratorCaseMapper.toContacts(client.getContacts(municipalityId, partyId)));
+	}
+
+	/** The caseworker directory is the one read that is not person-scoped, so there is no party id to resolve. */
+	@Override
+	public List<User> getUsers(final String municipalityId, final Integer limit, final Integer offset, final String modifiedAfter, final String modifiedBefore) {
+		return call("fetching users", () -> IntegratorCaseMapper.toUsers(
+			client.getUsers(municipalityId, limit, offset, modifiedAfter, modifiedBefore)));
+	}
+
+	// ---- Not translated yet ------------------------------------------------------------------------------------------
+	//
+	// Investigations, executions and resource allocations sit on the interface but are called from nowhere in careM,
+	// so they are left alone rather than translated on spec. The proposals and the writes are the real remainder.
+
+	@Override
+	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
+		throw notPorted("getInvestigations");
 	}
 
 	@Override
@@ -116,21 +154,6 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 	@Override
 	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
 		throw notPorted("getResourceAllocations");
-	}
-
-	@Override
-	public List<User> getUsers(final String municipalityId, final Integer limit, final Integer offset, final String modifiedAfter, final String modifiedBefore) {
-		throw notPorted("getUsers");
-	}
-
-	@Override
-	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		throw notPorted("getDocuments");
-	}
-
-	@Override
-	public byte[] getDocumentContent(final String municipalityId, final String id) {
-		throw notPorted("getDocumentContent");
 	}
 
 	@Override

@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
@@ -59,6 +60,17 @@ class LifecareFamilyCareIntegrationTest {
 
 	@InjectMocks
 	private LifecareFamilyCareIntegration integration;
+
+	/**
+	 * FamilyCare answers with personal identity numbers — the interface default. LifecareCaseService branches on this
+	 * to decide whether a person in a response still has to be resolved to a partyId, so a silent flip here would put
+	 * personnummer into partyId fields.
+	 */
+	@Test
+	void respondsWithPersonalIdentityNumbersNotPartyIds() {
+		assertThat(integration.respondsWithPartyId()).isFalse();
+		verifyNoInteractions(clientMock);
+	}
 
 	// ---- Person-based reads ------------------------------------------------------------------------------------------
 

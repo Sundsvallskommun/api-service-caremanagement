@@ -1,6 +1,9 @@
 package se.sundsvall.caremanagement.lifecare.integration.integrator;
 
+import generated.se.sundsvall.lifecareintegrator.ActualisationProposal;
 import generated.se.sundsvall.lifecareintegrator.CalculationProposal;
+import generated.se.sundsvall.lifecareintegrator.Caseworker;
+import generated.se.sundsvall.lifecareintegrator.Contact;
 import generated.se.sundsvall.lifecareintegrator.DecisionsResponse;
 import generated.se.sundsvall.lifecareintegrator.PagedActualisationResponse;
 import generated.se.sundsvall.lifecareintegrator.PagedCalculationResponse;
@@ -10,6 +13,7 @@ import generated.se.sundsvall.lifecareintegrator.PagedServiceResponse;
 import generated.se.sundsvall.lifecareintegrator.Person;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.time.LocalDate;
+import java.util.List;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static se.sundsvall.caremanagement.lifecare.integration.integrator.configuration.LifecareIntegratorConfiguration.CLIENT_ID;
 
 /**
@@ -84,4 +89,22 @@ public interface LifecareIntegratorClient {
 		@RequestParam final String partyId,
 		@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
 		@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to);
+
+	@GetMapping(path = "/{municipalityId}/contacts", produces = APPLICATION_JSON_VALUE)
+	List<Contact> getContacts(@PathVariable final String municipalityId, @RequestParam final String partyId);
+
+	/** The only read that is not person-scoped: the caseworker directory, used to resolve a name to a user id. */
+	@GetMapping(path = "/{municipalityId}/users", produces = APPLICATION_JSON_VALUE)
+	List<Caseworker> getUsers(
+		@PathVariable final String municipalityId,
+		@RequestParam final Integer limit,
+		@RequestParam(required = false) final Integer offset,
+		@RequestParam(required = false) final String modifiedAfter,
+		@RequestParam(required = false) final String modifiedBefore);
+
+	@GetMapping(path = "/{municipalityId}/documents/{documentId}/content", produces = APPLICATION_PDF_VALUE)
+	byte[] getDocumentContent(@PathVariable final String municipalityId, @PathVariable final String documentId);
+
+	@GetMapping(path = "/{municipalityId}/actualisations/proposal", produces = APPLICATION_JSON_VALUE)
+	ActualisationProposal getActualisationProposal(@PathVariable final String municipalityId, @RequestParam final String partyId);
 }

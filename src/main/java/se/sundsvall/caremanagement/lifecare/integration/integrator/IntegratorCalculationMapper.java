@@ -16,6 +16,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.lifecare.integration.integrator.IntegratorValues.mapEach;
+import static se.sundsvall.caremanagement.lifecare.integration.integrator.IntegratorValues.toDouble;
+import static se.sundsvall.caremanagement.lifecare.integration.integrator.IntegratorValues.toInteger;
+import static se.sundsvall.caremanagement.lifecare.integration.integrator.IntegratorValues.toText;
 
 /**
  * Translates the integrator's calculation models back into the FamilyCare DTOs the {@code lifecare} services consume.
@@ -113,21 +117,5 @@ final class IntegratorCalculationMapper {
 			.type(expense.getType())
 			.appliedAmount(toDouble(expense.getAppliedAmount()))
 			.approvedAmount(toDouble(expense.getApprovedAmount()));
-	}
-
-	private static <S, T> List<T> mapEach(final List<S> source, final java.util.function.Function<S, T> mapper) {
-		return ofNullable(source).orElseGet(List::of).stream().map(mapper).toList();
-	}
-
-	private static Double toDouble(final BigDecimal value) {
-		return ofNullable(value).map(BigDecimal::doubleValue).orElse(null);
-	}
-
-	private static String toText(final LocalDate date) {
-		return ofNullable(date).map(LocalDate::toString).orElse(null);
-	}
-
-	private static Integer toInteger(final Long value) {
-		return ofNullable(value).map(Long::intValue).orElse(null);
 	}
 }

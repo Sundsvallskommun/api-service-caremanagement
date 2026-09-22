@@ -15,10 +15,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 
 import static java.time.Month.JUNE;
@@ -37,11 +39,21 @@ class LifecareCaseServiceTest {
 	private static final String APPLICANT = "198001012389";
 	private static final LocalDate REFERENCE = LocalDate.of(2026, JUNE, 15);
 
+	// The direct FamilyCare route: it answers with personal identity numbers, so the roster resolves them to party ids.
+	private static final String APPLICANT_PARTY_ID = "3f5ca9a0-1c2d-4e3f-8a9b-0c1d2e3f4a5b";
+	private static final String CO_APPLICANT = "198202022397";
+	private static final String CO_APPLICANT_PARTY_ID = "7b6a5c4d-3e2f-4a1b-9c8d-7e6f5a4b3c2d";
+	private static final String CHILD = "201801012380";
+	private static final String CHILD_PARTY_ID = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+
 	@Mock
 	private LifecareFamilyCareIntegration integrationMock;
 
+	@Mock
+	private CitizenService citizenServiceMock;
+
 	private LifecareCaseService service() {
-		return new LifecareCaseService(integrationMock, 13, List.of("Aktuell"));
+		return new LifecareCaseService(integrationMock, citizenServiceMock, 13, List.of("Aktuell"));
 	}
 
 	private void noActualisations() {
@@ -146,7 +158,7 @@ class LifecareCaseServiceTest {
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 		noCalculations();
 
-		final var service = new LifecareCaseService(integrationMock, 13, List.of(" ", "Aktuell"));
+		final var service = new LifecareCaseService(integrationMock, citizenServiceMock, 13, List.of(" ", "Aktuell"));
 
 		assertThat(service.summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE).hasOpenCase()).isTrue();
 	}
@@ -229,9 +241,13 @@ class LifecareCaseServiceTest {
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("198001019999").name("Old"));
 		final var newerCalc = new PersonBasedCalculationDTO().toDate("2026-06-30")
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT).name("Anna"))
-			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("201801012380").name("Kid"));
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD).name("Kid"));
 		final var decision = new PersonBasedDecisionDTO().toDate("2026-06-30")
-			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId("198202022397").isCoApplicant(true));
+			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId(CO_APPLICANT).isCoApplicant(true));
+
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(APPLICANT_PARTY_ID));
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CO_APPLICANT)).thenReturn(Optional.of(CO_APPLICANT_PARTY_ID));
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CHILD)).thenReturn(Optional.of(CHILD_PARTY_ID));
 
 		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(olderCalc, newerCalc)));
@@ -240,9 +256,9 @@ class LifecareCaseServiceTest {
 
 		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT, REFERENCE);
 
-		assertThat(roster.applicant()).isEqualTo(APPLICANT);
-		assertThat(roster.coApplicant()).isEqualTo("198202022397");
-		assertThat(roster.members()).extracting(LifecareRoster.Member::personalNumber).containsExactly(APPLICANT, "201801012380");
+		assertThat(roster.applicant()).isEqualTo(APPLICANT_PARTY_ID);
+		assertThat(roster.coApplicant()).isEqualTo(CO_APPLICANT_PARTY_ID);
+		assertThat(roster.members()).extracting(LifecareRoster.Member::partyId).containsExactly(APPLICANT_PARTY_ID, CHILD_PARTY_ID);
 		assertThat(roster.members()).extracting(LifecareRoster.Member::name).containsExactly("Anna", "Kid");
 	}
 
@@ -256,12 +272,14 @@ class LifecareCaseServiceTest {
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(calc));
 		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO()
-				.addResultItem(new PersonBasedDecisionDTO().toDate("2026-06-30").coApplicant("198202022397")));
+				.addResultItem(new PersonBasedDecisionDTO().toDate("2026-06-30").coApplicant("Bo Berg")));
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(APPLICANT_PARTY_ID));
 
 		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT, REFERENCE);
 
-		assertThat(roster.members()).extracting(LifecareRoster.Member::personalNumber).containsExactly(APPLICANT);
-		assertThat(roster.coApplicant()).isEqualTo("198202022397");
+		assertThat(roster.members()).extracting(LifecareRoster.Member::partyId).containsExactly(APPLICANT_PARTY_ID);
+		// FamilyCare's own co-applicant field is free text, not an identity, so it is passed through as it came.
+		assertThat(roster.coApplicant()).isEqualTo("Bo Berg");
 	}
 
 	@Test
@@ -271,9 +289,11 @@ class LifecareCaseServiceTest {
 		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(APPLICANT_PARTY_ID));
+
 		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT, REFERENCE);
 
-		assertThat(roster.applicant()).isEqualTo(APPLICANT);
+		assertThat(roster.applicant()).isEqualTo(APPLICANT_PARTY_ID);
 		assertThat(roster.coApplicant()).isNull();
 		assertThat(roster.members()).isEmpty();
 	}

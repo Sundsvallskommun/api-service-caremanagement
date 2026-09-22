@@ -22,9 +22,11 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
  * them
  * to {@link RenewalPrefill}. The applicant is the logged-in citizen and the co-applicant comes from the portal, so
  * neither
- * is pre-filled; the co-applicant is read only to exclude that adult from the children. Lifecare supplies personnummer
- * + name, so everything else (residence, school) is left for the citizen. Best-effort — an unresolved partyId or a
- * citizen/Lifecare failure yields an empty pre-fill with {@code lifecareChecked=false} rather than an error.
+ * is pre-filled; the co-applicant is read only to exclude that adult from the children. The roster already identifies
+ * everyone by partyId, so nothing here handles a personnummer beyond the one it hands Lifecare. Lifecare supplies the
+ * identity and the name, so everything else (residence, school) is left for the citizen. Best-effort — an unresolved
+ * partyId or a citizen/Lifecare failure yields an empty pre-fill with {@code lifecareChecked=false} rather than an
+ * error.
  */
 @Service
 @Transactional(readOnly = true)
@@ -41,7 +43,7 @@ public class RenewalPrefillService {
 	public RenewalPrefill prefill(final String municipalityId, final String partyId) {
 		try {
 			return citizenService.getPersonalNumber(municipalityId, partyId)
-				.map(personalNumber -> toPrefill(municipalityId, lifecareCaseService.latestRoster(municipalityId, personalNumber, LocalDate.now(ZoneId.systemDefault()))))
+				.map(personalNumber -> toPrefill(lifecareCaseService.latestRoster(municipalityId, personalNumber, LocalDate.now(ZoneId.systemDefault()))))
 				.orElseGet(RenewalPrefillService::empty);
 		} catch (final ThrowableProblem e) {
 			return empty();
@@ -49,22 +51,32 @@ public class RenewalPrefillService {
 	}
 
 	/**
-	 * Lifecare carries the children's personnummer; resolve each back to a partyId so the API never returns personnummer.
-	 * A child whose personnummer the citizen service can't resolve (204) keeps a {@code null} partyId — its name is still
-	 * useful for the citizen to recognise.
+	 * The household minus the two adults. {@link LifecareCaseService} has already put every member, the applicant and
+	 * the co-applicant in the same partyId space, so the two exclusions are plain comparisons; a child the citizen
+	 * service could not resolve (204) carries a {@code null} partyId, and its name is still useful for the citizen to
+	 * recognise.
 	 */
-	private RenewalPrefill toPrefill(final String municipalityId, final LifecareRoster roster) {
+	private static RenewalPrefill toPrefill(final LifecareRoster roster) {
 		final var children = roster.members().stream()
-			.filter(member -> !Objects.equals(member.personalNumber(), roster.applicant()))
-			.filter(member -> !Objects.equals(member.personalNumber(), roster.coApplicant()))
+			.filter(member -> !isSamePerson(member.partyId(), roster.applicant()))
+			.filter(member -> !isSamePerson(member.partyId(), roster.coApplicant()))
 			.map(member -> PrefilledChild.create()
-				.withPartyId(citizenService.getPartyId(municipalityId, member.personalNumber()).orElse(null))
+				.withPartyId(member.partyId())
 				.withName(member.name()))
 			.toList();
 
 		return RenewalPrefill.create()
 			.withLifecareChecked(true)
 			.withChildren(children);
+	}
+
+	/**
+	 * Two identities are the same person only when both are known. Without the null check an unidentifiable child
+	 * would match an unidentifiable applicant and be dropped from the pre-fill — the citizen would silently lose a
+	 * child from the form rather than see one with a name and no partyId.
+	 */
+	private static boolean isSamePerson(final String one, final String other) {
+		return (one != null) && Objects.equals(one, other);
 	}
 
 	private static RenewalPrefill empty() {
