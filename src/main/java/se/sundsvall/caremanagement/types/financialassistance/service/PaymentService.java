@@ -6,7 +6,9 @@ import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPayeeRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPaymentRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPayeeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPaymentEntity;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -38,7 +40,8 @@ import static org.springframework.util.StringUtils.hasText;
  * of the payment via {@code GET .../payments/{paymentId}}, carrying only the {@code paymentId} in the queue item, so
  * personal data never enters the Orchestrator queue) is a separate, explicit {@code POST .../rpa-tasks} call — the
  * same two-call shape every other RPA action in this service uses. Nothing else in this service ever changes
- * {@code status}; a later worker/callback updates it out of band as the robot processes the queued task.
+ * {@code status}, and nothing outside it does either: the {@code REGISTER_PAYMENT} robot has no result endpoint to
+ * report on, so a decided row stays {@code PENDING_REGISTRATION} whatever happens in Lifecare.
  * </p>
  */
 @Service
@@ -56,10 +59,12 @@ public class PaymentService {
 
 	private final ErrandService errandService;
 	private final FaPaymentRepository paymentRepository;
+	private final FaPayeeRepository payeeRepository;
 
-	PaymentService(final ErrandService errandService, final FaPaymentRepository paymentRepository) {
+	PaymentService(final ErrandService errandService, final FaPaymentRepository paymentRepository, final FaPayeeRepository payeeRepository) {
 		this.errandService = errandService;
 		this.paymentRepository = paymentRepository;
+		this.payeeRepository = payeeRepository;
 	}
 
 	/** The payments on an errand, oldest first. Scoped: throws {@code 404} when the errand is missing here. */
@@ -68,7 +73,7 @@ public class PaymentService {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		return paymentRepository.findByErrandId(errandId).stream()
 			.sorted(comparing(FaPaymentEntity::getCreated, nullsLast(naturalOrder())))
-			.map(PaymentService::toPayment)
+			.map(this::toPayment)
 			.toList();
 	}
 
@@ -181,6 +186,7 @@ public class PaymentService {
 			.withReportedOnStakeholderIds(request.getReportedOnStakeholderIds())
 			.withAccountingDate(request.getAccountingDate())
 			.withExcludedFromPayment(request.isExcludedFromPayment())
+			.withPayeeId(request.getPayeeId())
 			.withPayeeStakeholderId(request.getPayeeStakeholderId())
 			.withPaymentMethod(request.getPaymentMethod())
 			.withPayeeName(request.getPayeeName())
@@ -196,7 +202,12 @@ public class PaymentService {
 			.withMessageLines(request.getMessageLines());
 	}
 
-	private static Payment toPayment(final FaPaymentEntity entity) {
+	/**
+	 * The payment as the API serves it. {@code lifecarePayeeId} is read from the payee row rather than stored on the
+	 * payment: the ADD_PAYEE robot reports it back onto that row, possibly after this payment was created, so a copy
+	 * taken at create time would go stale. Null when the payment has no payee row, or that row is gone.
+	 */
+	private Payment toPayment(final FaPaymentEntity entity) {
 		return Payment.create()
 			.withId(entity.getId())
 			.withSource(entity.getSource())
@@ -210,6 +221,8 @@ public class PaymentService {
 			.withReportedOnStakeholderIds(entity.getReportedOnStakeholderIds())
 			.withAccountingDate(entity.getAccountingDate())
 			.withExcludedFromPayment(entity.isExcludedFromPayment())
+			.withPayeeId(entity.getPayeeId())
+			.withLifecarePayeeId(lifecarePayeeId(entity.getPayeeId()))
 			.withPayeeStakeholderId(entity.getPayeeStakeholderId())
 			.withPaymentMethod(entity.getPaymentMethod())
 			.withPayeeName(entity.getPayeeName())
@@ -225,5 +238,15 @@ public class PaymentService {
 			.withMessageLines(entity.getMessageLines())
 			.withCreated(entity.getCreated())
 			.withModified(entity.getModified());
+	}
+
+	/** The payee row's Lifecare id, or null when there is no payee row (a Lifecare-derived payee, or a deleted one). */
+	private String lifecarePayeeId(final String payeeId) {
+		if (!hasText(payeeId)) {
+			return null;
+		}
+		return payeeRepository.findById(payeeId)
+			.map(FaPayeeEntity::getLifecarePayeeId)
+			.orElse(null);
 	}
 }

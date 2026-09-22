@@ -172,7 +172,7 @@ class FinalizeMapperTest {
 			.withAmount(new BigDecimal("6000.00"))
 			.withConcernedMonth("2026-06")
 			.withAccountingCode("5011")
-			.withPayee(Payee.create().withName("Hyresvärden AB").withPaymentMethod("BANKGIRO").withClearing("6000").withAccountNumber("123-4567"));
+			.withPayee(Payee.create().withId("a1b2c3d4-0000-0000-0000-000000000001").withName("Hyresvärden AB").withPaymentMethod("BANKGIRO").withClearing("6000").withAccountNumber("123-4567"));
 
 		final var request = FinalizeMapper.toPaymentRequest(payment);
 
@@ -184,6 +184,18 @@ class FinalizeMapperTest {
 		assertThat(request.getPaymentMethod()).isEqualTo("BANKGIRO");
 		assertThat(request.getClearingNumber()).isEqualTo("6000"); // clearing → clearingNumber
 		assertThat(request.getAccountNumber()).isEqualTo("123-4567");
+		// The link to the payee row, and through it to lifecarePayeeId - without it the REGISTER_PAYMENT robot is left
+		// matching the payee in Lifecare on name and account number.
+		assertThat(request.getPayeeId()).isEqualTo("a1b2c3d4-0000-0000-0000-000000000001");
+	}
+
+	@Test
+	void toPaymentRequestLeavesPayeeIdNullForALifecareDerivedPayee() {
+		// A payee taken from the 12-month Lifecare history has no row on the errand, so the list serves it with a null id.
+		final var payment = FinalizePayment.create()
+			.withPayee(Payee.create().withPaymentMethod("BANKGIRO"));
+
+		assertThat(FinalizeMapper.toPaymentRequest(payment).getPayeeId()).isNull();
 	}
 
 	@Test

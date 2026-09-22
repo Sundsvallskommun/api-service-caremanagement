@@ -59,6 +59,7 @@ class FaPaymentEntityTest {
 			.withReportedOnStakeholderIds(List.of("stakeholder-1"))
 			.withAccountingDate(accountingDate)
 			.withExcludedFromPayment(true)
+			.withPayeeId("a1b2c3d4-0000-0000-0000-000000000001")
 			.withPayeeStakeholderId("stakeholder-1")
 			.withPaymentMethod("BANK_TRANSFER")
 			.withPayeeName("Anna Andersson")
@@ -88,6 +89,7 @@ class FaPaymentEntityTest {
 		assertThat(entity.getReportedOnStakeholderIds()).containsExactly("stakeholder-1");
 		assertThat(entity.getAccountingDate()).isEqualTo(accountingDate);
 		assertThat(entity.isExcludedFromPayment()).isTrue();
+		assertThat(entity.getPayeeId()).isEqualTo("a1b2c3d4-0000-0000-0000-000000000001");
 		assertThat(entity.getPayeeStakeholderId()).isEqualTo("stakeholder-1");
 		assertThat(entity.getPaymentMethod()).isEqualTo("BANK_TRANSFER");
 		assertThat(entity.getPayeeName()).isEqualTo("Anna Andersson");

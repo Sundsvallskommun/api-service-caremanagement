@@ -40,12 +40,14 @@ class PayeeTest {
 	@Test
 	void testBuilderMethods() {
 		final var result = Payee.create()
+			.withId("a1b2c3d4-0000-0000-0000-000000000001")
 			.withName("Anna Andersson")
 			.withPaymentMethod("Bankkonto")
 			.withClearing("1234")
 			.withAccountNumber("5678901");
 
 		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getId()).isEqualTo("a1b2c3d4-0000-0000-0000-000000000001");
 		assertThat(result.getName()).isEqualTo("Anna Andersson");
 		assertThat(result.getPaymentMethod()).isEqualTo("Bankkonto");
 		assertThat(result.getClearing()).isEqualTo("1234");

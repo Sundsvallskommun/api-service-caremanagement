@@ -12,7 +12,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPayeeRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPaymentRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPayeeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPaymentEntity;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -38,6 +40,9 @@ class PaymentServiceTest {
 
 	@Mock
 	private FaPaymentRepository repositoryMock;
+
+	@Mock
+	private FaPayeeRepository payeeRepositoryMock;
 
 	@InjectMocks
 	private PaymentService service;
@@ -319,5 +324,65 @@ class PaymentServiceTest {
 		final var payment = service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PaymentRequest.create().withAmount(new BigDecimal("500.00")));
 
 		assertThat(payment.getStatus()).isEqualTo("DRAFT");
+	}
+
+	@Test
+	void getResolvesLifecarePayeeIdFromThePayeeRow() {
+		final var payeeId = "a1b2c3d4-0000-0000-0000-000000000001";
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null).withPayeeId(payeeId)));
+		when(payeeRepositoryMock.findById(payeeId)).thenReturn(Optional.of(FaPayeeEntity.create().withId(payeeId).withLifecarePayeeId("44213")));
+
+		final var result = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
+
+		// Read through rather than copied onto the payment: the ADD_PAYEE robot reports it back onto the payee row, which
+		// can happen after the payment was created.
+		assertThat(result.getPayeeId()).isEqualTo(payeeId);
+		assertThat(result.getLifecarePayeeId()).isEqualTo("44213");
+	}
+
+	@Test
+	void getLeavesLifecarePayeeIdNullWhenTheRobotHasNotReportedYet() {
+		final var payeeId = "a1b2c3d4-0000-0000-0000-000000000001";
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null).withPayeeId(payeeId)));
+		when(payeeRepositoryMock.findById(payeeId)).thenReturn(Optional.of(FaPayeeEntity.create().withId(payeeId)));
+
+		final var result = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
+
+		assertThat(result.getLifecarePayeeId()).isNull();
+	}
+
+	@Test
+	void getLeavesLifecarePayeeIdNullWhenThePayeeRowIsGone() {
+		// The caseworker may delete a manual payee after the decision; the payment's own copied fields survive it.
+		final var payeeId = "a1b2c3d4-0000-0000-0000-000000000001";
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null).withPayeeId(payeeId)));
+		when(payeeRepositoryMock.findById(payeeId)).thenReturn(Optional.empty());
+
+		final var result = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
+
+		assertThat(result.getPayeeId()).isEqualTo(payeeId);
+		assertThat(result.getLifecarePayeeId()).isNull();
+	}
+
+	@Test
+	void aPaymentWithoutAPayeeRowNeverHitsThePayeeRepository() {
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null)));
+
+		final var result = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
+
+		assertThat(result.getLifecarePayeeId()).isNull();
+		verifyNoInteractions(payeeRepositoryMock);
+	}
+
+	@Test
+	void createCarriesThePayeeRowId() {
+		final var payeeId = "a1b2c3d4-0000-0000-0000-000000000001";
+		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request().withPayeeId(payeeId));
+
+		final var captor = ArgumentCaptor.forClass(FaPaymentEntity.class);
+		verify(repositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getPayeeId()).isEqualTo(payeeId);
 	}
 }

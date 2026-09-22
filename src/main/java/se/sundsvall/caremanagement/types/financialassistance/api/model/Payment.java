@@ -14,8 +14,9 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 
 /**
  * A financial assistance payment (utbetalning) on an errand — a caseworker-drafted or Lifecare-mirrored payment row.
- * {@code status} is entirely server-managed (always {@code DRAFT} on create); queuing the robot to register it in
- * Lifecare is a separate {@code POST .../rpa-tasks} call with the {@code REGISTER_PAYMENT} action.
+ * {@code status} is entirely server-managed: {@code DRAFT} for a row saved through this resource, and
+ * {@code PENDING_REGISTRATION} for one a decision created. Queuing the robot to register it in Lifecare is a separate
+ * {@code POST .../rpa-tasks} call with the {@code REGISTER_PAYMENT} action.
  */
 @Schema(description = "A financial assistance payment (utbetalning) on an errand.")
 public class Payment {
@@ -33,9 +34,11 @@ public class Payment {
 		+ "payment; always set for a LIFECARE-sourced one.", examples = "987654")
 	private String lifecareId;
 
-	@Schema(description = "Server-managed lifecycle status. DRAFT on create; moves to QUEUED / EFFECTUATED / FAILED as the robot "
-		+ "processes the REGISTER_PAYMENT RPA task.", examples = "DRAFT", allowableValues = {
-			"DRAFT", "QUEUED", "EFFECTUATED", "FAILED"
+	@Schema(description = "Server-managed lifecycle status. DRAFT for a caseworker's saved draft; PENDING_REGISTRATION for one a "
+		+ "decision created, waiting for the robot to register it in Lifecare. Nothing moves a row out of "
+		+ "PENDING_REGISTRATION yet — the REGISTER_PAYMENT robot has no result endpoint to report back on, so treat it as "
+		+ "'decided, Lifecare state unknown' rather than as a terminal outcome.", examples = "DRAFT", allowableValues = {
+			"DRAFT", "PENDING_REGISTRATION"
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String status;
 
@@ -65,6 +68,18 @@ public class Payment {
 
 	@Schema(description = "Whether the payment is excluded from being paid out", examples = "false")
 	private boolean excludedFromPayment;
+
+	@Schema(description = "The id of the payee row on the errand this payment pays to, as GET .../payees returns it. Null for a payee "
+		+ "derived from the Lifecare payment history (no local row) and for a manual payee deleted after the decision — the "
+		+ "copied payee fields below are owned by the decision and stay either way.",
+		examples = "a1b2c3d4-0000-0000-0000-000000000001")
+	private String payeeId;
+
+	@Schema(description = "The payee's id in Lifecare, read from that payee row — set once the ADD_PAYEE robot has reported it back. "
+		+ "The REGISTER_PAYMENT robot uses it to pick the payee in Lifecare by id instead of matching on name and account "
+		+ "number. Null when the payee has no local row, or when the robot has not reported yet (lifecareStatus PENDING or "
+		+ "FAILED on that payee).", examples = "44213", accessMode = Schema.AccessMode.READ_ONLY)
+	private String lifecarePayeeId;
 
 	@Schema(description = "The stakeholder id of the payee", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479")
 	private String payeeStakeholderId;
@@ -274,6 +289,32 @@ public class Payment {
 		return this;
 	}
 
+	public String getPayeeId() {
+		return payeeId;
+	}
+
+	public void setPayeeId(final String payeeId) {
+		this.payeeId = payeeId;
+	}
+
+	public Payment withPayeeId(final String payeeId) {
+		this.payeeId = payeeId;
+		return this;
+	}
+
+	public String getLifecarePayeeId() {
+		return lifecarePayeeId;
+	}
+
+	public void setLifecarePayeeId(final String lifecarePayeeId) {
+		this.lifecarePayeeId = lifecarePayeeId;
+	}
+
+	public Payment withLifecarePayeeId(final String lifecarePayeeId) {
+		this.lifecarePayeeId = lifecarePayeeId;
+		return this;
+	}
+
 	public String getPayeeStakeholderId() {
 		return payeeStakeholderId;
 	}
@@ -479,6 +520,7 @@ public class Payment {
 			&& Objects.equals(moneyType, that.moneyType) && Objects.equals(paymentDate, that.paymentDate) && Objects.equals(amount, that.amount)
 			&& Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(accountingCode, that.accountingCode) && Objects.equals(reportedOnStakeholderIds, that.reportedOnStakeholderIds)
 			&& Objects.equals(accountingDate, that.accountingDate) && Objects.equals(payeeStakeholderId, that.payeeStakeholderId)
+			&& Objects.equals(payeeId, that.payeeId) && Objects.equals(lifecarePayeeId, that.lifecarePayeeId)
 			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(payeeName, that.payeeName)
 			&& Objects.equals(payeeAddress, that.payeeAddress) && Objects.equals(payeeCareOf, that.payeeCareOf)
 			&& Objects.equals(payeeZipCode, that.payeeZipCode) && Objects.equals(payeeCity, that.payeeCity)
@@ -490,7 +532,7 @@ public class Payment {
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, source, lifecareId, status, moneyType, paymentDate, amount, applicationMonth, accountingCode, reportedOnStakeholderIds,
-			accountingDate, excludedFromPayment, payeeStakeholderId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode,
+			accountingDate, excludedFromPayment, payeeId, lifecarePayeeId, payeeStakeholderId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode,
 			payeeCity, clearingNumber, accountNumber, localPaymentNumber, invoiceNumber, usesOcr, messageLines, created, modified);
 	}
 
@@ -509,6 +551,8 @@ public class Payment {
 			", reportedOnStakeholderIds=" + reportedOnStakeholderIds +
 			", accountingDate=" + accountingDate +
 			", excludedFromPayment=" + excludedFromPayment +
+			", payeeId='" + payeeId + '\'' +
+			", lifecarePayeeId='" + lifecarePayeeId + '\'' +
 			", payeeStakeholderId='" + payeeStakeholderId + '\'' +
 			", paymentMethod='" + paymentMethod + '\'' +
 			", payeeName='" + payeeName + '\'' +

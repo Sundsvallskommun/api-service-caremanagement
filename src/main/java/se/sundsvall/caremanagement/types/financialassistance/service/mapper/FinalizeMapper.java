@@ -178,6 +178,11 @@ public final class FinalizeMapper {
 			request.setApplicationMonth(source.getConcernedMonth());
 			request.setAccountingCode(source.getAccountingCode());
 			ofNullable(source.getPayee()).ifPresent(payee -> {
+				// The payee row's id, when the caseworker picked one from the errand's payee list. It is what carries the
+				// link to lifecarePayeeId through to GET .../payments/{paymentId}, so the REGISTER_PAYMENT robot can pick
+				// the payee in Lifecare by id instead of matching on name and account number. Null for a payee derived
+				// from the Lifecare payment history — those have no row here.
+				request.setPayeeId(payee.getId());
 				request.setPayeeName(payee.getName());
 				request.setPaymentMethod(payee.getPaymentMethod());
 				request.setClearingNumber(payee.getClearing());

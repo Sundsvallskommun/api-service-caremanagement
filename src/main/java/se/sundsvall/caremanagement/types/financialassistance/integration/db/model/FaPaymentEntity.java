@@ -33,9 +33,12 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  * </p>
  *
  * <p>
- * {@code status} is entirely server-managed: every payment is created {@code DRAFT} (queuing RPA is a separate,
- * explicit {@code POST .../rpa-tasks} call — see {@code PaymentService}), moving to {@code QUEUED} /
- * {@code EFFECTUATED} / {@code FAILED} as the robot processes it.
+ * {@code status} is entirely server-managed and has two values today: a caseworker's saved row is created
+ * {@code DRAFT} (queuing RPA is a separate, explicit {@code POST .../rpa-tasks} call — see {@code PaymentService}),
+ * and a row a decision created is {@code PENDING_REGISTRATION}. Nothing clears the latter: the
+ * {@code REGISTER_PAYMENT} robot has no endpoint to report its result on, so a decided payment stays
+ * {@code PENDING_REGISTRATION} whatever happens in Lifecare. Adding that result endpoint is what would introduce a
+ * terminal value here.
  * </p>
  *
  * <p>
@@ -95,6 +98,16 @@ public class FaPaymentEntity {
 
 	@Column(name = "payee_stakeholder_id", length = 64)
 	private String payeeStakeholderId;
+
+	/**
+	 * The {@link FaPayeeEntity} row this payment pays to, when the payee came from the errand's payee list. Null for a
+	 * payee derived from the Lifecare payment history (those have no local row) and for a manual payee the caseworker
+	 * deleted afterwards — the copied name/method/clearing/account fields are owned by the decision and stay either
+	 * way. It exists so the {@code REGISTER_PAYMENT} robot can be handed the payee's Lifecare id instead of matching
+	 * on name and account number.
+	 */
+	@Column(name = "payee_id", length = 36)
+	private String payeeId;
 
 	@Column(name = "payment_method", length = 64)
 	private String paymentMethod;
@@ -340,6 +353,19 @@ public class FaPaymentEntity {
 		return this;
 	}
 
+	public String getPayeeId() {
+		return payeeId;
+	}
+
+	public void setPayeeId(final String payeeId) {
+		this.payeeId = payeeId;
+	}
+
+	public FaPaymentEntity withPayeeId(final String payeeId) {
+		this.payeeId = payeeId;
+		return this;
+	}
+
 	public String getPaymentMethod() {
 		return paymentMethod;
 	}
@@ -534,6 +560,7 @@ public class FaPaymentEntity {
 			&& Objects.equals(status, that.status) && Objects.equals(moneyType, that.moneyType) && Objects.equals(paymentDate, that.paymentDate)
 			&& Objects.equals(amount, that.amount) && Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(accountingCode, that.accountingCode)
 			&& Objects.equals(accountingDate, that.accountingDate) && Objects.equals(payeeStakeholderId, that.payeeStakeholderId)
+			&& Objects.equals(payeeId, that.payeeId)
 			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(payeeName, that.payeeName)
 			&& Objects.equals(payeeAddress, that.payeeAddress) && Objects.equals(payeeCareOf, that.payeeCareOf)
 			&& Objects.equals(payeeZipCode, that.payeeZipCode) && Objects.equals(payeeCity, that.payeeCity)
@@ -545,7 +572,7 @@ public class FaPaymentEntity {
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, source, lifecareId, status, moneyType, paymentDate, amount, applicationMonth, accountingCode, accountingDate,
-			excludedFromPayment, payeeStakeholderId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode, payeeCity,
+			excludedFromPayment, payeeStakeholderId, payeeId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode, payeeCity,
 			clearingNumber, accountNumber, localPaymentNumber, invoiceNumber, usesOcr, created, modified);
 	}
 
@@ -565,6 +592,7 @@ public class FaPaymentEntity {
 			", accountingDate=" + accountingDate +
 			", excludedFromPayment=" + excludedFromPayment +
 			", payeeStakeholderId='" + payeeStakeholderId + '\'' +
+			", payeeId='" + payeeId + '\'' +
 			", paymentMethod='" + paymentMethod + '\'' +
 			", payeeName='" + payeeName + '\'' +
 			", payeeAddress='" + payeeAddress + '\'' +

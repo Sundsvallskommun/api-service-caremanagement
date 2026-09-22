@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.Objects;
+import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
  * Who a payment goes to and how. Free-form on purpose: the payment methods and account formats are Lifecare's, and
@@ -11,6 +12,13 @@ import java.util.Objects;
  */
 @Schema(description = "The recipient of a payment and the payment method.")
 public class Payee {
+
+	@Schema(description = "The id of the payee row this came from, as GET .../payees returns it — send it whenever the caseworker "
+		+ "picked an entry from that list. It is what lets the REGISTER_PAYMENT robot be handed the payee's Lifecare id "
+		+ "instead of matching on name and account number. Omit it for a payee that has no row: one derived from the "
+		+ "Lifecare payment history carries a null id in the list.", examples = "a1b2c3d4-0000-0000-0000-000000000001")
+	@ValidUuid(nullable = true)
+	private String id;
 
 	@Schema(description = "Name of the payee as registered in Lifecare", examples = "Anna Andersson", requiredMode = Schema.RequiredMode.REQUIRED)
 	@NotBlank
@@ -32,6 +40,19 @@ public class Payee {
 
 	public static Payee create() {
 		return new Payee();
+	}
+
+	public String getId() {
+		return id;
+	}
+
+	public void setId(final String id) {
+		this.id = id;
+	}
+
+	public Payee withId(final String id) {
+		this.id = id;
+		return this;
 	}
 
 	public String getName() {
@@ -91,19 +112,20 @@ public class Payee {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final Payee that = (Payee) o;
-		return Objects.equals(name, that.name) && Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(clearing, that.clearing)
-			&& Objects.equals(accountNumber, that.accountNumber);
+		return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(paymentMethod, that.paymentMethod)
+			&& Objects.equals(clearing, that.clearing) && Objects.equals(accountNumber, that.accountNumber);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(name, paymentMethod, clearing, accountNumber);
+		return Objects.hash(id, name, paymentMethod, clearing, accountNumber);
 	}
 
 	@Override
 	public String toString() {
 		return "Payee{" +
-			"name='" + name + '\'' +
+			"id='" + id + '\'' +
+			", name='" + name + '\'' +
 			", paymentMethod='" + paymentMethod + '\'' +
 			", clearing='" + clearing + '\'' +
 			", accountNumber='" + accountNumber + '\'' +

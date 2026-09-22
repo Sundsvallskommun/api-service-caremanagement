@@ -18,7 +18,9 @@ public enum RpaAction {
 	/**
 	 * Fetch watches/reminders, the document list (journal notes included) and jobbstimulans from Lifecare and deliver
 	 * them back in one near-raw dump: {@code POST .../errands/financial-assistance/{errandId}/lifecare-supplements}.
-	 * The queue item carries the applicant's {@code personId} so the robot can find the client in Lifecare.
+	 * The queue item carries no personal number: the robot reads the applicant's (and any co-applicant's) via
+	 * {@code GET .../errands/financial-assistance/{errandId}/rpa-context} as its first step, so each disclosure lands
+	 * in the errand's event log instead of persisting in the Orchestrator queue store.
 	 */
 	FETCH_SUPPLEMENTS,
 

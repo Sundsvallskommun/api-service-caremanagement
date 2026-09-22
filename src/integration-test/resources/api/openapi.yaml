@@ -8406,6 +8406,16 @@ components:
           description: Whether the payment is excluded from being paid out
           examples:
           - false
+        payeeId:
+          type: string
+          description: "The id of the payee row on the errand this payment pays to,\
+            \ as GET .../payees returns it. Send it when the caseworker picked an\
+            \ entry from that list — it is what lets the REGISTER_PAYMENT robot be\
+            \ handed the payee's Lifecare id instead of matching on name and account\
+            \ number. Omit it for a payee derived from the Lifecare payment history,\
+            \ which has no local row."
+          examples:
+          - a1b2c3d4-0000-0000-0000-000000000001
         payeeStakeholderId:
           type: string
           description: The stakeholder id of the payee
@@ -8526,14 +8536,15 @@ components:
           - "987654"
         status:
           type: string
-          description: Server-managed lifecycle status. DRAFT on create; moves to
-            QUEUED / EFFECTUATED / FAILED as the robot processes the REGISTER_PAYMENT
-            RPA task.
+          description: "Server-managed lifecycle status. DRAFT for a caseworker's\
+            \ saved draft; PENDING_REGISTRATION for one a decision created, waiting\
+            \ for the robot to register it in Lifecare. Nothing moves a row out of\
+            \ PENDING_REGISTRATION yet — the REGISTER_PAYMENT robot has no result\
+            \ endpoint to report back on, so treat it as 'decided, Lifecare state\
+            \ unknown' rather than as a terminal outcome."
           enum:
           - DRAFT
-          - QUEUED
-          - EFFECTUATED
-          - FAILED
+          - PENDING_REGISTRATION
           examples:
           - DRAFT
           readOnly: true
@@ -8584,6 +8595,26 @@ components:
           description: Whether the payment is excluded from being paid out
           examples:
           - false
+        payeeId:
+          type: string
+          description: "The id of the payee row on the errand this payment pays to,\
+            \ as GET .../payees returns it. Null for a payee derived from the Lifecare\
+            \ payment history (no local row) and for a manual payee deleted after\
+            \ the decision — the copied payee fields below are owned by the decision\
+            \ and stay either way."
+          examples:
+          - a1b2c3d4-0000-0000-0000-000000000001
+        lifecarePayeeId:
+          type: string
+          description: "The payee's id in Lifecare, read from that payee row — set\
+            \ once the ADD_PAYEE robot has reported it back. The REGISTER_PAYMENT\
+            \ robot uses it to pick the payee in Lifecare by id instead of matching\
+            \ on name and account number. Null when the payee has no local row, or\
+            \ when the robot has not reported yet (lifecareStatus PENDING or FAILED\
+            \ on that payee)."
+          examples:
+          - "44213"
+          readOnly: true
         payeeStakeholderId:
           type: string
           description: The stakeholder id of the payee
@@ -11194,6 +11225,16 @@ components:
       type: object
       description: The recipient of a payment and the payment method.
       properties:
+        id:
+          type: string
+          description: "The id of the payee row this came from, as GET .../payees\
+            \ returns it — send it whenever the caseworker picked an entry from that\
+            \ list. It is what lets the REGISTER_PAYMENT robot be handed the payee's\
+            \ Lifecare id instead of matching on name and account number. Omit it\
+            \ for a payee that has no row: one derived from the Lifecare payment history\
+            \ carries a null id in the list."
+          examples:
+          - a1b2c3d4-0000-0000-0000-000000000001
         name:
           type: string
           description: Name of the payee as registered in Lifecare

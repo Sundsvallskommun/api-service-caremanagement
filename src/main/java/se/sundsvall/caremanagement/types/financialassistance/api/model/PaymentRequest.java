@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
+import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 
@@ -64,6 +65,13 @@ public class PaymentRequest {
 
 	@Schema(description = "Whether the payment is excluded from being paid out", examples = "false")
 	private boolean excludedFromPayment;
+
+	@Schema(description = "The id of the payee row on the errand this payment pays to, as GET .../payees returns it. Send it when "
+		+ "the caseworker picked an entry from that list — it is what lets the REGISTER_PAYMENT robot be handed the payee's "
+		+ "Lifecare id instead of matching on name and account number. Omit it for a payee derived from the Lifecare payment "
+		+ "history, which has no local row.", examples = "a1b2c3d4-0000-0000-0000-000000000001")
+	@ValidUuid(nullable = true)
+	private String payeeId;
 
 	@Schema(description = "The stakeholder id of the payee", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479")
 	@Size(max = 64)
@@ -250,6 +258,19 @@ public class PaymentRequest {
 		return this;
 	}
 
+	public String getPayeeId() {
+		return payeeId;
+	}
+
+	public void setPayeeId(final String payeeId) {
+		this.payeeId = payeeId;
+	}
+
+	public PaymentRequest withPayeeId(final String payeeId) {
+		this.payeeId = payeeId;
+		return this;
+	}
+
 	public String getPayeeStakeholderId() {
 		return payeeStakeholderId;
 	}
@@ -429,6 +450,7 @@ public class PaymentRequest {
 			&& Objects.equals(paymentDate, that.paymentDate) && Objects.equals(amount, that.amount)
 			&& Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(accountingCode, that.accountingCode) && Objects.equals(reportedOnStakeholderIds, that.reportedOnStakeholderIds)
 			&& Objects.equals(accountingDate, that.accountingDate) && Objects.equals(payeeStakeholderId, that.payeeStakeholderId)
+			&& Objects.equals(payeeId, that.payeeId)
 			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(payeeName, that.payeeName)
 			&& Objects.equals(payeeAddress, that.payeeAddress) && Objects.equals(payeeCareOf, that.payeeCareOf)
 			&& Objects.equals(payeeZipCode, that.payeeZipCode) && Objects.equals(payeeCity, that.payeeCity)
@@ -440,7 +462,7 @@ public class PaymentRequest {
 	@Override
 	public int hashCode() {
 		return Objects.hash(source, lifecareId, moneyType, paymentDate, amount, applicationMonth, accountingCode, reportedOnStakeholderIds, accountingDate,
-			excludedFromPayment, payeeStakeholderId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode, payeeCity,
+			excludedFromPayment, payeeId, payeeStakeholderId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode, payeeCity,
 			clearingNumber, accountNumber, localPaymentNumber, invoiceNumber, usesOcr, messageLines);
 	}
 
@@ -457,6 +479,7 @@ public class PaymentRequest {
 			", reportedOnStakeholderIds=" + reportedOnStakeholderIds +
 			", accountingDate=" + accountingDate +
 			", excludedFromPayment=" + excludedFromPayment +
+			", payeeId='" + payeeId + '\'' +
 			", payeeStakeholderId='" + payeeStakeholderId + '\'' +
 			", paymentMethod='" + paymentMethod + '\'' +
 			", payeeName='" + payeeName + '\'' +
