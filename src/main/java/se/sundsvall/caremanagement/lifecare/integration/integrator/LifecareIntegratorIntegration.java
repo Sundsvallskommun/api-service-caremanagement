@@ -136,10 +136,25 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 			client.getUsers(municipalityId, limit, offset, modifiedAfter, modifiedBefore)));
 	}
 
+	@Override
+	public PersonBasedCalculationProposalDTO getCalculationProposal(final String municipalityId, final String personId) {
+		final var partyId = resolvePartyId(municipalityId, personId);
+		return call("fetching the calculation proposal", () -> IntegratorProposalMapper.toCalculationProposal(
+			client.getCalculationProposal(municipalityId, partyId)));
+	}
+
+	@Override
+	public PersonBasedAktualiseringProposalDTO getActualisationProposal(final String municipalityId, final String personId) {
+		final var partyId = resolvePartyId(municipalityId, personId);
+		return call("fetching the actualisation proposal", () -> IntegratorProposalMapper.toActualisationProposal(
+			client.getActualisationProposal(municipalityId, partyId)));
+	}
+
 	// ---- Not translated yet ------------------------------------------------------------------------------------------
 	//
 	// Investigations, executions and resource allocations sit on the interface but are called from nowhere in careM,
-	// so they are left alone rather than translated on spec. The proposals and the writes are the real remainder.
+	// so they are left alone rather than translated on spec. Every read careM actually makes is ported; what remains
+	// is the writes.
 
 	@Override
 	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
@@ -157,18 +172,8 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 	}
 
 	@Override
-	public PersonBasedAktualiseringProposalDTO getActualisationProposal(final String municipalityId, final String personId) {
-		throw notPorted("getActualisationProposal");
-	}
-
-	@Override
 	public Integer createActualisation(final String municipalityId, final PostAktualiseringsBodyRequest body) {
 		throw notPorted("createActualisation");
-	}
-
-	@Override
-	public PersonBasedCalculationProposalDTO getCalculationProposal(final String municipalityId, final String personId) {
-		throw notPorted("getCalculationProposal");
 	}
 
 	@Override

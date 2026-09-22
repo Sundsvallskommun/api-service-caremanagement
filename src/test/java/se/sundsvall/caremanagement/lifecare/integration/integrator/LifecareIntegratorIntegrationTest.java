@@ -1,22 +1,26 @@
 package se.sundsvall.caremanagement.lifecare.integration.integrator;
 
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsOrganizationDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedServiceDTO;
 import generated.se.sundsvall.lifecarefamilycare.User;
 import generated.se.sundsvall.lifecareintegrator.Actualisation;
+import generated.se.sundsvall.lifecareintegrator.ActualisationProposal;
 import generated.se.sundsvall.lifecareintegrator.Calculation;
 import generated.se.sundsvall.lifecareintegrator.CalculationExpense;
 import generated.se.sundsvall.lifecareintegrator.CalculationIncome;
 import generated.se.sundsvall.lifecareintegrator.CalculationPerson;
+import generated.se.sundsvall.lifecareintegrator.CalculationProposal;
 import generated.se.sundsvall.lifecareintegrator.CaseService;
 import generated.se.sundsvall.lifecareintegrator.Caseworker;
 import generated.se.sundsvall.lifecareintegrator.Contact;
 import generated.se.sundsvall.lifecareintegrator.Decision;
 import generated.se.sundsvall.lifecareintegrator.DecisionsResponse;
 import generated.se.sundsvall.lifecareintegrator.DocumentMetadata;
+import generated.se.sundsvall.lifecareintegrator.Organization;
 import generated.se.sundsvall.lifecareintegrator.PagedActualisationResponse;
 import generated.se.sundsvall.lifecareintegrator.PagedCalculationResponse;
 import generated.se.sundsvall.lifecareintegrator.PagedDocumentResponse;
@@ -295,23 +299,41 @@ class LifecareIntegratorIntegrationTest {
 		verifyNoInteractions(citizenServiceMock);
 	}
 
+	@Test
+	void getCalculationProposalGoesThroughTheIntegrator() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.getCalculationProposal(MUNICIPALITY_ID, PARTY_ID)).thenReturn(new CalculationProposal().actualisationMandatory(true));
+
+		assertThat(integration.getCalculationProposal(MUNICIPALITY_ID, PERSON_ID).getAktualiseringMandatory()).isTrue();
+		verify(clientMock).getCalculationProposal(MUNICIPALITY_ID, PARTY_ID);
+	}
+
+	@Test
+	void getActualisationProposalGoesThroughTheIntegrator() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.getActualisationProposal(MUNICIPALITY_ID, PARTY_ID)).thenReturn(new ActualisationProposal()
+			.organizations(List.of(new Organization().name("IFO Ekonomiskt bistånd"))));
+
+		assertThat(integration.getActualisationProposal(MUNICIPALITY_ID, PERSON_ID).getOrganizations())
+			.singleElement().extracting(PersonBasedAktualiseringsOrganizationDTO::getName).isEqualTo("IFO Ekonomiskt bistånd");
+		verify(clientMock).getActualisationProposal(MUNICIPALITY_ID, PARTY_ID);
+	}
+
 	/**
 	 * An operation that is not translated yet has to fail loudly. An empty result would be indistinguishable from "this
 	 * person has nothing", and a handläggare would be shown a normberäkning built on a silent gap.
 	 */
 	@Test
 	void unportedOperationsFailInsteadOfAnsweringEmpty() {
-		assertThatThrownBy(() -> integration.getCalculationProposal(MUNICIPALITY_ID, PERSON_ID))
+		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, null))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_IMPLEMENTED)
-			.hasMessageContaining("getCalculationProposal");
+			.hasMessageContaining("createCalculation");
 
 		assertThatThrownBy(() -> integration.getInvestigations(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.getExecutions(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.getResourceAllocations(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.getActualisationProposal(MUNICIPALITY_ID, PERSON_ID)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.createActualisation(MUNICIPALITY_ID, null)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, null)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.postActualisationAttachment(MUNICIPALITY_ID, 1, "type", "senderType", "title", "sender", "file.pdf", new byte[0]))
 			.isInstanceOf(ThrowableProblem.class);
 
