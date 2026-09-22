@@ -63,14 +63,20 @@ spring:
             client-secret: ${INTEGRATION_FINANCIAL_AID_CLIENT_SECRET}
             authorization-grant-type: client_credentials
             provider: financial-aid
-          # RPA is the one optional integration (integration.rpa.enabled is the master switch), so it keeps
-          # placeholder credentials — a deploy without an Orchestrator runs with enabled=false and never uses them.
+          # The two opt-in integrations below keep placeholder credentials, so a deploy that uses neither needs no
+          # secrets for them: RPA is switched by integration.rpa.enabled (no Orchestrator, enabled=false, never used),
+          # and lifecare-integrator only wakes up when integration.lifecare-familycare.provider=integrator.
           rpa:
             client-id: ${INTEGRATION_RPA_CLIENT_ID:placeholder}
             client-secret: ${INTEGRATION_RPA_CLIENT_SECRET:placeholder}
             authorization-grant-type: client_credentials
             provider: rpa
             scope: OR.Queues, OR.Queues.Read, OR.Queues.Write
+          lifecare-integrator:
+            client-id: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_ID:placeholder}
+            client-secret: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_SECRET:placeholder}
+            authorization-grant-type: client_credentials
+            provider: lifecare-integrator
         provider:
           messaging:
             token-uri: ${INTEGRATION_MESSAGING_TOKEN_URI}
@@ -82,6 +88,8 @@ spring:
             token-uri: ${INTEGRATION_FINANCIAL_AID_TOKEN_URI}
           rpa:
             token-uri: ${INTEGRATION_RPA_TOKEN_URI:http://localhost/token}
+          lifecare-integrator:
+            token-uri: ${INTEGRATION_LIFECARE_INTEGRATOR_TOKEN_URI:http://localhost/token}
 #========================================
 # Integration settings
 #========================================
@@ -89,6 +97,13 @@ integration:
   operaton:
     connect-timeout: 5
     read-timeout: 30
+  # lifecare-integrator — the route to FamilyCare that works from outside the municipal network. Only used when
+  # integration.lifecare-familycare.provider=integrator; the credentials carry placeholders so a deploy on the direct
+  # route needs none of them, the same pattern as RPA.
+  lifecare-integrator:
+    url: ${INTEGRATION_LIFECARE_INTEGRATOR_URL:http://localhost/lifecare-integrator}
+    connect-timeout: 5
+    read-timeout: 60
   # financial-aid (SSBTEK proxy). OAuth2 client-credentials via the financial-aid Spring security registration above.
   financial-aid:
     url: ${INTEGRATION_FINANCIAL_AID_URL}
