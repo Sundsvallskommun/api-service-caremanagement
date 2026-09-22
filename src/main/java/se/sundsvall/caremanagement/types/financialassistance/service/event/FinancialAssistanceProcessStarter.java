@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
@@ -44,10 +43,17 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  *
  * <p>
  * The process is started with {@code businessKey = errandId} and seeded with the municipalityId and namespace, the
- * applicant and optional co-applicant partyIds (from the application's persons), their personnummer (resolved via
- * {@link CitizenService}, keyed on by the SSBTEK fetch), the application month derived from the period, and the SSBTEK
- * fetch window (fromDate/toDate) derived from that month. Best-effort: a missing process definition or an unavailable
- * engine is logged and swallowed so it never disturbs the caller — the flow can be (re)started later.
+ * applicant and optional co-applicant partyIds (from the application's persons), the application month derived from
+ * the period, and the SSBTEK fetch window (fromDate/toDate) derived from that month. Best-effort: a missing process
+ * definition or an unavailable engine is logged and swallowed so it never disturbs the caller — the flow can be
+ * (re)started later.
+ *
+ * <p>
+ * The household's personnummer are deliberately <strong>not</strong> seeded, though the SSBTEK lookup keys on them.
+ * The engine persists every process variable in {@code ACT_RU_VARIABLE} and keeps it in {@code ACT_HI_VARINST} for the
+ * model's history TTL — 180 days on this one — where no gallring reaches it and anyone with Cockpit can read it. The
+ * beredning step resolves them per run from {@code /rpa-context} instead, which is the same trade the RPA queue items
+ * were built on and puts every disclosure in the errand's event log.
  */
 @Component
 class FinancialAssistanceProcessStarter {
@@ -85,20 +91,15 @@ class FinancialAssistanceProcessStarter {
 	static final String VAR_CO_APPLICANT = "coApplicant";
 	static final String VAR_APPLICATION_MONTH = "applicationMonth";
 	// Personnummer + SSBTEK window the fetch worker keys on (financial-aid looks up by personnummer, not partyId).
-	static final String VAR_PERSONAL_NUMBER = "personalNumber";
-	static final String VAR_CO_APPLICANT_PERSONAL_NUMBER = "coApplicantPersonalNumber";
 	static final String VAR_FROM_DATE = "fromDate";
 	static final String VAR_TO_DATE = "toDate";
 
 	private final ProcessService processService;
 	private final ErrandService errandService;
-	private final CitizenService citizenService;
 
-	FinancialAssistanceProcessStarter(final ProcessService processService, final ErrandService errandService,
-		final CitizenService citizenService) {
+	FinancialAssistanceProcessStarter(final ProcessService processService, final ErrandService errandService) {
 		this.processService = processService;
 		this.errandService = errandService;
-		this.citizenService = citizenService;
 	}
 
 	/**
@@ -133,15 +134,8 @@ class FinancialAssistanceProcessStarter {
 		variables.put(VAR_MUNICIPALITY_ID, municipalityId);
 		variables.put(VAR_NAMESPACE, namespace);
 
-		final var applicantPartyId = partyId(entity, ROLE_APPLICANT);
-		final var coApplicantPartyId = partyId(entity, ROLE_CO_APPLICANT);
-		applicantPartyId.ifPresent(id -> variables.put(VAR_APPLICANT, id));
-		coApplicantPartyId.ifPresent(id -> variables.put(VAR_CO_APPLICANT, id));
-
-		// The SSBTEK/financial-aid lookup keys on personnummer; resolve it from the partyId. The co-applicant is optional
-		// — seed an empty personnummer so the (unconditional) co-applicant fetch resolves to an empty basis.
-		variables.put(VAR_PERSONAL_NUMBER, personalNumber(municipalityId, applicantPartyId));
-		variables.put(VAR_CO_APPLICANT_PERSONAL_NUMBER, personalNumber(municipalityId, coApplicantPartyId));
+		partyId(entity, ROLE_APPLICANT).ifPresent(id -> variables.put(VAR_APPLICANT, id));
+		partyId(entity, ROLE_CO_APPLICANT).ifPresent(id -> variables.put(VAR_CO_APPLICANT, id));
 
 		applicationMonth(entity).ifPresent(month -> {
 			variables.put(VAR_APPLICATION_MONTH, month);
@@ -153,15 +147,6 @@ class FinancialAssistanceProcessStarter {
 			variables.put(VAR_TO_DATE, window.atEndOfMonth().toString());
 		});
 		return variables;
-	}
-
-	/**
-	 * A household member's personnummer resolved from their partyId, or {@code ""} when the role is absent/unresolvable.
-	 */
-	private String personalNumber(final String municipalityId, final Optional<String> memberPartyId) {
-		return memberPartyId
-			.flatMap(id -> citizenService.getPersonalNumber(municipalityId, id))
-			.orElse("");
 	}
 
 	/** The partyId of the first person holding {@code role} on the application, when one carries a partyId. */

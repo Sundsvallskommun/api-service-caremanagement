@@ -10,7 +10,6 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
@@ -35,11 +34,9 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.even
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_APPLICATION_MONTH;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_CO_APPLICANT;
-import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_CO_APPLICANT_PERSONAL_NUMBER;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_FROM_DATE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_MUNICIPALITY_ID;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_NAMESPACE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_PERSONAL_NUMBER;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.VAR_TO_DATE;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,9 +57,6 @@ class FinancialAssistanceProcessStarterTest {
 	@Mock
 	private ErrandService errandServiceMock;
 
-	@Mock
-	private CitizenService citizenServiceMock;
-
 	@Captor
 	private ArgumentCaptor<Map<String, Object>> varsCaptor;
 
@@ -78,8 +72,6 @@ class FinancialAssistanceProcessStarterTest {
 			.withPersons(List.of(
 				FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID),
 				FaPerson.create().withRole("CO_APPLICANT").withPartyId(CO_APPLICANT_PARTY_ID)));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CO_APPLICANT_PARTY_ID)).thenReturn(Optional.of(CO_APPLICANT_PERSONAL_NUMBER));
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
 
@@ -92,8 +84,6 @@ class FinancialAssistanceProcessStarterTest {
 			.containsEntry(VAR_APPLICANT, APPLICANT_PARTY_ID)
 			.containsEntry(VAR_CO_APPLICANT, CO_APPLICANT_PARTY_ID)
 			.containsEntry(VAR_APPLICATION_MONTH, "2026-06")
-			.containsEntry(VAR_PERSONAL_NUMBER, APPLICANT_PERSONAL_NUMBER)
-			.containsEntry(VAR_CO_APPLICANT_PERSONAL_NUMBER, CO_APPLICANT_PERSONAL_NUMBER)
 			.containsEntry(VAR_FROM_DATE, "2026-04-01")
 			.containsEntry(VAR_TO_DATE, "2026-06-30");
 
@@ -107,7 +97,6 @@ class FinancialAssistanceProcessStarterTest {
 			.withPeriodYear(2026)
 			.withPeriodMonth(6)
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID)));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME_SUPPLEMENTARY), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
 
@@ -130,7 +119,6 @@ class FinancialAssistanceProcessStarterTest {
 			.withPeriodYear(2026)
 			.withPeriodMonth(6)
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID)));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME_NEW), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
 
@@ -146,12 +134,38 @@ class FinancialAssistanceProcessStarterTest {
 		verify(errandServiceMock).linkProcessInstance(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PROCESS_INSTANCE_ID);
 	}
 
+	/**
+	 * The engine persists every process variable in ACT_RU_VARIABLE and keeps it in ACT_HI_VARINST for the model's
+	 * history TTL — 180 days here — where no gallring reaches it and Cockpit reads it in the clear. Personnummer
+	 * therefore never travel as process variables; the beredning step resolves them per run from /rpa-context, where
+	 * each disclosure is recorded on the errand. Seeding them again would be invisible until someone opened Cockpit.
+	 */
+	@Test
+	void neverSeedsPersonalNumbersIntoTheProcess() {
+		final var entity = FinancialAssistanceEntity.create()
+			.withErrandId(ERRAND_ID)
+			.withPeriodYear(2026).withPeriodMonth(6)
+			.withPersons(List.of(
+				FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID),
+				FaPerson.create().withRole("CO_APPLICANT").withPartyId(CO_APPLICANT_PARTY_ID)));
+		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
+			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
+
+		starter.startFor(SLUG_RENEWAL, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, entity);
+
+		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), varsCaptor.capture());
+		assertThat(varsCaptor.getValue())
+			.doesNotContainKey("personalNumber")
+			.doesNotContainKey("coApplicantPersonalNumber");
+		assertThat(varsCaptor.getValue().values())
+			.doesNotContain(APPLICANT_PERSONAL_NUMBER, CO_APPLICANT_PERSONAL_NUMBER);
+	}
+
 	@Test
 	void omitsCoApplicantAndMonthWhenAbsent() {
 		final var entity = FinancialAssistanceEntity.create()
 			.withErrandId(ERRAND_ID)
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID)));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.of(PROCESS_INSTANCE_ID));
 
@@ -160,8 +174,6 @@ class FinancialAssistanceProcessStarterTest {
 		verify(processServiceMock).startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), varsCaptor.capture());
 		assertThat(varsCaptor.getValue())
 			.containsEntry(VAR_APPLICANT, APPLICANT_PARTY_ID)
-			.containsEntry(VAR_PERSONAL_NUMBER, APPLICANT_PERSONAL_NUMBER)
-			.containsEntry(VAR_CO_APPLICANT_PERSONAL_NUMBER, "")
 			.doesNotContainKey(VAR_CO_APPLICANT)
 			.doesNotContainKey(VAR_APPLICATION_MONTH)
 			.doesNotContainKey(VAR_FROM_DATE)
@@ -175,7 +187,6 @@ class FinancialAssistanceProcessStarterTest {
 		final var entity = FinancialAssistanceEntity.create()
 			.withErrandId(ERRAND_ID)
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID)));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenThrow(Problem.valueOf(BAD_REQUEST, "No Operaton process definition found"));
 
@@ -189,7 +200,6 @@ class FinancialAssistanceProcessStarterTest {
 		final var entity = FinancialAssistanceEntity.create()
 			.withErrandId(ERRAND_ID)
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId(APPLICANT_PARTY_ID)));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT_PERSONAL_NUMBER));
 		when(processServiceMock.startProcess(eq(MUNICIPALITY_ID), eq(PROCESS_DEFINITION_NAME), eq(ERRAND_ID), any()))
 			.thenReturn(Optional.empty());
 
@@ -202,13 +212,13 @@ class FinancialAssistanceProcessStarterTest {
 	void startForUnknownSlugStartsNoProcess() {
 		starter.startFor("some-other-errand-type", MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceEntity.create().withErrandId(ERRAND_ID));
 
-		verifyNoInteractions(processServiceMock, errandServiceMock, citizenServiceMock);
+		verifyNoInteractions(processServiceMock, errandServiceMock);
 	}
 
 	@Test
 	void startForNullSlugStartsNoProcess() {
 		starter.startFor(null, MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceEntity.create().withErrandId(ERRAND_ID));
 
-		verifyNoInteractions(processServiceMock, errandServiceMock, citizenServiceMock);
+		verifyNoInteractions(processServiceMock, errandServiceMock);
 	}
 }
