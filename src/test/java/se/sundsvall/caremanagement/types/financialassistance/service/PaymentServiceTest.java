@@ -268,7 +268,7 @@ class PaymentServiceTest {
 	void createForDecisionStampsPendingRegistrationAndReturnsTheId() {
 		// A row the caseworker has decided on is not a draft — the status has to say what is actually waiting for the
 		// robot. The errand is not scope-checked here: finalize has already read it, inside the same transaction.
-		when(repositoryMock.save(any(FaPaymentEntity.class)))
+		when(repositoryMock.saveAndFlush(any(FaPaymentEntity.class)))
 			.thenAnswer(invocation -> invocation.<FaPaymentEntity>getArgument(0).withId("pay-1"));
 
 		final var id = service.createForDecision(ERRAND_ID, PaymentRequest.create()
@@ -276,7 +276,8 @@ class PaymentServiceTest {
 
 		assertThat(id).isEqualTo("pay-1");
 		final var captor = ArgumentCaptor.forClass(FaPaymentEntity.class);
-		verify(repositoryMock).save(captor.capture());
+		// saveAndFlush, so a constraint violation surfaces before finalize touches the process or the RPA queue
+		verify(repositoryMock).saveAndFlush(captor.capture());
 		assertThat(captor.getValue())
 			.returns("PENDING_REGISTRATION", FaPaymentEntity::getStatus)
 			.returns("CASEWORKER", FaPaymentEntity::getSource)

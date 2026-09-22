@@ -122,7 +122,12 @@ public class PaymentService {
 	 */
 	@Transactional
 	public String createForDecision(final String errandId, final PaymentRequest request) {
-		return paymentRepository.save(applyRequest(FaPaymentEntity.create(), request)
+		// saveAndFlush, not save: an ordinary save only queues the insert in the persistence context, and JPA flushes
+		// it at commit - after finalize has already correlated the process message and queued the RPA items, which are
+		// external and cannot be rolled back. A constraint violation would then leave the engine believing a decision
+		// was made while careM has no decision and no payment row. Flushing here makes the database the first thing
+		// that can fail, so the rollback is complete.
+		return paymentRepository.saveAndFlush(applyRequest(FaPaymentEntity.create(), request)
 			.withErrandId(errandId)
 			.withSource(SOURCE_CASEWORKER)
 			.withStatus(STATUS_PENDING_REGISTRATION)).getId();
