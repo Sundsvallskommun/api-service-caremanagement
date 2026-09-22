@@ -9,6 +9,8 @@ info:
 servers:
 - url: http://localhost:60847
   description: Generated server url
+security:
+- sentBy: []
 tags:
 - name: Financial Assistance · Lifecare supplements
   description: "The RPA robot's single delivery endpoint — one near-raw Lifecare dump\
@@ -1941,14 +1943,6 @@ paths:
         required: true
         schema:
           type: string
-      - name: X-Sent-By
-        in: header
-        description: "Caller identity (type=adAccount → caseworker, type=partyId →\
-          \ applicant)"
-        required: true
-        schema:
-          type: string
-        example: joe001doe; type=adAccount
       requestBody:
         content:
           application/json:
@@ -6369,14 +6363,6 @@ paths:
         required: true
         schema:
           type: string
-      - name: X-Sent-By
-        in: header
-        description: "Caller identity (type=adAccount → caseworker, type=partyId →\
-          \ applicant)"
-        required: true
-        schema:
-          type: string
-        example: joe001doe; type=adAccount
       responses:
         "200":
           description: Successful operation
@@ -14322,4 +14308,11 @@ components:
           description: Human-readable label for the status
           examples:
           - Under utredning
-  securitySchemes: {}
+  securitySchemes:
+    sentBy:
+      type: apiKey
+      description: "Caller identity, e.g. 'joe001doe; type=adAccount' or '<uuid>;\
+        \ type=partyId'. Not authentication - it is the actor recorded in the errand\
+        \ event log."
+      name: X-Sent-By
+      in: header
