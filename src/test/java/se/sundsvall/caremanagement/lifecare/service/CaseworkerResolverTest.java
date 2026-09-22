@@ -18,6 +18,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,6 +57,63 @@ class CaseworkerResolverTest {
 			assertThat(caseworker.assignedUserId()).isEqualTo("anna01ker");
 			assertThat(caseworker.fullName()).isEqualTo("Anna Andersson");
 		});
+	}
+
+	@Test
+	void ignoresAClosedServiceSoAReturneeReachesTheDefaultAssignee() {
+		// Verksamheten 2026-09-22: no open insats means the default handläggare, even for a person we recognise.
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(MUNICIPALITY_ID), eq(PERSON_ID), any(), any())).thenReturn(
+			new ApiPaginationCompositePersonBasedServiceDTO()
+				.addResultItem(new PersonBasedServiceDTO().startDate("2025-01-01").endDate("2025-11-30").caseworker("Anna Andersson")));
+
+		assertThat(resolver.resolve(MUNICIPALITY_ID, PERSON_ID, DATE)).isEmpty();
+		verifyNoMoreInteractions(lifecareFamilyCareIntegrationMock);
+	}
+
+	@Test
+	void picksTheOpenServiceOverAMoreRecentClosedOne() {
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(MUNICIPALITY_ID), eq(PERSON_ID), any(), any())).thenReturn(
+			new ApiPaginationCompositePersonBasedServiceDTO()
+				.addResultItem(new PersonBasedServiceDTO().startDate("2026-01-01").caseworker("Anna Andersson"))
+				.addResultItem(new PersonBasedServiceDTO().startDate("2026-03-01").endDate("2026-04-30").caseworker("Old Caseworker")));
+		when(lifecareFamilyCareIntegrationMock.getUsers(MUNICIPALITY_ID, USERS_LIMIT, null, null, null)).thenReturn(List.of(
+			new User().id("9001").fullName("Anna Andersson").networkUserId("anna01ker")));
+
+		assertThat(resolver.resolve(MUNICIPALITY_ID, PERSON_ID, DATE))
+			.hasValueSatisfying(caseworker -> assertThat(caseworker.fullName()).isEqualTo("Anna Andersson"));
+	}
+
+	@Test
+	void treatsAServiceEndingOnTheIntakeDateAsStillOpen() {
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(MUNICIPALITY_ID), eq(PERSON_ID), any(), any())).thenReturn(
+			new ApiPaginationCompositePersonBasedServiceDTO()
+				.addResultItem(new PersonBasedServiceDTO().startDate("2026-01-01").endDate("2026-06-01").caseworker("Anna Andersson")));
+		when(lifecareFamilyCareIntegrationMock.getUsers(MUNICIPALITY_ID, USERS_LIMIT, null, null, null)).thenReturn(List.of(
+			new User().id("9001").fullName("Anna Andersson").networkUserId("anna01ker")));
+
+		// The insats runs through its last day; the application arrives while it is still running.
+		assertThat(resolver.resolve(MUNICIPALITY_ID, PERSON_ID, DATE)).isPresent();
+	}
+
+	@Test
+	void treatsAnUnreadableEndDateAsStillOpen() {
+		// A wrongly kept caseworker is visible; a wrongly reassigned one looks like the routing working as intended.
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(MUNICIPALITY_ID), eq(PERSON_ID), any(), any())).thenReturn(
+			new ApiPaginationCompositePersonBasedServiceDTO()
+				.addResultItem(new PersonBasedServiceDTO().startDate("2026-01-01").endDate("inte ett datum").caseworker("Anna Andersson")));
+		when(lifecareFamilyCareIntegrationMock.getUsers(MUNICIPALITY_ID, USERS_LIMIT, null, null, null)).thenReturn(List.of(
+			new User().id("9001").fullName("Anna Andersson").networkUserId("anna01ker")));
+
+		assertThat(resolver.resolve(MUNICIPALITY_ID, PERSON_ID, DATE)).isPresent();
+	}
+
+	@Test
+	void treatsADatetimeEndDateTheSameWayAsADate() {
+		when(lifecareFamilyCareIntegrationMock.getServices(eq(MUNICIPALITY_ID), eq(PERSON_ID), any(), any())).thenReturn(
+			new ApiPaginationCompositePersonBasedServiceDTO()
+				.addResultItem(new PersonBasedServiceDTO().startDate("2025-01-01").endDate("2025-11-30T00:00:00").caseworker("Anna Andersson")));
+
+		assertThat(resolver.resolve(MUNICIPALITY_ID, PERSON_ID, DATE)).isEmpty();
 	}
 
 	@Test
