@@ -101,6 +101,9 @@ class FinancialAssistanceCalculationServiceTest {
 	private MissingIncomeFeeder missingIncomeFeederMock;
 
 	@Mock
+	private LateTransferFeeder lateTransferFeederMock;
+
+	@Mock
 	private RpaService rpaServiceMock;
 
 	@InjectMocks

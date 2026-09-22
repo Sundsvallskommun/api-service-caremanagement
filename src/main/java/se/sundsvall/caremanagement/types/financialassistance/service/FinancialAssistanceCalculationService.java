@@ -81,12 +81,13 @@ public class FinancialAssistanceCalculationService {
 	private final ApplicationRuleFeeder applicationRuleFeeder;
 	private final PeriodRuleFeeder periodRuleFeeder;
 	private final MissingIncomeFeeder missingIncomeFeeder;
+	private final LateTransferFeeder lateTransferFeeder;
 	private final RpaService rpaService;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
-		final MissingIncomeFeeder missingIncomeFeeder, final RpaService rpaService) {
+		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder, final RpaService rpaService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
@@ -99,6 +100,7 @@ public class FinancialAssistanceCalculationService {
 		this.applicationRuleFeeder = applicationRuleFeeder;
 		this.periodRuleFeeder = periodRuleFeeder;
 		this.missingIncomeFeeder = missingIncomeFeeder;
+		this.lateTransferFeeder = lateTransferFeeder;
 		this.rpaService = rpaService;
 	}
 
@@ -214,11 +216,16 @@ public class FinancialAssistanceCalculationService {
 		final var periodWarnings = periodRuleFeeder.periodWarnings(municipalityId, classifiedIncomes);
 		// Verksamhetens "föregående månad = facit": an income SSBTEK reported last month and not this one.
 		final var missingIncomeWarnings = missingIncomeFeeder.missingIncomeWarnings(classifiedIncomes);
+		// The one rule that both moves money and warns: a comparison-period income last month's calculation never took,
+		// which the transfer above has just picked up. The set comes from the transfer's own filter, not a second
+		// reading of the rule, so the warning cannot claim something the draft did not do.
+		final var lateTransferWarnings = lateTransferFeeder.lateTransferWarnings(
+			calculationService.lateTransferredComparisonIncomes(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
 		// Read after the merge, not before: the duplicate only exists once the refreshed process rows sit alongside
 		// whatever the caseworker has added by hand.
 		final var duplicateWarnings = draftService.duplicateIncomeWarnings(input.errandId());
 		return new DraftRefresh(changes, Stream.of(expenseFeed.warnings(), housingWarnings, questionWarnings, incomeWarnings,
-			comparisonWarnings, periodWarnings, missingIncomeWarnings, duplicateWarnings)
+			comparisonWarnings, periodWarnings, missingIncomeWarnings, lateTransferWarnings, duplicateWarnings)
 			.flatMap(List::stream)
 			.toList());
 	}

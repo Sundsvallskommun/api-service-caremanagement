@@ -86,6 +86,36 @@ class CalculationServiceTest {
 	}
 
 	@Test
+	void lateTransferredComparisonIncomesReportsWhatTheTransferPickedUp() {
+		final var comparisonPeriod = new ClassifiedIncome(
+			new SsbtekIncome("Underhållsstöd", null, "Månad", new BigDecimal("1673"), LocalDate.of(2026, MAY, 15), ApplicantRole.APPLICANT),
+			"TA_MED", "Underhållsstöd", false, "Ta med", true);
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			comparisonPeriod, bostadsbidrag()
+		});
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, MONTH)).thenReturn(List.of());
+
+		final var late = service.lateTransferredComparisonIncomes(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]");
+
+		// Only the comparison-period income the previous calculation lacked — the control-period one is not a late arrival.
+		assertThat(late).singleElement().satisfies(income -> assertThat(income.income().benefit()).isEqualTo("Underhållsstöd"));
+	}
+
+	@Test
+	void lateTransferredComparisonIncomesIsEmptyWhenThePreviousMonthAlreadyTookThem() {
+		final var comparisonPeriod = new ClassifiedIncome(
+			new SsbtekIncome("Underhållsstöd", null, "Månad", new BigDecimal("1673"), LocalDate.of(2026, MAY, 15), ApplicantRole.APPLICANT),
+			"TA_MED", "Underhållsstöd", false, "Ta med", true);
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			comparisonPeriod
+		});
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, MONTH)).thenReturn(List.of("Underhållsstöd"));
+
+		// Nothing moved, so there is nothing to warn about — the money was already counted last month.
+		assertThat(service.lateTransferredComparisonIncomes(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]")).isEmpty();
+	}
+
+	@Test
 	void incomeLinesTransfersTheComparisonPeriodUnfilteredWhenThePreviousMonthCannotBeRead() {
 		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
 			bostadsbidrag()

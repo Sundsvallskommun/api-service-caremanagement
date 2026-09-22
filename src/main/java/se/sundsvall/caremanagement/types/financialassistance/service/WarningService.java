@@ -67,12 +67,27 @@ public class WarningService {
 	public static final String TYPE_NORM_MISMATCH_PREVIOUS_CALCULATION = "NORM_MISMATCH_PREVIOUS_CALCULATION";
 
 	/**
-	 * An income SSBTEK reported in the comparison period and not in the control period — verksamhetens "föregående
-	 * månad = facit". Distinct from {@link #TYPE_INCOME_MISSING_VS_PREVIOUS_CALCULATION}, which compares against the
+	 * An income SSBTEK reported in the comparison period and not in the control period — verksamhetens “föregående
+	 * månad = facit”. Distinct from {@link #TYPE_INCOME_MISSING_VS_PREVIOUS_CALCULATION}, which compares against the
 	 * previous normberäkning in Lifecare (what a caseworker transferred) rather than against the previous SSBTEK
 	 * answer (what the agencies reported).
 	 */
 	public static final String TYPE_INCOME_MISSING_PREVIOUS_PERIOD = "INCOME_MISSING_PREVIOUS_PERIOD";
+
+	/**
+	 * A comparison-period income the previous month's normberäkning did not contain, and which this month's transfer
+	 * therefore picks up — verksamhetens regelverk (revision 2026-09-22): <em>”Finns inkomster i jämförelseperioden
+	 * som inte är överförda? Ja = för över till normberäkning och generera varning”</em>.
+	 * <p>
+	 * The only rule in the regelverk that both changes the normberäkning and warns about it, which is exactly why it
+	 * warns: the money moves whether or not anyone looks, so the handläggare has to be told it moved.
+	 * <p>
+	 * Distinct from {@link #TYPE_INCOME_MISSING_PREVIOUS_PERIOD}, which fires for every comparison-period income
+	 * (SSBTEK reported it last month, not this month). This one fires for the subset of those that were also absent
+	 * from last month's calculation — the two overlap, and say different things: “the agencies stopped reporting it”
+	 * versus “it was never taken, and now it has been”.
+	 */
+	public static final String TYPE_INCOME_TRANSFERRED_LATE = "INCOME_TRANSFERRED_LATE";
 
 	/** The rakel-eb-periodkontroll tables: the table's own text says which branch fired, so one type per decision. */
 	public static final String TYPE_SSBTEK_DAY_CHECK = "SSBTEK_DAY_CHECK";
@@ -94,7 +109,7 @@ public class WarningService {
 
 	/**
 	 * Verksamhetens own wording for a failed read — the handläggare is told a retry is coming, not that data is missing
-	 * — carrying the time of the attempt, so "nytt försök görs snart igen" can be judged against a clock rather than
+	 * — carrying the time of the attempt, so “nytt försök görs snart igen” can be judged against a clock rather than
 	 * taken on faith. Each failed run refreshes the text, so the time is always the most recent attempt; the warning's
 	 * {@code created} still says when the run of failures started.
 	 */
@@ -103,7 +118,7 @@ public class WarningService {
 
 	/**
 	 * The failed read is timestamped in Swedish wall-clock time: the services run on UTC containers, and a handläggare
-	 * reading "14:53" off the screen at 14:55 must not be told 12:53. Same reason {@code ErrandNumberGenerator} pins
+	 * reading “14:53” off the screen at 14:55 must not be told 12:53. Same reason {@code ErrandNumberGenerator} pins
 	 * the zone rather than taking the system default.
 	 */
 	private static final ZoneId SSBTEK_READ_FAILED_ZONE = ZoneId.of("Europe/Stockholm");
@@ -177,7 +192,8 @@ public class WarningService {
 		Map.entry(TYPE_EXPENSE_PARTIALLY_REJECTED, "Utgift delvis ej godkänd – delavslag"),
 		Map.entry(TYPE_CO_APPLICANT_SPLIT_PAYMENT, "Medsökande – kontrollera delad utbetalning"),
 		Map.entry(TYPE_SSBTEK_READ_FAILED, "SSBTEK kunde inte läsas"),
-		Map.entry(TYPE_INCOME_MISSING_PREVIOUS_PERIOD, "Inkomst saknas mot föregående SSBTEK-period"));
+		Map.entry(TYPE_INCOME_MISSING_PREVIOUS_PERIOD, "Inkomst saknas mot föregående SSBTEK-period"),
+		Map.entry(TYPE_INCOME_TRANSFERRED_LATE, "Inkomst överförd i efterhand"));
 
 	/** Warning status → Swedish display name. */
 	private static final Map<String, String> STATUS_DISPLAY_NAME = Map.ofEntries(
@@ -367,7 +383,7 @@ public class WarningService {
 		return status;
 	}
 
-	/** A stable dedup/grouping key for the income a warning concerns — the benefit/type before any " (..." or ": ...". */
+	/** A stable dedup/grouping key for the income a warning concerns — the benefit/type before any “ (…” or “: …”. */
 	private static String sourceKey(final String text) {
 		if (text == null) {
 			return "";

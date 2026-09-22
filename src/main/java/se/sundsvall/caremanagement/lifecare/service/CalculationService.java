@@ -87,6 +87,30 @@ public class CalculationService {
 	}
 
 	/**
+	 * The comparison-period incomes this month's transfer picks up <em>because</em> the previous month's calculation
+	 * did not contain them — the “nödlösning” case {@link ClassifiedIncomeToFamilyCareMapper#withoutAlreadyTransferred}
+	 * describes, seen from the other side.
+	 * <p>
+	 * Verksamhetens regelverk (revision 2026-09-22) added a warning for exactly this set: <em>”Finns inkomster i
+	 * jämförelseperioden som inte är överförda? Ja = för över till normberäkning och generera varning”</em>. The
+	 * transfer half has been in place all along; this exposes which incomes it moved so the warning can name them.
+	 * <p>
+	 * Derived by running the same filter as {@link #incomeLines}, not by re-deriving the rule — the two must not be
+	 * able to disagree about what was transferred. The cost is one more previous-calculation read per prepare, in
+	 * company with the ones {@code refreshDraft} already makes for amounts, household and expenses.
+	 *
+	 * @param  classifiedIncomesJson the {@code classifiedIncomes} payload
+	 * @return                       the comparison-period incomes being transferred now, in engine order
+	 */
+	public List<ClassifiedIncome> lateTransferredComparisonIncomes(final String municipalityId, final String applicantPersonId,
+		final YearMonth applicationMonth, final String classifiedIncomesJson) {
+		return ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
+			parse(classifiedIncomesJson), previousIncomeTypes(municipalityId, applicantPersonId, applicationMonth)).stream()
+			.filter(ClassifiedIncome::isFromComparisonPeriod)
+			.toList();
+	}
+
+	/**
 	 * The income types on the previous month's calculation, best-effort. A failed read yields none, which transfers the
 	 * comparison-period incomes as before: an income counted twice shows up as a duplicate warning on the case, an
 	 * income silently withheld shows up as nothing at all.
