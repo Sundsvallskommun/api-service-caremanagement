@@ -69,7 +69,7 @@ public class FinancialAssistanceActualisationService {
 	public ActualisationResponse createActualisation(final String municipalityId, final String namespace, final ActualisationRequest request) {
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
 		final var intakeDate = YearMonth.parse(request.getApplicationMonth()).atDay(1);
-		final var result = actualisationService.createActualisation(applicant, intakeDate);
+		final var result = actualisationService.createActualisation(municipalityId, applicant, intakeDate);
 
 		ofNullable(request.getErrandId()).filter(StringUtils::hasText)
 			.ifPresent(errandId -> recordActualisation(municipalityId, namespace, errandId, result));
@@ -123,7 +123,7 @@ public class FinancialAssistanceActualisationService {
 		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
 		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
 
-		return actualisationService.listActualisations(applicant, fromDate, toDate).stream()
+		return actualisationService.listActualisations(municipalityId, applicant, fromDate, toDate).stream()
 			.map(FinancialAssistanceActualisationService::toActualisation)
 			.toList();
 	}
@@ -155,7 +155,7 @@ public class FinancialAssistanceActualisationService {
 		final var documentSenderType = ofNullable(meta.getDocumentSenderType()).filter(StringUtils::hasText).orElse(DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE);
 		final var senderName = ofNullable(meta.getSenderName()).filter(StringUtils::hasText).orElse(DEFAULT_ARCHIVE_SENDER_NAME);
 
-		actualisationService.uploadAttachment(actualisationId, fileName, readBytes(file), documentType, documentSenderType, title, senderName);
+		actualisationService.uploadAttachment(municipalityId, actualisationId, fileName, readBytes(file), documentType, documentSenderType, title, senderName);
 
 		ofNullable(meta.getErrandId()).filter(StringUtils::hasText)
 			.ifPresent(errandId -> addActualisationDecision(municipalityId, namespace, errandId, actualisationId,

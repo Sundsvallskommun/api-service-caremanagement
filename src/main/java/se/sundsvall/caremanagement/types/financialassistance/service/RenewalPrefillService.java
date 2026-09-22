@@ -41,7 +41,7 @@ public class RenewalPrefillService {
 	public RenewalPrefill prefill(final String municipalityId, final String partyId) {
 		try {
 			return citizenService.getPersonalNumber(municipalityId, partyId)
-				.map(personalNumber -> toPrefill(municipalityId, lifecareCaseService.latestRoster(personalNumber, LocalDate.now(ZoneId.systemDefault()))))
+				.map(personalNumber -> toPrefill(municipalityId, lifecareCaseService.latestRoster(municipalityId, personalNumber, LocalDate.now(ZoneId.systemDefault()))))
 				.orElseGet(RenewalPrefillService::empty);
 		} catch (final ThrowableProblem e) {
 			return empty();

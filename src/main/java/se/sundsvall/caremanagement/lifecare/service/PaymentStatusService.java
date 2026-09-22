@@ -4,7 +4,7 @@ import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBas
 import java.time.YearMonth;
 import java.util.List;
 import org.springframework.stereotype.Service;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.util.StringUtils.hasText;
@@ -12,14 +12,14 @@ import static org.springframework.util.StringUtils.hasText;
 /**
  * Reads whether a Lifecare payment concerning an application month has been effectuated for an applicant. The payment
  * itself is a manual caseworker step in Lifecare (FamilyCare exposes no payment write) — this service only reads the
- * registered payments via {@link LifecareFamilyCareIntegration}. Mirrors {@link ActualisationService}.
+ * registered payments via {@link LifecareFamilyCare}. Mirrors {@link ActualisationService}.
  */
 @Service
 public class PaymentStatusService {
 
-	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
+	private final LifecareFamilyCare lifecareFamilyCareIntegration;
 
-	public PaymentStatusService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration) {
+	public PaymentStatusService(final LifecareFamilyCare lifecareFamilyCareIntegration) {
 		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
 	}
 
@@ -32,11 +32,11 @@ public class PaymentStatusService {
 	 * @param  applicationMonth  the month the payment concerns
 	 * @return                   the effectuated flag and, when effectuated, the Lifecare PayDate
 	 */
-	public PaymentStatus read(final String applicantPersonId, final YearMonth applicationMonth) {
+	public PaymentStatus read(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth) {
 		final var from = applicationMonth.minusMonths(1).atDay(1);
 		final var to = applicationMonth.atEndOfMonth();
 
-		final var payments = ofNullable(lifecareFamilyCareIntegration.getPayments(applicantPersonId, from, to))
+		final var payments = ofNullable(lifecareFamilyCareIntegration.getPayments(municipalityId, applicantPersonId, from, to))
 			.map(ApiPaginationCompositePersonBasedPaymentDTO::getResult)
 			.orElseGet(List::of);
 

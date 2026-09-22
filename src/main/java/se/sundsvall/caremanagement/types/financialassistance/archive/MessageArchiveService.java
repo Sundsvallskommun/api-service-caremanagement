@@ -79,10 +79,10 @@ public class MessageArchiveService {
 		final var candidates = errandService.findByStatusTouchedBefore(properties.municipalityId(), properties.namespace(), STATUS_CLOSED, cutoff);
 
 		LOG.info("Message archive: {} closed errand(s) eligible for archiving (closed on or before {})", candidates.size(), cutoff);
-		candidates.forEach(this::archiveOne);
+		candidates.forEach(errand -> archiveOne(properties.municipalityId(), errand));
 	}
 
-	private void archiveOne(final Errand errand) {
+	private void archiveOne(final String municipalityId, final Errand errand) {
 		try {
 			if (attachmentService.messageHistoryExists(errand.getId())) {
 				return;
@@ -116,7 +116,7 @@ public class MessageArchiveService {
 			// throws, so a "Failed to archive" log can no longer coincide with a document actually created in Lifecare.
 			attachmentService.createMessageHistoryAttachment(errand.getMunicipalityId(), errand.getNamespace(), errand.getId(), fileName, pdf);
 
-			actualisationService.uploadAttachment(actualisationId.get(), fileName, pdf,
+			actualisationService.uploadAttachment(municipalityId, actualisationId.get(), fileName, pdf,
 				properties.lifecareDocumentType(), properties.lifecareDocumentSenderType(), title, properties.lifecareSenderName());
 
 			LOG.info("Archived message history for errand {} ({} message(s)) to Lifecare actualisation {}", errand.getErrandNumber(), thread.size(), actualisationId.get());

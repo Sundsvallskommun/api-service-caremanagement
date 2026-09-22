@@ -115,7 +115,7 @@ class FinancialAssistanceCalculationServiceTest {
 			FaNormIncomeEntity.create().withTypeId(20).withApplicantProcessAmount(new BigDecimal("1000")).withApplicantCaseworkerAmount(new BigDecimal("1100"))));
 		when(draftServiceMock.liveExpenses(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
 		when(draftServiceMock.livePersons(ERRAND_ID)).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
-		when(calculationServiceMock.commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(4712);
+		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(4712);
 		// finalize stored the household-size flag on the errand → the WRITE_NORMBERAKNING item forwards it to the robot
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withHouseholdSizeChanged(true)));
 
@@ -131,7 +131,7 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(rpaServiceMock).enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, WRITE_NORMBERAKNING, Map.of("householdSizeChanged", "true"));
 
 		final ArgumentCaptor<List<EffectiveIncome>> incomeCaptor = ArgumentCaptor.captor();
-		verify(calculationServiceMock).commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), incomeCaptor.capture(), any(), any());
+		verify(calculationServiceMock).commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), incomeCaptor.capture(), any(), any());
 		assertThat(incomeCaptor.getValue()).singleElement().satisfies(income -> {
 			assertThat(income.typeId()).isEqualTo(20);
 			assertThat(income.applicantAmount()).isEqualByComparingTo(BigDecimal.valueOf(1100.0)); // caseworker value wins over the process value
@@ -145,7 +145,7 @@ class FinancialAssistanceCalculationServiceTest {
 		final var month = YearMonth.of(2026, JUNE);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(7)));
-		when(calculationServiceMock.commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(4712);
+		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(4712);
 		doThrow(new IllegalStateException("No RPA folder id")).when(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(WRITE_NORMBERAKNING), any());
 
 		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
@@ -263,7 +263,7 @@ class FinancialAssistanceCalculationServiceTest {
 		final var month = YearMonth.of(2026, JUNE);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM"))));
-		when(calculationServiceMock.completeness("199001011234", month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
+		when(calculationServiceMock.completeness(MUNICIPALITY_ID, "199001011234", month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("UNDER_REVIEW"));
 		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
 
@@ -299,7 +299,7 @@ class FinancialAssistanceCalculationServiceTest {
 		final var month = YearMonth.of(2026, JUNE);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
-		when(calculationServiceMock.completeness("199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
+		when(calculationServiceMock.completeness(MUNICIPALITY_ID, "199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("SUPPLEMENT_REQUESTED"));
 		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
 
@@ -331,7 +331,7 @@ class FinancialAssistanceCalculationServiceTest {
 		final var month = YearMonth.of(2026, JUNE);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
-		when(calculationServiceMock.completeness("199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
+		when(calculationServiceMock.completeness(MUNICIPALITY_ID, "199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
 		// a recommendation already exists, and the errand is already in the target status
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(List.of(Decision.create().withDecisionType("RECOMMENDATION")));
@@ -356,15 +356,15 @@ class FinancialAssistanceCalculationServiceTest {
 
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
-		when(calculationServiceMock.applicationIncomeLines(eq("199001011234"), any()))
+		when(calculationServiceMock.applicationIncomeLines(eq(MUNICIPALITY_ID), eq("199001011234"), any()))
 			.thenReturn(List.of(new FamilyCareIncomeLine(11, "Lön efter skatt", "APPLICANT", new BigDecimal("18500"), null, "Ansökan")));
 		when(calculationFeederMock.incomeRows(eq(ERRAND_ID), any())).thenReturn(List.of(
 			FaNormIncomeEntity.create().withTypeId(11).withApplicantProcessAmount(new BigDecimal("18500"))));
 		when(calculationFeederMock.applicationExpenseRows(eq(ERRAND_ID), any())).thenReturn(
 			List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
 		when(calculationFeederMock.personRows(any(), any(), eq(ERRAND_ID), any())).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
-		when(calculationServiceMock.selectNormId("199001011234", month)).thenReturn(7);
-		when(calculationServiceMock.commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(5001);
+		when(calculationServiceMock.selectNormId(MUNICIPALITY_ID, "199001011234", month)).thenReturn(7);
+		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(5001);
 
 		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
 		final var response = service.commitFromApplication(MUNICIPALITY_ID, NAMESPACE, request);
@@ -374,12 +374,12 @@ class FinancialAssistanceCalculationServiceTest {
 		// The application's declared incomes are mapped to the neutral ApplicationIncome (recipient → role) and handed to
 		// the existing income pipeline — not a parallel calculation engine.
 		final ArgumentCaptor<List<ApplicationIncome>> incomeCaptor = ArgumentCaptor.captor();
-		verify(calculationServiceMock).applicationIncomeLines(eq("199001011234"), incomeCaptor.capture());
+		verify(calculationServiceMock).applicationIncomeLines(eq(MUNICIPALITY_ID), eq("199001011234"), incomeCaptor.capture());
 		assertThat(incomeCaptor.getValue()).extracting(ApplicationIncome::incomeType, income -> income.role().name())
 			.containsExactly(tuple("SALARY", "APPLICANT"), tuple("SWISH_DEPOSITS", "CO_APPLICANT"));
 
 		final ArgumentCaptor<List<EffectiveIncome>> effectiveCaptor = ArgumentCaptor.captor();
-		verify(calculationServiceMock).commitEffective(eq("199001011234"), eq(month), any(CalculationHeader.class), effectiveCaptor.capture(), any(), any());
+		verify(calculationServiceMock).commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), effectiveCaptor.capture(), any(), any());
 		assertThat(effectiveCaptor.getValue()).singleElement().satisfies(income -> assertThat(income.typeId()).isEqualTo(11));
 		// not finalized (no flag on the errand) → the robot is told the household size is unchanged
 		verify(rpaServiceMock).enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, WRITE_NORMBERAKNING, Map.of("householdSizeChanged", "false"));

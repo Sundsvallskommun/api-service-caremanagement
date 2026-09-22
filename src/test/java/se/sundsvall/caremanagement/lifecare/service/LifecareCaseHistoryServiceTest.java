@@ -32,6 +32,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class LifecareCaseHistoryServiceTest {
 
+	private static final String MUNICIPALITY_ID = "2281";
+
 	private static final String PERSON_ID = "199001011234";
 	private static final LocalDate FROM = LocalDate.of(2026, JANUARY, 1);
 	private static final LocalDate TO = LocalDate.of(2026, JUNE, 30);
@@ -52,10 +54,10 @@ class LifecareCaseHistoryServiceTest {
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Lön").amountApplicant(12000.0).applicantSearchDate("2026-05-15").amountCoApplicant(0.0).coApplicantSearchDate(null))
 			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Hyra").appliedAmount(7500.0).approvedAmount(7000.0))
 			.addCalculationSpecialExpensesDTOsItem(new CommonCalculationSpecialExpenseDTO().type("Tandvård").appliedAmount(500.0).approvedAmount(500.0));
-		when(lifecareFamilyCareIntegrationMock.getCalculations(PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
+		when(lifecareFamilyCareIntegrationMock.getCalculations(MUNICIPALITY_ID, PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(dto));
 
-		final var result = service.listCalculations(PERSON_ID, FROM, TO);
+		final var result = service.listCalculations(MUNICIPALITY_ID, PERSON_ID, FROM, TO);
 
 		assertThat(result).singleElement().satisfies(calculation -> {
 			assertThat(calculation.id()).isEqualTo(7001);
@@ -71,17 +73,17 @@ class LifecareCaseHistoryServiceTest {
 
 	@Test
 	void listCalculationsEmptyWhenNoPage() {
-		when(lifecareFamilyCareIntegrationMock.getCalculations(PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30"))).thenReturn(null);
+		when(lifecareFamilyCareIntegrationMock.getCalculations(MUNICIPALITY_ID, PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30"))).thenReturn(null);
 
-		assertThat(service.listCalculations(PERSON_ID, FROM, TO)).isEmpty();
+		assertThat(service.listCalculations(MUNICIPALITY_ID, PERSON_ID, FROM, TO)).isEmpty();
 	}
 
 	@Test
 	void listCalculationsHandlesNullRowLists() {
-		when(lifecareFamilyCareIntegrationMock.getCalculations(PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
+		when(lifecareFamilyCareIntegrationMock.getCalculations(MUNICIPALITY_ID, PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(new PersonBasedCalculationDTO().id(1)));
 
-		assertThat(service.listCalculations(PERSON_ID, FROM, TO)).singleElement().satisfies(calculation -> {
+		assertThat(service.listCalculations(MUNICIPALITY_ID, PERSON_ID, FROM, TO)).singleElement().satisfies(calculation -> {
 			assertThat(calculation.persons()).isEmpty();
 			assertThat(calculation.incomes()).isEmpty();
 			assertThat(calculation.expenses()).isEmpty();
@@ -95,10 +97,10 @@ class LifecareCaseHistoryServiceTest {
 			.id(9900).date("2026-06-02").type("Bifall").fromDate("2026-06-01").toDate("2026-06-30")
 			.reason("Beviljas").decisionMaker("Anna").organization("IFO").amount(8500.0).coApplicant("198001019999").reasonCoApplicant("Sammanboende")
 			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId("198001019999").name("Sven").isCoApplicant(true));
-		when(lifecareFamilyCareIntegrationMock.getDecisions(PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
+		when(lifecareFamilyCareIntegrationMock.getDecisions(MUNICIPALITY_ID, PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().addResultItem(dto));
 
-		assertThat(service.listDecisions(PERSON_ID, FROM, TO)).singleElement().satisfies(decision -> {
+		assertThat(service.listDecisions(MUNICIPALITY_ID, PERSON_ID, FROM, TO)).singleElement().satisfies(decision -> {
 			assertThat(decision.id()).isEqualTo(9900);
 			assertThat(decision.type()).isEqualTo("Bifall");
 			assertThat(decision.amount()).isEqualTo(BigDecimal.valueOf(8500.0));
@@ -109,10 +111,10 @@ class LifecareCaseHistoryServiceTest {
 	@Test
 	void listDocumentsMapsMetadata() {
 		final var dto = new PersonBasedDocumentDTO().id("doc-1").title("Beslut").date("2026-06-02").documentType("Beslut").ownerId("9900").ownerType("Decision");
-		when(lifecareFamilyCareIntegrationMock.getDocuments(PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
+		when(lifecareFamilyCareIntegrationMock.getDocuments(MUNICIPALITY_ID, PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedDocumentDTO().addResultItem(dto));
 
-		assertThat(service.listDocuments(PERSON_ID, FROM, TO)).singleElement().satisfies(document -> {
+		assertThat(service.listDocuments(MUNICIPALITY_ID, PERSON_ID, FROM, TO)).singleElement().satisfies(document -> {
 			assertThat(document.id()).isEqualTo("doc-1");
 			assertThat(document.title()).isEqualTo("Beslut");
 			assertThat(document.documentType()).isEqualTo("Beslut");
@@ -126,10 +128,10 @@ class LifecareCaseHistoryServiceTest {
 			.name("Anna Andersson").streetAddress("Storgatan 1").careOfAddress("c/o Test").postalCode("85230").postalAddress("Sundsvall")
 			.message("Ekonomiskt bistånd").concernedMonth("2026-06")
 			.addPaymentPersonDTOsItem(new PersonBasedPaymentPersonDTO().personId("198001019999").name("Sven"));
-		when(lifecareFamilyCareIntegrationMock.getPayments(PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
+		when(lifecareFamilyCareIntegrationMock.getPayments(MUNICIPALITY_ID, PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().addResultItem(dto));
 
-		assertThat(service.listPayments(PERSON_ID, FROM, TO)).singleElement().satisfies(payment -> {
+		assertThat(service.listPayments(MUNICIPALITY_ID, PERSON_ID, FROM, TO)).singleElement().satisfies(payment -> {
 			assertThat(payment.id()).isEqualTo(4711);
 			assertThat(payment.amount()).isEqualTo(BigDecimal.valueOf(8500.0));
 			assertThat(payment.paymentMethod()).isEqualTo("Bankkonto");
@@ -149,16 +151,16 @@ class LifecareCaseHistoryServiceTest {
 
 	@Test
 	void listPaymentsEmptyWhenLifecareReturnsNothing() {
-		when(lifecareFamilyCareIntegrationMock.getPayments(PERSON_ID, FROM, TO)).thenReturn(null);
+		when(lifecareFamilyCareIntegrationMock.getPayments(MUNICIPALITY_ID, PERSON_ID, FROM, TO)).thenReturn(null);
 
-		assertThat(service.listPayments(PERSON_ID, FROM, TO)).isEmpty();
+		assertThat(service.listPayments(MUNICIPALITY_ID, PERSON_ID, FROM, TO)).isEmpty();
 	}
 
 	@Test
 	void documentContentForwards() {
-		when(lifecareFamilyCareIntegrationMock.getDocumentContent("doc-1")).thenReturn("%PDF-1.4".getBytes());
+		when(lifecareFamilyCareIntegrationMock.getDocumentContent(MUNICIPALITY_ID, "doc-1")).thenReturn("%PDF-1.4".getBytes());
 
-		assertThat(service.documentContent("doc-1")).isEqualTo("%PDF-1.4".getBytes());
-		verify(lifecareFamilyCareIntegrationMock).getDocumentContent("doc-1");
+		assertThat(service.documentContent(MUNICIPALITY_ID, "doc-1")).isEqualTo("%PDF-1.4".getBytes());
+		verify(lifecareFamilyCareIntegrationMock).getDocumentContent(MUNICIPALITY_ID, "doc-1");
 	}
 }

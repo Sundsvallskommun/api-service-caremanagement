@@ -36,7 +36,7 @@ public class FinancialAssistancePaymentService {
 	 */
 	public PaymentStatusResponse checkPaymentStatus(final String municipalityId, final PaymentStatusRequest request) {
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
-		final PaymentStatus status = paymentStatusService.read(applicant, YearMonth.parse(request.getApplicationMonth()));
+		final PaymentStatus status = paymentStatusService.read(municipalityId, applicant, YearMonth.parse(request.getApplicationMonth()));
 		return PaymentStatusResponse.create()
 			.withEffectuated(status.effectuated())
 			.withPaymentDate(status.paymentDate());

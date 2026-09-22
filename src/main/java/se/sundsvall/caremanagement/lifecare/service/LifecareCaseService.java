@@ -26,7 +26,7 @@ import java.util.TreeSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.IncomeTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
@@ -40,7 +40,7 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.toA
 
 /**
  * Answers financial-assistance-routing questions about a person from Lifecare FamilyCare. Wraps {@link
- * LifecareFamilyCareIntegration}, reading actualisations, decision and calculations over a lookback window ending at
+ * LifecareFamilyCare}, reading actualisations, decision and calculations over a lookback window ending at
  * the reference date, and reduces them to a domain {@link LifecareCaseSummary}. FamilyCare's date strings (from/to
  * periods) and generated DTOs never leave this module.
  *
@@ -55,11 +55,11 @@ public class LifecareCaseService {
 	/** Guard against a malformed decision period (e.g. from 2000 to 2030) producing an unbounded month set. */
 	private static final int MAX_MONTHS_PER_DECISION = 36;
 
-	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
+	private final LifecareFamilyCare lifecareFamilyCareIntegration;
 	private final int lookbackMonths;
 	private final Set<String> openActualisationStatuses;
 
-	LifecareCaseService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration,
+	LifecareCaseService(final LifecareFamilyCare lifecareFamilyCareIntegration,
 		@Value("${integration.lifecare-familycare.lookback-months:13}") final int lookbackMonths,
 		@Value("${integration.lifecare-familycare.open-actualisation-statuses:Aktuell}") final List<String> openActualisationStatuses) {
 		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
@@ -78,18 +78,18 @@ public class LifecareCaseService {
 	 * @param  referenceDate the date the routing is evaluated against (bounds the lookback window)
 	 * @return               the distilled summary; never {@code null}
 	 */
-	public LifecareCaseSummary summarize(final String personId, final LocalDate referenceDate) {
+	public LifecareCaseSummary summarize(final String municipalityId, final String personId, final LocalDate referenceDate) {
 		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		final var actualisations = ofNullable(lifecareFamilyCareIntegration.getActualisations(personId, start, referenceDate))
+		final var actualisations = ofNullable(lifecareFamilyCareIntegration.getActualisations(municipalityId, personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedAktualiseringDTO::getResult)
 			.orElseGet(List::of);
 
-		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, start, referenceDate))
+		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(municipalityId, personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of);
 
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(municipalityId, personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of);
 
@@ -141,8 +141,8 @@ public class LifecareCaseService {
 	 * @param  personId the person's personal identity number
 	 * @return          {@code true} when either protection flag is set, {@code false} otherwise or when unknown
 	 */
-	public boolean hasProtectedIdentity(final String personId) {
-		return ofNullable(lifecareFamilyCareIntegration.getPerson(personId))
+	public boolean hasProtectedIdentity(final String municipalityId, final String personId) {
+		return ofNullable(lifecareFamilyCareIntegration.getPerson(municipalityId, personId))
 			.map(person -> TRUE.equals(person.getAddressProtection()) || TRUE.equals(person.getProtectedRegistration()))
 			.orElse(false);
 	}
@@ -157,14 +157,14 @@ public class LifecareCaseService {
 	 * @param  referenceDate the date the lookup is evaluated against (bounds the lookback window)
 	 * @return               the roster (applicant, co-applicant and the calculation members); members empty when none
 	 */
-	public LifecareRoster latestRoster(final String personId, final LocalDate referenceDate) {
+	public LifecareRoster latestRoster(final String municipalityId, final String personId, final LocalDate referenceDate) {
 		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(municipalityId, personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of);
 
-		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, start, referenceDate))
+		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(municipalityId, personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of);
 
@@ -192,8 +192,8 @@ public class LifecareCaseService {
 	 * @param  applicationMonth the month being applied for; only calculations before it are considered
 	 * @return                  the previous calculation's distinct income-type names, or empty
 	 */
-	public List<String> previousCalculationIncomeTypes(final String personId, final YearMonth applicationMonth) {
-		return latestCalculationBefore(personId, applicationMonth)
+	public List<String> previousCalculationIncomeTypes(final String municipalityId, final String personId, final YearMonth applicationMonth) {
+		return latestCalculationBefore(municipalityId, personId, applicationMonth)
 			.map(PersonBasedCalculationDTO::getCalculationIncomesDTOs)
 			.orElseGet(List::of).stream()
 			.map(CommonCalculationIncomeDTO::getType)
@@ -216,9 +216,9 @@ public class LifecareCaseService {
 	 * @param  applicationMonth the month being applied for; only calculations before it are considered
 	 * @return                  the summed amount keyed by financial assistance income type (empty when none)
 	 */
-	public Map<String, BigDecimal> previousCalculationIncomeAmounts(final String personId, final YearMonth applicationMonth) {
+	public Map<String, BigDecimal> previousCalculationIncomeAmounts(final String municipalityId, final String personId, final YearMonth applicationMonth) {
 		final var amounts = new HashMap<String, BigDecimal>();
-		latestCalculationBefore(personId, applicationMonth)
+		latestCalculationBefore(municipalityId, personId, applicationMonth)
 			.map(PersonBasedCalculationDTO::getCalculationIncomesDTOs)
 			.orElseGet(List::of)
 			.forEach(income -> IncomeTypeMapper.incomeTypeForFamilyCareName(income.getType())
@@ -237,11 +237,11 @@ public class LifecareCaseService {
 	 * The person's most recent calculation strictly before {@code applicationMonth} over the lookback window — the
 	 * shared "föregående normberäkning" read the income/household/expense baselines are all taken from.
 	 */
-	private Optional<PersonBasedCalculationDTO> latestCalculationBefore(final String personId, final YearMonth applicationMonth) {
+	private Optional<PersonBasedCalculationDTO> latestCalculationBefore(final String municipalityId, final String personId, final YearMonth applicationMonth) {
 		final var referenceDate = applicationMonth.atDay(1);
 		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(municipalityId, personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
@@ -261,8 +261,8 @@ public class LifecareCaseService {
 	 * @param  applicationMonth the month being applied for; only calculations before it are considered
 	 * @return                  the previous household (empty when none)
 	 */
-	public PreviousHousehold previousHousehold(final String personId, final YearMonth applicationMonth) {
-		final var latest = latestCalculationBefore(personId, applicationMonth);
+	public PreviousHousehold previousHousehold(final String municipalityId, final String personId, final YearMonth applicationMonth) {
+		final var latest = latestCalculationBefore(municipalityId, personId, applicationMonth);
 		final var personIds = latest
 			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
 			.orElseGet(List::of).stream()
@@ -294,8 +294,8 @@ public class LifecareCaseService {
 	 * @param  applicationMonth the month being applied for; only calculations before it are considered
 	 * @return                  approved amount keyed by financial assistance cost type (empty when none)
 	 */
-	public Map<String, BigDecimal> previousExpenseAmounts(final String personId, final YearMonth applicationMonth) {
-		final var latest = latestCalculationBefore(personId, applicationMonth);
+	public Map<String, BigDecimal> previousExpenseAmounts(final String municipalityId, final String personId, final YearMonth applicationMonth) {
+		final var latest = latestCalculationBefore(municipalityId, personId, applicationMonth);
 		final var amounts = new HashMap<String, BigDecimal>();
 		latest.map(PersonBasedCalculationDTO::getCalculationExpensesDTOs).orElseGet(List::of)
 			.forEach(expense -> ExpenseTypeMapper.costTypeForFamilyCareName(expense.getType()).ifPresent(costType -> {

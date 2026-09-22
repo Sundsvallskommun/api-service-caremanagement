@@ -19,11 +19,14 @@ import static java.time.Month.JANUARY;
 import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ActualisationServiceTest {
+
+	private static final String MUNICIPALITY_ID = "2281";
 
 	private static final String APPLICANT = "199001011234";
 	private static final LocalDate DATE = LocalDate.of(2026, JUNE, 1);
@@ -50,17 +53,17 @@ class ActualisationServiceTest {
 		final var proposal = new PersonBasedAktualiseringProposalDTO()
 			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(3));
 
-		when(caseworkerResolverMock.resolve(APPLICANT, DATE)).thenReturn(Optional.of(new ResolvedCaseworker("9001", "anna01ker", "Anna Andersson")));
-		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
-		when(lifecareFamilyCareIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
+		when(caseworkerResolverMock.resolve(MUNICIPALITY_ID, APPLICANT, DATE)).thenReturn(Optional.of(new ResolvedCaseworker("9001", "anna01ker", "Anna Andersson")));
+		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
+		when(lifecareFamilyCareIntegrationMock.createActualisation(eq(MUNICIPALITY_ID), any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
-		final var result = service.createActualisation(APPLICANT, DATE);
+		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE);
 
 		assertThat(result.actualisationId()).isEqualTo(5012);
 		assertThat(result.assignedUserId()).isEqualTo("anna01ker");
 
 		final ArgumentCaptor<PostAktualiseringsBodyRequest> captor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
-		verify(lifecareFamilyCareIntegrationMock).createActualisation(captor.capture());
+		verify(lifecareFamilyCareIntegrationMock).createActualisation(eq(MUNICIPALITY_ID), captor.capture());
 		assertThat(captor.getValue().getPersonId()).isEqualTo(APPLICANT);
 		assertThat(captor.getValue().getDate()).isEqualTo("2026-06-01T00:00:00");
 		assertThat(captor.getValue().getType()).isEqualTo(3);
@@ -72,17 +75,17 @@ class ActualisationServiceTest {
 		final var proposal = new PersonBasedAktualiseringProposalDTO()
 			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(3));
 
-		when(caseworkerResolverMock.resolve(APPLICANT, DATE)).thenReturn(Optional.empty());
-		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
-		when(lifecareFamilyCareIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
+		when(caseworkerResolverMock.resolve(MUNICIPALITY_ID, APPLICANT, DATE)).thenReturn(Optional.empty());
+		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
+		when(lifecareFamilyCareIntegrationMock.createActualisation(eq(MUNICIPALITY_ID), any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
-		final var result = service.createActualisation(APPLICANT, DATE);
+		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE);
 
 		assertThat(result.actualisationId()).isEqualTo(5012);
 		assertThat(result.assignedUserId()).isNull();
 
 		final ArgumentCaptor<PostAktualiseringsBodyRequest> captor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
-		verify(lifecareFamilyCareIntegrationMock).createActualisation(captor.capture());
+		verify(lifecareFamilyCareIntegrationMock).createActualisation(eq(MUNICIPALITY_ID), captor.capture());
 		assertThat(captor.getValue().getCaseworkerId()).isNull();
 	}
 
@@ -91,17 +94,17 @@ class ActualisationServiceTest {
 		final var proposal = new PersonBasedAktualiseringProposalDTO()
 			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(3));
 
-		when(caseworkerResolverMock.resolve(APPLICANT, DATE)).thenThrow(new RuntimeException("FamilyCare down"));
-		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(APPLICANT)).thenReturn(proposal);
-		when(lifecareFamilyCareIntegrationMock.createActualisation(any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
+		when(caseworkerResolverMock.resolve(MUNICIPALITY_ID, APPLICANT, DATE)).thenThrow(new RuntimeException("FamilyCare down"));
+		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
+		when(lifecareFamilyCareIntegrationMock.createActualisation(eq(MUNICIPALITY_ID), any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
-		final var result = service.createActualisation(APPLICANT, DATE);
+		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE);
 
 		assertThat(result.actualisationId()).isEqualTo(5012);
 		assertThat(result.assignedUserId()).isNull();
 
 		final ArgumentCaptor<PostAktualiseringsBodyRequest> captor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
-		verify(lifecareFamilyCareIntegrationMock).createActualisation(captor.capture());
+		verify(lifecareFamilyCareIntegrationMock).createActualisation(eq(MUNICIPALITY_ID), captor.capture());
 		assertThat(captor.getValue().getCaseworkerId()).isNull();
 	}
 
@@ -111,10 +114,10 @@ class ActualisationServiceTest {
 			.id(5012).type("Ansökan").personId(APPLICANT).name("Ekonomiskt bistånd").date("2026-06-01")
 			.reason("Nyansökan").regards("Försörjningsstöd").fromWho("Den enskilde").caseworker("Anna Andersson")
 			.organization("IFO").status("Pågående").investigationId(8801).serviceId(7700).decisionId(9900);
-		when(lifecareFamilyCareIntegrationMock.getActualisations(APPLICANT, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
+		when(lifecareFamilyCareIntegrationMock.getActualisations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO().addResultItem(dto));
 
-		final var result = service.listActualisations(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
+		final var result = service.listActualisations(MUNICIPALITY_ID, APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 
 		assertThat(result).singleElement().satisfies(summary -> {
 			assertThat(summary.id()).isEqualTo(5012);
@@ -135,9 +138,9 @@ class ActualisationServiceTest {
 
 	@Test
 	void listReturnsEmptyWhenFamilyCareHasNoPage() {
-		when(lifecareFamilyCareIntegrationMock.getActualisations(APPLICANT, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30"))).thenReturn(null);
+		when(lifecareFamilyCareIntegrationMock.getActualisations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30"))).thenReturn(null);
 
-		assertThat(service.listActualisations(APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30))).isEmpty();
+		assertThat(service.listActualisations(MUNICIPALITY_ID, APPLICANT, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30))).isEmpty();
 	}
 
 	@Test
@@ -146,9 +149,9 @@ class ActualisationServiceTest {
 			1, 2, 3
 		};
 
-		service.uploadAttachment(5012, "EB-26060001_meddelandehistorik.pdf", content, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun");
+		service.uploadAttachment(MUNICIPALITY_ID, 5012, "EB-26060001_meddelandehistorik.pdf", content, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun");
 
-		verify(lifecareFamilyCareIntegrationMock).postActualisationAttachment(5012, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik",
+		verify(lifecareFamilyCareIntegrationMock).postActualisationAttachment(MUNICIPALITY_ID, 5012, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik",
 			"Sundsvalls kommun", "EB-26060001_meddelandehistorik.pdf", content);
 	}
 }

@@ -193,10 +193,10 @@ public class EligibilityService {
 	/** The Lifecare summaries for the applicant (+ co-applicant), best-effort: an upstream failure degrades to "none". */
 	private LifecareFacts loadLifecare(final String municipalityId, final EligibilityRequest request, final LocalDate today, final boolean hasCoApplicant) {
 		try {
-			final var applicant = lifecareCaseService.summarize(personalNumber(municipalityId, request.getApplicant()), today);
+			final var applicant = lifecareCaseService.summarize(municipalityId, personalNumber(municipalityId, request.getApplicant()), today);
 			LifecareCaseSummary coApplicant = null;
 			if (hasCoApplicant) {
-				coApplicant = lifecareCaseService.summarize(personalNumber(municipalityId, request.getCoApplicant()), today);
+				coApplicant = lifecareCaseService.summarize(municipalityId, personalNumber(municipalityId, request.getCoApplicant()), today);
 			}
 			return new LifecareFacts(true, applicant, coApplicant);
 		} catch (final ThrowableProblem e) {
@@ -395,7 +395,7 @@ public class EligibilityService {
 	private boolean lifecareProtected(final String municipalityId, final String partyId) {
 		try {
 			return citizenService.getPersonalNumber(municipalityId, partyId)
-				.map(lifecareCaseService::hasProtectedIdentity)
+				.map(personalNumber -> lifecareCaseService.hasProtectedIdentity(municipalityId, personalNumber))
 				.orElse(false);
 		} catch (final ThrowableProblem e) {
 			return false;

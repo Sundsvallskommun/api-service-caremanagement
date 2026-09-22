@@ -48,7 +48,7 @@ class RenewalPrefillServiceTest {
 			new LifecareRoster.Member(APPLICANT_PNR, "Anna Andersson"),
 			new LifecareRoster.Member(CO_APPLICANT_PNR, "Björn Andersson"),
 			new LifecareRoster.Member(CHILD_PNR, "Kid Andersson")));
-		when(lifecareCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any())).thenReturn(roster);
+		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(roster);
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
 
@@ -65,7 +65,7 @@ class RenewalPrefillServiceTest {
 		final var roster = new LifecareRoster(APPLICANT_PNR, null, List.of(
 			new LifecareRoster.Member(APPLICANT_PNR, "Anna Andersson"),
 			new LifecareRoster.Member(CHILD_PNR, "Kid Andersson")));
-		when(lifecareCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any())).thenReturn(roster);
+		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(roster);
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
 
@@ -77,7 +77,7 @@ class RenewalPrefillServiceTest {
 	@Test
 	void emptyRosterYieldsNoChildren() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
-		when(lifecareCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any()))
+		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any()))
 			.thenReturn(new LifecareRoster(APPLICANT_PNR, null, List.of()));
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
@@ -100,7 +100,7 @@ class RenewalPrefillServiceTest {
 	@Test
 	void lifecareFailureDegradesToEmptyResult() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
-		when(lifecareCaseServiceMock.latestRoster(eq(APPLICANT_PNR), any()))
+		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any()))
 			.thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare unreachable"));
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);

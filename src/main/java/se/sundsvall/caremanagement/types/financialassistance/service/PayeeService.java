@@ -253,7 +253,7 @@ public class PayeeService {
 		final var today = LocalDate.now();
 		final List<PaymentView> payments;
 		try {
-			payments = lifecareCaseHistoryService.listPayments(applicant.get(), today.minusMonths(PAYEE_LOOKBACK_MONTHS), today);
+			payments = lifecareCaseHistoryService.listPayments(municipalityId, applicant.get(), today.minusMonths(PAYEE_LOOKBACK_MONTHS), today);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the applicant's Lifecare payments — the payee list falls back to the manually added ones", e);
 			return List.of();

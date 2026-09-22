@@ -66,15 +66,15 @@ public class ProposalBasisService {
 		final var household = householdPartyService.household(municipalityId, namespace, errandId);
 		final var applicationMonth = ofNullable(draft.getApplicationMonth()).filter(month -> hasText(month)).map(YearMonth::parse);
 		final var normSum = household.applicantPersonalNumber()
-			.flatMap(applicant -> applicationMonth.flatMap(month -> previousNormSum(applicant, month)));
+			.flatMap(applicant -> applicationMonth.flatMap(month -> previousNormSum(municipalityId, applicant, month)));
 		final var estimatedAmount = normSum.map(norm -> ProposalMapper.estimatedAmount(draft, norm));
 		return new ProposalBasis(draft, household, applicationMonth, normSum, estimatedAmount);
 	}
 
 	/** The previous calculation's norm sum, best-effort — a failed Lifecare read degrades to "unknown". */
-	private Optional<BigDecimal> previousNormSum(final String applicant, final YearMonth applicationMonth) {
+	private Optional<BigDecimal> previousNormSum(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
-			return ofNullable(lifecareCaseService.previousHousehold(applicant, applicationMonth).normSum());
+			return ofNullable(lifecareCaseService.previousHousehold(municipalityId, applicant, applicationMonth).normSum());
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation household — the proposal amount is left unknown", e);
 			return Optional.empty();

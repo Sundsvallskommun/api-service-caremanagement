@@ -169,7 +169,7 @@ class EligibilityServiceTest {
 	@Test
 	void protectedApplicantViaLifecareYieldsEmptySuggestions() {
 		// Citizen says not protected, but Lifecare flags the person → still no suggestions.
-		when(lifecareCaseServiceMock.hasProtectedIdentity(APPLICANT_PNR)).thenReturn(true);
+		when(lifecareCaseServiceMock.hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT_PNR)).thenReturn(true);
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -194,8 +194,8 @@ class EligibilityServiceTest {
 		// Both protection sources fail → treated as not protected → routing proceeds normally.
 		noCmErrands();
 		when(citizenServiceMock.hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT)).thenThrow(Problem.valueOf(BAD_GATEWAY, "citizen down"));
-		when(lifecareCaseServiceMock.hasProtectedIdentity(APPLICANT_PNR)).thenThrow(Problem.valueOf(BAD_GATEWAY, "FamilyCare down"));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT_PNR)).thenThrow(Problem.valueOf(BAD_GATEWAY, "FamilyCare down"));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -208,7 +208,7 @@ class EligibilityServiceTest {
 	@Test
 	void noExistenceAnywhereSuggestsNew() {
 		noCmErrands();
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -224,7 +224,7 @@ class EligibilityServiceTest {
 	@Test
 	void existsInLifecareOnlyPassesExistence() {
 		noCmErrands();
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -238,9 +238,9 @@ class EligibilityServiceTest {
 		cmErrand(person(ROLE_APPLICANT, APPLICANT), person(ROLE_CO_APPLICANT, CO_APPLICANT));
 		// Re-stub co lookup to empty so the co-applicant is absent from CM, and absent from LC.
 		when(financialAssistanceRepositoryMock.findErrandIdsByPartyId(CO_APPLICANT)).thenReturn(List.of());
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any()))
 			.thenReturn(new LifecareCaseSummary(true, true, Set.of(), null, false, true));
-		when(lifecareCaseServiceMock.summarize(eq(CO_APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(CO_APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		// errand only lists the applicant so co-applicant isn't found in CM either
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID))
@@ -255,7 +255,7 @@ class EligibilityServiceTest {
 	@Test
 	void openCaseFlagIsReportedFromLifecare() {
 		noCmErrands();
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any()))
 			.thenReturn(new LifecareCaseSummary(true, false, Set.of(PREVIOUS), PREVIOUS, false, false));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
@@ -268,7 +268,7 @@ class EligibilityServiceTest {
 	@Test
 	void requireOpenCaseRejectsAFootprintWithoutAnOpenCase() {
 		noCmErrands();
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any()))
 			.thenReturn(new LifecareCaseSummary(true, false, Set.of(PREVIOUS), PREVIOUS, false, false));
 
 		final var response = serviceRequiringOpenCase().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
@@ -281,7 +281,7 @@ class EligibilityServiceTest {
 		// No readable actualisation status → hasOpenCase null → the footprint decides, so nobody is locked out by an
 		// unrecognised FamilyCare status vocabulary.
 		noCmErrands();
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any()))
 			.thenReturn(new LifecareCaseSummary(true, null, Set.of(PREVIOUS), PREVIOUS, false, false));
 
 		final var response = serviceRequiringOpenCase().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
@@ -297,8 +297,8 @@ class EligibilityServiceTest {
 	void civilstandChangedSuggestsNew() {
 		// Previous CM application was solo; now applying together → marital status changed → NY.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
-		when(lifecareCaseServiceMock.summarize(eq(CO_APPLICANT_PNR), any())).thenReturn(lifecare(Set.of())); // co exists in LC
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(CO_APPLICANT_PNR), any())).thenReturn(lifecare(Set.of())); // co exists in LC
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
 
@@ -312,8 +312,8 @@ class EligibilityServiceTest {
 	void sameCivilstandTogetherPasses() {
 		// Previous CM application also had a co-applicant → same marital status → continue to month logic.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT), person(ROLE_CO_APPLICANT, CO_APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
-		when(lifecareCaseServiceMock.summarize(eq(CO_APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(CO_APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
 
@@ -335,8 +335,8 @@ class EligibilityServiceTest {
 			FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)
 				.withPersons(List.of(person(ROLE_APPLICANT, APPLICANT), person(ROLE_CO_APPLICANT, CO_APPLICANT)))));
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, otherCo)).thenReturn(Optional.of(otherCoPnr));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
-		when(lifecareCaseServiceMock.summarize(eq(otherCoPnr), any())).thenReturn(lifecare(Set.of()));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(otherCoPnr), any())).thenReturn(lifecare(Set.of()));
 		final var request = EligibilityRequest.create().withApplicant(APPLICANT).withCoApplicant(otherCo);
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, request);
@@ -352,7 +352,7 @@ class EligibilityServiceTest {
 	void recentlyClosedSuggestsRenewalAndSurfacesErrand() {
 		final var closedAt = OffsetDateTime.now().minusDays(5);
 		cmErrand(person(ROLE_APPLICANT, APPLICANT)); // applicant exists → passes existence + marital (alone)
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
 		when(recentlyClosedErrandServiceMock.findRecentlyClosed(eq(MUNICIPALITY_ID), eq(NAMESPACE), any()))
 			.thenReturn(Optional.of(new RecentlyClosedErrandService.RecentlyClosed(ERRAND_ID, closedAt)));
 
@@ -371,7 +371,7 @@ class EligibilityServiceTest {
 	void noRecentlyClosedFallsThroughToPerMonth() {
 		// Recently-closed service finds nothing → routing continues to the normal per-month logic.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 		when(recentlyClosedErrandServiceMock.findRecentlyClosed(eq(MUNICIPALITY_ID), eq(NAMESPACE), any())).thenReturn(Optional.empty());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
@@ -385,7 +385,7 @@ class EligibilityServiceTest {
 	@Test
 	void decisionForCurrentMonthRecommendsNextMonthAndSupplementThis() {
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any()))
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any()))
 			.thenReturn(new LifecareCaseSummary(true, true, Set.of(CURRENT), CURRENT, true, false));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
@@ -407,7 +407,7 @@ class EligibilityServiceTest {
 	@Test
 	void decisionForPreviousMonthRecommendsRenewalThisMonthOrNext() {
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -428,7 +428,7 @@ class EligibilityServiceTest {
 	void decisionTwoMonthsBackStillRecommendsRenewal() {
 		// Nothing for the current or previous month, but the month before that is decided → the run is unbroken.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(TWO_MONTHS_BACK)));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(TWO_MONTHS_BACK)));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -444,7 +444,7 @@ class EligibilityServiceTest {
 	void noDecisionForTheLastTwoMonthsSuggestsNew() {
 		// A known applicant whose latest decision is months old — too long a gap for a renewal.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(FIVE_MONTHS_BACK)));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(FIVE_MONTHS_BACK)));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -460,7 +460,7 @@ class EligibilityServiceTest {
 	@Test
 	void noDecisionsAtAllForAnExistingApplicantSuggestsNew() {
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -473,7 +473,7 @@ class EligibilityServiceTest {
 		// The decision run is broken, but an application for the current month is already in progress in caremanagement —
 		// a second one of the same kind is not allowed, so only a supplementary application remains.
 		cmErrandWithPeriod(CURRENT, OffsetDateTime.now(), person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -488,7 +488,7 @@ class EligibilityServiceTest {
 	@Test
 	void ongoingApplicationForNextMonthOnlyOffersASupplementForThatMonth() {
 		cmErrandWithPeriod(NEXT, OffsetDateTime.now(), person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of()));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -505,7 +505,7 @@ class EligibilityServiceTest {
 	void cmApplicationForThisMonthYieldsSupplement() {
 		// A CM application already exists for the current month → supplementary application this month.
 		cmErrandWithPeriod(CURRENT, OffsetDateTime.now(), person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -519,7 +519,7 @@ class EligibilityServiceTest {
 	void terminalCmApplicationDoesNotOccupyTheMonth() {
 		// A rejected application for the current month is decided, not pending — it must not force a supplementary one.
 		cmErrandWithPeriodAndStatus(CURRENT, OffsetDateTime.now(), STATUS_REJECTED, person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -531,7 +531,7 @@ class EligibilityServiceTest {
 	void cmApplicationOutsideWindowDoesNotCount() {
 		// Same-month CM application but left non-terminal since long ago → stale → still renewal.
 		cmErrandWithPeriod(CURRENT, OffsetDateTime.now().minusDays(200), person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -544,7 +544,7 @@ class EligibilityServiceTest {
 	@Test
 	void introTextIsPhrasedForASingleApplicant() {
 		noCmErrands();
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -554,8 +554,8 @@ class EligibilityServiceTest {
 	@Test
 	void introTextIsPhrasedForTwoApplicants() {
 		noCmErrands();
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
-		when(lifecareCaseServiceMock.summarize(eq(CO_APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(CO_APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, together());
 
@@ -565,7 +565,7 @@ class EligibilityServiceTest {
 	@Test
 	void newApplicationCarriesItsCitizenDescription() {
 		noCmErrands();
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -576,7 +576,7 @@ class EligibilityServiceTest {
 	@Test
 	void renewalCarriesItsCitizenDescriptionAndSupplementaryHasNoneYet() {
 		cmErrandWithPeriod(CURRENT, OffsetDateTime.now(), person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(lifecare(Set.of(PREVIOUS)));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -596,7 +596,7 @@ class EligibilityServiceTest {
 		// The decision history is unknown, so an existing applicant keeps the renewal instead of being pushed into a new
 		// application on unread data.
 		cmErrand(person(ROLE_APPLICANT, APPLICANT));
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "FamilyCare down"));
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "FamilyCare down"));
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -611,7 +611,7 @@ class EligibilityServiceTest {
 	@Test
 	void configuredWindowIsReflected() {
 		noCmErrands();
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 
@@ -639,7 +639,7 @@ class EligibilityServiceTest {
 	@Test
 	void routingIsOnByDefaultWhenTheOverrideIsUnset() {
 		noCmErrands();
-		when(lifecareCaseServiceMock.summarize(eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
+		when(lifecareCaseServiceMock.summarize(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(LifecareCaseSummary.none());
 
 		final var response = service().evaluate(MUNICIPALITY_ID, NAMESPACE, alone());
 

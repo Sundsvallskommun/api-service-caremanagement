@@ -74,7 +74,7 @@ public class PaymentProposalService {
 		final var basis = proposalBasisService.basis(municipalityId, namespace, errandId);
 		final var household = basis.household();
 		final var previousPayments = household.applicantPersonalNumber()
-			.flatMap(applicant -> basis.applicationMonth().map(month -> previousPayments(applicant, month)))
+			.flatMap(applicant -> basis.applicationMonth().map(month -> previousPayments(municipalityId, applicant, month)))
 			.orElseGet(List::of);
 		final var previousPayment = previousPayments.stream()
 			.filter(payment -> hasText(payment.payDate()))
@@ -129,9 +129,9 @@ public class PaymentProposalService {
 	}
 
 	/** The applicant's Lifecare payments in the lookback window ending at the application month, best-effort. */
-	private List<PaymentView> previousPayments(final String applicant, final YearMonth applicationMonth) {
+	private List<PaymentView> previousPayments(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
-			return lifecareCaseHistoryService.listPayments(applicant, applicationMonth.minusMonths(PREVIOUS_PAYMENT_LOOKBACK_MONTHS).atDay(1), applicationMonth.atEndOfMonth());
+			return lifecareCaseHistoryService.listPayments(municipalityId, applicant, applicationMonth.minusMonths(PREVIOUS_PAYMENT_LOOKBACK_MONTHS).atDay(1), applicationMonth.atEndOfMonth());
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous Lifecare payments — the payment proposal is computed without them", e);
 			return List.of();

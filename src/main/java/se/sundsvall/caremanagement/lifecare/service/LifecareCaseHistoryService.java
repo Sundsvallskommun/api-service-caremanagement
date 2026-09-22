@@ -16,7 +16,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedPaymentDTO;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationExpenseView;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationIncomeView;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationPersonView;
@@ -31,7 +31,7 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.toA
 
 /**
  * Reads a person's Lifecare FamilyCare case history — calculations, decisions, documents and payments — for the
- * caseworker-facing case view, and fetches a single document's content. Wraps {@link LifecareFamilyCareIntegration},
+ * caseworker-facing case view, and fetches a single document's content. Wraps {@link LifecareFamilyCare},
  * reducing the generated FamilyCare DTOs to the display projections in {@code lifecare.service.model} so the generated
  * types never leave the integration boundary.
  *
@@ -44,9 +44,9 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.toA
 @Service
 public class LifecareCaseHistoryService {
 
-	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
+	private final LifecareFamilyCare lifecareFamilyCareIntegration;
 
-	public LifecareCaseHistoryService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration) {
+	public LifecareCaseHistoryService(final LifecareFamilyCare lifecareFamilyCareIntegration) {
 		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
 	}
 
@@ -58,8 +58,8 @@ public class LifecareCaseHistoryService {
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's calculations in the period (empty when none)
 	 */
-	public List<CalculationView> listCalculations(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, fromDate, toDate))
+	public List<CalculationView> listCalculations(final String municipalityId, final String personId, final LocalDate fromDate, final LocalDate toDate) {
+		return ofNullable(lifecareFamilyCareIntegration.getCalculations(municipalityId, personId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -75,8 +75,8 @@ public class LifecareCaseHistoryService {
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's decisions in the period (empty when none)
 	 */
-	public List<DecisionView> listDecisions(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, fromDate, toDate))
+	public List<DecisionView> listDecisions(final String municipalityId, final String personId, final LocalDate fromDate, final LocalDate toDate) {
+		return ofNullable(lifecareFamilyCareIntegration.getDecisions(municipalityId, personId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -93,8 +93,8 @@ public class LifecareCaseHistoryService {
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's documents in the period (empty when none)
 	 */
-	public List<DocumentView> listDocuments(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getDocuments(personId, fromDate, toDate))
+	public List<DocumentView> listDocuments(final String municipalityId, final String personId, final LocalDate fromDate, final LocalDate toDate) {
+		return ofNullable(lifecareFamilyCareIntegration.getDocuments(municipalityId, personId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedDocumentDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -111,8 +111,8 @@ public class LifecareCaseHistoryService {
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's payments in the period (empty when none)
 	 */
-	public List<PaymentView> listPayments(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getPayments(personId, fromDate, toDate))
+	public List<PaymentView> listPayments(final String municipalityId, final String personId, final LocalDate fromDate, final LocalDate toDate) {
+		return ofNullable(lifecareFamilyCareIntegration.getPayments(municipalityId, personId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedPaymentDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -126,8 +126,8 @@ public class LifecareCaseHistoryService {
 	 * @param  id the document id ({@code DocumentView.id})
 	 * @return    the raw document bytes (PDF)
 	 */
-	public byte[] documentContent(final String id) {
-		return lifecareFamilyCareIntegration.getDocumentContent(id);
+	public byte[] documentContent(final String municipalityId, final String id) {
+		return lifecareFamilyCareIntegration.getDocumentContent(municipalityId, id);
 	}
 
 	private static CalculationView toCalculation(final PersonBasedCalculationDTO dto) {

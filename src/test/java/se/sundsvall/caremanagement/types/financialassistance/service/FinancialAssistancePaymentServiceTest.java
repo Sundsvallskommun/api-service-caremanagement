@@ -17,6 +17,7 @@ import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -40,7 +41,7 @@ class FinancialAssistancePaymentServiceTest {
 	@Test
 	void checkPaymentStatusEffectuated() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(paymentStatusServiceMock.read("199001011234", YearMonth.of(2026, JUNE))).thenReturn(new PaymentStatus(true, "2026-05-27"));
+		when(paymentStatusServiceMock.read(MUNICIPALITY_ID, "199001011234", YearMonth.of(2026, JUNE))).thenReturn(new PaymentStatus(true, "2026-05-27"));
 
 		final var request = PaymentStatusRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
 
@@ -48,13 +49,13 @@ class FinancialAssistancePaymentServiceTest {
 
 		assertThat(response.getEffectuated()).isTrue();
 		assertThat(response.getPaymentDate()).isEqualTo("2026-05-27");
-		verify(paymentStatusServiceMock).read("199001011234", YearMonth.of(2026, JUNE));
+		verify(paymentStatusServiceMock).read(MUNICIPALITY_ID, "199001011234", YearMonth.of(2026, JUNE));
 	}
 
 	@Test
 	void checkPaymentStatusNotEffectuated() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(paymentStatusServiceMock.read("199001011234", YearMonth.of(2026, JUNE))).thenReturn(new PaymentStatus(false, null));
+		when(paymentStatusServiceMock.read(MUNICIPALITY_ID, "199001011234", YearMonth.of(2026, JUNE))).thenReturn(new PaymentStatus(false, null));
 
 		final var request = PaymentStatusRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
 
@@ -75,6 +76,6 @@ class FinancialAssistancePaymentServiceTest {
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
 			.hasMessage("Not Found: No citizen found for partyId f47ac10b-58cc-4372-a567-0e02b2c3d479");
 
-		verify(paymentStatusServiceMock, never()).read(any(), any());
+		verify(paymentStatusServiceMock, never()).read(eq(MUNICIPALITY_ID), any(), any());
 	}
 }

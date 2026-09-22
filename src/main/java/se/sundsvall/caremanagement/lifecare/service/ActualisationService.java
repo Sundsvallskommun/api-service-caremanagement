@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ActualisationAssembler;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
 
@@ -22,7 +22,7 @@ import static java.util.Optional.ofNullable;
  *
  * <p>
  * The write is a two-call exchange (proposal GET → actualisation POST); both go through {@link
- * LifecareFamilyCareIntegration}, which keeps the generated FamilyCare DTOs and the privacy-safe logging inside the
+ * LifecareFamilyCare}, which keeps the generated FamilyCare DTOs and the privacy-safe logging inside the
  * integration layer. Mirrors {@link CalculationService}.
  */
 @Service
@@ -31,11 +31,11 @@ public class ActualisationService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ActualisationService.class);
 
-	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
+	private final LifecareFamilyCare lifecareFamilyCareIntegration;
 	private final CaseworkerResolver caseworkerResolver;
 	private final ActualisationProperties actualisationProperties;
 
-	public ActualisationService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration, final CaseworkerResolver caseworkerResolver,
+	public ActualisationService(final LifecareFamilyCare lifecareFamilyCareIntegration, final CaseworkerResolver caseworkerResolver,
 		final ActualisationProperties actualisationProperties) {
 		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
 		this.caseworkerResolver = caseworkerResolver;
@@ -53,10 +53,10 @@ public class ActualisationService {
 	 * @return                   the created actualisation id and the errand assignee ({@code null} when no caseworker was
 	 *                           found)
 	 */
-	public ActualisationResult createActualisation(final String applicantPersonId, final LocalDate date) {
-		final var caseworker = resolveCaseworker(applicantPersonId, date);
+	public ActualisationResult createActualisation(final String municipalityId, final String applicantPersonId, final LocalDate date) {
+		final var caseworker = resolveCaseworker(municipalityId, applicantPersonId, date);
 
-		final var proposal = lifecareFamilyCareIntegration.getActualisationProposal(applicantPersonId);
+		final var proposal = lifecareFamilyCareIntegration.getActualisationProposal(municipalityId, applicantPersonId);
 		final var selection = ActualisationAssembler.assemble(applicantPersonId, proposal, date,
 			caseworker.map(ResolvedCaseworker::caseworkerId).orElse(null), actualisationProperties);
 		// A name that is not in the catalogue falls back to the first offered value, which is the guess the
@@ -65,15 +65,15 @@ public class ActualisationService {
 			LOG.warn("Lifecare's actualisation catalogue has no entry for {} - falling back to the first offered value. "
 				+ "Check the configured names against the catalogue.", String.join(", ", selection.misses()));
 		}
-		final var actualisationId = lifecareFamilyCareIntegration.createActualisation(selection.body());
+		final var actualisationId = lifecareFamilyCareIntegration.createActualisation(municipalityId, selection.body());
 
 		return new ActualisationResult(actualisationId, caseworker.map(ResolvedCaseworker::assignedUserId).orElse(null));
 	}
 
 	/** Best-effort caseworker resolution — never blocks intake creation; a lookup failure resolves to no caseworker. */
-	private Optional<ResolvedCaseworker> resolveCaseworker(final String applicantPersonId, final LocalDate date) {
+	private Optional<ResolvedCaseworker> resolveCaseworker(final String municipalityId, final String applicantPersonId, final LocalDate date) {
 		try {
-			return caseworkerResolver.resolve(applicantPersonId, date);
+			return caseworkerResolver.resolve(municipalityId, applicantPersonId, date);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not resolve caseworker for actualisation; creating intake without one: {}", e.getMessage());
 			return Optional.empty();
@@ -91,8 +91,8 @@ public class ActualisationService {
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's actualisations in the period (newest-first as Lifecare returns them)
 	 */
-	public List<ActualisationSummary> listActualisations(final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getActualisations(personId, fromDate, toDate))
+	public List<ActualisationSummary> listActualisations(final String municipalityId, final String personId, final LocalDate fromDate, final LocalDate toDate) {
+		return ofNullable(lifecareFamilyCareIntegration.getActualisations(municipalityId, personId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedAktualiseringDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -121,8 +121,8 @@ public class ActualisationService {
 	 * @param title              the document title
 	 * @param senderName         the sender name
 	 */
-	public void uploadAttachment(final Integer actualisationId, final String fileName, final byte[] content,
+	public void uploadAttachment(final String municipalityId, final Integer actualisationId, final String fileName, final byte[] content,
 		final String documentType, final String documentSenderType, final String title, final String senderName) {
-		lifecareFamilyCareIntegration.postActualisationAttachment(actualisationId, documentType, documentSenderType, title, senderName, fileName, content);
+		lifecareFamilyCareIntegration.postActualisationAttachment(municipalityId, actualisationId, documentType, documentSenderType, title, senderName, fileName, content);
 	}
 }

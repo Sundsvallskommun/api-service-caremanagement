@@ -118,7 +118,7 @@ public class FinancialAssistanceCalculationService {
 		}
 		final var input = gather(municipalityId, namespace, request);
 		final var refresh = refreshDraft(municipalityId, input);
-		final var response = completeness(request, input);
+		final var response = completeness(municipalityId, request, input);
 
 		publish(municipalityId, namespace, input, refresh, response);
 		stampDailyRun(input.errand());
@@ -189,22 +189,22 @@ public class FinancialAssistanceCalculationService {
 	 * comparison also raise the section warnings reconciled in {@link #publish}.
 	 */
 	private DraftRefresh refreshDraft(final String municipalityId, final PrepareInput input) {
-		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
+		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
 		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, input.errandId(), input.errand(),
-			previousExpenseAmounts(input.applicant(), input.applicationMonth()), ageFromPnr(input.applicant()));
+			previousExpenseAmounts(municipalityId, input.applicant(), input.applicationMonth()), ageFromPnr(input.applicant()));
 		final var personRows = calculationFeeder.personRows(municipalityId, input.namespace(), input.errandId(), input.errand());
-		final var normId = calculationService.selectNormId(input.applicant(), input.applicationMonth());
+		final var normId = calculationService.selectNormId(municipalityId, input.applicant(), input.applicationMonth());
 		final var changes = draftService.refresh(input.errandId(), input.applicationMonthValue(), normId, input.errand().getNormType(),
 			personRows, incomeRows, expenseFeed.rows());
 
-		final var previous = previousHousehold(input.applicant(), input.applicationMonth());
+		final var previous = previousHousehold(municipalityId, input.applicant(), input.applicationMonth());
 		final var housingWarnings = calculationFeeder.housingDeltaWarnings(municipalityId, input.errand(), previous);
 		// The verksamhet's återansökan regelverk, evaluated in the engine: the warnings that follow from the answers in
 		// the application, the income comparison against the previous normberäkning, and the children/household-count/norm
 		// comparisons against it.
 		final var questionWarnings = applicationRuleFeeder.applicationQuestionWarnings(municipalityId, input.errandId(), input.errand());
 		final var incomeWarnings = applicationRuleFeeder.incomeComparisonWarnings(municipalityId, input.errand(),
-			previousIncomeAmounts(input.applicant(), input.applicationMonth()));
+			previousIncomeAmounts(municipalityId, input.applicant(), input.applicationMonth()));
 		final var comparisonWarnings = applicationRuleFeeder.previousCalculationWarnings(municipalityId, input.errand(), previous);
 		// Parsed once and handed to both feeders below - it was parsed twice here until the missing-income feeder
 		// arrived and made the duplication obvious.
@@ -224,8 +224,8 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/** The verdict the process asked for: does this month cover every income type the previous calculation had? */
-	private CalculationResponse completeness(final CalculationRequest request, final PrepareInput input) {
-		final var completeness = calculationService.completeness(input.applicant(), input.applicationMonth(), input.classifiedIncomes());
+	private CalculationResponse completeness(final String municipalityId, final CalculationRequest request, final PrepareInput input) {
+		final var completeness = calculationService.completeness(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes());
 		return CalculationResponse.create()
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
 			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of))
@@ -251,9 +251,9 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/** The previous calculation household, best-effort — a failed Lifecare read degrades to "no previous household". */
-	private PreviousHousehold previousHousehold(final String applicant, final YearMonth applicationMonth) {
+	private PreviousHousehold previousHousehold(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
-			return lifecareCaseService.previousHousehold(applicant, applicationMonth);
+			return lifecareCaseService.previousHousehold(municipalityId, applicant, applicationMonth);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation household — skipping the household drift check", e);
 			return PreviousHousehold.empty();
@@ -261,9 +261,9 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/** The previous calculation's per-income-type amounts, best-effort — a failed Lifecare read degrades to none. */
-	private Map<String, BigDecimal> previousIncomeAmounts(final String applicant, final YearMonth applicationMonth) {
+	private Map<String, BigDecimal> previousIncomeAmounts(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
-			return lifecareCaseService.previousCalculationIncomeAmounts(applicant, applicationMonth);
+			return lifecareCaseService.previousCalculationIncomeAmounts(municipalityId, applicant, applicationMonth);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation income amounts — the income comparison is skipped", e);
 			return Map.of();
@@ -271,9 +271,9 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/** The previous calculation's per-cost-type approved amounts, best-effort — a failed Lifecare read degrades to none. */
-	private Map<String, BigDecimal> previousExpenseAmounts(final String applicant, final YearMonth applicationMonth) {
+	private Map<String, BigDecimal> previousExpenseAmounts(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
-			return lifecareCaseService.previousExpenseAmounts(applicant, applicationMonth);
+			return lifecareCaseService.previousExpenseAmounts(municipalityId, applicant, applicationMonth);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation expense amounts — expense history treated as missing", e);
 			return Map.of();
@@ -314,7 +314,7 @@ public class FinancialAssistanceCalculationService {
 
 		final var calculationHeader = new CalculationHeader(header.getNormId(), header.getCalculationFromDate(), header.getCalculationToDate(),
 			header.getCalculationDate(), header.getHasCustomHouseholdSize(), header.getHouseholdSize());
-		final var calculationId = calculationService.commitEffective(applicant, applicationMonth, calculationHeader, incomes, expenses, persons);
+		final var calculationId = calculationService.commitEffective(municipalityId, applicant, applicationMonth, calculationHeader, incomes, expenses, persons);
 
 		// The calculation is now in Lifecare via the FamilyCare API; ask RPA to mirror the rest of the decision surface that
 		// has no
@@ -345,7 +345,7 @@ public class FinancialAssistanceCalculationService {
 		// Incomes straight from the application, but folded + converted through the same pipeline as the SSBTEK path
 		// (CalculationFeeder.incomeRows → toEffectiveIncome); expenses + persons via the same feeder, already application-
 		// sourced. Nothing here is calculation logic of its own — only the application's data fed into the existing engine.
-		final var incomeLines = calculationService.applicationIncomeLines(applicant, toApplicationIncomes(errand.getIncomes()));
+		final var incomeLines = calculationService.applicationIncomeLines(municipalityId, applicant, toApplicationIncomes(errand.getIncomes()));
 		final var incomes = calculationFeeder.incomeRows(errandId, incomeLines).stream()
 			.map(CalculationDraftMapper::toEffectiveIncome).toList();
 		final var expenses = calculationFeeder.applicationExpenseRows(errandId, errand).stream()
@@ -353,10 +353,10 @@ public class FinancialAssistanceCalculationService {
 		final var persons = calculationFeeder.personRows(municipalityId, namespace, errandId, errand).stream()
 			.map(CalculationDraftMapper::toEffectivePerson).toList();
 
-		final var normId = calculationService.selectNormId(applicant, applicationMonth);
+		final var normId = calculationService.selectNormId(municipalityId, applicant, applicationMonth);
 		final var header = new CalculationHeader(normId, applicationMonth.atDay(1), applicationMonth.atEndOfMonth(), LocalDate.now(ZoneId.systemDefault()), false, null);
 
-		final var calculationId = calculationService.commitEffective(applicant, applicationMonth, header, incomes, expenses, persons);
+		final var calculationId = calculationService.commitEffective(municipalityId, applicant, applicationMonth, header, incomes, expenses, persons);
 		triggerRpaWrite(municipalityId, namespace, errandId);
 
 		return CalculationResponse.create().withCalculationId(calculationId);

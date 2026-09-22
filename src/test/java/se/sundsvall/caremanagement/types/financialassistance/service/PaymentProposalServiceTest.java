@@ -61,7 +61,7 @@ class PaymentProposalServiceTest {
 	@Test
 	void proposalFromThePreviousPaymentWithCoApplicantWarning() {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(Optional.of(APPLICANT), true, Optional.of(FaPerson.create().withPaymentSameAsPrevious(true)), Optional.of(new BigDecimal("4250"))));
-		when(lifecareCaseHistoryServiceMock.listPayments(APPLICANT, FROM, TO)).thenReturn(List.of(
+		when(lifecareCaseHistoryServiceMock.listPayments(MUNICIPALITY_ID, APPLICANT, FROM, TO)).thenReturn(List.of(
 			payment("2026-04-27", "Anna Andersson", "111"),
 			payment("2026-05-27", "Anna Andersson", "222"), // the latest by pay date → previous payment
 			payment(null, "Bo", "333"))); // never paid → not the previous payment, still a payee option
@@ -89,7 +89,7 @@ class PaymentProposalServiceTest {
 	void applicationAccountWinsWhenNotSameAsPrevious() {
 		final var person = FaPerson.create().withPaymentSameAsPrevious(false).withPaymentMethod("Bankkonto").withClearingNumber("9999").withAccountNumber("new-1");
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(Optional.of(APPLICANT), false, Optional.of(person), Optional.of(new BigDecimal("4250"))));
-		when(lifecareCaseHistoryServiceMock.listPayments(APPLICANT, FROM, TO)).thenReturn(List.of(payment("2026-05-27", "Anna Andersson", "222")));
+		when(lifecareCaseHistoryServiceMock.listPayments(MUNICIPALITY_ID, APPLICANT, FROM, TO)).thenReturn(List.of(payment("2026-05-27", "Anna Andersson", "222")));
 		when(warningServiceMock.reconcileByTypes(ERRAND_ID, PAYMENT_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
 
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
@@ -122,7 +122,7 @@ class PaymentProposalServiceTest {
 	@Test
 	void aFailedLifecarePaymentReadIsBestEffort() {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(Optional.of(APPLICANT), false, Optional.empty(), Optional.of(new BigDecimal("4250"))));
-		when(lifecareCaseHistoryServiceMock.listPayments(APPLICANT, FROM, TO)).thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
+		when(lifecareCaseHistoryServiceMock.listPayments(MUNICIPALITY_ID, APPLICANT, FROM, TO)).thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
 		when(warningServiceMock.reconcileByTypes(ERRAND_ID, PAYMENT_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
 
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);

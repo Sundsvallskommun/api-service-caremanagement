@@ -92,7 +92,7 @@ class PayeeServiceTest {
 	@Test
 	void listPutsLifecarePayeesFirstMostRecentlyPaidAndAppendsManualOnes() {
 		householdWithApplicant();
-		when(lifecareCaseHistoryServiceMock.listPayments(eq(PERSONAL_NUMBER), any(), any())).thenReturn(List.of(
+		when(lifecareCaseHistoryServiceMock.listPayments(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(List.of(
 			payment("2026-06-27", "Anna Andersson", "111"),
 			payment("2026-08-27", "Hyresvärden AB", "222")));
 		when(payeeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(manual(PAYEE_ID, "Ny Mottagare", "333", LIFECARE_STATUS_PENDING)));
@@ -110,7 +110,7 @@ class PayeeServiceTest {
 	@Test
 	void listCollapsesAManualPayeeIntoItsLifecareTwin() {
 		householdWithApplicant();
-		when(lifecareCaseHistoryServiceMock.listPayments(eq(PERSONAL_NUMBER), any(), any()))
+		when(lifecareCaseHistoryServiceMock.listPayments(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any()))
 			.thenReturn(List.of(payment("2026-08-27", "Hyresvärden AB", "222")));
 		when(payeeRepositoryMock.findByErrandId(ERRAND_ID))
 			.thenReturn(List.of(manual(PAYEE_ID, " hyresvärden ab ", "222", LIFECARE_STATUS_SYNCED)));
@@ -124,7 +124,7 @@ class PayeeServiceTest {
 	@Test
 	void listDedupesRepeatedLifecarePayees() {
 		householdWithApplicant();
-		when(lifecareCaseHistoryServiceMock.listPayments(eq(PERSONAL_NUMBER), any(), any())).thenReturn(List.of(
+		when(lifecareCaseHistoryServiceMock.listPayments(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(List.of(
 			payment("2026-08-27", "Anna Andersson", "111"),
 			payment("2026-07-27", "Anna Andersson", "111")));
 		when(payeeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
@@ -138,7 +138,7 @@ class PayeeServiceTest {
 	@Test
 	void listSkipsLifecarePaymentsWithNeitherNameNorAccount() {
 		householdWithApplicant();
-		when(lifecareCaseHistoryServiceMock.listPayments(eq(PERSONAL_NUMBER), any(), any()))
+		when(lifecareCaseHistoryServiceMock.listPayments(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any()))
 			.thenReturn(List.of(payment("2026-08-27", null, null)));
 		when(payeeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 
@@ -148,7 +148,7 @@ class PayeeServiceTest {
 	@Test
 	void listFallsBackToManualPayeesWhenLifecareIsDown() {
 		householdWithApplicant();
-		when(lifecareCaseHistoryServiceMock.listPayments(eq(PERSONAL_NUMBER), any(), any())).thenThrow(new IllegalStateException("Lifecare down"));
+		when(lifecareCaseHistoryServiceMock.listPayments(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenThrow(new IllegalStateException("Lifecare down"));
 		when(payeeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(manual(PAYEE_ID, "Ny Mottagare", "333", LIFECARE_STATUS_PENDING)));
 
 		final var result = service.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);

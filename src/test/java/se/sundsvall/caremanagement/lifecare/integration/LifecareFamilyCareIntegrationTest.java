@@ -43,6 +43,8 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @ExtendWith(MockitoExtension.class)
 class LifecareFamilyCareIntegrationTest {
 
+	private static final String MUNICIPALITY_ID = "2281";
+
 	private static final String PERSON_ID = "200001012384";
 	private static final LocalDate START = LocalDate.of(2026, APRIL, 1);
 	private static final LocalDate END = LocalDate.of(2026, JUNE, 30);
@@ -65,7 +67,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new PersonBasedPersonDTO();
 		when(clientMock.getPerson(PERSON_ID)).thenReturn(response);
 
-		assertThat(integration.getPerson(PERSON_ID)).isSameAs(response);
+		assertThat(integration.getPerson(MUNICIPALITY_ID, PERSON_ID)).isSameAs(response);
 		verify(clientMock).getPerson(PERSON_ID);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -75,7 +77,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = List.of(new PersonBasedContactDTO());
 		when(clientMock.getContacts(PERSON_ID)).thenReturn(response);
 
-		assertThat(integration.getContacts(PERSON_ID)).isSameAs(response);
+		assertThat(integration.getContacts(MUNICIPALITY_ID, PERSON_ID)).isSameAs(response);
 		verify(clientMock).getContacts(PERSON_ID);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -85,7 +87,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedAktualiseringDTO();
 		when(clientMock.getActualisations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getActualisations(PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getActualisations(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
 		verify(clientMock).getActualisations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -95,7 +97,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedCalculationDTO();
 		when(clientMock.getCalculations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getCalculations(PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getCalculations(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
 		verify(clientMock).getCalculations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -105,7 +107,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedDecisionDTO();
 		when(clientMock.getDecisions(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getDecisions(PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getDecisions(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
 		verify(clientMock).getDecisions(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -115,7 +117,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedPaymentDTO();
 		when(clientMock.getPayments(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getPayments(PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getPayments(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
 		verify(clientMock).getPayments(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -125,7 +127,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedInvestigationDTO();
 		when(clientMock.getInvestigations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getInvestigations(PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getInvestigations(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
 		verify(clientMock).getInvestigations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -135,7 +137,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedServiceDTO();
 		when(clientMock.getServices(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getServices(PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getServices(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
 		verify(clientMock).getServices(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -145,7 +147,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedExecutionDTO();
 		when(clientMock.getExecutions(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getExecutions(PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getExecutions(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
 		verify(clientMock).getExecutions(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -155,7 +157,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = List.of(new User().id("9001").fullName("Anna Andersson").networkUserId("anna01ker"));
 		when(clientMock.getUsers(1000, null, null, null)).thenReturn(response);
 
-		assertThat(integration.getUsers(1000, null, null, null)).isSameAs(response);
+		assertThat(integration.getUsers(MUNICIPALITY_ID, 1000, null, null, null)).isSameAs(response);
 		verify(clientMock).getUsers(1000, null, null, null);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -164,7 +166,7 @@ class LifecareFamilyCareIntegrationTest {
 	void getUsersFailureBecomesBadGateway() {
 		when(clientMock.getUsers(1000, null, null, null)).thenThrow(Problem.valueOf(NOT_FOUND, "boom"));
 
-		assertThatThrownBy(() -> integration.getUsers(1000, null, null, null))
+		assertThatThrownBy(() -> integration.getUsers(MUNICIPALITY_ID, 1000, null, null, null))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
@@ -176,7 +178,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedResourceAllocationDTO();
 		when(clientMock.getResourceAllocations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getResourceAllocations(PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getResourceAllocations(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
 		verify(clientMock).getResourceAllocations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -185,7 +187,7 @@ class LifecareFamilyCareIntegrationTest {
 	void getDecisionsFailure() {
 		when(clientMock.getDecisions(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenThrow(new RuntimeException("timeout"));
 
-		assertThatThrownBy(() -> integration.getDecisions(PERSON_ID, START, END))
+		assertThatThrownBy(() -> integration.getDecisions(MUNICIPALITY_ID, PERSON_ID, START, END))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
@@ -201,7 +203,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new PersonBasedAktualiseringProposalDTO();
 		when(clientMock.getActualisationProposal(PERSON_ID)).thenReturn(response);
 
-		assertThat(integration.getActualisationProposal(PERSON_ID)).isSameAs(response);
+		assertThat(integration.getActualisationProposal(MUNICIPALITY_ID, PERSON_ID)).isSameAs(response);
 		verify(clientMock).getActualisationProposal(PERSON_ID);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -210,7 +212,7 @@ class LifecareFamilyCareIntegrationTest {
 	void getActualisationProposalFailure() {
 		when(clientMock.getActualisationProposal(PERSON_ID)).thenThrow(Problem.valueOf(NOT_FOUND, "boom"));
 
-		assertThatThrownBy(() -> integration.getActualisationProposal(PERSON_ID))
+		assertThatThrownBy(() -> integration.getActualisationProposal(MUNICIPALITY_ID, PERSON_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
@@ -224,7 +226,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var body = new PostAktualiseringsBodyRequest();
 		when(clientMock.createActualisation(body)).thenReturn(4711);
 
-		assertThat(integration.createActualisation(body)).isEqualTo(4711);
+		assertThat(integration.createActualisation(MUNICIPALITY_ID, body)).isEqualTo(4711);
 		verify(clientMock).createActualisation(body);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -234,7 +236,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var body = new PostAktualiseringsBodyRequest();
 		when(clientMock.createActualisation(body)).thenThrow(new RuntimeException("connection reset"));
 
-		assertThatThrownBy(() -> integration.createActualisation(body))
+		assertThatThrownBy(() -> integration.createActualisation(MUNICIPALITY_ID, body))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
@@ -248,7 +250,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new PersonBasedCalculationProposalDTO();
 		when(clientMock.getCalculationProposal(PERSON_ID)).thenReturn(response);
 
-		assertThat(integration.getCalculationProposal(PERSON_ID)).isSameAs(response);
+		assertThat(integration.getCalculationProposal(MUNICIPALITY_ID, PERSON_ID)).isSameAs(response);
 		verify(clientMock).getCalculationProposal(PERSON_ID);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -258,7 +260,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var body = new PostCalculationBodyRequest();
 		when(clientMock.createCalculation(body)).thenReturn(99);
 
-		assertThat(integration.createCalculation(body)).isEqualTo(99);
+		assertThat(integration.createCalculation(MUNICIPALITY_ID, body)).isEqualTo(99);
 		verify(clientMock).createCalculation(body);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -268,7 +270,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var body = new PostCalculationBodyRequest();
 		when(clientMock.createCalculation(body)).thenThrow(Problem.valueOf(BAD_GATEWAY, "upstream down"));
 
-		assertThatThrownBy(() -> integration.createCalculation(body))
+		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, body))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
@@ -283,7 +285,7 @@ class LifecareFamilyCareIntegrationTest {
 			9, 8, 7
 		};
 
-		integration.postActualisationAttachment(4711, "DOC", "SENDER", "Title", "Sender", "EB-1_meddelandehistorik.pdf", content);
+		integration.postActualisationAttachment(MUNICIPALITY_ID, 4711, "DOC", "SENDER", "Title", "Sender", "EB-1_meddelandehistorik.pdf", content);
 
 		final ArgumentCaptor<MultipartFile> fileCaptor = ArgumentCaptor.forClass(MultipartFile.class);
 		verify(clientMock).postActualisationAttachment(eq(4711), eq("DOC"), eq("SENDER"), eq("Title"), eq("Sender"), fileCaptor.capture());
@@ -299,7 +301,7 @@ class LifecareFamilyCareIntegrationTest {
 		doThrow(new RuntimeException("connection reset")).when(clientMock)
 			.postActualisationAttachment(eq(4711), any(), any(), any(), any(), any());
 
-		assertThatThrownBy(() -> integration.postActualisationAttachment(4711, "DOC", "SENDER", "Title", "Sender", "f.pdf", new byte[] {
+		assertThatThrownBy(() -> integration.postActualisationAttachment(MUNICIPALITY_ID, 4711, "DOC", "SENDER", "Title", "Sender", "f.pdf", new byte[] {
 			1
 		}))
 			.isInstanceOf(ThrowableProblem.class)
@@ -316,7 +318,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var leaky = "GET https://lifecare-familycare/Persons?personId=200001012384&key=SUPER-SECRET-KEY HTTP/1.1";
 		when(clientMock.getPerson(PERSON_ID)).thenThrow(new RuntimeException(leaky));
 
-		assertThatThrownBy(() -> integration.getPerson(PERSON_ID))
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, PERSON_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
@@ -334,7 +336,7 @@ class LifecareFamilyCareIntegrationTest {
 		// ThrowableProblem causes are already clean — keep status + detail for self-diagnosing logs.
 		when(clientMock.getPerson(PERSON_ID)).thenThrow(Problem.valueOf(NOT_FOUND, "person not found"));
 
-		assertThatThrownBy(() -> integration.getPerson(PERSON_ID))
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, PERSON_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())

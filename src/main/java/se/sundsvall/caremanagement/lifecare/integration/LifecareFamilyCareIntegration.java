@@ -19,6 +19,7 @@ import generated.se.sundsvall.lifecarefamilycare.User;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Supplier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -35,12 +36,19 @@ import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.s
  * identity number and income data (sprint privacy rule, vof-ekonomiskt-bistand/CLAUDE.md).
  *
  * <p>
+ * The {@code municipalityId} every method leads with is unused here: this client talks to a single Lifecare instance
+ * and FamilyCare has no tenant in its API. It is on {@link LifecareFamilyCare} because the integrator-backed route
+ * needs
+ * it, and dropping it here rather than in the interface keeps the tenant visible to callers either way.
+ *
+ * <p>
  * The period reads take the window as {@link LocalDate}s and render them here, through {@link FamilyCareDates}, so no
  * caller can hand FamilyCare a date in a format it rejects. The window is inclusive in both ends: the start date
  * becomes start of day and the end date end of day.
  */
 @Component
-public class LifecareFamilyCareIntegration {
+@ConditionalOnProperty(name = "integration.lifecare-familycare.provider", havingValue = "familycare", matchIfMissing = true)
+public class LifecareFamilyCareIntegration implements LifecareFamilyCare {
 
 	/** Everything uploaded to an actualisation is a generated or uploaded PDF. */
 	private static final String PDF_MIME_TYPE = "application/pdf";
@@ -67,73 +75,90 @@ public class LifecareFamilyCareIntegration {
 		return e.getClass().getSimpleName();
 	}
 
-	public PersonBasedPersonDTO getPerson(final String personId) {
+	@Override
+	public PersonBasedPersonDTO getPerson(final String municipalityId, final String personId) {
 		return call("fetching person", () -> lifecareFamilyCareClient.getPerson(personId));
 	}
 
-	public List<PersonBasedContactDTO> getContacts(final String personId) {
+	@Override
+	public List<PersonBasedContactDTO> getContacts(final String municipalityId, final String personId) {
 		return call("fetching contacts", () -> lifecareFamilyCareClient.getContacts(personId));
 	}
 
-	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String personId, final LocalDate startDate, final LocalDate endDate) {
+	@Override
+	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching actualisations", () -> lifecareFamilyCareClient.getActualisations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String personId, final LocalDate startDate, final LocalDate endDate) {
+	@Override
+	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching calculations", () -> lifecareFamilyCareClient.getCalculations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String personId, final LocalDate startDate, final LocalDate endDate) {
+	@Override
+	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching decision", () -> lifecareFamilyCareClient.getDecisions(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String personId, final LocalDate startDate, final LocalDate endDate) {
+	@Override
+	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching payments", () -> lifecareFamilyCareClient.getPayments(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String personId, final LocalDate startDate, final LocalDate endDate) {
+	@Override
+	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching investigations", () -> lifecareFamilyCareClient.getInvestigations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String personId, final LocalDate startDate, final LocalDate endDate) {
+	@Override
+	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching services", () -> lifecareFamilyCareClient.getServices(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String personId, final LocalDate startDate, final LocalDate endDate) {
+	@Override
+	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching executions", () -> lifecareFamilyCareClient.getExecutions(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String personId, final LocalDate startDate, final LocalDate endDate) {
+	@Override
+	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching resource allocations", () -> lifecareFamilyCareClient.getResourceAllocations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public List<User> getUsers(final Integer limit, final Integer offset, final String modifiedAfter, final String modifiedBefore) {
+	@Override
+	public List<User> getUsers(final String municipalityId, final Integer limit, final Integer offset, final String modifiedAfter, final String modifiedBefore) {
 		return call("fetching users", () -> lifecareFamilyCareClient.getUsers(limit, offset, modifiedAfter, modifiedBefore));
 	}
 
-	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String personId, final LocalDate startDate, final LocalDate endDate) {
+	@Override
+	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching documents", () -> lifecareFamilyCareClient.getDocuments(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
 	// ---- Write-back (actualisation + calculation) and the proposals that drive it ----------------------------------
 
-	public byte[] getDocumentContent(final String id) {
+	@Override
+	public byte[] getDocumentContent(final String municipalityId, final String id) {
 		return call("fetching document content", () -> lifecareFamilyCareClient.getDocumentContent(id));
 	}
 
-	public PersonBasedAktualiseringProposalDTO getActualisationProposal(final String personId) {
+	@Override
+	public PersonBasedAktualiseringProposalDTO getActualisationProposal(final String municipalityId, final String personId) {
 		return call("fetching actualisation proposal", () -> lifecareFamilyCareClient.getActualisationProposal(personId));
 	}
 
-	public Integer createActualisation(final PostAktualiseringsBodyRequest body) {
+	@Override
+	public Integer createActualisation(final String municipalityId, final PostAktualiseringsBodyRequest body) {
 		return call("creating actualisation", () -> lifecareFamilyCareClient.createActualisation(body));
 	}
 
-	public PersonBasedCalculationProposalDTO getCalculationProposal(final String personId) {
+	@Override
+	public PersonBasedCalculationProposalDTO getCalculationProposal(final String municipalityId, final String personId) {
 		return call("fetching calculation proposal", () -> lifecareFamilyCareClient.getCalculationProposal(personId));
 	}
 
-	public Integer createCalculation(final PostCalculationBodyRequest body) {
+	@Override
+	public Integer createCalculation(final String municipalityId, final PostCalculationBodyRequest body) {
 		return call("creating calculation", () -> lifecareFamilyCareClient.createCalculation(body));
 	}
 
@@ -142,7 +167,8 @@ public class LifecareFamilyCareIntegration {
 	 * {@code Content} part named after the file. Everything sent this way is a generated or uploaded PDF, so the part is
 	 * typed as {@code application/pdf}. No payload is logged.
 	 */
-	public void postActualisationAttachment(final Integer actualisationId, final String documentType, final String documentSenderType,
+	@Override
+	public void postActualisationAttachment(final String municipalityId, final Integer actualisationId, final String documentType, final String documentSenderType,
 		final String title, final String senderName, final String fileName, final byte[] content) {
 
 		final var file = new ByteArrayMultipartFile("Content", fileName, PDF_MIME_TYPE, content);

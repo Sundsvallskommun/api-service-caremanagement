@@ -48,7 +48,7 @@ public class FinancialAssistanceLifecareService {
 		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
 		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
 
-		return lifecareCaseHistoryService.listCalculations(applicant, fromDate, toDate).stream()
+		return lifecareCaseHistoryService.listCalculations(municipalityId, applicant, fromDate, toDate).stream()
 			.map(LifecareHistoryMapper::toCalculation)
 			.toList();
 	}
@@ -63,7 +63,7 @@ public class FinancialAssistanceLifecareService {
 		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
 		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
 
-		return lifecareCaseHistoryService.listDecisions(applicant, fromDate, toDate).stream()
+		return lifecareCaseHistoryService.listDecisions(municipalityId, applicant, fromDate, toDate).stream()
 			.map(LifecareHistoryMapper::toDecision)
 			.toList();
 	}
@@ -88,7 +88,7 @@ public class FinancialAssistanceLifecareService {
 		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
 		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
 
-		return lifecareCaseHistoryService.listDocuments(applicant, fromDate, toDate).stream()
+		return lifecareCaseHistoryService.listDocuments(municipalityId, applicant, fromDate, toDate).stream()
 			.map(LifecareHistoryMapper::toDocument)
 			.toList();
 	}
@@ -105,7 +105,7 @@ public class FinancialAssistanceLifecareService {
 		if (!owned) {
 			throw Problem.valueOf(NOT_FOUND, DOCUMENT_NOT_FOUND_MESSAGE.formatted(documentId));
 		}
-		return lifecareCaseHistoryService.documentContent(documentId);
+		return lifecareCaseHistoryService.documentContent(municipalityId, documentId);
 	}
 
 	/** Resolve a partyId to the personnummer the Lifecare/SSBTEK pipeline needs, or 404 when the citizen is unknown. */

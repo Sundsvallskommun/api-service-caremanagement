@@ -31,11 +31,14 @@ import static java.time.Month.JUNE;
 import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CalculationServiceTest {
+
+	private static final String MUNICIPALITY_ID = "2281";
 
 	private static final String APPLICANT = "199001011234";
 	private static final YearMonth MONTH = YearMonth.of(2026, JUNE);
@@ -69,10 +72,10 @@ class CalculationServiceTest {
 		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
 			bostadsbidrag()
 		});
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
-		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of());
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, MONTH)).thenReturn(List.of());
 
-		final var lines = service.incomeLines(APPLICANT, MONTH, "[json]");
+		final var lines = service.incomeLines(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]");
 
 		assertThat(lines).singleElement().satisfies(line -> {
 			assertThat(line.typeId()).isEqualTo(20);
@@ -87,20 +90,20 @@ class CalculationServiceTest {
 		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
 			bostadsbidrag()
 		});
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
-		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH))
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, MONTH))
 			.thenThrow(new IllegalStateException("Lifecare unavailable"));
 
 		// an income counted twice surfaces as a duplicate warning; one silently withheld surfaces as nothing
-		assertThat(service.incomeLines(APPLICANT, MONTH, "[json]")).hasSize(1);
+		assertThat(service.incomeLines(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]")).hasSize(1);
 	}
 
 	@Test
 	void applicationIncomeLinesResolveAgainstProposal() {
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal()
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal()
 			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(11).name("Lön efter skatt")));
 
-		final var lines = service.applicationIncomeLines(APPLICANT, List.of(
+		final var lines = service.applicationIncomeLines(MUNICIPALITY_ID, APPLICANT, List.of(
 			new ApplicationIncome("SALARY", new BigDecimal("18500"), LocalDate.of(2026, MAY, 25), ApplicantRole.APPLICANT)));
 
 		assertThat(lines).singleElement().satisfies(line -> {
@@ -118,10 +121,10 @@ class CalculationServiceTest {
 		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
 			bostadsbidrag()
 		});
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
-		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenThrow(new RuntimeException("FamilyCare down"));
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, MONTH)).thenThrow(new RuntimeException("FamilyCare down"));
 
-		final var completeness = service.completeness(APPLICANT, MONTH, "[json]");
+		final var completeness = service.completeness(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]");
 
 		assertThat(completeness.informationComplete()).isTrue();
 		assertThat(completeness.missingIncomeTypes()).isEmpty();
@@ -132,10 +135,10 @@ class CalculationServiceTest {
 		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
 			bostadsbidrag()
 		});
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal());
-		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag", "Dagersättning"));
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag", "Dagersättning"));
 
-		final var completeness = service.completeness(APPLICANT, MONTH, "[json]");
+		final var completeness = service.completeness(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]");
 
 		assertThat(completeness.informationComplete()).isFalse();
 		assertThat(completeness.missingIncomeTypes()).containsExactly("Dagersättning");
@@ -143,17 +146,17 @@ class CalculationServiceTest {
 
 	@Test
 	void selectNormIdPicksTheNormCoveringTheMonth() {
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal()
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal()
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(99).fromDate("2026-01-01").toDate("2026-12-31")));
 
-		assertThat(service.selectNormId(APPLICANT, MONTH)).isEqualTo(99);
+		assertThat(service.selectNormId(MUNICIPALITY_ID, APPLICANT, MONTH)).isEqualTo(99);
 	}
 
 	@Test
 	void commitEffectiveAssemblesIncomesExpensesAndPersonsAndPosts() {
-		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(APPLICANT)).thenReturn(proposal()
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal()
 			.addCalculationExpenseTypesItem(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Boendekostnad")));
-		when(lifecareFamilyCareIntegrationMock.createCalculation(any(PostCalculationBodyRequest.class))).thenReturn(5000);
+		when(lifecareFamilyCareIntegrationMock.createCalculation(eq(MUNICIPALITY_ID), any(PostCalculationBodyRequest.class))).thenReturn(5000);
 
 		final var incomes = List.of(new EffectiveIncome(20, BigDecimal.valueOf(1850.0), null, null, null, "SSBTEK"));
 		final var expenses = List.of(
@@ -161,11 +164,11 @@ class CalculationServiceTest {
 			new EffectiveExpense("UNMAPPED_NONSENSE", "EXPENSE", BigDecimal.valueOf(100.0), BigDecimal.valueOf(100.0), null)); // skipped (no FamilyCare id)
 		final var persons = List.of(new EffectivePerson("p1", 30, null, null));
 
-		final var calculationId = service.commitEffective(APPLICANT, MONTH, new CalculationHeader(7, null, null, null, null, null), incomes, expenses, persons);
+		final var calculationId = service.commitEffective(MUNICIPALITY_ID, APPLICANT, MONTH, new CalculationHeader(7, null, null, null, null, null), incomes, expenses, persons);
 
 		assertThat(calculationId).isEqualTo(5000);
 		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
-		verify(lifecareFamilyCareIntegrationMock).createCalculation(captor.capture());
+		verify(lifecareFamilyCareIntegrationMock).createCalculation(eq(MUNICIPALITY_ID), captor.capture());
 		final var body = captor.getValue();
 		assertThat(body.getNormId()).isEqualTo(7); // override applied
 		assertThat(body.getCalculationIncomes()).singleElement().satisfies(income -> assertThat(income.getId()).isEqualTo(20));

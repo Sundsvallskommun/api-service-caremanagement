@@ -11,7 +11,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.util.Optional.ofNullable;
@@ -32,11 +32,11 @@ import static java.util.Optional.ofNullable;
 @Service
 public class CaseworkerResolver {
 
-	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
+	private final LifecareFamilyCare lifecareFamilyCareIntegration;
 	private final int lookbackMonths;
 	private final int usersLimit;
 
-	CaseworkerResolver(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration,
+	CaseworkerResolver(final LifecareFamilyCare lifecareFamilyCareIntegration,
 		@Value("${integration.lifecare-familycare.caseworker-lookback-months:36}") final int lookbackMonths,
 		@Value("${integration.lifecare-familycare.users-limit:1000}") final int usersLimit) {
 		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
@@ -51,17 +51,17 @@ public class CaseworkerResolver {
 	 * @param  referenceDate the intake date (bounds the Service lookback window)
 	 * @return               the resolved caseworker, or empty when none can be determined
 	 */
-	public Optional<ResolvedCaseworker> resolve(final String personId, final LocalDate referenceDate) {
-		return mostRecentServiceCaseworker(personId, referenceDate)
-			.flatMap(this::findUserByFullName)
+	public Optional<ResolvedCaseworker> resolve(final String municipalityId, final String personId, final LocalDate referenceDate) {
+		return mostRecentServiceCaseworker(municipalityId, personId, referenceDate)
+			.flatMap(name -> findUserByFullName(municipalityId, name))
 			.map(CaseworkerResolver::toResolvedCaseworker);
 	}
 
 	/** The caseworker display name on the person's most recent Service (by start date) in the lookback window. */
-	private Optional<String> mostRecentServiceCaseworker(final String personId, final LocalDate referenceDate) {
+	private Optional<String> mostRecentServiceCaseworker(final String municipalityId, final String personId, final LocalDate referenceDate) {
 		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		return ofNullable(lifecareFamilyCareIntegration.getServices(personId, start, referenceDate))
+		return ofNullable(lifecareFamilyCareIntegration.getServices(municipalityId, personId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedServiceDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
@@ -72,8 +72,8 @@ public class CaseworkerResolver {
 	}
 
 	/** The first enabled FamilyCare user whose full name matches the given caseworker name (case-insensitive, trimmed). */
-	private Optional<User> findUserByFullName(final String caseworkerName) {
-		return ofNullable(lifecareFamilyCareIntegration.getUsers(usersLimit, null, null, null))
+	private Optional<User> findUserByFullName(final String municipalityId, final String caseworkerName) {
+		return ofNullable(lifecareFamilyCareIntegration.getUsers(municipalityId, usersLimit, null, null, null))
 			.orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
 			.filter(user -> !Boolean.TRUE.equals(user.getDisabled()))

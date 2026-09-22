@@ -53,7 +53,7 @@ class ProposalBasisServiceTest {
 		final var draft = CalculationDraft.create().withApplicationMonth("2026-06").withIncomeSum(new BigDecimal("3000")).withExpenseSum(new BigDecimal("800")).withSpecialExpenseSum(new BigDecimal("250"));
 		when(draftServiceMock.get(ERRAND_ID)).thenReturn(draft);
 		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(Optional.of(APPLICANT)));
-		when(lifecareCaseServiceMock.previousHousehold(APPLICANT, YearMonth.parse("2026-06"))).thenReturn(new PreviousHousehold(Set.of(), 1, new BigDecimal("6200"), null, "Riksnorm"));
+		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.parse("2026-06"))).thenReturn(new PreviousHousehold(Set.of(), 1, new BigDecimal("6200"), null, "Riksnorm"));
 
 		final var basis = service.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -68,7 +68,7 @@ class ProposalBasisServiceTest {
 	void basisWithoutPreviousNormLeavesTheAmountUnknown() {
 		when(draftServiceMock.get(ERRAND_ID)).thenReturn(CalculationDraft.create().withApplicationMonth("2026-06"));
 		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(Optional.of(APPLICANT)));
-		when(lifecareCaseServiceMock.previousHousehold(APPLICANT, YearMonth.parse("2026-06"))).thenReturn(PreviousHousehold.empty());
+		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.parse("2026-06"))).thenReturn(PreviousHousehold.empty());
 
 		final var basis = service.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -80,7 +80,7 @@ class ProposalBasisServiceTest {
 	void basisToleratesAFailedLifecareRead() {
 		when(draftServiceMock.get(ERRAND_ID)).thenReturn(CalculationDraft.create().withApplicationMonth("2026-06"));
 		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(Optional.of(APPLICANT)));
-		when(lifecareCaseServiceMock.previousHousehold(APPLICANT, YearMonth.parse("2026-06"))).thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
+		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.parse("2026-06"))).thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
 
 		assertThat(service.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).estimatedAmount()).isEmpty();
 	}

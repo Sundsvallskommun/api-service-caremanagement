@@ -22,6 +22,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class PaymentStatusServiceTest {
 
+	private static final String MUNICIPALITY_ID = "2281";
+
 	@Mock
 	private LifecareFamilyCareIntegration lifecareFamilyCareIntegrationMock;
 
@@ -31,10 +33,10 @@ class PaymentStatusServiceTest {
 	@Test
 	void effectuatedWhenMatchingPaymentExists() {
 		final var payment = new PersonBasedPaymentDTO().payDate("2026-05-27").concernedMonth("2026-06");
-		when(lifecareFamilyCareIntegrationMock.getPayments(eq("199001011234"), any(), any()))
+		when(lifecareFamilyCareIntegrationMock.getPayments(eq(MUNICIPALITY_ID), eq("199001011234"), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().result(List.of(payment)));
 
-		final var status = service.read("199001011234", YearMonth.of(2026, JUNE));
+		final var status = service.read(MUNICIPALITY_ID, "199001011234", YearMonth.of(2026, JUNE));
 
 		assertThat(status.effectuated()).isTrue();
 		assertThat(status.paymentDate()).isEqualTo("2026-05-27");
@@ -43,10 +45,10 @@ class PaymentStatusServiceTest {
 	@Test
 	void notEffectuatedWhenPaymentConcernsAnotherMonth() {
 		final var payment = new PersonBasedPaymentDTO().payDate("2026-04-27").concernedMonth("2026-05");
-		when(lifecareFamilyCareIntegrationMock.getPayments(any(), any(), any()))
+		when(lifecareFamilyCareIntegrationMock.getPayments(eq(MUNICIPALITY_ID), any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().result(List.of(payment)));
 
-		final var status = service.read("199001011234", YearMonth.of(2026, JUNE));
+		final var status = service.read(MUNICIPALITY_ID, "199001011234", YearMonth.of(2026, JUNE));
 
 		assertThat(status.effectuated()).isFalse();
 		assertThat(status.paymentDate()).isNull();
@@ -55,19 +57,19 @@ class PaymentStatusServiceTest {
 	@Test
 	void notEffectuatedWhenPaymentHasNoPayDate() {
 		final var payment = new PersonBasedPaymentDTO().concernedMonth("2026-06");
-		when(lifecareFamilyCareIntegrationMock.getPayments(any(), any(), any()))
+		when(lifecareFamilyCareIntegrationMock.getPayments(eq(MUNICIPALITY_ID), any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().result(List.of(payment)));
 
-		final var status = service.read("199001011234", YearMonth.of(2026, JUNE));
+		final var status = service.read(MUNICIPALITY_ID, "199001011234", YearMonth.of(2026, JUNE));
 
 		assertThat(status.effectuated()).isFalse();
 	}
 
 	@Test
 	void notEffectuatedWhenResponseIsNull() {
-		when(lifecareFamilyCareIntegrationMock.getPayments(any(), any(), any())).thenReturn(null);
+		when(lifecareFamilyCareIntegrationMock.getPayments(eq(MUNICIPALITY_ID), any(), any(), any())).thenReturn(null);
 
-		final var status = service.read("199001011234", YearMonth.of(2026, JUNE));
+		final var status = service.read(MUNICIPALITY_ID, "199001011234", YearMonth.of(2026, JUNE));
 
 		assertThat(status.effectuated()).isFalse();
 		assertThat(status.paymentDate()).isNull();
@@ -75,11 +77,11 @@ class PaymentStatusServiceTest {
 
 	@Test
 	void queriesThePriorMonthThroughApplicationMonthWindow() {
-		when(lifecareFamilyCareIntegrationMock.getPayments(any(), any(), any()))
+		when(lifecareFamilyCareIntegrationMock.getPayments(eq(MUNICIPALITY_ID), any(), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().result(List.of()));
 
-		service.read("199001011234", YearMonth.of(2026, JUNE));
+		service.read(MUNICIPALITY_ID, "199001011234", YearMonth.of(2026, JUNE));
 
-		verify(lifecareFamilyCareIntegrationMock).getPayments("199001011234", LocalDate.parse("2026-05-01"), LocalDate.parse("2026-06-30"));
+		verify(lifecareFamilyCareIntegrationMock).getPayments(MUNICIPALITY_ID, "199001011234", LocalDate.parse("2026-05-01"), LocalDate.parse("2026-06-30"));
 	}
 }

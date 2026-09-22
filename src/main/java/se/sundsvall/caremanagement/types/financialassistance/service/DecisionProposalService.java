@@ -100,7 +100,7 @@ public class DecisionProposalService {
 		final var basis = proposalBasisService.basis(municipalityId, namespace, errandId);
 		final var draft = basis.draft();
 		final var previousDecision = basis.household().applicantPersonalNumber()
-			.flatMap(applicant -> basis.applicationMonth().flatMap(month -> previousDecision(applicant, month)));
+			.flatMap(applicant -> basis.applicationMonth().flatMap(month -> previousDecision(municipalityId, applicant, month)));
 		final var partiallyRejected = ProposalMapper.partiallyRejectedExpenses(draft);
 		final var outcome = basis.estimatedAmount().map(amount -> ProposalMapper.outcome(amount, partiallyRejected));
 		final var reason = previousDecision.map(DecisionView::reason).filter(text -> hasText(text));
@@ -164,9 +164,9 @@ public class DecisionProposalService {
 	 * The applicant's most recent Lifecare decision within the lookback window ending at the application month —
 	 * Lifecare lists newest-first, so the first one. Best-effort: a failed read degrades to "no previous decision".
 	 */
-	private Optional<DecisionView> previousDecision(final String applicant, final YearMonth applicationMonth) {
+	private Optional<DecisionView> previousDecision(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
-			return lifecareCaseHistoryService.listDecisions(applicant, applicationMonth.minusMonths(PREVIOUS_DECISION_LOOKBACK_MONTHS).atDay(1), applicationMonth.atEndOfMonth())
+			return lifecareCaseHistoryService.listDecisions(municipalityId, applicant, applicationMonth.minusMonths(PREVIOUS_DECISION_LOOKBACK_MONTHS).atDay(1), applicationMonth.atEndOfMonth())
 				.stream()
 				.findFirst();
 		} catch (final RuntimeException e) {
