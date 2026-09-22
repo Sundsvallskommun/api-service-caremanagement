@@ -11,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentLifecareResult;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPayeeRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPaymentRepository;
@@ -26,6 +27,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
@@ -384,5 +387,108 @@ class PaymentServiceTest {
 		final var captor = ArgumentCaptor.forClass(FaPaymentEntity.class);
 		verify(repositoryMock).save(captor.capture());
 		assertThat(captor.getValue().getPayeeId()).isEqualTo(payeeId);
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
+	// The REGISTER_PAYMENT robot's report - the only thing that moves a payment out of PENDING_REGISTRATION
+	// ------------------------------------------------------------------------------------------------------------------
+
+	private static FaPaymentEntity pendingPayment() {
+		return entity("b1", null).withStatus("PENDING_REGISTRATION");
+	}
+
+	@Test
+	void registeredStampsTheLifecareIdAndClearsThePendingStatus() {
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(pendingPayment()));
+		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
+			PaymentLifecareResult.create().withOutcome("REGISTERED").withLifecarePaymentId("4"));
+
+		assertThat(result.getStatus()).isEqualTo("REGISTERED");
+		assertThat(result.getLifecareId()).isEqualTo("4");
+		assertThat(result.getLifecareDetail()).isNull();
+		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	@Test
+	void alreadyExistsCountsAsSuccess() {
+		// The caseworker's intent - this payment must exist in Lifecare - is satisfied either way.
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(pendingPayment()));
+		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
+			PaymentLifecareResult.create().withOutcome("ALREADY_EXISTS"));
+
+		assertThat(result.getStatus()).isEqualTo("REGISTERED");
+	}
+
+	@Test
+	void aReReportWithoutAnIdKeepsTheOneAlreadyStored() {
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(pendingPayment().withLifecareId("4")));
+		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
+			PaymentLifecareResult.create().withOutcome("ALREADY_EXISTS"));
+
+		assertThat(result.getLifecareId()).isEqualTo("4");
+	}
+
+	@Test
+	void failedStoresLifecaresOwnMessage() {
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(pendingPayment()));
+		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
+			PaymentLifecareResult.create().withOutcome("FAILED").withDetail("Betalningsmottagaren saknas i Lifecare"));
+
+		assertThat(result.getStatus()).isEqualTo("FAILED");
+		assertThat(result.getLifecareDetail()).isEqualTo("Betalningsmottagaren saknas i Lifecare");
+	}
+
+	@Test
+	void failedWithoutDetailYields400() {
+		// A FAILED with no reason is useless to the caseworker, who is the one who has to act on it.
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(pendingPayment()));
+
+		assertThatThrownBy(() -> service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
+			PaymentLifecareResult.create().withOutcome("FAILED")))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+		verify(repositoryMock, never()).save(any(FaPaymentEntity.class));
+	}
+
+	@Test
+	void failedOnAnAlreadyRegisteredPaymentYields409() {
+		// Would silently un-register a payment that exists in Lifecare.
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null).withStatus("REGISTERED")));
+
+		assertThatThrownBy(() -> service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
+			PaymentLifecareResult.create().withOutcome("FAILED").withDetail("nagot gick fel")))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", CONFLICT);
+		verify(repositoryMock, never()).save(any(FaPaymentEntity.class));
+	}
+
+	@Test
+	void reportingOnAMissingPaymentYields404() {
+		when(repositoryMock.findByIdAndErrandId("missing", ERRAND_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing",
+			PaymentLifecareResult.create().withOutcome("REGISTERED")))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+	}
+
+	@Test
+	void everyStatusStillFitsTheColumn() throws Exception {
+		// The same guard everyStatusFitsTheColumn applies, now that REGISTERED and FAILED joined the vocabulary.
+		final var column = FaPaymentEntity.class.getDeclaredField("status").getAnnotation(jakarta.persistence.Column.class);
+		for (final var field : PaymentService.class.getDeclaredFields()) {
+			if (field.getName().startsWith("STATUS_")) {
+				field.setAccessible(true);
+				assertThat((String) field.get(null)).hasSizeLessThanOrEqualTo(column.length());
+			}
+		}
 	}
 }

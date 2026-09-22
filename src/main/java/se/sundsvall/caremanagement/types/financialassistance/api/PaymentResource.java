@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentCount;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentLifecareResult;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.PaymentService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
@@ -116,6 +117,28 @@ class PaymentResource {
 		@ValidUuid @PathVariable final String paymentId) {
 
 		return ok(service.get(municipalityId, namespace, errandId, paymentId));
+	}
+
+	@PostMapping(path = "/{paymentId}/lifecare-result", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Report what the REGISTER_PAYMENT robot did in Lifecare",
+		description = "The counterpart of the ADD_PAYEE report, and the only thing that moves a payment out of PENDING_REGISTRATION. "
+			+ "REGISTERED and ALREADY_EXISTS both set status=REGISTERED and store lifecarePaymentId as the payment's lifecareId; "
+			+ "REGISTERED means the payment exists in Lifecare, not that it has been paid out. FAILED requires detail, which must be "
+			+ "Lifecare's own message since it is shown to the caseworker as-is. Re-reporting the same outcome is idempotent; "
+			+ "reporting FAILED on an already REGISTERED payment is a 409.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
+			@ApiResponse(responseCode = "409", description = "Conflict", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<Payment> reportPaymentLifecareResult(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@ValidUuid @PathVariable final String errandId,
+		@ValidUuid @PathVariable final String paymentId,
+		@Valid @NotNull @RequestBody final PaymentLifecareResult result) {
+
+		return ok(service.recordLifecareResult(municipalityId, namespace, errandId, paymentId, result));
 	}
 
 	@PutMapping(path = "/{paymentId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)

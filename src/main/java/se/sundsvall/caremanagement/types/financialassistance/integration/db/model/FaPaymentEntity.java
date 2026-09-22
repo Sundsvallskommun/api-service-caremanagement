@@ -67,6 +67,10 @@ public class FaPaymentEntity {
 	@Column(name = "lifecare_id", length = 64)
 	private String lifecareId;
 
+	/** Lifecare's own message when the REGISTER_PAYMENT robot reported FAILED — shown to the caseworker as-is. */
+	@Column(name = "lifecare_detail", length = 1024)
+	private String lifecareDetail;
+
 	@Column(name = "status", length = 32)
 	private String status;
 
@@ -220,6 +224,19 @@ public class FaPaymentEntity {
 
 	public FaPaymentEntity withLifecareId(final String lifecareId) {
 		this.lifecareId = lifecareId;
+		return this;
+	}
+
+	public String getLifecareDetail() {
+		return lifecareDetail;
+	}
+
+	public void setLifecareDetail(final String lifecareDetail) {
+		this.lifecareDetail = lifecareDetail;
+	}
+
+	public FaPaymentEntity withLifecareDetail(final String lifecareDetail) {
+		this.lifecareDetail = lifecareDetail;
 		return this;
 	}
 
@@ -557,6 +574,7 @@ public class FaPaymentEntity {
 		final FaPaymentEntity that = (FaPaymentEntity) o;
 		return excludedFromPayment == that.excludedFromPayment && usesOcr == that.usesOcr && Objects.equals(id, that.id)
 			&& Objects.equals(errandId, that.errandId) && Objects.equals(source, that.source) && Objects.equals(lifecareId, that.lifecareId)
+			&& Objects.equals(lifecareDetail, that.lifecareDetail)
 			&& Objects.equals(status, that.status) && Objects.equals(moneyType, that.moneyType) && Objects.equals(paymentDate, that.paymentDate)
 			&& Objects.equals(amount, that.amount) && Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(accountingCode, that.accountingCode)
 			&& Objects.equals(accountingDate, that.accountingDate) && Objects.equals(payeeStakeholderId, that.payeeStakeholderId)
@@ -571,7 +589,7 @@ public class FaPaymentEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, source, lifecareId, status, moneyType, paymentDate, amount, applicationMonth, accountingCode, accountingDate,
+		return Objects.hash(id, errandId, source, lifecareId, lifecareDetail, status, moneyType, paymentDate, amount, applicationMonth, accountingCode, accountingDate,
 			excludedFromPayment, payeeStakeholderId, payeeId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode, payeeCity,
 			clearingNumber, accountNumber, localPaymentNumber, invoiceNumber, usesOcr, created, modified);
 	}
@@ -583,6 +601,7 @@ public class FaPaymentEntity {
 			", errandId='" + errandId + '\'' +
 			", source='" + source + '\'' +
 			", lifecareId='" + lifecareId + '\'' +
+			", lifecareDetail='" + lifecareDetail + '\'' +
 			", status='" + status + '\'' +
 			", moneyType='" + moneyType + '\'' +
 			", paymentDate=" + paymentDate +

@@ -13,6 +13,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentCount;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentLifecareResult;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
 import se.sundsvall.caremanagement.types.financialassistance.service.PaymentService;
 
@@ -148,6 +149,27 @@ class PaymentResourceTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getMoneyType()).isEqualTo("ANNAN_TYP");
 		verify(paymentServiceMock).update(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(PAYMENT_ID), any(PaymentRequest.class));
+	}
+
+	@Test
+	void reportLifecareResult() {
+		when(paymentServiceMock.recordLifecareResult(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(PAYMENT_ID), any(PaymentLifecareResult.class)))
+			.thenReturn(Payment.create().withId(PAYMENT_ID).withStatus("REGISTERED").withLifecareId("4"));
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PAYMENT_PATH + "/{paymentId}/lifecare-result").build(withPayment()))
+			.contentType(APPLICATION_JSON)
+			.bodyValue(PaymentLifecareResult.create().withOutcome("REGISTERED").withLifecarePaymentId("4"))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(Payment.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getStatus()).isEqualTo("REGISTERED");
+		assertThat(response.getLifecareId()).isEqualTo("4");
+		verify(paymentServiceMock).recordLifecareResult(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(PAYMENT_ID), any(PaymentLifecareResult.class));
 	}
 
 	@Test

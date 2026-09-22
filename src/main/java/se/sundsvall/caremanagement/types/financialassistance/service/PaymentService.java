@@ -3,8 +3,10 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payment;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentLifecareResult;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPayeeRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPaymentRepository;
@@ -15,6 +17,9 @@ import se.sundsvall.dept44.problem.Problem;
 import static java.util.Comparator.comparing;
 import static java.util.Comparator.naturalOrder;
 import static java.util.Comparator.nullsLast;
+import static java.util.Optional.ofNullable;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
 
@@ -39,9 +44,9 @@ import static org.springframework.util.StringUtils.hasText;
  * draft payment without setting the robot off; queuing the {@code REGISTER_PAYMENT} RPA task (which fetches the rest
  * of the payment via {@code GET .../payments/{paymentId}}, carrying only the {@code paymentId} in the queue item, so
  * personal data never enters the Orchestrator queue) is a separate, explicit {@code POST .../rpa-tasks} call — the
- * same two-call shape every other RPA action in this service uses. Nothing else in this service ever changes
- * {@code status}, and nothing outside it does either: the {@code REGISTER_PAYMENT} robot has no result endpoint to
- * report on, so a decided row stays {@code PENDING_REGISTRATION} whatever happens in Lifecare.
+ * same two-call shape every other RPA action in this service uses. The one thing that does move {@code status} is the
+ * robot's own report through {@link #recordLifecareResult}: {@code PENDING_REGISTRATION} becomes {@code REGISTERED}
+ * or {@code FAILED} when the {@code REGISTER_PAYMENT} robot says what happened.
  * </p>
  */
 @Service
@@ -53,9 +58,23 @@ public class PaymentService {
 	/**
 	 * A payment created by "Besluta och utbetala" and queued to the robot. Deliberately not {@code DRAFT}: a row the
 	 * caseworker has decided on is not a draft, and calling it one would make the status useless for seeing what is
-	 * actually waiting to be registered in Lifecare. Nothing clears it yet — the robot has no callback (open question).
+	 * actually waiting to be registered in Lifecare. The {@code REGISTER_PAYMENT} robot clears it by reporting through
+	 * {@link #recordLifecareResult}.
 	 */
 	static final String STATUS_PENDING_REGISTRATION = "PENDING_REGISTRATION";
+
+	/**
+	 * The robot reported the payment into Lifecare. It exists there; whether it has been paid out is a separate question.
+	 */
+	static final String STATUS_REGISTERED = "REGISTERED";
+
+	/** The robot could not register the payment. Lifecare's own reason is on the row, and the caseworker sees it. */
+	static final String STATUS_FAILED = "FAILED";
+
+	static final String OUTCOME_FAILED = "FAILED";
+
+	private static final String ERROR_DETAIL_REQUIRED = "detail is required when outcome is FAILED - it must be Lifecare's own message, since it is shown to the caseworker";
+	private static final String ERROR_ALREADY_REGISTERED = "payment is already REGISTERED in Lifecare - a later FAILED would silently un-register a payment that exists there";
 
 	private final ErrandService errandService;
 	private final FaPaymentRepository paymentRepository;
@@ -156,6 +175,45 @@ public class PaymentService {
 		return toPayment(paymentRepository.save(entity));
 	}
 
+	/**
+	 * Record the {@code REGISTER_PAYMENT} robot's report — the counterpart of the {@code ADD_PAYEE} one, and the only
+	 * thing that moves a payment out of {@code PENDING_REGISTRATION}. {@code REGISTERED} and {@code ALREADY_EXISTS}
+	 * both count as success: the caseworker's intent, "this payment must exist in Lifecare", is satisfied either way.
+	 *
+	 * <p>
+	 * The Lifecare id goes into the existing {@code lifecareId} — the field was always documented as the payment's id
+	 * in Lifecare once it exists there. Re-posting the same outcome is idempotent; reporting {@code FAILED} on a row
+	 * already {@code REGISTERED} is a {@code 409}, because that would silently un-register a payment that exists in
+	 * Lifecare, exactly as it would for a payee.
+	 * </p>
+	 */
+	@Transactional
+	public Payment recordLifecareResult(final String municipalityId, final String namespace, final String errandId, final String paymentId,
+		final PaymentLifecareResult result) {
+
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		final var entity = requirePayment(errandId, paymentId);
+
+		if (OUTCOME_FAILED.equals(result.getOutcome())) {
+			if (!hasText(result.getDetail())) {
+				throw Problem.valueOf(BAD_REQUEST, ERROR_DETAIL_REQUIRED);
+			}
+			if (STATUS_REGISTERED.equals(entity.getStatus())) {
+				throw Problem.valueOf(CONFLICT, ERROR_ALREADY_REGISTERED);
+			}
+			return toPayment(paymentRepository.save(entity
+				.withStatus(STATUS_FAILED)
+				.withLifecareDetail(result.getDetail())));
+		}
+
+		// A re-report without an id must not wipe the one an earlier report already stored.
+		final var lifecareId = ofNullable(result.getLifecarePaymentId()).filter(StringUtils::hasText).orElse(entity.getLifecareId());
+		return toPayment(paymentRepository.save(entity
+			.withStatus(STATUS_REGISTERED)
+			.withLifecareId(lifecareId)
+			.withLifecareDetail(null)));
+	}
+
 	/** Remove a payment from an errand. Scoped: throws {@code 404} when the errand or payment is missing here. */
 	@Transactional
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String paymentId) {
@@ -212,6 +270,7 @@ public class PaymentService {
 			.withId(entity.getId())
 			.withSource(entity.getSource())
 			.withLifecareId(entity.getLifecareId())
+			.withLifecareDetail(entity.getLifecareDetail())
 			.withStatus(entity.getStatus())
 			.withMoneyType(entity.getMoneyType())
 			.withPaymentDate(entity.getPaymentDate())

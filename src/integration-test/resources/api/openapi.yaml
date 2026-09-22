@@ -2803,6 +2803,81 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payments/{paymentId}/lifecare-result:
+    post:
+      tags:
+      - Financial Assistance · Payments
+      summary: Report what the REGISTER_PAYMENT robot did in Lifecare
+      description: "The counterpart of the ADD_PAYEE report, and the only thing that\
+        \ moves a payment out of PENDING_REGISTRATION. REGISTERED and ALREADY_EXISTS\
+        \ both set status=REGISTERED and store lifecarePaymentId as the payment's\
+        \ lifecareId; REGISTERED means the payment exists in Lifecare, not that it\
+        \ has been paid out. FAILED requires detail, which must be Lifecare's own\
+        \ message since it is shown to the caseworker as-is. Re-reporting the same\
+        \ outcome is idempotent; reporting FAILED on an already REGISTERED payment\
+        \ is a 409."
+      operationId: reportPaymentLifecareResult
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentLifecareResult"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payees:
     get:
       tags:
@@ -8297,10 +8372,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -8534,17 +8609,27 @@ components:
             one.
           examples:
           - "987654"
+        lifecareDetail:
+          type: string
+          description: Lifecare's own message when the REGISTER_PAYMENT robot reported
+            FAILED — shown to the caseworker as-is
+          examples:
+          - Betalningsmottagaren saknas i Lifecare
+          readOnly: true
         status:
           type: string
           description: "Server-managed lifecycle status. DRAFT for a caseworker's\
             \ saved draft; PENDING_REGISTRATION for one a decision created, waiting\
-            \ for the robot to register it in Lifecare. Nothing moves a row out of\
-            \ PENDING_REGISTRATION yet — the REGISTER_PAYMENT robot has no result\
-            \ endpoint to report back on, so treat it as 'decided, Lifecare state\
-            \ unknown' rather than as a terminal outcome."
+            \ for the robot; REGISTERED once the REGISTER_PAYMENT robot has reported\
+            \ it into Lifecare (REGISTERED means it exists there, not that it has\
+            \ been paid out — whether it was effectuated is a separate question, asked\
+            \ through POST .../financial-assistance/payment-status); FAILED when the\
+            \ robot could not register it, with Lifecare's reason in lifecareDetail."
           enum:
           - DRAFT
           - PENDING_REGISTRATION
+          - REGISTERED
+          - FAILED
           examples:
           - DRAFT
           readOnly: true
@@ -10665,6 +10750,39 @@ components:
           format: date-time
           description: When the warning was last updated
           readOnly: true
+    PaymentLifecareResult:
+      type: object
+      description: The REGISTER_PAYMENT robot's report on registering a payment in
+        Lifecare.
+      properties:
+        outcome:
+          type: string
+          description: What the robot ended up doing
+          enum:
+          - REGISTERED
+          - ALREADY_EXISTS
+          - FAILED
+          examples:
+          - REGISTERED
+          minLength: 1
+        lifecarePaymentId:
+          type: string
+          description: "The payment id Lifecare gave, when it gave one — what CreatePaymentForService\
+            \ returns. Stored as the payment's lifecareId"
+          examples:
+          - "4"
+          maxLength: 64
+          minLength: 0
+        detail:
+          type: string
+          description: Lifecare's own message. Required when outcome is FAILED — it
+            is shown to the caseworker as-is
+          examples:
+          - Betalningsmottagaren saknas i Lifecare
+          maxLength: 1024
+          minLength: 0
+      required:
+      - outcome
     PayeeRequest:
       type: object
       description: A betalningsmottagare to add by hand on an errand.

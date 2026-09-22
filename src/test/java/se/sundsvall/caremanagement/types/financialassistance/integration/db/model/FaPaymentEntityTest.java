@@ -50,6 +50,7 @@ class FaPaymentEntityTest {
 			.withErrandId("errand")
 			.withSource("LIFECARE")
 			.withLifecareId("987654")
+			.withLifecareDetail("Betalningsmottagaren saknas i Lifecare")
 			.withStatus("DRAFT")
 			.withMoneyType("FORSORJNINGSSTOD")
 			.withPaymentDate(paymentDate)
@@ -81,6 +82,7 @@ class FaPaymentEntityTest {
 		assertThat(entity.getErrandId()).isEqualTo("errand");
 		assertThat(entity.getSource()).isEqualTo("LIFECARE");
 		assertThat(entity.getLifecareId()).isEqualTo("987654");
+		assertThat(entity.getLifecareDetail()).isEqualTo("Betalningsmottagaren saknas i Lifecare");
 		assertThat(entity.getStatus()).isEqualTo("DRAFT");
 		assertThat(entity.getMoneyType()).isEqualTo("FORSORJNINGSSTOD");
 		assertThat(entity.getPaymentDate()).isEqualTo(paymentDate);

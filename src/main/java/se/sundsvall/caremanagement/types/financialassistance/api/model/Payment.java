@@ -34,11 +34,17 @@ public class Payment {
 		+ "payment; always set for a LIFECARE-sourced one.", examples = "987654")
 	private String lifecareId;
 
+	@Schema(description = "Lifecare's own message when the REGISTER_PAYMENT robot reported FAILED — shown to the caseworker as-is",
+		examples = "Betalningsmottagaren saknas i Lifecare",
+		accessMode = Schema.AccessMode.READ_ONLY)
+	private String lifecareDetail;
+
 	@Schema(description = "Server-managed lifecycle status. DRAFT for a caseworker's saved draft; PENDING_REGISTRATION for one a "
-		+ "decision created, waiting for the robot to register it in Lifecare. Nothing moves a row out of "
-		+ "PENDING_REGISTRATION yet — the REGISTER_PAYMENT robot has no result endpoint to report back on, so treat it as "
-		+ "'decided, Lifecare state unknown' rather than as a terminal outcome.", examples = "DRAFT", allowableValues = {
-			"DRAFT", "PENDING_REGISTRATION"
+		+ "decision created, waiting for the robot; REGISTERED once the REGISTER_PAYMENT robot has reported it into Lifecare "
+		+ "(REGISTERED means it exists there, not that it has been paid out — whether it was effectuated is a separate "
+		+ "question, asked through POST .../financial-assistance/payment-status); FAILED when the robot could not register "
+		+ "it, with Lifecare's reason in lifecareDetail.", examples = "DRAFT", allowableValues = {
+			"DRAFT", "PENDING_REGISTRATION", "REGISTERED", "FAILED"
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String status;
 
@@ -169,6 +175,19 @@ public class Payment {
 
 	public Payment withLifecareId(final String lifecareId) {
 		this.lifecareId = lifecareId;
+		return this;
+	}
+
+	public String getLifecareDetail() {
+		return lifecareDetail;
+	}
+
+	public void setLifecareDetail(final String lifecareDetail) {
+		this.lifecareDetail = lifecareDetail;
+	}
+
+	public Payment withLifecareDetail(final String lifecareDetail) {
+		this.lifecareDetail = lifecareDetail;
 		return this;
 	}
 
@@ -516,7 +535,8 @@ public class Payment {
 			return false;
 		final Payment that = (Payment) o;
 		return excludedFromPayment == that.excludedFromPayment && usesOcr == that.usesOcr && Objects.equals(id, that.id)
-			&& Objects.equals(source, that.source) && Objects.equals(lifecareId, that.lifecareId) && Objects.equals(status, that.status)
+			&& Objects.equals(source, that.source) && Objects.equals(lifecareId, that.lifecareId)
+			&& Objects.equals(lifecareDetail, that.lifecareDetail) && Objects.equals(status, that.status)
 			&& Objects.equals(moneyType, that.moneyType) && Objects.equals(paymentDate, that.paymentDate) && Objects.equals(amount, that.amount)
 			&& Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(accountingCode, that.accountingCode) && Objects.equals(reportedOnStakeholderIds, that.reportedOnStakeholderIds)
 			&& Objects.equals(accountingDate, that.accountingDate) && Objects.equals(payeeStakeholderId, that.payeeStakeholderId)
@@ -531,7 +551,7 @@ public class Payment {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, source, lifecareId, status, moneyType, paymentDate, amount, applicationMonth, accountingCode, reportedOnStakeholderIds,
+		return Objects.hash(id, source, lifecareId, lifecareDetail, status, moneyType, paymentDate, amount, applicationMonth, accountingCode, reportedOnStakeholderIds,
 			accountingDate, excludedFromPayment, payeeId, lifecarePayeeId, payeeStakeholderId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode,
 			payeeCity, clearingNumber, accountNumber, localPaymentNumber, invoiceNumber, usesOcr, messageLines, created, modified);
 	}
@@ -542,6 +562,7 @@ public class Payment {
 			"id='" + id + '\'' +
 			", source='" + source + '\'' +
 			", lifecareId='" + lifecareId + '\'' +
+			", lifecareDetail='" + lifecareDetail + '\'' +
 			", status='" + status + '\'' +
 			", moneyType='" + moneyType + '\'' +
 			", paymentDate=" + paymentDate +
