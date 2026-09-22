@@ -21,9 +21,13 @@ import static java.util.Optional.ofNullable;
  * <ul>
  * <li>{@code Decision_dagersattningDagkontroll} — aktivitetsstöd / utvecklings- / etableringsersättning: is the day
  * count readable, and does it match the month? ({@link #dayCheck})</li>
- * <li>{@code Decision_foraldrapenningKontroll} — föräldrapenning: does the day count match the period, and is there a
- * gap since last month's period? ({@link #parentalBenefitCheck})</li>
  * </ul>
+ *
+ * <p>
+ * {@code Decision_foraldrapenningKontroll} used to sit alongside it — day count against the period, plus the gap to
+ * last month's. Verksamheten retired both on 2026-09-21: „detta ska inte göras, denna inkomst kommer inte vara med
+ * på rålistan”. The table is gone from the published DMN and the check with it.
+ * </p>
  *
  * <p>
  * The tables output {@code varning} + {@code regel} and no warning code, so the caller supplies the warning type and
@@ -35,7 +39,6 @@ import static java.util.Optional.ofNullable;
 public class PeriodRulesService {
 
 	static final String DECISION_KEY_DAY_CHECK = "Decision_dagersattningDagkontroll";
-	static final String DECISION_KEY_PARENTAL_BENEFIT = "Decision_foraldrapenningKontroll";
 
 	private static final String OUTPUT_VARNING = "varning";
 	private static final String OUTPUT_REGEL = "regel";
@@ -73,30 +76,6 @@ public class PeriodRulesService {
 		variables.put("uttagnaDagar", days);
 		variables.put("ickeRodaDagar", nonRedDays);
 		return evaluate(municipalityId, DECISION_KEY_DAY_CHECK, variables);
-	}
-
-	/**
-	 * Judge one föräldrapenning payment's day count and its gap to the previous month's period.
-	 *
-	 * @param  municipalityId      the municipality the errand belongs to
-	 * @param  periodReadable      whether the payment's period could be read at all ({@code periodLasbar})
-	 * @param  days                the number of days drawn ({@code uttagnaDagar}), {@code null} when SSBTEK did not say
-	 * @param  daysInPeriod        the number of days the period covers, both ends included ({@code dagarIPerioden})
-	 * @param  previousMonthExists whether föräldrapenning was paid in the comparison period too
-	 * @param  gapDays             days between the comparison period's last day and this period's first
-	 *                             ({@code glappDagar}); {@code null} when there is no previous period to measure from
-	 * @return                     the verdict, best-effort
-	 */
-	public PeriodVerdict parentalBenefitCheck(final String municipalityId, final boolean periodReadable, final BigDecimal days,
-		final Integer daysInPeriod, final boolean previousMonthExists, final Integer gapDays) {
-
-		final var variables = new HashMap<String, Object>();
-		variables.put("periodLasbar", periodReadable);
-		variables.put("uttagnaDagar", days);
-		variables.put("dagarIPerioden", daysInPeriod);
-		variables.put("foregaendeManadFinns", previousMonthExists);
-		variables.put("glappDagar", gapDays);
-		return evaluate(municipalityId, DECISION_KEY_PARENTAL_BENEFIT, variables);
 	}
 
 	private PeriodVerdict evaluate(final String municipalityId, final String decisionKey, final Map<String, Object> variables) {

@@ -5,7 +5,6 @@ import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -118,93 +117,28 @@ class PeriodRuleFeederTest {
 	}
 
 	// ----------------------------------------------------------------------------------------------------------------
-	// Decision_foraldrapenningKontroll
+	// Föräldrapenning is deliberately NOT judged here any more
 	// ----------------------------------------------------------------------------------------------------------------
 
 	@Test
-	void parentalBenefitPassesTheDayCountThePeriodLengthAndTheGap() {
-		when(periodRulesServiceMock.parentalBenefitCheck(any(), anyBoolean(), any(), any(), anyBoolean(), any()))
-			.thenReturn(new PeriodRulesService.PeriodVerdict(true, "Glapp mellan föregående föräldrapenningperiod och denna"));
-		final var previous = comparison(parentalBenefit(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 25), BigDecimal.valueOf(25)));
-		final var current = control(parentalBenefit(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30), BigDecimal.valueOf(30)));
+	void foraldrapenningIsNoLongerJudgedAtAll() {
+		// Verksamheten 2026-09-21, on both the day count and the gap: "detta ska inte göras, denna inkomst kommer inte
+		// vara med på rålistan". Decision_foraldrapenningKontroll is gone from the published DMN, so a föräldrapenning
+		// payment - even one whose day count plainly disagrees with its period - must now pass without a word.
+		final var current = control(parentalBenefit(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30), BigDecimal.valueOf(3)));
+		final var previous = comparison(parentalBenefit(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 10), BigDecimal.valueOf(10)));
 
-		final var warnings = feeder.periodWarnings(MUNICIPALITY_ID, List.of(previous, current));
-
-		final var gap = ArgumentCaptor.forClass(Integer.class);
-		final var daysInPeriod = ArgumentCaptor.forClass(Integer.class);
-		verify(periodRulesServiceMock).parentalBenefitCheck(eq(MUNICIPALITY_ID), eq(true), eq(BigDecimal.valueOf(30)),
-			daysInPeriod.capture(), eq(true), gap.capture());
-		assertThat(daysInPeriod.getValue()).isEqualTo(30); // 1 April - 30 April, both ends counted
-		assertThat(gap.getValue()).isEqualTo(6); // 26-31 March uncovered
-		assertThat(warnings).singleElement().satisfies(warning -> {
-			assertThat(warning.type()).isEqualTo(WarningService.TYPE_PARENTAL_BENEFIT_PERIOD_CHECK);
-			assertThat(warning.sourceKey()).isEqualTo("FORALDRAPENNING:2026-04-01");
-		});
-	}
-
-	@Test
-	void consecutivePeriodsAreNoGap() {
-		when(periodRulesServiceMock.parentalBenefitCheck(any(), anyBoolean(), any(), any(), anyBoolean(), any()))
-			.thenReturn(PeriodRulesService.PeriodVerdict.none());
-		final var previous = comparison(parentalBenefit(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31), BigDecimal.valueOf(31)));
-		final var current = control(parentalBenefit(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30), BigDecimal.valueOf(30)));
-
-		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, List.of(previous, current))).isEmpty();
-		verify(periodRulesServiceMock).parentalBenefitCheck(any(), anyBoolean(), any(), any(), eq(true), eq(0));
-	}
-
-	@Test
-	void overlappingPeriodsGiveANegativeGap() {
-		when(periodRulesServiceMock.parentalBenefitCheck(any(), anyBoolean(), any(), any(), anyBoolean(), any()))
-			.thenReturn(PeriodRulesService.PeriodVerdict.none());
-		final var previous = comparison(parentalBenefit(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 4, 2), BigDecimal.valueOf(33)));
-		final var current = control(parentalBenefit(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30), BigDecimal.valueOf(30)));
-
-		feeder.periodWarnings(MUNICIPALITY_ID, List.of(previous, current));
-
-		verify(periodRulesServiceMock).parentalBenefitCheck(any(), anyBoolean(), any(), any(), eq(true), eq(-2));
-	}
-
-	@Test
-	void noParentalBenefitLastMonthMeansNoPreviousPeriodAndNoGap() {
-		when(periodRulesServiceMock.parentalBenefitCheck(any(), anyBoolean(), any(), any(), anyBoolean(), any()))
-			.thenReturn(new PeriodRulesService.PeriodVerdict(true, "Går ej att kontrollera glapp"));
-		final var current = control(parentalBenefit(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30), BigDecimal.valueOf(30)));
-
-		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, List.of(current))).hasSize(1);
-		verify(periodRulesServiceMock).parentalBenefitCheck(any(), anyBoolean(), any(), any(), eq(false), eq(null));
-	}
-
-	@Test
-	void theLatestOfSeveralPreviousPeriodsIsTheOneMeasuredFrom() {
-		when(periodRulesServiceMock.parentalBenefitCheck(any(), anyBoolean(), any(), any(), anyBoolean(), any()))
-			.thenReturn(PeriodRulesService.PeriodVerdict.none());
-		final var early = comparison(parentalBenefit(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 10), BigDecimal.valueOf(10)));
-		final var late = comparison(parentalBenefit(LocalDate.of(2026, 3, 15), LocalDate.of(2026, 3, 31), BigDecimal.valueOf(17)));
-		final var current = control(parentalBenefit(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30), BigDecimal.valueOf(30)));
-
-		feeder.periodWarnings(MUNICIPALITY_ID, List.of(early, late, current));
-
-		verify(periodRulesServiceMock).parentalBenefitCheck(any(), anyBoolean(), any(), any(), eq(true), eq(0));
-	}
-
-	@Test
-	void anUnreadableParentalPeriodIsReportedAsSuchRatherThanAsADayMismatch() {
-		when(periodRulesServiceMock.parentalBenefitCheck(any(), anyBoolean(), any(), any(), anyBoolean(), any()))
-			.thenReturn(new PeriodRulesService.PeriodVerdict(true, "Gick ej att läsa ut perioden för föräldrapenning"));
-		final var current = control(parentalBenefit(null, null, BigDecimal.valueOf(30)));
-
-		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, List.of(current))).hasSize(1);
-		verify(periodRulesServiceMock).parentalBenefitCheck(eq(MUNICIPALITY_ID), eq(false), any(), eq(null), anyBoolean(), any());
+		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, List.of(current, previous))).isEmpty();
+		verifyNoInteractions(periodRulesServiceMock);
 	}
 
 	@Test
 	void aVerdictWithoutAWarningRaisesNothing() {
-		when(periodRulesServiceMock.parentalBenefitCheck(any(), anyBoolean(), any(), any(), anyBoolean(), any()))
+		when(periodRulesServiceMock.dayCheck(any(), anyBoolean(), any(), any()))
 			.thenReturn(PeriodRulesService.PeriodVerdict.none());
-		final var current = control(parentalBenefit(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30), BigDecimal.valueOf(30)));
+		final var income = control(dayBenefit(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30), null));
 
-		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, List.of(current))).isEmpty();
+		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, List.of(income))).isEmpty();
 	}
 
 	@Test

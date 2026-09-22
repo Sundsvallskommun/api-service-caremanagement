@@ -1,6 +1,5 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
-import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +18,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static se.sundsvall.caremanagement.types.financialassistance.service.PeriodRulesService.DECISION_KEY_DAY_CHECK;
-import static se.sundsvall.caremanagement.types.financialassistance.service.PeriodRulesService.DECISION_KEY_PARENTAL_BENEFIT;
 
 @ExtendWith(MockitoExtension.class)
 class PeriodRulesServiceTest {
@@ -47,33 +45,6 @@ class PeriodRulesServiceTest {
 	}
 
 	@Test
-	void parentalBenefitCheckPassesTheTablesOwnVariableNames() {
-		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_PARENTAL_BENEFIT), anyMap()))
-			.thenReturn(List.of(Map.of("varning", true, "regel", "Glapp mellan föregående föräldrapenningperiod och denna – manuell kontroll")));
-
-		final var result = service.parentalBenefitCheck(MUNICIPALITY_ID, true, BigDecimal.valueOf(30), 30, true, 6);
-
-		final ArgumentCaptor<Map<String, Object>> captor = captor();
-		verify(processServiceMock).evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_PARENTAL_BENEFIT), captor.capture());
-		assertThat(captor.getValue()).containsOnly(entry("periodLasbar", true), entry("uttagnaDagar", BigDecimal.valueOf(30)),
-			entry("dagarIPerioden", 30), entry("foregaendeManadFinns", true), entry("glappDagar", 6));
-		assertThat(result.warning()).isTrue();
-	}
-
-	@Test
-	void aDecimalDayCountIsPassedThroughUntouched() {
-		// FK sends partial parental-benefit days; rounding them here would undo the decimal fix in the contract.
-		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_PARENTAL_BENEFIT), anyMap()))
-			.thenReturn(List.of());
-
-		service.parentalBenefitCheck(MUNICIPALITY_ID, true, new BigDecimal("4.5"), 5, true, 0);
-
-		final ArgumentCaptor<Map<String, Object>> captor = captor();
-		verify(processServiceMock).evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_PARENTAL_BENEFIT), captor.capture());
-		assertThat(captor.getValue()).contains(entry("uttagnaDagar", new BigDecimal("4.5")));
-	}
-
-	@Test
 	void noRowsMeansNoWarning() {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_DAY_CHECK), anyMap())).thenReturn(List.of());
 
@@ -91,17 +62,6 @@ class PeriodRulesServiceTest {
 	}
 
 	@Test
-	void anUnavailableEngineRaisesNoWarningRatherThanBlockingThePrepare() {
-		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_PARENTAL_BENEFIT), anyMap()))
-			.thenThrow(new IllegalStateException("engine down"));
-
-		final var result = service.parentalBenefitCheck(MUNICIPALITY_ID, true, BigDecimal.ONE, 1, true, 0);
-
-		assertThat(result.warning()).isFalse();
-		assertThat(result.rule()).isNull();
-	}
-
-	@Test
 	void aFlaggedRowWithoutARuleTextStillWarns() {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_DAY_CHECK), anyMap()))
 			.thenReturn(List.of(mapWithNullRule()));
@@ -109,6 +69,20 @@ class PeriodRulesServiceTest {
 		final var result = service.dayCheck(MUNICIPALITY_ID, false, null, null);
 
 		assertThat(result.warning()).isTrue();
+		assertThat(result.rule()).isNull();
+	}
+
+	@Test
+	void anUnavailableDecisionDegradesToNoWarningRatherThanFailing() {
+		// The whole point of the best-effort contract: the daily prepare must never be blocked because the engine
+		// blinked or the table is not deployed. Silence here is a deliberate choice, not an accident - and it is the
+		// safe direction, because the alternative is an errand that never gets prepared at all.
+		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_DAY_CHECK), anyMap()))
+			.thenThrow(new IllegalStateException("engine unreachable"));
+
+		final var result = service.dayCheck(MUNICIPALITY_ID, true, null, 22);
+
+		assertThat(result.warning()).isFalse();
 		assertThat(result.rule()).isNull();
 	}
 

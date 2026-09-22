@@ -9,14 +9,16 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.TypeOptio
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class FinancialAssistanceTypesTest {
 
 	@Test
 	void cataloguesHaveExpectedSizes() {
-		// 7 citizen + 26 handläggare-only income; 11 citizen + 5 handläggare-only cost
+		// 7 citizen + 26 handläggare-only income; 10 citizen + 5 handläggare-only cost
+		// (INTERNET left the cost catalogue 2026-09-21 — the regelverk prices no internet cost)
 		assertThat(FinancialAssistanceTypes.INCOME_TYPES).hasSize(33);
-		assertThat(FinancialAssistanceTypes.COST_TYPES).hasSize(16);
+		assertThat(FinancialAssistanceTypes.COST_TYPES).hasSize(15);
 	}
 
 	@Test
@@ -72,11 +74,24 @@ class FinancialAssistanceTypesTest {
 	}
 
 	@Test
-	void moneyTypesAndPaymentMethodsArePlaceholdersUntilLifecareCatalogueIsKnown() {
-		// Payment.moneyType / Payment.paymentMethod are deliberately unconstrained strings — the real value sets come
-		// from Lifecare and aren't known yet, so these catalogues start empty rather than guessing at codes.
+	void moneyTypesAreStillAPlaceholderUntilLifecareCatalogueIsKnown() {
+		// Payment.moneyType stays an unconstrained string: verksamhetens answer of 2026-09-21 gave betalsätt but not
+		// pengatyp, so this catalogue still starts empty rather than guessing at codes.
 		assertThat(FinancialAssistanceTypes.MONEY_TYPES).isEmpty();
-		assertThat(FinancialAssistanceTypes.PAYMENT_METHODS).isEmpty();
+	}
+
+	@Test
+	void paymentMethodsCarryTheValueSetVerksamhetenSupplied() {
+		// The live Lifecare dropdown as verksamheten screenshotted it 2026-09-21, in their order. Still a list and not
+		// an enum, so a correction is an edit here rather than an API version.
+		assertThat(FinancialAssistanceTypes.PAYMENT_METHODS)
+			.extracting(TypeOption::getCode, TypeOption::getInternalDisplayName)
+			.containsExactly(
+				tuple("BANKGIRO_VIA_PLUSGIRO", "Bankgiro via Plusgiro"),
+				tuple("BANKKONTO_VIA_PLUSGIRO", "Bankkonto via Plusgiro"),
+				tuple("MEMORIAL", "Memorial"),
+				tuple("PERSONKONTO", "Personkonto"),
+				tuple("PLUSGIRO", "Plusgiro"));
 	}
 
 	@Test

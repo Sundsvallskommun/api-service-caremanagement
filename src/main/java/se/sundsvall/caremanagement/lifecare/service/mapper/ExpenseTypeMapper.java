@@ -47,7 +47,6 @@ public final class ExpenseTypeMapper {
 		Map.entry("ELECTRICITY", "El 1"),
 		Map.entry("ELECTRICITY_2", "El 2"),
 		Map.entry("HOME_INSURANCE", "Hemförsäkring"),
-		Map.entry("INTERNET", "Bredband/Internet"),
 		Map.entry("UNEMPLOYMENT_FUND", "A-kasseavgift"),
 		Map.entry("UNION_FEE", "Fackavgift"),
 		Map.entry("TRAVEL_APPROVED", "Arbetsresor"),

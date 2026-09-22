@@ -2,9 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -55,12 +53,6 @@ public class PeriodRuleFeeder {
 	private static final Set<String> DAY_BENEFIT_AMOUNT_TYPES = Set.of(
 		"aktivitetsstöd", "etableringsersättning", "bostadsersättning", "etableringstillägg", "utvecklingsersättning");
 
-	/** Föräldrapenning — the regelverk's sub-benefit list. */
-	private static final Set<String> PARENTAL_SUB_BENEFITS = Set.of("föräldrapenning", "tillfällig föräldrapenning");
-
-	/** …and its amount-type list. */
-	private static final Set<String> PARENTAL_AMOUNT_TYPES = Set.of("föräldrapenning", "dubbeldagar", "tim/dagberäknad");
-
 	private static final String BENEFIT_DAY_ALLOWANCE = "dagersättning";
 
 	private static final Logger LOG = LoggerFactory.getLogger(PeriodRuleFeeder.class);
@@ -81,14 +73,10 @@ public class PeriodRuleFeeder {
 	public List<WarningService.WarningInput> periodWarnings(final String municipalityId, final List<ClassifiedIncome> classified) {
 		final var incomes = ofNullable(classified).orElseGet(List::of);
 		final var control = periodIncomes(incomes, false);
-		final var comparison = periodIncomes(incomes, true);
 
 		final var warnings = new ArrayList<WarningService.WarningInput>();
 		control.stream().filter(PeriodRuleFeeder::isDayBenefit)
 			.map(income -> dayBenefitWarning(municipalityId, income))
-			.forEach(warning -> warning.ifPresent(warnings::add));
-		control.stream().filter(PeriodRuleFeeder::isParentalBenefit)
-			.map(income -> parentalBenefitWarning(municipalityId, income, latestParentalBenefit(comparison)))
 			.forEach(warning -> warning.ifPresent(warnings::add));
 		return List.copyOf(warnings);
 	}
@@ -114,39 +102,6 @@ public class PeriodRuleFeeder {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
-	// Decision_foraldrapenningKontroll
-	// ------------------------------------------------------------------------------------------------------------
-
-	private Optional<WarningService.WarningInput> parentalBenefitWarning(final String municipalityId, final SsbtekIncome income,
-		final Optional<SsbtekIncome> previous) {
-
-		final var readable = hasPeriod(income);
-		final Integer daysInPeriod;
-		if (readable) {
-			daysInPeriod = daysInclusive(income.periodFrom(), income.periodTo());
-		} else {
-			daysInPeriod = null;
-		}
-		final var previousEnd = previous.map(SsbtekIncome::periodTo).orElse(null);
-		final Integer gapDays;
-		if ((previousEnd != null) && (income.periodFrom() != null)) {
-			gapDays = gapBetween(previousEnd, income.periodFrom());
-		} else {
-			gapDays = null;
-		}
-		return warning(WarningService.TYPE_PARENTAL_BENEFIT_PERIOD_CHECK, sourceKey("FORALDRAPENNING", income),
-			periodRulesService.parentalBenefitCheck(municipalityId, readable, income.days(), daysInPeriod, previous.isPresent(), gapDays));
-	}
-
-	/** The comparison period's last föräldrapenning period — the one this month's period is measured against. */
-	private static Optional<SsbtekIncome> latestParentalBenefit(final List<SsbtekIncome> comparison) {
-		return comparison.stream()
-			.filter(PeriodRuleFeeder::isParentalBenefit)
-			.filter(income -> income.periodTo() != null)
-			.max(Comparator.comparing(SsbtekIncome::periodTo));
-	}
-
-	// ------------------------------------------------------------------------------------------------------------
 	// Selection and arithmetic
 	// ------------------------------------------------------------------------------------------------------------
 
@@ -160,10 +115,6 @@ public class PeriodRuleFeeder {
 
 	private static boolean isDayBenefit(final SsbtekIncome income) {
 		return matches(income, DAY_BENEFIT_SUB_BENEFITS, DAY_BENEFIT_AMOUNT_TYPES);
-	}
-
-	private static boolean isParentalBenefit(final SsbtekIncome income) {
-		return matches(income, PARENTAL_SUB_BENEFITS, PARENTAL_AMOUNT_TYPES);
 	}
 
 	private static boolean matches(final SsbtekIncome income, final Set<String> subBenefits, final Set<String> amountTypes) {
@@ -186,19 +137,6 @@ public class PeriodRuleFeeder {
 
 	private static boolean hasPeriod(final SsbtekIncome income) {
 		return (income.periodFrom() != null) && (income.periodTo() != null);
-	}
-
-	/** Days from {@code from} to {@code to} with both ends counted. */
-	private static int daysInclusive(final LocalDate from, final LocalDate to) {
-		return (int) ChronoUnit.DAYS.between(from, to) + 1;
-	}
-
-	/**
-	 * Uncovered days between the previous period's last day and this period's first — 0 when they are consecutive,
-	 * negative when the periods overlap.
-	 */
-	private static int gapBetween(final LocalDate previousEnd, final LocalDate currentStart) {
-		return (int) ChronoUnit.DAYS.between(previousEnd, currentStart) - 1;
 	}
 
 	/** One warning per (benefit, period start), so the daily reconcile dedups and auto-closes it. */

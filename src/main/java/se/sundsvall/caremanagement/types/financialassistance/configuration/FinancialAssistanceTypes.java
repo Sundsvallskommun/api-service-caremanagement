@@ -73,13 +73,21 @@ public final class FinancialAssistanceTypes {
 		caseworkerOnly("ELDERLY_SUPPORT", "Äldreförsörjningsstöd"),
 		caseworkerOnly("SURPLUS_FROM_PREVIOUS_MONTH", "Överskjutande inkomst från föregående månad"));
 
-	/** Cost types (kostnader) — the citizen Mina-sidor list (grouped), then the handläggare-only Lifecare list. */
+	/**
+	 * Cost types (kostnader) — the citizen Mina-sidor list (grouped), then the handläggare-only Lifecare list.
+	 * <p>
+	 * {@code INTERNET} was dropped on 2026-09-21: the revised regelverk prices no internet cost, and verksamheten
+	 * confirmed it should leave the forms too, because internet is part of riksnormen from 2027. It is removed in all
+	 * three places the invariant tests hold together — here, {@code Cost}'s allowable values and
+	 * {@code ExpenseTypeMapper} — so a cost carrying it is now a 400. The citizen form is driven by this catalogue,
+	 * so it stops being offered the moment this deploys; the exposure is an application already in flight.
+	 * {@code Decision_internet} is gone from the published DMN in the same change.
+	 */
 	public static final List<TypeOption> COST_TYPES = List.of(
 		// Citizen Mina-sidor costs (the "Vilka kostnader söker du bistånd för?" form, grouped)
 		cost("RENT", "Hyra (inte parkering/garage)", "Boendekostnad", GROUP_HOUSING),
 		cost("ELECTRICITY", "Elkostnad (totalsumma)", "El 1", GROUP_HOUSING),
 		cost("HOME_INSURANCE", "Hemförsäkring (månadskostnad)", "Hemförsäkring", GROUP_HOUSING),
-		cost("INTERNET", "Internet", "Bredband/Internet", GROUP_HOUSING),
 		cost("UNEMPLOYMENT_FUND", "A-kassa", "A-kasseavgift", GROUP_WORK_AND_STUDIES),
 		cost("UNION_FEE", "Fackföreningsavgift", "Fackavgift", GROUP_WORK_AND_STUDIES),
 		cost("TRAVEL_APPROVED", "Resor till godkänd planering/aktivitet", "Arbetsresor", GROUP_WORK_AND_STUDIES),
@@ -95,15 +103,26 @@ public final class FinancialAssistanceTypes {
 		caseworkerOnly("DENTAL_CARE", "Tandvård"));
 
 	/**
-	 * Payment money types ({@code Payment.moneyType}) and payment methods ({@code Payment.paymentMethod}). Deliberately
-	 * empty placeholders: unlike income/cost types, Lifecare's real value sets for these two are not known yet (see
-	 * {@code Payment}/{@code PaymentRequest} javadoc — the fields are left as unconstrained strings for the same
-	 * reason). Populate these lists once the Lifecare catalogue is confirmed, following the {@code caseworkerOnly}/
-	 * {@code income}/{@code cost} helper pattern above.
+	 * Payment money types ({@code Payment.moneyType}). Still a deliberately empty placeholder: verksamheten's answer of
+	 * 2026-09-21 covered betalsätt but not pengatyp, so Lifecare's value set for this one is still unknown and the
+	 * field stays an unconstrained string (see {@code Payment}/{@code PaymentRequest} javadoc).
 	 */
 	public static final List<TypeOption> MONEY_TYPES = List.of();
 
-	public static final List<TypeOption> PAYMENT_METHODS = List.of();
+	/**
+	 * Payment methods ({@code Payment.paymentMethod}) — the value set verksamheten supplied on 2026-09-21 as a
+	 * screenshot of the live Lifecare dropdown (backlog/svar-2026-09-21-betalsatt.png), in the order it shows them.
+	 * <p>
+	 * Still an editable list rather than an enum, per the payments decision already taken: dept44 forbids enums in API
+	 * models, and verksamheten's own answer was hedged („vet ej exakt hur det kommer fungera”), so this is the best
+	 * known starting set and not a contract. Adding or renaming a method is a change here, not a new API version.
+	 */
+	public static final List<TypeOption> PAYMENT_METHODS = List.of(
+		caseworkerOnly("BANKGIRO_VIA_PLUSGIRO", "Bankgiro via Plusgiro"),
+		caseworkerOnly("BANKKONTO_VIA_PLUSGIRO", "Bankkonto via Plusgiro"),
+		caseworkerOnly("MEMORIAL", "Memorial"),
+		caseworkerOnly("PERSONKONTO", "Personkonto"),
+		caseworkerOnly("PLUSGIRO", "Plusgiro"));
 
 	/** The assembled metadata response — the income + cost + payment catalogues the metadata endpoint returns. */
 	public static FinancialAssistanceMetadata metadata() {

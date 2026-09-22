@@ -21,7 +21,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
  * <ul>
  * <li>{@code RENT} → {@code Decision_hyra} (cap per age/children) · {@code HOME_INSURANCE} → {@code
  * Decision_hemforsakring} (cap per household size)</li>
- * <li>fixed caps: {@code ELECTRICITY}/{@code INTERNET}/{@code UNEMPLOYMENT_FUND}/{@code UNION_FEE}/{@code
+ * <li>fixed caps: {@code ELECTRICITY}/{@code UNEMPLOYMENT_FUND}/{@code UNION_FEE}/{@code
  * TRAVEL_APPROVED}/ {@code TRAVEL_MEDICAL_TRANSPORT}/{@code MEDICAL_CARE}/{@code MEDICINE}</li>
  * <li>{@code OTHER} → {@code Decision_ovrigtBistand} (always 0, assessed manually)</li>
  * </ul>
@@ -42,12 +42,18 @@ public class ExpenseRulesService {
 	private static final String RULE_NO_MATCH = "Regelverket gav inget utslag för utgiften – manuell kontroll";
 	private static final String RULE_UNAVAILABLE = "Regelverket kunde inte nås – utgiften är inte bedömd, manuell kontroll";
 
-	/** financial assistance cost type → its own decision key in the engine. */
+	/**
+	 * financial assistance cost type → its own decision key in the engine.
+	 * <p>
+	 * No {@code INTERNET} entry since 2026-09-21: the revised regelverk prices no internet cost and
+	 * {@code Decision_internet} is gone from the published DMN. An internet cost on a stored errand therefore takes
+	 * the no-decision path below — passed through at the applied amount, unflagged — rather than being reported as an
+	 * expense the regelverk could not reach.
+	 */
 	private static final Map<String, String> DECISION_KEY_BY_COST_TYPE = Map.ofEntries(
 		Map.entry("RENT", "Decision_hyra"),
 		Map.entry("HOME_INSURANCE", "Decision_hemforsakring"),
 		Map.entry("ELECTRICITY", "Decision_hushallsel"),
-		Map.entry("INTERNET", "Decision_internet"),
 		Map.entry("UNEMPLOYMENT_FUND", "Decision_akasseavgift"),
 		Map.entry("UNION_FEE", "Decision_fackavgift"),
 		Map.entry("TRAVEL_APPROVED", "Decision_resor"),
@@ -64,7 +70,6 @@ public class ExpenseRulesService {
 		Map.entry("RENT", BUCKET_EXPENSE),
 		Map.entry("ELECTRICITY", BUCKET_EXPENSE),
 		Map.entry("HOME_INSURANCE", BUCKET_EXPENSE),
-		Map.entry("INTERNET", BUCKET_SPECIAL_EXPENSE),
 		Map.entry("UNEMPLOYMENT_FUND", BUCKET_EXPENSE),
 		Map.entry("UNION_FEE", BUCKET_EXPENSE),
 		Map.entry("TRAVEL_APPROVED", BUCKET_EXPENSE),
