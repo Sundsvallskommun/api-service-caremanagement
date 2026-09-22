@@ -4,9 +4,11 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposa
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsFromWhoDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInfoDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInvestigationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInvestigationTypeDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsOrganizationDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsReasonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceTypeDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsSpecifyTypeDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsWorkingStatusDTO;
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
@@ -20,6 +22,7 @@ import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationProperties;
 
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toSet;
 import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.startOfDay;
 import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.normalize;
 
@@ -39,10 +42,15 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.nor
  * at the top level, so choosing the type by name has to happen first.
  *
  * <p>
- * Still "first offered", because verksamheten has not named them: the service, the investigation, and the
- * specify-type / working-status that are only set when the chosen type asks for them. The {@code CaseworkerId} is
- * set from the caseworker resolved off the applicant's most recent Lifecare Service (see {@code CaseworkerResolver})
- * when one is supplied, and left unset otherwise — the regelverk's "Handläggare = Rakel" is an open question.
+ * The service and investigation links are <strong>not</strong> free choices. The proposal's top-level
+ * {@code Services}/{@code Investigations} are everything the person has open anywhere in socialtjänsten — a
+ * vuxenutredning, a BoU-avgift — and the chosen type names which of their types it accepts. Taking the first offered
+ * one attached a "Vux Utredning 14 kap 2 § SoL" to an EB-återansökan, which FamilyCare answers 400 to; an accepted
+ * type list that is empty means the type takes no such link, so none is sent. The specify-type and working-status
+ * are still first-offered when the type asks for them, minus the unnamed {@code {id: 0}} placeholder that leads the
+ * working-status catalogue. The {@code CaseworkerId} is set from the caseworker resolved off the applicant's most
+ * recent Lifecare Service (see {@code CaseworkerResolver}) when one is supplied, and left unset otherwise — the
+ * regelverk's "Handläggare = Rakel" is an open question.
  */
 public final class ActualisationAssembler {
 
@@ -81,13 +89,19 @@ public final class ActualisationAssembler {
 				if (Boolean.TRUE.equals(type.getWorkingStatus())) {
 					firstWorkingStatusId(proposal).ifPresent(body::workingStatus);
 				}
+				// The proposal lists every open service and investigation the person has, across the whole of
+				// socialtjänsten - a vuxenutredning and a BoU-avgift sit in the same list as the EB ones. Only the
+				// ones whose type the chosen actualisation type accepts may be linked, and a type that accepts none
+				// (as EK Återansökan does for investigations) gets no link at all.
+				linkedId(proposal.getServices(), PersonBasedAktualiseringsServiceDTO::getType, PersonBasedAktualiseringsServiceDTO::getId,
+					type.getServiceTypes(), PersonBasedAktualiseringsServiceTypeDTO::getId).ifPresent(body::serviceId);
+				linkedId(proposal.getInvestigations(), PersonBasedAktualiseringsInvestigationDTO::getType, PersonBasedAktualiseringsInvestigationDTO::getId,
+					type.getInvestigationTypes(), PersonBasedAktualiseringsInvestigationTypeDTO::getId).ifPresent(body::investigationId);
 			});
 			organization(proposal, names, misses).ifPresent(org -> {
 				body.organisationId(org.getId());
 				body.organisationUnitId(org.getUnitId());
 			});
-			firstServiceId(proposal).ifPresent(body::serviceId);
-			firstInvestigationId(proposal).ifPresent(body::investigationId);
 		});
 
 		return new Selection(body, List.copyOf(misses));
@@ -157,24 +171,39 @@ public final class ActualisationAssembler {
 			.findFirst();
 	}
 
+	/**
+	 * The first working status that actually names something. The catalogue leads with an unnamed placeholder
+	 * ({@code {id: 0, name: ""}}) meaning "no status", which is not an answer for a type that marks working status
+	 * mandatory - so it is skipped and the first named status is used.
+	 */
 	private static Optional<Integer> firstWorkingStatusId(final PersonBasedAktualiseringProposalDTO proposal) {
 		return ofNullable(proposal.getWorkingStatus()).orElseGet(List::of).stream()
+			.filter(Objects::nonNull)
+			.filter(status -> status.getId() != null)
+			.filter(status -> StringUtils.hasText(status.getName()))
 			.map(PersonBasedAktualiseringsWorkingStatusDTO::getId)
-			.filter(Objects::nonNull)
 			.findFirst();
 	}
 
-	private static Optional<Integer> firstServiceId(final PersonBasedAktualiseringProposalDTO proposal) {
-		return ofNullable(proposal.getServices()).orElseGet(List::of).stream()
-			.map(PersonBasedAktualiseringsServiceDTO::getId)
-			.filter(Objects::nonNull)
-			.findFirst();
-	}
+	/**
+	 * The first of the person's items whose type the chosen actualisation type accepts, or empty when the type accepts
+	 * none. An empty accepted-types list is a statement, not a gap: the type takes no such link, and sending one
+	 * anyway is what FamilyCare answers 400 to.
+	 */
+	private static <T, U> Optional<Integer> linkedId(final List<T> candidates, final Function<T, Integer> typeOf, final Function<T, Integer> idOf,
+		final List<U> acceptedTypes, final Function<U, Integer> acceptedTypeId) {
 
-	private static Optional<Integer> firstInvestigationId(final PersonBasedAktualiseringProposalDTO proposal) {
-		return ofNullable(proposal.getInvestigations()).orElseGet(List::of).stream()
-			.map(PersonBasedAktualiseringsInvestigationDTO::getId)
+		final var accepted = ofNullable(acceptedTypes).orElseGet(List::<U>of).stream()
 			.filter(Objects::nonNull)
-			.findFirst();
+			.map(acceptedTypeId)
+			.filter(Objects::nonNull)
+			.collect(toSet());
+
+		return ofNullable(candidates).orElseGet(List::<T>of).stream()
+			.filter(Objects::nonNull)
+			.filter(candidate -> idOf.apply(candidate) != null)
+			.filter(candidate -> accepted.contains(typeOf.apply(candidate)))
+			.findFirst()
+			.map(idOf);
 	}
 }

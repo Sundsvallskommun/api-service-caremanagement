@@ -4,9 +4,11 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposa
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsFromWhoDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInfoDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInvestigationDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInvestigationTypeDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsOrganizationDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsReasonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceTypeDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsSpecifyTypeDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsWorkingStatusDTO;
 import java.time.LocalDate;
@@ -65,12 +67,14 @@ class ActualisationAssemblerTest {
 				.id(1)
 				.addReasonsItem(new PersonBasedAktualiseringsReasonDTO().id(11))
 				.addReasonsItem(new PersonBasedAktualiseringsReasonDTO().id(12))
-				.addFromWhoItem(new PersonBasedAktualiseringsFromWhoDTO().id(21)))
+				.addFromWhoItem(new PersonBasedAktualiseringsFromWhoDTO().id(21))
+				.addServiceTypesItem(new PersonBasedAktualiseringsServiceTypeDTO().id(7))
+				.addInvestigationTypesItem(new PersonBasedAktualiseringsInvestigationTypeDTO().id(8)))
 			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(2))
 			.addOrganizationsItem(new PersonBasedAktualiseringsOrganizationDTO().id(31).unitId("unit-A"))
-			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(41))
-			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(42))
-			.addInvestigationsItem(new PersonBasedAktualiseringsInvestigationDTO().id(51));
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(41).type(7))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(42).type(7))
+			.addInvestigationsItem(new PersonBasedAktualiseringsInvestigationDTO().id(51).type(8));
 
 		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE, null, NAMES).body();
 
@@ -94,7 +98,7 @@ class ActualisationAssemblerTest {
 				.specifyTypeMandatory(true)
 				.workingStatus(true))
 			.addSpecifyTypesItem(new PersonBasedAktualiseringsSpecifyTypeDTO().id(61))
-			.addWorkingStatusItem(new PersonBasedAktualiseringsWorkingStatusDTO().id(71));
+			.addWorkingStatusItem(new PersonBasedAktualiseringsWorkingStatusDTO().id(71).name("Ny"));
 
 		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE, null, NAMES).body();
 
@@ -116,6 +120,59 @@ class ActualisationAssemblerTest {
 
 		assertThat(body.getSpecifies()).isNull();
 		assertThat(body.getWorkingStatus()).isNull();
+	}
+
+	/**
+	 * The regression that produced a 400 from FamilyCare on every EB återansökan: the person's open investigations are
+	 * everything they have anywhere in socialtjänsten, so the first offered one was a "Vux Utredning 14 kap 2 § SoL"
+	 * hung on an EB intake. Only what the chosen type accepts may be linked.
+	 */
+	@Test
+	void linksOnlyTheServiceAndInvestigationTheChosenTypeAccepts() {
+		final var proposal = new PersonBasedAktualiseringProposalDTO()
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO()
+				.id(1)
+				.addServiceTypesItem(new PersonBasedAktualiseringsServiceTypeDTO().id(27))
+				.addInvestigationTypesItem(new PersonBasedAktualiseringsInvestigationTypeDTO().id(40)))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(5).type(3))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(2).type(27))
+			.addInvestigationsItem(new PersonBasedAktualiseringsInvestigationDTO().id(12).type(18))
+			.addInvestigationsItem(new PersonBasedAktualiseringsInvestigationDTO().id(99).type(40));
+
+		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE, null, NAMES).body();
+
+		assertThat(body.getServiceId()).isEqualTo(2);
+		assertThat(body.getInvestigationId()).isEqualTo(99);
+	}
+
+	/** An empty accepted-type list is a statement — the type takes no such link — not a reason to pick any of them. */
+	@Test
+	void sendsNoLinkWhenTheTypeAcceptsNoSuchType() {
+		final var proposal = new PersonBasedAktualiseringProposalDTO()
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(29))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(2).type(27))
+			.addInvestigationsItem(new PersonBasedAktualiseringsInvestigationDTO().id(12).type(18));
+
+		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE, null, NAMES).body();
+
+		assertThat(body.getServiceId()).isNull();
+		assertThat(body.getInvestigationId()).isNull();
+	}
+
+	/**
+	 * FamilyCare's working-status catalogue leads with an unnamed {@code {id: 0}} placeholder meaning "no status",
+	 * which is no answer for a type that marks the field mandatory.
+	 */
+	@Test
+	void skipsTheUnnamedWorkingStatusPlaceholder() {
+		final var proposal = new PersonBasedAktualiseringProposalDTO()
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(1).workingStatus(true))
+			.addWorkingStatusItem(new PersonBasedAktualiseringsWorkingStatusDTO().id(0).name(""))
+			.addWorkingStatusItem(new PersonBasedAktualiseringsWorkingStatusDTO().id(1).name("Ny"));
+
+		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE, null, NAMES).body();
+
+		assertThat(body.getWorkingStatus()).isEqualTo(1);
 	}
 
 	@Test
