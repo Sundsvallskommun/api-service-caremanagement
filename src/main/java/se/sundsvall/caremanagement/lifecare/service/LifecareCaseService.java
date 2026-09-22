@@ -214,6 +214,24 @@ public class LifecareCaseService {
 	}
 
 	/**
+	 * A person <em>from a FamilyCare response</em> as a personal identity number — {@link #toPartyId} run the other
+	 * way. The direct route already answers with one, so it is returned unchanged; the integrator answers with a party
+	 * id, which the citizen service resolves.
+	 *
+	 * <p>
+	 * The two directions exist because the answers are consumed differently: a roster reaches the API, which never
+	 * returns a personal identity number, while the previous household is only ever compared against the errand's own
+	 * members. Picking the wrong one is silent either way — the comparison simply never matches — which is exactly
+	 * what {@code previousHousehold} did on the integrator route before this resolution existed.
+	 */
+	private String toPersonalNumber(final String municipalityId, final String identity) {
+		if (!lifecareFamilyCareIntegration.respondsWithPartyId()) {
+			return identity;
+		}
+		return citizenService.getPersonalNumber(municipalityId, identity).orElse(null);
+	}
+
+	/**
 	 * The distinct FamilyCare income-type names on the person's most recent calculation strictly before {@code
 	 * applicationMonth} — the baseline for the financial assistance "all last month's values present" completeness
 	 * check. Empty when there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on
@@ -294,10 +312,15 @@ public class LifecareCaseService {
 	 */
 	public PreviousHousehold previousHousehold(final String municipalityId, final String personId, final YearMonth applicationMonth) {
 		final var latest = latestCalculationBefore(municipalityId, personId, applicationMonth);
-		final var personIds = latest
+		final var identities = latest
 			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
 			.orElseGet(List::of).stream()
 			.map(PersonBasedCalculationPersonDTO::getPersonId)
+			.filter(StringUtils::hasText)
+			.distinct()
+			.toList();
+		final var personIds = identities.stream()
+			.map(identity -> toPersonalNumber(municipalityId, identity))
 			.filter(StringUtils::hasText)
 			.collect(toSet());
 		final var normSum = toAmount(latest.map(PersonBasedCalculationDTO::getNormSum).orElse(null));
@@ -310,7 +333,8 @@ public class LifecareCaseService {
 			.reduce(BigDecimal::add)
 			.orElse(null);
 
-		return new PreviousHousehold(personIds, personIds.size(), normSum, housingCost, latest.map(PersonBasedCalculationDTO::getNorm).orElse(null));
+		return new PreviousHousehold(personIds, personIds.size() == identities.size(), identities.size(), normSum, housingCost,
+			latest.map(PersonBasedCalculationDTO::getNorm).orElse(null));
 	}
 
 	/**

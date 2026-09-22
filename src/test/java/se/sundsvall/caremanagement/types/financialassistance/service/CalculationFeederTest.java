@@ -366,7 +366,7 @@ class CalculationFeederTest {
 
 	@Test
 	void housingDeltaWarningsFlagsHousingCostChange() {
-		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, BigDecimal.valueOf(5000.0), null);
+		final var previous = new PreviousHousehold(Set.of("p-1"), true, 1, null, BigDecimal.valueOf(5000.0), null);
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6600"))));
 
@@ -387,7 +387,7 @@ class CalculationFeederTest {
 
 	@Test
 	void housingDeltaWarningsSkipsWhenDmnDoesNotFlag() {
-		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, BigDecimal.valueOf(5000.0), null);
+		final var previous = new PreviousHousehold(Set.of("p-1"), true, 1, null, BigDecimal.valueOf(5000.0), null);
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("5100"))));
 
@@ -401,7 +401,7 @@ class CalculationFeederTest {
 	void housingDeltaWarningsIgnoresHouseholdSizeDrift() {
 		// The household-size tiers moved to the återansökan regelverk's exact ANTAL_I_BOSTADEN comparison; a pure
 		// member change no longer consults the delta DMN at all.
-		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, null, null);
+		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), true, 2, null, null, null);
 		final var errand = FinancialAssistanceEntity.create();
 
 		assertThat(feeder.housingDeltaWarnings(MUNICIPALITY_ID, errand, previous)).isEmpty();
@@ -411,7 +411,7 @@ class CalculationFeederTest {
 
 	@Test
 	void housingDeltaWarningsSkipsHousingWhenNoPreviousCost() {
-		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, null, null);
+		final var previous = new PreviousHousehold(Set.of("p-1"), true, 1, null, null, null);
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6000"))));
 

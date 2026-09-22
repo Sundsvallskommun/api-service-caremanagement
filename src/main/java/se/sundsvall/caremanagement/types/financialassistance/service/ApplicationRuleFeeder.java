@@ -304,14 +304,20 @@ public class ApplicationRuleFeeder {
 
 	/**
 	 * The children in the application against the children in the previous normberäkning. Only made when the applicant
-	 * states children under 21, and only when every household member's party id resolves to the personal identity
-	 * number the previous calculation is keyed on — an unresolvable member would make every renewal look like a
-	 * mismatch, so the comparison is skipped instead.
+	 * states children under 21, and only when both households can be named in full: every errand member's party id has
+	 * to resolve to the personal identity number the previous calculation is keyed on, and the previous household
+	 * itself has to have come back complete. A household missing a member it cannot name would make every renewal look
+	 * like a mismatch, so the comparison is skipped instead.
 	 */
 	private Optional<WarningService.WarningInput> childrenComparisonWarning(final String municipalityId, final FinancialAssistanceEntity errand,
 		final PreviousHousehold previous) {
 
 		if (!TRUE.equals(errand.getHasChildrenUnder21())) {
+			return Optional.empty();
+		}
+
+		if (!previous.personIdsComplete()) {
+			LOG.warn("The previous calculation's household came back incomplete — skipping the children comparison");
 			return Optional.empty();
 		}
 

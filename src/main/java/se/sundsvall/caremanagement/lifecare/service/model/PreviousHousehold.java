@@ -11,15 +11,24 @@ import java.util.Set;
  * free-text norm on that calculation (e.g. "Riksnorm"), used for the återansökan norm comparison; {@code null} when the
  * calculation carried none. Empty ({@code memberCount == 0}) when there is no prior calculation or the lookup failed
  * (best-effort).
+ *
+ * <p>
+ * {@code personIds} are personal identity numbers whichever FamilyCare route answered — the direct one says so
+ * already, the integrator answers with party ids and {@code LifecareCaseService} resolves them.
+ * {@code personIdsComplete} is {@code false} when at least one member could not be resolved; the set is then short of
+ * a member it cannot name, so a caller comparing households member by member has to skip rather than report the
+ * difference as a real one. {@code memberCount} is the previous calculation's own member count and stays right either
+ * way.
  */
 public record PreviousHousehold(
 	Set<String> personIds,
+	boolean personIdsComplete,
 	int memberCount,
 	BigDecimal normSum,
 	BigDecimal housingCost,
 	String norm) {
 
 	public static PreviousHousehold empty() {
-		return new PreviousHousehold(Set.of(), 0, null, null, null);
+		return new PreviousHousehold(Set.of(), true, 0, null, null, null);
 	}
 }

@@ -29,6 +29,7 @@ import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -354,10 +355,59 @@ class LifecareCaseServiceTest {
 		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
 
 		assertThat(household.personIds()).containsExactlyInAnyOrder(APPLICANT, "201801012380");
+		assertThat(household.personIdsComplete()).isTrue();
 		assertThat(household.memberCount()).isEqualTo(2);
+		// The direct route answers with personal identity numbers, so nothing is resolved.
+		verifyNoInteractions(citizenServiceMock);
 		assertThat(household.normSum()).isEqualTo(BigDecimal.valueOf(12345.0));
 		assertThat(household.housingCost()).isEqualTo(BigDecimal.valueOf(7500.0)); // 6000 (approved) + 1500 (applied fallback)
 		assertThat(household.norm()).isEqualTo("Riksnorm 2026");
+	}
+
+	/**
+	 * The integrator answers with party ids, so the previous household is resolved to the personal identity numbers
+	 * the errand's members are compared against. Left unresolved, {@code ApplicationRuleFeeder} would be matching
+	 * party ids against personnummer and every renewal with children would report a household mismatch.
+	 */
+	@Test
+	void previousHouseholdResolvesPartyIdsToPersonalIdentityNumbersOnTheIntegratorRoute() {
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD_PARTY_ID));
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
+		when(integrationMock.respondsWithPartyId()).thenReturn(true);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CHILD_PARTY_ID)).thenReturn(Optional.of(CHILD));
+
+		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+
+		assertThat(household.personIds()).containsExactlyInAnyOrder(APPLICANT, CHILD);
+		assertThat(household.personIdsComplete()).isTrue();
+		assertThat(household.memberCount()).isEqualTo(2);
+	}
+
+	/**
+	 * A member that does not resolve leaves the household short of someone it cannot name. The count still reports the
+	 * calculation's own two members — that comparison stays valid — but the set is flagged incomplete so the member
+	 * comparison is skipped rather than reported as a difference that was never there.
+	 */
+	@Test
+	void previousHouseholdIsIncompleteWhenAMemberDoesNotResolve() {
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD_PARTY_ID));
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
+		when(integrationMock.respondsWithPartyId()).thenReturn(true);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CHILD_PARTY_ID)).thenReturn(Optional.empty());
+
+		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+
+		assertThat(household.personIds()).containsExactly(APPLICANT);
+		assertThat(household.personIdsComplete()).isFalse();
+		assertThat(household.memberCount()).isEqualTo(2);
 	}
 
 	@Test
