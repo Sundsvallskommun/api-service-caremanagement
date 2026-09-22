@@ -46,6 +46,7 @@ class NotificationTest {
 		final var description = "desc";
 		final var content = "content";
 		final var acknowledged = Boolean.TRUE;
+		final var handled = Boolean.TRUE;
 		final var expires = FIXED_TIMESTAMP.plusDays(30);
 		final var created = FIXED_TIMESTAMP;
 		final var modified = FIXED_TIMESTAMP;
@@ -62,6 +63,7 @@ class NotificationTest {
 			.withDescription(description)
 			.withContent(content)
 			.withAcknowledged(acknowledged)
+			.withHandled(handled)
 			.withExpires(expires)
 			.withCreated(created)
 			.withModified(modified);
@@ -78,6 +80,7 @@ class NotificationTest {
 		assertThat(result.getDescription()).isEqualTo(description);
 		assertThat(result.getContent()).isEqualTo(content);
 		assertThat(result.getAcknowledged()).isEqualTo(acknowledged);
+		assertThat(result.getHandled()).isEqualTo(handled);
 		assertThat(result.getExpires()).isEqualTo(expires);
 		assertThat(result.getCreated()).isEqualTo(created);
 		assertThat(result.getModified()).isEqualTo(modified);

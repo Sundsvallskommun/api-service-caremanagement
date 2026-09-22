@@ -78,14 +78,14 @@ class ErrandResourceTest {
 
 	@Test
 	void findErrands() {
-		when(serviceMock.findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(), eq(false), isNull(), any())).thenReturn(FindErrandsResponse.create().withErrands(List.of(Errand.create())));
+		when(serviceMock.findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(), eq(false), eq(false), isNull(), any())).thenReturn(FindErrandsResponse.create().withErrands(List.of(Errand.create())));
 
 		webTestClient.get()
 			.uri(builder -> builder.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(serviceMock).findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Specification.class), eq(false), isNull(), any());
+		verify(serviceMock).findErrands(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(Specification.class), eq(false), eq(false), isNull(), any());
 	}
 
 	@Test

@@ -17,7 +17,8 @@ import se.sundsvall.dept44.common.validators.annotation.MemberOf;
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
-@Schema(description = "User-facing notification raised against an errand. Mutable: callers acknowledge (acknowledged=true) when the recipient has seen it; expired notifications are purged by a background job.")
+@Schema(
+	description = "User-facing notification raised against an errand. Mutable: callers acknowledge (acknowledged=true) when the recipient has seen it and mark it handled (handled=true) when the recipient has acted on it; expired notifications are purged by a background job.")
 public class Notification {
 
 	@Schema(description = "Unique identifier", examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec", accessMode = READ_ONLY)
@@ -73,8 +74,14 @@ public class Notification {
 	})
 	private String content;
 
-	@Schema(description = "Acknowledgement state. On PATCH, null leaves the value unchanged; true/false sets it. The bulk-acknowledge endpoint flips this to true for every notification on an errand.", examples = "false")
+	@Schema(description = "Acknowledgement state - the recipient has seen the notification. On PATCH, null leaves the value unchanged; true/false sets it. The bulk-acknowledge endpoint flips this to true for every notification on an errand.",
+		examples = "false")
 	private Boolean acknowledged;
+
+	@Schema(
+		description = "Handled state - the recipient has acted on the notification, not merely seen it. On PATCH, null leaves the value unchanged; true/false sets it, and setting it to true also acknowledges the notification. The bulk-handle endpoint flips this to true for every notification on an errand.",
+		examples = "false")
+	private Boolean handled;
 
 	@Schema(description = "Timestamp after which the notification is eligible for cleanup (server-assigned)", accessMode = READ_ONLY)
 	@DateTimeFormat(iso = DATE_TIME)
@@ -238,6 +245,19 @@ public class Notification {
 		return this;
 	}
 
+	public Boolean getHandled() {
+		return handled;
+	}
+
+	public void setHandled(final Boolean handled) {
+		this.handled = handled;
+	}
+
+	public Notification withHandled(final Boolean handled) {
+		this.handled = handled;
+		return this;
+	}
+
 	public OffsetDateTime getExpires() {
 		return expires;
 	}
@@ -279,7 +299,7 @@ public class Notification {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, ownerId, createdBy, type, typeDisplayName, subType, subTypeDisplayName, description, content, acknowledged, expires, created, modified);
+		return Objects.hash(id, errandId, ownerId, createdBy, type, typeDisplayName, subType, subTypeDisplayName, description, content, acknowledged, handled, expires, created, modified);
 	}
 
 	@Override
@@ -301,6 +321,7 @@ public class Notification {
 			&& Objects.equals(description, other.description)
 			&& Objects.equals(content, other.content)
 			&& Objects.equals(acknowledged, other.acknowledged)
+			&& Objects.equals(handled, other.handled)
 			&& Objects.equals(expires, other.expires)
 			&& Objects.equals(created, other.created)
 			&& Objects.equals(modified, other.modified);
@@ -320,6 +341,7 @@ public class Notification {
 			", description='" + description + '\'' +
 			", content='" + content + '\'' +
 			", acknowledged=" + acknowledged +
+			", handled=" + handled +
 			", expires=" + expires +
 			", created=" + created +
 			", modified=" + modified +

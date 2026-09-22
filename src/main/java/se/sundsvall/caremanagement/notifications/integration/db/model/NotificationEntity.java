@@ -23,6 +23,8 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 		@Index(name = "idx_notification_errand_id", columnList = "errand_id"),
 		@Index(name = "idx_notification_mid_ns_owner_id_acknowledged", columnList = "municipality_id,namespace,owner_id,acknowledged"),
 		@Index(name = "idx_notification_mid_ns_errand_id_acknowledged", columnList = "municipality_id,namespace,errand_id,acknowledged"),
+		@Index(name = "idx_notification_mid_ns_owner_id_handled", columnList = "municipality_id,namespace,owner_id,handled"),
+		@Index(name = "idx_notification_mid_ns_errand_id_handled", columnList = "municipality_id,namespace,errand_id,handled"),
 		@Index(name = "idx_notification_expires", columnList = "expires")
 	})
 @EntityListeners(AuditableListener.class)
@@ -64,6 +66,10 @@ public class NotificationEntity implements Auditable {
 
 	@Column(name = "acknowledged", nullable = false)
 	private boolean acknowledged;
+
+	/** Whether the caseworker has acted on the notification — a separate state from having merely read it. */
+	@Column(name = "handled", nullable = false)
+	private boolean handled;
 
 	@Column(name = "expires", nullable = false)
 	@TimeZoneStorage(NORMALIZE)
@@ -125,6 +131,10 @@ public class NotificationEntity implements Auditable {
 		return acknowledged;
 	}
 
+	public boolean isHandled() {
+		return handled;
+	}
+
 	public OffsetDateTime getExpires() {
 		return expires;
 	}
@@ -179,6 +189,10 @@ public class NotificationEntity implements Auditable {
 
 	public void setAcknowledged(final boolean acknowledged) {
 		this.acknowledged = acknowledged;
+	}
+
+	public void setHandled(final boolean handled) {
+		this.handled = handled;
 	}
 
 	public void setExpires(final OffsetDateTime expires) {
@@ -250,6 +264,11 @@ public class NotificationEntity implements Auditable {
 		return this;
 	}
 
+	public NotificationEntity withHandled(final boolean handled) {
+		this.handled = handled;
+		return this;
+	}
+
 	public NotificationEntity withExpires(final OffsetDateTime expires) {
 		this.expires = expires;
 		return this;
@@ -268,7 +287,7 @@ public class NotificationEntity implements Auditable {
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, municipalityId, namespace, ownerId, createdBy, type, subType, description,
-			content, acknowledged, expires, created, modified);
+			content, acknowledged, handled, expires, created, modified);
 	}
 
 	@Override
@@ -277,7 +296,7 @@ public class NotificationEntity implements Auditable {
 			return true;
 		if (!(obj instanceof final NotificationEntity other))
 			return false;
-		return acknowledged == other.acknowledged
+		return (acknowledged == other.acknowledged) && (handled == other.handled)
 			&& Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
 			&& Objects.equals(municipalityId, other.municipalityId) && Objects.equals(namespace, other.namespace)
 			&& Objects.equals(ownerId, other.ownerId) && Objects.equals(createdBy, other.createdBy)
@@ -291,6 +310,6 @@ public class NotificationEntity implements Auditable {
 	public String toString() {
 		return "NotificationEntity{id='" + id + "', errandId='" + errandId + "', ownerId='" + ownerId
 			+ "', type=" + type + ", subType=" + subType + ", description='" + description
-			+ "', acknowledged=" + acknowledged + ", created=" + created + '}';
+			+ "', acknowledged=" + acknowledged + ", handled=" + handled + ", created=" + created + '}';
 	}
 }

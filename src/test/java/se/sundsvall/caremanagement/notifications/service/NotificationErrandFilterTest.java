@@ -21,7 +21,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class UnacknowledgedNotificationErrandFilterTest {
+class NotificationErrandFilterTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "FINANCIAL_ASSISTANCE";
@@ -51,7 +51,7 @@ class UnacknowledgedNotificationErrandFilterTest {
 	@Mock
 	private Predicate existsMock;
 
-	private final UnacknowledgedNotificationErrandFilter filter = new UnacknowledgedNotificationErrandFilter();
+	private final NotificationErrandFilter filter = new NotificationErrandFilter();
 
 	@SuppressWarnings("unchecked")
 	private void stubCriteria() {
@@ -76,6 +76,7 @@ class UnacknowledgedNotificationErrandFilterTest {
 		assertThat(result).isSameAs(existsMock);
 		verify(cbMock).equal(pathMock, "jane01doe");
 		verify(cbMock).isFalse(any());
+		verify(notificationRootMock).get("acknowledged");
 		verify(cbMock).exists(subqueryMock);
 	}
 
@@ -88,6 +89,33 @@ class UnacknowledgedNotificationErrandFilterTest {
 
 		assertThat(result).isSameAs(existsMock);
 		verify(cbMock, never()).equal(pathMock, "jane01doe");
+		verify(cbMock).exists(subqueryMock);
+	}
+
+	@Test
+	void buildsUnhandledExistsSubqueryScopedToOwner() {
+		stubCriteria();
+
+		final var spec = filter.hasUnhandledNotifications(MUNICIPALITY_ID, NAMESPACE, "jane01doe");
+		final var result = spec.toPredicate(rootMock, queryMock, cbMock);
+
+		assertThat(result).isSameAs(existsMock);
+		verify(cbMock).equal(pathMock, "jane01doe");
+		verify(notificationRootMock).get("handled");
+		verify(notificationRootMock, never()).get("acknowledged");
+		verify(cbMock).exists(subqueryMock);
+	}
+
+	@Test
+	void buildsUnhandledExistsSubqueryWithoutOwnerScope() {
+		stubCriteria();
+
+		final var spec = filter.hasUnhandledNotifications(MUNICIPALITY_ID, NAMESPACE, null);
+		final var result = spec.toPredicate(rootMock, queryMock, cbMock);
+
+		assertThat(result).isSameAs(existsMock);
+		verify(cbMock, never()).equal(pathMock, "jane01doe");
+		verify(notificationRootMock).get("handled");
 		verify(cbMock).exists(subqueryMock);
 	}
 }

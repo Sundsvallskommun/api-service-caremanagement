@@ -126,12 +126,15 @@ public class ErrandService implements ErrandAccessGuard {
 
 	@Transactional(readOnly = true)
 	public FindErrandsResponse findErrands(final String municipalityId, final String namespace, final Specification<ErrandEntity> filter,
-		final boolean hasUnacknowledgedNotifications, final String notificationOwnerId, final Pageable pageable) {
+		final boolean hasUnacknowledgedNotifications, final boolean hasUnhandledNotifications, final String notificationOwnerId, final Pageable pageable) {
 
 		var combined = withNamespaceAndMunicipalityId(namespace, municipalityId);
 		combined = ofNullable(filter).map(combined::and).orElse(combined);
 		if (hasUnacknowledgedNotifications) {
 			combined = combined.and(errandNotificationFilter.hasUnacknowledgedNotifications(municipalityId, namespace, notificationOwnerId));
+		}
+		if (hasUnhandledNotifications) {
+			combined = combined.and(errandNotificationFilter.hasUnhandledNotifications(municipalityId, namespace, notificationOwnerId));
 		}
 		return toFindErrandsResponse(errandRepository.findAll(combined, pageable));
 	}

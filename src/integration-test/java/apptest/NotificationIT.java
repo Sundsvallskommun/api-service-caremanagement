@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.notifications.integration.db.NotificationRepository;
+import se.sundsvall.caremanagement.notifications.integration.db.model.NotificationEntity;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 
@@ -143,5 +144,18 @@ class NotificationIT extends AbstractAppTest {
 			.withExpectedResponseStatus(NOT_FOUND)
 			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequestAndVerifyResponse();
+	}
+
+	@Test
+	void test10_handleAll() {
+		setupCall()
+			.withServicePath(ERRAND_PATH.formatted(ERRAND_ID) + "/handled")
+			.withHttpMethod(PUT)
+			.withExpectedResponseStatus(NO_CONTENT)
+			.withExpectedResponseBodyIsNull()
+			.sendRequestAndVerifyResponse();
+
+		assertThat(notificationRepository.findAll()).allMatch(NotificationEntity::isHandled);
+		assertThat(notificationRepository.findAll()).allMatch(NotificationEntity::isAcknowledged);
 	}
 }

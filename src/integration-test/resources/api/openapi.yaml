@@ -35,7 +35,8 @@ tags:
     \ are approved."
 - name: Notifications
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
-    acknowledge them when seen; expired ones are purged by a daily background job.
+    acknowledge them when seen and mark them handled when acted on; expired ones are
+    purged by a daily background job.
 - name: Status History
   description: Status transition log for an errand
 - name: RPA
@@ -137,6 +138,56 @@ tags:
 - name: Errand attachments
   description: Errand attachment operations
 paths:
+  /{municipalityId}/{namespace}/errands/{errandId}/notifications/handled:
+    put:
+      tags:
+      - Notifications
+      summary: Mark all notifications on an errand handled
+      description: Sets `handled=true` (and with it `acknowledged=true`) on every
+        notification belonging to the errand that is not already handled.
+      operationId: handleAll
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+        example: MY_NAMESPACE
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          description: Errand not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/{errandId}/notifications/acknowledged:
     put:
       tags:
@@ -855,10 +906,22 @@ paths:
           type: boolean
           default: false
         example: true
+      - name: hasUnhandledNotifications
+        in: query
+        description: "When true, only errands that have at least one notification\
+          \ not yet marked handled are returned. Handled is a state of its own: a\
+          \ message may have been read without having been dealt with. Combine with\
+          \ notificationOwnerId to scope to a single recipient."
+        required: false
+        schema:
+          type: boolean
+          default: false
+        example: true
       - name: notificationOwnerId
         in: query
-        description: Scopes the unacknowledged-notification filter to notifications
-          addressed to this recipient (caseworker). Only applied when hasUnacknowledgedNotifications=true.
+        description: Scopes the notification filters to notifications addressed to
+          this recipient (caseworker). Only applied when hasUnacknowledgedNotifications=true
+          or hasUnhandledNotifications=true.
         required: false
         schema:
           type:
@@ -4706,8 +4769,9 @@ paths:
       tags:
       - Notifications
       summary: Update notification
-      description: "Partial update. Only `acknowledged`, `description`, `content`,\
-        \ `type`, and `subType` are honoured; other fields in the body are ignored."
+      description: "Partial update. Only `acknowledged`, `handled`, `description`,\
+        \ `content`, `type`, and `subType` are honoured; other fields in the body\
+        \ are ignored. Setting `handled=true` also sets `acknowledged=true`."
       operationId: updateNotification
       parameters:
       - name: municipalityId
@@ -8534,10 +8598,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -10240,8 +10304,9 @@ components:
     Notification:
       type: object
       description: "User-facing notification raised against an errand. Mutable: callers\
-        \ acknowledge (acknowledged=true) when the recipient has seen it; expired\
-        \ notifications are purged by a background job."
+        \ acknowledge (acknowledged=true) when the recipient has seen it and mark\
+        \ it handled (handled=true) when the recipient has acted on it; expired notifications\
+        \ are purged by a background job."
       properties:
         id:
           type: string
@@ -10317,9 +10382,18 @@ components:
           - You have been assigned a new errand regarding financial assistance.
         acknowledged:
           type: boolean
-          description: "Acknowledgement state. On PATCH, null leaves the value unchanged;\
-            \ true/false sets it. The bulk-acknowledge endpoint flips this to true\
-            \ for every notification on an errand."
+          description: "Acknowledgement state - the recipient has seen the notification.\
+            \ On PATCH, null leaves the value unchanged; true/false sets it. The bulk-acknowledge\
+            \ endpoint flips this to true for every notification on an errand."
+          examples:
+          - false
+        handled:
+          type: boolean
+          description: "Handled state - the recipient has acted on the notification,\
+            \ not merely seen it. On PATCH, null leaves the value unchanged; true/false\
+            \ sets it, and setting it to true also acknowledges the notification.\
+            \ The bulk-handle endpoint flips this to true for every notification on\
+            \ an errand."
           examples:
           - false
         expires:

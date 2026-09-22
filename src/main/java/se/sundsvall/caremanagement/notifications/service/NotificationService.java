@@ -38,6 +38,7 @@ public class NotificationService {
 		final var entity = NotificationMapper.toEntity(notification, municipalityId, namespace, errandId, expires);
 		if (selfCreated(notification)) {
 			entity.setAcknowledged(true);
+			entity.setHandled(true);
 		}
 		return notificationRepository.save(entity).getId();
 	}
@@ -76,6 +77,15 @@ public class NotificationService {
 	public int acknowledgeAll(final String municipalityId, final String namespace, final String errandId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		return notificationRepository.acknowledgeAllByErrand(namespace, municipalityId, errandId);
+	}
+
+	/**
+	 * Marks every notification on the errand handled - the caseworker has dealt with what they say, not merely seen
+	 * them. Acknowledgement follows along, since handled implies read.
+	 */
+	public int handleAll(final String municipalityId, final String namespace, final String errandId) {
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
+		return notificationRepository.handleAllByErrand(namespace, municipalityId, errandId);
 	}
 
 	/**
