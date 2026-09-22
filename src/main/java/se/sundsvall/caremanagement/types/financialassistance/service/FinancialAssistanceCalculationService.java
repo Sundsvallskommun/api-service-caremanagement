@@ -31,6 +31,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
+import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
@@ -196,7 +197,7 @@ public class FinancialAssistanceCalculationService {
 			previousExpenseAmounts(municipalityId, input.applicant(), input.applicationMonth()), ageFromPnr(input.applicant()));
 		final var personRows = calculationFeeder.personRows(municipalityId, input.namespace(), input.errandId(), input.errand(),
 			previousPersonAmounts(municipalityId, input.applicant(), input.applicationMonth()));
-		final var normId = calculationService.selectNormId(municipalityId, input.applicant(), input.applicationMonth());
+		final var normId = calculationService.selectNormId(municipalityId, input.applicant(), input.applicationMonth(), normNames(input.errand().getNormType()));
 		final var changes = draftService.refresh(input.errandId(), input.applicationMonthValue(), normId, input.errand().getNormType(),
 			personRows, incomeRows, expenseFeed.rows());
 
@@ -375,7 +376,7 @@ public class FinancialAssistanceCalculationService {
 		final var persons = calculationFeeder.personRows(municipalityId, namespace, errandId, errand, Map.of()).stream()
 			.map(CalculationDraftMapper::toEffectivePerson).toList();
 
-		final var normId = calculationService.selectNormId(municipalityId, applicant, applicationMonth);
+		final var normId = calculationService.selectNormId(municipalityId, applicant, applicationMonth, normNames(errand.getNormType()));
 		final var header = new CalculationHeader(normId, applicationMonth.atDay(1), applicationMonth.atEndOfMonth(), LocalDate.now(ZoneId.systemDefault()), false, null);
 
 		final var calculationId = calculationService.commitEffective(municipalityId, applicant, applicationMonth, header, incomes, expenses, persons);
@@ -501,5 +502,17 @@ public class FinancialAssistanceCalculationService {
 	private String personalNumber(final String municipalityId, final String partyId) {
 		return citizenService.getPersonalNumber(municipalityId, partyId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No citizen found for partyId " + partyId));
+	}
+
+	/**
+	 * The application's norm types as the Swedish names FamilyCare's norm catalogue uses. The translation lives here
+	 * because {@code normType} is this errand type's vocabulary: the lifecare module serves every errand type and has
+	 * no business knowing what {@code NATIONAL_NORM} means, which is also what the module cycle check enforces.
+	 */
+	private static List<String> normNames(final List<String> normTypes) {
+		return ofNullable(normTypes).orElseGet(List::of).stream()
+			.map(FinancialAssistanceLabels::normTypeDisplayName)
+			.filter(StringUtils::hasText)
+			.toList();
 	}
 }

@@ -12,12 +12,14 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationSections;
 
 import static java.util.Optional.ofNullable;
 import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.startOfDay;
+import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.normalize;
 
 /**
  * Assembles the full FamilyCare {@link PostCalculationBodyRequest} for an SSBTEK-driven calculation by combining the
@@ -48,7 +50,8 @@ public final class CalculationAssembler {
 		final String applicantPersonId,
 		final PersonBasedCalculationProposalDTO proposal,
 		final List<PersonBasedCalculationIncomePostDTO> calculationIncomes,
-		final YearMonth applicationMonth) {
+		final YearMonth applicationMonth,
+		final List<String> normNames) {
 
 		final var monthStart = applicationMonth.atDay(1);
 		final var body = new PostCalculationBodyRequest()
@@ -61,7 +64,7 @@ public final class CalculationAssembler {
 		ofNullable(proposal).ifPresent(p -> {
 			firstServiceId(p).ifPresent(body::serviceId);
 			firstInvestigationId(p).ifPresent(body::investigationId);
-			normIdForMonth(p, monthStart).ifPresent(body::normId);
+			normIdForMonth(p, monthStart, normNames).ifPresent(body::normId);
 			mandatoryAktualiseringId(p).ifPresent(body::aktualiseringId);
 		});
 
@@ -84,9 +87,10 @@ public final class CalculationAssembler {
 		final String applicantPersonId,
 		final PersonBasedCalculationProposalDTO proposal,
 		final CalculationSections sections,
-		final YearMonth applicationMonth) {
+		final YearMonth applicationMonth,
+		final List<String> normNames) {
 
-		final var body = assemble(applicantPersonId, proposal, sections.incomes(), applicationMonth);
+		final var body = assemble(applicantPersonId, proposal, sections.incomes(), applicationMonth, normNames);
 		ofNullable(sections.expenses()).ifPresent(body::calculationExpenses);
 		ofNullable(sections.specialExpenses()).ifPresent(body::calculationSpecialExpenses);
 		ofNullable(sections.persons()).ifPresent(body::calculationPersons);
@@ -107,9 +111,13 @@ public final class CalculationAssembler {
 		ofNullable(header.householdSize()).ifPresent(body::householdSize);
 	}
 
-	/** The norm id the proposal offers for the application month (the window covering it, else the first), or empty. */
-	public static Optional<Integer> selectNormId(final PersonBasedCalculationProposalDTO proposal, final YearMonth applicationMonth) {
-		return ofNullable(proposal).flatMap(p -> normIdForMonth(p, applicationMonth.atDay(1)));
+	/**
+	 * The norm id for the application month — the one the application's {@code normType} names among those covering
+	 * the month; see {@link #normIdForMonth}.
+	 */
+	public static Optional<Integer> selectNormId(final PersonBasedCalculationProposalDTO proposal, final YearMonth applicationMonth,
+		final List<String> normNames) {
+		return ofNullable(proposal).flatMap(p -> normIdForMonth(p, applicationMonth.atDay(1), normNames));
 	}
 
 	private static Optional<Integer> firstServiceId(final PersonBasedCalculationProposalDTO proposal) {
@@ -126,18 +134,51 @@ public final class CalculationAssembler {
 			.findFirst();
 	}
 
-	/** The norm whose [fromDate, toDate] window covers the application month, falling back to the first offered norm. */
-	private static Optional<Integer> normIdForMonth(final PersonBasedCalculationProposalDTO proposal, final LocalDate monthStart) {
+	/**
+	 * The norm to calculate against: the one the application asked for, among those whose [fromDate, toDate] window
+	 * covers the application month.
+	 *
+	 * <p>
+	 * The window alone does not choose. FamilyCare offered four norms for September 2026 — Riksnorm, Matnorm,
+	 * Nettonorm and Specnorm — and every one of them covered the month, so "the first that covers" was a coin toss
+	 * that landed on Matnorm. Matnorm is a reduced food norm with no row for a single-person household, and
+	 * FamilyCare refused the calculation with <em>Saknar norm för angiven hushållsstorlek</em>. The application had
+	 * said {@code NATIONAL_NORM} all along; it was simply never read.
+	 *
+	 * <p>
+	 * The caller passes norm <em>names</em> rather than its own norm-type codes: this module serves every errand type
+	 * and has no business knowing what {@code NATIONAL_NORM} means. Matching is on the name as a prefix of the
+	 * catalogue entry ("Riksnorm" → "Riksnorm 2026"), because the catalogue names carry the year and the labels do
+	 * not. A name that matches nothing selects nothing and falls through to the covering-window default.
+	 */
+	private static Optional<Integer> normIdForMonth(final PersonBasedCalculationProposalDTO proposal, final LocalDate monthStart,
+		final List<String> normNames) {
+
 		final var norms = ofNullable(proposal.getNorms()).orElseGet(List::of);
-		return norms.stream()
-			.filter(norm -> covers(norm, monthStart))
+		final var covering = norms.stream().filter(norm -> covers(norm, monthStart)).toList();
+		final var wanted = ofNullable(normNames).orElseGet(List::of).stream()
+			.filter(StringUtils::hasText)
+			.toList();
+
+		return covering.stream()
+			.filter(norm -> matchesAnyLabel(norm, wanted))
 			.map(PersonBasedCalculationNormDTO::getId)
 			.filter(Objects::nonNull)
 			.findFirst()
+			.or(() -> covering.stream()
+				.map(PersonBasedCalculationNormDTO::getId)
+				.filter(Objects::nonNull)
+				.findFirst())
 			.or(() -> norms.stream()
 				.map(PersonBasedCalculationNormDTO::getId)
 				.filter(Objects::nonNull)
 				.findFirst());
+	}
+
+	/** Whether the catalogue norm's name starts with any of the requested labels, ignoring case and surrounding space. */
+	private static boolean matchesAnyLabel(final PersonBasedCalculationNormDTO norm, final List<String> labels) {
+		final var name = normalize(norm.getName());
+		return labels.stream().map(MapperUtil::normalize).anyMatch(label -> !label.isEmpty() && name.startsWith(label));
 	}
 
 	/** Only link an actualisation when FamilyCare says one is mandatory; then take the first offered. */

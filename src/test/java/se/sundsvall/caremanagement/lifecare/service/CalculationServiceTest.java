@@ -30,6 +30,7 @@ import tools.jackson.databind.ObjectMapper;
 import static java.time.Month.JUNE;
 import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -179,7 +180,7 @@ class CalculationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal()
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(99).fromDate("2026-01-01").toDate("2026-12-31")));
 
-		assertThat(service.selectNormId(MUNICIPALITY_ID, APPLICANT, MONTH)).isEqualTo(99);
+		assertThat(service.selectNormId(MUNICIPALITY_ID, APPLICANT, MONTH, List.of())).isEqualTo(99);
 	}
 
 	@Test
@@ -211,7 +212,32 @@ class CalculationServiceTest {
 		// number in LifecareFamilyCareIntegration.createCalculation, the integrator route wants it unchanged.
 		assertThat(body.getCalculationPersons()).singleElement().satisfies(person -> {
 			assertThat(person.getPersonId()).isEqualTo("p1");
-			assertThat(person.getNumberOfDays()).isEqualTo(30);
+			// careM's full month is 30; June 2026 spans 2026-06-01–2026-06-30, which FamilyCare counts as 29.
+			assertThat(person.getNumberOfDays()).isEqualTo(29);
 		});
+	}
+
+	/**
+	 * FamilyCare refuses a NumberOfDays above the difference between the period's first and last day — 30 over a
+	 * 30-day month is <em>Invalid NumberOfDays for calculationperson</em>. careM counts a full month as 30 whatever
+	 * its length, so the value is capped at the FamilyCare edge rather than changed in the draft the caseworker reads.
+	 */
+	@Test
+	void capsHouseholdDaysAtWhatTheCalculationPeriodAllows() {
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
+		when(lifecareFamilyCareIntegrationMock.createCalculation(eq(MUNICIPALITY_ID), any(PostCalculationBodyRequest.class))).thenReturn(6000);
+
+		final var july = YearMonth.of(2026, 7); // 31 days: 2026-07-01–2026-07-31 is 30
+		final var persons = List.of(
+			new EffectivePerson("full", 30, null, null),
+			new EffectivePerson("partial", 12, null, null));
+
+		service.commitEffective(MUNICIPALITY_ID, APPLICANT, july, new CalculationHeader(7, null, null, null, null, null), List.of(), List.of(), persons);
+
+		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
+		verify(lifecareFamilyCareIntegrationMock).createCalculation(eq(MUNICIPALITY_ID), captor.capture());
+		assertThat(captor.getValue().getCalculationPersons())
+			.extracting(person -> person.getPersonId(), person -> person.getNumberOfDays())
+			.containsExactly(tuple("full", 30), tuple("partial", 12));
 	}
 }

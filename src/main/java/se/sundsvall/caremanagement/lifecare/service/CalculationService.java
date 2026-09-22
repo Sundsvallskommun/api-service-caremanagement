@@ -32,6 +32,7 @@ import se.sundsvall.dept44.problem.Problem;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
+import static java.time.temporal.ChronoUnit.DAYS;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper.BUCKET_SPECIAL_EXPENSE;
@@ -148,11 +149,14 @@ public class CalculationService {
 	}
 
 	/**
-	 * The norm id the FamilyCare proposal offers for the application month (covering window, else first), or {@code null}.
+	 * The norm id for the application month: the first of the requested norm <em>names</em> found among the norms
+	 * whose window covers it, or {@code null} when the proposal offers none. The caller resolves its own norm-type
+	 * vocabulary to names before calling.
 	 */
-	public Integer selectNormId(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth) {
+	public Integer selectNormId(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth,
+		final List<String> normNames) {
 		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPersonId);
-		return CalculationAssembler.selectNormId(proposal, applicationMonth).orElse(null);
+		return CalculationAssembler.selectNormId(proposal, applicationMonth, normNames).orElse(null);
 	}
 
 	/**
@@ -177,10 +181,13 @@ public class CalculationService {
 			.filter(expense -> BUCKET_SPECIAL_EXPENSE.equals(expense.bucket()))
 			.map(expense -> toSpecialExpenseDto(expense, proposal)).filter(Objects::nonNull).toList();
 
-		final var personDtos = ofNullable(persons).orElseGet(List::of).stream().map(CalculationService::toPersonDto).toList();
+		final var periodDays = familyCarePeriodDays(header, applicationMonth);
+		final var personDtos = ofNullable(persons).orElseGet(List::of).stream().map(person -> toPersonDto(person, periodDays)).toList();
 
 		final var sections = new CalculationSections(incomeDtos, expenseDtos, specialExpenseDtos, personDtos, header);
-		final var body = CalculationAssembler.assemble(applicantPersonId, proposal, sections, applicationMonth);
+		// No norm types here: the draft header carries the norm already chosen by selectNormId and overrides whatever
+		// the assembler would pick, so this argument only feeds a fallback that the header makes unreachable.
+		final var body = CalculationAssembler.assemble(applicantPersonId, proposal, sections, applicationMonth, List.of());
 		return lifecareFamilyCareIntegration.createCalculation(municipalityId, body);
 	}
 
@@ -213,12 +220,42 @@ public class CalculationService {
 	 * {@code LifecareFamilyCareIntegration.createCalculation}. Resolving it here instead would make the integrator
 	 * route round-trip party → personnummer → party for no gain, and fail where the reverse lookup does.
 	 */
-	private static PersonBasedCalculationPersonPostDTO toPersonDto(final EffectivePerson person) {
+	private static PersonBasedCalculationPersonPostDTO toPersonDto(final EffectivePerson person, final long periodDays) {
 		return new PersonBasedCalculationPersonPostDTO()
 			.personId(person.partyId())
-			.numberOfDays(person.numberOfDays())
+			.numberOfDays(cappedDays(person.numberOfDays(), periodDays))
 			.deviationFromDate(toOffsetDateTime(person.deviationFromDate()))
 			.deviationToDate(toOffsetDateTime(person.deviationToDate()));
+	}
+
+	/**
+	 * The largest {@code NumberOfDays} FamilyCare accepts over the calculation period: the difference between its first
+	 * and last day, <em>not</em> the inclusive day count. September 2026 (2026-09-01–2026-09-30) is 29, and 30 is
+	 * refused with {@code Invalid NumberOfDays for calculationperson}.
+	 *
+	 * <p>
+	 * Established against the live API on 2026-09-22, because the FamilyCare specification says nothing about the
+	 * field and the read model does not carry it at all — an existing calculation cannot be inspected to learn the
+	 * rule. Whether FamilyCare means "days between" or merely enforces an upper bound is not settled by that one
+	 * observation; both readings accept this value, so it is used as a cap rather than as a computed answer.
+	 */
+	private static long familyCarePeriodDays(final CalculationHeader header, final YearMonth applicationMonth) {
+		final var from = ofNullable(header).map(CalculationHeader::calculationFromDate).orElseGet(() -> applicationMonth.atDay(1));
+		final var to = ofNullable(header).map(CalculationHeader::calculationToDate).orElseGet(applicationMonth::atEndOfMonth);
+		return DAYS.between(ofNullable(from).orElseGet(() -> applicationMonth.atDay(1)), ofNullable(to).orElseGet(applicationMonth::atEndOfMonth));
+	}
+
+	/**
+	 * A household member's days, never above what the period allows. careM counts a full month as 30 whatever its
+	 * length, which is right for the caseworker reading the draft and wrong on the wire for every month that is not
+	 * 31 days long — so the conversion happens here, at the FamilyCare edge, and the draft keeps the number a human
+	 * recognises.
+	 */
+	private static Integer cappedDays(final Integer days, final long periodDays) {
+		if (days == null) {
+			return null;
+		}
+		return (int) Math.min(days.longValue(), periodDays);
 	}
 
 	private static OffsetDateTime toOffsetDateTime(final LocalDate date) {
