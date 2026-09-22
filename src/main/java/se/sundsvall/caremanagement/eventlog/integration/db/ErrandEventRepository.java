@@ -1,7 +1,9 @@
 package se.sundsvall.caremanagement.eventlog.integration.db;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import java.time.OffsetDateTime;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -31,6 +33,53 @@ public interface ErrandEventRepository extends JpaRepository<ErrandEventEntity, 
 		""")
 	List<ErrandEventEntity> findFiltered(@Param("municipalityId") String municipalityId, @Param("namespace") String namespace, @Param("errandId") String errandId, @Param("action") String action, @Param("actor") String actor, @Param("source") String source,
 		@Param("includeReads") boolean includeReads);
+
+	/**
+	 * One actor's events across every errand in the tenant, newest-first — the logguppföljning read.
+	 * <p>
+	 * Verksamhetens regelverk (revision 2026-09-22): <em>”Måste kunna söka upp loggar på en användare, inte bara per
+	 * ärende”</em>. {@link #findFiltered} can already narrow by actor, but only inside one errand, which answers ”who
+	 * touched this case” and not ”what has this caseworker looked at” — and the second question is the one a
+	 * logguppföljning asks.
+	 * <p>
+	 * Bounded by a window that includes {@code from} and excludes {@code to}, rather than unbounded: an actor's history
+	 * spans every errand
+	 * they have ever opened, and a follow-up is always about a period. Both bounds are optional ({@code null} matches
+	 * all) so the query still answers “everything” when that is what is wanted.
+	 * <p>
+	 * Reads are included by design — a logguppföljning is mostly about who <em>read</em> what, which is the opposite of
+	 * the errand timeline's default use.
+	 */
+	@Query("""
+		select e from ErrandEventEntity e
+		where e.municipalityId = :municipalityId
+		  and e.namespace = :namespace
+		  and lower(e.actor) = lower(:actor)
+		  and (:action is null or lower(e.action) = lower(:action))
+		  and (:source is null or lower(e.source) = lower(:source))
+		  and (:from is null or e.created >= :from)
+		  and (:to is null or e.created < :to)
+		order by e.created desc
+		""")
+	List<ErrandEventEntity> findByActor(@Param("municipalityId") String municipalityId, @Param("namespace") String namespace, @Param("actor") String actor,
+		@Param("action") String action, @Param("source") String source, @Param("from") OffsetDateTime from, @Param("to") OffsetDateTime to, Pageable pageable);
+
+	/**
+	 * Counts one actor's events across the tenant, honouring the same scope and filters as {@link #findByActor} — so a
+	 * capped listing can say how much it did not show.
+	 */
+	@Query("""
+		select count(e) from ErrandEventEntity e
+		where e.municipalityId = :municipalityId
+		  and e.namespace = :namespace
+		  and lower(e.actor) = lower(:actor)
+		  and (:action is null or lower(e.action) = lower(:action))
+		  and (:source is null or lower(e.source) = lower(:source))
+		  and (:from is null or e.created >= :from)
+		  and (:to is null or e.created < :to)
+		""")
+	long countByActor(@Param("municipalityId") String municipalityId, @Param("namespace") String namespace, @Param("actor") String actor,
+		@Param("action") String action, @Param("source") String source, @Param("from") OffsetDateTime from, @Param("to") OffsetDateTime to);
 
 	/**
 	 * Counts the errand's events honouring the same tenant scope and filters as {@link #findFiltered}, DB-side (no row

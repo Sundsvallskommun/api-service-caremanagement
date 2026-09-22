@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.eventlog.web;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
@@ -20,11 +21,13 @@ import se.sundsvall.dept44.support.Identifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -202,5 +205,51 @@ class ErrandEventInterceptorTest {
 	private void stubMethodAndUri(final String method, final String uri) {
 		when(requestMock.getMethod()).thenReturn(method);
 		lenient().when(requestMock.getRequestURI()).thenReturn(uri);
+	}
+
+	// --- Sökträffar: verksamhetens "loggas på ärendet men även på användare" -------------------------------------
+
+	private static final String HIT_ONE = UUID.randomUUID().toString();
+	private static final String HIT_TWO = UUID.randomUUID().toString();
+
+	@Test
+	void recordsOneRowPerSearchHit() {
+		stub("GET", "/2281/FINANCIAL_ASSISTANCE/errands", 200);
+		when(requestMock.getAttribute(SearchHitsCollector.SEARCH_HITS_ATTRIBUTE)).thenReturn(List.of(HIT_ONE, HIT_TWO));
+		Identifier.set(Identifier.create().withType(Identifier.Type.AD_ACCOUNT).withValue("joe001doe"));
+
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
+
+		final var captor = ArgumentCaptor.forClass(ErrandEventEntity.class);
+		verify(serviceMock, times(2)).recordEvent(captor.capture());
+
+		assertThat(captor.getAllValues())
+			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getTarget, ErrandEventEntity::getAction, ErrandEventEntity::getActor)
+			.containsExactly(
+				tuple(HIT_ONE, "errands/search", "READ", "joe001doe"),
+				tuple(HIT_TWO, "errands/search", "READ", "joe001doe"));
+		// The row has to say it was a list sighting, not an opened case — the two are different disclosures.
+		assertThat(captor.getAllValues()).allSatisfy(entity -> assertThat(entity.getDescription()).isEqualTo("Såg ärendet i en sökträfflista (2 träffar)"));
+	}
+
+	@Test
+	void recordsNothingForASearchThatMatchedNothing() {
+		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands");
+		when(requestMock.getAttribute(SearchHitsCollector.SEARCH_HITS_ATTRIBUTE)).thenReturn(List.of());
+
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
+
+		// Nothing was shown, so nothing was disclosed.
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void recordsNothingForAnErrandlessRouteThatIsNotASearch() {
+		stubMethodAndUri("GET", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/eligibility");
+		when(requestMock.getAttribute(SearchHitsCollector.SEARCH_HITS_ATTRIBUTE)).thenReturn(null);
+
+		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
+
+		verifyNoInteractions(serviceMock);
 	}
 }

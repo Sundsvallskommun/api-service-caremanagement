@@ -5,14 +5,19 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 import se.sundsvall.caremanagement.eventlog.integration.db.ErrandEventRepository;
 import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEntity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -68,6 +73,33 @@ class ErrandEventServiceTest {
 				tuple("ev2", "READ", "joe001doe"),
 				tuple("ev1", "UPDATE", "edwmol"));
 		verify(repositoryMock).findFiltered("2281", "ns", "e1", null, null, null, true);
+	}
+
+	@Test
+	void listForActorReadsAcrossErrandsAndReportsTheTotalBesideTheCappedPage() {
+		final var from = OffsetDateTime.parse("2026-09-01T00:00:00Z");
+		final var to = OffsetDateTime.parse("2026-10-01T00:00:00Z");
+		when(repositoryMock.findByActor(eq("2281"), eq("ns"), eq("joe001doe"), eq("read"), eq("http"), eq(from), eq(to), any(Pageable.class)))
+			.thenReturn(List.of(event("ev2", "READ", "joe001doe", FIXED_TIMESTAMP)));
+		when(repositoryMock.countByActor("2281", "ns", "joe001doe", "read", "http", from, to)).thenReturn(4213L);
+
+		final var result = service.listForActor("2281", "ns", "joe001doe", "read", "http", from, to);
+
+		assertThat(result.events()).extracting("id", "action", "actor").containsExactly(tuple("ev2", "READ", "joe001doe"));
+		// A follow-up that shows one row out of 4213 and does not say so is worse than showing nothing.
+		assertThat(result.total()).isEqualTo(4213);
+	}
+
+	@Test
+	void listForActorCapsThePage() {
+		when(repositoryMock.findByActor(any(), any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of());
+
+		service.listForActor("2281", "ns", "joe001doe", null, null, null, null);
+
+		final var pageable = ArgumentCaptor.forClass(Pageable.class);
+		verify(repositoryMock).findByActor(eq("2281"), eq("ns"), eq("joe001doe"), isNull(), isNull(), isNull(), isNull(), pageable.capture());
+		assertThat(pageable.getValue().getPageSize()).isEqualTo(1000);
+		assertThat(pageable.getValue().getPageNumber()).isZero();
 	}
 
 	@Test

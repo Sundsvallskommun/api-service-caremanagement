@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:63479
+- url: http://localhost:62995
   description: Generated server url
 security:
 - sentBy: []
@@ -6002,6 +6002,79 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/events:
+    get:
+      tags:
+      - Event Log
+      summary: List one actor's activity across all errands (newest first)
+      description: "Logguppföljning for a single user: every errand they read or changed\
+        \ in this namespace, newest first. Optionally filter by action (READ/CREATE/UPDATE/DELETE),\
+        \ source (HTTP access log or EVENT change log) and a [from, to) time window.\
+        \ Reads are included — a follow-up is mostly about what someone looked at.\
+        \ The listing is capped; compare the returned events against 'total' to see\
+        \ whether it was truncated."
+      operationId: listForActor
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: actor
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      - name: action
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: source
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorEventLog"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/{errandId}/status-history:
     get:
       tags:
@@ -8433,9 +8506,9 @@ components:
     Problem:
       type: object
       properties:
-        detail:
-          type: string
         title:
+          type: string
+        detail:
           type: string
         instance:
           type: string
@@ -10776,6 +10849,7 @@ components:
           - CO_APPLICANT_SPLIT_PAYMENT
           - SSBTEK_READ_FAILED
           - INCOME_MISSING_PREVIOUS_PERIOD
+          - INCOME_TRANSFERRED_LATE
           examples:
           - EXPENSE_CAPPED
         typeDisplayName:
@@ -12403,8 +12477,10 @@ components:
           - f47ac10b-58cc-4372-a567-0e02b2c3d479
         applicationMonth:
           type: string
-          description: "The application month (ISO year-month, yyyy-MM); the actualisation's\
-            \ intake date is the first day of this month"
+          description: "The application month (ISO year-month, yyyy-MM). The actualisation's\
+            \ intake date (Ansökningsdatum) is the day the application was submitted,\
+            \ read from the errand's created stamp; when no errandId is given, or\
+            \ the errand is unknown, it falls back to the first day of this month."
           examples:
           - 2026-06
           pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
@@ -12850,6 +12926,58 @@ components:
           description: Number of errands in the status
           examples:
           - 12
+    ActorEventLog:
+      type: object
+      description: "One actor's activity across every errand in the namespace, newest\
+        \ first. The listing is capped; compare 'events' against 'total' to see whether\
+        \ it was truncated, and narrow with from/to to see the rest."
+      properties:
+        events:
+          type: array
+          description: "The matching events, newest first, up to the listing cap"
+          items:
+            $ref: "#/components/schemas/ErrandEventEntry"
+        total:
+          type: integer
+          format: int64
+          description: "How many events match the filters in total, ignoring the cap"
+          examples:
+          - 4213
+    ErrandEventEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        errandId:
+          type: string
+        municipalityId:
+          type: string
+        namespace:
+          type: string
+        source:
+          type: string
+        action:
+          type: string
+        target:
+          type: string
+        description:
+          type: string
+        httpMethod:
+          type: string
+        requestPath:
+          type: string
+        actor:
+          type: string
+        actorType:
+          type: string
+        requestId:
+          type: string
+        statusCode:
+          type: integer
+          format: int32
+        created:
+          type: string
+          format: date-time
     Direction:
       type: string
       enum:
@@ -13044,41 +13172,6 @@ components:
             has not yet marked as read
           examples:
           - 3
-    ErrandEventEntry:
-      type: object
-      properties:
-        id:
-          type: string
-        errandId:
-          type: string
-        municipalityId:
-          type: string
-        namespace:
-          type: string
-        source:
-          type: string
-        action:
-          type: string
-        target:
-          type: string
-        description:
-          type: string
-        httpMethod:
-          type: string
-        requestPath:
-          type: string
-        actor:
-          type: string
-        actorType:
-          type: string
-        requestId:
-          type: string
-        statusCode:
-          type: integer
-          format: int32
-        created:
-          type: string
-          format: date-time
     ErrandEventCount:
       type: object
       description: The number of activity events on the errand matching the given

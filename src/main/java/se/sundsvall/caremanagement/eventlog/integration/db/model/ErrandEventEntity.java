@@ -16,7 +16,9 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 @Table(name = "errand_event",
 	indexes = {
 		@Index(name = "idx_errand_event_errand_id_created", columnList = "errand_id, created"),
-		@Index(name = "idx_errand_event_created", columnList = "created")
+		@Index(name = "idx_errand_event_created", columnList = "created"),
+		// Logguppföljning reads one actor across every errand, so the errand-leading index cannot serve it.
+		@Index(name = "idx_errand_event_actor_created", columnList = "actor, created")
 	})
 public class ErrandEventEntity {
 

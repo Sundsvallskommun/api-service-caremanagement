@@ -4,6 +4,9 @@ TRUNCATE TABLE attachment_data;
 TRUNCATE TABLE contact_channel;
 TRUNCATE TABLE decision;
 TRUNCATE TABLE errand_document;
+-- The access log was missing here: every AppTest request writes rows to it, so without this they accumulate across
+-- ITs. Harmless while nothing asserted on them; not harmless now that a search writes one row per hit.
+TRUNCATE TABLE errand_event;
 TRUNCATE TABLE errand_financial_assistance;
 TRUNCATE TABLE errand_financial_assistance_calculation_draft;
 TRUNCATE TABLE errand_financial_assistance_monitoring;
