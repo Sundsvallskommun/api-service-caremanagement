@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:52321
+- url: http://localhost:60847
   description: Generated server url
 tags:
 - name: Financial Assistance · Lifecare supplements
@@ -13799,7 +13799,9 @@ components:
           - HOUSING
         citizenReportable:
           type: boolean
-          description: Whether the type is offered on the citizen Mina-sidor form
+          description: "Whether an applicant may report the type, i.e. whether the\
+            \ code is accepted on the citizen payload. Does not control what the Mina-sidor\
+            \ form renders — that list is maintained in the frontend."
           examples:
           - true
     LifecareDocument:

@@ -24,6 +24,15 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.TypeOptio
  * (Arbete och studier), {@code HEALTH} (Hälsa), {@code OTHER} (Övrigt) — null for income and for handläggare-only
  * types.
  * </p>
+ *
+ * <p>
+ * <strong>Mina sidor does not read this catalogue.</strong> It never calls the metadata endpoint — its income and cost
+ * boxes are a hardcoded list in the frontend, confirmed by Oliver 2026-09-22. Only Draken consumes {@code /metadata}.
+ * Keeping the two in sync is therefore manual: removing a code here does not remove the box from the citizen form, so
+ * every applicant who ticks it keeps submitting a value that {@code Income}/{@code Cost} now reject with a 400 until
+ * the frontend ships a matching change. Treat any removal as a coordinated breaking change across both repos, not as
+ * something that takes effect on deploy.
+ * </p>
  */
 public final class FinancialAssistanceTypes {
 
@@ -79,9 +88,14 @@ public final class FinancialAssistanceTypes {
 	 * {@code INTERNET} was dropped on 2026-09-21: the revised regelverk prices no internet cost, and verksamheten
 	 * confirmed it should leave the forms too, because internet is part of riksnormen from 2027. It is removed in all
 	 * three places the invariant tests hold together — here, {@code Cost}'s allowable values and
-	 * {@code ExpenseTypeMapper} — so a cost carrying it is now a 400. The citizen form is driven by this catalogue,
-	 * so it stops being offered the moment this deploys; the exposure is an application already in flight.
-	 * {@code Decision_internet} is gone from the published DMN in the same change.
+	 * {@code ExpenseTypeMapper} — so a cost carrying it is now a 400. {@code Decision_internet} is gone from the
+	 * published DMN in the same change.
+	 * <p>
+	 * The change was written on the assumption that dropping the code here also drops the box from the citizen form.
+	 * It does not — see the class javadoc: Mina sidor hardcodes its cost list and never calls the metadata endpoint.
+	 * The Internet box therefore survived the deploy, and every application that ticked it got a 400 on submit until
+	 * Oliver removed it from the frontend on 2026-09-22. The exposure was every new application in that window, not
+	 * just the ones already in flight.
 	 */
 	public static final List<TypeOption> COST_TYPES = List.of(
 		// Citizen Mina-sidor costs (the "Vilka kostnader söker du bistånd för?" form, grouped)
