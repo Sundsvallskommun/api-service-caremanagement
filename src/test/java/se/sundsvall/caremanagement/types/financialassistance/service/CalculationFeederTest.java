@@ -304,7 +304,7 @@ class CalculationFeederTest {
 			.withPersons(List.of(applicant))
 			.withChildren(List.of(child, childNoDays));
 
-		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand);
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of("p-1", BigDecimal.valueOf(1431.00), "c-1", BigDecimal.valueOf(2100.00)));
 
 		assertThat(rows).hasSize(3)
 			.allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
@@ -314,21 +314,37 @@ class CalculationFeederTest {
 		assertThat(personRow.getRole()).isEqualTo("APPLICANT");
 		assertThat(personRow.getName()).isEqualTo("Karin Nilsson");
 		assertThat(personRow.getProcessDays()).isEqualTo(30);
+		assertThat(personRow.getAmount()).isEqualByComparingTo("1431.00");
 
 		final var childRow = rows.get(1);
 		assertThat(childRow.getPartyId()).isEqualTo("c-1");
 		assertThat(childRow.getRole()).isEqualTo(ROLE_CHILD);
 		assertThat(childRow.getName()).isEqualTo("Anna Svensson");
 		assertThat(childRow.getProcessDays()).isEqualTo(15);
+		assertThat(childRow.getAmount()).isEqualByComparingTo("2100.00");
 
+		// The previous calculation never covered this child, so the Belopp column stays empty rather than borrowing one.
 		final var childNoDaysRow = rows.get(2);
 		assertThat(childNoDaysRow.getName()).isEqualTo("Bo");
 		assertThat(childNoDaysRow.getProcessDays()).isEqualTo(30);
+		assertThat(childNoDaysRow.getAmount()).isNull();
+	}
+
+	@Test
+	void personRowsLeavesTheAmountNullWithoutPreviousAmounts() {
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		final var errand = FinancialAssistanceEntity.create()
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")))
+			.withChildren(List.of(FaChild.create().withFirstName("Anna").withLastName("Svensson")));
+
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, null);
+
+		assertThat(rows).hasSize(2).allMatch(row -> row.getAmount() == null);
 	}
 
 	@Test
 	void personRowsHandlesNullCollections() {
-		assertThat(feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceEntity.create())).isEmpty();
+		assertThat(feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceEntity.create(), Map.of())).isEmpty();
 	}
 
 	@Test
@@ -337,7 +353,7 @@ class CalculationFeederTest {
 			Stakeholder.create().withRole("APPLICANT").withFirstName("Karin").withLastName("Nilsson")));
 		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withPartyId("p-1")));
 
-		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand);
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of());
 
 		assertThat(rows).hasSize(1);
 		assertThat(rows.getFirst().getName()).isNull();
@@ -348,7 +364,7 @@ class CalculationFeederTest {
 		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(new IllegalStateException("boom"));
 		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
 
-		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand);
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of());
 
 		assertThat(rows).hasSize(1);
 		assertThat(rows.getFirst().getName()).isNull();

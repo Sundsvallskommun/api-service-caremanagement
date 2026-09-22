@@ -117,7 +117,7 @@ public final class CalculationDraftMapper {
 			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withPartyId(e.getPartyId()).withRole(e.getRole()).withRoleDisplayName(roleDisplayName(e.getRole())).withName(e.getName())
 			.withProcessDays(e.getProcessDays()).withCaseworkerDays(e.getCaseworkerDays()).withEffectiveDays(effective)
 			.withIncluded(e.isIncluded()).withDeviationFromDate(e.getDeviationFromDate()).withDeviationToDate(e.getDeviationToDate())
-			.withNormInterval(e.getNormInterval()).withJobStimulusAmount(e.getJobStimulusAmount())
+			.withNormInterval(e.getNormInterval()).withAmount(e.getAmount()).withJobStimulusAmount(e.getJobStimulusAmount())
 			.withDeleted(e.isDeleted()).withNote(e.getNote()).withCreated(e.getCreated()).withUpdated(e.getUpdated());
 	}
 

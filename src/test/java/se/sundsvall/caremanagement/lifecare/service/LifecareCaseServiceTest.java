@@ -27,6 +27,7 @@ import static java.time.Month.JUNE;
 import static java.time.Month.MARCH;
 import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -408,6 +409,55 @@ class LifecareCaseServiceTest {
 		assertThat(household.personIds()).containsExactly(APPLICANT);
 		assertThat(household.personIdsComplete()).isFalse();
 		assertThat(household.memberCount()).isEqualTo(2);
+	}
+
+	/**
+	 * The direct route answers with personal identity numbers, so the amounts have to be resolved to the party ids
+	 * careM's own draft person rows are keyed by — otherwise the Belopp column never matches a single member.
+	 */
+	@Test
+	void previousPersonAmountsKeyedByPartyIdOnTheDirectRoute() {
+		final var older = new PersonBasedCalculationDTO().toDate("2026-03-31")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT).amount(999.0));
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT).amount(1431.0))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD).amount(2100.0))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CO_APPLICANT)) // no amount -> skipped
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("198001019999").amount(50.0)); // unresolvable -> skipped
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous)));
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(APPLICANT_PARTY_ID));
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CHILD)).thenReturn(Optional.of(CHILD_PARTY_ID));
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CO_APPLICANT)).thenReturn(Optional.of(CO_APPLICANT_PARTY_ID));
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, "198001019999")).thenReturn(Optional.empty());
+
+		final var amounts = service().previousPersonAmounts(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+
+		assertThat(amounts).hasSize(2)
+			.containsEntry(APPLICANT_PARTY_ID, BigDecimal.valueOf(1431.0))
+			.containsEntry(CHILD_PARTY_ID, BigDecimal.valueOf(2100.0));
+	}
+
+	/** The integrator already answers with party ids, so nothing is resolved. */
+	@Test
+	void previousPersonAmountsPassesPartyIdsThroughOnTheIntegratorRoute() {
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID).amount(1431.0));
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
+		when(integrationMock.respondsWithPartyId()).thenReturn(true);
+
+		final var amounts = service().previousPersonAmounts(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+
+		assertThat(amounts).containsExactly(entry(APPLICANT_PARTY_ID, BigDecimal.valueOf(1431.0)));
+		verifyNoInteractions(citizenServiceMock);
+	}
+
+	@Test
+	void previousPersonAmountsEmptyWhenNoPriorCalculation() {
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any())).thenReturn(null);
+
+		assertThat(service().previousPersonAmounts(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE))).isEmpty();
 	}
 
 	@Test

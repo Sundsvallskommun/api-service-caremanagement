@@ -11842,6 +11842,14 @@ components:
         normInterval:
           type: string
           description: The norm interval applied to the member
+        amount:
+          type: number
+          description: "The member's own share of the norm (the Belopp column of Lifecare's\
+            \ Beräkning view); carried over from the previous calculation, the norm\
+            \ itself is computed in Lifecare"
+          examples:
+          - 1431.0
+          readOnly: true
         jobStimulusAmount:
           type: number
           description: The job stimulus amount applied to the member

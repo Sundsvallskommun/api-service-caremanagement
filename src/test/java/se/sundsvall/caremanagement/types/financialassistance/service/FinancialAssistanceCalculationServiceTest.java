@@ -365,7 +365,7 @@ class FinancialAssistanceCalculationServiceTest {
 			FaNormIncomeEntity.create().withTypeId(11).withApplicantProcessAmount(new BigDecimal("18500"))));
 		when(calculationFeederMock.applicationExpenseRows(eq(ERRAND_ID), any())).thenReturn(
 			List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
-		when(calculationFeederMock.personRows(any(), any(), eq(ERRAND_ID), any())).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
+		when(calculationFeederMock.personRows(any(), any(), eq(ERRAND_ID), any(), any())).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
 		when(calculationServiceMock.selectNormId(MUNICIPALITY_ID, "199001011234", month)).thenReturn(7);
 		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(5001);
 

@@ -58,6 +58,13 @@ class CalculationDraftMapperTest {
 	}
 
 	@Test
+	void toPersonRowCarriesTheNormAmount() {
+		final var entity = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withAmount(new BigDecimal("1431.00"));
+
+		assertThat(CalculationDraftMapper.toPersonRow(entity).getAmount()).isEqualByComparingTo("1431.00");
+	}
+
+	@Test
 	void theViewRowsCarryTheLabelBesideTheCode() {
 		final var expense = FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("RENT");
 		final var person = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole("CO_APPLICANT");

@@ -27,6 +27,12 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  * sent to Lifecare is the caseworker value when set, otherwise the process value. A row can be soft-deleted
  * ({@code deleted}) and is then excluded from the calculation but never resurrected by the daily refresh. Drives the
  * norm base, and is compared against the previous calculation in Lifecare to warn on household drift.
+ *
+ * <p>
+ * {@code amount} is the member's own share of the norm — the Belopp column of Lifecare's Beräkning view. Like
+ * {@code processDays} it is a process value written only by the daily prepare (from the previous calculation's
+ * {@code CalculationPerson.Amount}); the norm itself is computed in Lifecare, never here.
+ * </p>
  */
 @Entity
 @Table(name = "errand_fa_norm_person", indexes = {
@@ -74,6 +80,9 @@ public class FaNormPersonEntity {
 
 	@Column(name = "norm_interval")
 	private String normInterval;
+
+	@Column(name = "amount", precision = 12, scale = 2)
+	private BigDecimal amount;
 
 	@Column(name = "job_stimulus_amount", precision = 12, scale = 2)
 	private BigDecimal jobStimulusAmount;
@@ -277,6 +286,19 @@ public class FaNormPersonEntity {
 		return this;
 	}
 
+	public BigDecimal getAmount() {
+		return amount;
+	}
+
+	public void setAmount(final BigDecimal amount) {
+		this.amount = amount;
+	}
+
+	public FaNormPersonEntity withAmount(final BigDecimal amount) {
+		this.amount = amount;
+		return this;
+	}
+
 	public BigDecimal getJobStimulusAmount() {
 		return jobStimulusAmount;
 	}
@@ -354,14 +376,14 @@ public class FaNormPersonEntity {
 			&& Objects.equals(name, that.name)
 			&& Objects.equals(processDays, that.processDays) && Objects.equals(caseworkerDays, that.caseworkerDays)
 			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
-			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount)
+			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(amount, that.amount) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, origin, position, partyId, role, name, processDays, caseworkerDays, included, deviationFromDate, deviationToDate, normInterval,
-			jobStimulusAmount, deleted, created, updated);
+			amount, jobStimulusAmount, deleted, created, updated);
 	}
 
 	@Override
@@ -380,6 +402,7 @@ public class FaNormPersonEntity {
 			", deviationFromDate=" + deviationFromDate +
 			", deviationToDate=" + deviationToDate +
 			", normInterval='" + normInterval + '\'' +
+			", amount=" + amount +
 			", jobStimulusAmount=" + jobStimulusAmount +
 			", deleted=" + deleted +
 			", created=" + created +

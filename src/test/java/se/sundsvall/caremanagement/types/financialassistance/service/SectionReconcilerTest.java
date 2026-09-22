@@ -112,6 +112,23 @@ class SectionReconcilerTest {
 		verify(incomeRepositoryMock, never()).save(existing); // not auto-deleted, not re-saved
 	}
 
+	/** The Belopp column is a process value, so the daily refresh carries the new one in without touching the override. */
+	@Test
+	void reconcilePersonsRefreshesTheNormAmount() {
+		final var existing = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withPartyId("f47ac10b-58cc-4372-a567-0e02b2c3d479")
+			.withName("Alva Alvsson").withProcessDays(30).withIncluded(true).withAmount(new BigDecimal("1431.00")).withCaseworkerDays(15);
+		final var fresh = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withPartyId("f47ac10b-58cc-4372-a567-0e02b2c3d479")
+			.withName("Alva Alvsson").withProcessDays(30).withIncluded(true).withAmount(new BigDecimal("1512.00"));
+		when(personRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
+
+		final var diff = sectionReconciler.reconcilePersons(ERRAND_ID, List.of(fresh));
+
+		assertThat(diff.added()).isEmpty();
+		assertThat(existing.getAmount()).isEqualByComparingTo("1512.00"); // process refreshed
+		assertThat(existing.getCaseworkerDays()).isEqualTo(15); // caseworker value untouched
+		verify(personRepositoryMock).save(existing);
+	}
+
 	@Test
 	void reconcilePersonsKeepsChildrenWithoutPartyIdDistinct() {
 		when(personRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());

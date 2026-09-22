@@ -24,6 +24,9 @@ class NormPersonRowTest {
 	@BeforeAll
 	static void setup() {
 		BeanMatchers.registerValueGenerator(() -> now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+		// BeanMatchers' generators are global static state, so relying on a sibling test class to have registered the
+		// LocalDate one makes this class pass only when it runs after them. Register our own.
+		BeanMatchers.registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(1_000_000)), LocalDate.class);
 	}
 
 	@Test
@@ -52,6 +55,7 @@ class NormPersonRowTest {
 		final var deviationFromDate = LocalDate.of(2026, JUNE, 1);
 		final var deviationToDate = LocalDate.of(2026, JUNE, 15);
 		final var normInterval = "MONTH";
+		final var amount = BigDecimal.valueOf(1431.00);
 		final var jobStimulusAmount = BigDecimal.valueOf(1000.00);
 		final var deleted = true;
 		final var note = "note";
@@ -73,6 +77,7 @@ class NormPersonRowTest {
 			.withDeviationFromDate(deviationFromDate)
 			.withDeviationToDate(deviationToDate)
 			.withNormInterval(normInterval)
+			.withAmount(amount)
 			.withJobStimulusAmount(jobStimulusAmount)
 			.withDeleted(deleted)
 			.withNote(note)
@@ -94,6 +99,7 @@ class NormPersonRowTest {
 		assertThat(result.getDeviationFromDate()).isEqualTo(deviationFromDate);
 		assertThat(result.getDeviationToDate()).isEqualTo(deviationToDate);
 		assertThat(result.getNormInterval()).isEqualTo(normInterval);
+		assertThat(result.getAmount()).isEqualTo(amount);
 		assertThat(result.getJobStimulusAmount()).isEqualTo(jobStimulusAmount);
 		assertThat(result.isDeleted()).isEqualTo(deleted);
 		assertThat(result.getNote()).isEqualTo(note);

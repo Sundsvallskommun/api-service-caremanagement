@@ -179,6 +179,7 @@ class SectionReconciler {
 	private static void copyPersonProcess(final FaNormPersonEntity target, final FaNormPersonEntity fresh) {
 		target.setName(fresh.getName());
 		target.setProcessDays(fresh.getProcessDays());
+		target.setAmount(fresh.getAmount());
 	}
 
 	// --- warning labels ---

@@ -338,6 +338,38 @@ public class LifecareCaseService {
 	}
 
 	/**
+	 * The norm amount per household member on the person's most recent calculation strictly before {@code
+	 * applicationMonth} — the Belopp column of Lifecare's Beräkning view, keyed by {@code partyId} because that is what
+	 * careM's own draft person rows are keyed by. Empty when there is no prior calculation. Propagates the integration's
+	 * {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
+	 *
+	 * <p>
+	 * Carrying the previous month's amount forward is the closest careM can get on its own: the norm is computed in
+	 * Lifecare, and the current month's calculation does not exist until the draft is committed. A member Lifecare has
+	 * never paid for — a newborn, a new co-applicant — is simply absent from the map and keeps no amount, rather than
+	 * being given one that was never calculated.
+	 * </p>
+	 *
+	 * @param  personId         the applicant's personal identity number
+	 * @param  applicationMonth the month being applied for; only calculations before it are considered
+	 * @return                  the member's norm amount keyed by party id (empty when none)
+	 */
+	public Map<String, BigDecimal> previousPersonAmounts(final String municipalityId, final String personId, final YearMonth applicationMonth) {
+		final var amounts = new HashMap<String, BigDecimal>();
+		latestCalculationBefore(municipalityId, personId, applicationMonth)
+			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
+			.orElseGet(List::of)
+			.forEach(person -> {
+				final var partyId = toPartyId(municipalityId, person.getPersonId());
+				final var amount = toAmount(person.getAmount());
+				if (hasText(partyId) && (amount != null)) {
+					amounts.putIfAbsent(partyId, amount);
+				}
+			});
+		return amounts;
+	}
+
+	/**
 	 * The approved amount per financial assistance cost type on the person's most recent previous calculation — read
 	 * from the regular (UTGIFTER) expense array and mapped back from each FamilyCare type name via {@link
 	 * ExpenseTypeMapper}. Empty when there is no previous calculation. Feeds the expense rule tree's "godkänt belopp

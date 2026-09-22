@@ -194,7 +194,8 @@ public class FinancialAssistanceCalculationService {
 		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
 		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, input.errandId(), input.errand(),
 			previousExpenseAmounts(municipalityId, input.applicant(), input.applicationMonth()), ageFromPnr(input.applicant()));
-		final var personRows = calculationFeeder.personRows(municipalityId, input.namespace(), input.errandId(), input.errand());
+		final var personRows = calculationFeeder.personRows(municipalityId, input.namespace(), input.errandId(), input.errand(),
+			previousPersonAmounts(municipalityId, input.applicant(), input.applicationMonth()));
 		final var normId = calculationService.selectNormId(municipalityId, input.applicant(), input.applicationMonth());
 		final var changes = draftService.refresh(input.errandId(), input.applicationMonthValue(), normId, input.errand().getNormType(),
 			personRows, incomeRows, expenseFeed.rows());
@@ -273,6 +274,19 @@ public class FinancialAssistanceCalculationService {
 			return lifecareCaseService.previousCalculationIncomeAmounts(municipalityId, applicant, applicationMonth);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation income amounts — the income comparison is skipped", e);
+			return Map.of();
+		}
+	}
+
+	/**
+	 * The previous calculation's per-member norm amounts, best-effort — a failed Lifecare read leaves the Belopp column
+	 * empty.
+	 */
+	private Map<String, BigDecimal> previousPersonAmounts(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
+		try {
+			return lifecareCaseService.previousPersonAmounts(municipalityId, applicant, applicationMonth);
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not read the previous calculation person amounts — the person rows get no amount", e);
 			return Map.of();
 		}
 	}
@@ -357,7 +371,8 @@ public class FinancialAssistanceCalculationService {
 			.map(CalculationDraftMapper::toEffectiveIncome).toList();
 		final var expenses = calculationFeeder.applicationExpenseRows(errandId, errand).stream()
 			.map(CalculationDraftMapper::toEffectiveExpense).toList();
-		final var persons = calculationFeeder.personRows(municipalityId, namespace, errandId, errand).stream()
+		// No previous calculation on a new application, and toEffectivePerson does not carry the amount anyway.
+		final var persons = calculationFeeder.personRows(municipalityId, namespace, errandId, errand, Map.of()).stream()
 			.map(CalculationDraftMapper::toEffectivePerson).toList();
 
 		final var normId = calculationService.selectNormId(municipalityId, applicant, applicationMonth);

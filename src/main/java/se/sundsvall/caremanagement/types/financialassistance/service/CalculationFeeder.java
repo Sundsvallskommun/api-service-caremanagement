@@ -239,22 +239,43 @@ public class CalculationFeeder {
 	 * nothing but a party id to name the person by, which is an identifier, not something a handläggare reads. A
 	 * stakeholder read that fails or finds nothing leaves the name null; the row then falls back to its role label.
 	 * </p>
+	 *
+	 * <p>
+	 * The Belopp column — the member's own share of the norm — is carried over from {@code previousAmounts} (the
+	 * previous Lifecare calculation, keyed by party id). The norm is computed in Lifecare, so this is the only figure
+	 * careM can show before the draft is committed; a member the previous calculation did not cover keeps none rather
+	 * than being given one that was never calculated.
+	 * </p>
+	 *
+	 * @param previousAmounts the previous calculation's norm amount per party id, empty when there is no history
 	 */
-	public List<FaNormPersonEntity> personRows(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity errand) {
+	public List<FaNormPersonEntity> personRows(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity errand,
+		final Map<String, BigDecimal> previousAmounts) {
+
 		final var rows = new ArrayList<FaNormPersonEntity>();
 		final var names = householdNames(municipalityId, namespace, errandId);
+		final var amounts = ofNullable(previousAmounts).orElseGet(Map::of);
 
 		ofNullable(errand.getPersons()).orElseGet(List::of).forEach(person -> rows.add(FaNormPersonEntity.create()
 			.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
 			.withPartyId(person.getPartyId()).withRole(person.getRole()).withName(nameFor(names, person.getRole()))
-			.withProcessDays(FULL_MONTH_DAYS).withIncluded(true)));
+			.withProcessDays(FULL_MONTH_DAYS).withIncluded(true).withAmount(amountFor(amounts, person.getPartyId()))));
 
 		ofNullable(errand.getChildren()).orElseGet(List::of).forEach(child -> rows.add(FaNormPersonEntity.create()
 			.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
 			.withPartyId(child.getPartyId()).withRole(childRole(child.getResidenceExtent())).withName(childName(child.getFirstName(), child.getLastName()))
-			.withProcessDays(ofNullable(child.getDaysInHome()).orElse(FULL_MONTH_DAYS)).withIncluded(true)));
+			.withProcessDays(ofNullable(child.getDaysInHome()).orElse(FULL_MONTH_DAYS)).withIncluded(true)
+			.withAmount(amountFor(amounts, child.getPartyId()))));
 
 		return rows;
+	}
+
+	/** The previous calculation's amount for a party id, tolerating a member the application left without one. */
+	private static BigDecimal amountFor(final Map<String, BigDecimal> amounts, final String partyId) {
+		if (!hasText(partyId)) {
+			return null;
+		}
+		return amounts.get(partyId);
 	}
 
 	/**
