@@ -6,6 +6,8 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
+import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.User;
 import generated.se.sundsvall.lifecareintegrator.Actualisation;
 import generated.se.sundsvall.lifecareintegrator.ActualisationProposal;
@@ -17,6 +19,9 @@ import generated.se.sundsvall.lifecareintegrator.CalculationProposal;
 import generated.se.sundsvall.lifecareintegrator.CaseService;
 import generated.se.sundsvall.lifecareintegrator.Caseworker;
 import generated.se.sundsvall.lifecareintegrator.Contact;
+import generated.se.sundsvall.lifecareintegrator.CreateActualisationRequest;
+import generated.se.sundsvall.lifecareintegrator.CreateCalculationRequest;
+import generated.se.sundsvall.lifecareintegrator.CreatedResource;
 import generated.se.sundsvall.lifecareintegrator.Decision;
 import generated.se.sundsvall.lifecareintegrator.DecisionsResponse;
 import generated.se.sundsvall.lifecareintegrator.DocumentMetadata;
@@ -35,10 +40,12 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -47,15 +54,20 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.Month.APRIL;
 import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_IMPLEMENTED;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
 @ExtendWith(MockitoExtension.class)
 class LifecareIntegratorIntegrationTest {
@@ -319,23 +331,156 @@ class LifecareIntegratorIntegrationTest {
 		verify(clientMock).getActualisationProposal(MUNICIPALITY_ID, PARTY_ID);
 	}
 
+	// ---- Writes -----------------------------------------------------------------------------------------------------
+
+	@Test
+	void createCalculationResolvesTheApplicantAndReturnsTheCreatedId() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.createCalculation(eq(MUNICIPALITY_ID), any())).thenReturn(new CreatedResource().id(5012));
+
+		final var created = integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody());
+
+		assertThat(created).isEqualTo(5012);
+		final var request = ArgumentCaptor.forClass(CreateCalculationRequest.class);
+		verify(clientMock).createCalculation(eq(MUNICIPALITY_ID), request.capture());
+		assertThat(request.getValue().getPartyId()).isEqualTo(PARTY_ID);
+		assertThat(request.getValue().getNormId()).isEqualTo(7);
+	}
+
 	/**
-	 * An operation that is not translated yet has to fail loudly. An empty result would be indistinguishable from "this
-	 * person has nothing", and a handläggare would be shown a normberäkning built on a silent gap.
+	 * The integrator declares these non-nullable. Naming them beats a constraint violation from two hops away, and it
+	 * has to happen before the call so an incomplete body never reaches Lifecare.
+	 */
+	@Test
+	void createCalculationNamesTheRequiredFieldsTheBodyIsMissing() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+
+		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, new PostCalculationBodyRequest().personId(PERSON_ID)))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessageContaining("normId")
+			.hasMessageContaining("calculationDate")
+			.hasMessageContaining("calculationFromDate")
+			.hasMessageContaining("calculationToDate");
+
+		verify(clientMock, never()).createCalculation(any(), any());
+	}
+
+	/** An unparseable date is a missing date, reported by name rather than as a stack trace from the mapper. */
+	@Test
+	void createCalculationRejectsAnUnparseableDateByName() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+
+		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody().calculationToDate("garbage")))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessageContaining("calculationToDate")
+			.hasMessageNotContaining("normId");
+
+		verify(clientMock, never()).createCalculation(any(), any());
+	}
+
+	@Test
+	void createCalculationWithoutAResolvableApplicantNeverWrites() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody()))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+
+		verify(clientMock, never()).createCalculation(any(), any());
+	}
+
+	@Test
+	void createActualisationResolvesTheApplicantAndReturnsTheCreatedId() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.createActualisation(eq(MUNICIPALITY_ID), any())).thenReturn(new CreatedResource().id(88));
+
+		final var body = new PostAktualiseringsBodyRequest().personId(PERSON_ID).date("2026-06-12T00:00:00").type(1);
+
+		assertThat(integration.createActualisation(MUNICIPALITY_ID, body)).isEqualTo(88);
+		final var request = ArgumentCaptor.forClass(CreateActualisationRequest.class);
+		verify(clientMock).createActualisation(eq(MUNICIPALITY_ID), request.capture());
+		assertThat(request.getValue().getPartyId()).isEqualTo(PARTY_ID);
+		assertThat(request.getValue().getDate()).isEqualTo(LocalDate.of(2026, JUNE, 12));
+	}
+
+	@Test
+	void createActualisationNamesTheRequiredFieldsTheBodyIsMissing() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+
+		assertThatThrownBy(() -> integration.createActualisation(MUNICIPALITY_ID, new PostAktualiseringsBodyRequest().personId(PERSON_ID)))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessageContaining("date")
+			.hasMessageContaining("typeId");
+
+		verify(clientMock, never()).createActualisation(any(), any());
+	}
+
+	/** A create that answers without an id yields null rather than an exception; the caller decides what that means. */
+	@Test
+	void aCreateWithNoIdInTheResponseYieldsNull() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.createCalculation(eq(MUNICIPALITY_ID), any())).thenReturn(new CreatedResource());
+
+		assertThat(integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody())).isNull();
+	}
+
+	/**
+	 * The attachment is bound by actualisation id, so there is no person to resolve. FamilyCare's
+	 * {@code documentSenderType} becomes the integrator's {@code senderType}, and the bytes are sent as a PDF part.
+	 */
+	@Test
+	void postActualisationAttachmentUploadsThePdfWithoutResolvingAPerson() {
+		final var content = "%PDF-1.7".getBytes(UTF_8);
+
+		integration.postActualisationAttachment(MUNICIPALITY_ID, 88, "Hyresavi", "Den enskilde", "Hyra juni", "Berit Berg", "hyra.pdf", content);
+
+		final var file = ArgumentCaptor.forClass(MultipartFile.class);
+		verify(clientMock).addActualisationAttachment(eq(MUNICIPALITY_ID), eq(88), eq("Hyresavi"), eq("Den enskilde"),
+			eq("Hyra juni"), eq("Berit Berg"), file.capture());
+		assertThat(file.getValue().getName()).isEqualTo("file");
+		assertThat(file.getValue().getOriginalFilename()).isEqualTo("hyra.pdf");
+		assertThat(file.getValue().getContentType()).isEqualTo(APPLICATION_PDF_VALUE);
+		assertThatNoException().isThrownBy(() -> assertThat(file.getValue().getBytes()).isEqualTo(content));
+		verifyNoInteractions(citizenServiceMock);
+	}
+
+	@Test
+	void anUploadFailureBecomesBadGateway() {
+		doThrow(new IllegalStateException("connection reset")).when(clientMock)
+			.addActualisationAttachment(any(), any(), any(), any(), any(), any(), any());
+
+		assertThatThrownBy(() -> integration.postActualisationAttachment(MUNICIPALITY_ID, 88, "Hyresavi", "Den enskilde", null, null, "hyra.pdf", new byte[0]))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.hasMessageContaining("uploading an actualisation attachment")
+			.hasMessageNotContaining("connection reset");
+	}
+
+	private static PostCalculationBodyRequest completeCalculationBody() {
+		return new PostCalculationBodyRequest()
+			.personId(PERSON_ID)
+			.normId(7)
+			.calculationDate("2026-06-01T00:00:00")
+			.calculationFromDate("2026-06-01T00:00:00")
+			.calculationToDate("2026-06-30T00:00:00");
+	}
+
+	/**
+	 * The three reads careM never makes are the only thing left unported, and they must fail loudly rather than answer
+	 * empty: an empty result is indistinguishable from "this person has nothing".
 	 */
 	@Test
 	void unportedOperationsFailInsteadOfAnsweringEmpty() {
-		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, null))
+		assertThatThrownBy(() -> integration.getInvestigations(MUNICIPALITY_ID, PERSON_ID, START, END))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_IMPLEMENTED)
-			.hasMessageContaining("createCalculation");
+			.hasMessageContaining("getInvestigations");
 
-		assertThatThrownBy(() -> integration.getInvestigations(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.getExecutions(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
 		assertThatThrownBy(() -> integration.getResourceAllocations(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.createActualisation(MUNICIPALITY_ID, null)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.postActualisationAttachment(MUNICIPALITY_ID, 1, "type", "senderType", "title", "sender", "file.pdf", new byte[0]))
-			.isInstanceOf(ThrowableProblem.class);
 
 		verifyNoInteractions(clientMock, citizenServiceMock);
 	}
