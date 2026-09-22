@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,8 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Actualisa
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
@@ -51,30 +54,64 @@ public class FinancialAssistanceActualisationService {
 	private final CitizenService citizenService;
 	private final DecisionService decisionService;
 	private final ErrandService errandService;
+	private final FinancialAssistanceRepository financialAssistanceRepository;
 
 	FinancialAssistanceActualisationService(final ActualisationService actualisationService, final CitizenService citizenService, final DecisionService decisionService,
-		final ErrandService errandService) {
+		final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository) {
 		this.actualisationService = actualisationService;
 		this.citizenService = citizenService;
 		this.decisionService = decisionService;
 		this.errandService = errandService;
+		this.financialAssistanceRepository = financialAssistanceRepository;
 	}
 
 	/**
 	 * Create the Lifecare actualisation (case intake) for the application month and return the created actualisation id.
-	 * The intake date is the first day of the application month. When the request carries an {@code errandId}, the
-	 * creation is recorded on that errand as a {@code Decision(ACTUALISATION)} so the caseworker sees it in the case's
-	 * audit trail.
+	 * The intake date follows {@link #intakeDate(ActualisationRequest)}. When the request carries an {@code errandId},
+	 * the creation is recorded on that errand as a {@code Decision(ACTUALISATION)} so the caseworker sees it in the
+	 * case's audit trail.
 	 */
 	public ActualisationResponse createActualisation(final String municipalityId, final String namespace, final ActualisationRequest request) {
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
-		final var intakeDate = YearMonth.parse(request.getApplicationMonth()).atDay(1);
+		final var intakeDate = intakeDate(request);
 		final var result = actualisationService.createActualisation(municipalityId, applicant, intakeDate);
 
 		ofNullable(request.getErrandId()).filter(StringUtils::hasText)
 			.ifPresent(errandId -> recordActualisation(municipalityId, namespace, errandId, result));
 
 		return ActualisationResponse.create().withActualisationId(result.actualisationId());
+	}
+
+	/**
+	 * The actualisation's {@code Ansökningsdatum}: <strong>the day the application was submitted</strong>, read from
+	 * the errand's {@code created} stamp.
+	 * <p>
+	 * Verksamhetens regelverk (revision 2026-09-22) says “Ansökningsdatum = datum för inskickandet”; the previous
+	 * revision said “datum för senaste signering”. This code did neither — it used the first day of the application
+	 * month, which is not a submission date at all and is up to a month early.
+	 * <p>
+	 * The errand's {@code created} is the only server-owned arrival stamp: it is set by {@code AuditableListener} when
+	 * the Mina-sidor application is persisted, so it is the moment careM received it. {@code attestedAt} would read
+	 * better but is supplied by the client and never written by careM, so it cannot be relied on.
+	 * <p>
+	 * Falls back to the first day of the application month when there is no errand to read — the actualisation may be
+	 * created standalone, without an {@code errandId}. The EB process always passes one (businessKey = errandId), so
+	 * the fallback only covers manual calls.
+	 * <p>
+	 * Note this date has a second effect: {@code ActualisationService} passes it to {@code CaseworkerResolver} as the
+	 * reference date bounding the 36-month Lifecare Service lookback. Moving it from the 1st to the submission day
+	 * shifts that window by at most a month, which does not change which caseworker is found in practice, but it is a
+	 * behaviour change rather than a pure relabelling.
+	 */
+	private LocalDate intakeDate(final ActualisationRequest request) {
+		final var applicationMonthStart = YearMonth.parse(request.getApplicationMonth()).atDay(1);
+
+		return ofNullable(request.getErrandId())
+			.filter(StringUtils::hasText)
+			.flatMap(financialAssistanceRepository::findByErrandId)
+			.map(FinancialAssistanceEntity::getCreated)
+			.map(OffsetDateTime::toLocalDate)
+			.orElse(applicationMonthStart);
 	}
 
 	/**

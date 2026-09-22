@@ -2,6 +2,8 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,8 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.time.Month.JANUARY;
@@ -57,8 +61,18 @@ class FinancialAssistanceActualisationServiceTest {
 	@Mock
 	private ErrandService errandServiceMock;
 
+	@Mock
+	private FinancialAssistanceRepository financialAssistanceRepositoryMock;
+
 	@InjectMocks
 	private FinancialAssistanceActualisationService service;
+
+	/** The errand's arrival stamp — "datum för inskickandet" — 17 June, deliberately not the 1st. */
+	private static final OffsetDateTime SUBMITTED_AT = OffsetDateTime.of(2026, 6, 17, 9, 15, 0, 0, ZoneOffset.ofHours(2));
+
+	private static FinancialAssistanceEntity submittedErrand() {
+		return FinancialAssistanceEntity.create().withCreated(SUBMITTED_AT);
+	}
 
 	@Test
 	void createActualisationResolvesPartyDelegatesAndMaps() {
@@ -81,7 +95,8 @@ class FinancialAssistanceActualisationServiceTest {
 	@Test
 	void createActualisationWithErrandIdRecordsActualisationDecisionAndAssignsCaseworker() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
+		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 17))).thenReturn(new ActualisationResult(5012, "anna01ker"));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -91,6 +106,8 @@ class FinancialAssistanceActualisationServiceTest {
 		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		assertThat(response.getActualisationId()).isEqualTo(5012);
+		// Ansökningsdatum = datum för inskickandet (errandets created), inte månadens första dag.
+		verify(actualisationServiceMock).createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 17));
 
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
@@ -108,7 +125,8 @@ class FinancialAssistanceActualisationServiceTest {
 	@Test
 	void createActualisationWithErrandIdButNoResolvedCaseworkerRecordsDecisionWithoutAssigning() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, null));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
+		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 17))).thenReturn(new ActualisationResult(5012, null));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -120,6 +138,39 @@ class FinancialAssistanceActualisationServiceTest {
 		assertThat(response.getActualisationId()).isEqualTo(5012);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Decision.class));
 		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
+	}
+
+	@Test
+	void createActualisationWithErrandIdButNoStoredErrandFallsBackToFirstOfApplicationMonth() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
+		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, null));
+
+		final var request = ActualisationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06")
+			.withErrandId(ERRAND_ID);
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request);
+
+		// No errand row to read a submission date from — the month's first day is the documented fallback.
+		verify(actualisationServiceMock).createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1));
+	}
+
+	@Test
+	void createActualisationWithErrandIdButNoCreatedStampFallsBackToFirstOfApplicationMonth() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()));
+		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, null));
+
+		final var request = ActualisationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06")
+			.withErrandId(ERRAND_ID);
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request);
+
+		verify(actualisationServiceMock).createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1));
 	}
 
 	@Test
