@@ -64,7 +64,7 @@ public class FaPaymentEntity {
 	@Column(name = "lifecare_id", length = 64)
 	private String lifecareId;
 
-	@Column(name = "status", length = 16)
+	@Column(name = "status", length = 32)
 	private String status;
 
 	@Column(name = "money_type", length = 64)

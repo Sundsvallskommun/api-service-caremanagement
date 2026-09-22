@@ -287,6 +287,30 @@ class PaymentServiceTest {
 	}
 
 	@Test
+	void everyStatusFitsTheColumn() throws Exception {
+		// PENDING_REGISTRATION is 20 characters and the column was varchar(16), so finalize failed with
+		// "Data too long for column 'status'" the first time it ran against a real database. The service tests mock
+		// the repository, so nothing here could see it - this reads the width off the entity instead.
+		final var column = FaPaymentEntity.class.getDeclaredField("status").getAnnotation(jakarta.persistence.Column.class);
+		final var statuses = java.util.Arrays.stream(PaymentService.class.getDeclaredFields())
+			.filter(field -> field.getName().startsWith("STATUS_"))
+			.map(field -> {
+				field.setAccessible(true);
+				try {
+					return (String) field.get(null);
+				} catch (final IllegalAccessException e) {
+					throw new IllegalStateException(e);
+				}
+			})
+			.toList();
+
+		assertThat(statuses).isNotEmpty();
+		assertThat(statuses).allSatisfy(status -> assertThat(status.length())
+			.as("status %s must fit the %d-character column", status, column.length())
+			.isLessThanOrEqualTo(column.length()));
+	}
+
+	@Test
 	void createStillYieldsADraft() {
 		// The caseworker's own save must keep working exactly as before — saving a draft never sets the robot off.
 		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
