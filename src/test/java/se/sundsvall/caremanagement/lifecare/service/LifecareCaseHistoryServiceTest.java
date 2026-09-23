@@ -95,7 +95,7 @@ class LifecareCaseHistoryServiceTest {
 	void listDecisionsMapsHeaderAndPersons() {
 		final var dto = new PersonBasedDecisionDTO()
 			.id(9900).date("2026-06-02").type("Bifall").fromDate("2026-06-01").toDate("2026-06-30")
-			.reason("Beviljas").decisionMaker("Anna").organization("IFO").amount(8500.0).coApplicant("198001019999").reasonCoApplicant("Sammanboende")
+			.reason("Beviljas").decisionMaker("Anna").organization("IFO").serviceId(2).amount(8500.0).coApplicant("198001019999").reasonCoApplicant("Sammanboende")
 			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId("198001019999").name("Sven").isCoApplicant(true));
 		when(lifecareFamilyCareIntegrationMock.getDecisions(MUNICIPALITY_ID, PERSON_ID, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().addResultItem(dto));
@@ -103,6 +103,7 @@ class LifecareCaseHistoryServiceTest {
 		assertThat(service.listDecisions(MUNICIPALITY_ID, PERSON_ID, FROM, TO)).singleElement().satisfies(decision -> {
 			assertThat(decision.id()).isEqualTo(9900);
 			assertThat(decision.type()).isEqualTo("Bifall");
+			assertThat(decision.serviceId()).isEqualTo(2);
 			assertThat(decision.amount()).isEqualTo(BigDecimal.valueOf(8500.0));
 			assertThat(decision.persons()).singleElement().satisfies(person -> assertThat(person.coApplicant()).isTrue());
 		});

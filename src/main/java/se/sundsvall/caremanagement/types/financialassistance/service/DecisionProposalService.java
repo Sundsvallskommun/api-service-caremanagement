@@ -83,12 +83,14 @@ public class DecisionProposalService {
 	private final ProposalBasisService proposalBasisService;
 	private final LifecareCaseHistoryService lifecareCaseHistoryService;
 	private final WarningService warningService;
+	private final LifecareDecisionFilter lifecareDecisionFilter;
 
 	DecisionProposalService(final ProposalBasisService proposalBasisService, final LifecareCaseHistoryService lifecareCaseHistoryService,
-		final WarningService warningService) {
+		final WarningService warningService, final LifecareDecisionFilter lifecareDecisionFilter) {
 		this.proposalBasisService = proposalBasisService;
 		this.lifecareCaseHistoryService = lifecareCaseHistoryService;
 		this.warningService = warningService;
+		this.lifecareDecisionFilter = lifecareDecisionFilter;
 	}
 
 	/**
@@ -161,13 +163,16 @@ public class DecisionProposalService {
 	}
 
 	/**
-	 * The applicant's most recent Lifecare decision within the lookback window ending at the application month —
-	 * Lifecare lists newest-first, so the first one. Best-effort: a failed read degrades to "no previous decision".
+	 * The applicant's most recent ekonomiskt bistånd decision within the lookback window ending at the application month
+	 * — Lifecare lists every IFO decision on the person newest-first, so the first one that is an EB decision covering a
+	 * period (see {@link LifecareDecisionFilter#isPreviousDecisionCandidate}). Best-effort: a failed read degrades to
+	 * "no previous decision".
 	 */
 	private Optional<DecisionView> previousDecision(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
 			return lifecareCaseHistoryService.listDecisions(municipalityId, applicant, applicationMonth.minusMonths(PREVIOUS_DECISION_LOOKBACK_MONTHS).atDay(1), applicationMonth.atEndOfMonth())
 				.stream()
+				.filter(lifecareDecisionFilter::isPreviousDecisionCandidate)
 				.findFirst();
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous Lifecare decision — the decision proposal is computed without it", e);

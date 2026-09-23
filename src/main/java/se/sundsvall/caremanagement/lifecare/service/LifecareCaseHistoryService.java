@@ -177,6 +177,7 @@ public class LifecareCaseHistoryService {
 			dto.getReason(),
 			dto.getDecisionMaker(),
 			dto.getOrganization(),
+			dto.getServiceId(),
 			toAmount(dto.getAmount()),
 			dto.getCoApplicant(),
 			dto.getReasonCoApplicant(),

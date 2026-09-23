@@ -4,11 +4,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
@@ -19,6 +21,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.CalculationView;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionPersonView;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.lifecare.service.model.DocumentView;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDecision;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.time.Month.JANUARY;
@@ -43,6 +46,9 @@ class FinancialAssistanceLifecareServiceTest {
 
 	@Mock
 	private LifecareCaseHistoryService lifecareCaseHistoryServiceMock;
+
+	@Spy
+	private LifecareDecisionFilter lifecareDecisionFilterSpy = new LifecareDecisionFilter(Set.of(2));
 
 	@InjectMocks
 	private FinancialAssistanceLifecareService service;
@@ -93,7 +99,7 @@ class FinancialAssistanceLifecareServiceTest {
 	void listDecisionsResolvesPartyDefaultsPeriodAndMaps() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		final var view = new DecisionView(9900, "2026-06-02", "Bifall", "2026-06-01", "2026-06-30", "Beviljas enligt norm",
-			"Anna Andersson", "IFO", BigDecimal.valueOf(8500.0), "198001019999", "Sammanboende",
+			"Anna Andersson", "IFO", 2, BigDecimal.valueOf(8500.0), "198001019999", "Sammanboende",
 			List.of(new DecisionPersonView("198001019999", "Sven Svensson", Boolean.TRUE)));
 		when(lifecareCaseHistoryServiceMock.listDecisions(eq(MUNICIPALITY_ID), eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
 
@@ -106,6 +112,27 @@ class FinancialAssistanceLifecareServiceTest {
 			assertThat(decision.getPersons()).singleElement().satisfies(person -> assertThat(person.getCoApplicant()).isTrue());
 		});
 		verify(lifecareCaseHistoryServiceMock).listDecisions(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
+	}
+
+	@Test
+	void listDecisionsKeepsOnlyEbDecisions() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(lifecareCaseHistoryServiceMock.listDecisions(eq(MUNICIPALITY_ID), eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(
+			decision(88, "Vux Individuellt behovsprövad öppenvård 11 kap 1 § SoL, bifall", 21, ""),
+			decision(83, "Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall", 2, "2026-09-01"),
+			decision(71, "BoU Egenavgift tas ut enligt 32 kap 3 § SoL", 16, ""),
+			decision(68, "Utredning 14 Kap 2 § SoL inleds", 0, ""),
+			decision(26, "LVM Utredning 7 § inleds", 0, ""),
+			decision(19, "EK Beslut om ekonomiskt bistånd under nuvarande förhållande", 2, ""),
+			decision(1, "Okänd tjänst", null, "")));
+
+		final var result = service.listDecisions(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null);
+
+		assertThat(result).extracting(LifecareDecision::getId).containsExactly(83, 19); // the EB utredningsbeslut stays in the history
+	}
+
+	private static DecisionView decision(final int id, final String type, final Integer serviceId, final String fromDate) {
+		return new DecisionView(id, "2026-09-01", type, fromDate, "", "", "Anna", "IFO", serviceId, BigDecimal.ZERO, null, "", List.of());
 	}
 
 	@Test

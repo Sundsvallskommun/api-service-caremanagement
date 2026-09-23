@@ -5,12 +5,14 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
@@ -48,6 +50,9 @@ class DecisionProposalServiceTest {
 	@Mock
 	private WarningService warningServiceMock;
 
+	@Spy
+	private LifecareDecisionFilter lifecareDecisionFilterSpy = new LifecareDecisionFilter(Set.of(2));
+
 	@InjectMocks
 	private DecisionProposalService service;
 
@@ -71,7 +76,11 @@ class DecisionProposalServiceTest {
 	}
 
 	private static DecisionView decision(final String type, final String reason, final String coApplicant, final String coApplicantReason) {
-		return new DecisionView(1, "2026-04-28", type, "2026-05-01", "2026-05-31", reason, "Anna", "IFO", new BigDecimal("8500"), coApplicant, coApplicantReason, List.of());
+		return new DecisionView(1, "2026-04-28", type, "2026-05-01", "2026-05-31", reason, "Anna", "IFO", 2, new BigDecimal("8500"), coApplicant, coApplicantReason, List.of());
+	}
+
+	private static DecisionView otherDecision(final String type, final Integer serviceId, final String fromDate) {
+		return new DecisionView(2, "2026-05-02", type, fromDate, "", "", "Anna", "IFO", serviceId, BigDecimal.ZERO, null, "", List.of());
 	}
 
 	@Test
@@ -198,6 +207,38 @@ class DecisionProposalServiceTest {
 
 		assertThat(proposal.getCoApplicantReason()).isNull();
 		assertThat(proposal.getReasonOptions()).containsExactlyElementsOf(DEFAULT_REASON_OPTIONS);
+	}
+
+	@Test
+	void thePreviousDecisionIsTheNewestEbDecisionCoveringAPeriod() {
+		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
+			.thenReturn(List.of(
+				otherDecision("Vux Individuellt behovsprövad öppenvård 11 kap 1 § SoL, bifall", 21, ""),
+				otherDecision("Utredning 14 Kap 2 § SoL inleds", 0, ""),
+				otherDecision("EK Beslut om ekonomiskt bistånd under nuvarande förhållande", 2, ""),
+				otherDecision("Okänd tjänst", null, "2026-05-01"),
+				decision("Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall", "Arbetslös, ingen ersättning/stöd"),
+				decision("Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall", "Arbetar heltid, otillräcklig inkomst")));
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+
+		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(proposal.getPreviousDecision().getType()).isEqualTo("Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall");
+		assertThat(proposal.getReason()).isEqualTo("Arbetslös, ingen ersättning/stöd");
+	}
+
+	@Test
+	void noEbDecisionMeansNoPreviousDecision() {
+		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
+			.thenReturn(List.of(otherDecision("BoU Avgift förälder grundbeslut", 16, ""), otherDecision("EK Beslut om ekonomiskt bistånd under nuvarande förhållande", 2, "")));
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+
+		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(proposal.getPreviousDecision()).isNull();
+		assertThat(proposal.getReason()).isNull();
 	}
 
 	@Test

@@ -251,3 +251,9 @@ financial-assistance:
     # three flows. Only ever set FINANCIAL_ASSISTANCE_RETURN_ALL_TYPES=true in a throwaway test environment — it
     # bypasses the real common-entry-point routing, including the protected-identity gate.
     return-all-types: ${FINANCIAL_ASSISTANCE_RETURN_ALL_TYPES:false}
+  lifecare:
+    # The Lifecare ServiceId(s) an ekonomiskt bistånd decision is made under. FamilyCare's decision list carries every
+    # IFO decision on the person (Vux, BoU, LVM, utredningar …); the Lifecare decision listing keeps only these, and the
+    # decision proposal's previous decision is the newest of them that covers a period. A Lifecare catalogue id
+    # (2 in Lifecare test), so override per environment. Comma-separated.
+    decision-service-ids: ${FINANCIAL_ASSISTANCE_LIFECARE_DECISION_SERVICE_IDS:2}

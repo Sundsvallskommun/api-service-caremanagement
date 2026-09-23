@@ -113,7 +113,7 @@ class ProposalMapperTest {
 	}
 
 	private static DecisionView decision(final String type, final String reason) {
-		return new DecisionView(1, "2026-04-28", type, "2026-05-01", "2026-05-31", reason, "Anna", "IFO", new BigDecimal("8500"), "Astrid Testsson", "Hemarbetande", List.of());
+		return new DecisionView(1, "2026-04-28", type, "2026-05-01", "2026-05-31", reason, "Anna", "IFO", 2, new BigDecimal("8500"), "Astrid Testsson", "Hemarbetande", List.of());
 	}
 
 	@Test

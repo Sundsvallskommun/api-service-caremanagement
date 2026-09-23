@@ -31,10 +31,13 @@ public class FinancialAssistanceLifecareService {
 
 	private final CitizenService citizenService;
 	private final LifecareCaseHistoryService lifecareCaseHistoryService;
+	private final LifecareDecisionFilter lifecareDecisionFilter;
 
-	FinancialAssistanceLifecareService(final CitizenService citizenService, final LifecareCaseHistoryService lifecareCaseHistoryService) {
+	FinancialAssistanceLifecareService(final CitizenService citizenService, final LifecareCaseHistoryService lifecareCaseHistoryService,
+		final LifecareDecisionFilter lifecareDecisionFilter) {
 		this.citizenService = citizenService;
 		this.lifecareCaseHistoryService = lifecareCaseHistoryService;
+		this.lifecareDecisionFilter = lifecareDecisionFilter;
 	}
 
 	/**
@@ -54,9 +57,11 @@ public class FinancialAssistanceLifecareService {
 	}
 
 	/**
-	 * List the applicant's Lifecare decisions — served straight from Lifecare. The applicant is identified by
-	 * partyId (resolved to a personnummer via the citizen service — 404 when unknown). The period defaults to the last
-	 * {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when {@code from}/{@code to} are omitted.
+	 * List the applicant's ekonomiskt bistånd decisions in Lifecare — served straight from Lifecare, less the decisions
+	 * from other IFO areas (Vux, BoU, LVM …) that FamilyCare returns alongside them (see
+	 * {@link LifecareDecisionFilter#isFinancialAssistance}). The EB utredningsbeslut stay in. The applicant is
+	 * identified by partyId (resolved to a personnummer via the citizen service — 404 when unknown). The period defaults
+	 * to the last {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when {@code from}/{@code to} are omitted.
 	 */
 	public List<LifecareDecision> listDecisions(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
 		final var applicant = personalNumber(municipalityId, partyId);
@@ -64,6 +69,7 @@ public class FinancialAssistanceLifecareService {
 		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
 
 		return lifecareCaseHistoryService.listDecisions(municipalityId, applicant, fromDate, toDate).stream()
+			.filter(lifecareDecisionFilter::isFinancialAssistance)
 			.map(LifecareHistoryMapper::toDecision)
 			.toList();
 	}
