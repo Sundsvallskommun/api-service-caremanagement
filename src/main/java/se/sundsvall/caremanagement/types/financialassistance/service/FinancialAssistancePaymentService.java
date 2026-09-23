@@ -1,9 +1,12 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
@@ -17,6 +20,7 @@ import se.sundsvall.dept44.problem.Problem;
 import static java.util.Comparator.naturalOrder;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
+import static se.sundsvall.caremanagement.types.financialassistance.service.NonRedDayCalendar.plusWorkingDays;
 import static se.sundsvall.caremanagement.types.financialassistance.service.PaymentService.SOURCE_CASEWORKER;
 import static se.sundsvall.caremanagement.types.financialassistance.service.PaymentService.STATUS_DRAFT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.PaymentService.STATUS_REGISTERED;
@@ -24,7 +28,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Paym
 /**
  * Reads whether the Lifecare payments of a bifall have been effectuated. caremanagement makes no payment — Draken's BFF
  * registers them in Lifecare and reports each one's Lifecare id back; the process polls this to detect when they are
- * all there.
+ * all there, and escalates to the caseworker once the answer is {@code overdue}.
  */
 @Service
 @Transactional
@@ -34,14 +38,28 @@ public class FinancialAssistancePaymentService {
 	static final String DETAIL_NOT_REGISTERED = "%d av %d beslutade utbetalningar är inte registrerade i Lifecare";
 	static final String DETAIL_NOT_FOUND_IN_LIFECARE = "%d av %d registrerade utbetalningar hittas inte som utbetalda i Lifecare";
 
+	/** How long a bifall may wait for its payments before the process tells the caseworker (decided 2026-09-23). */
+	static final int DEADLINE_WORKING_DAYS = 3;
+
+	/** Working days are Swedish ones; the containers run on UTC. */
+	private static final ZoneId SWEDISH_TIME = ZoneId.of("Europe/Stockholm");
+
 	private final PaymentStatusService paymentStatusService;
 	private final PaymentService paymentService;
 	private final CitizenService citizenService;
+	private final Clock clock;
 
+	@Autowired
 	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final PaymentService paymentService, final CitizenService citizenService) {
+		this(paymentStatusService, paymentService, citizenService, Clock.system(SWEDISH_TIME));
+	}
+
+	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final PaymentService paymentService, final CitizenService citizenService,
+		final Clock clock) {
 		this.paymentStatusService = paymentStatusService;
 		this.paymentService = paymentService;
 		this.citizenService = citizenService;
+		this.clock = clock;
 	}
 
 	/**
@@ -56,7 +74,15 @@ public class FinancialAssistancePaymentService {
 	 * </p>
 	 *
 	 * <p>
-	 * Without an {@code errandId} the answer is the old person-and-month read, for a caller that predates the field.
+	 * A not-effectuated answer also says whether it is {@code overdue}: the deadline is {@value #DEADLINE_WORKING_DAYS}
+	 * working days after the day finalize created the payments, and it is overdue from the day after. A bifall with no
+	 * decided payments at all is overdue at once — waiting cannot resolve it. The status is never closed on a deadline;
+	 * {@code overdue} only tells the process to raise it with a person.
+	 * </p>
+	 *
+	 * <p>
+	 * Without an {@code errandId} the answer is the old person-and-month read, for a caller that predates the field. It
+	 * has no deadline.
 	 * </p>
 	 */
 	public PaymentStatusResponse checkPaymentStatus(final String municipalityId, final String namespace, final PaymentStatusRequest request) {
@@ -74,14 +100,16 @@ public class FinancialAssistancePaymentService {
 			.filter(payment -> !STATUS_DRAFT.equals(payment.getStatus()))
 			.toList();
 		if (decided.isEmpty()) {
-			return notEffectuated(DETAIL_NO_DECIDED_PAYMENTS);
+			return notEffectuated(DETAIL_NO_DECIDED_PAYMENTS).withOverdue(true);
 		}
+		final var deadline = deadline(decided);
+		final var overdue = LocalDate.now(clock).isAfter(deadline);
 
 		final var unregistered = decided.stream()
 			.filter(payment -> !STATUS_REGISTERED.equals(payment.getStatus()) || !hasText(payment.getLifecareId()))
 			.count();
 		if (unregistered > 0) {
-			return notEffectuated(DETAIL_NOT_REGISTERED.formatted(unregistered, decided.size()));
+			return notEffectuated(DETAIL_NOT_REGISTERED.formatted(unregistered, decided.size())).withDeadline(deadline.toString()).withOverdue(overdue);
 		}
 
 		final var applicant = personalNumber(municipalityId, request.getApplicant());
@@ -90,11 +118,13 @@ public class FinancialAssistancePaymentService {
 			.filter(payment -> !paid.containsKey(payment.getLifecareId()))
 			.count();
 		if (missing > 0) {
-			return notEffectuated(DETAIL_NOT_FOUND_IN_LIFECARE.formatted(missing, decided.size()));
+			return notEffectuated(DETAIL_NOT_FOUND_IN_LIFECARE.formatted(missing, decided.size())).withDeadline(deadline.toString()).withOverdue(overdue);
 		}
 
 		return PaymentStatusResponse.create()
 			.withEffectuated(true)
+			.withDeadline(deadline.toString())
+			.withOverdue(false)
 			.withPaymentDate(decided.stream()
 				.map(payment -> paid.get(payment.getLifecareId()))
 				.max(naturalOrder())
@@ -105,6 +135,21 @@ public class FinancialAssistancePaymentService {
 		return PaymentStatusResponse.create()
 			.withEffectuated(false)
 			.withDetail(detail);
+	}
+
+	/**
+	 * The last working day the payments may wait: {@value #DEADLINE_WORKING_DAYS} working days after the day the first of
+	 * them was created, which is the day finalize ran. A row without a timestamp counts from today, so it can only
+	 * postpone, never trigger, an escalation.
+	 */
+	private LocalDate deadline(final List<Payment> decided) {
+		final var decidedOn = decided.stream()
+			.map(Payment::getCreated)
+			.filter(Objects::nonNull)
+			.map(created -> created.atZoneSameInstant(SWEDISH_TIME).toLocalDate())
+			.min(naturalOrder())
+			.orElseGet(() -> LocalDate.now(clock));
+		return plusWorkingDays(decidedOn, DEADLINE_WORKING_DAYS);
 	}
 
 	/** The month before the application month, or the earliest decided payment date when that is earlier. */

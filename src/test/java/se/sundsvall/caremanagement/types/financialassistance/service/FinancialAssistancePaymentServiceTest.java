@@ -1,13 +1,17 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
@@ -46,8 +50,15 @@ class FinancialAssistancePaymentServiceTest {
 	@Mock
 	private CitizenService citizenServiceMock;
 
-	@InjectMocks
+	// "Today" is Wednesday 2026-09-23, Swedish time.
+	private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-23T10:00:00Z"), ZoneId.of("Europe/Stockholm"));
+
 	private FinancialAssistancePaymentService service;
+
+	@BeforeEach
+	void setUp() {
+		service = new FinancialAssistancePaymentService(paymentStatusServiceMock, paymentServiceMock, citizenServiceMock, CLOCK);
+	}
 
 	private static PaymentStatusRequest errandRequest() {
 		return PaymentStatusRequest.create().withErrandId(ERRAND_ID).withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06");
@@ -102,6 +113,7 @@ class FinancialAssistancePaymentServiceTest {
 		assertThat(response.getEffectuated()).isTrue();
 		assertThat(response.getPaymentDate()).isEqualTo("2026-06-10");
 		assertThat(response.getDetail()).isNull();
+		assertThat(response.getOverdue()).isFalse();
 	}
 
 	@Test
@@ -129,6 +141,9 @@ class FinancialAssistancePaymentServiceTest {
 
 		assertThat(response.getEffectuated()).isFalse();
 		assertThat(response.getDetail()).isEqualTo("2 av 3 beslutade utbetalningar är inte registrerade i Lifecare");
+		// No creation timestamps: counted from today, so not overdue.
+		assertThat(response.getDeadline()).isEqualTo("2026-09-28");
+		assertThat(response.getOverdue()).isFalse();
 		verifyNoInteractions(paymentStatusServiceMock, citizenServiceMock);
 	}
 
@@ -151,6 +166,9 @@ class FinancialAssistancePaymentServiceTest {
 
 		assertThat(response.getEffectuated()).isFalse();
 		assertThat(response.getDetail()).isEqualTo("Ärendet har inga beslutade utbetalningar");
+		// Waiting cannot resolve a bifall without payments, so it goes to the caseworker at once.
+		assertThat(response.getOverdue()).isTrue();
+		assertThat(response.getDeadline()).isNull();
 		verifyNoInteractions(paymentStatusServiceMock, citizenServiceMock);
 	}
 
@@ -182,5 +200,51 @@ class FinancialAssistancePaymentServiceTest {
 			.hasMessage("Not Found: No citizen found for partyId f47ac10b-58cc-4372-a567-0e02b2c3d479");
 
 		verify(paymentStatusServiceMock, never()).read(eq(MUNICIPALITY_ID), any(), any());
+	}
+
+	private static Payment decidedOn(final String status, final String lifecareId, final OffsetDateTime created) {
+		return decided(status, lifecareId, LocalDate.of(2026, 9, 25)).withCreated(created);
+	}
+
+	@Test
+	void checkPaymentStatusIsOverdueTheDayAfterTheThirdWorkingDay() {
+		// Finalized Thursday 2026-09-17: Friday, Monday, Tuesday - the deadline is Tuesday 22nd, overdue on Wednesday.
+		when(paymentServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			decidedOn("PENDING_REGISTRATION", null, OffsetDateTime.parse("2026-09-17T08:00:00Z")),
+			decidedOn("REGISTERED", "101", OffsetDateTime.parse("2026-09-18T08:00:00Z"))));
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isFalse();
+		assertThat(response.getDeadline()).isEqualTo("2026-09-22");
+		assertThat(response.getOverdue()).isTrue();
+	}
+
+	@Test
+	void checkPaymentStatusIsNotOverdueOnTheDeadlineItself() {
+		// Finalized Friday 2026-09-18 late evening Swedish time (UTC still the 18th): Monday, Tuesday, Wednesday.
+		when(paymentServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			decidedOn("REGISTERED", "101", OffsetDateTime.parse("2026-09-18T21:30:00Z"))));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
+		when(paymentStatusServiceMock.paidPaymentDates(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(Map.of());
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		// 21:30Z is 23:30 on the 18th in Stockholm, so the count starts from Friday and ends Wednesday the 23rd.
+		assertThat(response.getDeadline()).isEqualTo("2026-09-23");
+		assertThat(response.getOverdue()).isFalse();
+		assertThat(response.getDetail()).isEqualTo("1 av 1 registrerade utbetalningar hittas inte som utbetalda i Lifecare");
+	}
+
+	@Test
+	void checkPaymentStatusWithoutErrandHasNoDeadline() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
+		when(paymentStatusServiceMock.read(MUNICIPALITY_ID, PERSONAL_NUMBER, YearMonth.of(2026, JUNE))).thenReturn(new PaymentStatus(false, null));
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE,
+			PaymentStatusRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06"));
+
+		assertThat(response.getDeadline()).isNull();
+		assertThat(response.getOverdue()).isNull();
 	}
 }

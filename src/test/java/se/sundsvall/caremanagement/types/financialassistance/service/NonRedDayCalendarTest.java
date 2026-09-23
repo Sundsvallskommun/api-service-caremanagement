@@ -88,4 +88,17 @@ class NonRedDayCalendarTest {
 		// Julafton and nyårsafton are decided as ersättningsdagar: December has one exact count.
 		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, 12))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
 	}
+
+	@ParameterizedTest(name = "{0} + {1} working days = {2}")
+	@CsvSource({
+		"2026-09-23, 3, 2026-09-28", // Wednesday: Thursday, Friday, Monday
+		"2026-09-25, 0, 2026-09-25", // nothing to add
+		"2026-04-02, 3, 2026-04-09", // långfredag and annandag påsk skipped
+		"2026-06-17, 3, 2026-06-23", // midsommarafton skipped although it is no helgdag
+		"2026-12-23, 3, 2026-12-30", // julafton, juldagen and the weekend skipped
+		"2026-12-30, 3, 2027-01-07" // nyårsafton, nyårsdagen and trettondedag jul skipped, across the year
+	})
+	void plusWorkingDaysSkipsWeekendsHelgdagarAndTheEves(final LocalDate from, final int workingDays, final LocalDate expected) {
+		assertThat(NonRedDayCalendar.plusWorkingDays(from, workingDays)).isEqualTo(expected);
+	}
 }

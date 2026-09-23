@@ -12648,6 +12648,20 @@ components:
             \ act on; empty when effectuated"
           examples:
           - 1 av 2 beslutade utbetalningar är inte registrerade i Lifecare
+        deadline:
+          type: string
+          description: The last working day the errand's decided payments may wait
+            (ISO date); absent without an errand or when the errand has no decided
+            payments
+          examples:
+          - 2026-09-28
+        overdue:
+          type: boolean
+          description: "True when the payments are still not effectuated after the\
+            \ deadline, or the bifall has no decided payments at all — the process\
+            \ then notifies the caseworker. Never closes anything."
+          examples:
+          - false
     EligibilityRequest:
       type: object
       description: Request to evaluate which financial assistance application a citizen

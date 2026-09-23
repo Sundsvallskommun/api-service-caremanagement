@@ -19,6 +19,12 @@ public class PaymentStatusResponse {
 	@Schema(description = "Why the status is not effectuated, in words a caseworker can act on; empty when effectuated", examples = "1 av 2 beslutade utbetalningar är inte registrerade i Lifecare")
 	private String detail;
 
+	@Schema(description = "The last working day the errand's decided payments may wait (ISO date); absent without an errand or when the errand has no decided payments", examples = "2026-09-28")
+	private String deadline;
+
+	@Schema(description = "True when the payments are still not effectuated after the deadline, or the bifall has no decided payments at all — the process then notifies the caseworker. Never closes anything.", examples = "false")
+	private Boolean overdue;
+
 	public static PaymentStatusResponse create() {
 		return new PaymentStatusResponse();
 	}
@@ -62,21 +68,48 @@ public class PaymentStatusResponse {
 		return this;
 	}
 
+	public String getDeadline() {
+		return deadline;
+	}
+
+	public void setDeadline(final String deadline) {
+		this.deadline = deadline;
+	}
+
+	public PaymentStatusResponse withDeadline(final String deadline) {
+		this.deadline = deadline;
+		return this;
+	}
+
+	public Boolean getOverdue() {
+		return overdue;
+	}
+
+	public void setOverdue(final Boolean overdue) {
+		this.overdue = overdue;
+	}
+
+	public PaymentStatusResponse withOverdue(final Boolean overdue) {
+		this.overdue = overdue;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final PaymentStatusResponse that = (PaymentStatusResponse) o;
-		return Objects.equals(effectuated, that.effectuated) && Objects.equals(paymentDate, that.paymentDate) && Objects.equals(detail, that.detail);
+		return Objects.equals(effectuated, that.effectuated) && Objects.equals(paymentDate, that.paymentDate) && Objects.equals(detail, that.detail) && Objects.equals(deadline, that.deadline)
+			&& Objects.equals(overdue, that.overdue);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(effectuated, paymentDate, detail);
+		return Objects.hash(effectuated, paymentDate, detail, deadline, overdue);
 	}
 
 	@Override
 	public String toString() {
-		return "PaymentStatusResponse{effectuated=" + effectuated + ", paymentDate='" + paymentDate + "', detail='" + detail + "'}";
+		return "PaymentStatusResponse{effectuated=" + effectuated + ", paymentDate='" + paymentDate + "', detail='" + detail + "', deadline='" + deadline + "', overdue=" + overdue + "}";
 	}
 }

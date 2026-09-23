@@ -100,6 +100,34 @@ final class NonRedDayCalendar {
 	}
 
 	/**
+	 * The working day that falls {@code workingDays} working days after {@code from} — {@code from} itself not counted.
+	 * A working day is a weekday that is neither an allmän helgdag nor one of the three aftnar the municipality closes on
+	 * (midsommar-, jul- and nyårsafton). This is the caseworker's calendar, not the benefit day count above: that one
+	 * counts jul- and nyårsafton as ersättningsdagar by verksamhetens beslut, which says nothing about office days.
+	 */
+	static LocalDate plusWorkingDays(final LocalDate from, final int workingDays) {
+		var date = from;
+		var remaining = workingDays;
+		while (remaining > 0) {
+			date = date.plusDays(1);
+			if (isWorkingDay(date)) {
+				remaining--;
+			}
+		}
+		return date;
+	}
+
+	private static boolean isWorkingDay(final LocalDate date) {
+		final var year = date.getYear();
+		return date.getDayOfWeek() != DayOfWeek.SATURDAY
+			&& date.getDayOfWeek() != DayOfWeek.SUNDAY
+			&& !publicHolidays(year).contains(date)
+			&& !date.equals(midsummerEve(year))
+			&& !date.equals(LocalDate.of(year, 12, 24))
+			&& !date.equals(LocalDate.of(year, 12, 31));
+	}
+
+	/**
 	 * The allmänna helgdagar of lag (1989:253) for a year. Collected into a set rather than {@code Set.of}: two of them
 	 * can coincide (Kristi himmelsfärd falls on 1 May when Easter is 23 March, e.g. 2008; pingstdagen on 6 June when
 	 * Easter is 18 April).

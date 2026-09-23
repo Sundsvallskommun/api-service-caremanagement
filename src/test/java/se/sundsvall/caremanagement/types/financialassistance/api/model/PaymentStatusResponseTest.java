@@ -28,11 +28,15 @@ class PaymentStatusResponseTest {
 		final var response = PaymentStatusResponse.create()
 			.withEffectuated(true)
 			.withPaymentDate("2026-05-27")
-			.withDetail("detail");
+			.withDetail("detail")
+			.withDeadline("2026-09-28")
+			.withOverdue(false);
 
 		assertThat(response.getEffectuated()).isTrue();
 		assertThat(response.getPaymentDate()).isEqualTo("2026-05-27");
 		assertThat(response.getDetail()).isEqualTo("detail");
+		assertThat(response.getDeadline()).isEqualTo("2026-09-28");
+		assertThat(response.getOverdue()).isFalse();
 	}
 
 	@Test
