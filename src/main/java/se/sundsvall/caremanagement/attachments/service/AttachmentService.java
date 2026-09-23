@@ -120,13 +120,18 @@ public class AttachmentService {
 	 * legitimate state: an application can be submitted without a single uploaded file.
 	 *
 	 * <p>
+	 * It is a {@code GENERATED} document, not an {@code APPLICATION} one — the citizen's own uploads carry the latter
+	 * and the merge careM makes of them carries the former. Filtering on {@code APPLICATION} here matches nothing,
+	 * silently, and the archive then reports that there was nothing to archive.
+	 *
+	 * <p>
 	 * Returns bytes rather than the {@code Attachment} model for the same reason {@link #applicationAttachmentsExist}
 	 * returns a boolean — the model stays inside this module.
 	 */
 	@Transactional(readOnly = true)
 	public Optional<byte[]> readApplicationArchivePdf(final String errandId) {
 		return attachmentRepository.findByErrandId(errandId).stream()
-			.filter(attachment -> DOCUMENT_TYPE_APPLICATION.equals(attachment.getDocumentType()))
+			.filter(attachment -> DOCUMENT_TYPE_GENERATED.equals(attachment.getDocumentType()))
 			.filter(attachment -> COMBINED_PDF_FILE_NAME.equals(attachment.getFileName()))
 			.findFirst()
 			.map(AttachmentService::readContent);

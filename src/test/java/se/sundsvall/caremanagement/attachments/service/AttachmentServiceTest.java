@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.attachments.service;
 
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.sql.Blob;
 import java.sql.SQLException;
@@ -26,6 +27,7 @@ import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -220,6 +222,44 @@ class AttachmentServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
 			.hasMessage("Bad Request: Could not read input stream: disk gone");
+	}
+
+	/**
+	 * The archive read picks careM's merge of the citizen's uploads, which is stored as {@code GENERATED} — the
+	 * {@code APPLICATION} rows are the individual uploads. Filtering on {@code APPLICATION} matches nothing and the
+	 * actualisation step then reports "nothing to archive" on an errand that plainly had documents, which is exactly
+	 * what happened the first time this shipped.
+	 */
+	@Test
+	void readApplicationArchivePdfReturnsTheGeneratedCombinedPdf() throws SQLException {
+		final var combined = "combined-pdf".getBytes(UTF_8);
+		// Build the stubbed entities BEFORE the repository stubbing - nesting when() inside when() leaves the outer
+		// stubbing unfinished.
+		// The citizen's own upload gets no stubbed stream on purpose: if the filter ever stops excluding APPLICATION
+		// rows, this test fails on the unread stub rather than passing by luck.
+		final var upload = storedAttachment("hyresavi.pdf", "APPLICATION", null);
+		final var merged = storedAttachment("sammanstallning.pdf", "GENERATED", combined);
+		when(attachmentRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(upload, merged));
+
+		assertThat(service.readApplicationArchivePdf(ERRAND_ID)).contains(combined);
+	}
+
+	@Test
+	void readApplicationArchivePdfIsEmptyWhenTheErrandHasNoDocuments() {
+		when(attachmentRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+
+		assertThat(service.readApplicationArchivePdf(ERRAND_ID)).isEmpty();
+	}
+
+	private static AttachmentEntity storedAttachment(final String fileName, final String documentType, final byte[] content) throws SQLException {
+		final var blob = mock(Blob.class);
+		if (content != null) {
+			when(blob.getBinaryStream()).thenReturn(new ByteArrayInputStream(content));
+		}
+		return AttachmentEntity.create()
+			.withId(ATTACHMENT_ID).withErrandId(ERRAND_ID)
+			.withFileName(fileName).withDocumentType(documentType).withMimeType("application/pdf")
+			.withAttachmentData(AttachmentDataEntity.create().withFile(blob));
 	}
 
 	@Test
