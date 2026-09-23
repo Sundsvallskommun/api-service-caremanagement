@@ -175,6 +175,11 @@ integration:
 notification:
   ttl: P30D
 scheduler:
+  process-message-retry:
+    cron: '0 * * * * *'
+    name: process-message-retry
+    shedlock-lock-at-most-for: PT5M
+    maximum-execution-time: PT5M
   notification-cleanup:
     cron: '0 0 2 * * *'
     name: notification-cleanup

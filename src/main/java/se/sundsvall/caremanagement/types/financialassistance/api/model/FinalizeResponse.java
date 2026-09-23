@@ -17,12 +17,13 @@ public class FinalizeResponse {
 	@Schema(description = "Id of the PAYMENT decision recorded on the errand", examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec")
 	private String decisionId;
 
-	@Schema(description = "Whether the PaymentDecisionReceived message reached the process. False means the engine could not be reached — the errand stays AWAITING_DECISION and the message must be re-sent via the process-messages endpoint.",
-		examples = "true")
 	@ArraySchema(arraySchema = @Schema(description = "The ids of the Payment rows the finalize created, in request order. The REGISTER_PAYMENT queue items carry these and nothing else - the robot reads each payment through GET .../payments/{paymentId}."),
 		schema = @Schema(implementation = String.class, examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479"))
 	private List<String> paymentIds;
 
+	@Schema(
+		description = "Whether the PaymentDecisionReceived message reached the process. False means it did not reach it now — the errand stays AWAITING_DECISION and the message is queued and re-sent automatically (at most an hour apart, for three days). Draken should say so; correlating by hand through the process-messages endpoint is only needed if the retry gives up.",
+		examples = "true")
 	private Boolean processMessageCorrelated;
 
 	@Schema(description = "The RPA write-back tasks the finalize step tried to enqueue, one per Lifecare step")

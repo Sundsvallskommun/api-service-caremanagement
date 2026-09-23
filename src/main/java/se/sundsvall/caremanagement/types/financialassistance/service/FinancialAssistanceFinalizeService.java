@@ -72,7 +72,8 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * <p>
  * Steps 3 and 4 are best-effort and reported in the response rather than failing the call: the decision is recorded
  * either way, an RPA item that did not get queued can be re-enqueued through the RPA endpoint, and an uncorrelated
- * message re-sent through the process-messages endpoint. {@code WRITE_NORMBERAKNING} is <strong>not</strong> enqueued
+ * message is queued, in this transaction, for the scheduled process-message retry. {@code WRITE_NORMBERAKNING} is
+ * <strong>not</strong> enqueued
  * here — the process's commit step ({@code FinancialAssistanceCalculationService#commitCalculation}) does that, and it
  * reads the household-size flag stored in step 1. Sending the decision to the applicant (step 6 of the verksamhet's
  * flow) is the Draken BFF's job; this service only records and echoes the chosen channels.
@@ -328,7 +329,9 @@ public class FinancialAssistanceFinalizeService {
 	 * Resume the process waiting at the decision gateway: {@code paymentDecision=APPROVED} for a granting outcome (the
 	 * process commits the normberäkning, sets GRANTED and polls the payment), {@code REJECTED} otherwise. The status is
 	 * the process's to set, never this service's. Best-effort: an unreachable engine is reported as
-	 * {@code processMessageCorrelated=false}, and the message can be re-sent through the process-messages endpoint.
+	 * {@code processMessageCorrelated=false}, and the message is queued for the scheduled retry in the transaction that
+	 * records the decision — so a saved decision cannot leave its process waiting before the decision gateway. If the
+	 * queueing itself fails, so does finalize, and nothing is saved.
 	 */
 	private boolean correlatePaymentDecision(final String municipalityId, final String namespace, final String errandId, final String outcome) {
 		final String paymentDecision;
@@ -337,11 +340,13 @@ public class FinancialAssistanceFinalizeService {
 		} else {
 			paymentDecision = PAYMENT_DECISION_REJECTED;
 		}
+		final Map<String, Object> variables = Map.of(VARIABLE_PAYMENT_DECISION, paymentDecision);
 		try {
-			processService.correlateMessage(municipalityId, namespace, MESSAGE_PAYMENT_DECISION_RECEIVED, errandId, Map.of(VARIABLE_PAYMENT_DECISION, paymentDecision));
+			processService.correlateMessage(municipalityId, namespace, MESSAGE_PAYMENT_DECISION_RECEIVED, errandId, variables);
 			return true;
 		} catch (final Exception e) {
-			LOG.warn("Could not correlate {} for errand {} — decision recorded, process not resumed", sanitizeForLogging(MESSAGE_PAYMENT_DECISION_RECEIVED), sanitizeForLogging(errandId), e);
+			LOG.warn("Could not correlate {} for errand {} — decision recorded, message queued for retry", sanitizeForLogging(MESSAGE_PAYMENT_DECISION_RECEIVED), sanitizeForLogging(errandId), e);
+			processService.queueMessageRetry(municipalityId, namespace, MESSAGE_PAYMENT_DECISION_RECEIVED, errandId, variables, e.getMessage());
 			return false;
 		}
 	}

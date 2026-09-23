@@ -4,15 +4,19 @@ import generated.se.sundsvall.operaton.CorrelationMessageRequest;
 import generated.se.sundsvall.operaton.ProcessDefinitionResponse;
 import generated.se.sundsvall.operaton.ProcessDefinitionsResponse;
 import generated.se.sundsvall.operaton.StartProcessInstanceRequest;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.operaton.integration.OperatonClient;
+import se.sundsvall.caremanagement.operaton.integration.db.ProcessMessageRetryRepository;
+import se.sundsvall.caremanagement.operaton.integration.db.model.ProcessMessageRetryEntity;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRequest;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
+import tools.jackson.databind.json.JsonMapper;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -27,12 +31,21 @@ public class ProcessService {
 
 	private static final String NO_DEFINITION_FOUND_MESSAGE = "No Operaton process definition found with name '%s'";
 
+	/** A queued message waits this long before its first retry. */
+	static final long FIRST_RETRY_DELAY_MINUTES = 1;
+	static final String RETRY_STATUS_PENDING = "PENDING";
+	static final int MAX_ERROR_LENGTH = 1024;
+
+	private static final JsonMapper JSON_MAPPER = JsonMapper.builder().build();
+
 	private final OperatonClient operatonClient;
 	private final ErrandAccessGuard errandGuard;
+	private final ProcessMessageRetryRepository processMessageRetryRepository;
 
-	ProcessService(final OperatonClient operatonClient, final ErrandAccessGuard errandGuard) {
+	ProcessService(final OperatonClient operatonClient, final ErrandAccessGuard errandGuard, final ProcessMessageRetryRepository processMessageRetryRepository) {
 		this.operatonClient = operatonClient;
 		this.errandGuard = errandGuard;
+		this.processMessageRetryRepository = processMessageRetryRepository;
 	}
 
 	/**
@@ -69,6 +82,46 @@ public class ProcessService {
 			.messageName(messageName)
 			.businessKey(businessKey)
 			.processVariables(ofNullable(variables).orElseGet(Map::of)));
+	}
+
+	/**
+	 * Queue a message that could not be correlated for another attempt. Call it in the transaction that recorded what
+	 * the message reports — then the record and the retry commit together, and a saved decision can never silently leave
+	 * its process waiting. The scheduled retry re-sends it with backoff until the engine accepts it, and gives up after
+	 * a few days; see {@code ProcessMessageRetryWorker}.
+	 *
+	 * @param firstError why the first attempt failed, kept on the row (truncated) for whoever reads it next
+	 */
+	public void queueMessageRetry(final String municipalityId, final String namespace, final String messageName, final String businessKey,
+		final Map<String, Object> variables, final String firstError) {
+
+		final var now = OffsetDateTime.now();
+		processMessageRetryRepository.save(ProcessMessageRetryEntity.create()
+			.withMunicipalityId(municipalityId)
+			.withNamespace(namespace)
+			.withErrandId(businessKey)
+			.withMessageName(messageName)
+			.withVariables(JSON_MAPPER.writeValueAsString(ofNullable(variables).orElseGet(Map::of)))
+			.withStatus(RETRY_STATUS_PENDING)
+			.withAttempts(1)
+			.withLastError(truncate(firstError))
+			.withNextAttempt(now.plusMinutes(FIRST_RETRY_DELAY_MINUTES))
+			.withCreated(now));
+	}
+
+	/** The variables a queued message carries, as they were queued. */
+	public static Map<String, Object> variablesOf(final ProcessMessageRetryEntity retry) {
+		return ofNullable(retry.getVariables())
+			.map(json -> JSON_MAPPER.readerForMapOf(Object.class).<Map<String, Object>>readValue(json))
+			.orElseGet(Map::of);
+	}
+
+	/** An error text cut to what the retry row can hold. */
+	public static String truncate(final String error) {
+		if (error == null || error.length() <= MAX_ERROR_LENGTH) {
+			return error;
+		}
+		return error.substring(0, MAX_ERROR_LENGTH);
 	}
 
 	/**

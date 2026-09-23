@@ -5,6 +5,7 @@ import generated.se.sundsvall.operaton.ProcessDefinitionResponse;
 import generated.se.sundsvall.operaton.ProcessDefinitionsResponse;
 import generated.se.sundsvall.operaton.ProcessInstanceResponse;
 import generated.se.sundsvall.operaton.StartProcessInstanceRequest;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -14,13 +15,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.operaton.integration.OperatonClient;
+import se.sundsvall.caremanagement.operaton.integration.db.ProcessMessageRetryRepository;
+import se.sundsvall.caremanagement.operaton.integration.db.model.ProcessMessageRetryEntity;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRequest;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -39,6 +44,9 @@ class ProcessServiceTest {
 
 	@Mock
 	private ErrandAccessGuard errandGuardMock;
+
+	@Mock
+	private ProcessMessageRetryRepository processMessageRetryRepositoryMock;
 
 	@InjectMocks
 	private ProcessService service;
@@ -146,5 +154,46 @@ class ProcessServiceTest {
 		final ArgumentCaptor<EvaluateDecisionRequest> captor = ArgumentCaptor.forClass(EvaluateDecisionRequest.class);
 		verify(operatonClientMock).evaluateDecision(eq(MUNICIPALITY_ID), eq("Decision_x"), captor.capture());
 		assertThat(captor.getValue().variables()).isEmpty();
+	}
+
+	@Test
+	void queueMessageRetryStoresAPendingRowDueInAMinute() {
+		service.queueMessageRetry(MUNICIPALITY_ID, NAMESPACE, "PaymentDecisionReceived", "errand-1", Map.of("paymentDecision", "APPROVED"), "engine down");
+
+		final var captor = ArgumentCaptor.forClass(ProcessMessageRetryEntity.class);
+		verify(processMessageRetryRepositoryMock).save(captor.capture());
+		final var retry = captor.getValue();
+		assertThat(retry.getMunicipalityId()).isEqualTo(MUNICIPALITY_ID);
+		assertThat(retry.getNamespace()).isEqualTo(NAMESPACE);
+		assertThat(retry.getErrandId()).isEqualTo("errand-1");
+		assertThat(retry.getMessageName()).isEqualTo("PaymentDecisionReceived");
+		assertThat(retry.getStatus()).isEqualTo("PENDING");
+		assertThat(retry.getAttempts()).isEqualTo(1);
+		assertThat(retry.getLastError()).isEqualTo("engine down");
+		assertThat(retry.getCreated()).isCloseTo(OffsetDateTime.now(), within(5, SECONDS));
+		assertThat(retry.getNextAttempt()).isCloseTo(retry.getCreated().plusMinutes(1), within(1, SECONDS));
+		assertThat(ProcessService.variablesOf(retry)).isEqualTo(Map.of("paymentDecision", "APPROVED"));
+	}
+
+	@Test
+	void queueMessageRetryWithoutVariablesStoresAnEmptyObject() {
+		service.queueMessageRetry(MUNICIPALITY_ID, NAMESPACE, "M", "errand-1", null, null);
+
+		final var captor = ArgumentCaptor.forClass(ProcessMessageRetryEntity.class);
+		verify(processMessageRetryRepositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getVariables()).isEqualTo("{}");
+		assertThat(captor.getValue().getLastError()).isNull();
+	}
+
+	@Test
+	void variablesOfARowWithoutVariablesIsEmpty() {
+		assertThat(ProcessService.variablesOf(ProcessMessageRetryEntity.create())).isEmpty();
+	}
+
+	@Test
+	void truncateCutsLongErrorsToTheColumn() {
+		assertThat(ProcessService.truncate("x".repeat(2000))).hasSize(1024);
+		assertThat(ProcessService.truncate("short")).isEqualTo("short");
+		assertThat(ProcessService.truncate(null)).isNull();
 	}
 }

@@ -12075,14 +12075,19 @@ components:
           description: "The ids of the Payment rows the finalize created, in request\
             \ order. The REGISTER_PAYMENT queue items carry these and nothing else\
             \ - the robot reads each payment through GET .../payments/{paymentId}."
-          examples:
-          - true
           items:
             type: string
             examples:
             - f47ac10b-58cc-4372-a567-0e02b2c3d479
         processMessageCorrelated:
           type: boolean
+          description: "Whether the PaymentDecisionReceived message reached the process.\
+            \ False means it did not reach it now — the errand stays AWAITING_DECISION\
+            \ and the message is queued and re-sent automatically (at most an hour\
+            \ apart, for three days). Draken should say so; correlating by hand through\
+            \ the process-messages endpoint is only needed if the retry gives up."
+          examples:
+          - true
         rpaTasks:
           type: array
           description: "The RPA write-back tasks the finalize step tried to enqueue,\

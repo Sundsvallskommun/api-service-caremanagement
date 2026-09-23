@@ -365,6 +365,24 @@ class FinancialAssistanceFinalizeServiceTest {
 		assertThat(response.getProcessMessageCorrelated()).isFalse();
 		verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), variablesCaptor.capture());
 		assertThat(variablesCaptor.getValue()).containsExactly(Map.entry("paymentDecision", "REJECTED"));
+		// The decision is saved, so the message must not be lost: it is queued, same variables, with the reason.
+		verify(processServiceMock).queueMessageRetry(MUNICIPALITY_ID, NAMESPACE, "PaymentDecisionReceived", ERRAND_ID, Map.of("paymentDecision", "REJECTED"), "engine down");
+	}
+
+	@Test
+	void aFailedQueueFailsTheFinalizeRatherThanLosingTheMessage() {
+		readyErrand();
+		rpaEnqueuesEverything();
+		when(monitoringServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(journalEntryServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(documentServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		doThrow(new IllegalStateException("engine down")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), anyMap());
+		doThrow(new IllegalStateException("database down")).when(processServiceMock).queueMessageRetry(any(), any(), any(), any(), anyMap(), any());
+		final var request = rejectingRequest();
+
+		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessage("database down");
 	}
 
 	@Test
