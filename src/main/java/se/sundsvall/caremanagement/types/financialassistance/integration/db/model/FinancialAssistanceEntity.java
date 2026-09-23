@@ -121,6 +121,10 @@ public class FinancialAssistanceEntity implements Auditable {
 	@Column(name = "lifecare_service_id")
 	private Integer lifecareServiceId;
 
+	/** The Lifecare decision (beslut) id the errand concerns, set by the caseworker. A key only, like the insats id. */
+	@Column(name = "lifecare_decision_id")
+	private Integer lifecareDecisionId;
+
 	// Set by "Besluta och utbetala" (finalize) — null until the caseworker has finalized the errand.
 
 	/**
@@ -403,6 +407,14 @@ public class FinancialAssistanceEntity implements Auditable {
 		this.lifecareServiceId = lifecareServiceId;
 	}
 
+	public Integer getLifecareDecisionId() {
+		return lifecareDecisionId;
+	}
+
+	public void setLifecareDecisionId(final Integer lifecareDecisionId) {
+		this.lifecareDecisionId = lifecareDecisionId;
+	}
+
 	public Boolean getHouseholdSizeChanged() {
 		return householdSizeChanged;
 	}
@@ -660,6 +672,11 @@ public class FinancialAssistanceEntity implements Auditable {
 		return this;
 	}
 
+	public FinancialAssistanceEntity withLifecareDecisionId(final Integer lifecareDecisionId) {
+		this.lifecareDecisionId = lifecareDecisionId;
+		return this;
+	}
+
 	public FinancialAssistanceEntity withHouseholdSizeChanged(final Boolean householdSizeChanged) {
 		this.householdSizeChanged = householdSizeChanged;
 		return this;
@@ -756,6 +773,7 @@ public class FinancialAssistanceEntity implements Auditable {
 			&& Objects.equals(staysInMunicipality, that.staysInMunicipality)
 			&& Objects.equals(attestation, that.attestation) && Objects.equals(attestedAt, that.attestedAt)
 			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt) && Objects.equals(lifecareServiceId, that.lifecareServiceId)
+			&& Objects.equals(lifecareDecisionId, that.lifecareDecisionId)
 			&& Objects.equals(householdSizeChanged, that.householdSizeChanged) && Objects.equals(notifyMinaSidor, that.notifyMinaSidor)
 			&& Objects.equals(notifyDigitalMailbox, that.notifyDigitalMailbox) && Objects.equals(notifyLetter, that.notifyLetter)
 			&& Objects.equals(children, that.children) && Objects.equals(costs, that.costs) && Objects.equals(incomes, that.incomes)
@@ -770,7 +788,7 @@ public class FinancialAssistanceEntity implements Auditable {
 		return Objects.hash(errandId, applicationType, maritalStatus, periodMonth, periodYear, periodChoice, normType,
 			hasChildrenUnder21, childrenResidenceChanged, housingForm, housingPersonCount, housingRoomsPlusKitchen, housingChanged,
 			hasIncomes, hasPendingBenefits, hasAssets, staysInMunicipality, attestation,
-			attestedAt, lastDailyRunAt, lifecareServiceId, householdSizeChanged, notifyMinaSidor, notifyDigitalMailbox, notifyLetter,
+			attestedAt, lastDailyRunAt, lifecareServiceId, lifecareDecisionId, householdSizeChanged, notifyMinaSidor, notifyDigitalMailbox, notifyLetter,
 			children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
 			created, modified);
 	}
@@ -780,6 +798,6 @@ public class FinancialAssistanceEntity implements Auditable {
 		return "FinancialAssistanceEntity{errandId='" + errandId + "', applicationType='" + applicationType
 			+ "', maritalStatus='" + maritalStatus + "', periodMonth=" + periodMonth + ", periodYear=" + periodYear
 			+ ", normType=" + normType + ", housingForm='" + housingForm + "', attestation=" + attestation
-			+ ", lastDailyRunAt=" + lastDailyRunAt + ", lifecareServiceId=" + lifecareServiceId + ", created=" + created + ", modified=" + modified + '}';
+			+ ", lastDailyRunAt=" + lastDailyRunAt + ", lifecareServiceId=" + lifecareServiceId + ", lifecareDecisionId=" + lifecareDecisionId + ", created=" + created + ", modified=" + modified + '}';
 	}
 }

@@ -117,6 +117,9 @@ public class FinancialAssistanceData {
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime attestedAt;
 
+	@Schema(description = "The Lifecare decision (beslut) id the errand concerns, set by the caseworker", examples = "4711")
+	private Integer lifecareDecisionId;
+
 	@ArraySchema(arraySchema = @Schema(description = "Children included in the application"), schema = @Schema(implementation = Child.class))
 	@Valid
 	private List<Child> children;
@@ -469,6 +472,19 @@ public class FinancialAssistanceData {
 		return this;
 	}
 
+	public Integer getLifecareDecisionId() {
+		return lifecareDecisionId;
+	}
+
+	public void setLifecareDecisionId(final Integer lifecareDecisionId) {
+		this.lifecareDecisionId = lifecareDecisionId;
+	}
+
+	public FinancialAssistanceData withLifecareDecisionId(final Integer lifecareDecisionId) {
+		this.lifecareDecisionId = lifecareDecisionId;
+		return this;
+	}
+
 	public List<Child> getChildren() {
 		return children;
 	}
@@ -606,6 +622,7 @@ public class FinancialAssistanceData {
 			&& Objects.equals(hasPendingBenefits, that.hasPendingBenefits) && Objects.equals(hasAssets, that.hasAssets)
 			&& Objects.equals(staysInMunicipality, that.staysInMunicipality) && Objects.equals(stayDescription, that.stayDescription)
 			&& Objects.equals(attestation, that.attestation) && Objects.equals(attestedAt, that.attestedAt)
+			&& Objects.equals(lifecareDecisionId, that.lifecareDecisionId)
 			&& Objects.equals(children, that.children) && Objects.equals(costs, that.costs) && Objects.equals(incomes, that.incomes)
 			&& Objects.equals(pendingBenefits, that.pendingBenefits) && Objects.equals(assets, that.assets)
 			&& Objects.equals(persons, that.persons) && Objects.equals(plannings, that.plannings)
@@ -618,7 +635,7 @@ public class FinancialAssistanceData {
 			otherBenefitDescription, livelihoodDescription, hasChildrenUnder21, childrenResidenceChanged,
 			childrenResidenceChangeDescription, housingForm, housingPersonCount, housingRoomsPlusKitchen,
 			housingDescription, housingChanged, housingChangeDescription, hasIncomes, hasPendingBenefits, hasAssets,
-			staysInMunicipality, stayDescription, attestation, attestedAt, children, costs, incomes, pendingBenefits, assets,
+			staysInMunicipality, stayDescription, attestation, attestedAt, lifecareDecisionId, children, costs, incomes, pendingBenefits, assets,
 			persons, plannings, plannedActivities, jobApplications);
 	}
 
@@ -634,7 +651,7 @@ public class FinancialAssistanceData {
 			+ housingRoomsPlusKitchen + ", housingDescription='" + housingDescription + "', housingChanged=" + housingChanged
 			+ ", housingChangeDescription='" + housingChangeDescription + "', hasIncomes=" + hasIncomes + ", hasPendingBenefits="
 			+ hasPendingBenefits + ", hasAssets=" + hasAssets + ", staysInMunicipality=" + staysInMunicipality
-			+ ", stayDescription='" + stayDescription + "', attestation=" + attestation + ", attestedAt=" + attestedAt
+			+ ", stayDescription='" + stayDescription + "', attestation=" + attestation + ", attestedAt=" + attestedAt + ", lifecareDecisionId=" + lifecareDecisionId
 			+ ", children=" + children + ", costs=" + costs + ", incomes=" + incomes + ", pendingBenefits=" + pendingBenefits
 			+ ", assets=" + assets + ", persons=" + persons + ", plannings=" + plannings + ", plannedActivities="
 			+ plannedActivities + ", jobApplications=" + jobApplications + '}';

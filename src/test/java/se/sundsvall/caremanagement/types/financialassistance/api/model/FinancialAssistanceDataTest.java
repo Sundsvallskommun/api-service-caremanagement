@@ -73,6 +73,7 @@ class FinancialAssistanceDataTest {
 			.withStayDescription("Lives at the registered address")
 			.withAttestation(true)
 			.withAttestedAt(ATTESTED_AT)
+			.withLifecareDecisionId(4711)
 			.withChildren(CHILDREN)
 			.withCosts(COSTS)
 			.withIncomes(INCOMES)
@@ -134,6 +135,7 @@ class FinancialAssistanceDataTest {
 			.withStayDescription("Lives at the registered address")
 			.withAttestation(true)
 			.withAttestedAt(ATTESTED_AT)
+			.withLifecareDecisionId(4711)
 			.withChildren(CHILDREN)
 			.withCosts(COSTS)
 			.withIncomes(INCOMES)
@@ -146,6 +148,7 @@ class FinancialAssistanceDataTest {
 
 		assertThat(data.getAttestation()).isTrue();
 		assertThat(data.getAttestedAt()).isEqualTo(ATTESTED_AT);
+		assertThat(data.getLifecareDecisionId()).isEqualTo(4711);
 		assertThat(data.getChildren()).isEqualTo(CHILDREN);
 		assertThat(data.getCosts()).isEqualTo(COSTS);
 		assertThat(data.getIncomes()).isEqualTo(INCOMES);

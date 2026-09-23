@@ -82,6 +82,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getStayDescription()).isEqualTo("Lives at the registered address");
 		assertThat(entity.getAttestation()).isTrue();
 		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);
+		assertThat(entity.getLifecareDecisionId()).isEqualTo(4711);
 		assertThat(entity.getChildren()).hasSize(1);
 		assertThat(entity.getChildren().getFirst().getPartyId()).isEqualTo("20180101-1234");
 		assertThat(entity.getChildren().getFirst().getFirstName()).isEqualTo("Kid");
@@ -218,6 +219,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(result.getStayDescription()).isEqualTo("Lives at the registered address");
 		assertThat(result.getAttestation()).isTrue();
 		assertThat(result.getAttestedAt()).isEqualTo(ATTESTED_AT);
+		assertThat(result.getLifecareDecisionId()).isEqualTo(4711);
 		assertThat(result.getChildren()).hasSize(1);
 		assertThat(result.getCosts()).hasSize(1);
 		assertThat(result.getIncomes()).hasSize(1);
@@ -290,6 +292,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(data.getStayDescription()).isEqualTo("Bor utomlands");
 		assertThat(data.getAttestation()).isFalse();
 		assertThat(data.getAttestedAt()).isEqualTo(ATTESTED_AT);
+		assertThat(data.getLifecareDecisionId()).isEqualTo(4712);
 		assertThat(data.getChildren()).hasSize(1);
 		assertThat(data.getChildren().getFirst().getFirstName()).isEqualTo("Kid");
 		assertThat(data.getCosts()).hasSize(1);
@@ -496,6 +499,7 @@ class FinancialAssistanceMapperTest {
 			.withStayDescription("Lives at the registered address")
 			.withAttestation(true)
 			.withAttestedAt(ATTESTED_AT)
+			.withLifecareDecisionId(4711)
 			.withChildren(List.of(Child.create()
 				.withPartyId("20180101-1234")
 				.withFirstName("Kid")
@@ -595,6 +599,7 @@ class FinancialAssistanceMapperTest {
 			.withAttestedAt(ATTESTED_AT)
 			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
 			.withLifecareServiceId(7700)
+			.withLifecareDecisionId(4712)
 			.withHouseholdSizeChanged(true)
 			.withNotifyMinaSidor(true)
 			.withNotifyDigitalMailbox(false)

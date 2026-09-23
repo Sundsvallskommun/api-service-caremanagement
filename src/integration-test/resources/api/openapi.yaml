@@ -9937,6 +9937,13 @@ components:
           description: When the application was attested
           examples:
           - 2026-06-01T09:30:00Z
+        lifecareDecisionId:
+          type: integer
+          format: int32
+          description: "The Lifecare decision (beslut) id the errand concerns, set by\
+            \ the caseworker"
+          examples:
+          - 4711
         children:
           type: array
           description: Children included in the application
