@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.rpa.service;
 
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -40,7 +41,7 @@ class RpaServiceTest {
 	private ErrandService errandServiceMock;
 
 	private static RpaProperties properties(final boolean enabled) {
-		return new RpaProperties(enabled, "RakelEkonomisktBistand", Map.of(MUNICIPALITY_ID, FOLDER_ID), 5, 30);
+		return new RpaProperties(enabled, Set.of(), "RakelEkonomisktBistand", Map.of(MUNICIPALITY_ID, FOLDER_ID), 5, 30);
 	}
 
 	@Test
@@ -183,6 +184,30 @@ class RpaServiceTest {
 	}
 
 	@Test
+	void disabledActionReportsTheReferenceButNotEnqueued() {
+		final var client = mock(RpaClient.class);
+		final var properties = new RpaProperties(true, Set.of("WRITE_JOURNAL"), "q", Map.of(MUNICIPALITY_ID, FOLDER_ID), 5, 30);
+		final var service = new RpaService(client, properties, errandServiceMock);
+
+		final var outcome = service.enqueue(MUNICIPALITY_ID, null, ERRAND_ID, RpaAction.WRITE_JOURNAL, null, Map.of());
+
+		assertThat(outcome).isEqualTo(new RpaService.EnqueueOutcome(ERRAND_ID + ":WRITE_JOURNAL", false));
+		verifyNoInteractions(client);
+	}
+
+	@Test
+	void disabledActionLeavesOtherActionsEnqueued() {
+		final var client = mock(RpaClient.class);
+		final var properties = new RpaProperties(true, Set.of("WRITE_JOURNAL"), "q", Map.of(MUNICIPALITY_ID, FOLDER_ID), 5, 30);
+		final var service = new RpaService(client, properties, errandServiceMock);
+
+		final var outcome = service.enqueue(MUNICIPALITY_ID, null, ERRAND_ID, RpaAction.WRITE_DECISION, null, Map.of());
+
+		assertThat(outcome.enqueued()).isTrue();
+		verify(client).addQueueItem(eq(FOLDER_ID), any());
+	}
+
+	@Test
 	void duplicateConflictIsSwallowed() {
 		final var client = mock(RpaClient.class);
 		doThrow(Problem.valueOf(CONFLICT, "Queue item already exists, error code 1016"))
@@ -207,7 +232,7 @@ class RpaServiceTest {
 	@Test
 	void missingFolderIdFails() {
 		final var client = mock(RpaClient.class);
-		final var service = new RpaService(client, new RpaProperties(true, "q", Map.of(), 5, 30), errandServiceMock);
+		final var service = new RpaService(client, new RpaProperties(true, Set.of(), "q", Map.of(), 5, 30), errandServiceMock);
 
 		assertThatThrownBy(() -> service.enqueue(MUNICIPALITY_ID, ERRAND_ID, RpaAction.WRITE_DECISION))
 			.isInstanceOf(IllegalStateException.class)

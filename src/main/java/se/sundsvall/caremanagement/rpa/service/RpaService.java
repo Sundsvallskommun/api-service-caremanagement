@@ -127,6 +127,13 @@ public class RpaService {
 			return new EnqueueOutcome(reference, false);
 		}
 
+		// An action handed over to another executor (e.g. Draken's BFF writing to Lifecare itself) must not also reach the
+		// robot, or Lifecare gets the same write twice.
+		if (properties.disabledActions().contains(actionName)) {
+			LOG.info("RPA action {} disabled — skipping for errand {}", sanitizeForLogging(actionName), sanitizeForLogging(errandId));
+			return new EnqueueOutcome(reference, false);
+		}
+
 		final var folderId = ofNullable(properties.folderIds().get(municipalityId))
 			.orElseThrow(() -> new IllegalStateException("No RPA folder id configured for municipality " + municipalityId));
 

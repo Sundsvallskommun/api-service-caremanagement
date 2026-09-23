@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.rpa.integration.configuration;
 
 import java.util.Map;
+import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -16,13 +17,21 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * {@code SpecificContent}, so no new queue has to be provisioned per action.</li>
  * <li>{@code folderIds} — municipalityId → Orchestrator folder (the {@code X-UIPATH-OrganizationUnitId} header).</li>
  * <li>{@code enabled} — master switch; when {@code false} an enqueue is a logged no-op (environments without an
- * Orchestrator).</li>
+ * Orchestrator). Defaults to {@code false}, the same as {@code application.yml}, so an unconfigured deploy never talks
+ * to
+ * an Orchestrator.</li>
+ * <li>{@code disabledActions} — {@link se.sundsvall.caremanagement.rpa.service.RpaAction} names that are a logged no-op
+ * even while RPA is enabled. It lets another executor (Draken's BFF writing to Lifecare directly) take over one action
+ * at
+ * a time without the robot writing the same thing a second time.</li>
  * </ul>
  */
 @ConfigurationProperties(prefix = "integration.rpa")
 public record RpaProperties(
 
-	@DefaultValue("true") boolean enabled,
+	@DefaultValue("false") boolean enabled,
+
+	@DefaultValue Set<String> disabledActions,
 
 	@DefaultValue("RakelEkonomisktBistand") String queue,
 
