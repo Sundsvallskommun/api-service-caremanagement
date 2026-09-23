@@ -141,14 +141,27 @@ class PeriodRuleFeederTest {
 	}
 
 	@Test
-	void aMonthWithEvesSendsBothReadings() {
+	void aMonthWithMidsummerEveSendsBothReadings() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(PeriodVerdict.none());
-		final var payment = control(dayBenefit(LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31), BigDecimal.valueOf(23)));
+		final var payment = control(dayBenefit(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30), BigDecimal.valueOf(22)));
+
+		feeder.periodWarnings(MUNICIPALITY_ID, YearMonth.of(2026, 7), List.of(payment),
+			DayCheckBasis.create().withEconomicDecisionPeriods(List.of(period(LocalDate.of(2026, 6, 1), null))).withAllDaysConsumed(false));
+
+		// June 2026: 22 non-red days, 21 with midsommarafton (Friday 19th) red - the one eve verksamheten has not decided.
+		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(22), 22, 21));
+	}
+
+	@Test
+	void julaftonAndNyarsaftonAreErsattningsdagar() {
+		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(PeriodVerdict.none());
+		final var payment = control(dayBenefit(LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31), BigDecimal.valueOf(22)));
 
 		feeder.periodWarnings(MUNICIPALITY_ID, YearMonth.of(2027, 1), List.of(payment),
 			DayCheckBasis.create().withEconomicDecisionPeriods(List.of(period(LocalDate.of(2026, 8, 1), null))).withAllDaysConsumed(false));
 
-		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(23), 22, 20));
+		// Decided in verksamhetens svar 2026-09-24 section 1: December has one exact count, with both eves as ordinary days.
+		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(22), 22, 22));
 	}
 
 	@Test

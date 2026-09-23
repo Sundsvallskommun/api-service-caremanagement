@@ -28,41 +28,42 @@ import java.util.stream.Stream;
  * </p>
  *
  * <p>
- * <strong>The open question — julafton, midsommarafton, nyårsafton.</strong> They are not helgdagar in the law but are
- * de facto days off, and verksamheten has not said whether they count as red. Until they do, the calendar does not
- * guess: {@link #nonRedDays(YearMonth)} returns the count under <em>both</em> readings and the table accepts a day
- * count that matches either, so the warning is only raised when the payment disagrees with both. In a month without an
- * eve on a non-red day the two counts are identical and the check is exact.
+ * <strong>The eves (svar 2026-09-24 §1).</strong> Julafton and nyårsafton are not helgdagar in the law, and
+ * verksamheten has decided they are ordinary ersättningsdagar: they count as non-red unless they fall on a weekend.
+ * <strong>Midsommarafton</strong> (always a Friday) was not mentioned in the answer and is still open. Until it is
+ * decided the calendar does not guess: {@link #nonRedDays(YearMonth)} returns the count under <em>both</em> readings
+ * of midsommarafton and the table accepts a day count that matches either, so the warning is only raised when the
+ * payment disagrees with both. Every month but June therefore gets one exact number.
  * </p>
  *
  * <p>
- * <strong>When the answer comes, change {@link #EVE_READING} — nothing else.</strong> {@link EveReading#EVES_ARE_RED}
- * or {@link EveReading#EVES_ARE_NOT_RED} makes both counts the same number, and the tolerance disappears everywhere.
+ * <strong>When the answer comes, change {@link #EVE_READING} — nothing else.</strong> {@link EveReading#EVE_IS_RED}
+ * or {@link EveReading#EVE_IS_NOT_RED} makes both counts the same number, and the tolerance disappears everywhere.
  * </p>
  */
 final class NonRedDayCalendar {
 
-	/** How julafton, midsommarafton and nyårsafton are read. */
+	/** How midsommarafton is read — the one eve verksamheten has not decided. */
 	enum EveReading {
 		/** Verksamheten has not decided: accept a day count that matches either reading. */
 		UNDECIDED,
-		/** The three eves are red. */
-		EVES_ARE_RED,
-		/** The three eves are ordinary (non-red) days unless they fall on a weekend. */
-		EVES_ARE_NOT_RED
+		/** Midsommarafton is red. */
+		EVE_IS_RED,
+		/** Midsommarafton is an ordinary (non-red) day. */
+		EVE_IS_NOT_RED
 	}
 
 	/**
-	 * THE switch for the open eve question (verksamhetens svar 2026-09-23 §2, "Fortfarande öppet"). Set it to the answer
-	 * once it is given.
+	 * THE switch for the open midsommarafton question (verksamhetens svar 2026-09-24 §1, "Kvar att reda ut"). Set it to
+	 * the answer once it is given.
 	 */
 	static final EveReading EVE_READING = EveReading.UNDECIDED;
 
 	/**
 	 * The non-red day counts a payment's day count is accepted against.
 	 *
-	 * @param count            the count with the eves as ordinary days, or the decided reading's count
-	 * @param alternativeCount the count with the eves as red days, or the decided reading's count again
+	 * @param count            the count with midsommarafton as an ordinary day, or the decided reading's count
+	 * @param alternativeCount the count with midsommarafton as a red day, or the decided reading's count again
 	 */
 	record NonRedDays(int count, int alternativeCount) {}
 
@@ -74,20 +75,20 @@ final class NonRedDayCalendar {
 	}
 
 	static NonRedDays nonRedDays(final YearMonth month, final EveReading reading) {
-		final var evesOrdinary = count(month, false);
-		final var evesRed = count(month, true);
+		final var eveOrdinary = count(month, false);
+		final var eveRed = count(month, true);
 		return switch (reading) {
-			case EVES_ARE_RED -> new NonRedDays(evesRed, evesRed);
-			case EVES_ARE_NOT_RED -> new NonRedDays(evesOrdinary, evesOrdinary);
-			case UNDECIDED -> new NonRedDays(evesOrdinary, evesRed);
+			case EVE_IS_RED -> new NonRedDays(eveRed, eveRed);
+			case EVE_IS_NOT_RED -> new NonRedDays(eveOrdinary, eveOrdinary);
+			case UNDECIDED -> new NonRedDays(eveOrdinary, eveRed);
 		};
 	}
 
-	private static int count(final YearMonth month, final boolean evesRed) {
+	private static int count(final YearMonth month, final boolean eveRed) {
 		final var holidays = publicHolidays(month.getYear());
 		final Set<LocalDate> eves;
-		if (evesRed) {
-			eves = eves(month.getYear());
+		if (eveRed) {
+			eves = Set.of(midsummerEve(month.getYear()));
 		} else {
 			eves = Set.of();
 		}
@@ -122,12 +123,9 @@ final class NonRedDayCalendar {
 			.collect(Collectors.toUnmodifiableSet());
 	}
 
-	/** Julafton, midsommarafton and nyårsafton — de facto days off, not helgdagar in the law. */
-	static Set<LocalDate> eves(final int year) {
-		return Set.of(
-			LocalDate.of(year, 12, 24), // julafton
-			midsummerDay(year).minusDays(1), // midsommarafton, the Friday 19–25 June
-			LocalDate.of(year, 12, 31)); // nyårsafton
+	/** Midsommarafton, the Friday 19–25 June — a de facto day off, not a helgdag in the law. */
+	static LocalDate midsummerEve(final int year) {
+		return midsummerDay(year).minusDays(1);
 	}
 
 	private static LocalDate midsummerDay(final int year) {

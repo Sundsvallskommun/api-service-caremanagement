@@ -7,8 +7,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NonRedDayCalendar.EveReading.EVES_ARE_NOT_RED;
-import static se.sundsvall.caremanagement.types.financialassistance.service.NonRedDayCalendar.EveReading.EVES_ARE_RED;
+import static se.sundsvall.caremanagement.types.financialassistance.service.NonRedDayCalendar.EveReading.EVE_IS_NOT_RED;
+import static se.sundsvall.caremanagement.types.financialassistance.service.NonRedDayCalendar.EveReading.EVE_IS_RED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.NonRedDayCalendar.EveReading.UNDECIDED;
 
 /**
@@ -48,21 +48,21 @@ class NonRedDayCalendarTest {
 	}
 
 	@Test
-	void evesOf2026() {
-		assertThat(NonRedDayCalendar.eves(2026)).containsExactlyInAnyOrder(
-			LocalDate.of(2026, 6, 19), LocalDate.of(2026, 12, 24), LocalDate.of(2026, 12, 31));
+	void midsummerEveIsTheFridayBeforeMidsommardagen() {
+		assertThat(NonRedDayCalendar.midsummerEve(2026)).isEqualTo(LocalDate.of(2026, 6, 19));
+		assertThat(NonRedDayCalendar.midsummerEve(2025)).isEqualTo(LocalDate.of(2025, 6, 20));
 	}
 
-	@ParameterizedTest(name = "{0}: {1} with the eves ordinary, {2} with the eves red")
+	@ParameterizedTest(name = "{0}: {1} with midsommarafton ordinary, {2} with it red")
 	@CsvSource({
 		"2026-04, 20, 20", // långfredag + annandag påsk on weekdays, påskdagen on a Sunday
 		"2026-06, 22, 21", // nationaldagen + midsommardagen on Saturdays, midsommarafton Friday 19th
 		"2026-08, 21, 21", // no helgdag: 31 days, five Saturdays and five Sundays
 		"2026-10, 22, 22", // alla helgons dag on Saturday 31 October
-		"2026-12, 22, 20", // juldagen on Friday, annandag jul on Saturday; julafton and nyårsafton both Thursdays
-		"2027-12, 23, 21", // annandag jul on a Sunday counts once
-		"2025-06, 20, 19",
-		"2025-12, 21, 19", // the month verksamheten is asked about: 23 weekdays, 21 without helgdagar, 19 without the eves too
+		"2026-12, 22, 22", // juldagen on Friday, annandag jul on Saturday; julafton and nyårsafton (Thursdays) are ersättningsdagar
+		"2027-12, 23, 23", // annandag jul on a Sunday counts once
+		"2025-06, 20, 19", // midsommarafton Friday 20th
+		"2025-12, 21, 21", // the month verksamheten was asked about: 23 weekdays, 21 without helgdagar; the eves count (svar 2026-09-24)
 		"2008-05, 21, 21" // Kristi himmelsfärd on första maj counts once
 	})
 	void undecidedGivesBothReadings(final String month, final int ordinary, final int red) {
@@ -74,16 +74,18 @@ class NonRedDayCalendarTest {
 
 	@Test
 	void aDecidedReadingCollapsesToOneNumber() {
-		final var december = YearMonth.of(2026, 12);
+		final var june = YearMonth.of(2026, 6);
 
-		assertThat(NonRedDayCalendar.nonRedDays(december, EVES_ARE_RED)).isEqualTo(new NonRedDayCalendar.NonRedDays(20, 20));
-		assertThat(NonRedDayCalendar.nonRedDays(december, EVES_ARE_NOT_RED)).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
+		assertThat(NonRedDayCalendar.nonRedDays(june, EVE_IS_RED)).isEqualTo(new NonRedDayCalendar.NonRedDays(21, 21));
+		assertThat(NonRedDayCalendar.nonRedDays(june, EVE_IS_NOT_RED)).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
 	}
 
 	@Test
 	void theSwitchIsStillUndecided() {
 		// Fails on purpose the day someone flips EVE_READING, so the verksamhet's answer is recorded in the tests too.
 		assertThat(NonRedDayCalendar.EVE_READING).isEqualTo(UNDECIDED);
-		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, 12))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 20));
+		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, 6))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 21));
+		// Julafton and nyårsafton are decided as ersättningsdagar: December has one exact count.
+		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, 12))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
 	}
 }
