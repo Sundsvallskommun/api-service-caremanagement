@@ -23,6 +23,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Peri
 class PeriodRulesServiceTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
+	private static final PeriodRulesService.DayCheck UNREAD_GATE = new PeriodRulesService.DayCheck(null, null, false, null, null, null, null);
 
 	@Mock
 	private ProcessService processServiceMock;
@@ -35,11 +36,14 @@ class PeriodRulesServiceTest {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_DAY_CHECK), anyMap()))
 			.thenReturn(List.of(Map.of("varning", true, "regel", "Antal uttagna dagar saknas i SSBTEK-svaret – manuell kontroll")));
 
-		final var result = service.dayCheck(MUNICIPALITY_ID, true, null, 22);
+		final var result = service.dayCheck(MUNICIPALITY_ID,
+			new PeriodRulesService.DayCheck(true, false, true, true, null, 25, 23));
 
 		final ArgumentCaptor<Map<String, Object>> captor = captor();
 		verify(processServiceMock).evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_DAY_CHECK), captor.capture());
-		assertThat(captor.getValue()).containsOnly(entry("periodLasbar", true), entry("uttagnaDagar", null), entry("ickeRodaDagar", 22));
+		assertThat(captor.getValue()).containsOnly(entry("afEkonomisktBeslut", true), entry("allaDagarForbrukade", false),
+			entry("utbetalningFinns", true), entry("periodLasbar", true), entry("uttagnaDagar", null), entry("ickeRodaDagar", 25),
+			entry("ickeRodaDagarAlternativ", 23));
 		assertThat(result.warning()).isTrue();
 		assertThat(result.rule()).isEqualTo("Antal uttagna dagar saknas i SSBTEK-svaret – manuell kontroll");
 	}
@@ -48,7 +52,7 @@ class PeriodRulesServiceTest {
 	void noRowsMeansNoWarning() {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_DAY_CHECK), anyMap())).thenReturn(List.of());
 
-		final var result = service.dayCheck(MUNICIPALITY_ID, false, null, null);
+		final var result = service.dayCheck(MUNICIPALITY_ID, UNREAD_GATE);
 
 		assertThat(result.warning()).isFalse();
 		assertThat(result.rule()).isNull();
@@ -58,7 +62,7 @@ class PeriodRulesServiceTest {
 	void nullRowsMeanNoWarning() {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_DAY_CHECK), anyMap())).thenReturn(null);
 
-		assertThat(service.dayCheck(MUNICIPALITY_ID, false, null, null).warning()).isFalse();
+		assertThat(service.dayCheck(MUNICIPALITY_ID, UNREAD_GATE).warning()).isFalse();
 	}
 
 	@Test
@@ -66,7 +70,7 @@ class PeriodRulesServiceTest {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_DAY_CHECK), anyMap()))
 			.thenReturn(List.of(mapWithNullRule()));
 
-		final var result = service.dayCheck(MUNICIPALITY_ID, false, null, null);
+		final var result = service.dayCheck(MUNICIPALITY_ID, UNREAD_GATE);
 
 		assertThat(result.warning()).isTrue();
 		assertThat(result.rule()).isNull();
@@ -80,7 +84,7 @@ class PeriodRulesServiceTest {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq(DECISION_KEY_DAY_CHECK), anyMap()))
 			.thenThrow(new IllegalStateException("engine unreachable"));
 
-		final var result = service.dayCheck(MUNICIPALITY_ID, true, null, 22);
+		final var result = service.dayCheck(MUNICIPALITY_ID, UNREAD_GATE);
 
 		assertThat(result.warning()).isFalse();
 		assertThat(result.rule()).isNull();

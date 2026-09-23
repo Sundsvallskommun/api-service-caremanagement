@@ -30,6 +30,7 @@ import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.DayCheckBasis;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
@@ -161,7 +162,7 @@ public class FinancialAssistanceCalculationService {
 	 * both parsed (for the Lifecare reads) and verbatim (the draft header stores the request's own string).
 	 */
 	private record PrepareInput(String namespace, String errandId, String applicant, YearMonth applicationMonth, String applicationMonthValue,
-		String classifiedIncomes, FinancialAssistanceEntity errand) {}
+		String classifiedIncomes, DayCheckBasis dayCheckBasis, FinancialAssistanceEntity errand) {}
 
 	/** What refreshing the draft produced: the per-row changes to reconcile, and the warnings the feed raised. */
 	private record DraftRefresh(DraftChanges changes, List<WarningService.WarningInput> warnings) {}
@@ -183,7 +184,7 @@ public class FinancialAssistanceCalculationService {
 		final var errand = financialAssistanceRepository.findByErrandId(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No financial-assistance errand for id " + errandId));
 
-		return new PrepareInput(namespace, errandId, applicant, applicationMonth, request.getApplicationMonth(), classifiedIncomes, errand);
+		return new PrepareInput(namespace, errandId, applicant, applicationMonth, request.getApplicationMonth(), classifiedIncomes, request.getDayCheckBasis(), errand);
 	}
 
 	/**
@@ -213,9 +214,11 @@ public class FinancialAssistanceCalculationService {
 		// Parsed once and handed to both feeders below - it was parsed twice here until the missing-income feeder
 		// arrived and made the duplication obvious.
 		final var classifiedIncomes = calculationService.classifiedIncomes(input.classifiedIncomes());
-		// The SSBTEK period checks (rakel-eb-periodkontroll): day counts for aktivitetsstöd/etablerings-/
-		// utvecklingsersättning, and day count + gap-to-last-month for föräldrapenning.
-		final var periodWarnings = periodRuleFeeder.periodWarnings(municipalityId, classifiedIncomes);
+		// The SSBTEK period check (rakel-eb-periodkontroll): the dagersättning day check for aktivitetsstöd/etablerings-/
+		// utvecklingsersättning, gated on AF's ekonomiska beslut and FK's 450 days. The control month is the month
+		// before the application month - the SSBTEK kontrollperiod.
+		final var periodWarnings = periodRuleFeeder.periodWarnings(municipalityId, input.applicationMonth().minusMonths(1), classifiedIncomes,
+			input.dayCheckBasis());
 		// Verksamhetens "föregående månad = facit": an income SSBTEK reported last month and not this one.
 		final var missingIncomeWarnings = missingIncomeFeeder.missingIncomeWarnings(classifiedIncomes);
 		// The one rule that both moves money and warns: a comparison-period income last month's calculation never took,

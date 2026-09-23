@@ -49,6 +49,11 @@ public class CalculationRequest {
 		examples = "false")
 	private Boolean ssbtekError;
 
+	@Schema(description = """
+		The SSBTEK facts that gate the dagersättning day check (AF economic decision, FK consumed days). Absent means \
+		the caller did not read them, and the day check is then not made at all.""")
+	private DayCheckBasis dayCheckBasis;
+
 	public static CalculationRequest create() {
 		return new CalculationRequest();
 	}
@@ -157,6 +162,19 @@ public class CalculationRequest {
 		return this;
 	}
 
+	public DayCheckBasis getDayCheckBasis() {
+		return dayCheckBasis;
+	}
+
+	public void setDayCheckBasis(final DayCheckBasis dayCheckBasis) {
+		this.dayCheckBasis = dayCheckBasis;
+	}
+
+	public CalculationRequest withDayCheckBasis(final DayCheckBasis dayCheckBasis) {
+		this.dayCheckBasis = dayCheckBasis;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -164,17 +182,19 @@ public class CalculationRequest {
 		final CalculationRequest that = (CalculationRequest) o;
 		return Objects.equals(applicant, that.applicant) && Objects.equals(coApplicant, that.coApplicant) && Objects.equals(applicationMonth, that.applicationMonth)
 			&& Objects.equals(errandId, that.errandId) && Objects.equals(classifiedIncomes, that.classifiedIncomes) && Objects.equals(unhandledIncomes, that.unhandledIncomes)
-			&& Objects.equals(changeWarnings, that.changeWarnings) && Objects.equals(ssbtekError, that.ssbtekError);
+			&& Objects.equals(changeWarnings, that.changeWarnings) && Objects.equals(ssbtekError, that.ssbtekError)
+			&& Objects.equals(dayCheckBasis, that.dayCheckBasis);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(applicant, coApplicant, applicationMonth, errandId, classifiedIncomes, unhandledIncomes, changeWarnings, ssbtekError);
+		return Objects.hash(applicant, coApplicant, applicationMonth, errandId, classifiedIncomes, unhandledIncomes, changeWarnings, ssbtekError, dayCheckBasis);
 	}
 
 	@Override
 	public String toString() {
 		return "CalculationRequest{applicant='" + applicant + "', coApplicant='" + coApplicant + "', applicationMonth='" + applicationMonth + "', errandId='" + errandId
-			+ "', classifiedIncomes='" + classifiedIncomes + "', unhandledIncomes=" + unhandledIncomes + ", changeWarnings=" + changeWarnings + ", ssbtekError=" + ssbtekError + "}";
+			+ "', classifiedIncomes='" + classifiedIncomes + "', unhandledIncomes=" + unhandledIncomes + ", changeWarnings=" + changeWarnings + ", ssbtekError=" + ssbtekError
+			+ ", dayCheckBasis=" + dayCheckBasis + "}";
 	}
 }

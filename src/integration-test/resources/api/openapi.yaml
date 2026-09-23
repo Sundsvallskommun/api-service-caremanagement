@@ -12701,10 +12701,61 @@ components:
             \ know about the flag behaves as before."
           examples:
           - false
+        dayCheckBasis:
+          $ref: "#/components/schemas/DayCheckBasis"
+          description: "The SSBTEK facts that gate the dagersättning day check (AF\
+            \ economic decision, FK consumed days). Absent means the caller did not\
+            \ read them, and the day check is then not made at all."
       required:
       - applicant
       - applicationMonth
       - errandId
+    DayCheckBasis:
+      type: object
+      description: "The SSBTEK facts that gate the dagersättning day check: Arbetsfö\
+        rmedlingen's economic-decision periods and Försäkringskassan's consumed jobb-\
+        \ och utvecklingsgaranti days. A null field means the caller did not read\
+        \ it, and the day check is then not made at all."
+      properties:
+        economicDecisionPeriods:
+          type: array
+          description: Arbetsförmedlingen's economic-decision periods (af BeslutInfo.EkonomiskaBeslut.Beslut).
+            An empty list means AF answered and reports no decision; null means AF
+            was not read or could not answer.
+          items:
+            $ref: "#/components/schemas/EconomicDecisionPeriod"
+        consumedDays:
+          type: integer
+          format: int32
+          description: "Försäkringskassan's consumed days in the jobb- och utvecklingsgaranti\
+            \ (fk formansinformation.programjobdagar antalForbrukade, 'Förbrukade\
+            \ dagar'); null when not read"
+          examples:
+          - 212
+        allDaysConsumed:
+          type: boolean
+          description: "Whether Försäkringskassan reports all days used up (fk formansinformation.programjobdagar\
+            \ harForbrukatMaxAntal, 'Alla dagar förbrukade'). False when FK answered\
+            \ without any programjobdagar; null when FK was not read."
+          examples:
+          - false
+    EconomicDecisionPeriod:
+      type: object
+      description: "A period Arbetsförmedlingen reports an economic decision (ekonomiskt\
+        \ beslut) for, as read from SSBTEK."
+      properties:
+        fromDate:
+          type: string
+          format: date
+          description: Decision period start (BeslutFrom)
+          examples:
+          - 2026-08-01
+        toDate:
+          type: string
+          format: date
+          description: Decision period end (BeslutTom); null for an open period
+          examples:
+          - 2026-12-31
     CalculationResponse:
       type: object
       description: The created Lifecare calculation id plus the income warnings to

@@ -19,8 +19,9 @@ import static java.util.Optional.ofNullable;
  * ({@link PeriodRuleFeeder}) selects the incomes the rule applies to and works out the numbers.
  *
  * <ul>
- * <li>{@code Decision_dagersattningDagkontroll} — aktivitetsstöd / utvecklings- / etableringsersättning: is the day
- * count readable, and does it match the month? ({@link #dayCheck})</li>
+ * <li>{@code Decision_dagersattningDagkontroll} — aktivitetsstöd / utvecklings- / etableringsersättning: verksamhetens
+ * gate (AF ekonomiskt beslut, FK:s 450 dagar), then a missing payment, then the day count against the non-red days of
+ * the covered month ({@link #dayCheck})</li>
  * </ul>
  *
  * <p>
@@ -61,20 +62,39 @@ public class PeriodRulesService {
 	}
 
 	/**
-	 * Judge one dagersättning payment's day count.
+	 * What the dagersättning day check is asked, in the table's own order (verksamhetens svar 2026-09-23 §2). Every boxed
+	 * field is nullable, and {@code null} is meaningful: an unread gate ({@code economicDecision} or
+	 * {@code allDaysConsumed}) makes the table stop without a warning.
+	 *
+	 * @param economicDecision      AF reports an ekonomiskt beslut for the control month ({@code afEkonomisktBeslut})
+	 * @param allDaysConsumed       FK reports all 450 days used up ({@code allaDagarForbrukade})
+	 * @param paymentFound          the control month carries a matching payment ({@code utbetalningFinns})
+	 * @param periodReadable        the payment's period reads as one whole month ({@code periodLasbar}); {@code null}
+	 *                              without a payment
+	 * @param days                  the days the payment is for ({@code uttagnaDagar}), possibly a half day
+	 * @param nonRedDays            the non-red days of the covered month ({@code ickeRodaDagar})
+	 * @param nonRedDaysAlternative the same under the other open eve reading ({@code ickeRodaDagarAlternativ}); equal
+	 *                              to {@code nonRedDays} once verksamheten has answered, see {@link NonRedDayCalendar}
+	 */
+	public record DayCheck(Boolean economicDecision, Boolean allDaysConsumed, boolean paymentFound, Boolean periodReadable,
+		BigDecimal days, Integer nonRedDays, Integer nonRedDaysAlternative) {}
+
+	/**
+	 * Judge the dagersättning day check for one payment — or, with {@code paymentFound = false}, for its absence.
 	 *
 	 * @param  municipalityId the municipality the errand belongs to
-	 * @param  periodReadable whether the payment's period could be read as a single whole month
-	 * @param  days           the number of days drawn ({@code uttagnaDagar}), {@code null} when SSBTEK did not say
-	 * @param  nonRedDays     the number of non-red days in that month ({@code ickeRodaDagar}); see
-	 *                        {@link PeriodRuleFeeder} for why the caller never reaches this decision without one
+	 * @param  check          the gate and the numbers, see {@link DayCheck}
 	 * @return                the verdict, best-effort
 	 */
-	public PeriodVerdict dayCheck(final String municipalityId, final boolean periodReadable, final BigDecimal days, final Integer nonRedDays) {
+	public PeriodVerdict dayCheck(final String municipalityId, final DayCheck check) {
 		final var variables = new HashMap<String, Object>();
-		variables.put("periodLasbar", periodReadable);
-		variables.put("uttagnaDagar", days);
-		variables.put("ickeRodaDagar", nonRedDays);
+		variables.put("afEkonomisktBeslut", check.economicDecision());
+		variables.put("allaDagarForbrukade", check.allDaysConsumed());
+		variables.put("utbetalningFinns", check.paymentFound());
+		variables.put("periodLasbar", check.periodReadable());
+		variables.put("uttagnaDagar", check.days());
+		variables.put("ickeRodaDagar", check.nonRedDays());
+		variables.put("ickeRodaDagarAlternativ", check.nonRedDaysAlternative());
 		return evaluate(municipalityId, DECISION_KEY_DAY_CHECK, variables);
 	}
 
