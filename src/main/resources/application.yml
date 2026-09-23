@@ -203,17 +203,6 @@ archive:
     document-label: Meddelanden och bilagor från Draken
     lifecare-sender-name: Sundsvalls kommun
 #========================================
-# Financial assistance RPA settings
-#========================================
-# The REGISTER_PAYMENT queue item carries the paymentId and nothing else; the robot reads the payment through
-# GET .../payments/{paymentId}, so the payee's name, clearing and account number never enter the Orchestrator queue
-# store. legacy-fields keeps the pre-2026-09-21 fields on the item as well, for the window where careM has been
-# released and the robot has not.
-#
-# ⚠️ While this is true the personal data IS written to the queue. It is a bridge, not a setting: release the robot
-# against the paymentId contract, set this to false, and the leak closes with no careM deploy. Default true so an
-# unattended upgrade cannot break a running robot.
-#========================================
 # Lifecare actualisation settings
 #========================================
 # The catalogue entries verksamheten named for an EB återansökan (Regelverk Drakel 2026-09-21). Matched on the
