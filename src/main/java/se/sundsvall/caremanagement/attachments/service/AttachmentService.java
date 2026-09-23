@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -111,6 +112,33 @@ public class AttachmentService {
 	@Transactional(readOnly = true)
 	public boolean applicationAttachmentsExist(final String errandId) {
 		return attachmentRepository.existsByErrandIdAndDocumentType(errandId, DOCUMENT_TYPE_APPLICATION);
+	}
+
+	/**
+	 * The citizen's application documents as a single PDF — the combined {@value #COMBINED_PDF_FILE_NAME} that
+	 * {@link #storeAndCombine} writes alongside the individual files. Empty when the errand carries none, which is a
+	 * legitimate state: an application can be submitted without a single uploaded file.
+	 *
+	 * <p>
+	 * Returns bytes rather than the {@code Attachment} model for the same reason {@link #applicationAttachmentsExist}
+	 * returns a boolean — the model stays inside this module.
+	 */
+	@Transactional(readOnly = true)
+	public Optional<byte[]> readApplicationArchivePdf(final String errandId) {
+		return attachmentRepository.findByErrandId(errandId).stream()
+			.filter(attachment -> DOCUMENT_TYPE_APPLICATION.equals(attachment.getDocumentType()))
+			.filter(attachment -> COMBINED_PDF_FILE_NAME.equals(attachment.getFileName()))
+			.findFirst()
+			.map(AttachmentService::readContent);
+	}
+
+	/** The stored bytes of one attachment. */
+	private static byte[] readContent(final AttachmentEntity attachment) {
+		try (final var in = attachment.getAttachmentData().getFile().getBinaryStream()) {
+			return in.readAllBytes();
+		} catch (final IOException | SQLException exception) {
+			throw Problem.valueOf(INTERNAL_SERVER_ERROR, STREAM_ERROR_MESSAGE.formatted(exception.getClass().getSimpleName(), attachment.getId(), exception.getMessage()));
+		}
 	}
 
 	/**

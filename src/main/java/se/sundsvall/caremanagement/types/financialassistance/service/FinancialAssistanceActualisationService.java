@@ -5,10 +5,13 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import se.sundsvall.caremanagement.attachments.service.AttachmentService;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.api.model.PatchErrand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
@@ -49,16 +52,27 @@ public class FinancialAssistanceActualisationService {
 	private static final String DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE = "ENSKILD";
 	private static final String DEFAULT_ARCHIVE_SENDER_NAME = "Draken";
 	private static final String ACTUALISATION_NOT_FOUND_MESSAGE = "No Lifecare actualisation '%s' found for the given applicant";
+	/** Archive outcomes, written onto the errand's Decision row so the caseworker sees what happened. */
+	private static final String ARCHIVED_MESSAGE = "Application archived to Lifecare as %s.";
+	private static final String NOTHING_TO_ARCHIVE_MESSAGE = "No application documents to archive.";
+	private static final String ARCHIVE_FAILED_MESSAGE = "Archiving the application to Lifecare FAILED: %s";
+	private static final String APPLICATION_ARCHIVE_FILE_NAME = "%s_ansokan.pdf";
+	private static final String APPLICATION_ARCHIVE_TITLE = "Ansökan ekonomiskt bistånd %s";
+
+	private static final Logger LOG = LoggerFactory.getLogger(FinancialAssistanceActualisationService.class);
 
 	private final ActualisationService actualisationService;
+	private final AttachmentService attachmentService;
 	private final CitizenService citizenService;
 	private final DecisionService decisionService;
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 
-	FinancialAssistanceActualisationService(final ActualisationService actualisationService, final CitizenService citizenService, final DecisionService decisionService,
+	FinancialAssistanceActualisationService(final ActualisationService actualisationService, final AttachmentService attachmentService,
+		final CitizenService citizenService, final DecisionService decisionService,
 		final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository) {
 		this.actualisationService = actualisationService;
+		this.attachmentService = attachmentService;
 		this.citizenService = citizenService;
 		this.decisionService = decisionService;
 		this.errandService = errandService;
@@ -118,14 +132,59 @@ public class FinancialAssistanceActualisationService {
 	 * Record the created actualisation on the errand as a {@code Decision(ACTUALISATION)} — the canonical audit-trail
 	 * vehicle on the case — carrying the Lifecare actualisation id as the value, and assign the errand to the resolved
 	 * caseworker when one was found (the same caseworker set on the Lifecare actualisation).
+	 *
+	 * <p>
+	 * The application is archived before the row is written, so its outcome can be folded into the same description
+	 * rather than needing a row of its own.
 	 */
 	private void recordActualisation(final String municipalityId, final String namespace, final String errandId, final ActualisationResult result) {
+		final var archiveOutcome = archiveApplication(municipalityId, namespace, errandId, result.actualisationId());
+
 		addActualisationDecision(municipalityId, namespace, errandId, result.actualisationId(),
-			"Actualisation created in Lifecare (id %d).".formatted(result.actualisationId()));
+			"Actualisation created in Lifecare (id %d). %s".formatted(result.actualisationId(), archiveOutcome));
 
 		ofNullable(result.assignedUserId()).filter(StringUtils::hasText)
 			.ifPresent(assignedUserId -> errandService.updateErrand(municipalityId, namespace, errandId,
 				PatchErrand.create().withAssignedUserId(assignedUserId)));
+	}
+
+	/**
+	 * Upload the citizen's application documents onto the actualisation just created — the "arkivera ansökan" half of
+	 * the process step, which carried the name without doing the work.
+	 *
+	 * <p>
+	 * Best-effort, and the retry is the reason. This runs after the actualisation exists in Lifecare, so letting a
+	 * failed upload propagate would make the external task retry the whole step and create a <strong>second</strong>
+	 * actualisation for the same application. A failed archive must never cost the intake.
+	 *
+	 * <p>
+	 * What it must not do either is fail quietly. The outcome — archived, nothing to archive, or failed — goes into
+	 * the {@code Decision} row the step already writes, so a caseworker sees it on the errand instead of it living
+	 * only in a log line nobody reads.
+	 *
+	 * @return a sentence describing the outcome, for the audit-trail decision
+	 */
+	private String archiveApplication(final String municipalityId, final String namespace, final String errandId, final Integer actualisationId) {
+		try {
+			final var pdf = attachmentService.readApplicationArchivePdf(errandId);
+			if (pdf.isEmpty()) {
+				LOG.info("No application documents to archive for errand {}", errandId);
+				return NOTHING_TO_ARCHIVE_MESSAGE;
+			}
+
+			final var errandNumber = errandService.readErrand(municipalityId, namespace, errandId).getErrandNumber();
+			final var fileName = APPLICATION_ARCHIVE_FILE_NAME.formatted(errandNumber);
+
+			actualisationService.uploadAttachment(municipalityId, actualisationId, fileName, pdf.get(),
+				DEFAULT_ARCHIVE_DOCUMENT_TYPE, DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE,
+				APPLICATION_ARCHIVE_TITLE.formatted(errandNumber), DEFAULT_ARCHIVE_SENDER_NAME);
+
+			LOG.info("Archived the application of errand {} to Lifecare actualisation {}", errandNumber, actualisationId);
+			return ARCHIVED_MESSAGE.formatted(fileName);
+		} catch (final Exception e) {
+			LOG.error("Failed to archive the application of errand {} to Lifecare actualisation {}: {}", errandId, actualisationId, e.getMessage(), e);
+			return ARCHIVE_FAILED_MESSAGE.formatted(e.getMessage());
+		}
 	}
 
 	/**

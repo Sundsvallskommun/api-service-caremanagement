@@ -14,7 +14,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
+import se.sundsvall.caremanagement.attachments.service.AttachmentService;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
+import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.api.model.PatchErrand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
@@ -26,18 +28,22 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Actualisa
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.Month.JANUARY;
 import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -51,6 +57,9 @@ class FinancialAssistanceActualisationServiceTest {
 
 	@Mock
 	private ActualisationService actualisationServiceMock;
+
+	@Mock
+	private AttachmentService attachmentServiceMock;
 
 	@Mock
 	private CitizenService citizenServiceMock;
@@ -120,6 +129,75 @@ class FinancialAssistanceActualisationServiceTest {
 		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
 		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("anna01ker");
+	}
+
+	/**
+	 * The half of the process step that its name promised and the code never did: "Aktualisera &amp; arkivera
+	 * ansökan" created the actualisation and stopped there.
+	 */
+	@Test
+	void createActualisationArchivesTheApplicationOntoTheActualisation() {
+		final var pdf = "application-pdf".getBytes(UTF_8);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
+		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null));
+		when(attachmentServiceMock.readApplicationArchivePdf(ERRAND_ID)).thenReturn(Optional.of(pdf));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withErrandNumber("EB-26060001"));
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, ActualisationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID));
+
+		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, "EB-26060001_ansokan.pdf", pdf,
+			"ANSOKAN", "ENSKILD", "Ansökan ekonomiskt bistånd EB-26060001", "Draken");
+
+		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
+		assertThat(decisionCaptor.getValue().getDescription()).contains("EB-26060001_ansokan.pdf");
+	}
+
+	/** An application can arrive with no uploaded files at all; that is not a failure, and the row says so. */
+	@Test
+	void createActualisationWithNoApplicationDocumentsUploadsNothingAndSaysSo() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
+		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null));
+		when(attachmentServiceMock.readApplicationArchivePdf(ERRAND_ID)).thenReturn(Optional.empty());
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, ActualisationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID));
+
+		verify(actualisationServiceMock, never()).uploadAttachment(any(), any(), any(), any(), any(), any(), any(), any());
+
+		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
+		assertThat(decisionCaptor.getValue().getDescription()).contains("No application documents to archive");
+	}
+
+	/**
+	 * The intake must survive a failed archive. Propagating would make the external task retry the whole step and
+	 * create a second actualisation for the same application — so the failure is recorded on the errand instead.
+	 */
+	@Test
+	void createActualisationSurvivesAFailedArchiveAndRecordsItOnTheErrand() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
+		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null));
+		when(attachmentServiceMock.readApplicationArchivePdf(ERRAND_ID)).thenReturn(Optional.of("pdf".getBytes(UTF_8)));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withErrandNumber("EB-26060001"));
+		doThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare refused the upload"))
+			.when(actualisationServiceMock).uploadAttachment(any(), any(), any(), any(), any(), any(), any(), any());
+
+		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, ActualisationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID));
+
+		assertThat(response.getActualisationId()).isEqualTo(5012);
+
+		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
+		assertThat(decisionCaptor.getValue().getDescription())
+			.contains("id 5012")
+			.contains("FAILED")
+			.contains("Lifecare refused the upload");
 	}
 
 	@Test
