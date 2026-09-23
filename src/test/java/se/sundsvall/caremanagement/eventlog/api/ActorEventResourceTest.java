@@ -43,7 +43,7 @@ class ActorEventResourceTest {
 
 	private static ErrandEventEntry entry() {
 		return new ErrandEventEntry("ev1", randomUUID().toString(), MUNICIPALITY_ID, NAMESPACE, "HTTP", "READ", "errand", "Öppnade ärendet",
-			"GET", "/path", ACTOR, "adAccount", "req-1", 200, FIXED_TIMESTAMP);
+			"GET", "/path", null, ACTOR, "adAccount", "req-1", 200, FIXED_TIMESTAMP);
 	}
 
 	@Test

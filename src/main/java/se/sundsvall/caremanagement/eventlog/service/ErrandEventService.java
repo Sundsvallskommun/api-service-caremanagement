@@ -3,15 +3,21 @@ package se.sundsvall.caremanagement.eventlog.service;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.eventlog.api.model.ActorEventLog;
 import se.sundsvall.caremanagement.eventlog.api.model.ErrandEventEntry;
+import se.sundsvall.caremanagement.eventlog.api.model.LifecareAccess;
 import se.sundsvall.caremanagement.eventlog.integration.db.ErrandEventRepository;
 import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEntity;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
+import se.sundsvall.dept44.requestid.RequestId;
+import se.sundsvall.dept44.support.Identifier;
 
 import static java.time.OffsetDateTime.now;
 
@@ -28,10 +34,15 @@ public class ErrandEventService {
 	 */
 	static final int ACTOR_EVENT_LIMIT = 1000;
 
-	private final ErrandEventRepository errandEventRepository;
+	/** Source of a row reported by a caller that read or wrote Lifecare directly (Draken's BFF). */
+	static final String SOURCE_LIFECARE = "LIFECARE";
 
-	ErrandEventService(final ErrandEventRepository errandEventRepository) {
+	private final ErrandEventRepository errandEventRepository;
+	private final ErrandAccessGuard errandAccessGuard;
+
+	ErrandEventService(final ErrandEventRepository errandEventRepository, final ErrandAccessGuard errandAccessGuard) {
 		this.errandEventRepository = errandEventRepository;
+		this.errandAccessGuard = errandAccessGuard;
 	}
 
 	/**
@@ -40,6 +51,27 @@ public class ErrandEventService {
 	 */
 	public void recordEvent(final ErrandEventEntity entity) {
 		errandEventRepository.save(entity.withCreated(now(ZoneId.systemDefault())));
+	}
+
+	/**
+	 * Records reads and writes a caller made in Lifecare directly on the errand's behalf — Draken's BFF, which reads
+	 * journal, documents, reminders and jobbstimulans live from Lifecare and writes journal notes, documents and
+	 * reminders straight into it. None of that passes this service's own request logging, so the caller reports it and
+	 * it lands in the same who/what/when log, under source {@code LIFECARE}, attributed to the caller's
+	 * {@code X-Sent-By} identity.
+	 *
+	 * @param caller   the reporting caller's identity, from the {@code X-Sent-By} header
+	 * @param accesses what was accessed in Lifecare, one row each
+	 */
+	public void recordLifecareAccesses(final String municipalityId, final String namespace, final String errandId, final Identifier caller,
+		final List<LifecareAccess> accesses) {
+		errandAccessGuard.verifyExistingErrand(municipalityId, namespace, errandId);
+
+		final var created = now(ZoneId.systemDefault());
+		final var requestId = RequestId.get();
+		errandEventRepository.saveAll(accesses.stream()
+			.map(access -> toLifecareEntity(municipalityId, namespace, errandId, caller, requestId, created, access))
+			.toList());
 	}
 
 	/**
@@ -115,6 +147,29 @@ public class ErrandEventService {
 		return errandEventRepository.countFiltered(municipalityId, namespace, errandId, action, actor, source, includeReads);
 	}
 
+	/**
+	 * One reported Lifecare access as a log row. The description falls back to "{@code ACTION target}", the same shape
+	 * the request log uses when it has nothing better, so the list never shows an empty line.
+	 */
+	private static ErrandEventEntity toLifecareEntity(final String municipalityId, final String namespace, final String errandId, final Identifier caller,
+		final String requestId, final OffsetDateTime created, final LifecareAccess access) {
+		return ErrandEventEntity.create()
+			.withErrandId(errandId)
+			.withMunicipalityId(municipalityId)
+			.withNamespace(namespace)
+			.withSource(SOURCE_LIFECARE)
+			.withAction(access.getAction())
+			.withTarget(access.getTarget())
+			.withDescription(Optional.ofNullable(access.getDescription())
+				.filter(StringUtils::hasText)
+				.orElseGet(() -> access.getAction() + " " + access.getTarget()))
+			.withLifecareId(access.getLifecareId())
+			.withActor(caller.getValue())
+			.withActorType(caller.getTypeString())
+			.withRequestId(requestId)
+			.withCreated(created);
+	}
+
 	private static ErrandEventEntry toEvent(final ErrandEventEntity e) {
 		return new ErrandEventEntry(
 			e.getId(),
@@ -127,6 +182,7 @@ public class ErrandEventService {
 			e.getDescription(),
 			e.getHttpMethod(),
 			e.getRequestPath(),
+			e.getLifecareId(),
 			e.getActor(),
 			e.getActorType(),
 			e.getRequestId(),

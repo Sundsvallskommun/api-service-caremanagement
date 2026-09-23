@@ -164,6 +164,7 @@ class ErrandEventInterceptorTest {
 			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands"),
 			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/metadata"),
 			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/events"),
+			arguments("POST", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/events/lifecare"),
 			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/unread-count"),
 			arguments("POST", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/read"),
 			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/notes/count"),

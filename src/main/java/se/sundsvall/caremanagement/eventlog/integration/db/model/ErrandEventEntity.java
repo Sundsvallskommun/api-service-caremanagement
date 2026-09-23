@@ -54,6 +54,9 @@ public class ErrandEventEntity {
 	@Column(name = "request_path", length = 1024)
 	private String requestPath;
 
+	@Column(name = "lifecare_id", length = 64)
+	private String lifecareId;
+
 	@Column(name = "actor", length = 64)
 	private String actor;
 
@@ -114,6 +117,10 @@ public class ErrandEventEntity {
 		return requestPath;
 	}
 
+	public String getLifecareId() {
+		return lifecareId;
+	}
+
 	public String getActor() {
 		return actor;
 	}
@@ -172,6 +179,10 @@ public class ErrandEventEntity {
 
 	public void setRequestPath(final String requestPath) {
 		this.requestPath = requestPath;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
 	}
 
 	public void setActor(final String actor) {
@@ -244,6 +255,11 @@ public class ErrandEventEntity {
 		return this;
 	}
 
+	public ErrandEventEntity withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+		return this;
+	}
+
 	public ErrandEventEntity withActor(final String actor) {
 		this.actor = actor;
 		return this;
@@ -280,6 +296,7 @@ public class ErrandEventEntity {
 			&& Objects.equals(source, other.source) && Objects.equals(action, other.action)
 			&& Objects.equals(target, other.target) && Objects.equals(description, other.description)
 			&& Objects.equals(httpMethod, other.httpMethod) && Objects.equals(requestPath, other.requestPath)
+			&& Objects.equals(lifecareId, other.lifecareId)
 			&& Objects.equals(actor, other.actor) && Objects.equals(actorType, other.actorType)
 			&& Objects.equals(requestId, other.requestId) && Objects.equals(statusCode, other.statusCode)
 			&& Objects.equals(created, other.created);
@@ -288,7 +305,7 @@ public class ErrandEventEntity {
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, municipalityId, namespace, source, action, target, description, httpMethod,
-			requestPath, actor, actorType, requestId, statusCode, created);
+			requestPath, lifecareId, actor, actorType, requestId, statusCode, created);
 	}
 
 	@Override
@@ -296,7 +313,7 @@ public class ErrandEventEntity {
 		return "ErrandEventEntity{id='" + id + "', errandId='" + errandId + "', municipalityId='" + municipalityId
 			+ "', namespace='" + namespace + "', source='" + source + "', action='" + action + "', target='" + target
 			+ "', description='" + description + "', httpMethod='" + httpMethod + "', requestPath='" + requestPath
-			+ "', actor='" + actor + "', actorType='" + actorType + "', requestId='" + requestId + "', statusCode="
+			+ "', lifecareId='" + lifecareId + "', actor='" + actor + "', actorType='" + actorType + "', requestId='" + requestId + "', statusCode="
 			+ statusCode + ", created=" + created + '}';
 	}
 }

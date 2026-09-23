@@ -12,14 +12,16 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
  * @param errandId       the errand the activity targeted
  * @param municipalityId the municipality id
  * @param namespace      the namespace
- * @param source         where the row came from: {@code HTTP} (an inbound request) or {@code EVENT} (a published domain
- *                       event)
+ * @param source         where the row came from: {@code HTTP} (an inbound request), {@code EVENT} (a published domain
+ *                       event) or {@code LIFECARE} (a read or write Draken's BFF made in Lifecare directly and
+ *                       reported)
  * @param action         READ / CREATE / UPDATE / DELETE (derived from the HTTP method)
  * @param target         what was acted on, e.g. {@code errand}, {@code decisions},
  *                       {@code financial-assistance/calculation/draft/incomes}
  * @param description    human readable summary, e.g. {@code "UPDATE financial-assistance/calculation/draft/incomes"}
  * @param httpMethod     the HTTP method of the request
  * @param requestPath    the request path (no query string)
+ * @param lifecareId     the Lifecare record a {@code LIFECARE} access was about, or {@code null}
  * @param actor          who acted — the {@code X-Sent-By} value (AD account / partyId / custom), or {@code null} if
  *                       absent
  * @param actorType      the actor type — {@code adAccount}, {@code partyId} or a custom type, or {@code null}
@@ -38,6 +40,7 @@ public record ErrandEventEntry(
 	String description,
 	String httpMethod,
 	String requestPath,
+	String lifecareId,
 	String actor,
 	String actorType,
 	String requestId,

@@ -51,12 +51,14 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 	private static final String SEARCH_TARGET = "errands/search";
 
 	/**
-	 * Targets that must never produce an access-log row: reads of the event log itself, and the conversation read-state
+	 * Targets that must never produce an access-log row: reads of the event log itself, the report of accesses made in
+	 * Lifecare (those rows <em>are</em> the log entry — logging the report as well would double every one), and the
+	 * conversation read-state
 	 * machinery (the polled unread-count and the mark-as-read call) — recording those would drown the who/what/when log
 	 * in noise and is explicitly not wanted. Any {@code .../count} target (the per-resource badge counts) is likewise
 	 * skipped via {@link #isNonAudited(String)}.
 	 */
-	private static final Set<String> NON_AUDITED_TARGETS = Set.of("events", "messages/unread-count", "messages/read");
+	private static final Set<String> NON_AUDITED_TARGETS = Set.of("events", "events/lifecare", "messages/unread-count", "messages/read");
 
 	private static boolean isNonAudited(final String target) {
 		return NON_AUDITED_TARGETS.contains(target) || target.endsWith("/count");

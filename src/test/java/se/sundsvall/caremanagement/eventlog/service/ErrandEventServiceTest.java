@@ -10,16 +10,25 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
+import se.sundsvall.caremanagement.eventlog.api.model.LifecareAccess;
 import se.sundsvall.caremanagement.eventlog.integration.db.ErrandEventRepository;
 import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEntity;
+import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
+import se.sundsvall.dept44.problem.Problem;
+import se.sundsvall.dept44.support.Identifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
 class ErrandEventServiceTest {
@@ -27,6 +36,9 @@ class ErrandEventServiceTest {
 
 	@Mock
 	private ErrandEventRepository repositoryMock;
+
+	@Mock
+	private ErrandAccessGuard errandAccessGuardMock;
 
 	@InjectMocks
 	private ErrandEventService service;
@@ -39,6 +51,40 @@ class ErrandEventServiceTest {
 
 		verify(repositoryMock).save(entity);
 		assertThat(entity.getCreated()).isNotNull();
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void recordLifecareAccessesWritesOneLifecareRowPerAccessAttributedToTheCaller() {
+		final var caller = Identifier.parse("joe001doe; type=adAccount");
+		final var accesses = List.of(
+			LifecareAccess.create().withAction("READ").withTarget("lifecare/journal-notes").withDescription("Läste journalen i Lifecare"),
+			LifecareAccess.create().withAction("CREATE").withTarget("lifecare/journal-notes").withLifecareId("4711"));
+
+		service.recordLifecareAccesses("2281", "ns", "e1", caller, accesses);
+
+		verify(errandAccessGuardMock).verifyExistingErrand("2281", "ns", "e1");
+		final ArgumentCaptor<List<ErrandEventEntity>> captor = ArgumentCaptor.forClass(List.class);
+		verify(repositoryMock).saveAll(captor.capture());
+		assertThat(captor.getValue())
+			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getMunicipalityId, ErrandEventEntity::getNamespace, ErrandEventEntity::getSource,
+				ErrandEventEntity::getAction, ErrandEventEntity::getTarget, ErrandEventEntity::getDescription, ErrandEventEntity::getLifecareId,
+				ErrandEventEntity::getActor, ErrandEventEntity::getActorType)
+			.containsExactly(
+				tuple("e1", "2281", "ns", "LIFECARE", "READ", "lifecare/journal-notes", "Läste journalen i Lifecare", null, "joe001doe", "adAccount"),
+				tuple("e1", "2281", "ns", "LIFECARE", "CREATE", "lifecare/journal-notes", "CREATE lifecare/journal-notes", "4711", "joe001doe", "adAccount"));
+		assertThat(captor.getValue()).allSatisfy(entity -> assertThat(entity.getCreated()).isNotNull());
+	}
+
+	@Test
+	void recordLifecareAccessesOnUnknownErrandRecordsNothing() {
+		doThrow(Problem.valueOf(NOT_FOUND, "No errand")).when(errandAccessGuardMock).verifyExistingErrand("2281", "ns", "e1");
+		final var accesses = List.of(LifecareAccess.create().withAction("READ").withTarget("lifecare/reminders"));
+		final var caller = Identifier.parse("joe001doe; type=adAccount");
+
+		assertThatThrownBy(() -> service.recordLifecareAccesses("2281", "ns", "e1", caller, accesses))
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+		verify(repositoryMock, never()).saveAll(anyList());
 	}
 
 	@Test

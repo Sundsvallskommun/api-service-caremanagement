@@ -13,10 +13,13 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.eventlog.api.model.ErrandEventCount;
 import se.sundsvall.caremanagement.eventlog.api.model.ErrandEventEntry;
+import se.sundsvall.caremanagement.eventlog.api.model.LifecareAccess;
 import se.sundsvall.caremanagement.eventlog.service.ErrandEventService;
+import se.sundsvall.dept44.support.Identifier;
 
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
@@ -43,7 +46,7 @@ class ErrandEventResourceTest {
 	@Test
 	void list() {
 		final var event = new ErrandEventEntry("ev1", ERRAND_ID, MUNICIPALITY_ID, NAMESPACE, "HTTP", "READ", "errand", "Öppnade ärendet",
-			"GET", "/path", "joe001doe", "adAccount", "req-1", 200, FIXED_TIMESTAMP);
+			"GET", "/path", null, "joe001doe", "adAccount", "req-1", 200, FIXED_TIMESTAMP);
 		when(serviceMock.listForErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(List.of(event));
 
 		final var response = webTestClient.get()
@@ -116,5 +119,22 @@ class ErrandEventResourceTest {
 			.getResponseBody();
 
 		assertThat(response).isEmpty();
+	}
+
+	@Test
+	void reportLifecareAccesses() {
+		final var accesses = List.of(
+			LifecareAccess.create().withAction("READ").withTarget("lifecare/journal-notes"),
+			LifecareAccess.create().withAction("CREATE").withTarget("lifecare/journal-notes").withLifecareId("4711"));
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/lifecare").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "joe001doe; type=adAccount")
+			.bodyValue(accesses)
+			.exchange()
+			.expectStatus().isNoContent();
+
+		verify(serviceMock).recordLifecareAccesses(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID),
+			argThat(caller -> "joe001doe".equals(caller.getValue())), eq(accesses));
 	}
 }
