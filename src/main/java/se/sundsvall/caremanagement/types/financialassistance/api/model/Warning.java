@@ -35,7 +35,7 @@ public class Warning {
 	@Schema(description = "Swedish display name for the warning type", examples = "Kapad kostnad", accessMode = Schema.AccessMode.READ_ONLY)
 	private String typeDisplayName;
 
-	@Schema(description = "The Draken view section (tab) the warning belongs to — derived from the type: the decision proposal's types are DECISION, the payment proposal's are PAYMENT, everything else is CALCULATION",
+	@Schema(description = "The Draken view section (tab) the warning belongs to — derived from the type: the decision proposal's types are DECISION, the payment warnings' are PAYMENT, everything else is CALCULATION",
 		examples = "CALCULATION",
 		allowableValues = {
 			"CALCULATION", "DECISION", "PAYMENT"

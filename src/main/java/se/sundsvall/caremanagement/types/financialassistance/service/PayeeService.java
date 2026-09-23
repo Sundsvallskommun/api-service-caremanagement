@@ -50,9 +50,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.mapp
  * </p>
  *
  * <p>
- * This read is deliberately separate from the payment proposal, which carries the same options today. The proposal
- * reconciles and <em>persists</em> the PAYMENT-section warnings on every read and 404s when the errand has no
- * calculation draft; neither is acceptable for filling a dropdown. Nothing here writes anything on a read.
+ * Nothing here writes anything on a read.
  * </p>
  *
  * <p>
@@ -67,7 +65,7 @@ public class PayeeService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(PayeeService.class);
 
-	/** How far back the Lifecare payment history is read for payee options — the same window the payment proposal uses. */
+	/** How far back the Lifecare payment history is read for payee options. */
 	static final int PAYEE_LOOKBACK_MONTHS = 12;
 
 	static final String LIFECARE_STATUS_PENDING = "PENDING";

@@ -2,21 +2,14 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
-import se.sundsvall.caremanagement.lifecare.service.model.PaymentView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PreviousDecision;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.PreviousPayment;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 
 import static java.util.Optional.ofNullable;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.costDisplayName;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
@@ -24,7 +17,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
 
 /**
  * The pure derivations behind the section proposals — the outcome rule, the estimated amount, the expense
- * partial-rejection check, the children check — and the projections of the Lifecare views onto the proposal models.
+ * partial-rejection check, the children check — and the projection of the Lifecare decision view onto the decision
+ * proposal.
  * No I/O; everything here is a function of its arguments.
  */
 public final class ProposalMapper {
@@ -137,63 +131,6 @@ public final class ProposalMapper {
 			.withPeriodTo(view.toDate())
 			.withAmount(view.amount())
 			.withDate(view.date());
-	}
-
-	public static PreviousPayment toPreviousPayment(final PaymentView view) {
-		return PreviousPayment.create()
-			.withPayDate(view.payDate())
-			.withAmount(view.amount())
-			.withConcernedMonth(view.concernedMonth())
-			.withPaymentMethod(view.paymentMethod())
-			.withName(view.name())
-			.withClearing(view.clearing())
-			.withAccountNumber(view.accountNumber())
-			.withMessage(view.message());
-	}
-
-	public static Payee toPayee(final PaymentView view) {
-		return Payee.create()
-			.withName(view.name())
-			.withPaymentMethod(view.paymentMethod())
-			.withClearing(view.clearing())
-			.withAccountNumber(view.accountNumber())
-			.withAddress(view.streetAddress())
-			.withCareOf(view.careOfAddress())
-			.withZipCode(view.postalCode())
-			.withCity(view.postalAddress());
-	}
-
-	/** The payee the applicant stated in the application, or empty when the application names no account. */
-	public static Optional<Payee> toPayee(final FaPerson person, final String name) {
-		if (!hasText(person.getAccountNumber()) && !hasText(person.getPaymentMethod())) {
-			return Optional.empty();
-		}
-		return Optional.of(Payee.create()
-			.withName(name)
-			.withPaymentMethod(person.getPaymentMethod())
-			.withClearing(person.getClearingNumber())
-			.withAccountNumber(person.getAccountNumber()));
-	}
-
-	/**
-	 * The distinct payees among the payments, in first-seen order. Distinct on who and where the money goes — name,
-	 * method, clearing, account — so the same account paid under a changed address stays one payee, with the address
-	 * of the first (newest-first input) payment.
-	 */
-	public static List<Payee> distinctPayees(final List<PaymentView> payments) {
-		return payments.stream()
-			.map(ProposalMapper::toPayee)
-			.filter(payee -> hasText(payee.getName()) || hasText(payee.getAccountNumber()))
-			.collect(toMap(PayeeKey::of, identity(), (a, _) -> a, java.util.LinkedHashMap::new))
-			.values()
-			.stream()
-			.toList();
-	}
-
-	private record PayeeKey(String name, String paymentMethod, String clearing, String accountNumber) {
-		static PayeeKey of(final Payee payee) {
-			return new PayeeKey(payee.getName(), payee.getPaymentMethod(), payee.getClearing(), payee.getAccountNumber());
-		}
 	}
 
 	private static BigDecimal orZero(final BigDecimal amount) {

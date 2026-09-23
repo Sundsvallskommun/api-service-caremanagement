@@ -93,8 +93,9 @@ public class WarningService {
 	public static final String TYPE_SSBTEK_DAY_CHECK = "SSBTEK_DAY_CHECK";
 	public static final String TYPE_PARENTAL_BENEFIT_PERIOD_CHECK = "PARENTAL_BENEFIT_PERIOD_CHECK";
 
-	// Section proposal warnings — raised by the decision proposal (DECISION tab) and the payment proposal (PAYMENT tab),
-	// recomputed on every proposal read and on section approval. They are reconciled per owning section
+	// Section warnings — raised by the decision proposal (DECISION tab, recomputed on every read and on CALCULATION
+	// approval) and the payment warnings (PAYMENT tab, recomputed on DECISION approval). They are reconciled per owning
+	// section
 	// ({@link #reconcileByTypes}), so the daily calculation reconcile never touches them and vice versa.
 	public static final String TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT = "PREVIOUS_DECISION_ADVANCE_ON_BENEFIT";
 	public static final String TYPE_EXPENSE_PARTIALLY_REJECTED = "EXPENSE_PARTIALLY_REJECTED";
@@ -139,7 +140,7 @@ public class WarningService {
 
 	/** The warning types the decision proposal owns (shown on the DECISION tab). */
 	public static final Set<String> DECISION_PROPOSAL_TYPES = Set.of(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT, TYPE_EXPENSE_PARTIALLY_REJECTED);
-	/** The warning types the payment proposal owns (shown on the PAYMENT tab). */
+	/** The warning types the payment warnings own (shown on the PAYMENT tab). */
 	public static final Set<String> PAYMENT_PROPOSAL_TYPES = Set.of(TYPE_CO_APPLICANT_SPLIT_PAYMENT);
 	/**
 	 * The read-failure warning is reconciled on its own, because it is the one warning raised on a run where the

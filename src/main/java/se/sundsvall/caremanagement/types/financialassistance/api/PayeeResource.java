@@ -45,8 +45,7 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Tag(name = "Financial Assistance · Payees",
 	description = "The betalningsmottagare selectable for an errand's payment form: the payees seen on the applicant's Lifecare payments in "
 		+ "the last 12 months, plus the ones added by hand here when the history does not contain the right one. FamilyCare exposes no payee "
-		+ "register, so a past payment is the only evidence a payee exists. Reading is side-effect free — unlike the payment proposal, which "
-		+ "carries the same options but persists warnings on every read and requires a calculation draft.")
+		+ "register, so a past payment is the only evidence a payee exists. Reading is side-effect free.")
 @ApiResponses(value = {
 	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
 		Problem.class, ConstraintViolationProblem.class

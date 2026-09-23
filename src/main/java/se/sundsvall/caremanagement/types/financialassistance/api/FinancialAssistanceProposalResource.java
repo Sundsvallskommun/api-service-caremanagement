@@ -14,9 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.DecisionProposal;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentProposal;
 import se.sundsvall.caremanagement.types.financialassistance.service.DecisionProposalService;
-import se.sundsvall.caremanagement.types.financialassistance.service.PaymentProposalService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
@@ -42,11 +40,9 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 class FinancialAssistanceProposalResource {
 
 	private final DecisionProposalService decisionProposalService;
-	private final PaymentProposalService paymentProposalService;
 
-	FinancialAssistanceProposalResource(final DecisionProposalService decisionProposalService, final PaymentProposalService paymentProposalService) {
+	FinancialAssistanceProposalResource(final DecisionProposalService decisionProposalService) {
 		this.decisionProposalService = decisionProposalService;
-		this.paymentProposalService = paymentProposalService;
 	}
 
 	@GetMapping(path = "/financial-assistance/{errandId}/decision-proposal", produces = APPLICATION_JSON_VALUE)
@@ -68,26 +64,5 @@ class FinancialAssistanceProposalResource {
 		@ValidUuid @PathVariable final String errandId) {
 
 		return ok(decisionProposalService.get(municipalityId, namespace, errandId));
-	}
-
-	@GetMapping(path = "/financial-assistance/{errandId}/payment-proposal", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Read the payment proposal (utbetalningsförslag)",
-		description = """
-			The proposed payment for the PAYMENT tab, derived on every read from the calculation draft, the application and the applicant's \
-			previous Lifecare payments — never stored. Returned as a 'payments' list with one entry so the frontend can split it into several \
-			payments. Payment date = the 27th of the calculation's month, moved to the Friday before when the 27th is a Saturday (26th) or \
-			Sunday (25th); public holidays are not considered. Amount = the whole estimated bistånd (same estimate as the decision proposal; \
-			null with an 'explanation' when no norm is known). Payee = the account the applicant stated in the application when \
-			paymentSameAsPrevious=false, else the previous Lifecare payment's payee ('payeeSource' says which); 'payeeOptions' lists every \
-			distinct payee on the applicant's payments in the last 12 months (FamilyCare has no payee register). accountingCode (kontering) \
-			is always null — not available from FamilyCare. Reading also reconciles the PAYMENT-section warnings (a medsökande exists → check \
-			for delad utbetalning) and returns them. 404 when the errand has no calculation draft.""",
-		responses = @ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true))
-	ResponseEntity<PaymentProposal> getPaymentProposal(
-		@ValidMunicipalityId @PathVariable final String municipalityId,
-		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@ValidUuid @PathVariable final String errandId) {
-
-		return ok(paymentProposalService.get(municipalityId, namespace, errandId));
 	}
 }

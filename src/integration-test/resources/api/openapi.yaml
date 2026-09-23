@@ -32,11 +32,9 @@ tags:
     \ on an errand, with full CRUD. Unlike the income warnings they carry no acknowledge\
     \ lifecycle."
 - name: Financial Assistance · Proposals
-  description: "The decision proposal (beslutsförslag) and payment proposal (utbetalningsfö\
-    rslag) — derived on every read from the calculation draft, the application and\
-    \ the applicant's Lifecare history; only the section warnings they raise are stored.\
-    \ Recomputed when the CALCULATION (→ decision) and DECISION (→ payment) sections\
-    \ are approved."
+  description: The decision proposal (beslutsförslag) — derived on every read from
+    the calculation draft and the applicant's Lifecare history; only the section warnings
+    it raises are stored. Recomputed when the CALCULATION section is approved.
 - name: Notifications
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen and mark them handled when acted on; expired ones are
@@ -121,9 +119,7 @@ tags:
     \ payees seen on the applicant's Lifecare payments in the last 12 months, plus\
     \ the ones added by hand here when the history does not contain the right one.\
     \ FamilyCare exposes no payee register, so a past payment is the only evidence\
-    \ a payee exists. Reading is side-effect free — unlike the payment proposal, which\
-    \ carries the same options but persists warnings on every read and requires a\
-    \ calculation draft."
+    \ a payee exists. Reading is side-effect free."
 - name: Documents
   description: Formal case documents attached to an errand
 - name: Financial Assistance · Payments
@@ -7595,71 +7591,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payment-proposal:
-    get:
-      tags:
-      - Financial Assistance · Proposals
-      summary: Read the payment proposal (utbetalningsförslag)
-      description: "The proposed payment for the PAYMENT tab, derived on every read\
-        \ from the calculation draft, the application and the applicant's previous\
-        \ Lifecare payments — never stored. Returned as a 'payments' list with one\
-        \ entry so the frontend can split it into several payments. Payment date =\
-        \ the 27th of the calculation's month, moved to the Friday before when the\
-        \ 27th is a Saturday (26th) or Sunday (25th); public holidays are not considered.\
-        \ Amount = the whole estimated bistånd (same estimate as the decision proposal;\
-        \ null with an 'explanation' when no norm is known). Payee = the account the\
-        \ applicant stated in the application when paymentSameAsPrevious=false, else\
-        \ the previous Lifecare payment's payee ('payeeSource' says which); 'payeeOptions'\
-        \ lists every distinct payee on the applicant's payments in the last 12 months\
-        \ (FamilyCare has no payee register). accountingCode (kontering) is always\
-        \ null — not available from FamilyCare. Reading also reconciles the PAYMENT-section\
-        \ warnings (a medsökande exists → check for delad utbetalning) and returns\
-        \ them. 404 when the errand has no calculation draft."
-      operationId: getPaymentProposal
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PaymentProposal"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payees/{payeeId}:
     get:
       tags:
@@ -11380,7 +11311,7 @@ components:
           type: string
           description: "The Draken view section (tab) the warning belongs to — derived\
             \ from the type: the decision proposal's types are DECISION, the payment\
-            \ proposal's are PAYMENT, everything else is CALCULATION"
+            \ warnings' are PAYMENT, everything else is CALCULATION"
           enum:
           - CALCULATION
           - DECISION
@@ -14123,132 +14054,6 @@ components:
           description: Number of payments on the errand
           examples:
           - 2
-    PaymentProposal:
-      type: object
-      description: "The payment proposal (utbetalningsförslag) — derived data, recomputed\
-        \ on every read."
-      properties:
-        payments:
-          type: array
-          description: The proposed payments — always exactly one entry from the service;
-            the frontend may split it into several before registering
-          items:
-            $ref: "#/components/schemas/ProposedPayment"
-        payeeOptions:
-          type: array
-          description: "Every distinct payee seen on the applicant's Lifecare payments\
-            \ in the last 12 months — the dropdown alternatives. FamilyCare has no\
-            \ payee register, so this is the only source"
-          items:
-            $ref: "#/components/schemas/Payee"
-        payeeSource:
-          type: string
-          description: "Where the proposed payee came from: PREVIOUS_PAYMENT (the\
-            \ most recent Lifecare payment) or APPLICATION (the applicant stated a\
-            \ new account in the application, paymentSameAsPrevious=false). Null when\
-            \ no payee could be proposed"
-          enum:
-          - PREVIOUS_PAYMENT
-          - APPLICATION
-          examples:
-          - PREVIOUS_PAYMENT
-        previousPayment:
-          $ref: "#/components/schemas/PreviousPayment"
-          description: "The applicant's most recent Lifecare payment, or null when\
-            \ none was found (or Lifecare could not be read)"
-        explanation:
-          type: string
-          description: "Why the proposal is incomplete (Swedish), e.g. no norm is\
-            \ known so no amount could be estimated. Null when the proposal is complete"
-          examples:
-          - Ingen norm kunde läsas från Lifecare – beloppet kunde inte beräknas.
-        warnings:
-          type: array
-          description: The PAYMENT-section warnings this proposal raised (reconciled
-            on every read)
-          items:
-            $ref: "#/components/schemas/Warning"
-    PreviousPayment:
-      type: object
-      description: The applicant's most recent Lifecare payment.
-      properties:
-        payDate:
-          type: string
-          description: The Lifecare pay date (raw Lifecare string)
-          examples:
-          - 2026-05-27
-        amount:
-          type: number
-          description: The paid amount
-          examples:
-          - 8500
-        concernedMonth:
-          type: string
-          description: The month the payment concerned (raw Lifecare string)
-          examples:
-          - 2026-06
-        paymentMethod:
-          type: string
-          description: The payment method as Lifecare names it
-          examples:
-          - Bankkonto
-        name:
-          type: string
-          description: The payee name
-          examples:
-          - Anna Andersson
-        clearing:
-          type: string
-          description: "The clearing number, when a bank account"
-          examples:
-          - "1234"
-        accountNumber:
-          type: string
-          description: "The account number, when a bank account"
-          examples:
-          - "5678901"
-        message:
-          type: string
-          description: The payment message
-          examples:
-          - Ekonomiskt bistånd juni
-    ProposedPayment:
-      type: object
-      description: One proposed payment (a proposal always starts with a single entry;
-        the frontend may split it).
-      properties:
-        paymentDate:
-          type: string
-          format: date
-          description: "The proposed payment date: the 27th of the concerned month,\
-            \ moved to the Friday before when the 27th is a Saturday (→ 26th) or Sunday\
-            \ (→ 25th). Swedish public holidays (röda dagar) are not considered —\
-            \ an open question with verksamheten"
-          examples:
-          - 2026-06-26
-        amount:
-          type: number
-          description: The proposed amount — the whole estimated bistånd (see DecisionProposal.estimatedAmount).
-            Null when no norm is known
-          examples:
-          - 4250
-        concernedMonth:
-          type: string
-          description: The month the payment concerns (YYYY-MM) — the calculation's
-            application month
-          examples:
-          - 2026-06
-        payee:
-          $ref: "#/components/schemas/Payee"
-          description: "The proposed payee, or null when neither a previous payment\
-            \ nor the application names one"
-        accountingCode:
-          type:
-          - string
-          - "null"
-          description: "Kontering. Always null for now: the FamilyCare API exposes\
-            \ no accounting code, so the caseworker fills it in. The field exists\
-            \ so the frontend can render and post it"
     MonitoringCount:
       type: object
       description: The number of monitorings on the errand

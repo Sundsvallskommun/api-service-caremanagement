@@ -34,7 +34,7 @@ class FinancialAssistanceApprovalServiceTest {
 	private DecisionProposalService decisionProposalServiceMock;
 
 	@Mock
-	private PaymentProposalService paymentProposalServiceMock;
+	private PaymentWarningService paymentWarningServiceMock;
 
 	@InjectMocks
 	private FinancialAssistanceApprovalService service;
@@ -66,14 +66,14 @@ class FinancialAssistanceApprovalServiceTest {
 
 		assertThat(service.setSectionApproval(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CALCULATION", true, "jane02doe")).isSameAs(approval);
 		verify(decisionProposalServiceMock).get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-		verifyNoInteractions(paymentProposalServiceMock);
+		verifyNoInteractions(paymentWarningServiceMock);
 	}
 
 	@Test
-	void approvingDecisionRecomputesThePaymentProposalBestEffort() {
+	void approvingDecisionRefreshesThePaymentWarningsBestEffort() {
 		final var approval = SectionApproval.create().withSection("DECISION").withApproved(true);
 		when(sectionApprovalServiceMock.setApproval(ERRAND_ID, "DECISION", true, "jane02doe")).thenReturn(approval);
-		when(paymentProposalServiceMock.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
+		when(paymentWarningServiceMock.reconcile(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
 
 		assertThat(service.setSectionApproval(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "DECISION", true, "jane02doe")).isSameAs(approval); // never fails the approval
 		verifyNoInteractions(decisionProposalServiceMock);
@@ -87,6 +87,6 @@ class FinancialAssistanceApprovalServiceTest {
 		service.setSectionApproval(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CALCULATION", false, null);
 		service.setSectionApproval(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "PAYMENT", true, "jane02doe");
 
-		verifyNoInteractions(decisionProposalServiceMock, paymentProposalServiceMock);
+		verifyNoInteractions(decisionProposalServiceMock, paymentWarningServiceMock);
 	}
 }

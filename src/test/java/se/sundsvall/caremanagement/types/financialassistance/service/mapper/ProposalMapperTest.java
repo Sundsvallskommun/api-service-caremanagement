@@ -6,24 +6,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
-import se.sundsvall.caremanagement.lifecare.service.model.PaymentView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
 
 class ProposalMapperTest {
 
 	private static NormExpenseRow expense(final String costType, final String applied, final String effective) {
 		return NormExpenseRow.create().withCostType(costType).withAppliedAmount(new BigDecimal(applied)).withEffectiveAmount(new BigDecimal(effective));
-	}
-
-	private static PaymentView payment(final String name, final String clearing, final String account) {
-		return new PaymentView(1, BigDecimal.TEN, "Bankkonto", "2026-05-27", clearing, account, name, null, null, null, null, "msg", "2026-06");
 	}
 
 	@Test
@@ -130,60 +122,5 @@ class ProposalMapperTest {
 		assertThat(result.getAmount()).isEqualByComparingTo("8500");
 		assertThat(result.getDate()).isEqualTo("2026-04-28");
 		assertThat(result).hasNoNullFieldsOrProperties();
-	}
-
-	@Test
-	void toPreviousPaymentAndPayee() {
-		final var view = payment("Anna Andersson", "1234", "5678901");
-
-		final var previous = ProposalMapper.toPreviousPayment(view);
-		assertThat(previous.getPayDate()).isEqualTo("2026-05-27");
-		assertThat(previous.getAmount()).isEqualByComparingTo("10");
-		assertThat(previous.getConcernedMonth()).isEqualTo("2026-06");
-		assertThat(previous.getPaymentMethod()).isEqualTo("Bankkonto");
-		assertThat(previous.getName()).isEqualTo("Anna Andersson");
-		assertThat(previous.getClearing()).isEqualTo("1234");
-		assertThat(previous.getAccountNumber()).isEqualTo("5678901");
-		assertThat(previous.getMessage()).isEqualTo("msg");
-		assertThat(previous).hasNoNullFieldsOrProperties();
-
-		assertThat(ProposalMapper.toPayee(view)).isEqualTo(Payee.create().withName("Anna Andersson").withPaymentMethod("Bankkonto").withClearing("1234").withAccountNumber("5678901"));
-	}
-
-	@Test
-	void toPayeeFromApplicationNeedsAnAccountOrMethod() {
-		assertThat(ProposalMapper.toPayee(FaPerson.create(), "Anna")).isEmpty();
-		assertThat(ProposalMapper.toPayee(FaPerson.create().withPaymentMethod("Bankkonto").withClearingNumber("1234").withAccountNumber("999"), "Anna"))
-			.contains(Payee.create().withName("Anna").withPaymentMethod("Bankkonto").withClearing("1234").withAccountNumber("999"));
-	}
-
-	@Test
-	void distinctPayeesKeepsFirstSeenOrderAndDropsBlanks() {
-		final var payees = ProposalMapper.distinctPayees(List.of(
-			payment("Anna", "1234", "1"),
-			payment("Bo", "1234", "2"),
-			payment("Anna", "1234", "1"),
-			payment(null, null, null)));
-
-		assertThat(payees).extracting(Payee::getName, Payee::getAccountNumber).containsExactly(tuple("Anna", "1"), tuple("Bo", "2"));
-		assertThat(ProposalMapper.distinctPayees(List.of())).isEmpty();
-	}
-
-	@Test
-	void toPayeeCarriesTheAddressLifecarePaidTo() {
-		final var view = new PaymentView(1, BigDecimal.TEN, "Bankgiro", "2026-05-27", null, "123-4567", "Hyresvärden AB",
-			"Storgatan 1", "c/o Bertil Bertilsson", "85230", "Sundsvall", "msg", "2026-06");
-
-		assertThat(ProposalMapper.toPayee(view)).isEqualTo(Payee.create().withName("Hyresvärden AB").withPaymentMethod("Bankgiro")
-			.withAccountNumber("123-4567").withAddress("Storgatan 1").withCareOf("c/o Bertil Bertilsson").withZipCode("85230").withCity("Sundsvall"));
-	}
-
-	@Test
-	void distinctPayeesKeepsOnePayeeWhenOnlyTheAddressChanged() {
-		// Newest first: the same account paid under an old address earlier stays one payee, with the newest address.
-		final var newest = new PaymentView(1, BigDecimal.TEN, "Bankkonto", "2026-05-27", "1234", "1", "Anna", "Nygatan 2", null, "85231", "Sundsvall", "msg", "2026-06");
-		final var older = new PaymentView(2, BigDecimal.TEN, "Bankkonto", "2026-04-27", "1234", "1", "Anna", "Storgatan 1", null, "85230", "Sundsvall", "msg", "2026-05");
-
-		assertThat(ProposalMapper.distinctPayees(List.of(newest, older))).extracting(Payee::getAddress).containsExactly("Nygatan 2");
 	}
 }

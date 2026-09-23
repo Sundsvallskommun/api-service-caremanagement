@@ -18,10 +18,11 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Sect
  * delegating to {@link SectionApprovalService}. Split out of the former FinancialAssistanceService god-service.
  *
  * <p>
- * Approving a section also recomputes the next section's proposal — CALCULATION approved → the decision proposal,
- * DECISION approved → the payment proposal — so their warnings are on the errand the moment the caseworker moves on.
+ * Approving a section also refreshes the next section's warnings — CALCULATION approved → the decision proposal,
+ * DECISION approved → the payment warnings — so they are on the errand the moment the caseworker moves on.
  * The recompute is a direct, best-effort call (not a Modulith event: those run asynchronously after commit, which
- * would leave the tab briefly stale) and never fails the approval — the proposals are also recomputed on every read.
+ * would leave the tab briefly stale) and never fails the approval — the decision proposal is also recomputed on every
+ * read.
  * </p>
  */
 @Service
@@ -33,14 +34,14 @@ public class FinancialAssistanceApprovalService {
 	private final ErrandService errandService;
 	private final SectionApprovalService sectionApprovalService;
 	private final DecisionProposalService decisionProposalService;
-	private final PaymentProposalService paymentProposalService;
+	private final PaymentWarningService paymentWarningService;
 
 	FinancialAssistanceApprovalService(final ErrandService errandService, final SectionApprovalService sectionApprovalService,
-		final DecisionProposalService decisionProposalService, final PaymentProposalService paymentProposalService) {
+		final DecisionProposalService decisionProposalService, final PaymentWarningService paymentWarningService) {
 		this.errandService = errandService;
 		this.sectionApprovalService = sectionApprovalService;
 		this.decisionProposalService = decisionProposalService;
-		this.paymentProposalService = paymentProposalService;
+		this.paymentWarningService = paymentWarningService;
 	}
 
 	/**
@@ -68,7 +69,7 @@ public class FinancialAssistanceApprovalService {
 	}
 
 	/**
-	 * CALCULATION approved → decision proposal; DECISION approved → payment proposal. Best-effort, never fails the
+	 * CALCULATION approved → decision proposal; DECISION approved → payment warnings. Best-effort, never fails the
 	 * approval.
 	 */
 	private void recomputeNextProposal(final String municipalityId, final String namespace, final String errandId, final String section) {
@@ -76,10 +77,10 @@ public class FinancialAssistanceApprovalService {
 			if (SECTION_CALCULATION.equals(section)) {
 				decisionProposalService.get(municipalityId, namespace, errandId);
 			} else if (SECTION_DECISION.equals(section)) {
-				paymentProposalService.get(municipalityId, namespace, errandId);
+				paymentWarningService.reconcile(municipalityId, namespace, errandId);
 			}
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not recompute the section proposal after approving {} — it is recomputed on the next read", section, e);
+			LOG.warn("Could not refresh the next section's warnings after approving {}", section, e);
 		}
 	}
 }
