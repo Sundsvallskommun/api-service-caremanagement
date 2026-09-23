@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:55058
+- url: http://localhost:63825
   description: Generated server url
 security:
 - sentBy: []
@@ -18,6 +18,10 @@ tags:
     \ by CareManagement, answered with a per-item receipt."
 - name: Statistics
   description: Read-only errand statistics for the caseworker interface
+- name: Co-caseworkers
+  description: "Co-caseworkers (medhandläggare) added to an errand alongside its ordinary\
+    \ caseworker. Both the caseworker and every co-caseworker receive the errand's\
+    \ notifications as one shared, logical message."
 - name: Permits
   description: "Permits issued on an errand: validity period, conditions and status.\
     \ Revoking sets the status to REVOKED."
@@ -2614,6 +2618,133 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/co-caseworkers:
+    get:
+      tags:
+      - Co-caseworkers
+      summary: List co-caseworkers on an errand
+      operationId: readCoCaseworkers
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+        example: MY_NAMESPACE
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: sort
+        in: query
+        description: "Sorting criteria in the format: property,(asc|desc). Default\
+          \ sort order is ascending. Multiple sort criteria are supported."
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoCaseworker"
+        "404":
+          description: Errand not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+      - Co-caseworkers
+      summary: Add a co-caseworker to an errand
+      operationId: addCoCaseworker
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+        example: MY_NAMESPACE
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCoCaseworker"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
+        "404":
+          description: Errand not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: User is already a co-caseworker on the errand
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
         "500":
           description: Internal server error
           content:
@@ -8700,6 +8831,61 @@ paths:
       x-auth-type: None
       x-throttling-tier: Unlimited
       x-wso2-mutual-ssl: Optional
+  /{municipalityId}/{namespace}/errands/{errandId}/co-caseworkers/{userId}:
+    delete:
+      tags:
+      - Co-caseworkers
+      summary: Remove a co-caseworker from an errand
+      operationId: removeCoCaseworker
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+        example: MY_NAMESPACE
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        description: User id of the co-caseworker to remove
+        required: true
+        schema:
+          type: string
+        example: jane01doe
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
 components:
   schemas:
     Problem:
@@ -8733,10 +8919,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -11070,6 +11256,19 @@ components:
           minLength: 0
       required:
       - outcome
+    AddCoCaseworker:
+      type: object
+      description: Request to add a co-caseworker (medhandläggare) to an errand
+      properties:
+        userId:
+          type: string
+          description: User id of the co-caseworker to add
+          examples:
+          - jane01doe
+          maxLength: 64
+          minLength: 0
+      required:
+      - userId
     CreateWarningRequest:
       type: object
       description: Request to create a financial assistance income warning on an errand
@@ -13553,6 +13752,29 @@ components:
           description: Number of matching events
           examples:
           - 12
+    CoCaseworker:
+      type: object
+      description: "A co-caseworker (medhandläggare) on an errand. Both the errand's\
+        \ ordinary caseworker and every co-caseworker receive the errand's notifications\
+        \ as one shared, logical message"
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+        errandId:
+          type: string
+          description: Errand id this co-caseworker is added to
+        userId:
+          type: string
+          description: User id of the co-caseworker
+          examples:
+          - jane01doe
+        created:
+          type: string
+          format: date-time
+          description: When the co-caseworker was added
     Attachment:
       type: object
       description: Attachment model

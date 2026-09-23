@@ -17,7 +17,26 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
 
 	List<NotificationEntity> findAllByNamespaceAndMunicipalityIdAndErrandId(String namespace, String municipalityId, String errandId, Sort sort);
 
-	List<NotificationEntity> findAllByNamespaceAndMunicipalityIdAndOwnerId(String namespace, String municipalityId, String ownerId, Sort sort);
+	/**
+	 * Widens "notifications for this recipient" beyond direct ownership: also matches notifications on any errand
+	 * where {@code userId} is a co-caseworker (see the {@code cocaseworkers} module). Referenced by entity name only
+	 * (no Java import of {@code CoCaseworkerEntity}) to keep the module dependency out of the compiled graph — the two
+	 * modules are coupled only through this JPQL string, resolved against the shared persistence unit at runtime.
+	 * Notifications stay single rows: this only widens who can see one, never duplicates it.
+	 */
+	@Query("""
+		select n from NotificationEntity n
+		where n.namespace = ?1
+		  and n.municipalityId = ?2
+		  and (n.ownerId = ?3
+		    or n.errandId in (
+		      select c.errandId from CoCaseworkerEntity c
+		      where c.namespace = ?1
+		        and c.municipalityId = ?2
+		        and c.userId = ?3
+		    ))
+		""")
+	List<NotificationEntity> findAllVisibleToUser(String namespace, String municipalityId, String userId, Sort sort);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("update NotificationEntity n set n.acknowledged = true where n.namespace = ?1 and n.municipalityId = ?2 and n.errandId = ?3 and n.acknowledged = false")

@@ -127,6 +127,19 @@ class NotificationIT extends AbstractAppTest {
 	}
 
 	@Test
+	void test07b_readNotificationsByCoCaseworker() {
+		// coworker1 is seeded (testdata-it.sql) as a co-caseworker on errand 1111... alongside assignee1. Widened
+		// visibility must return the exact same notification rows a direct owner would see — same ids, same shared
+		// handled/acknowledged state — never a duplicate copy.
+		setupCall()
+			.withServicePath(OWNER_PATH + "?ownerId=coworker1")
+			.withHttpMethod(GET)
+			.withExpectedResponseStatus(OK)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequestAndVerifyResponse();
+	}
+
+	@Test
 	void test08_readNotificationNotFound() {
 		setupCall()
 			.withServicePath(ERRAND_PATH.formatted(ERRAND_ID) + "/" + UNKNOWN_NOTIFICATION_ID)
