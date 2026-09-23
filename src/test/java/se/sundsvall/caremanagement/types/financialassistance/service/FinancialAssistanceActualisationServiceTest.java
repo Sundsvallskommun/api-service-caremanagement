@@ -24,6 +24,7 @@ import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationResult;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
+import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ArchiveActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
@@ -169,22 +170,28 @@ class FinancialAssistanceActualisationServiceTest {
 	 */
 	@Test
 	void createActualisationArchivesTheApplicationOntoTheActualisation() {
-		final var pdf = "application-pdf".getBytes(UTF_8);
+		final var application = new SourceFile("EB-26060001.pdf", "application/pdf", "application-pdf".getBytes(UTF_8));
+		final var merged = new SourceFile("sammanstallning.pdf", "application/pdf", "combined-pdf".getBytes(UTF_8));
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
 		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null, null));
-		when(attachmentServiceMock.readApplicationArchivePdf(ERRAND_ID)).thenReturn(Optional.of(pdf));
+		when(attachmentServiceMock.readApplicationArchiveDocuments(ERRAND_ID)).thenReturn(List.of(application, merged));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withErrandNumber("EB-26060001"));
 
 		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID));
 
-		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, "EB-26060001_ansokan.pdf", pdf,
+		// Both documents, under names a caseworker can tell apart among the person's other Lifecare documents.
+		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, "EB-26060001_ansokan.pdf", application.content(),
 			"1", "1", "Ansökan ekonomiskt bistånd EB-26060001", "Draken");
+		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, "EB-26060001_bilagor.pdf", merged.content(),
+			"1", "1", "Bilagor till ansökan EB-26060001", "Draken");
 
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
-		assertThat(decisionCaptor.getValue().getDescription()).contains("EB-26060001_ansokan.pdf");
+		assertThat(decisionCaptor.getValue().getDescription())
+			.contains("EB-26060001_ansokan.pdf")
+			.contains("EB-26060001_bilagor.pdf");
 	}
 
 	/** An application can arrive with no uploaded files at all; that is not a failure, and the row says so. */
@@ -193,7 +200,7 @@ class FinancialAssistanceActualisationServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
 		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null, null));
-		when(attachmentServiceMock.readApplicationArchivePdf(ERRAND_ID)).thenReturn(Optional.empty());
+		when(attachmentServiceMock.readApplicationArchiveDocuments(ERRAND_ID)).thenReturn(List.of());
 
 		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID));
@@ -214,7 +221,8 @@ class FinancialAssistanceActualisationServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
 		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null, null));
-		when(attachmentServiceMock.readApplicationArchivePdf(ERRAND_ID)).thenReturn(Optional.of("pdf".getBytes(UTF_8)));
+		when(attachmentServiceMock.readApplicationArchiveDocuments(ERRAND_ID))
+			.thenReturn(List.of(new SourceFile("EB-26060001.pdf", "application/pdf", "pdf".getBytes(UTF_8))));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withErrandNumber("EB-26060001"));
 		doThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare refused the upload"))
 			.when(actualisationServiceMock).uploadAttachment(any(), any(), any(), any(), any(), any(), any(), any());

@@ -115,26 +115,45 @@ public class AttachmentService {
 	}
 
 	/**
-	 * The citizen's application documents as a single PDF — the combined {@value #COMBINED_PDF_FILE_NAME} that
-	 * {@link #storeAndCombine} writes alongside the individual files. Empty when the errand carries none, which is a
-	 * legitimate state: an application can be submitted without a single uploaded file.
+	 * The documents that make up the citizen's application, for archiving into the case system: the application PDF
+	 * itself — the {@code CASE_DATA} snapshot Mina sidor supplies, stored as {@code {errandNumber}.pdf} — followed by
+	 * careM's merge of the citizen's own uploads, {@value #COMBINED_PDF_FILE_NAME}.
 	 *
 	 * <p>
-	 * It is a {@code GENERATED} document, not an {@code APPLICATION} one — the citizen's own uploads carry the latter
-	 * and the merge careM makes of them carries the former. Filtering on {@code APPLICATION} here matches nothing,
-	 * silently, and the archive then reports that there was nothing to archive.
+	 * Verksamheten asked for both (2026-09-23). They are different documents and either can legitimately be absent: an
+	 * application can arrive with no uploaded files, and an errand created through the API rather than Mina sidor
+	 * carries no case-data snapshot.
 	 *
 	 * <p>
-	 * Returns bytes rather than the {@code Attachment} model for the same reason {@link #applicationAttachmentsExist}
-	 * returns a boolean — the model stays inside this module.
+	 * The merge is a {@code GENERATED} document, not an {@code APPLICATION} one — the citizen's own uploads carry the
+	 * latter and careM's merge of them carries the former. Filtering on {@code APPLICATION} matches nothing, silently,
+	 * and the archive then reports that there was nothing to archive; that shipped once.
+	 *
+	 * <p>
+	 * Returns {@link SourceFile} rather than the {@code Attachment} model for the same reason
+	 * {@link #applicationAttachmentsExist} returns a boolean — the model stays inside this module, while
+	 * {@code SourceFile} already crosses it for {@link #combineToPdf}.
+	 *
+	 * @return the application documents in archiving order, possibly empty
 	 */
 	@Transactional(readOnly = true)
-	public Optional<byte[]> readApplicationArchivePdf(final String errandId) {
-		return attachmentRepository.findByErrandId(errandId).stream()
-			.filter(attachment -> DOCUMENT_TYPE_GENERATED.equals(attachment.getDocumentType()))
-			.filter(attachment -> COMBINED_PDF_FILE_NAME.equals(attachment.getFileName()))
+	public List<SourceFile> readApplicationArchiveDocuments(final String errandId) {
+		final var attachments = attachmentRepository.findByErrandId(errandId);
+
+		return Stream.of(
+			firstMatching(attachments, DOCUMENT_TYPE_CASE_DATA, null),
+			firstMatching(attachments, DOCUMENT_TYPE_GENERATED, COMBINED_PDF_FILE_NAME))
+			.flatMap(Optional::stream)
+			.toList();
+	}
+
+	/** The first attachment of the given type, optionally narrowed to one file name, read into memory. */
+	private static Optional<SourceFile> firstMatching(final List<AttachmentEntity> attachments, final String documentType, final String fileName) {
+		return attachments.stream()
+			.filter(attachment -> documentType.equals(attachment.getDocumentType()))
+			.filter(attachment -> (fileName == null) || fileName.equals(attachment.getFileName()))
 			.findFirst()
-			.map(AttachmentService::readContent);
+			.map(attachment -> new SourceFile(attachment.getFileName(), attachment.getMimeType(), readContent(attachment)));
 	}
 
 	/** The stored bytes of one attachment. */

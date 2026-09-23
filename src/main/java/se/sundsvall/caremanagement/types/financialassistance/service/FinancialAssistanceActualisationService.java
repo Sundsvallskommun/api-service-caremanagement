@@ -20,6 +20,7 @@ import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationResult;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
+import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Actualisation;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationResponse;
@@ -66,6 +67,10 @@ public class FinancialAssistanceActualisationService {
 	private static final String ACTUALISATION_NOT_FOUND_MESSAGE = "No Lifecare actualisation '%s' found for the given applicant";
 	/** Archive outcomes, written onto the errand's Decision row so the caseworker sees what happened. */
 	private static final String ARCHIVED_MESSAGE = "Application archived to Lifecare as %s.";
+	/** careM's own name for the merge of the citizen's uploads — the marker that tells the two documents apart. */
+	private static final String COMBINED_PDF_FILE_NAME = "sammanstallning.pdf";
+	private static final String ATTACHMENTS_ARCHIVE_FILE_NAME = "%s_bilagor.pdf";
+	private static final String ATTACHMENTS_ARCHIVE_TITLE = "Bilagor till ansökan %s";
 	private static final String NOTHING_TO_ARCHIVE_MESSAGE = "No application documents to archive.";
 	private static final String ARCHIVE_FAILED_MESSAGE = "Archiving the application to Lifecare FAILED: %s";
 	private static final String APPLICATION_ARCHIVE_FILE_NAME = "%s_ansokan.pdf";
@@ -184,25 +189,41 @@ public class FinancialAssistanceActualisationService {
 	 */
 	private String archiveApplication(final String municipalityId, final String namespace, final String errandId, final Integer actualisationId) {
 		try {
-			final var pdf = attachmentService.readApplicationArchivePdf(errandId);
-			if (pdf.isEmpty()) {
+			final var documents = attachmentService.readApplicationArchiveDocuments(errandId);
+			if (documents.isEmpty()) {
 				LOG.info("No application documents to archive for errand {}", errandId);
 				return NOTHING_TO_ARCHIVE_MESSAGE;
 			}
 
 			final var errandNumber = errandService.readErrand(municipalityId, namespace, errandId).getErrandNumber();
-			final var fileName = APPLICATION_ARCHIVE_FILE_NAME.formatted(errandNumber);
+			final var archived = documents.stream()
+				.map(document -> upload(municipalityId, actualisationId, errandNumber, document))
+				.toList();
 
-			actualisationService.uploadAttachment(municipalityId, actualisationId, fileName, pdf.get(),
-				DEFAULT_ARCHIVE_DOCUMENT_TYPE, DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE,
-				APPLICATION_ARCHIVE_TITLE.formatted(errandNumber), DEFAULT_ARCHIVE_SENDER_NAME);
-
-			LOG.info("Archived the application of errand {} to Lifecare actualisation {}", errandNumber, actualisationId);
-			return ARCHIVED_MESSAGE.formatted(fileName);
+			LOG.info("Archived {} application document(s) of errand {} to Lifecare actualisation {}", archived.size(), errandNumber, actualisationId);
+			return ARCHIVED_MESSAGE.formatted(String.join(", ", archived));
 		} catch (final Exception e) {
 			LOG.error("Failed to archive the application of errand {} to Lifecare actualisation {}: {}", errandId, actualisationId, e.getMessage(), e);
 			return ARCHIVE_FAILED_MESSAGE.formatted(e.getMessage());
 		}
+	}
+
+	/**
+	 * Upload one application document, under a name a caseworker can tell apart in Lifecare. careM's own names do not
+	 * travel: the case-data snapshot is {@code {errandNumber}.pdf} and the merge is {@code sammanstallning.pdf}, which
+	 * says nothing about which errand it belongs to once it sits among a person's other documents.
+	 *
+	 * @return the name the document was archived under
+	 */
+	private String upload(final String municipalityId, final Integer actualisationId, final String errandNumber, final SourceFile document) {
+		final var merged = COMBINED_PDF_FILE_NAME.equals(document.fileName());
+		final var fileName = (merged ? ATTACHMENTS_ARCHIVE_FILE_NAME : APPLICATION_ARCHIVE_FILE_NAME).formatted(errandNumber);
+		final var title = (merged ? ATTACHMENTS_ARCHIVE_TITLE : APPLICATION_ARCHIVE_TITLE).formatted(errandNumber);
+
+		actualisationService.uploadAttachment(municipalityId, actualisationId, fileName, document.content(),
+			DEFAULT_ARCHIVE_DOCUMENT_TYPE, DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE, title, DEFAULT_ARCHIVE_SENDER_NAME);
+
+		return fileName;
 	}
 
 	/**
