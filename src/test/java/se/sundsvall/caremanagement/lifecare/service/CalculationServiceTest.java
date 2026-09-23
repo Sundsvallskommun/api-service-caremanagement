@@ -25,14 +25,17 @@ import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
+import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.ObjectMapper;
 
 import static java.time.Month.JUNE;
 import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -184,12 +187,38 @@ class CalculationServiceTest {
 	}
 
 	@Test
+	void commitEffectiveResolvesACaseworkerIncomeWithoutTypeIdByItsName() {
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal()
+			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(11).name("Lön efter skatt")));
+		when(lifecareFamilyCareIntegrationMock.createCalculation(eq(MUNICIPALITY_ID), any(PostCalculationBodyRequest.class))).thenReturn(5000);
+		final var incomes = List.of(new EffectiveIncome(null, " lön EFTER skatt ", BigDecimal.valueOf(5000.0), null, null, null, null));
+
+		service.commitEffective(MUNICIPALITY_ID, APPLICANT, MONTH, new CalculationHeader(7, null, null, null, null, null), incomes, List.of(), List.of());
+
+		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
+		verify(lifecareFamilyCareIntegrationMock).createCalculation(eq(MUNICIPALITY_ID), captor.capture());
+		assertThat(captor.getValue().getCalculationIncomes()).singleElement().satisfies(income -> assertThat(income.getId()).isEqualTo(11));
+	}
+
+	@Test
+	void commitEffectiveRefusesAnIncomeWhoseTypeCannotBeResolved() {
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
+		final var incomes = List.of(new EffectiveIncome(null, "Okänd inkomst", BigDecimal.valueOf(5000.0), null, null, null, null));
+		final var header = new CalculationHeader(7, null, null, null, null, null);
+
+		assertThatThrownBy(() -> service.commitEffective(MUNICIPALITY_ID, APPLICANT, MONTH, header, incomes, List.of(), List.of()))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasMessage("Bad Request: Income row 'Okänd inkomst' has no Lifecare income type id and its name matches none of Lifecare's income types");
+		verify(lifecareFamilyCareIntegrationMock, never()).createCalculation(any(), any());
+	}
+
+	@Test
 	void commitEffectiveAssemblesIncomesExpensesAndPersonsAndPosts() {
 		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal()
 			.addCalculationExpenseTypesItem(new PersonBasedCalculationExpenseTypeDTO().id(42).name("Boendekostnad")));
 		when(lifecareFamilyCareIntegrationMock.createCalculation(eq(MUNICIPALITY_ID), any(PostCalculationBodyRequest.class))).thenReturn(5000);
 
-		final var incomes = List.of(new EffectiveIncome(20, BigDecimal.valueOf(1850.0), null, null, null, "SSBTEK"));
+		final var incomes = List.of(new EffectiveIncome(20, "Bostadsbidrag", BigDecimal.valueOf(1850.0), null, null, null, "SSBTEK"));
 		final var expenses = List.of(
 			new EffectiveExpense("RENT", "EXPENSE", BigDecimal.valueOf(9000.0), BigDecimal.valueOf(8000.0), null), // resolves to FamilyCare id 42
 			new EffectiveExpense("UNMAPPED_NONSENSE", "EXPENSE", BigDecimal.valueOf(100.0), BigDecimal.valueOf(100.0), null)); // skipped (no FamilyCare id)

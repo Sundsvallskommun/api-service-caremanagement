@@ -32,6 +32,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.model.Draft
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
@@ -181,6 +182,10 @@ public class DraftService {
 
 	@Transactional
 	public NormIncomeRow addIncome(final String errandId, final NormIncomeInput input) {
+		if ((input.getTypeId() == null) && !StringUtils.hasText(input.getTypeName())) {
+			// Without an id or a name the row can never be sent to Lifecare, and the commit would fail long after this.
+			throw Problem.valueOf(BAD_REQUEST, "An income row needs a typeId or a typeName");
+		}
 		requireHeader(errandId);
 		final var entity = incomeRepository.save(CalculationDraftMapper.toNewIncomeEntity(errandId, incomeRepository.nextPositionForErrand(errandId), input));
 		return CalculationDraftMapper.toIncomeRow(entity);

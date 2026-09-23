@@ -10,6 +10,7 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import se.sundsvall.caremanagement.lifecare.service.mapper.ApplicationIncomeToFa
 import se.sundsvall.caremanagement.lifecare.service.mapper.CalculationAssembler;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFamilyCareMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
+import se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationSections;
@@ -50,6 +52,7 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.toW
 public class CalculationService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(CalculationService.class);
+	private static final String UNKNOWN_INCOME_TYPE = "Income row '%s' has no Lifecare income type id and its name matches none of Lifecare's income types";
 
 	private final LifecareFamilyCare lifecareFamilyCareIntegration;
 	private final LifecareCaseService lifecareCaseService;
@@ -171,7 +174,8 @@ public class CalculationService {
 		final List<EffectiveIncome> incomes, final List<EffectiveExpense> expenses, final List<EffectivePerson> persons) {
 
 		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPersonId);
-		final var incomeDtos = ofNullable(incomes).orElseGet(List::of).stream().map(CalculationService::toIncomeDto).toList();
+		final var incomeTypeIds = MapperUtil.indexIncomeTypeIds(proposal);
+		final var incomeDtos = ofNullable(incomes).orElseGet(List::of).stream().map(income -> toIncomeDto(income, incomeTypeIds)).toList();
 
 		final var allExpenses = ofNullable(expenses).orElseGet(List::of);
 		final var expenseDtos = allExpenses.stream()
@@ -191,14 +195,25 @@ public class CalculationService {
 		return lifecareFamilyCareIntegration.createCalculation(municipalityId, body);
 	}
 
-	private static PersonBasedCalculationIncomePostDTO toIncomeDto(final EffectiveIncome income) {
+	private static PersonBasedCalculationIncomePostDTO toIncomeDto(final EffectiveIncome income, final Map<String, Integer> incomeTypeIds) {
 		return new PersonBasedCalculationIncomePostDTO()
-			.id(income.typeId())
+			.id(incomeTypeId(income, incomeTypeIds))
 			.applicantAmount(toWireAmount(income.applicantAmount()))
 			.applicantAmountDate(income.applicantAmountDate())
 			.coApplicantAmount(toWireAmount(income.coApplicantAmount()))
 			.coApplicantAmountDate(income.coApplicantAmountDate())
 			.note(income.note());
+	}
+
+	/**
+	 * The row's FamilyCare income type id: its own when set, otherwise the proposal's id for its type name. An income
+	 * that resolves to neither is refused rather than dropped the way an unknown expense is — leaving out an income
+	 * changes the amount the person is granted, and posting it without an id is refused by Lifecare anyway.
+	 */
+	private static Integer incomeTypeId(final EffectiveIncome income, final Map<String, Integer> incomeTypeIds) {
+		return ofNullable(income.typeId())
+			.or(() -> ofNullable(incomeTypeIds.get(MapperUtil.normalize(income.typeName()))))
+			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, UNKNOWN_INCOME_TYPE.formatted(income.typeName())));
 	}
 
 	private static PersonBasedCalculationExpensePostDTO toExpenseDto(final EffectiveExpense expense, final PersonBasedCalculationProposalDTO proposal) {

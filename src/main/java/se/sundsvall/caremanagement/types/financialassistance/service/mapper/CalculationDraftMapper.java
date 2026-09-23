@@ -170,7 +170,7 @@ public final class CalculationDraftMapper {
 	 * One live income row → its effective FamilyCare income (applicant + co-applicant effective amounts), ready to post.
 	 */
 	public static EffectiveIncome toEffectiveIncome(final FaNormIncomeEntity row) {
-		return new EffectiveIncome(row.getTypeId(),
+		return new EffectiveIncome(row.getTypeId(), row.getTypeName(),
 			effectiveAmount(row.getApplicantCaseworkerAmount(), row.getApplicantProcessAmount()), row.getApplicantAmountDate(),
 			effectiveAmount(row.getCoapplicantCaseworkerAmount(), row.getCoapplicantProcessAmount()), row.getCoapplicantAmountDate(),
 			row.getNote());

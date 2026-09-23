@@ -30,7 +30,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
@@ -201,10 +203,19 @@ class DraftServiceTest {
 	void addIncomeThrows404WhenNoHeader() {
 		when(headerRepositoryMock.existsById(ERRAND_ID)).thenReturn(false);
 
-		assertThatThrownBy(() -> service.addIncome(ERRAND_ID, new NormIncomeInput()))
+		assertThatThrownBy(() -> service.addIncome(ERRAND_ID, NormIncomeInput.create().withTypeName("Lön efter skatt")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
 			.hasMessage("Not Found: No draft calculation for errand");
+	}
+
+	@Test
+	void addIncomeRejectsARowWithNeitherTypeIdNorTypeName() {
+		assertThatThrownBy(() -> service.addIncome(ERRAND_ID, NormIncomeInput.create().withTypeName("  ")))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: An income row needs a typeId or a typeName");
+		verifyNoInteractions(incomeRepositoryMock);
 	}
 
 	@Test
