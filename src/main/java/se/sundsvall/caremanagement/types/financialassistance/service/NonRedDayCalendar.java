@@ -14,16 +14,17 @@ import java.util.stream.Stream;
  * etableringsersättning payment is for against the non-red days of the month the payment covers (svar 2026-09-23 §2).
  *
  * <p>
- * <strong>What is red.</strong> Every Sunday, plus the allmänna helgdagar of lag (1989:253): nyårsdagen, trettondedag
- * jul, långfredagen, påskdagen, annandag påsk, första maj, Kristi himmelsfärds dag, pingstdagen, nationaldagen,
- * midsommardagen (the Saturday 20–26 June), alla helgons dag (the Saturday 31 October – 6 November), juldagen and
- * annandag jul. Computed with {@code java.time} — no external calendar, nothing to operate.
+ * <strong>What is red.</strong> Every Saturday and Sunday, plus the allmänna helgdagar of lag (1989:253): nyårsdagen,
+ * trettondedag jul, långfredagen, påskdagen, annandag påsk, första maj, Kristi himmelsfärds dag, pingstdagen,
+ * nationaldagen, midsommardagen (the Saturday 20–26 June), alla helgons dag (the Saturday 31 October – 6 November),
+ * juldagen and annandag jul. Computed with {@code java.time} — no external calendar, nothing to operate.
  * </p>
  *
  * <p>
- * <strong>Saturdays that are not a helgdag count as non-red.</strong> That is the literal reading of "icke-röda dagar"
- * in the decision, and nothing in the regelverk says otherwise (it says "icke-röda-dagar" in one sentence and "antal
- * dagar i månaden" in the next). Should verksamheten mean weekdays, add a Saturday filter in {@link #count}.
+ * <strong>Saturdays are red.</strong> Aktivitetsstöd, utvecklings- and etableringsersättning are paid for at most five
+ * days per calendar week (förordning 2017:819, 10 kap. 6 §), so a count that included Saturdays is one no correct
+ * payment can reach, and the check would warn on every one of them. The literal "icke-röda dagar" of the decision is
+ * read as weekdays that are not helgdagar; the question is put to verksamheten for confirmation, not left to block.
  * </p>
  *
  * <p>
@@ -47,7 +48,7 @@ final class NonRedDayCalendar {
 		UNDECIDED,
 		/** The three eves are red. */
 		EVES_ARE_RED,
-		/** The three eves are ordinary (non-red) days unless they fall on a Sunday. */
+		/** The three eves are ordinary (non-red) days unless they fall on a weekend. */
 		EVES_ARE_NOT_RED
 	}
 
@@ -91,7 +92,7 @@ final class NonRedDayCalendar {
 			eves = Set.of();
 		}
 		return (int) month.atDay(1).datesUntil(month.atEndOfMonth().plusDays(1))
-			.filter(date -> date.getDayOfWeek() != DayOfWeek.SUNDAY)
+			.filter(date -> date.getDayOfWeek() != DayOfWeek.SATURDAY && date.getDayOfWeek() != DayOfWeek.SUNDAY)
 			.filter(date -> !holidays.contains(date))
 			.filter(date -> !eves.contains(date))
 			.count();

@@ -55,14 +55,15 @@ class NonRedDayCalendarTest {
 
 	@ParameterizedTest(name = "{0}: {1} with the eves ordinary, {2} with the eves red")
 	@CsvSource({
-		"2026-04, 24, 24", // långfredag + annandag påsk on weekdays, påskdagen on a Sunday
-		"2026-06, 24, 23", // nationaldagen + midsommardagen on Saturdays, midsommarafton Friday 19th
-		"2026-08, 26, 26", // no helgdag: 31 days, five Sundays
-		"2026-10, 26, 26", // alla helgons dag on Saturday 31 October
-		"2026-12, 25, 23", // juldagen + annandag jul; julafton and nyårsafton both Thursdays
-		"2027-12, 26, 24", // annandag jul on a Sunday counts once
-		"2025-06, 23, 22",
-		"2008-05, 26, 26" // Kristi himmelsfärd on första maj counts once
+		"2026-04, 20, 20", // långfredag + annandag påsk on weekdays, påskdagen on a Sunday
+		"2026-06, 22, 21", // nationaldagen + midsommardagen on Saturdays, midsommarafton Friday 19th
+		"2026-08, 21, 21", // no helgdag: 31 days, five Saturdays and five Sundays
+		"2026-10, 22, 22", // alla helgons dag on Saturday 31 October
+		"2026-12, 22, 20", // juldagen on Friday, annandag jul on Saturday; julafton and nyårsafton both Thursdays
+		"2027-12, 23, 21", // annandag jul on a Sunday counts once
+		"2025-06, 20, 19",
+		"2025-12, 21, 19", // the month verksamheten is asked about: 23 weekdays, 21 without helgdagar, 19 without the eves too
+		"2008-05, 21, 21" // Kristi himmelsfärd on första maj counts once
 	})
 	void undecidedGivesBothReadings(final String month, final int ordinary, final int red) {
 		final var result = NonRedDayCalendar.nonRedDays(YearMonth.parse(month), UNDECIDED);
@@ -75,14 +76,14 @@ class NonRedDayCalendarTest {
 	void aDecidedReadingCollapsesToOneNumber() {
 		final var december = YearMonth.of(2026, 12);
 
-		assertThat(NonRedDayCalendar.nonRedDays(december, EVES_ARE_RED)).isEqualTo(new NonRedDayCalendar.NonRedDays(23, 23));
-		assertThat(NonRedDayCalendar.nonRedDays(december, EVES_ARE_NOT_RED)).isEqualTo(new NonRedDayCalendar.NonRedDays(25, 25));
+		assertThat(NonRedDayCalendar.nonRedDays(december, EVES_ARE_RED)).isEqualTo(new NonRedDayCalendar.NonRedDays(20, 20));
+		assertThat(NonRedDayCalendar.nonRedDays(december, EVES_ARE_NOT_RED)).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
 	}
 
 	@Test
 	void theSwitchIsStillUndecided() {
 		// Fails on purpose the day someone flips EVE_READING, so the verksamhet's answer is recorded in the tests too.
 		assertThat(NonRedDayCalendar.EVE_READING).isEqualTo(UNDECIDED);
-		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, 12))).isEqualTo(new NonRedDayCalendar.NonRedDays(25, 23));
+		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, 12))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 20));
 	}
 }

@@ -106,7 +106,7 @@ class PeriodRuleFeederTest {
 		// FK splitting a payment across several utbetalningsdetalj rows leaves sub-benefit and amount type null, so it
 		// cannot be routed. It may well be the aktivitetsstöd - claiming it is missing would be a fabricated finding.
 		final var split = control(income("Dagersättning", null, null,
-			LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(26)));
+			LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(21)));
 
 		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(split), OPEN_GATE)).isEmpty();
 		verifyNoInteractions(periodRulesServiceMock);
@@ -127,12 +127,12 @@ class PeriodRuleFeederTest {
 	@Test
 	void aWholeMonthPaymentIsComparedWithTheNonRedDaysOfTheMonthItCovers() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(new PeriodVerdict(true, W2));
-		// Paid in September (the control month), covering August: August 2026 has 26 non-red days and no eve.
+		// Paid in September (the control month), covering August: August 2026 has 21 non-red days and no eve.
 		final var payment = control(dayBenefit(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(21.5)));
 
 		final var warnings = feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(payment), OPEN_GATE);
 
-		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(21.5), 26, 26));
+		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(21.5), 21, 21));
 		assertThat(warnings).singleElement().satisfies(warning -> {
 			assertThat(warning.type()).isEqualTo(WarningService.TYPE_SSBTEK_DAY_CHECK);
 			assertThat(warning.sourceKey()).isEqualTo("DAGERSATTNING:2026-08-01");
@@ -148,7 +148,7 @@ class PeriodRuleFeederTest {
 		feeder.periodWarnings(MUNICIPALITY_ID, YearMonth.of(2027, 1), List.of(payment),
 			DayCheckBasis.create().withEconomicDecisionPeriods(List.of(period(LocalDate.of(2026, 8, 1), null))).withAllDaysConsumed(false));
 
-		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(23), 25, 23));
+		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(23), 22, 20));
 	}
 
 	@Test
@@ -206,13 +206,13 @@ class PeriodRuleFeederTest {
 			LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(22)));
 
 		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(payment), OPEN_GATE)).hasSize(1);
-		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(22), 26, 26));
+		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(22), 21, 21));
 	}
 
 	@Test
 	void aVerdictWithoutAWarningRaisesNothing() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(PeriodVerdict.none());
-		final var payment = control(dayBenefit(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(26)));
+		final var payment = control(dayBenefit(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(21)));
 
 		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(payment), OPEN_GATE)).isEmpty();
 	}
