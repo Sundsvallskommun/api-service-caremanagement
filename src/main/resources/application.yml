@@ -100,10 +100,15 @@ integration:
   # lifecare-integrator — the route to FamilyCare that works from outside the municipal network. Only used when
   # integration.lifecare-familycare.provider=integrator; the credentials carry placeholders so a deploy on the direct
   # route needs none of them, the same pattern as RPA.
+  # read-timeout 90: an attachment upload onto a Lifecare actualisation measured 41.5 s against the live API on
+  # 2026-09-23, and the integrator's own read timeout to FamilyCare is raised to 90 to match. The two are equal rather
+  # than staggered, so a FamilyCare call that runs the full 90 s may be cut here first; raise this above the
+  # integrator's if that shows up. A cut here is not free — the timeout throws past the error decoder, so the failure
+  # arrives without Lifecare's explanation.
   lifecare-integrator:
     url: ${INTEGRATION_LIFECARE_INTEGRATOR_URL:http://localhost/lifecare-integrator}
     connect-timeout: 5
-    read-timeout: 60
+    read-timeout: 90
   # financial-aid (SSBTEK proxy). OAuth2 client-credentials via the financial-aid Spring security registration above.
   financial-aid:
     url: ${INTEGRATION_FINANCIAL_AID_URL}
