@@ -167,4 +167,22 @@ class ProposalMapperTest {
 		assertThat(payees).extracting(Payee::getName, Payee::getAccountNumber).containsExactly(tuple("Anna", "1"), tuple("Bo", "2"));
 		assertThat(ProposalMapper.distinctPayees(List.of())).isEmpty();
 	}
+
+	@Test
+	void toPayeeCarriesTheAddressLifecarePaidTo() {
+		final var view = new PaymentView(1, BigDecimal.TEN, "Bankgiro", "2026-05-27", null, "123-4567", "Hyresvärden AB",
+			"Storgatan 1", "c/o Bertil Bertilsson", "85230", "Sundsvall", "msg", "2026-06");
+
+		assertThat(ProposalMapper.toPayee(view)).isEqualTo(Payee.create().withName("Hyresvärden AB").withPaymentMethod("Bankgiro")
+			.withAccountNumber("123-4567").withAddress("Storgatan 1").withCareOf("c/o Bertil Bertilsson").withZipCode("85230").withCity("Sundsvall"));
+	}
+
+	@Test
+	void distinctPayeesKeepsOnePayeeWhenOnlyTheAddressChanged() {
+		// Newest first: the same account paid under an old address earlier stays one payee, with the newest address.
+		final var newest = new PaymentView(1, BigDecimal.TEN, "Bankkonto", "2026-05-27", "1234", "1", "Anna", "Nygatan 2", null, "85231", "Sundsvall", "msg", "2026-06");
+		final var older = new PaymentView(2, BigDecimal.TEN, "Bankkonto", "2026-04-27", "1234", "1", "Anna", "Storgatan 1", null, "85230", "Sundsvall", "msg", "2026-05");
+
+		assertThat(ProposalMapper.distinctPayees(List.of(newest, older))).extracting(Payee::getAddress).containsExactly("Nygatan 2");
+	}
 }

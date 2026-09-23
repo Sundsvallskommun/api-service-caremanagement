@@ -152,7 +152,11 @@ public final class ProposalMapper {
 			.withName(view.name())
 			.withPaymentMethod(view.paymentMethod())
 			.withClearing(view.clearing())
-			.withAccountNumber(view.accountNumber());
+			.withAccountNumber(view.accountNumber())
+			.withAddress(view.streetAddress())
+			.withCareOf(view.careOfAddress())
+			.withZipCode(view.postalCode())
+			.withCity(view.postalAddress());
 	}
 
 	/** The payee the applicant stated in the application, or empty when the application names no account. */
@@ -167,15 +171,25 @@ public final class ProposalMapper {
 			.withAccountNumber(person.getAccountNumber()));
 	}
 
-	/** The distinct payees among the payments, in first-seen order. */
+	/**
+	 * The distinct payees among the payments, in first-seen order. Distinct on who and where the money goes — name,
+	 * method, clearing, account — so the same account paid under a changed address stays one payee, with the address
+	 * of the first (newest-first input) payment.
+	 */
 	public static List<Payee> distinctPayees(final List<PaymentView> payments) {
 		return payments.stream()
 			.map(ProposalMapper::toPayee)
 			.filter(payee -> hasText(payee.getName()) || hasText(payee.getAccountNumber()))
-			.collect(toMap(identity(), identity(), (a, _) -> a, java.util.LinkedHashMap::new))
-			.keySet()
+			.collect(toMap(PayeeKey::of, identity(), (a, _) -> a, java.util.LinkedHashMap::new))
+			.values()
 			.stream()
 			.toList();
+	}
+
+	private record PayeeKey(String name, String paymentMethod, String clearing, String accountNumber) {
+		static PayeeKey of(final Payee payee) {
+			return new PayeeKey(payee.getName(), payee.getPaymentMethod(), payee.getClearing(), payee.getAccountNumber());
+		}
 	}
 
 	private static BigDecimal orZero(final BigDecimal amount) {
