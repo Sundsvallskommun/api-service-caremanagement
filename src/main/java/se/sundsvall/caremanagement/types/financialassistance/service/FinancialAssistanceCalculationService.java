@@ -85,11 +85,13 @@ public class FinancialAssistanceCalculationService {
 	private final MissingIncomeFeeder missingIncomeFeeder;
 	private final LateTransferFeeder lateTransferFeeder;
 	private final RpaService rpaService;
+	private final LifecareServiceIdService lifecareServiceIdService;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
-		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder, final RpaService rpaService) {
+		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder, final RpaService rpaService,
+		final LifecareServiceIdService lifecareServiceIdService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
@@ -104,6 +106,7 @@ public class FinancialAssistanceCalculationService {
 		this.missingIncomeFeeder = missingIncomeFeeder;
 		this.lateTransferFeeder = lateTransferFeeder;
 		this.rpaService = rpaService;
+		this.lifecareServiceIdService = lifecareServiceIdService;
 	}
 
 	/**
@@ -338,7 +341,8 @@ public class FinancialAssistanceCalculationService {
 		final var persons = draftService.livePersons(errandId).stream().map(CalculationDraftMapper::toEffectivePerson).toList();
 
 		final var calculationHeader = new CalculationHeader(header.getNormId(), header.getCalculationFromDate(), header.getCalculationToDate(),
-			header.getCalculationDate(), header.getHasCustomHouseholdSize(), header.getHouseholdSize());
+			header.getCalculationDate(), header.getHasCustomHouseholdSize(), header.getHouseholdSize(),
+			lifecareServiceIdService.currentOrResolve(municipalityId, namespace, errandId));
 		final var calculationId = calculationService.commitEffective(municipalityId, applicant, applicationMonth, calculationHeader, incomes, expenses, persons);
 
 		// The calculation is now in Lifecare via the FamilyCare API; ask RPA to mirror the rest of the decision surface that
@@ -380,7 +384,8 @@ public class FinancialAssistanceCalculationService {
 			.map(CalculationDraftMapper::toEffectivePerson).toList();
 
 		final var normId = calculationService.selectNormId(municipalityId, applicant, applicationMonth, normNames(errand.getNormType()));
-		final var header = new CalculationHeader(normId, applicationMonth.atDay(1), applicationMonth.atEndOfMonth(), LocalDate.now(ZoneId.systemDefault()), false, null);
+		final var header = new CalculationHeader(normId, applicationMonth.atDay(1), applicationMonth.atEndOfMonth(), LocalDate.now(ZoneId.systemDefault()), false, null,
+			lifecareServiceIdService.currentOrResolve(municipalityId, namespace, errandId));
 
 		final var calculationId = calculationService.commitEffective(municipalityId, applicant, applicationMonth, header, incomes, expenses, persons);
 		triggerRpaWrite(municipalityId, namespace, errandId);

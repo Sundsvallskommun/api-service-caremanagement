@@ -193,7 +193,7 @@ class CalculationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.createCalculation(eq(MUNICIPALITY_ID), any(PostCalculationBodyRequest.class))).thenReturn(5000);
 		final var incomes = List.of(new EffectiveIncome(null, " lön EFTER skatt ", BigDecimal.valueOf(5000.0), null, null, null, null));
 
-		service.commitEffective(MUNICIPALITY_ID, APPLICANT, MONTH, new CalculationHeader(7, null, null, null, null, null), incomes, List.of(), List.of());
+		service.commitEffective(MUNICIPALITY_ID, APPLICANT, MONTH, new CalculationHeader(7, null, null, null, null, null, null), incomes, List.of(), List.of());
 
 		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
 		verify(lifecareFamilyCareIntegrationMock).createCalculation(eq(MUNICIPALITY_ID), captor.capture());
@@ -204,7 +204,7 @@ class CalculationServiceTest {
 	void commitEffectiveRefusesAnIncomeWhoseTypeCannotBeResolved() {
 		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
 		final var incomes = List.of(new EffectiveIncome(null, "Okänd inkomst", BigDecimal.valueOf(5000.0), null, null, null, null));
-		final var header = new CalculationHeader(7, null, null, null, null, null);
+		final var header = new CalculationHeader(7, null, null, null, null, null, null);
 
 		assertThatThrownBy(() -> service.commitEffective(MUNICIPALITY_ID, APPLICANT, MONTH, header, incomes, List.of(), List.of()))
 			.isInstanceOf(ThrowableProblem.class)
@@ -224,7 +224,7 @@ class CalculationServiceTest {
 			new EffectiveExpense("UNMAPPED_NONSENSE", "EXPENSE", BigDecimal.valueOf(100.0), BigDecimal.valueOf(100.0), null)); // skipped (no FamilyCare id)
 		final var persons = List.of(new EffectivePerson("p1", 30, null, null));
 
-		final var calculationId = service.commitEffective(MUNICIPALITY_ID, APPLICANT, MONTH, new CalculationHeader(7, null, null, null, null, null), incomes, expenses, persons);
+		final var calculationId = service.commitEffective(MUNICIPALITY_ID, APPLICANT, MONTH, new CalculationHeader(7, null, null, null, null, null, null), incomes, expenses, persons);
 
 		assertThat(calculationId).isEqualTo(5000);
 		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
@@ -261,7 +261,7 @@ class CalculationServiceTest {
 			new EffectivePerson("full", 30, null, null),
 			new EffectivePerson("partial", 12, null, null));
 
-		service.commitEffective(MUNICIPALITY_ID, APPLICANT, july, new CalculationHeader(7, null, null, null, null, null), List.of(), List.of(), persons);
+		service.commitEffective(MUNICIPALITY_ID, APPLICANT, july, new CalculationHeader(7, null, null, null, null, null, null), List.of(), List.of(), persons);
 
 		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
 		verify(lifecareFamilyCareIntegrationMock).createCalculation(eq(MUNICIPALITY_ID), captor.capture());

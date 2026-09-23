@@ -60,9 +60,40 @@ class CalculationAssemblerTest {
 
 		final var body = CalculationAssembler.assemble(PERSON_ID, proposal, List.of(), MONTH, List.of());
 
-		assertThat(body.getServiceId()).isEqualTo(5);
-		assertThat(body.getInvestigationId()).isEqualTo(7);
+		// The proposal's services and investigations are all of the person's open cases: never "take the first".
+		assertThat(body.getServiceId()).isNull();
+		assertThat(body.getInvestigationId()).isNull();
 		assertThat(body.getNormId()).isEqualTo(200); // the norm whose window covers 2026-06
+	}
+
+	/**
+	 * The regression behind FamilyCare's "Cannot contain both investigation and service": a calculation belongs to the
+	 * errand's EB insats, and to nothing else.
+	 */
+	@Test
+	void linksTheErrandsInsatsWhenTheProposalOffersItAndNeverAnInvestigation() {
+		final var proposal = new PersonBasedCalculationProposalDTO()
+			.addServicesItem(new PersonBasedCalculationServiceDTO().id(9).type(31).name("Vux"))
+			.addServicesItem(new PersonBasedCalculationServiceDTO().id(2).type(27).name("Ekonomiskt bistånd"))
+			.addInvestigationsItem(new PersonBasedCalculationInvestigationDTO().id(7));
+		final var sections = new CalculationSections(List.of(), List.of(), List.of(), List.of(), new CalculationHeader(null, null, null, null, null, null, 2));
+
+		final var body = CalculationAssembler.assemble(PERSON_ID, proposal, sections, MONTH, List.of());
+
+		assertThat(body.getServiceId()).isEqualTo(2);
+		assertThat(body.getInvestigationId()).isNull();
+	}
+
+	@Test
+	void leavesTheCalculationUnlinkedWhenTheProposalDoesNotOfferTheErrandsInsats() {
+		final var proposal = new PersonBasedCalculationProposalDTO()
+			.addServicesItem(new PersonBasedCalculationServiceDTO().id(9).type(31));
+		final var withUnofferedInsats = new CalculationSections(List.of(), List.of(), List.of(), List.of(), new CalculationHeader(null, null, null, null, null, null, 2));
+		final var withoutInsats = new CalculationSections(List.of(), List.of(), List.of(), List.of(), new CalculationHeader(null, null, null, null, null, null, null));
+
+		assertThat(CalculationAssembler.assemble(PERSON_ID, proposal, withUnofferedInsats, MONTH, List.of()).getServiceId()).isNull();
+		assertThat(CalculationAssembler.assemble(PERSON_ID, proposal, withoutInsats, MONTH, List.of()).getServiceId()).isNull();
+		assertThat(CalculationAssembler.assemble(PERSON_ID, null, withUnofferedInsats, MONTH, List.of()).getServiceId()).isNull();
 	}
 
 	/**
@@ -123,7 +154,7 @@ class CalculationAssemblerTest {
 		final var specialExpense = new PersonBasedCalculationSpecialExpensePostDTO().id(30);
 		final var person = new PersonBasedCalculationPersonPostDTO().personId(PERSON_ID);
 		final var header = new CalculationHeader(999, LocalDate.of(2026, JUNE, 5), LocalDate.of(2026, JUNE, 25),
-			LocalDate.of(2026, JUNE, 5), true, 3);
+			LocalDate.of(2026, JUNE, 5), true, 3, null);
 
 		final var proposal = new PersonBasedCalculationProposalDTO()
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(200).fromDate("2026-01-01").toDate("2026-12-31"));

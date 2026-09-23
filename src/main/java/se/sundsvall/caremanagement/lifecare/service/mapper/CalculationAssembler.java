@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.lifecare.service.mapper;
 
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationAktualiseringDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationIncomePostDTO;
-import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationInvestigationDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationNormDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationServiceDTO;
@@ -27,8 +26,11 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.nor
  * person) with the prepared income rows and the application month.
  *
  * <p>
- * Sprint defaults where the proposal offers a choice: the first service, investigation and (when mandatory)
- * actualisation are taken, and the norm covering the application month — falling back to the first. The calculation
+ * Where the proposal offers a choice: the first actualisation is taken when one is mandatory, and the norm covering the
+ * application month — falling back to the first. No service or investigation is taken from the proposal: those lists
+ * are all of the person's open insatser and utredningar across socialtjänsten, so "the first" can be a Vux utredning
+ * or a BoU insats, and FamilyCare refuses a calculation carrying both. The insats comes from the draft header instead
+ * (the errand's own EB insats), and only when the proposal offers it. The calculation
  * spans the application month. Expenses are left to the caseworker and household size to FamilyCare (left unset →
  * FamilyCare derives it from the proposal's household). These selections are intentionally simple and isolated here so
  * they are easy to refine once real FamilyCare proposals are available.
@@ -62,8 +64,6 @@ public final class CalculationAssembler {
 			.calculationIncomes(ofNullable(calculationIncomes).orElseGet(List::of));
 
 		ofNullable(proposal).ifPresent(p -> {
-			firstServiceId(p).ifPresent(body::serviceId);
-			firstInvestigationId(p).ifPresent(body::investigationId);
 			normIdForMonth(p, monthStart, normNames).ifPresent(body::normId);
 			mandatoryAktualiseringId(p).ifPresent(body::aktualiseringId);
 		});
@@ -94,7 +94,10 @@ public final class CalculationAssembler {
 		ofNullable(sections.expenses()).ifPresent(body::calculationExpenses);
 		ofNullable(sections.specialExpenses()).ifPresent(body::calculationSpecialExpenses);
 		ofNullable(sections.persons()).ifPresent(body::calculationPersons);
-		ofNullable(sections.header()).ifPresent(h -> applyHeader(body, h));
+		ofNullable(sections.header()).ifPresent(h -> {
+			applyHeader(body, h);
+			offeredServiceId(proposal, h.serviceId()).ifPresent(body::serviceId);
+		});
 		return body;
 	}
 
@@ -120,18 +123,15 @@ public final class CalculationAssembler {
 		return ofNullable(proposal).flatMap(p -> normIdForMonth(p, applicationMonth.atDay(1), normNames));
 	}
 
-	private static Optional<Integer> firstServiceId(final PersonBasedCalculationProposalDTO proposal) {
-		return ofNullable(proposal.getServices()).orElseGet(List::of).stream()
+	/**
+	 * The errand's insats, when the proposal offers it. An insats the proposal does not list is closed or belongs to
+	 * someone else; linking it would be refused, so the calculation is then left unlinked.
+	 */
+	private static Optional<Integer> offeredServiceId(final PersonBasedCalculationProposalDTO proposal, final Integer serviceId) {
+		return ofNullable(serviceId).filter(id -> ofNullable(proposal)
+			.map(PersonBasedCalculationProposalDTO::getServices).orElseGet(List::of).stream()
 			.map(PersonBasedCalculationServiceDTO::getId)
-			.filter(Objects::nonNull)
-			.findFirst();
-	}
-
-	private static Optional<Integer> firstInvestigationId(final PersonBasedCalculationProposalDTO proposal) {
-		return ofNullable(proposal.getInvestigations()).orElseGet(List::of).stream()
-			.map(PersonBasedCalculationInvestigationDTO::getId)
-			.filter(Objects::nonNull)
-			.findFirst();
+			.anyMatch(id::equals));
 	}
 
 	/**

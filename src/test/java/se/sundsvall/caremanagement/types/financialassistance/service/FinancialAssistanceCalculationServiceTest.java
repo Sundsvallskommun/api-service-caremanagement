@@ -107,6 +107,9 @@ class FinancialAssistanceCalculationServiceTest {
 	@Mock
 	private RpaService rpaServiceMock;
 
+	@Mock
+	private LifecareServiceIdService lifecareServiceIdServiceMock;
+
 	@InjectMocks
 	private FinancialAssistanceCalculationService service;
 
@@ -120,6 +123,7 @@ class FinancialAssistanceCalculationServiceTest {
 		when(draftServiceMock.liveExpenses(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
 		when(draftServiceMock.livePersons(ERRAND_ID)).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
 		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(4712);
+		when(lifecareServiceIdServiceMock.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(2);
 		// finalize stored the household-size flag on the errand → the WRITE_NORMBERAKNING item forwards it to the robot
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withHouseholdSizeChanged(true)));
 
@@ -135,7 +139,10 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(rpaServiceMock).enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, WRITE_NORMBERAKNING, Map.of("householdSizeChanged", "true"));
 
 		final ArgumentCaptor<List<EffectiveIncome>> incomeCaptor = ArgumentCaptor.captor();
-		verify(calculationServiceMock).commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), incomeCaptor.capture(), any(), any());
+		final ArgumentCaptor<CalculationHeader> headerCaptor = ArgumentCaptor.forClass(CalculationHeader.class);
+		verify(calculationServiceMock).commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), headerCaptor.capture(), incomeCaptor.capture(), any(), any());
+		// The calculation is created under the errand's own EB insats.
+		assertThat(headerCaptor.getValue().serviceId()).isEqualTo(2);
 		assertThat(incomeCaptor.getValue()).singleElement().satisfies(income -> {
 			assertThat(income.typeId()).isEqualTo(20);
 			assertThat(income.applicantAmount()).isEqualByComparingTo(BigDecimal.valueOf(1100.0)); // caseworker value wins over the process value
