@@ -34,12 +34,12 @@ class FinancialAssistancePaymentResourceTest {
 
 	@Test
 	void checkPaymentStatus() {
-		when(paymentServiceMock.checkPaymentStatus(eq(MUNICIPALITY_ID), any(PaymentStatusRequest.class)))
+		when(paymentServiceMock.checkPaymentStatus(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(PaymentStatusRequest.class)))
 			.thenReturn(PaymentStatusResponse.create().withEffectuated(true).withPaymentDate("2026-05-27"));
 
 		final var response = webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/payment-status").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
-			.bodyValue(PaymentStatusRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
+			.bodyValue(PaymentStatusRequest.create().withErrandId("a3c1f4de-2b6a-4c1e-9d3f-7e8a9b0c1d2e").withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(PaymentStatusResponse.class)
@@ -49,7 +49,7 @@ class FinancialAssistancePaymentResourceTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getEffectuated()).isTrue();
 		assertThat(response.getPaymentDate()).isEqualTo("2026-05-27");
-		verify(paymentServiceMock).checkPaymentStatus(eq(MUNICIPALITY_ID), any(PaymentStatusRequest.class));
+		verify(paymentServiceMock).checkPaymentStatus(eq(MUNICIPALITY_ID), eq(NAMESPACE), any(PaymentStatusRequest.class));
 	}
 
 }

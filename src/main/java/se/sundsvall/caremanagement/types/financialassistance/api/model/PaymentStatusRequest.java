@@ -7,12 +7,20 @@ import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
- * Request to read whether the manual Lifecare payment for one applicant and one application month has been
- * effectuated. The process polls this after a bifall to detect when the caseworker's manual payment is registered in
- * Lifecare — caremanagement makes no payment.
+ * Request to read whether the Lifecare payments of a bifall have been effectuated. The process polls this after the
+ * decision to detect when the payments are registered in Lifecare — caremanagement makes no payment. With
+ * {@code errandId}, exactly the payments the errand's decision registered are verified; without it, any payment for the
+ * applicant and month counts.
  */
 @Schema(description = "Request to read whether the Lifecare payment for an application month has been effectuated.")
 public class PaymentStatusRequest {
+
+	@Schema(description = """
+		The errand whose decided payments to verify. When given, the status is effectuated only when every payment the
+		decision registered is found in Lifecare, by its Lifecare id. Without it, any Lifecare payment for the applicant and
+		application month counts — kept only for callers that predate the field.""", examples = "a3c1f4de-2b6a-4c1e-9d3f-7e8a9b0c1d2e")
+	@ValidUuid(nullable = true)
+	private String errandId;
 
 	@Schema(description = "The applicant's partyId (personId GUID)", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", requiredMode = Schema.RequiredMode.REQUIRED)
 	@ValidUuid
@@ -25,6 +33,19 @@ public class PaymentStatusRequest {
 
 	public static PaymentStatusRequest create() {
 		return new PaymentStatusRequest();
+	}
+
+	public String getErrandId() {
+		return errandId;
+	}
+
+	public void setErrandId(final String errandId) {
+		this.errandId = errandId;
+	}
+
+	public PaymentStatusRequest withErrandId(final String errandId) {
+		this.errandId = errandId;
+		return this;
 	}
 
 	public String getApplicant() {
@@ -58,16 +79,16 @@ public class PaymentStatusRequest {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final PaymentStatusRequest that = (PaymentStatusRequest) o;
-		return Objects.equals(applicant, that.applicant) && Objects.equals(applicationMonth, that.applicationMonth);
+		return Objects.equals(errandId, that.errandId) && Objects.equals(applicant, that.applicant) && Objects.equals(applicationMonth, that.applicationMonth);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(applicant, applicationMonth);
+		return Objects.hash(errandId, applicant, applicationMonth);
 	}
 
 	@Override
 	public String toString() {
-		return "PaymentStatusRequest{applicant='" + applicant + "', applicationMonth='" + applicationMonth + "'}";
+		return "PaymentStatusRequest{errandId='" + errandId + "', applicant='" + applicant + "', applicationMonth='" + applicationMonth + "'}";
 	}
 }

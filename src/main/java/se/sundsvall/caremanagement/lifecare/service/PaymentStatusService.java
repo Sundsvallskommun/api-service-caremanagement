@@ -1,12 +1,16 @@
 package se.sundsvall.caremanagement.lifecare.service;
 
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedPaymentDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedPaymentDTO;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toMap;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
@@ -28,24 +32,41 @@ public class PaymentStatusService {
 	 * PayDate and its ConcernedMonth carries the application month (yyyy-MM). The query window spans the month before the
 	 * application month (payments are typically made late in the preceding month) through the application month.
 	 *
+	 * <p>
+	 * This matches <em>any</em> payment for the person and month — another errand's or an older insats's counts too. It
+	 * is only the answer for a caller that names no errand; with an errand, the decided payments are verified by id
+	 * through {@link #paidPaymentDates}.
+	 * </p>
+	 *
 	 * @param  applicantPersonId the applicant's personal identity number
 	 * @param  applicationMonth  the month the payment concerns
 	 * @return                   the effectuated flag and, when effectuated, the Lifecare PayDate
 	 */
 	public PaymentStatus read(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth) {
-		final var from = applicationMonth.minusMonths(1).atDay(1);
-		final var to = applicationMonth.atEndOfMonth();
-
-		final var payments = ofNullable(lifecareFamilyCareIntegration.getPayments(municipalityId, applicantPersonId, from, to))
-			.map(ApiPaginationCompositePersonBasedPaymentDTO::getResult)
-			.orElseGet(List::of);
-
 		final var monthKey = applicationMonth.toString();
-		return payments.stream()
+		return payments(municipalityId, applicantPersonId, applicationMonth.minusMonths(1).atDay(1), applicationMonth.atEndOfMonth()).stream()
 			.filter(payment -> hasText(payment.getPayDate()))
 			.filter(payment -> hasText(payment.getConcernedMonth()) && payment.getConcernedMonth().contains(monthKey))
 			.findFirst()
 			.map(payment -> new PaymentStatus(true, payment.getPayDate()))
 			.orElseGet(() -> new PaymentStatus(false, null));
+	}
+
+	/**
+	 * The applicant's Lifecare payments in a date window that carry a PayDate, keyed on their Lifecare id. This is what
+	 * lets a caller verify specific payments — the ones a decision registered — instead of any payment for the person.
+	 *
+	 * @return Lifecare payment id to PayDate; payments without an id or a PayDate are left out
+	 */
+	public Map<String, String> paidPaymentDates(final String municipalityId, final String applicantPersonId, final LocalDate from, final LocalDate to) {
+		return payments(municipalityId, applicantPersonId, from, to).stream()
+			.filter(payment -> payment.getId() != null && hasText(payment.getPayDate()))
+			.collect(toMap(payment -> String.valueOf(payment.getId()), PersonBasedPaymentDTO::getPayDate, (first, second) -> first));
+	}
+
+	private List<PersonBasedPaymentDTO> payments(final String municipalityId, final String applicantPersonId, final LocalDate from, final LocalDate to) {
+		return ofNullable(lifecareFamilyCareIntegration.getPayments(municipalityId, applicantPersonId, from, to))
+			.map(ApiPaginationCompositePersonBasedPaymentDTO::getResult)
+			.orElseGet(List::of);
 	}
 }

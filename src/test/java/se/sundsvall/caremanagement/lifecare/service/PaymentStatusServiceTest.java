@@ -14,6 +14,7 @@ import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegr
 
 import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -83,5 +84,26 @@ class PaymentStatusServiceTest {
 		service.read(MUNICIPALITY_ID, "199001011234", YearMonth.of(2026, JUNE));
 
 		verify(lifecareFamilyCareIntegrationMock).getPayments(MUNICIPALITY_ID, "199001011234", LocalDate.parse("2026-05-01"), LocalDate.parse("2026-06-30"));
+	}
+
+	@Test
+	void paidPaymentDatesKeysPaidPaymentsOnTheirLifecareId() {
+		when(lifecareFamilyCareIntegrationMock.getPayments(MUNICIPALITY_ID, "199001011234", LocalDate.parse("2026-04-20"), LocalDate.parse("2026-07-03")))
+			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().result(List.of(
+				new PersonBasedPaymentDTO().id(101).payDate("2026-05-27"),
+				new PersonBasedPaymentDTO().id(101).payDate("2026-05-28"),
+				new PersonBasedPaymentDTO().id(102),
+				new PersonBasedPaymentDTO().payDate("2026-05-27"))));
+
+		final var paid = service.paidPaymentDates(MUNICIPALITY_ID, "199001011234", LocalDate.parse("2026-04-20"), LocalDate.parse("2026-07-03"));
+
+		assertThat(paid).containsExactly(entry("101", "2026-05-27"));
+	}
+
+	@Test
+	void paidPaymentDatesIsEmptyWhenResponseIsNull() {
+		when(lifecareFamilyCareIntegrationMock.getPayments(eq(MUNICIPALITY_ID), any(), any(), any())).thenReturn(null);
+
+		assertThat(service.paidPaymentDates(MUNICIPALITY_ID, "199001011234", LocalDate.parse("2026-05-01"), LocalDate.parse("2026-06-30"))).isEmpty();
 	}
 }

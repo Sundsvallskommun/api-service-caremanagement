@@ -3997,11 +3997,12 @@ paths:
       tags:
       - Financial Assistance · Payment
       summary: Read whether the Lifecare payment has been effectuated
-      description: "Reads whether the manual Lifecare payment for the applicant and\
-        \ application month has been registered, returning the effectuated flag and\
-        \ (when effectuated) the payment date. caremanagement makes no payment — payment\
-        \ is a manual caseworker step in Lifecare; the process polls this to detect\
-        \ when it is done."
+      description: "Reads whether the Lifecare payments of a bifall have been registered,\
+        \ returning the effectuated flag, the payment date when effectuated and the\
+        \ reason when not. With errandId, every payment the errand's decision registered\
+        \ must be found in Lifecare by its Lifecare id; without it, any payment for\
+        \ the applicant and application month counts. caremanagement makes no payment;\
+        \ the process polls this to detect when it is done."
       operationId: checkPaymentStatus
       parameters:
       - name: municipalityId
@@ -12595,6 +12596,14 @@ components:
       description: Request to read whether the Lifecare payment for an application
         month has been effectuated.
       properties:
+        errandId:
+          type: string
+          description: |-
+            The errand whose decided payments to verify. When given, the status is effectuated only when every payment the
+            decision registered is found in Lifecare, by its Lifecare id. Without it, any Lifecare payment for the applicant and
+            application month counts — kept only for callers that predate the field.
+          examples:
+          - a3c1f4de-2b6a-4c1e-9d3f-7e8a9b0c1d2e
         applicant:
           type: string
           description: The applicant's partyId (personId GUID)
@@ -12617,8 +12626,8 @@ components:
       properties:
         effectuated:
           type: boolean
-          description: True when a Lifecare payment concerning the application month
-            has been registered
+          description: "True when the decided payments (or, without an errand, a payment\
+            \ for the application month) are registered in Lifecare"
           examples:
           - true
         paymentDate:
@@ -12626,6 +12635,12 @@ components:
           description: "The date the payment was made (Lifecare PayDate), when effectuated"
           examples:
           - 2026-05-27
+        detail:
+          type: string
+          description: "Why the status is not effectuated, in words a caseworker can\
+            \ act on; empty when effectuated"
+          examples:
+          - 1 av 2 beslutade utbetalningar är inte registrerade i Lifecare
     EligibilityRequest:
       type: object
       description: Request to evaluate which financial assistance application a citizen

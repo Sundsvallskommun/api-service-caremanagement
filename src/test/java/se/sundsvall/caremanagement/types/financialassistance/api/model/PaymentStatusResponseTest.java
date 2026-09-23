@@ -27,10 +27,12 @@ class PaymentStatusResponseTest {
 	void testBuilderMethods() {
 		final var response = PaymentStatusResponse.create()
 			.withEffectuated(true)
-			.withPaymentDate("2026-05-27");
+			.withPaymentDate("2026-05-27")
+			.withDetail("detail");
 
 		assertThat(response.getEffectuated()).isTrue();
 		assertThat(response.getPaymentDate()).isEqualTo("2026-05-27");
+		assertThat(response.getDetail()).isEqualTo("detail");
 	}
 
 	@Test

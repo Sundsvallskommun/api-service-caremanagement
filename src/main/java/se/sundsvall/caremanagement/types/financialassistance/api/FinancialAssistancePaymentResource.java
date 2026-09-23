@@ -49,7 +49,7 @@ class FinancialAssistancePaymentResource {
 
 	@PostMapping(path = "/financial-assistance/payment-status", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read whether the Lifecare payment has been effectuated",
-		description = "Reads whether the manual Lifecare payment for the applicant and application month has been registered, returning the effectuated flag and (when effectuated) the payment date. caremanagement makes no payment — payment is a manual caseworker step in Lifecare; the process polls this to detect when it is done.",
+		description = "Reads whether the Lifecare payments of a bifall have been registered, returning the effectuated flag, the payment date when effectuated and the reason when not. With errandId, every payment the errand's decision registered must be found in Lifecare by its Lifecare id; without it, any payment for the applicant and application month counts. caremanagement makes no payment; the process polls this to detect when it is done.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -59,6 +59,6 @@ class FinancialAssistancePaymentResource {
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@Valid @NotNull @RequestBody final PaymentStatusRequest request) {
 
-		return ok(service.checkPaymentStatus(municipalityId, request));
+		return ok(service.checkPaymentStatus(municipalityId, namespace, request));
 	}
 }
