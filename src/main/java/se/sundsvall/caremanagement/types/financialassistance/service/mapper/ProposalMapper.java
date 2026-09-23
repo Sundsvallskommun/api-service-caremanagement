@@ -116,11 +116,15 @@ public final class ProposalMapper {
 		return orZero(amount).stripTrailingZeros().toPlainString();
 	}
 
-	/** Whether a Lifecare decision was a förskott på förmån — matched case-insensitively on its type or reason. */
+	/**
+	 * Whether a Lifecare decision was a förskott på förmån — matched case-insensitively on its decision type only
+	 * (verksamhetens svar 2026-09-24 §2: e.g. ”EK Förskott på förmån 12 Kap 1 § och 33 kap 2 § SoL, bifall”). The reason
+	 * is free text and is deliberately not read.
+	 */
 	public static boolean isAdvanceOnBenefit(final DecisionView decision) {
-		return Stream.of(decision.type(), decision.reason())
-			.filter(text -> hasText(text))
-			.anyMatch(text -> text.toLowerCase().contains("förskott"));
+		return ofNullable(decision.type())
+			.filter(type -> type.toLowerCase().contains("förskott"))
+			.isPresent();
 	}
 
 	public static PreviousDecision toPreviousDecision(final DecisionView view) {

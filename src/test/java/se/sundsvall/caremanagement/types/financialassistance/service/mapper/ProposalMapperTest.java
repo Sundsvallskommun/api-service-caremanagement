@@ -105,9 +105,10 @@ class ProposalMapperTest {
 	}
 
 	@Test
-	void isAdvanceOnBenefitMatchesTypeOrReasonCaseInsensitively() {
-		assertThat(ProposalMapper.isAdvanceOnBenefit(decision("Förskott på förmån", "x"))).isTrue();
-		assertThat(ProposalMapper.isAdvanceOnBenefit(decision("Bifall", "FÖRSKOTT"))).isTrue();
+	void isAdvanceOnBenefitMatchesTypeOnlyCaseInsensitively() {
+		assertThat(ProposalMapper.isAdvanceOnBenefit(decision("EK Förskott på förmån 12 Kap 1 § och 33 kap 2 § SoL, bifall", "Arbetslös, ingen ersättning/stöd"))).isTrue();
+		assertThat(ProposalMapper.isAdvanceOnBenefit(decision("EK FÖRSKOTT på förmån, avslag", null))).isTrue();
+		assertThat(ProposalMapper.isAdvanceOnBenefit(decision("Bifall", "Förskott på förmån"))).isFalse();
 		assertThat(ProposalMapper.isAdvanceOnBenefit(decision("Bifall", "Försörjningsstöd"))).isFalse();
 		assertThat(ProposalMapper.isAdvanceOnBenefit(decision(null, null))).isFalse();
 	}
