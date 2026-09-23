@@ -112,6 +112,15 @@ public class FinancialAssistanceEntity implements Auditable {
 	@TimeZoneStorage(TimeZoneStorageType.NORMALIZE)
 	private OffsetDateTime lastDailyRunAt;
 
+	/**
+	 * The applicant's open financial-assistance service (insats) id in Lifecare — the key Lifecare's own case reads take.
+	 * Set at intake from the insats the actualisation was linked to, and filled in later when the errand had none then
+	 * (a nyansökan, whose insats the caseworker opens afterwards). A key, not case data: nothing about the insats itself
+	 * is kept here.
+	 */
+	@Column(name = "lifecare_service_id")
+	private Integer lifecareServiceId;
+
 	// Set by "Besluta och utbetala" (finalize) — null until the caseworker has finalized the errand.
 
 	/**
@@ -386,6 +395,14 @@ public class FinancialAssistanceEntity implements Auditable {
 		this.lastDailyRunAt = lastDailyRunAt;
 	}
 
+	public Integer getLifecareServiceId() {
+		return lifecareServiceId;
+	}
+
+	public void setLifecareServiceId(final Integer lifecareServiceId) {
+		this.lifecareServiceId = lifecareServiceId;
+	}
+
 	public Boolean getHouseholdSizeChanged() {
 		return householdSizeChanged;
 	}
@@ -638,6 +655,11 @@ public class FinancialAssistanceEntity implements Auditable {
 		return this;
 	}
 
+	public FinancialAssistanceEntity withLifecareServiceId(final Integer lifecareServiceId) {
+		this.lifecareServiceId = lifecareServiceId;
+		return this;
+	}
+
 	public FinancialAssistanceEntity withHouseholdSizeChanged(final Boolean householdSizeChanged) {
 		this.householdSizeChanged = householdSizeChanged;
 		return this;
@@ -733,7 +755,7 @@ public class FinancialAssistanceEntity implements Auditable {
 			&& Objects.equals(hasPendingBenefits, that.hasPendingBenefits) && Objects.equals(hasAssets, that.hasAssets)
 			&& Objects.equals(staysInMunicipality, that.staysInMunicipality)
 			&& Objects.equals(attestation, that.attestation) && Objects.equals(attestedAt, that.attestedAt)
-			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt)
+			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt) && Objects.equals(lifecareServiceId, that.lifecareServiceId)
 			&& Objects.equals(householdSizeChanged, that.householdSizeChanged) && Objects.equals(notifyMinaSidor, that.notifyMinaSidor)
 			&& Objects.equals(notifyDigitalMailbox, that.notifyDigitalMailbox) && Objects.equals(notifyLetter, that.notifyLetter)
 			&& Objects.equals(children, that.children) && Objects.equals(costs, that.costs) && Objects.equals(incomes, that.incomes)
@@ -748,7 +770,7 @@ public class FinancialAssistanceEntity implements Auditable {
 		return Objects.hash(errandId, applicationType, maritalStatus, periodMonth, periodYear, periodChoice, normType,
 			hasChildrenUnder21, childrenResidenceChanged, housingForm, housingPersonCount, housingRoomsPlusKitchen, housingChanged,
 			hasIncomes, hasPendingBenefits, hasAssets, staysInMunicipality, attestation,
-			attestedAt, lastDailyRunAt, householdSizeChanged, notifyMinaSidor, notifyDigitalMailbox, notifyLetter,
+			attestedAt, lastDailyRunAt, lifecareServiceId, householdSizeChanged, notifyMinaSidor, notifyDigitalMailbox, notifyLetter,
 			children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
 			created, modified);
 	}
@@ -758,6 +780,6 @@ public class FinancialAssistanceEntity implements Auditable {
 		return "FinancialAssistanceEntity{errandId='" + errandId + "', applicationType='" + applicationType
 			+ "', maritalStatus='" + maritalStatus + "', periodMonth=" + periodMonth + ", periodYear=" + periodYear
 			+ ", normType=" + normType + ", housingForm='" + housingForm + "', attestation=" + attestation
-			+ ", lastDailyRunAt=" + lastDailyRunAt + ", created=" + created + ", modified=" + modified + '}';
+			+ ", lastDailyRunAt=" + lastDailyRunAt + ", lifecareServiceId=" + lifecareServiceId + ", created=" + created + ", modified=" + modified + '}';
 	}
 }

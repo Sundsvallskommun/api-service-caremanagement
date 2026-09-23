@@ -4,6 +4,8 @@ import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBas
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInfoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceTypeDTO;
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -46,6 +48,40 @@ class ActualisationServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new ActualisationService(lifecareFamilyCareIntegrationMock, caseworkerResolverMock, names);
+	}
+
+	@Test
+	void createReturnsTheInsatsTheActualisationWasLinkedTo() {
+		final var proposal = new PersonBasedAktualiseringProposalDTO()
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(3).name("Ek Återansökan Digital Ekonomiskt bistånd")
+				.addServiceTypesItem(new PersonBasedAktualiseringsServiceTypeDTO().id(27)))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(7700).type(27));
+		when(caseworkerResolverMock.resolve(MUNICIPALITY_ID, APPLICANT, DATE)).thenReturn(Optional.empty());
+		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
+		when(lifecareFamilyCareIntegrationMock.createActualisation(eq(MUNICIPALITY_ID), any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
+
+		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE);
+
+		assertThat(result.serviceId()).isEqualTo(7700);
+	}
+
+	@Test
+	void findFinancialAssistanceServiceIdPicksTheServiceTheActualisationTypeAccepts() {
+		final var proposal = new PersonBasedAktualiseringProposalDTO()
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(3).name("Ek Återansökan Digital Ekonomiskt bistånd")
+				.addServiceTypesItem(new PersonBasedAktualiseringsServiceTypeDTO().id(27)))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(5).type(3))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(7700).type(27));
+		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
+
+		assertThat(service.findFinancialAssistanceServiceId(MUNICIPALITY_ID, APPLICANT)).contains(7700);
+	}
+
+	@Test
+	void findFinancialAssistanceServiceIdIsEmptyWhenThePersonHasNoOpenEbInsats() {
+		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(new PersonBasedAktualiseringProposalDTO());
+
+		assertThat(service.findFinancialAssistanceServiceId(MUNICIPALITY_ID, APPLICANT)).isEmpty();
 	}
 
 	@Test

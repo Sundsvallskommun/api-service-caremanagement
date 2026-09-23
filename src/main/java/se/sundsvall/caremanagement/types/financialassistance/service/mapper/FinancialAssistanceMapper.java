@@ -199,6 +199,7 @@ public final class FinancialAssistanceMapper {
 				.withModified(env.getModified())
 				.withTouched(env.getTouched())
 				.withLastDailyRunAt(ofNullable(entity).map(FinancialAssistanceEntity::getLastDailyRunAt).orElse(null))
+				.withLifecareServiceId(ofNullable(entity).map(FinancialAssistanceEntity::getLifecareServiceId).orElse(null))
 				.withData(toData(entity))
 				.withCommunication(toCommunicationChannels(entity))
 				.withHouseholdSizeChanged(ofNullable(entity).map(FinancialAssistanceEntity::getHouseholdSizeChanged).orElse(null)))

@@ -77,6 +77,9 @@ class FinancialAssistanceErrandServiceTest {
 	@Mock
 	private SectionApprovalService sectionApprovalServiceMock;
 
+	@Mock
+	private LifecareServiceIdService lifecareServiceIdServiceMock;
+
 	@InjectMocks
 	private FinancialAssistanceErrandService service;
 
@@ -251,6 +254,7 @@ class FinancialAssistanceErrandServiceTest {
 			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withApplicationType("NEW")));
 		final var approvals = SectionApprovals.create().withCalculation(SectionApproval.create().withSection("CALCULATION").withApproved(true));
 		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals);
+		when(lifecareServiceIdServiceMock.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(7700);
 
 		final var view = service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -258,6 +262,7 @@ class FinancialAssistanceErrandServiceTest {
 		assertThat(view.getData()).isNotNull();
 		assertThat(view.getData().getApplicationType()).isEqualTo("NEW");
 		assertThat(view.getSectionApprovals()).isSameAs(approvals);
+		assertThat(view.getLifecareServiceId()).isEqualTo(7700);
 	}
 
 	@Test

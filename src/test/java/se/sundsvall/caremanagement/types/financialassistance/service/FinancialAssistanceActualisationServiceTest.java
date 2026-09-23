@@ -86,7 +86,7 @@ class FinancialAssistanceActualisationServiceTest {
 	@Test
 	void createActualisationResolvesPartyDelegatesAndMaps() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, "anna01ker"));
+		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, "anna01ker", null));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -105,7 +105,7 @@ class FinancialAssistanceActualisationServiceTest {
 	void createActualisationWithErrandIdRecordsActualisationDecisionAndAssignsCaseworker() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
-		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 17))).thenReturn(new ActualisationResult(5012, "anna01ker"));
+		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 17))).thenReturn(new ActualisationResult(5012, "anna01ker", null));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -131,6 +131,38 @@ class FinancialAssistanceActualisationServiceTest {
 		assertThat(patchCaptor.getValue().getAssignedUserId()).isEqualTo("anna01ker");
 	}
 
+	@Test
+	void createActualisationKeepsTheLinkedInsatsOnTheErrand() {
+		final var errand = submittedErrand();
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
+		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null, 7700));
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, ActualisationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06")
+			.withErrandId(ERRAND_ID));
+
+		verify(financialAssistanceRepositoryMock).save(errand);
+		assertThat(errand.getLifecareServiceId()).isEqualTo(7700);
+	}
+
+	@Test
+	void createActualisationWithoutLinkedInsatsKeepsNothing() {
+		final var errand = submittedErrand();
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
+		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null, null));
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, ActualisationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06")
+			.withErrandId(ERRAND_ID));
+
+		verify(financialAssistanceRepositoryMock, never()).save(any());
+		assertThat(errand.getLifecareServiceId()).isNull();
+	}
+
 	/**
 	 * The half of the process step that its name promised and the code never did: "Aktualisera &amp; arkivera
 	 * ansökan" created the actualisation and stopped there.
@@ -140,7 +172,7 @@ class FinancialAssistanceActualisationServiceTest {
 		final var pdf = "application-pdf".getBytes(UTF_8);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
-		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null));
+		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null, null));
 		when(attachmentServiceMock.readApplicationArchivePdf(ERRAND_ID)).thenReturn(Optional.of(pdf));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withErrandNumber("EB-26060001"));
 
@@ -160,7 +192,7 @@ class FinancialAssistanceActualisationServiceTest {
 	void createActualisationWithNoApplicationDocumentsUploadsNothingAndSaysSo() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
-		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null));
+		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null, null));
 		when(attachmentServiceMock.readApplicationArchivePdf(ERRAND_ID)).thenReturn(Optional.empty());
 
 		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, ActualisationRequest.create()
@@ -181,7 +213,7 @@ class FinancialAssistanceActualisationServiceTest {
 	void createActualisationSurvivesAFailedArchiveAndRecordsItOnTheErrand() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
-		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null));
+		when(actualisationServiceMock.createActualisation(any(), any(), any())).thenReturn(new ActualisationResult(5012, null, null));
 		when(attachmentServiceMock.readApplicationArchivePdf(ERRAND_ID)).thenReturn(Optional.of("pdf".getBytes(UTF_8)));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withErrandNumber("EB-26060001"));
 		doThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare refused the upload"))
@@ -204,7 +236,7 @@ class FinancialAssistanceActualisationServiceTest {
 	void createActualisationWithErrandIdButNoResolvedCaseworkerRecordsDecisionWithoutAssigning() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
-		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 17))).thenReturn(new ActualisationResult(5012, null));
+		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 17))).thenReturn(new ActualisationResult(5012, null, null));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -222,7 +254,7 @@ class FinancialAssistanceActualisationServiceTest {
 	void createActualisationWithErrandIdButNoStoredErrandFallsBackToFirstOfApplicationMonth() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
-		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, null));
+		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, null, null));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)
@@ -239,7 +271,7 @@ class FinancialAssistanceActualisationServiceTest {
 	void createActualisationWithErrandIdButNoCreatedStampFallsBackToFirstOfApplicationMonth() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()));
-		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, null));
+		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JUNE, 1))).thenReturn(new ActualisationResult(5012, null, null));
 
 		final var request = ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID)

@@ -53,10 +53,11 @@ public class FinancialAssistanceErrandService {
 	private final FormSnapshotService formSnapshotService;
 	private final DecisionService decisionService;
 	private final SectionApprovalService sectionApprovalService;
+	private final LifecareServiceIdService lifecareServiceIdService;
 
 	FinancialAssistanceErrandService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final StakeholderService stakeholderService,
 		final AttachmentService attachmentService, final FormSnapshotService formSnapshotService, final DecisionService decisionService,
-		final SectionApprovalService sectionApprovalService) {
+		final SectionApprovalService sectionApprovalService, final LifecareServiceIdService lifecareServiceIdService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.stakeholderService = stakeholderService;
@@ -64,6 +65,7 @@ public class FinancialAssistanceErrandService {
 		this.formSnapshotService = formSnapshotService;
 		this.decisionService = decisionService;
 		this.sectionApprovalService = sectionApprovalService;
+		this.lifecareServiceIdService = lifecareServiceIdService;
 	}
 
 	/**
@@ -131,7 +133,8 @@ public class FinancialAssistanceErrandService {
 		final var entity = financialAssistanceRepository.findByErrandId(errandId).orElse(null);
 		return toView(envelope, entity)
 			.withRecommendation(latestRecommendation(municipalityId, namespace, errandId))
-			.withSectionApprovals(sectionApprovalService.approvals(errandId));
+			.withSectionApprovals(sectionApprovalService.approvals(errandId))
+			.withLifecareServiceId(lifecareServiceIdService.currentOrResolve(municipalityId, namespace, errandId));
 	}
 
 	/** The most recent {@code RECOMMENDATION} decision on the errand (the automated recommendation), or null when none. */

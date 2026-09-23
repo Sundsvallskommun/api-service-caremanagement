@@ -67,7 +67,20 @@ public class ActualisationService {
 		}
 		final var actualisationId = lifecareFamilyCareIntegration.createActualisation(municipalityId, selection.body());
 
-		return new ActualisationResult(actualisationId, caseworker.map(ResolvedCaseworker::assignedUserId).orElse(null));
+		return new ActualisationResult(actualisationId, caseworker.map(ResolvedCaseworker::assignedUserId).orElse(null), selection.body().getServiceId());
+	}
+
+	/**
+	 * The person's open financial-assistance service (insats) id in Lifecare — the key Lifecare's own case reads take
+	 * (reminders, jobbstimulans, document proposals). Chosen by the same rule an intake is linked with, see
+	 * {@link ActualisationAssembler#linkedServiceId}.
+	 *
+	 * @param  personId the person's personal identity number
+	 * @return          the service id, or empty when the person has no open EB insats
+	 */
+	public Optional<Integer> findFinancialAssistanceServiceId(final String municipalityId, final String personId) {
+		final var proposal = lifecareFamilyCareIntegration.getActualisationProposal(municipalityId, personId);
+		return ActualisationAssembler.linkedServiceId(proposal, actualisationProperties);
 	}
 
 	/** Best-effort caseworker resolution — never blocks intake creation; a lookup failure resolves to no caseworker. */

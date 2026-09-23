@@ -7,6 +7,8 @@ package se.sundsvall.caremanagement.lifecare.service;
  *
  * @param actualisationId the id of the actualisation created in Lifecare FamilyCare
  * @param assignedUserId  the network/AD user id of the resolved caseworker, or {@code null} when none was resolved
+ * @param serviceId       the applicant's open financial-assistance service (insats) the actualisation was linked to, or
+ *                        {@code null} when the applicant has none (a nyansökan, typically)
  */
-public record ActualisationResult(Integer actualisationId, String assignedUserId) {
+public record ActualisationResult(Integer actualisationId, String assignedUserId, Integer serviceId) {
 }

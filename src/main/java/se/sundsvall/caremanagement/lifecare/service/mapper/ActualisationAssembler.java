@@ -108,6 +108,25 @@ public final class ActualisationAssembler {
 	}
 
 	/**
+	 * The person's open service (insats) that belongs to the configured actualisation type — for financial assistance,
+	 * the EB insats rather than, say, a vuxenutredning the person also has open.
+	 * <p>
+	 * It is the same rule {@link #assemble} links an intake with, so anything that needs "the person's EB insats" gets
+	 * the one a new intake would be filed against. Nothing else in the proposal says which of the person's services is
+	 * the EB one: the service list is every open insats across socialtjänsten, and only the actualisation type's
+	 * accepted service types tell them apart.
+	 *
+	 * @param  proposalDTO the FamilyCare actualisation proposal for the person; may be {@code null}
+	 * @param  names       the configured catalogue names, of which only the actualisation type is used
+	 * @return             the service id, or empty when the person has no open service of an accepted type
+	 */
+	public static Optional<Integer> linkedServiceId(final PersonBasedAktualiseringProposalDTO proposalDTO, final ActualisationProperties names) {
+		return ofNullable(proposalDTO).flatMap(proposal -> actualisationType(proposal, names, new ArrayList<>())
+			.flatMap(type -> linkedId(proposal.getServices(), PersonBasedAktualiseringsServiceDTO::getType, PersonBasedAktualiseringsServiceDTO::getId,
+				type.getServiceTypes(), PersonBasedAktualiseringsServiceTypeDTO::getId)));
+	}
+
+	/**
 	 * The assembled body plus the configured names that were not found in the proposal and therefore fell back to the
 	 * first offered value. Empty misses means every name verksamheten gave us matched a catalogue entry.
 	 */

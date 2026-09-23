@@ -155,6 +155,12 @@ public class FinancialAssistanceActualisationService {
 		addActualisationDecision(municipalityId, namespace, errandId, result.actualisationId(),
 			"Actualisation created in Lifecare (id %d). %s".formatted(result.actualisationId(), archiveOutcome));
 
+		// The insats the actualisation was linked to is the key Lifecare's own case reads take; keeping it on the errand
+		// saves every later errand open a Lifecare lookup. None for a nyansökan — that one is filled in on read.
+		ofNullable(result.serviceId())
+			.ifPresent(serviceId -> financialAssistanceRepository.findByErrandId(errandId)
+				.ifPresent(entity -> financialAssistanceRepository.save(entity.withLifecareServiceId(serviceId))));
+
 		ofNullable(result.assignedUserId()).filter(StringUtils::hasText)
 			.ifPresent(assignedUserId -> errandService.updateErrand(municipalityId, namespace, errandId,
 				PatchErrand.create().withAssignedUserId(assignedUserId)));

@@ -49,7 +49,7 @@ class FinancialAssistanceMapperTest {
 
 		// the finalize-owned fields (household flag, notify channels) are never set from client data
 		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("lastDailyRunAt", "created", "modified",
-			"householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter");
+			"householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter", "lifecareServiceId");
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
 		assertThat(entity.getApplicationType()).isEqualTo("NEW");
 		assertThat(entity.getMaritalStatus()).isEqualTo("SINGLE");
@@ -193,7 +193,8 @@ class FinancialAssistanceMapperTest {
 		assertThat(result.getCreated()).isEqualTo(CREATED);
 		assertThat(result.getModified()).isEqualTo(MODIFIED);
 		// client fields replaced; the finalize-owned fields are not client data and stay untouched (null here)
-		assertThat(result).hasNoNullFieldsOrPropertiesExcept("householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter");
+		assertThat(result).hasNoNullFieldsOrPropertiesExcept("householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter",
+			"lifecareServiceId");
 		assertThat(result.getMaritalStatus()).isEqualTo("SINGLE");
 		assertThat(result.getPeriodMonth()).isEqualTo(6);
 		assertThat(result.getPeriodYear()).isEqualTo(2026);
@@ -593,6 +594,7 @@ class FinancialAssistanceMapperTest {
 			.withAttestation(false)
 			.withAttestedAt(ATTESTED_AT)
 			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withLifecareServiceId(7700)
 			.withHouseholdSizeChanged(true)
 			.withNotifyMinaSidor(true)
 			.withNotifyDigitalMailbox(false)

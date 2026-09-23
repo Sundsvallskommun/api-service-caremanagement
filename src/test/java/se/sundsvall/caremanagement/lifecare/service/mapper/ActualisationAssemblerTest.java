@@ -145,6 +145,35 @@ class ActualisationAssemblerTest {
 		assertThat(body.getInvestigationId()).isEqualTo(99);
 	}
 
+	@Test
+	void linkedServiceIdIsTheServiceTheConfiguredTypeAccepts() {
+		final var proposal = new PersonBasedAktualiseringProposalDTO()
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO()
+				.id(1)
+				.name("Ek Återansökan Digital Ekonomiskt bistånd")
+				.addServiceTypesItem(new PersonBasedAktualiseringsServiceTypeDTO().id(27)))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(5).type(3))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(2).type(27));
+
+		assertThat(ActualisationAssembler.linkedServiceId(proposal, NAMES)).contains(2);
+	}
+
+	@Test
+	void linkedServiceIdIsEmptyWhenNoOpenServiceHasAnAcceptedType() {
+		final var proposal = new PersonBasedAktualiseringProposalDTO()
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO()
+				.id(1)
+				.addServiceTypesItem(new PersonBasedAktualiseringsServiceTypeDTO().id(27)))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(5).type(3));
+
+		assertThat(ActualisationAssembler.linkedServiceId(proposal, NAMES)).isEmpty();
+	}
+
+	@Test
+	void linkedServiceIdIsEmptyWithoutProposal() {
+		assertThat(ActualisationAssembler.linkedServiceId(null, NAMES)).isEmpty();
+	}
+
 	/** An empty accepted-type list is a statement — the type takes no such link — not a reason to pick any of them. */
 	@Test
 	void sendsNoLinkWhenTheTypeAcceptsNoSuchType() {

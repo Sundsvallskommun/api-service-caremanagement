@@ -64,6 +64,7 @@ class FinancialAssistanceViewTest {
 			.withModified(MODIFIED)
 			.withTouched(TOUCHED)
 			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withLifecareServiceId(7700)
 			.withData(DATA)
 			.withRecommendation(RECOMMENDATION)
 			.withSectionApprovals(SECTION_APPROVALS)
@@ -85,6 +86,7 @@ class FinancialAssistanceViewTest {
 		assertThat(view.getModified()).isEqualTo(MODIFIED);
 		assertThat(view.getTouched()).isEqualTo(TOUCHED);
 		assertThat(view.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
+		assertThat(view.getLifecareServiceId()).isEqualTo(7700);
 		assertThat(view.getData()).isEqualTo(DATA);
 		assertThat(view.getRecommendation()).isEqualTo(RECOMMENDATION);
 		assertThat(view.getSectionApprovals()).isEqualTo(SECTION_APPROVALS);
