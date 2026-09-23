@@ -41,8 +41,12 @@ class FinalizePaymentTest {
 			.withAmount(new BigDecimal("7900.00"))
 			.withConcernedMonth("2026-06")
 			.withPayee(payee)
-			.withAccountingCode("5011");
+			.withAccountingCode("5011")
+			.withLocalPaymentNumber("4711")
+			.withInvoiceNumber("2026-00417");
 
+		assertThat(payment.getLocalPaymentNumber()).isEqualTo("4711");
+		assertThat(payment.getInvoiceNumber()).isEqualTo("2026-00417");
 		assertThat(payment.getPaymentDate()).isEqualTo(LocalDate.of(2026, 6, 25));
 		assertThat(payment.getAmount()).isEqualByComparingTo("7900.00");
 		assertThat(payment.getConcernedMonth()).isEqualTo("2026-06");

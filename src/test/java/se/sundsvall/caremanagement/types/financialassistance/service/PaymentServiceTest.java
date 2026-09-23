@@ -368,6 +368,17 @@ class PaymentServiceTest {
 	}
 
 	@Test
+	void getServesTheLifecarePayeeIdGivenWithThePayment() {
+		// A payee picked straight from Lifecare has no payee row; its Lifecare id was given with the payment itself.
+		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null).withLifecarePayeeId("1234567")));
+
+		final var result = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
+
+		assertThat(result.getLifecarePayeeId()).isEqualTo("1234567");
+		verifyNoInteractions(payeeRepositoryMock);
+	}
+
+	@Test
 	void aPaymentWithoutAPayeeRowNeverHitsThePayeeRepository() {
 		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null)));
 

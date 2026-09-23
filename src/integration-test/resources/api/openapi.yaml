@@ -9038,6 +9038,16 @@ components:
             \ which has no local row."
           examples:
           - a1b2c3d4-0000-0000-0000-000000000001
+        lifecarePayeeId:
+          type: string
+          description: "The payee's id in Lifecare. Send it when the caseworker picked\
+            \ a payee Lifecare already has — the list read from Lifecare, or one just\
+            \ created there — so the payment can be registered against that payee\
+            \ by id instead of matching on name and account number."
+          examples:
+          - "1234567"
+          maxLength: 64
+          minLength: 0
         payeeStakeholderId:
           type: string
           description: The stakeholder id of the payee
@@ -11976,6 +11986,22 @@ components:
           - "5011"
           maxLength: 64
           minLength: 0
+        localPaymentNumber:
+          type: string
+          description: "The payee's local payment number (lokalbetalningsnummer),\
+            \ for the payment methods Lifecare takes one for"
+          examples:
+          - "4711"
+          maxLength: 64
+          minLength: 0
+        invoiceNumber:
+          type: string
+          description: "The invoice number (räkningsnummer). Lifecare requires it\
+            \ for some payment methods, e.g. bankgiro via plusgiro."
+          examples:
+          - 2026-00417
+          maxLength: 64
+          minLength: 0
       required:
       - amount
       - concernedMonth
@@ -12053,6 +12079,44 @@ components:
           examples:
           - "123456789"
           maxLength: 64
+          minLength: 0
+        lifecarePayeeId:
+          type: string
+          description: "The payee's id in Lifecare. Send it when the caseworker picked\
+            \ a payee Lifecare already has — the list read from Lifecare, or one just\
+            \ created there — so the payment can be registered against that payee\
+            \ by id instead of matching on name and account number."
+          examples:
+          - "1234567"
+          maxLength: 64
+          minLength: 0
+        address:
+          type: string
+          description: The payee's street address
+          examples:
+          - Storgatan 1
+          maxLength: 255
+          minLength: 0
+        careOf:
+          type: string
+          description: The payee's c/o line
+          examples:
+          - c/o Bertil Bertilsson
+          maxLength: 255
+          minLength: 0
+        zipCode:
+          type: string
+          description: The payee's zip code
+          examples:
+          - "85230"
+          maxLength: 16
+          minLength: 0
+        city:
+          type: string
+          description: The payee's city
+          examples:
+          - Sundsvall
+          maxLength: 255
           minLength: 0
       required:
       - name

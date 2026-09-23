@@ -245,6 +245,7 @@ public class PaymentService {
 			.withAccountingDate(request.getAccountingDate())
 			.withExcludedFromPayment(request.isExcludedFromPayment())
 			.withPayeeId(request.getPayeeId())
+			.withLifecarePayeeId(request.getLifecarePayeeId())
 			.withPayeeStakeholderId(request.getPayeeStakeholderId())
 			.withPaymentMethod(request.getPaymentMethod())
 			.withPayeeName(request.getPayeeName())
@@ -261,9 +262,10 @@ public class PaymentService {
 	}
 
 	/**
-	 * The payment as the API serves it. {@code lifecarePayeeId} is read from the payee row rather than stored on the
-	 * payment: the ADD_PAYEE robot reports it back onto that row, possibly after this payment was created, so a copy
-	 * taken at create time would go stale. Null when the payment has no payee row, or that row is gone.
+	 * The payment as the API serves it. {@code lifecarePayeeId} is the one given with the payment when the caseworker
+	 * picked a payee straight from Lifecare. Otherwise it is read from the payee row rather than copied at create time:
+	 * the ADD_PAYEE robot reports it back onto that row, possibly after this payment was created, so a copy would go
+	 * stale. Null when neither is there.
 	 */
 	private Payment toPayment(final FaPaymentEntity entity) {
 		return Payment.create()
@@ -281,7 +283,7 @@ public class PaymentService {
 			.withAccountingDate(entity.getAccountingDate())
 			.withExcludedFromPayment(entity.isExcludedFromPayment())
 			.withPayeeId(entity.getPayeeId())
-			.withLifecarePayeeId(lifecarePayeeId(entity.getPayeeId()))
+			.withLifecarePayeeId(lifecarePayeeId(entity))
 			.withPayeeStakeholderId(entity.getPayeeStakeholderId())
 			.withPaymentMethod(entity.getPaymentMethod())
 			.withPayeeName(entity.getPayeeName())
@@ -299,8 +301,12 @@ public class PaymentService {
 			.withModified(entity.getModified());
 	}
 
-	/** The payee row's Lifecare id, or null when there is no payee row (a Lifecare-derived payee, or a deleted one). */
-	private String lifecarePayeeId(final String payeeId) {
+	/** The Lifecare id given with the payment, else the payee row's, else null (no row, or a deleted one). */
+	private String lifecarePayeeId(final FaPaymentEntity entity) {
+		if (hasText(entity.getLifecarePayeeId())) {
+			return entity.getLifecarePayeeId();
+		}
+		final var payeeId = entity.getPayeeId();
 		if (!hasText(payeeId)) {
 			return null;
 		}

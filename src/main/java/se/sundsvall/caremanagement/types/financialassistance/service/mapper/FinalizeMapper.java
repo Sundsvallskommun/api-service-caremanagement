@@ -180,16 +180,23 @@ public final class FinalizeMapper {
 			// concernedMonth on the finalize model, applicationMonth on the payment - same yyyy-MM, different word
 			request.setApplicationMonth(source.getConcernedMonth());
 			request.setAccountingCode(source.getAccountingCode());
+			request.setLocalPaymentNumber(source.getLocalPaymentNumber());
+			request.setInvoiceNumber(source.getInvoiceNumber());
 			ofNullable(source.getPayee()).ifPresent(payee -> {
-				// The payee row's id, when the caseworker picked one from the errand's payee list. It is what carries the
-				// link to lifecarePayeeId through to GET .../payments/{paymentId}, so the REGISTER_PAYMENT robot can pick
-				// the payee in Lifecare by id instead of matching on name and account number. Null for a payee derived
-				// from the Lifecare payment history — those have no row here.
+				// The payee row's id, when the caseworker picked one from the errand's payee list, and the payee's
+				// Lifecare id, when they picked one Lifecare already has. Either carries the link to lifecarePayeeId
+				// through to GET .../payments/{paymentId}, so the payment can be registered against the payee in Lifecare
+				// by id instead of by matching on name and account number.
 				request.setPayeeId(payee.getId());
+				request.setLifecarePayeeId(payee.getLifecarePayeeId());
 				request.setPayeeName(payee.getName());
 				request.setPaymentMethod(payee.getPaymentMethod());
 				request.setClearingNumber(payee.getClearing());
 				request.setAccountNumber(payee.getAccountNumber());
+				request.setPayeeAddress(payee.getAddress());
+				request.setPayeeCareOf(payee.getCareOf());
+				request.setPayeeZipCode(payee.getZipCode());
+				request.setPayeeCity(payee.getCity());
 			});
 		});
 		return request;

@@ -73,6 +73,13 @@ public class PaymentRequest {
 	@ValidUuid(nullable = true)
 	private String payeeId;
 
+	@Schema(description = """
+		The payee's id in Lifecare. Send it when the caseworker picked a payee Lifecare already has — the list read \
+		from Lifecare, or one just created there — so the payment can be registered against that payee by id instead \
+		of matching on name and account number.""", examples = "1234567")
+	@Size(max = 64)
+	private String lifecarePayeeId;
+
 	@Schema(description = "The stakeholder id of the payee", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479")
 	@Size(max = 64)
 	private String payeeStakeholderId;
@@ -271,6 +278,19 @@ public class PaymentRequest {
 		return this;
 	}
 
+	public String getLifecarePayeeId() {
+		return lifecarePayeeId;
+	}
+
+	public void setLifecarePayeeId(final String lifecarePayeeId) {
+		this.lifecarePayeeId = lifecarePayeeId;
+	}
+
+	public PaymentRequest withLifecarePayeeId(final String lifecarePayeeId) {
+		this.lifecarePayeeId = lifecarePayeeId;
+		return this;
+	}
+
 	public String getPayeeStakeholderId() {
 		return payeeStakeholderId;
 	}
@@ -450,7 +470,7 @@ public class PaymentRequest {
 			&& Objects.equals(paymentDate, that.paymentDate) && Objects.equals(amount, that.amount)
 			&& Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(accountingCode, that.accountingCode) && Objects.equals(reportedOnStakeholderIds, that.reportedOnStakeholderIds)
 			&& Objects.equals(accountingDate, that.accountingDate) && Objects.equals(payeeStakeholderId, that.payeeStakeholderId)
-			&& Objects.equals(payeeId, that.payeeId)
+			&& Objects.equals(payeeId, that.payeeId) && Objects.equals(lifecarePayeeId, that.lifecarePayeeId)
 			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(payeeName, that.payeeName)
 			&& Objects.equals(payeeAddress, that.payeeAddress) && Objects.equals(payeeCareOf, that.payeeCareOf)
 			&& Objects.equals(payeeZipCode, that.payeeZipCode) && Objects.equals(payeeCity, that.payeeCity)
@@ -462,7 +482,7 @@ public class PaymentRequest {
 	@Override
 	public int hashCode() {
 		return Objects.hash(source, lifecareId, moneyType, paymentDate, amount, applicationMonth, accountingCode, reportedOnStakeholderIds, accountingDate,
-			excludedFromPayment, payeeId, payeeStakeholderId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode, payeeCity,
+			excludedFromPayment, payeeId, lifecarePayeeId, payeeStakeholderId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode, payeeCity,
 			clearingNumber, accountNumber, localPaymentNumber, invoiceNumber, usesOcr, messageLines);
 	}
 
@@ -480,6 +500,7 @@ public class PaymentRequest {
 			", accountingDate=" + accountingDate +
 			", excludedFromPayment=" + excludedFromPayment +
 			", payeeId='" + payeeId + '\'' +
+			", lifecarePayeeId='" + lifecarePayeeId + '\'' +
 			", payeeStakeholderId='" + payeeStakeholderId + '\'' +
 			", paymentMethod='" + paymentMethod + '\'' +
 			", payeeName='" + payeeName + '\'' +

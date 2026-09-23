@@ -44,6 +44,17 @@ public class FinalizePayment {
 	@Size(max = 64)
 	private String accountingCode;
 
+	@Schema(description = """
+		The payee's local payment number (lokalbetalningsnummer), for the payment methods Lifecare takes one for""", examples = "4711")
+	@Size(max = 64)
+	private String localPaymentNumber;
+
+	@Schema(description = """
+		The invoice number (räkningsnummer). Lifecare requires it for some payment methods, e.g. bankgiro via \
+		plusgiro.""", examples = "2026-00417")
+	@Size(max = 64)
+	private String invoiceNumber;
+
 	public static FinalizePayment create() {
 		return new FinalizePayment();
 	}
@@ -113,18 +124,45 @@ public class FinalizePayment {
 		return this;
 	}
 
+	public String getLocalPaymentNumber() {
+		return localPaymentNumber;
+	}
+
+	public void setLocalPaymentNumber(final String localPaymentNumber) {
+		this.localPaymentNumber = localPaymentNumber;
+	}
+
+	public FinalizePayment withLocalPaymentNumber(final String localPaymentNumber) {
+		this.localPaymentNumber = localPaymentNumber;
+		return this;
+	}
+
+	public String getInvoiceNumber() {
+		return invoiceNumber;
+	}
+
+	public void setInvoiceNumber(final String invoiceNumber) {
+		this.invoiceNumber = invoiceNumber;
+	}
+
+	public FinalizePayment withInvoiceNumber(final String invoiceNumber) {
+		this.invoiceNumber = invoiceNumber;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FinalizePayment that = (FinalizePayment) o;
 		return Objects.equals(paymentDate, that.paymentDate) && Objects.equals(amount, that.amount) && Objects.equals(concernedMonth, that.concernedMonth)
-			&& Objects.equals(payee, that.payee) && Objects.equals(accountingCode, that.accountingCode);
+			&& Objects.equals(payee, that.payee) && Objects.equals(accountingCode, that.accountingCode) && Objects.equals(localPaymentNumber, that.localPaymentNumber)
+			&& Objects.equals(invoiceNumber, that.invoiceNumber);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(paymentDate, amount, concernedMonth, payee, accountingCode);
+		return Objects.hash(paymentDate, amount, concernedMonth, payee, accountingCode, localPaymentNumber, invoiceNumber);
 	}
 
 	@Override
@@ -135,6 +173,8 @@ public class FinalizePayment {
 			", concernedMonth='" + concernedMonth + '\'' +
 			", payee=" + payee +
 			", accountingCode='" + accountingCode + '\'' +
+			", localPaymentNumber='" + localPaymentNumber + '\'' +
+			", invoiceNumber='" + invoiceNumber + '\'' +
 			'}';
 	}
 }

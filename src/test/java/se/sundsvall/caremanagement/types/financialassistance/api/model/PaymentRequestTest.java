@@ -52,6 +52,7 @@ class PaymentRequestTest {
 			.withAccountingDate(accountingDate)
 			.withExcludedFromPayment(true)
 			.withPayeeStakeholderId("stakeholder-1")
+			.withLifecarePayeeId("1234567")
 			.withPaymentMethod("BANK_TRANSFER")
 			.withPayeeName("Anna Andersson")
 			.withPayeeAddress("Storgatan 1")
@@ -75,6 +76,7 @@ class PaymentRequestTest {
 		assertThat(request.getAccountingDate()).isEqualTo(accountingDate);
 		assertThat(request.isExcludedFromPayment()).isTrue();
 		assertThat(request.getPayeeStakeholderId()).isEqualTo("stakeholder-1");
+		assertThat(request.getLifecarePayeeId()).isEqualTo("1234567");
 		assertThat(request.getPaymentMethod()).isEqualTo("BANK_TRANSFER");
 		assertThat(request.getPayeeName()).isEqualTo("Anna Andersson");
 		assertThat(request.getPayeeAddress()).isEqualTo("Storgatan 1");

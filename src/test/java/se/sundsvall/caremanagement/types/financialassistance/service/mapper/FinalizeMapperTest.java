@@ -200,6 +200,34 @@ class FinalizeMapperTest {
 	}
 
 	@Test
+	void toPaymentRequestCarriesAPayeePickedStraightFromLifecare() {
+		// Draken reads the payees from Lifecare, so the picked payee has no row here - only its Lifecare id, its address,
+		// and the payment's räkningsnummer / lokalbetalningsnummer, all of which Lifecare needs to register the payment.
+		final var payment = FinalizePayment.create()
+			.withLocalPaymentNumber("4711")
+			.withInvoiceNumber("2026-00417")
+			.withPayee(Payee.create()
+				.withLifecarePayeeId("1234567")
+				.withName("Hyresvärden AB")
+				.withPaymentMethod("BANKGIRO")
+				.withAddress("Storgatan 1")
+				.withCareOf("c/o Bertil Bertilsson")
+				.withZipCode("85230")
+				.withCity("Sundsvall"));
+
+		final var request = FinalizeMapper.toPaymentRequest(payment);
+
+		assertThat(request.getPayeeId()).isNull();
+		assertThat(request.getLifecarePayeeId()).isEqualTo("1234567");
+		assertThat(request.getPayeeAddress()).isEqualTo("Storgatan 1");
+		assertThat(request.getPayeeCareOf()).isEqualTo("c/o Bertil Bertilsson");
+		assertThat(request.getPayeeZipCode()).isEqualTo("85230");
+		assertThat(request.getPayeeCity()).isEqualTo("Sundsvall");
+		assertThat(request.getLocalPaymentNumber()).isEqualTo("4711");
+		assertThat(request.getInvoiceNumber()).isEqualTo("2026-00417");
+	}
+
+	@Test
 	void toPaymentRequestIsNullSafe() {
 		assertThat(FinalizeMapper.toPaymentRequest(null).getAmount()).isNull();
 		assertThat(FinalizeMapper.toPaymentRequest(FinalizePayment.create()).getPayeeName()).isNull();

@@ -113,6 +113,14 @@ public class FaPaymentEntity {
 	@Column(name = "payee_id", length = 36)
 	private String payeeId;
 
+	/**
+	 * The payee's id in Lifecare, when the caseworker picked a payee Lifecare already has. Draken reads the payees
+	 * straight from Lifecare, so such a payee has no {@link FaPayeeEntity} row to carry the id — it is stored here
+	 * instead. Null when the payee came from a local row, whose own lifecarePayeeId is then used.
+	 */
+	@Column(name = "lifecare_payee_id", length = 64)
+	private String lifecarePayeeId;
+
 	@Column(name = "payment_method", length = 64)
 	private String paymentMethod;
 
@@ -383,6 +391,19 @@ public class FaPaymentEntity {
 		return this;
 	}
 
+	public String getLifecarePayeeId() {
+		return lifecarePayeeId;
+	}
+
+	public void setLifecarePayeeId(final String lifecarePayeeId) {
+		this.lifecarePayeeId = lifecarePayeeId;
+	}
+
+	public FaPaymentEntity withLifecarePayeeId(final String lifecarePayeeId) {
+		this.lifecarePayeeId = lifecarePayeeId;
+		return this;
+	}
+
 	public String getPaymentMethod() {
 		return paymentMethod;
 	}
@@ -578,7 +599,7 @@ public class FaPaymentEntity {
 			&& Objects.equals(status, that.status) && Objects.equals(moneyType, that.moneyType) && Objects.equals(paymentDate, that.paymentDate)
 			&& Objects.equals(amount, that.amount) && Objects.equals(applicationMonth, that.applicationMonth) && Objects.equals(accountingCode, that.accountingCode)
 			&& Objects.equals(accountingDate, that.accountingDate) && Objects.equals(payeeStakeholderId, that.payeeStakeholderId)
-			&& Objects.equals(payeeId, that.payeeId)
+			&& Objects.equals(payeeId, that.payeeId) && Objects.equals(lifecarePayeeId, that.lifecarePayeeId)
 			&& Objects.equals(paymentMethod, that.paymentMethod) && Objects.equals(payeeName, that.payeeName)
 			&& Objects.equals(payeeAddress, that.payeeAddress) && Objects.equals(payeeCareOf, that.payeeCareOf)
 			&& Objects.equals(payeeZipCode, that.payeeZipCode) && Objects.equals(payeeCity, that.payeeCity)
@@ -590,7 +611,7 @@ public class FaPaymentEntity {
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, source, lifecareId, lifecareDetail, status, moneyType, paymentDate, amount, applicationMonth, accountingCode, accountingDate,
-			excludedFromPayment, payeeStakeholderId, payeeId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode, payeeCity,
+			excludedFromPayment, payeeStakeholderId, payeeId, lifecarePayeeId, paymentMethod, payeeName, payeeAddress, payeeCareOf, payeeZipCode, payeeCity,
 			clearingNumber, accountNumber, localPaymentNumber, invoiceNumber, usesOcr, created, modified);
 	}
 
@@ -612,6 +633,7 @@ public class FaPaymentEntity {
 			", excludedFromPayment=" + excludedFromPayment +
 			", payeeStakeholderId='" + payeeStakeholderId + '\'' +
 			", payeeId='" + payeeId + '\'' +
+			", lifecarePayeeId='" + lifecarePayeeId + '\'' +
 			", paymentMethod='" + paymentMethod + '\'' +
 			", payeeName='" + payeeName + '\'' +
 			", payeeAddress='" + payeeAddress + '\'' +

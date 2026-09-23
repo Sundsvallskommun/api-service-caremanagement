@@ -38,6 +38,29 @@ public class Payee {
 	@Size(max = 64)
 	private String accountNumber;
 
+	@Schema(description = """
+		The payee's id in Lifecare. Send it when the caseworker picked a payee Lifecare already has — the list read \
+		from Lifecare, or one just created there — so the payment can be registered against that payee by id instead \
+		of matching on name and account number.""", examples = "1234567")
+	@Size(max = 64)
+	private String lifecarePayeeId;
+
+	@Schema(description = "The payee's street address", examples = "Storgatan 1")
+	@Size(max = 255)
+	private String address;
+
+	@Schema(description = "The payee's c/o line", examples = "c/o Bertil Bertilsson")
+	@Size(max = 255)
+	private String careOf;
+
+	@Schema(description = "The payee's zip code", examples = "85230")
+	@Size(max = 16)
+	private String zipCode;
+
+	@Schema(description = "The payee's city", examples = "Sundsvall")
+	@Size(max = 255)
+	private String city;
+
 	public static Payee create() {
 		return new Payee();
 	}
@@ -107,18 +130,84 @@ public class Payee {
 		return this;
 	}
 
+	public String getLifecarePayeeId() {
+		return lifecarePayeeId;
+	}
+
+	public void setLifecarePayeeId(final String lifecarePayeeId) {
+		this.lifecarePayeeId = lifecarePayeeId;
+	}
+
+	public Payee withLifecarePayeeId(final String lifecarePayeeId) {
+		this.lifecarePayeeId = lifecarePayeeId;
+		return this;
+	}
+
+	public String getAddress() {
+		return address;
+	}
+
+	public void setAddress(final String address) {
+		this.address = address;
+	}
+
+	public Payee withAddress(final String address) {
+		this.address = address;
+		return this;
+	}
+
+	public String getCareOf() {
+		return careOf;
+	}
+
+	public void setCareOf(final String careOf) {
+		this.careOf = careOf;
+	}
+
+	public Payee withCareOf(final String careOf) {
+		this.careOf = careOf;
+		return this;
+	}
+
+	public String getZipCode() {
+		return zipCode;
+	}
+
+	public void setZipCode(final String zipCode) {
+		this.zipCode = zipCode;
+	}
+
+	public Payee withZipCode(final String zipCode) {
+		this.zipCode = zipCode;
+		return this;
+	}
+
+	public String getCity() {
+		return city;
+	}
+
+	public void setCity(final String city) {
+		this.city = city;
+	}
+
+	public Payee withCity(final String city) {
+		this.city = city;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final Payee that = (Payee) o;
 		return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(paymentMethod, that.paymentMethod)
-			&& Objects.equals(clearing, that.clearing) && Objects.equals(accountNumber, that.accountNumber);
+			&& Objects.equals(clearing, that.clearing) && Objects.equals(accountNumber, that.accountNumber) && Objects.equals(lifecarePayeeId, that.lifecarePayeeId)
+			&& Objects.equals(address, that.address) && Objects.equals(careOf, that.careOf) && Objects.equals(zipCode, that.zipCode) && Objects.equals(city, that.city);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, name, paymentMethod, clearing, accountNumber);
+		return Objects.hash(id, name, paymentMethod, clearing, accountNumber, lifecarePayeeId, address, careOf, zipCode, city);
 	}
 
 	@Override
@@ -129,6 +218,11 @@ public class Payee {
 			", paymentMethod='" + paymentMethod + '\'' +
 			", clearing='" + clearing + '\'' +
 			", accountNumber='" + accountNumber + '\'' +
+			", lifecarePayeeId='" + lifecarePayeeId + '\'' +
+			", address='" + address + '\'' +
+			", careOf='" + careOf + '\'' +
+			", zipCode='" + zipCode + '\'' +
+			", city='" + city + '\'' +
 			'}';
 	}
 }

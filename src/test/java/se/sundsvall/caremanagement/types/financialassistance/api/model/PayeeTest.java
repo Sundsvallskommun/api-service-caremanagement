@@ -44,9 +44,19 @@ class PayeeTest {
 			.withName("Anna Andersson")
 			.withPaymentMethod("Bankkonto")
 			.withClearing("1234")
-			.withAccountNumber("5678901");
+			.withAccountNumber("5678901")
+			.withLifecarePayeeId("1234567")
+			.withAddress("Storgatan 1")
+			.withCareOf("c/o Bertil Bertilsson")
+			.withZipCode("85230")
+			.withCity("Sundsvall");
 
 		assertThat(result).hasNoNullFieldsOrProperties();
+		assertThat(result.getLifecarePayeeId()).isEqualTo("1234567");
+		assertThat(result.getAddress()).isEqualTo("Storgatan 1");
+		assertThat(result.getCareOf()).isEqualTo("c/o Bertil Bertilsson");
+		assertThat(result.getZipCode()).isEqualTo("85230");
+		assertThat(result.getCity()).isEqualTo("Sundsvall");
 		assertThat(result.getId()).isEqualTo("a1b2c3d4-0000-0000-0000-000000000001");
 		assertThat(result.getName()).isEqualTo("Anna Andersson");
 		assertThat(result.getPaymentMethod()).isEqualTo("Bankkonto");
