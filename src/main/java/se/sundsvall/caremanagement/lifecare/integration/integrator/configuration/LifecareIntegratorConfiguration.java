@@ -6,9 +6,9 @@ import org.springframework.cloud.openfeign.FeignBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import se.sundsvall.caremanagement.lifecare.integration.integrator.BufferingProblemErrorDecoder;
 import se.sundsvall.dept44.configuration.feign.FeignConfiguration;
 import se.sundsvall.dept44.configuration.feign.FeignMultiCustomizer;
-import se.sundsvall.dept44.configuration.feign.decoder.ProblemErrorDecoder;
 
 /**
  * Builds the customizer for the lifecare-integrator client. Unlike the direct FamilyCare client, which authenticates
@@ -37,7 +37,7 @@ public class LifecareIntegratorConfiguration {
 		final ClientRegistrationRepository clientRegistrationRepository) {
 
 		return FeignMultiCustomizer.create()
-			.withErrorDecoder(new ProblemErrorDecoder(CLIENT_ID))
+			.withErrorDecoder(new BufferingProblemErrorDecoder(CLIENT_ID))
 			.withCustomizer(builder -> builder.logLevel(Logger.Level.NONE))
 			.withRequestTimeoutsInSeconds(properties.connectTimeout(), properties.readTimeout())
 			.withRetryableOAuth2InterceptorForClientRegistration(clientRegistrationRepository.findByRegistrationId(CLIENT_ID))
