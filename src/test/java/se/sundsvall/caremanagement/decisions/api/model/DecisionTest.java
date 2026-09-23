@@ -62,6 +62,9 @@ class DecisionTest {
 			.withPeriodFrom(periodFrom)
 			.withPeriodTo(periodTo)
 			.withCreatedBy(createdBy)
+			.withLifecareStatus("SYNCED")
+			.withLifecareId("88123")
+			.withLifecareDetail("detail")
 			.withCreated(created);
 
 		assertThat(result).hasNoNullFieldsOrProperties();

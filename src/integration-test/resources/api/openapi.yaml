@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:62995
+- url: http://localhost:55058
   description: Generated server url
 security:
 - sentBy: []
@@ -2198,6 +2198,67 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/events/lifecare:
+    post:
+      tags:
+      - Event Log
+      summary: Report reads and writes made in Lifecare directly on the errand's behalf
+      description: "For a caller that reads or writes Lifecare itself — Draken's BFF\
+        \ reading journal, documents, reminders and jobbstimulans live, and writing\
+        \ journal notes, documents and reminders straight into Lifecare. Each reported\
+        \ access becomes one row in the errand's access log with source LIFECARE,\
+        \ attributed to the X-Sent-By identity, so the log still answers who saw or\
+        \ wrote what. Report after the Lifecare call, not before; report nothing for\
+        \ a call Lifecare refused."
+      operationId: reportLifecareAccesses
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/LifecareAccess"
+        required: true
+      responses:
+        "204":
+          description: Recorded
+        "404":
+          description: Errand not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/{errandId}/documents:
     get:
       tags:
@@ -2465,6 +2526,80 @@ paths:
               style: simple
               schema:
                 type: string
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/{errandId}/decisions/{decisionId}/lifecare-result:
+    post:
+      tags:
+      - Errand decisions
+      summary: Report the outcome of writing the decision into Lifecare
+      description: "For whoever writes the decision into Lifecare — the WRITE_DECISION\
+        \ robot today, possibly Draken's BFF. WRITTEN and ALREADY_EXISTS mark the\
+        \ decision SYNCED and store Lifecare's id; FAILED marks it FAILED with Lifecare's\
+        \ own message, which the caseworker sees. Re-posting the same outcome is harmless;\
+        \ FAILED on a SYNCED decision is a 409."
+      operationId: recordLifecareResult
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+        example: MY_NAMESPACE
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: decisionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecisionLifecareResult"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Decision"
+        "409":
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "400":
           description: Bad request
           content:
@@ -8598,10 +8733,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -10612,6 +10747,48 @@ components:
           format: date-time
           description: Timestamp when the entry was locked (became an upprättad handling);
             null while WORKING
+    LifecareAccess:
+      type: object
+      description: "One read or write made in Lifecare directly on an errand's behalf,\
+        \ reported to the errand's access log."
+      properties:
+        action:
+          type: string
+          description: What was done in Lifecare
+          enum:
+          - READ
+          - CREATE
+          - UPDATE
+          - DELETE
+          examples:
+          - READ
+          minLength: 1
+        target:
+          type: string
+          description: "What in Lifecare was accessed — a stable name, not a Lifecare\
+            \ path"
+          examples:
+          - lifecare/journal-notes
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          description: "A human-readable summary, shown in the access log"
+          examples:
+          - Läste journalen i Lifecare
+          maxLength: 512
+          minLength: 0
+        lifecareId:
+          type: string
+          description: "The Lifecare record the access was about (e.g. the journal\
+            \ note written), when there is one"
+          examples:
+          - "4711"
+          maxLength: 64
+          minLength: 0
+      required:
+      - action
+      - target
     CreateDocument:
       type: object
       properties:
@@ -10830,11 +11007,69 @@ components:
           - jane01doe
           maxLength: 64
           minLength: 0
+        lifecareStatus:
+          type: string
+          description: "Where the decision stands in Lifecare: PENDING once handed\
+            \ over to be written there, SYNCED once written, FAILED when Lifecare\
+            \ refused it (see lifecareDetail). Null for a decision that is never written\
+            \ to Lifecare."
+          enum:
+          - PENDING
+          - SYNCED
+          - FAILED
+          examples:
+          - SYNCED
+          readOnly: true
+        lifecareId:
+          type: string
+          description: "The decision's id in Lifecare, once written there"
+          examples:
+          - "88123"
+          readOnly: true
+        lifecareDetail:
+          type: string
+          description: Lifecare's own message when writing the decision failed — shown
+            to the caseworker as-is
+          examples:
+          - Beslutet kunde inte registreras
+          readOnly: true
         created:
           type: string
           format: date-time
           description: Timestamp the decision was recorded (server-assigned)
           readOnly: true
+    DecisionLifecareResult:
+      type: object
+      description: The report on writing a decision into Lifecare.
+      properties:
+        outcome:
+          type: string
+          description: What happened when the decision was written to Lifecare
+          enum:
+          - WRITTEN
+          - ALREADY_EXISTS
+          - FAILED
+          examples:
+          - WRITTEN
+          minLength: 1
+        lifecareId:
+          type: string
+          description: "The decision id Lifecare gave, when it gave one. Stored as\
+            \ the decision's lifecareId"
+          examples:
+          - "88123"
+          maxLength: 64
+          minLength: 0
+        detail:
+          type: string
+          description: Lifecare's own message. Required when outcome is FAILED — it
+            is shown to the caseworker as-is
+          examples:
+          - Beslutet kunde inte registreras
+          maxLength: 1024
+          minLength: 0
+      required:
+      - outcome
     CreateWarningRequest:
       type: object
       description: Request to create a financial assistance income warning on an errand
@@ -12532,16 +12767,16 @@ components:
           - Tilläggsansökan
         documentType:
           type: string
-          description: The Lifecare InsertDocumentType id, from the actualisation proposal's
-            attachmentTypes. Server default when omitted.
+          description: "The Lifecare InsertDocumentType id, from the actualisation\
+            \ proposal's attachmentTypes. Server default when omitted."
           examples:
-          - '1'
+          - "1"
         documentSenderType:
           type: string
-          description: The Lifecare InsertDocumentSenderType id, from the chosen attachment
-            type's senderTypes. Server default when omitted.
+          description: "The Lifecare InsertDocumentSenderType id, from the chosen\
+            \ attachment type's senderTypes. Server default when omitted."
           examples:
-          - '1'
+          - "1"
         senderName:
           type: string
           description: The sender name shown in Lifecare. Server default when omitted.
@@ -13048,6 +13283,8 @@ components:
           type: string
         requestPath:
           type: string
+        lifecareId:
+          type: string
         actor:
           type: string
         actorType:
@@ -13448,6 +13685,17 @@ components:
           description: When the financial assistance process last ran its daily loop
             for this errand (the calculation /prepare step). Null until the first
             loop has run.
+          readOnly: true
+        lifecareServiceId:
+          type: integer
+          format: int32
+          description: "The applicant's open financial-assistance service (insats)\
+            \ id in Lifecare — the key Lifecare's own case reads (journal, documents,\
+            \ reminders, jobbstimulans) take. Null while the applicant has no open\
+            \ EB insats, or when the Lifecare lookup could not be made; a later read\
+            \ tries again."
+          examples:
+          - 7700
           readOnly: true
         data:
           $ref: "#/components/schemas/FinancialAssistanceData"

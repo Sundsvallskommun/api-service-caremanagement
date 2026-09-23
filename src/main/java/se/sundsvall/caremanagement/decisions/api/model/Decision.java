@@ -61,6 +61,27 @@ public class Decision {
 	@Size(max = 64)
 	private String createdBy;
 
+	@Schema(description = """
+		Where the decision stands in Lifecare: PENDING once handed over to be written there, SYNCED once written, \
+		FAILED when Lifecare refused it (see lifecareDetail). Null for a decision that is never written to Lifecare.""",
+		examples = "SYNCED",
+		accessMode = READ_ONLY,
+		allowableValues = {
+			"PENDING", "SYNCED", "FAILED"
+		})
+	@Null(groups = OnCreate.class)
+	private String lifecareStatus;
+
+	@Schema(description = "The decision's id in Lifecare, once written there", examples = "88123", accessMode = READ_ONLY)
+	@Null(groups = OnCreate.class)
+	private String lifecareId;
+
+	@Schema(description = "Lifecare's own message when writing the decision failed — shown to the caseworker as-is",
+		examples = "Beslutet kunde inte registreras",
+		accessMode = READ_ONLY)
+	@Null(groups = OnCreate.class)
+	private String lifecareDetail;
+
 	@Schema(description = "Timestamp the decision was recorded (server-assigned)", accessMode = READ_ONLY)
 	@Null(groups = OnCreate.class)
 	@DateTimeFormat(iso = DATE_TIME)
@@ -213,6 +234,45 @@ public class Decision {
 		return this;
 	}
 
+	public String getLifecareStatus() {
+		return lifecareStatus;
+	}
+
+	public void setLifecareStatus(final String lifecareStatus) {
+		this.lifecareStatus = lifecareStatus;
+	}
+
+	public Decision withLifecareStatus(final String lifecareStatus) {
+		this.lifecareStatus = lifecareStatus;
+		return this;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
+	public Decision withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+		return this;
+	}
+
+	public String getLifecareDetail() {
+		return lifecareDetail;
+	}
+
+	public void setLifecareDetail(final String lifecareDetail) {
+		this.lifecareDetail = lifecareDetail;
+	}
+
+	public Decision withLifecareDetail(final String lifecareDetail) {
+		this.lifecareDetail = lifecareDetail;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -220,13 +280,15 @@ public class Decision {
 		final Decision that = (Decision) o;
 		return Objects.equals(id, that.id) && Objects.equals(decisionType, that.decisionType) && Objects.equals(value, that.value) && Objects.equals(description, that.description)
 			&& Objects.equals(amount, that.amount) && Objects.equals(decisionMessage, that.decisionMessage) && Objects.equals(decisionDate, that.decisionDate)
-			&& Objects.equals(periodFrom, that.periodFrom) && Objects.equals(periodTo, that.periodTo) && Objects.equals(createdBy, that.createdBy) && Objects.equals(created,
-				that.created);
+			&& Objects.equals(periodFrom, that.periodFrom) && Objects.equals(periodTo, that.periodTo) && Objects.equals(createdBy, that.createdBy)
+			&& Objects.equals(lifecareStatus, that.lifecareStatus) && Objects.equals(lifecareId, that.lifecareId)
+			&& Objects.equals(lifecareDetail, that.lifecareDetail) && Objects.equals(created, that.created);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, decisionType, value, description, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, created);
+		return Objects.hash(id, decisionType, value, description, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, lifecareStatus, lifecareId,
+			lifecareDetail, created);
 	}
 
 	@Override
@@ -242,6 +304,9 @@ public class Decision {
 			", periodFrom=" + periodFrom +
 			", periodTo=" + periodTo +
 			", createdBy='" + createdBy + '\'' +
+			", lifecareStatus='" + lifecareStatus + '\'' +
+			", lifecareId='" + lifecareId + '\'' +
+			", lifecareDetail='" + lifecareDetail + '\'' +
 			", created=" + created +
 			'}';
 	}

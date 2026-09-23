@@ -24,6 +24,9 @@ public final class DecisionMapper {
 				.withPeriodFrom(e.getPeriodFrom())
 				.withPeriodTo(e.getPeriodTo())
 				.withCreatedBy(e.getCreatedBy())
+				.withLifecareStatus(e.getLifecareStatus())
+				.withLifecareId(e.getLifecareId())
+				.withLifecareDetail(e.getLifecareDetail())
 				.withCreated(e.getCreated()))
 			.orElse(null);
 	}
@@ -40,7 +43,8 @@ public final class DecisionMapper {
 				.withDecisionDate(source.getDecisionDate())
 				.withPeriodFrom(source.getPeriodFrom())
 				.withPeriodTo(source.getPeriodTo())
-				.withCreatedBy(source.getCreatedBy()))
+				.withCreatedBy(source.getCreatedBy())
+				.withLifecareStatus(source.getLifecareStatus()))
 			.orElse(null);
 	}
 

@@ -17,6 +17,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.RpaTask;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.decisions.service.DecisionService.LIFECARE_STATUS_PENDING;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.outcomeCarriesAmount;
 
 /**
@@ -79,7 +80,9 @@ public final class FinalizeMapper {
 				.withDecisionDate(decisionDate)
 				.withPeriodFrom(decision.getPeriodFrom())
 				.withPeriodTo(decision.getPeriodTo())
-				.withCreatedBy(decidedBy))
+				.withCreatedBy(decidedBy)
+				// Handed over to be written into Lifecare; the writer's report moves it to SYNCED or FAILED.
+				.withLifecareStatus(LIFECARE_STATUS_PENDING))
 			.orElse(null);
 	}
 

@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.core.api.validation.groups.OnCreate;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
+import se.sundsvall.caremanagement.decisions.api.model.DecisionLifecareResult;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
@@ -119,5 +120,26 @@ class DecisionResource {
 
 		service.delete(municipalityId, namespace, errandId, decisionId);
 		return noContent().header(CONTENT_TYPE, ALL_VALUE).build();
+	}
+
+	@PostMapping(path = "/{decisionId}/lifecare-result", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Report the outcome of writing the decision into Lifecare",
+		description = """
+			For whoever writes the decision into Lifecare — the WRITE_DECISION robot today, possibly Draken's BFF. WRITTEN \
+			and ALREADY_EXISTS mark the decision SYNCED and store Lifecare's id; FAILED marks it FAILED with Lifecare's own \
+			message, which the caseworker sees. Re-posting the same outcome is harmless; FAILED on a SYNCED decision is a \
+			409.""",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "409", description = "Conflict", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<Decision> recordLifecareResult(
+		@Parameter(name = "municipalityId", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,
+		@Parameter(name = "namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Parameter(name = "errandId") @ValidUuid @PathVariable final String errandId,
+		@Parameter(name = "decisionId") @ValidUuid @PathVariable final String decisionId,
+		@Valid @NotNull @RequestBody final DecisionLifecareResult result) {
+
+		return ok(service.recordLifecareResult(municipalityId, namespace, errandId, decisionId, result));
 	}
 }

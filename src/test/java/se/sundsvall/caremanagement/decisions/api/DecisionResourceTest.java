@@ -11,6 +11,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
+import se.sundsvall.caremanagement.decisions.api.model.DecisionLifecareResult;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 
 import static java.util.UUID.randomUUID;
@@ -94,5 +95,26 @@ class DecisionResourceTest {
 			.expectStatus().isNoContent();
 
 		verify(serviceMock).delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID);
+	}
+
+	@Test
+	void recordLifecareResult() {
+		final var result = DecisionLifecareResult.create().withOutcome("WRITTEN").withLifecareId("88123");
+		when(serviceMock.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID, result))
+			.thenReturn(Decision.create().withId(DECISION_ID).withLifecareStatus("SYNCED").withLifecareId("88123"));
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/{decisionId}/lifecare-result")
+				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "decisionId", DECISION_ID)))
+			.bodyValue(result)
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(Decision.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getLifecareStatus()).isEqualTo("SYNCED");
+		verify(serviceMock).recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID, result);
 	}
 }

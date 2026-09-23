@@ -11,6 +11,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
+import se.sundsvall.caremanagement.decisions.api.model.DecisionLifecareResult;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 import se.sundsvall.dept44.problem.violations.Violation;
@@ -38,6 +39,20 @@ class DecisionResourceFailureTest {
 
 	@Autowired
 	private WebTestClient webTestClient;
+
+	@Test
+	void recordLifecareResultUnknownOutcome() {
+		webTestClient.post()
+			.uri(uri -> uri.path(ERRAND_BASE + "/{decisionId}/lifecare-result")
+				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "decisionId", randomUUID().toString())))
+			.bodyValue(DecisionLifecareResult.create().withOutcome("MAYBE"))
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertThat(result.getResponseBody()).isNotNull());
+
+		verifyNoInteractions(serviceMock);
+	}
 
 	@Test
 	void createDecisionBlankDecisionType() {

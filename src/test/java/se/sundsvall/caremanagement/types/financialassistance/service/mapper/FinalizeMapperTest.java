@@ -39,7 +39,7 @@ class FinalizeMapperTest {
 	void toPaymentDecisionMapsEverything() {
 		final var decision = FinalizeMapper.toPaymentDecision(grantingRequest(), "jane02doe", TODAY);
 
-		assertThat(decision).hasNoNullFieldsOrPropertiesExcept("id", "created");
+		assertThat(decision).hasNoNullFieldsOrPropertiesExcept("id", "created", "lifecareId", "lifecareDetail");
 		assertThat(decision.getDecisionType()).isEqualTo("PAYMENT");
 		assertThat(decision.getValue()).isEqualTo("BIFALL");
 		assertThat(decision.getDescription()).isEqualTo("Inkomster enligt SSBTEK");
@@ -49,6 +49,7 @@ class FinalizeMapperTest {
 		assertThat(decision.getPeriodFrom()).isEqualTo(LocalDate.of(2026, 6, 1));
 		assertThat(decision.getPeriodTo()).isEqualTo(LocalDate.of(2026, 6, 30));
 		assertThat(decision.getCreatedBy()).isEqualTo("jane02doe");
+		assertThat(decision.getLifecareStatus()).isEqualTo("PENDING");
 	}
 
 	@ParameterizedTest

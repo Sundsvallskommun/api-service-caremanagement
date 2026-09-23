@@ -57,6 +57,9 @@ class DecisionEntityTest {
 			.withPeriodFrom(periodFrom)
 			.withPeriodTo(periodTo)
 			.withCreatedBy("user")
+			.withLifecareStatus("SYNCED")
+			.withLifecareId("88123")
+			.withLifecareDetail("detail")
 			.withCreated(created);
 
 		assertThat(entity).hasNoNullFieldsOrProperties();

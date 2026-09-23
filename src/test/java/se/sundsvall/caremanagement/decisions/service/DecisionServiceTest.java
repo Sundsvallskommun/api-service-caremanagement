@@ -12,6 +12,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
+import se.sundsvall.caremanagement.decisions.api.model.DecisionLifecareResult;
 import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
 import se.sundsvall.caremanagement.decisions.service.event.DecisionCreated;
@@ -28,6 +29,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
@@ -161,5 +164,79 @@ class DecisionServiceTest {
 		service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID);
 
 		verify(decisionRepositoryMock).delete(entity);
+	}
+
+	@Test
+	void recordLifecareResultWrittenMarksTheDecisionSynced() {
+		final var entity = DecisionEntity.create().withId(DECISION_ID).withErrandId(ERRAND_ID).withLifecareStatus("PENDING").withLifecareDetail("old");
+		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.of(entity));
+		when(decisionRepositoryMock.save(entity)).thenReturn(entity);
+
+		final var result = service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID,
+			DecisionLifecareResult.create().withOutcome("WRITTEN").withLifecareId("88123"));
+
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		assertThat(result.getLifecareStatus()).isEqualTo("SYNCED");
+		assertThat(result.getLifecareId()).isEqualTo("88123");
+		assertThat(result.getLifecareDetail()).isNull();
+	}
+
+	@Test
+	void recordLifecareResultAlreadyExistsWithoutIdKeepsTheKnownId() {
+		final var entity = DecisionEntity.create().withId(DECISION_ID).withLifecareStatus("PENDING").withLifecareId("88123");
+		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.of(entity));
+		when(decisionRepositoryMock.save(entity)).thenReturn(entity);
+
+		final var result = service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID,
+			DecisionLifecareResult.create().withOutcome("ALREADY_EXISTS"));
+
+		assertThat(result.getLifecareStatus()).isEqualTo("SYNCED");
+		assertThat(result.getLifecareId()).isEqualTo("88123");
+	}
+
+	@Test
+	void recordLifecareResultFailedKeepsLifecaresMessage() {
+		final var entity = DecisionEntity.create().withId(DECISION_ID).withLifecareStatus("PENDING");
+		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.of(entity));
+		when(decisionRepositoryMock.save(entity)).thenReturn(entity);
+
+		final var result = service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID,
+			DecisionLifecareResult.create().withOutcome("FAILED").withDetail("Beslutet kunde inte registreras"));
+
+		assertThat(result.getLifecareStatus()).isEqualTo("FAILED");
+		assertThat(result.getLifecareDetail()).isEqualTo("Beslutet kunde inte registreras");
+	}
+
+	@Test
+	void recordLifecareResultFailedWithoutDetailIsBadRequest() {
+		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.of(DecisionEntity.create().withId(DECISION_ID)));
+		final var result = DecisionLifecareResult.create().withOutcome("FAILED");
+
+		assertThatThrownBy(() -> service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID, result))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+		verify(decisionRepositoryMock, never()).save(any());
+	}
+
+	@Test
+	void recordLifecareResultFailedOnSyncedDecisionIsConflict() {
+		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID))
+			.thenReturn(Optional.of(DecisionEntity.create().withId(DECISION_ID).withLifecareStatus("SYNCED")));
+		final var result = DecisionLifecareResult.create().withOutcome("FAILED").withDetail("Nej");
+
+		assertThatThrownBy(() -> service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID, result))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", CONFLICT);
+		verify(decisionRepositoryMock, never()).save(any());
+	}
+
+	@Test
+	void recordLifecareResultOnUnknownDecisionIsNotFound() {
+		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.empty());
+		final var result = DecisionLifecareResult.create().withOutcome("WRITTEN");
+
+		assertThatThrownBy(() -> service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID, result))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 	}
 }

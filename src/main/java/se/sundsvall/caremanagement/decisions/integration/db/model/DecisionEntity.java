@@ -54,6 +54,20 @@ public class DecisionEntity {
 	@Column(name = "created_by")
 	private String createdBy;
 
+	/**
+	 * Where the decision stands in Lifecare: {@code PENDING} once it has been handed over to be written there
+	 * (finalize), {@code SYNCED} once the writer reported it written, {@code FAILED} with Lifecare's own message in
+	 * {@link #lifecareDetail}. Null for a decision that is never written to Lifecare (a recommendation, say).
+	 */
+	@Column(name = "lifecare_status", length = 16)
+	private String lifecareStatus;
+
+	@Column(name = "lifecare_id", length = 64)
+	private String lifecareId;
+
+	@Column(name = "lifecare_detail", length = 1024)
+	private String lifecareDetail;
+
 	@Column(name = "created")
 	@TimeZoneStorage(NORMALIZE)
 	private OffsetDateTime created;
@@ -225,6 +239,45 @@ public class DecisionEntity {
 		return this;
 	}
 
+	public String getLifecareStatus() {
+		return lifecareStatus;
+	}
+
+	public void setLifecareStatus(final String lifecareStatus) {
+		this.lifecareStatus = lifecareStatus;
+	}
+
+	public DecisionEntity withLifecareStatus(final String lifecareStatus) {
+		this.lifecareStatus = lifecareStatus;
+		return this;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
+	public DecisionEntity withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+		return this;
+	}
+
+	public String getLifecareDetail() {
+		return lifecareDetail;
+	}
+
+	public void setLifecareDetail(final String lifecareDetail) {
+		this.lifecareDetail = lifecareDetail;
+	}
+
+	public DecisionEntity withLifecareDetail(final String lifecareDetail) {
+		this.lifecareDetail = lifecareDetail;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object obj) {
 		if (this == obj)
@@ -236,18 +289,22 @@ public class DecisionEntity {
 			&& Objects.equals(description, other.description) && Objects.equals(amount, other.amount)
 			&& Objects.equals(decisionMessage, other.decisionMessage) && Objects.equals(decisionDate, other.decisionDate)
 			&& Objects.equals(periodFrom, other.periodFrom) && Objects.equals(periodTo, other.periodTo)
-			&& Objects.equals(createdBy, other.createdBy) && Objects.equals(created, other.created);
+			&& Objects.equals(createdBy, other.createdBy) && Objects.equals(lifecareStatus, other.lifecareStatus)
+			&& Objects.equals(lifecareId, other.lifecareId) && Objects.equals(lifecareDetail, other.lifecareDetail)
+			&& Objects.equals(created, other.created);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, decisionType, value, description, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, created);
+		return Objects.hash(id, errandId, decisionType, value, description, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, lifecareStatus, lifecareId,
+			lifecareDetail, created);
 	}
 
 	@Override
 	public String toString() {
 		return "DecisionEntity{id='" + id + "', errandId='" + errandId + "', decisionType='" + decisionType
 			+ "', value='" + value + "', amount=" + amount + ", decisionDate=" + decisionDate
-			+ ", periodFrom=" + periodFrom + ", periodTo=" + periodTo + ", createdBy='" + createdBy + "', created=" + created + '}';
+			+ ", periodFrom=" + periodFrom + ", periodTo=" + periodTo + ", createdBy='" + createdBy + "', lifecareStatus='" + lifecareStatus
+			+ "', lifecareId='" + lifecareId + "', lifecareDetail='" + lifecareDetail + "', created=" + created + '}';
 	}
 }
