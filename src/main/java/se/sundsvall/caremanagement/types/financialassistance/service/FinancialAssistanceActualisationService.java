@@ -48,8 +48,20 @@ public class FinancialAssistanceActualisationService {
 	/** How far back the actualisation listing reaches when the caller gives no explicit {@code from} date. */
 	private static final int ACTUALISATION_LOOKBACK_MONTHS = 24;
 	/** Lifecare archive defaults — used when the archive request omits the matching field; all overridable per request. */
-	private static final String DEFAULT_ARCHIVE_DOCUMENT_TYPE = "ANSOKAN";
-	private static final String DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE = "ENSKILD";
+	/**
+	 * Lifecare's {@code InsertDocumentType} / {@code InsertDocumentSenderType} are <strong>catalogue ids</strong>, not
+	 * code words: the actualisation proposal's {@code attachmentTypes} carries {@code {id: 1, name: "Inkommen
+	 * handling"}} with {@code senderTypes} {@code {id: 1, name: "Den enskilde"}}. The previous values, "ANSOKAN" and
+	 * "ENSKILD", were invented here and had never reached the live API — it answers
+	 * {@code InsertDocumentType parameter not a number}. Verified against FamilyCare 2026-09-23: 1/1 uploads.
+	 *
+	 * <p>
+	 * Left as constants rather than resolved from the proposal by name because the catalogue holds a single entry and
+	 * a lookup would add a proposal fetch to every archive. If it grows, resolve by name the way the actualisation
+	 * type, reason and fromWho already are.
+	 */
+	private static final String DEFAULT_ARCHIVE_DOCUMENT_TYPE = "1";
+	private static final String DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE = "1";
 	private static final String DEFAULT_ARCHIVE_SENDER_NAME = "Draken";
 	private static final String ACTUALISATION_NOT_FOUND_MESSAGE = "No Lifecare actualisation '%s' found for the given applicant";
 	/** Archive outcomes, written onto the errand's Decision row so the caseworker sees what happened. */

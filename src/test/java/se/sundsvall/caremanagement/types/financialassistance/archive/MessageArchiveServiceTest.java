@@ -44,7 +44,7 @@ class MessageArchiveServiceTest {
 	private static final String EXPECTED_TITLE = LABEL + "_" + ERRAND_NUMBER + "_2026-05-12--2026-05-13";
 
 	private static final MessageArchiveProperties PROPERTIES = new MessageArchiveProperties(
-		MUNICIPALITY_ID, NAMESPACE, 30, "MEDDELANDEHISTORIK", "MYNDIGHET", LABEL, "Sundsvalls kommun");
+		MUNICIPALITY_ID, NAMESPACE, 30, "1", "1", LABEL, "Sundsvalls kommun");
 
 	@Mock
 	private ErrandService errandServiceMock;
@@ -92,7 +92,7 @@ class MessageArchiveServiceTest {
 
 		// messages page + 1 separator + 1 attachment = 3 combine sources
 		verify(attachmentServiceMock).combineToPdf(argThatHasSize(3));
-		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, EXPECTED_FILE_NAME, MERGED, "MEDDELANDEHISTORIK", "MYNDIGHET", EXPECTED_TITLE, "Sundsvalls kommun");
+		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, EXPECTED_FILE_NAME, MERGED, "1", "1", EXPECTED_TITLE, "Sundsvalls kommun");
 		verify(attachmentServiceMock).createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, EXPECTED_FILE_NAME, MERGED);
 	}
 

@@ -182,14 +182,16 @@ scheduler:
 #========================================
 # Nightly job: snapshots the conversation of every closed financial assistance errand into {errandNumber}_meddelandehistorik.pdf once it
 # has been closed (and untouched) for days-after-close days, then uploads it to the errand's Lifecare actualisation.
-# The Lifecare document-type / sender-type codes are tenant-specific (mocked in Drakel) — override per environment.
+# The Lifecare document-type / sender-type codes are the numeric ids from the actualisation proposal's
+# attachmentTypes (1 = "Inkommen handling", senderType 1 = "Den enskilde"). They are tenant-specific — override per
+# environment. FamilyCare rejects anything non-numeric with "InsertDocumentType parameter not a number".
 archive:
   message:
     municipality-id: 2281
     namespace: FINANCIAL_ASSISTANCE
     days-after-close: 30
-    lifecare-document-type: ${ARCHIVE_MESSAGE_LIFECARE_DOCUMENT_TYPE:MEDDELANDEHISTORIK}
-    lifecare-document-sender-type: ${ARCHIVE_MESSAGE_LIFECARE_SENDER_TYPE:MYNDIGHET}
+    lifecare-document-type: ${ARCHIVE_MESSAGE_LIFECARE_DOCUMENT_TYPE:1}
+    lifecare-document-sender-type: ${ARCHIVE_MESSAGE_LIFECARE_SENDER_TYPE:1}
     document-label: Meddelanden och bilagor från Draken
     lifecare-sender-name: Sundsvalls kommun
 #========================================

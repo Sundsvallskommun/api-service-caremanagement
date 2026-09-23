@@ -148,7 +148,7 @@ class FinancialAssistanceActualisationServiceTest {
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID));
 
 		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, "EB-26060001_ansokan.pdf", pdf,
-			"ANSOKAN", "ENSKILD", "Ansökan ekonomiskt bistånd EB-26060001", "Draken");
+			"1", "1", "Ansökan ekonomiskt bistånd EB-26060001", "Draken");
 
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
@@ -338,7 +338,7 @@ class FinancialAssistanceActualisationServiceTest {
 
 		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, "tillaggsansokan.pdf", new byte[] {
 			1, 2, 3
-		}, "ANSOKAN", "ENSKILD", "tillaggsansokan.pdf", "Draken");
+		}, "1", "1", "tillaggsansokan.pdf", "Draken");
 		// No errandId → nothing recorded on an errand.
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 	}
@@ -373,7 +373,7 @@ class FinancialAssistanceActualisationServiceTest {
 
 		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, APPLICANT_PARTY_ID, 5012, file, request);
 
-		verify(actualisationServiceMock).uploadAttachment(eq(MUNICIPALITY_ID), eq(5012), eq("tillaggsansokan.pdf"), any(), eq("ANSOKAN"), eq("ENSKILD"), eq("tillaggsansokan.pdf"), eq("Draken"));
+		verify(actualisationServiceMock).uploadAttachment(eq(MUNICIPALITY_ID), eq(5012), eq("tillaggsansokan.pdf"), any(), eq("1"), eq("1"), eq("tillaggsansokan.pdf"), eq("Draken"));
 
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
