@@ -24,6 +24,7 @@ import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaCalculationDraftRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -67,6 +68,9 @@ class FinancialAssistanceFinalizeServiceTest {
 
 	@Mock
 	private ProcessService processServiceMock;
+
+	@Mock
+	private FaCalculationDraftRepository calculationDraftRepositoryMock;
 
 	@Captor
 	private ArgumentCaptor<Decision> decisionCaptor;
@@ -134,7 +138,7 @@ class FinancialAssistanceFinalizeServiceTest {
 
 		verify(repositoryMock, never()).save(any());
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
-		verifyNoInteractions(processServiceMock);
+		verifyNoInteractions(processServiceMock, calculationDraftRepositoryMock);
 	}
 
 	@Test
@@ -347,6 +351,95 @@ class FinancialAssistanceFinalizeServiceTest {
 
 		assertRefusedWithConflict(rejectingRequest(),
 			"an AVSLAG decision pays nothing, but errand 'errand-1' is linked to Lifecare payments [90210] - remove them in Lifecare and clear lifecarePaymentIds before finalizing");
+	}
+
+	@Test
+	void aDecisionMissingBothLifecareReferencesIsRefusedForTheBeslutFirst() {
+		awaitingDecision(grantable().withLifecareDecisionId(null).withLifecareCalculationId(null));
+
+		assertRefusedWithConflict(grantingRequest(),
+			"a decision requires the beslut to be saved in Lifecare first - save it and set lifecareDecisionId on errand 'errand-1' (PATCH .../financial-assistance/{errandId}/data) before finalizing");
+	}
+
+	@Test
+	void rejectionWithASavedNormberakningIsStillFinalized() {
+		// A caseworker may save the normberäkning in Lifecare and still reject; the calculation id is simply not needed.
+		readyErrand(rejectable().withLifecareCalculationId(LIFECARE_CALCULATION_ID));
+
+		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
+
+		assertThat(response.getDecisionId()).isEqualTo(DECISION_ID);
+		verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), variablesCaptor.capture());
+		assertThat(variablesCaptor.getValue()).containsExactly(Map.entry("paymentDecision", "REJECTED"));
+	}
+
+	@Test
+	void partialGrantLinkedToLifecarePaymentsIsFinalized() {
+		// Only an avslag is refused for linked payments; a delavslag pays, so its payments belong to it.
+		readyErrand(grantable());
+		final var request = grantingRequest();
+		request.getDecision().setOutcome("DELAVSLAG");
+
+		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY);
+
+		assertThat(response.getDecisionId()).isEqualTo(DECISION_ID);
+	}
+
+	@Test
+	void grantingFinalizePurgesTheFrozenDraftOnceTheDecisionIsRecorded() {
+		readyErrand(grantable());
+		when(calculationDraftRepositoryMock.existsById(ERRAND_ID)).thenReturn(true);
+
+		service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
+
+		// The decision is recorded and the process resumed before careM's copy of the normberäkning is disposed of.
+		final var inOrder = inOrder(decisionServiceMock, processServiceMock, calculationDraftRepositoryMock);
+		inOrder.verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Decision.class));
+		inOrder.verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), anyMap());
+		inOrder.verify(calculationDraftRepositoryMock).deleteById(ERRAND_ID);
+	}
+
+	@Test
+	void rejectionWithASavedNormberakningPurgesTheDraftToo() {
+		readyErrand(rejectable().withLifecareCalculationId(LIFECARE_CALCULATION_ID));
+		when(calculationDraftRepositoryMock.existsById(ERRAND_ID)).thenReturn(true);
+
+		service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
+
+		verify(calculationDraftRepositoryMock).deleteById(ERRAND_ID);
+	}
+
+	@Test
+	void rejectionWithoutASavedNormberakningKeepsTheDraft() {
+		// No calculation in Lifecare: the draft is the only trace of the proposal and stays for the errand's own disposal.
+		readyErrand(rejectable());
+
+		service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
+
+		verifyNoInteractions(calculationDraftRepositoryMock);
+	}
+
+	@Test
+	void anErrandWithoutADraftHasNothingToPurge() {
+		readyErrand(grantable());
+		when(calculationDraftRepositoryMock.existsById(ERRAND_ID)).thenReturn(false);
+
+		service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
+
+		verify(calculationDraftRepositoryMock, never()).deleteById(any());
+	}
+
+	@Test
+	void theDraftIsPurgedEvenWhenTheProcessCouldNotBeReached() {
+		readyErrand(grantable());
+		when(calculationDraftRepositoryMock.existsById(ERRAND_ID)).thenReturn(true);
+		doThrow(new IllegalStateException("engine down")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), anyMap());
+
+		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
+
+		// The decision stands and the message is queued, so the errand is decided: the draft goes either way.
+		assertThat(response.getProcessMessageCorrelated()).isFalse();
+		verify(calculationDraftRepositoryMock).deleteById(ERRAND_ID);
 	}
 
 	@Test

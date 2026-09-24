@@ -13,6 +13,7 @@ import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeResponse;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaCalculationDraftRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -42,7 +43,13 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * <li>records the finalize choices on the errand (communication channels, household-size flag);</li>
  * <li>records the decision as a {@code PAYMENT} {@code Decision} row — the audit trail;</li>
  * <li>correlates {@code PaymentDecisionReceived} to the waiting process, which then sets the status and, for a bifall,
- * checks the linked Lifecare payments until they are paid out.</li>
+ * checks the linked Lifecare payments until they are paid out;</li>
+ * <li>purges careM's normberäkning draft when the errand is linked to a normberäkning saved in Lifecare
+ * ({@code lifecareCalculationId}): the draft was only a proposal, frozen since that id was set, and the decided
+ * calculation is Lifecare's. Keeping it would store the household's incomes and expenses twice. Without the id (an
+ * avslag decided without a saved calculation) the draft is the only trace of the proposal and stays for the errand's
+ * own
+ * disposal.</li>
  * </ol>
  *
  * <p>
@@ -81,13 +88,15 @@ public class FinancialAssistanceFinalizeService {
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final DecisionService decisionService;
 	private final ProcessService processService;
+	private final FaCalculationDraftRepository calculationDraftRepository;
 
 	FinancialAssistanceFinalizeService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository,
-		final DecisionService decisionService, final ProcessService processService) {
+		final DecisionService decisionService, final ProcessService processService, final FaCalculationDraftRepository calculationDraftRepository) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.decisionService = decisionService;
 		this.processService = processService;
+		this.calculationDraftRepository = calculationDraftRepository;
 	}
 
 	/**
@@ -119,6 +128,9 @@ public class FinancialAssistanceFinalizeService {
 
 		// 3. Resume the process.
 		final var correlated = correlatePaymentDecision(municipalityId, namespace, errandId, outcome);
+
+		// 4. The decided normberäkning is Lifecare's; careM's frozen proposal is disposed of.
+		purgeCalculationDraft(entity, errandId);
 
 		LOG.info("Finalized errand {} with outcome {} (decision {}, process correlated: {})", sanitizeForLogging(errandId),
 			sanitizeForLogging(outcome), sanitizeForLogging(decisionId), correlated);
@@ -188,6 +200,23 @@ public class FinancialAssistanceFinalizeService {
 
 	private static List<String> linkedPaymentIds(final FinancialAssistanceEntity entity) {
 		return ofNullable(entity.getLifecarePaymentIds()).orElseGet(List::of);
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
+	// Disposal
+	// ------------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * Delete careM's normberäkning draft once the decision rests on a normberäkning saved in Lifecare. The row cascades to
+	 * the draft's norm types, persons, incomes and expenses. The daily prepare never rebuilds it: it leaves the draft
+	 * alone while {@code lifecareCalculationId} is set, and a decided errand is not prepared again.
+	 */
+	private void purgeCalculationDraft(final FinancialAssistanceEntity entity, final String errandId) {
+		if (entity.getLifecareCalculationId() == null || !calculationDraftRepository.existsById(errandId)) {
+			return;
+		}
+		calculationDraftRepository.deleteById(errandId);
+		LOG.info("Purged the normberäkning draft of errand {}: the decided calculation is Lifecare's", sanitizeForLogging(errandId));
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,9 @@
+{
+	"decisionId": "${json-unit.any-string}",
+	"processMessageCorrelated": true,
+	"communication": {
+		"minaSidor": true,
+		"digitalMailbox": false,
+		"letter": false
+	}
+}

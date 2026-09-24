@@ -69,7 +69,7 @@ class FinancialAssistanceCalculationResource {
 
 	@GetMapping(path = "/financial-assistance/{errandId}/calculation/draft", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read the draft calculation",
-		description = "The FamilyCare income rows the financial assistance process prepared (not yet created in Lifecare) for the caseworker to review and edit before a decision. 404 when no draft exists yet.",
+		description = "The FamilyCare income rows the financial assistance process prepared (not yet created in Lifecare) for the caseworker to review and edit before a decision. 404 when no draft exists yet, and after a decision on a normberäkning saved in Lifecare (lifecareCalculationId), when finalize has purged it.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))

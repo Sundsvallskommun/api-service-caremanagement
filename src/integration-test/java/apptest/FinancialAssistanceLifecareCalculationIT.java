@@ -8,6 +8,7 @@ import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.PATCH;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
@@ -20,9 +21,14 @@ import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaCalculationDraftRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormExpenseRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormPersonRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPaymentRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaSectionApprovalRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaWarningRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaSectionApprovalEntity;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 import tools.jackson.core.JacksonException;
@@ -73,6 +79,18 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 
 	@Autowired
 	private FaPaymentRepository paymentRepository;
+
+	@Autowired
+	private FaSectionApprovalRepository sectionApprovalRepository;
+
+	@Autowired
+	private FaCalculationDraftRepository calculationDraftRepository;
+
+	@Autowired
+	private FaNormPersonRepository normPersonRepository;
+
+	@Autowired
+	private FaNormExpenseRepository normExpenseRepository;
 
 	@Test
 	void test01_patchLifecareCalculationIdAndReadItBack() {
@@ -219,6 +237,120 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 		assertThat(financialAssistanceRepository.findLifecarePaymentIdsLinkedElsewhere(List.of("90210", "90211", "90212"), "another-errand"))
 			.containsExactly("90210");
 		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void test08_finalizeBifallIgnoresSectionApprovals() {
+		// Draken's old "Markera som komplett": a calculation approved, the decision section explicitly not approved and
+		// no payment section at all. None of it gates finalize any more, and finalize leaves the rows as they are.
+		sectionApprovalRepository.saveAll(List.of(
+			FaSectionApprovalEntity.create().withErrandId(ERRAND_ID).withSection("CALCULATION").withApproved(true).withApprovedBy("joe01doe"),
+			FaSectionApprovalEntity.create().withErrandId(ERRAND_ID).withSection("DECISION").withApproved(false)));
+		patchData("""
+			{"lifecareCalculationId": 4711}""");
+
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/finalize")
+			.withHttpMethod(POST)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(OK)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequest();
+
+		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
+			.containsExactly(tuple("PAYMENT", "BIFALL"));
+		assertThat(sectionApprovalRepository.findByErrandId(ERRAND_ID)).extracting(FaSectionApprovalEntity::getSection, FaSectionApprovalEntity::isApproved)
+			.containsExactlyInAnyOrder(tuple("CALCULATION", true), tuple("DECISION", false));
+		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void test09_finalizeIgnoresPaymentsFromAnOlderClient() {
+		// A client built against the retired contract still sends its payment drafts; they are ignored, not created.
+		patchData("""
+			{"lifecareCalculationId": 4711}""");
+
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/finalize")
+			.withHttpMethod(POST)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(OK)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequest();
+
+		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
+			.containsExactly(tuple("PAYMENT", "BIFALL"));
+		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void test10_finalizeBifallWithoutLifecareDecisionIdIsRejected() {
+		// The normberäkning alone is not enough: the beslut must be saved in Lifecare too, and that is checked first.
+		patchData("""
+			{"lifecareCalculationId": 4711}""");
+		final var entity = financialAssistanceRepository.findByErrandId(ERRAND_ID).orElseThrow();
+		entity.setLifecareDecisionId(null);
+		financialAssistanceRepository.save(entity);
+
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/finalize")
+			.withHttpMethod(POST)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(CONFLICT)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequestAndVerifyResponse();
+
+		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void test11_finalizeAvslagLinkedToLifecarePaymentsIsRejected() {
+		patchData("""
+			{"lifecarePaymentIds": ["90210"]}""");
+
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/finalize")
+			.withHttpMethod(POST)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(CONFLICT)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequestAndVerifyResponse();
+
+		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void test12_finalizeBifallPurgesTheFrozenDraft() {
+		// The daily prepare builds careM's draft; Draken then saves the normberäkning in Lifecare and links it.
+		prepare();
+		assertThat(calculationDraftRepository.existsById(ERRAND_ID)).isTrue();
+		assertThat(normPersonRepository.findByErrandId(ERRAND_ID)).isNotEmpty();
+		assertThat(normExpenseRepository.findByErrandId(ERRAND_ID)).isNotEmpty();
+		patchData("""
+			{"lifecareCalculationId": 4711}""");
+
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/finalize")
+			.withHttpMethod(POST)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withRequest("finalize-request.json")
+			.withExpectedResponseStatus(OK)
+			.sendRequest();
+
+		// The decided calculation is Lifecare's: careM's frozen proposal and all its rows are gone, and the draft read
+		// answers 404 - which Draken shows as "no draft".
+		assertThat(calculationDraftRepository.existsById(ERRAND_ID)).isFalse();
+		assertThat(normPersonRepository.findByErrandId(ERRAND_ID)).isEmpty();
+		assertThat(normExpenseRepository.findByErrandId(ERRAND_ID)).isEmpty();
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/calculation/draft")
+			.withHttpMethod(GET)
+			.withExpectedResponseStatus(NOT_FOUND)
+			.sendRequest();
 	}
 
 	/**
