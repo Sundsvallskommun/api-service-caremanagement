@@ -35,6 +35,7 @@ class DecisionMapperTest {
 			.withDescription(DESCRIPTION)
 			.withAmount(AMOUNT)
 			.withDecisionMessage(DECISION_MESSAGE)
+			.withCoApplicantReason("Beviljad")
 			.withDecisionDate(DECISION_DATE)
 			.withPeriodFrom(PERIOD_FROM)
 			.withPeriodTo(PERIOD_TO)
@@ -57,6 +58,7 @@ class DecisionMapperTest {
 		assertThat(decision.getPeriodFrom()).isEqualTo(PERIOD_FROM);
 		assertThat(decision.getPeriodTo()).isEqualTo(PERIOD_TO);
 		assertThat(decision.getCreatedBy()).isEqualTo(CREATED_BY);
+		assertThat(decision.getCoApplicantReason()).isEqualTo("Beviljad");
 		assertThat(decision.getLifecareStatus()).isEqualTo("SYNCED");
 		assertThat(decision.getLifecareId()).isEqualTo("88123");
 		assertThat(decision.getLifecareDetail()).isEqualTo("detail");
@@ -77,6 +79,7 @@ class DecisionMapperTest {
 			.withDescription(DESCRIPTION)
 			.withAmount(AMOUNT)
 			.withDecisionMessage(DECISION_MESSAGE)
+			.withCoApplicantReason("Beviljad")
 			.withDecisionDate(DECISION_DATE)
 			.withPeriodFrom(PERIOD_FROM)
 			.withPeriodTo(PERIOD_TO)
@@ -100,6 +103,7 @@ class DecisionMapperTest {
 		assertThat(entity.getPeriodFrom()).isEqualTo(PERIOD_FROM);
 		assertThat(entity.getPeriodTo()).isEqualTo(PERIOD_TO);
 		assertThat(entity.getCreatedBy()).isEqualTo(CREATED_BY);
+		assertThat(entity.getCoApplicantReason()).isEqualTo("Beviljad");
 		// id and created are server/JPA-assigned and must not be carried over from the DTO
 		assertThat(entity.getId()).isNull();
 		assertThat(entity.getCreated()).isNull();

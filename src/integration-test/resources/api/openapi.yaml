@@ -7,11 +7,15 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:63825
+- url: http://localhost:57275
   description: Generated server url
 security:
 - sentBy: []
 tags:
+- name: Financial Assistance · Proposals
+  description: The decision proposal (beslutsförslag) — derived on every read from
+    the calculation draft and the applicant's Lifecare history; only the section warnings
+    it raises are stored. Recomputed when the CALCULATION section is approved.
 - name: Financial Assistance · Lifecare supplements
   description: "The RPA robot's single delivery endpoint — one near-raw Lifecare dump\
     \ per errand (bevakningar, document list, jobbstimulans), routed and upserted\
@@ -31,10 +35,6 @@ tags:
   description: "Financial assistance monitorings — date-bound watch/reminder objects\
     \ on an errand, with full CRUD. Unlike the income warnings they carry no acknowledge\
     \ lifecycle."
-- name: Financial Assistance · Proposals
-  description: The decision proposal (beslutsförslag) — derived on every read from
-    the calculation draft and the applicant's Lifecare history; only the section warnings
-    it raises are stored. Recomputed when the CALCULATION section is approved.
 - name: Notifications
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen and mark them handled when acted on; expired ones are
@@ -95,6 +95,12 @@ tags:
     \ errand number and the household's personal numbers, served on demand so they\
     \ never persist in the Orchestrator queue store. Every read lands in the errand's\
     \ event log."
+- name: Financial Assistance · Payees
+  description: "The betalningsmottagare selectable for an errand's payment form: the\
+    \ payees seen on the applicant's Lifecare payments in the last 12 months, plus\
+    \ the ones added by hand here when the history does not contain the right one.\
+    \ FamilyCare exposes no payee register, so a past payment is the only evidence\
+    \ a payee exists. Reading is side-effect free."
 - name: Event Log
   description: "Who/what/when activity log for an errand — every read and write, with\
     \ the acting user"
@@ -114,12 +120,6 @@ tags:
     \ decisions and documents — plus a single document's PDF content. Keyed by partyId\
     \ (resolved to a personnummer via the citizen service); the period defaults to\
     \ the last 24 months. caremanagement only forwards the reads."
-- name: Financial Assistance · Payees
-  description: "The betalningsmottagare selectable for an errand's payment form: the\
-    \ payees seen on the applicant's Lifecare payments in the last 12 months, plus\
-    \ the ones added by hand here when the history does not contain the right one.\
-    \ FamilyCare exposes no payee register, so a past payment is the only evidence\
-    \ a payee exists. Reading is side-effect free."
 - name: Documents
   description: Formal case documents attached to an errand
 - name: Financial Assistance · Payments
@@ -8851,10 +8851,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -9940,8 +9940,8 @@ components:
         lifecareDecisionId:
           type: integer
           format: int32
-          description: "The Lifecare decision (beslut) id the errand concerns, set by\
-            \ the caseworker"
+          description: "The Lifecare decision (beslut) id the errand concerns, set\
+            \ by the caseworker"
           examples:
           - 4711
         children:
@@ -11097,6 +11097,14 @@ components:
           - "Decision proposal per ruleset: 7900 kr, no warning"
           maxLength: 4096
           minLength: 0
+        coApplicantReason:
+          type: string
+          description: "The co-applicant's orsak, when the household has a co-applicant\
+            \ and the decision carries one; description carries the applicant's."
+          examples:
+          - Beviljad
+          maxLength: 255
+          minLength: 0
         amount:
           type: number
           description: "Optional decision amount, in SEK. For a financial-assistance\
@@ -11861,6 +11869,15 @@ components:
           examples:
           - "Inkomster enligt SSBTEK, hyra styrkt"
           maxLength: 4096
+          minLength: 0
+        coApplicantReason:
+          type: string
+          description: "The co-applicant's orsak, when the household has a co-applicant\
+            \ — picked from the same reasonOptions as reason. Stored on the decision\
+            \ as coApplicantReason."
+          examples:
+          - Beviljad
+          maxLength: 255
           minLength: 0
         periodFrom:
           type: string

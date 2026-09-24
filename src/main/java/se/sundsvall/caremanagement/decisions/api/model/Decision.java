@@ -37,6 +37,11 @@ public class Decision {
 	@Size(max = 4096)
 	private String description;
 
+	@Schema(description = "The co-applicant's orsak, when the household has a co-applicant and the decision carries one; description carries the applicant's.",
+		examples = "Beviljad")
+	@Size(max = 255)
+	private String coApplicantReason;
+
 	@Schema(description = "Optional decision amount, in SEK. For a financial-assistance decision this is the granted amount (0 for a rejection); for a recommendation it is the recommended amount when the pipeline has computed one.", examples = "7900.00")
 	private BigDecimal amount;
 
@@ -140,6 +145,19 @@ public class Decision {
 
 	public Decision withDescription(final String description) {
 		this.description = description;
+		return this;
+	}
+
+	public String getCoApplicantReason() {
+		return coApplicantReason;
+	}
+
+	public void setCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
+	}
+
+	public Decision withCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
 		return this;
 	}
 
@@ -279,6 +297,7 @@ public class Decision {
 			return false;
 		final Decision that = (Decision) o;
 		return Objects.equals(id, that.id) && Objects.equals(decisionType, that.decisionType) && Objects.equals(value, that.value) && Objects.equals(description, that.description)
+			&& Objects.equals(coApplicantReason, that.coApplicantReason)
 			&& Objects.equals(amount, that.amount) && Objects.equals(decisionMessage, that.decisionMessage) && Objects.equals(decisionDate, that.decisionDate)
 			&& Objects.equals(periodFrom, that.periodFrom) && Objects.equals(periodTo, that.periodTo) && Objects.equals(createdBy, that.createdBy)
 			&& Objects.equals(lifecareStatus, that.lifecareStatus) && Objects.equals(lifecareId, that.lifecareId)
@@ -287,7 +306,7 @@ public class Decision {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, decisionType, value, description, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, lifecareStatus, lifecareId,
+		return Objects.hash(id, decisionType, value, description, coApplicantReason, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, lifecareStatus, lifecareId,
 			lifecareDetail, created);
 	}
 
@@ -298,6 +317,7 @@ public class Decision {
 			", decisionType='" + decisionType + '\'' +
 			", value='" + value + '\'' +
 			", description='" + description + '\'' +
+			", coApplicantReason='" + coApplicantReason + '\'' +
 			", amount=" + amount +
 			", decisionMessage='" + decisionMessage + '\'' +
 			", decisionDate=" + decisionDate +

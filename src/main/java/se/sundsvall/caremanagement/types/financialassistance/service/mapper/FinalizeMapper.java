@@ -41,6 +41,7 @@ public final class FinalizeMapper {
 	static final String KEY_DECISION_ID = "decisionId";
 	static final String KEY_OUTCOME = "outcome";
 	static final String KEY_REASON = "reason";
+	static final String KEY_CO_APPLICANT_REASON = "coApplicantReason";
 	static final String KEY_PERIOD_FROM = "periodFrom";
 	static final String KEY_PERIOD_TO = "periodTo";
 	static final String KEY_AMOUNT = "amount";
@@ -75,6 +76,7 @@ public final class FinalizeMapper {
 				.withDecisionType(DECISION_TYPE_PAYMENT)
 				.withValue(decision.getOutcome())
 				.withDescription(decision.getReason())
+				.withCoApplicantReason(decision.getCoApplicantReason())
 				.withAmount(effectiveAmount(decision))
 				.withDecisionMessage(decision.getDecisionMessage())
 				.withDecisionDate(decisionDate)
@@ -118,6 +120,7 @@ public final class FinalizeMapper {
 		ofNullable(request).map(FinalizeRequest::getDecision).ifPresent(decision -> {
 			put(content, KEY_OUTCOME, decision.getOutcome());
 			put(content, KEY_REASON, decision.getReason());
+			put(content, KEY_CO_APPLICANT_REASON, decision.getCoApplicantReason());
 			put(content, KEY_PERIOD_FROM, decision.getPeriodFrom());
 			put(content, KEY_PERIOD_TO, decision.getPeriodTo());
 			put(content, KEY_AMOUNT, effectiveAmount(decision));

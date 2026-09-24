@@ -53,6 +53,7 @@ class DecisionEntityTest {
 			.withDescription("desc")
 			.withAmount(amount)
 			.withDecisionMessage("message")
+			.withCoApplicantReason("Beviljad")
 			.withDecisionDate(decisionDate)
 			.withPeriodFrom(periodFrom)
 			.withPeriodTo(periodTo)

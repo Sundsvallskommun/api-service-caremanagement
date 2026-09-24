@@ -27,6 +27,7 @@ class FinalizeMapperTest {
 			.withDecision(FinalizeDecision.create()
 				.withOutcome("BIFALL")
 				.withReason("Inkomster enligt SSBTEK")
+				.withCoApplicantReason("Beviljad")
 				.withPeriodFrom(LocalDate.of(2026, 6, 1))
 				.withPeriodTo(LocalDate.of(2026, 6, 30))
 				.withAmount(new BigDecimal("7900.00"))
@@ -50,6 +51,7 @@ class FinalizeMapperTest {
 		assertThat(decision.getPeriodTo()).isEqualTo(LocalDate.of(2026, 6, 30));
 		assertThat(decision.getCreatedBy()).isEqualTo("jane02doe");
 		assertThat(decision.getLifecareStatus()).isEqualTo("PENDING");
+		assertThat(decision.getCoApplicantReason()).isEqualTo("Beviljad");
 	}
 
 	@ParameterizedTest
@@ -109,6 +111,7 @@ class FinalizeMapperTest {
 			java.util.Map.entry("decisionId", "decision-1"),
 			java.util.Map.entry("outcome", "BIFALL"),
 			java.util.Map.entry("reason", "Inkomster enligt SSBTEK"),
+			java.util.Map.entry("coApplicantReason", "Beviljad"),
 			java.util.Map.entry("periodFrom", "2026-06-01"),
 			java.util.Map.entry("periodTo", "2026-06-30"),
 			java.util.Map.entry("amount", "7900.00"),

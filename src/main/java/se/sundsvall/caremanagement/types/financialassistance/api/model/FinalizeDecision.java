@@ -34,6 +34,12 @@ public class FinalizeDecision {
 	@Size(max = 4096)
 	private String reason;
 
+	@Schema(description = """
+		The co-applicant's orsak, when the household has a co-applicant — picked from the same reasonOptions as reason. \
+		Stored on the decision as coApplicantReason.""", examples = "Beviljad")
+	@Size(max = 255)
+	private String coApplicantReason;
+
 	@Schema(description = "Start of the period the decision covers (the month applied for)", examples = "2026-06-01")
 	@DateTimeFormat(iso = DATE)
 	private LocalDate periodFrom;
@@ -77,6 +83,19 @@ public class FinalizeDecision {
 
 	public FinalizeDecision withReason(final String reason) {
 		this.reason = reason;
+		return this;
+	}
+
+	public String getCoApplicantReason() {
+		return coApplicantReason;
+	}
+
+	public void setCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
+	}
+
+	public FinalizeDecision withCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
 		return this;
 	}
 
@@ -137,13 +156,14 @@ public class FinalizeDecision {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FinalizeDecision that = (FinalizeDecision) o;
-		return Objects.equals(outcome, that.outcome) && Objects.equals(reason, that.reason) && Objects.equals(periodFrom, that.periodFrom)
+		return Objects.equals(outcome, that.outcome) && Objects.equals(reason, that.reason) && Objects.equals(coApplicantReason, that.coApplicantReason)
+			&& Objects.equals(periodFrom, that.periodFrom)
 			&& Objects.equals(periodTo, that.periodTo) && Objects.equals(amount, that.amount) && Objects.equals(decisionMessage, that.decisionMessage);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(outcome, reason, periodFrom, periodTo, amount, decisionMessage);
+		return Objects.hash(outcome, reason, coApplicantReason, periodFrom, periodTo, amount, decisionMessage);
 	}
 
 	@Override
@@ -151,6 +171,7 @@ public class FinalizeDecision {
 		return "FinalizeDecision{" +
 			"outcome='" + outcome + '\'' +
 			", reason='" + reason + '\'' +
+			", coApplicantReason='" + coApplicantReason + '\'' +
 			", periodFrom=" + periodFrom +
 			", periodTo=" + periodTo +
 			", amount=" + amount +

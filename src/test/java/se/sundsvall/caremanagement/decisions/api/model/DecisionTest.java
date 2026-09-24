@@ -58,6 +58,7 @@ class DecisionTest {
 			.withDescription(description)
 			.withAmount(amount)
 			.withDecisionMessage(decisionMessage)
+			.withCoApplicantReason("Beviljad")
 			.withDecisionDate(decisionDate)
 			.withPeriodFrom(periodFrom)
 			.withPeriodTo(periodTo)

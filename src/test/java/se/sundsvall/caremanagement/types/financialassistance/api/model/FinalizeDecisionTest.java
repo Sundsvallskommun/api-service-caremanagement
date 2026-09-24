@@ -38,6 +38,7 @@ class FinalizeDecisionTest {
 		final var decision = FinalizeDecision.create()
 			.withOutcome("BIFALL")
 			.withReason("Inkomster enligt SSBTEK")
+			.withCoApplicantReason("Beviljad")
 			.withPeriodFrom(LocalDate.of(2026, 6, 1))
 			.withPeriodTo(LocalDate.of(2026, 6, 30))
 			.withAmount(new BigDecimal("7900.00"))
@@ -45,6 +46,7 @@ class FinalizeDecisionTest {
 
 		assertThat(decision.getOutcome()).isEqualTo("BIFALL");
 		assertThat(decision.getReason()).isEqualTo("Inkomster enligt SSBTEK");
+		assertThat(decision.getCoApplicantReason()).isEqualTo("Beviljad");
 		assertThat(decision.getPeriodFrom()).isEqualTo(LocalDate.of(2026, 6, 1));
 		assertThat(decision.getPeriodTo()).isEqualTo(LocalDate.of(2026, 6, 30));
 		assertThat(decision.getAmount()).isEqualByComparingTo("7900.00");
