@@ -1,0 +1,28 @@
+{
+	"request": {
+		"method": "POST",
+		"urlPath": "/api-operaton/2281/message",
+		"bodyPatterns": [
+			{
+				"equalToJson": {
+					"messageName": "PaymentDecisionReceived",
+					"businessKey": "66666666-6666-6666-6666-666666666666",
+					"processVariables": {
+						"paymentDecision": "APPROVED"
+					}
+				}
+			}
+		]
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/problem+json"
+		},
+		"jsonBody": {
+			"title": "Service Unavailable",
+			"status": 503,
+			"detail": "engine restarting"
+		},
+		"status": 503
+	}
+}
