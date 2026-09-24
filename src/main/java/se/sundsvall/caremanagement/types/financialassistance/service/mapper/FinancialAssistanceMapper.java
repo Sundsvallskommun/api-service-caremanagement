@@ -48,6 +48,16 @@ public final class FinancialAssistanceMapper {
 
 	private FinancialAssistanceMapper() {}
 
+	/**
+	 * A reference list without repeats, as a fresh mutable list — the Lifecare payment ids are a set keyed on the errand,
+	 * so the same id sent twice is one reference. Null stays null (a PATCH that leaves the list alone).
+	 */
+	private static List<String> distinctOrNull(final List<String> source) {
+		return ofNullable(source)
+			.map(list -> new ArrayList<>(list.stream().distinct().toList()))
+			.orElse(null);
+	}
+
 	private static <S, T> List<T> mapList(final List<S> source, final Function<S, T> mapper) {
 		return ofNullable(source)
 			.map(list -> list.stream()
@@ -88,6 +98,7 @@ public final class FinancialAssistanceMapper {
 				.withAttestedAt(d.getAttestedAt())
 				.withLifecareDecisionId(d.getLifecareDecisionId())
 				.withLifecareCalculationId(d.getLifecareCalculationId())
+				.withLifecarePaymentIds(distinctOrNull(d.getLifecarePaymentIds()))
 				.withChildren(mapList(d.getChildren(), FinancialAssistanceMapper::toFaChild))
 				.withCosts(mapList(d.getCosts(), FinancialAssistanceMapper::toFaCost))
 				.withIncomes(mapList(d.getIncomes(), FinancialAssistanceMapper::toFaIncome))
@@ -134,6 +145,7 @@ public final class FinancialAssistanceMapper {
 		ofNullable(source.getAttestedAt()).ifPresent(entity::setAttestedAt);
 		ofNullable(source.getLifecareDecisionId()).ifPresent(entity::setLifecareDecisionId);
 		ofNullable(source.getLifecareCalculationId()).ifPresent(entity::setLifecareCalculationId);
+		ofNullable(distinctOrNull(source.getLifecarePaymentIds())).ifPresent(entity::setLifecarePaymentIds);
 		ofNullable(mapList(source.getChildren(), FinancialAssistanceMapper::toFaChild)).ifPresent(value -> entity.setChildren(new ArrayList<>(value)));
 		ofNullable(mapList(source.getCosts(), FinancialAssistanceMapper::toFaCost)).ifPresent(value -> entity.setCosts(new ArrayList<>(value)));
 		ofNullable(mapList(source.getIncomes(), FinancialAssistanceMapper::toFaIncome)).ifPresent(value -> entity.setIncomes(new ArrayList<>(value)));
@@ -175,6 +187,7 @@ public final class FinancialAssistanceMapper {
 				.withAttestedAt(e.getAttestedAt())
 				.withLifecareDecisionId(e.getLifecareDecisionId())
 				.withLifecareCalculationId(e.getLifecareCalculationId())
+				.withLifecarePaymentIds(e.getLifecarePaymentIds())
 				.withChildren(mapList(e.getChildren(), FinancialAssistanceMapper::toChild))
 				.withCosts(mapList(e.getCosts(), FinancialAssistanceMapper::toCost))
 				.withIncomes(mapList(e.getIncomes(), FinancialAssistanceMapper::toIncome))

@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.util.Locale;
 import se.sundsvall.caremanagement.lifecare.service.model.PaymentView;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeOption;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPayeeEntity;
@@ -62,14 +61,6 @@ public final class PayeeMapper {
 	 */
 	public static PayeeKey key(final PayeeOption option) {
 		return key(option.getName(), option.getPaymentMethod(), option.getClearing(), option.getAccountNumber());
-	}
-
-	/**
-	 * The same identity for the payee a finalize names on a payment, so a decided payment can be matched against the
-	 * payees stored on the errand.
-	 */
-	public static PayeeKey key(final Payee payee) {
-		return key(payee.getName(), payee.getPaymentMethod(), payee.getClearing(), payee.getAccountNumber());
 	}
 
 	private static PayeeKey key(final String name, final String paymentMethod, final String clearing, final String accountNumber) {

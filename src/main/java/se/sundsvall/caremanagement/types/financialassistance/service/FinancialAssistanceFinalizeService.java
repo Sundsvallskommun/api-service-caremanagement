@@ -11,11 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizePayment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeResponse;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -33,34 +30,38 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.even
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessMessages.VARIABLE_PAYMENT_DECISION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.DECISION_TYPE_PAYMENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentDecision;
-import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentRequest;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.updateEntity;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * "Besluta och utbetala" — the caseworker's decision step on a financial assistance (återansökan) errand. Once the
- * three view sections are approved and the errand waits for a decision, one call does, in order:
+ * errand waits for a decision and the Lifecare artefacts the decision rests on are linked to it, one call does, in
+ * order:
  *
  * <ol>
  * <li>records the finalize choices on the errand (communication channels, household-size flag);</li>
  * <li>records the decision as a {@code PAYMENT} {@code Decision} row — the audit trail;</li>
- * <li>records one {@code Payment} row per decided utbetalning, which Draken's BFF registers directly in Lifecare and
- * acknowledges through {@code .../payments/{paymentId}/lifecare-result};</li>
- * <li>correlates {@code PaymentDecisionReceived} to the waiting process, which then sets the status and polls the
- * payment.</li>
+ * <li>correlates {@code PaymentDecisionReceived} to the waiting process, which then sets the status and, for a bifall,
+ * checks the linked Lifecare payments until they are paid out.</li>
  * </ol>
  *
  * <p>
- * A granting decision (BIFALL/DELAVSLAG) requires the normberäkning to be in Lifecare already: Draken saves it there
- * and sets {@code lifecareCalculationId} on the errand ({@code PATCH .../data}) before the decision, and finalize
- * refuses a granting decision on an errand that does not carry it. An avslag pays nothing and needs no calculation.
+ * The preconditions are the real ones, not caseworker check-offs: Draken saves the beslut in Lifecare and links it as
+ * {@code lifecareDecisionId} (every outcome); for a granting outcome (BIFALL/DELAVSLAG) it also saves the normberäkning
+ * and links it as {@code lifecareCalculationId}, both through {@code PATCH .../data} before this call, and registers
+ * the
+ * payments directly in Lifecare. finalize refuses an errand that lacks a required reference, and an avslag linked to
+ * payments. These are references: careM does not claim that the calculation is final, the beslut locked or a
+ * payment paid out because an id is there — those statuses are Lifecare's, read from Lifecare (payment-status for the
+ * process; Draken reads the rest itself). careM creates no payments, and neither the section approvals nor any payee
+ * state affects this call.
  *
  * <p>
- * Step 4 is best-effort and reported in the response rather than failing the call: the decision is recorded either
+ * Step 3 is best-effort and reported in the response rather than failing the call: the decision is recorded either
  * way, and an uncorrelated message is queued, in this transaction, for the scheduled process-message retry. The
  * Lifecare writes — decision, utbetalningar, bevakningar, journal, documents — are all the Draken BFF's, done directly
- * against Lifecare; nothing is queued for a robot (RPA was retired 2026-09-24). Sending the decision to the applicant
- * (step 6 of the verksamhet's flow) is the BFF's job too; this service only records and echoes the chosen channels.
+ * against Lifecare. Sending the decision to the applicant (step 6 of the verksamhet's flow) is the BFF's job too; this
+ * service only records and echoes the chosen channels.
  */
 @Service
 @Transactional
@@ -71,80 +72,61 @@ public class FinancialAssistanceFinalizeService {
 	private static final String ERROR_NO_TYPED_ERRAND = "No financial-assistance errand for id %s";
 	private static final String ERROR_NO_DECIDER = "a decision can only be recorded by an identified user - the X-Sent-By header is required";
 	private static final String ERROR_WRONG_STATUS = "errand must be in status %s to be finalized, but is in status '%s'";
-	private static final String ERROR_SECTIONS_NOT_APPROVED = "all sections must be approved before the errand can be finalized - not approved: %s";
 	private static final String ERROR_ALREADY_FINALIZED = "errand '%s' already carries a %s decision - it has been finalized";
+	private static final String ERROR_NO_LIFECARE_DECISION = "a decision requires the beslut to be saved in Lifecare first - save it and set lifecareDecisionId on errand '%s' (PATCH .../financial-assistance/{errandId}/data) before finalizing";
 	private static final String ERROR_NO_LIFECARE_CALCULATION = "a %s decision requires the normberäkning to be saved in Lifecare first - save it and set lifecareCalculationId on errand '%s' (PATCH .../financial-assistance/{errandId}/data) before finalizing";
+	private static final String ERROR_PAYMENTS_ON_REJECTION = "an %s decision pays nothing, but errand '%s' is linked to Lifecare payments %s - remove them in Lifecare and clear lifecarePaymentIds before finalizing";
 
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
-	private final SectionApprovalService sectionApprovalService;
 	private final DecisionService decisionService;
 	private final ProcessService processService;
-	private final PaymentService paymentService;
-	private final PayeeService payeeService;
 
 	FinancialAssistanceFinalizeService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository,
-		final SectionApprovalService sectionApprovalService, final DecisionService decisionService,
-		final ProcessService processService, final PaymentService paymentService, final PayeeService payeeService) {
+		final DecisionService decisionService, final ProcessService processService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
-		this.sectionApprovalService = sectionApprovalService;
 		this.decisionService = decisionService;
 		this.processService = processService;
-		this.paymentService = paymentService;
-		this.payeeService = payeeService;
 	}
 
 	/**
 	 * Finalize the errand — see the class description for the steps. Scoped: {@code 404} when the errand is missing in
 	 * this namespace/municipality; {@code 400} without an identified caller; {@code 409} when the errand is not
-	 * {@code AWAITING_DECISION}, when a section is not approved, when a {@code PAYMENT} decision already exists, or when a
-	 * granting outcome is decided on an errand without {@code lifecareCalculationId}.
+	 * {@code AWAITING_DECISION}, when a {@code PAYMENT} decision already exists, when the errand lacks a Lifecare
+	 * reference the outcome needs, or when an avslag is linked to payments.
 	 *
 	 * @param  decidedBy the authenticated caseworker (X-Sent-By) — becomes the decision's {@code createdBy}
-	 * @return           the receipt: decision id, payment ids, whether the process was resumed, the channels
+	 * @return           the receipt: decision id, whether the process was resumed, the channels
 	 */
 	public FinalizeResponse finalize(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request, final String decidedBy) {
 		final var errand = errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		requireDecider(decidedBy);
 		requireStatus(errand.getStatus());
-		requireApprovedSections(errandId);
 		requireNotFinalized(municipalityId, namespace, errandId);
 		final var entity = financialAssistanceRepository.findByErrandId(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERROR_NO_TYPED_ERRAND.formatted(errandId)));
-		requireLifecareCalculation(entity, errandId, request.getDecision().getOutcome());
+		final var outcome = request.getDecision().getOutcome();
+		requireLifecareReferences(entity, errandId, outcome);
 
 		// 1. The audit fields first (communication channels, household-size flag), so they are on the errand before the
-		// process is resumed in step 4.
+		// process is resumed in step 3.
 		financialAssistanceRepository.save(updateEntity(entity, request));
 
 		// 2. The decision row.
 		final var decisionId = decisionService.create(municipalityId, namespace, errandId,
 			toPaymentDecision(request, decidedBy, LocalDate.now(ZoneId.systemDefault())));
 
-		// 3. The payment rows, inside this transaction: a row that fails to save has to roll the decision back with it,
-		// rather than leave an errand with a decision and no payments for the BFF to register.
-		final var paymentIds = createPayments(errandId, request);
-
-		// 3b. A payment cannot be registered in Lifecare against a payee that is not there yet, so the receipt says which
-		// of the decided payees careM has not seen reported SYNCED. Deliberately a warning and not a guard: the decision is
-		// the caseworker's, and refusing here would strand an otherwise complete decision.
-		final var payeeWarnings = payeeService.unsyncedPayeeWarnings(errandId, decidedPayees(request));
-		payeeWarnings.forEach(warning -> LOG.warn("Errand {} finalized with a payee that is not in Lifecare yet: {}",
-			sanitizeForLogging(errandId), sanitizeForLogging(warning)));
-
-		// 4. Resume the process.
-		final var correlated = correlatePaymentDecision(municipalityId, namespace, errandId, request.getDecision().getOutcome());
+		// 3. Resume the process.
+		final var correlated = correlatePaymentDecision(municipalityId, namespace, errandId, outcome);
 
 		LOG.info("Finalized errand {} with outcome {} (decision {}, process correlated: {})", sanitizeForLogging(errandId),
-			sanitizeForLogging(request.getDecision().getOutcome()), sanitizeForLogging(decisionId), correlated);
+			sanitizeForLogging(outcome), sanitizeForLogging(decisionId), correlated);
 
 		return FinalizeResponse.create()
 			.withDecisionId(decisionId)
-			.withPaymentIds(paymentIds)
 			.withProcessMessageCorrelated(correlated)
-			.withCommunication(request.getCommunication())
-			.withPayeeWarnings(payeeWarnings);
+			.withCommunication(request.getCommunication());
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -169,18 +151,6 @@ public class FinancialAssistanceFinalizeService {
 		}
 	}
 
-	/** All three sections (CALCULATION, PAYMENT, DECISION) must be komplett-markerade. */
-	private void requireApprovedSections(final String errandId) {
-		final var approvals = sectionApprovalService.approvals(errandId);
-		final var notApproved = List.of(approvals.getCalculation(), approvals.getPayment(), approvals.getDecision()).stream()
-			.filter(approval -> !approval.isApproved())
-			.map(SectionApproval::getSection)
-			.toList();
-		if (!notApproved.isEmpty()) {
-			throw Problem.valueOf(CONFLICT, ERROR_SECTIONS_NOT_APPROVED.formatted(String.join(", ", notApproved)));
-		}
-	}
-
 	/** A second finalize would record a second decision and re-correlate a process that already moved on. */
 	private void requireNotFinalized(final String municipalityId, final String namespace, final String errandId) {
 		final var alreadyDecided = decisionService.readAll(municipalityId, namespace, errandId).stream()
@@ -191,35 +161,33 @@ public class FinancialAssistanceFinalizeService {
 	}
 
 	/**
-	 * A granting outcome (BIFALL/DELAVSLAG) is paid against the normberäkning in Lifecare, so the errand must carry the
-	 * {@code lifecareCalculationId} Draken sets after saving it. Without the guard the process would run
-	 * GRANTED&rarr;PAID&rarr;CLOSED with no calculation behind the payment. An avslag pays nothing and is let through.
+	 * The Lifecare artefacts the decision rests on must be linked to the errand. Every outcome is a beslut Draken saves in
+	 * Lifecare first, so {@code lifecareDecisionId} is always required. A granting outcome (BIFALL/DELAVSLAG) is paid
+	 * against the normberäkning in Lifecare, so it also needs {@code lifecareCalculationId}. Its payments are not a
+	 * precondition here: Draken registers them in Lifecare from its payment form without handing careM their ids, and the
+	 * process does not move the errand to PAID until payment-status has found them paid in Lifecare, on the errand's own
+	 * insats — a bifall whose payment is missing waits and is escalated to the caseworker, it never closes. An avslag
+	 * pays nothing: it needs no calculation, and a linked payment means money was registered in Lifecare for a decision
+	 * that grants none, so it is refused rather than recorded.
 	 */
-	private static void requireLifecareCalculation(final FinancialAssistanceEntity entity, final String errandId, final String outcome) {
-		if (outcomeCarriesAmount(outcome) && entity.getLifecareCalculationId() == null) {
+	private static void requireLifecareReferences(final FinancialAssistanceEntity entity, final String errandId, final String outcome) {
+		if (entity.getLifecareDecisionId() == null) {
+			throw Problem.valueOf(CONFLICT, ERROR_NO_LIFECARE_DECISION.formatted(errandId));
+		}
+		final var lifecarePaymentIds = linkedPaymentIds(entity);
+		if (!outcomeCarriesAmount(outcome)) {
+			if (!lifecarePaymentIds.isEmpty()) {
+				throw Problem.valueOf(CONFLICT, ERROR_PAYMENTS_ON_REJECTION.formatted(outcome, errandId, lifecarePaymentIds));
+			}
+			return;
+		}
+		if (entity.getLifecareCalculationId() == null) {
 			throw Problem.valueOf(CONFLICT, ERROR_NO_LIFECARE_CALCULATION.formatted(outcome, errandId));
 		}
 	}
 
-	// ------------------------------------------------------------------------------------------------------------------
-	// Payments
-	// ------------------------------------------------------------------------------------------------------------------
-
-	/** The payees the decision actually pays to, in request order — what the payee warnings are matched against. */
-	private static List<Payee> decidedPayees(final FinalizeRequest request) {
-		return ofNullable(request.getPayments()).orElseGet(List::<FinalizePayment>of).stream()
-			.map(FinalizePayment::getPayee)
-			.toList();
-	}
-
-	/**
-	 * Persist the decided payments and return their ids, in request order. Each becomes a {@code Payment} row Draken's
-	 * BFF registers in Lifecare and acknowledges back.
-	 */
-	private List<String> createPayments(final String errandId, final FinalizeRequest request) {
-		return ofNullable(request.getPayments()).orElseGet(List::<FinalizePayment>of).stream()
-			.map(payment -> paymentService.createForDecision(errandId, toPaymentRequest(payment)))
-			.toList();
+	private static List<String> linkedPaymentIds(final FinancialAssistanceEntity entity) {
+		return ofNullable(entity.getLifecarePaymentIds()).orElseGet(List::of);
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -228,11 +196,11 @@ public class FinancialAssistanceFinalizeService {
 
 	/**
 	 * Resume the process waiting at the decision gateway: {@code paymentDecision=APPROVED} for a granting outcome (the
-	 * process sets GRANTED and polls the payment), {@code REJECTED} otherwise. The status is
-	 * the process's to set, never this service's. Best-effort: an unreachable engine is reported as
-	 * {@code processMessageCorrelated=false}, and the message is queued for the scheduled retry in the transaction that
-	 * records the decision — so a saved decision cannot leave its process waiting before the decision gateway. If the
-	 * queueing itself fails, so does finalize, and nothing is saved.
+	 * process sets GRANTED and checks the payments in Lifecare), {@code REJECTED} otherwise. The status is the process's to
+	 * set, never this service's. Best-effort: an unreachable engine is reported as {@code processMessageCorrelated=false},
+	 * and the message is queued for the scheduled retry in the transaction that records the decision — so a saved
+	 * decision cannot leave its process waiting before the decision gateway. If the queueing itself fails, so does
+	 * finalize, and nothing is saved.
 	 */
 	private boolean correlatePaymentDecision(final String municipalityId, final String namespace, final String errandId, final String outcome) {
 		final String paymentDecision;

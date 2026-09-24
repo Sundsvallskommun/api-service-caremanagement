@@ -11,9 +11,10 @@ import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * The cross-field rules of a finalize request: a granting outcome (BIFALL/DELAVSLAG) needs an amount and at least one
- * payment, a non-granting one (AVSLAG) must carry no payments, and the decision period must not end before it
- * starts. Each broken rule is reported as its own violation on the field it concerns.
+ * The cross-field rules of a finalize request: a granting outcome (BIFALL/DELAVSLAG) needs an amount, and the decision
+ * period must not end before it starts. Each broken rule is reported as its own violation on the field it concerns. The
+ * Lifecare references the decision rests on (calculation, beslut, payments) are on the errand, not in the request, and
+ * are checked by the finalize service.
  */
 @Documented
 @Target(TYPE)

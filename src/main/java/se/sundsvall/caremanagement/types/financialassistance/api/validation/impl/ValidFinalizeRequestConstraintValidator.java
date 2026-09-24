@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.types.financialassistance.api.validation.imp
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
-import java.util.List;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.validation.ValidFinalizeRequest;
@@ -15,11 +14,8 @@ public class ValidFinalizeRequestConstraintValidator implements ConstraintValida
 
 	static final String NODE_AMOUNT = "decision.amount";
 	static final String NODE_PERIOD_TO = "decision.periodTo";
-	static final String NODE_PAYMENTS = "payments";
 
 	static final String ERROR_AMOUNT_REQUIRED = "must be given when the outcome carries an amount (BIFALL/DELAVSLAG)";
-	static final String ERROR_PAYMENTS_REQUIRED = "at least one payment is required when the outcome carries an amount (BIFALL/DELAVSLAG)";
-	static final String ERROR_PAYMENTS_FORBIDDEN = "must be empty when the outcome carries no amount (AVSLAG)";
 	static final String ERROR_PERIOD_ORDER = "must not be before periodFrom";
 
 	@Override
@@ -31,20 +27,10 @@ public class ValidFinalizeRequestConstraintValidator implements ConstraintValida
 			return true;
 		}
 
-		final var payments = ofNullable(request.getPayments()).orElseGet(List::of);
 		var isValid = true;
 
-		if (outcomeCarriesAmount(decision.getOutcome())) {
-			if (decision.getAmount() == null) {
-				addViolation(context, NODE_AMOUNT, ERROR_AMOUNT_REQUIRED);
-				isValid = false;
-			}
-			if (payments.isEmpty()) {
-				addViolation(context, NODE_PAYMENTS, ERROR_PAYMENTS_REQUIRED);
-				isValid = false;
-			}
-		} else if (!payments.isEmpty()) {
-			addViolation(context, NODE_PAYMENTS, ERROR_PAYMENTS_FORBIDDEN);
+		if (outcomeCarriesAmount(decision.getOutcome()) && decision.getAmount() == null) {
+			addViolation(context, NODE_AMOUNT, ERROR_AMOUNT_REQUIRED);
 			isValid = false;
 		}
 

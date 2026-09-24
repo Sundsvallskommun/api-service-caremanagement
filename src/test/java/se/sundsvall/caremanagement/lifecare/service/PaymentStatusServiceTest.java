@@ -106,4 +106,26 @@ class PaymentStatusServiceTest {
 
 		assertThat(service.paidPaymentDates(MUNICIPALITY_ID, "199001011234", LocalDate.parse("2026-05-01"), LocalDate.parse("2026-06-30"))).isEmpty();
 	}
+
+	@Test
+	void registeredPaymentsCarryTheInsatsMonthAndPayDateOfEveryPaymentWithAnId() {
+		when(lifecareFamilyCareIntegrationMock.getPayments(MUNICIPALITY_ID, "199001011234", LocalDate.parse("2026-05-01"), LocalDate.parse("2026-06-30")))
+			.thenReturn(new ApiPaginationCompositePersonBasedPaymentDTO().result(List.of(
+				new PersonBasedPaymentDTO().id(101).serviceId(7700).concernedMonth("2026-06").payDate("2026-05-27"),
+				new PersonBasedPaymentDTO().id(102).serviceId(7700).concernedMonth("2026-06"),
+				new PersonBasedPaymentDTO().serviceId(7700).payDate("2026-05-27"))));
+
+		final var payments = service.registeredPayments(MUNICIPALITY_ID, "199001011234", LocalDate.parse("2026-05-01"), LocalDate.parse("2026-06-30"));
+
+		assertThat(payments).containsExactly(
+			new LifecarePayment("101", 7700, "2026-06", "2026-05-27"),
+			new LifecarePayment("102", 7700, "2026-06", null));
+	}
+
+	@Test
+	void registeredPaymentsIsEmptyWhenResponseIsNull() {
+		when(lifecareFamilyCareIntegrationMock.getPayments(eq(MUNICIPALITY_ID), any(), any(), any())).thenReturn(null);
+
+		assertThat(service.registeredPayments(MUNICIPALITY_ID, "199001011234", LocalDate.parse("2026-05-01"), LocalDate.parse("2026-06-30"))).isEmpty();
+	}
 }

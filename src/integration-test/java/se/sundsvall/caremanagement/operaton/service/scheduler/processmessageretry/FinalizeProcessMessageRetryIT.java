@@ -60,10 +60,10 @@ class FinalizeProcessMessageRetryIT extends AbstractAppTest {
 			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequestAndVerifyResponse();
 
-		// The decision's payment is saved although the process was not reached ...
-		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).singleElement()
-			.satisfies(payment -> assertThat(payment.getStatus()).isEqualTo("PENDING_REGISTRATION"));
-		// ... and so is the message, waiting for the scheduled retry.
+		// The decision is saved although the process was not reached (the response carries its id), careM creates no
+		// payment - Draken registers it in Lifecare - ...
+		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
+		// ... and the message is saved too, waiting for the scheduled retry.
 		assertThat(retryRepository.findAll()).singleElement().satisfies(retry -> {
 			assertThat(retry.getErrandId()).isEqualTo(ERRAND_ID);
 			assertThat(retry.getMessageName()).isEqualTo("PaymentDecisionReceived");

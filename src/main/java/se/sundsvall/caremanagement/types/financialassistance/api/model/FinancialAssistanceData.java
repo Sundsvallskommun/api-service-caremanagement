@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -117,11 +119,27 @@ public class FinancialAssistanceData {
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime attestedAt;
 
-	@Schema(description = "The Lifecare decision (beslut) id the errand concerns, set by the caseworker", examples = "4711")
+	@Schema(description = """
+		Reference to the Lifecare decision (beslut) the errand concerns, set by Draken once the beslut is saved in Lifecare. \
+		A reference only: whether the beslut is locked (skrivskyddat) is Lifecare's status and is never stored here. finalize \
+		requires it for every outcome.""", examples = "4711")
 	private Integer lifecareDecisionId;
 
-	@Schema(description = "The Lifecare normberäkning (calculation) id the errand concerns, set by the caseworker once the calculation is saved in Lifecare", examples = "4242")
+	@Schema(description = """
+		Reference to the Lifecare normberäkning (calculation) the errand concerns, set by Draken once the calculation is saved \
+		in Lifecare. A reference only: whether the calculation is final (slutlig) is Lifecare's status and is never stored \
+		here. finalize requires it for a granting outcome (BIFALL/DELAVSLAG).""", examples = "4242")
 	private Integer lifecareCalculationId;
+
+	@ArraySchema(arraySchema = @Schema(description = """
+		References to the Lifecare payments (utbetalningar) a bifall pays with. Set either by Draken once it has registered a \
+		payment in Lifecare, or by careM itself once payment-status has found the errand's payments paid in Lifecare on the \
+		errand's own insats. When given in a PATCH the list replaces the stored one; an empty list clears it. References \
+		only: whether a payment is registered or paid out is read from Lifecare, never stored here. When set, payment-status \
+		verifies exactly these ids against Lifecare, and no other errand can take them; finalize refuses an AVSLAG that \
+		carries any."""),
+		schema = @Schema(implementation = String.class, maxLength = 64, examples = "90210"))
+	private List<@NotBlank @Size(max = 64) String> lifecarePaymentIds;
 
 	@ArraySchema(arraySchema = @Schema(description = "Children included in the application"), schema = @Schema(implementation = Child.class))
 	@Valid
@@ -501,6 +519,19 @@ public class FinancialAssistanceData {
 		return this;
 	}
 
+	public List<String> getLifecarePaymentIds() {
+		return lifecarePaymentIds;
+	}
+
+	public void setLifecarePaymentIds(final List<String> lifecarePaymentIds) {
+		this.lifecarePaymentIds = lifecarePaymentIds;
+	}
+
+	public FinancialAssistanceData withLifecarePaymentIds(final List<String> lifecarePaymentIds) {
+		this.lifecarePaymentIds = lifecarePaymentIds;
+		return this;
+	}
+
 	public List<Child> getChildren() {
 		return children;
 	}
@@ -639,6 +670,7 @@ public class FinancialAssistanceData {
 			&& Objects.equals(staysInMunicipality, that.staysInMunicipality) && Objects.equals(stayDescription, that.stayDescription)
 			&& Objects.equals(attestation, that.attestation) && Objects.equals(attestedAt, that.attestedAt)
 			&& Objects.equals(lifecareDecisionId, that.lifecareDecisionId) && Objects.equals(lifecareCalculationId, that.lifecareCalculationId)
+			&& Objects.equals(lifecarePaymentIds, that.lifecarePaymentIds)
 			&& Objects.equals(children, that.children) && Objects.equals(costs, that.costs) && Objects.equals(incomes, that.incomes)
 			&& Objects.equals(pendingBenefits, that.pendingBenefits) && Objects.equals(assets, that.assets)
 			&& Objects.equals(persons, that.persons) && Objects.equals(plannings, that.plannings)
@@ -651,7 +683,7 @@ public class FinancialAssistanceData {
 			otherBenefitDescription, livelihoodDescription, hasChildrenUnder21, childrenResidenceChanged,
 			childrenResidenceChangeDescription, housingForm, housingPersonCount, housingRoomsPlusKitchen,
 			housingDescription, housingChanged, housingChangeDescription, hasIncomes, hasPendingBenefits, hasAssets,
-			staysInMunicipality, stayDescription, attestation, attestedAt, lifecareDecisionId, lifecareCalculationId, children, costs, incomes, pendingBenefits, assets,
+			staysInMunicipality, stayDescription, attestation, attestedAt, lifecareDecisionId, lifecareCalculationId, lifecarePaymentIds, children, costs, incomes, pendingBenefits, assets,
 			persons, plannings, plannedActivities, jobApplications);
 	}
 
@@ -668,7 +700,7 @@ public class FinancialAssistanceData {
 			+ ", housingChangeDescription='" + housingChangeDescription + "', hasIncomes=" + hasIncomes + ", hasPendingBenefits="
 			+ hasPendingBenefits + ", hasAssets=" + hasAssets + ", staysInMunicipality=" + staysInMunicipality
 			+ ", stayDescription='" + stayDescription + "', attestation=" + attestation + ", attestedAt=" + attestedAt + ", lifecareDecisionId=" + lifecareDecisionId
-			+ ", lifecareCalculationId=" + lifecareCalculationId
+			+ ", lifecareCalculationId=" + lifecareCalculationId + ", lifecarePaymentIds=" + lifecarePaymentIds
 			+ ", children=" + children + ", costs=" + costs + ", incomes=" + incomes + ", pendingBenefits=" + pendingBenefits
 			+ ", assets=" + assets + ", persons=" + persons + ", plannings=" + plannings + ", plannedActivities="
 			+ plannedActivities + ", jobApplications=" + jobApplications + '}';

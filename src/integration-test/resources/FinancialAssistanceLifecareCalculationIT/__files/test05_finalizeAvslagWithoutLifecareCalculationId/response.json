@@ -1,11 +1,9 @@
 {
 	"decisionId": "${json-unit.any-string}",
-	"paymentIds": [],
 	"processMessageCorrelated": true,
 	"communication": {
 		"minaSidor": true,
 		"digitalMailbox": false,
 		"letter": false
-	},
-	"payeeWarnings": []
+	}
 }

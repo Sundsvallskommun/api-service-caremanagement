@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:52505
+- url: http://localhost:65459
   description: Generated server url
 security:
 - sentBy: []
@@ -25,10 +25,12 @@ tags:
 - name: Permits
   description: "Permits issued on an errand: validity period, conditions and status.\
     \ Revoking sets the status to REVOKED."
-- name: Financial Assistance · Payments
-  description: "Financial assistance payments (utbetalningar) on an errand, with full\
-    \ CRUD. Saved as DRAFT; a payment a decision created is registered in Lifecare\
-    \ by Draken's BFF, which reports the outcome through POST .../{paymentId}/lifecare-result."
+- name: Financial Assistance · Approvals
+  description: "DEPRECATED - being retired. Caseworker check-offs of the three financial\
+    \ assistance view sections (CALCULATION / PAYMENT / DECISION). They no longer\
+    \ gate finalize: whether the normberäkning is final, the beslut locked and the\
+    \ payment registered is Lifecare's status, read from Lifecare. Kept, with their\
+    \ stored rows, only until Draken stops reading and setting them."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
 - name: Financial Assistance · Monitorings
@@ -39,14 +41,14 @@ tags:
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen and mark them handled when acted on; expired ones are
     purged by a daily background job.
-- name: Financial Assistance · Finalize
-  description: "Besluta och utbetala: record the caseworker's decision and its payments\
-    \ and resume the process. The Lifecare writes (decision, payments, bevakningar,\
-    \ journal, documents) are made by Draken's BFF, which reports them back through\
-    \ the lifecare-result endpoints. The calculation is committed to Lifecare by the\
-    \ process, and the decision is sent to the applicant by the frontend."
 - name: Status History
   description: Status transition log for an errand
+- name: Financial Assistance · Finalize
+  description: "Besluta och utbetala: record the caseworker's decision and resume\
+    \ the process. The Lifecare writes (normberäkning, beslut, payments, bevakningar,\
+    \ journal, documents) are made by Draken's BFF directly in Lifecare before the\
+    \ decision; the errand only carries the references (lifecareCalculationId, lifecareDecisionId,\
+    \ lifecarePaymentIds). The decision is sent to the applicant by the frontend."
 - name: Metadata
   description: Metadata (lookup) operations
 - name: Namespace config
@@ -64,9 +66,6 @@ tags:
   description: "Pre-application and case-intake calls: eligibility routing (common\
     \ entry point), renewal pre-fill from Lifecare, the income/cost type metadata\
     \ catalogue, and Lifecare actualisation (case intake)."
-- name: Financial Assistance · Approvals
-  description: "Caseworker approval state of the three financial assistance view sections\
-    \ (CALCULATION / PAYMENT / DECISION) — read all three, or set/withdraw one."
 - name: Financial Assistance · Warnings
   description: "Acknowledgeable financial assistance income warnings on an errand\
     \ — create, list and set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare\
@@ -100,6 +99,9 @@ tags:
   description: "The calculation: prepare the calculation draft each daily loop (no\
     \ Lifecare write — Draken saves the normberäkning in Lifecare), and read or edit\
     \ the draft header."
+- name: Financial Assistance · Payment
+  description: Read from Lifecare whether the payments a bifall is linked to have
+    been paid out. caremanagement makes no payment and stores no payment status.
 - name: Financial Assistance · Errands
   description: "Create, read and replace financial assistance errands. Create against\
     \ one of the three application-type slugs (financial-assistance-new / -renewal\
@@ -118,9 +120,6 @@ tags:
   description: Formal case documents attached to an errand
 - name: Errands
   description: Errand operations
-- name: Financial Assistance · Payment
-  description: Read whether the manual Lifecare payment for the applicant and application
-    month has been effectuated. caremanagement makes no payment itself.
 - name: Financial Assistance · Draft rows
   description: "Caseworker edits to the draft calculation rows — add, edit, soft-delete\
     \ and restore income, expense and person rows. Each touches only the caseworker\
@@ -222,173 +221,6 @@ paths:
                 oneOf:
                 - $ref: "#/components/schemas/Problem"
                 - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payments/{paymentId}:
-    get:
-      tags:
-      - Financial Assistance · Payments
-      summary: Read a payment on an errand
-      operationId: getPayment
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: paymentId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Payment"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    put:
-      tags:
-      - Financial Assistance · Payments
-      summary: Replace a payment on an errand
-      description: Replaces the payment's mutable fields. status is server-managed
-        and never changed here.
-      operationId: updatePayment
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: paymentId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PaymentRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Payment"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    delete:
-      tags:
-      - Financial Assistance · Payments
-      summary: Delete a payment on an errand
-      operationId: deletePayment
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: paymentId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: Successful operation
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
         "500":
           description: Internal server error
           content:
@@ -2964,195 +2796,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payments:
-    get:
-      tags:
-      - Financial Assistance · Payments
-      summary: List the payments on an errand
-      operationId: listPayments
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Payment"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    post:
-      tags:
-      - Financial Assistance · Payments
-      summary: Create a payment on an errand
-      description: Creates a payment on the errand as a DRAFT. Nothing is written
-        to Lifecare. Returns the created payment and its Location.
-      operationId: createPayment
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PaymentRequest"
-        required: true
-      responses:
-        "201":
-          description: Successful operation
-          headers:
-            Location:
-              style: simple
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Payment"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payments/{paymentId}/lifecare-result:
-    post:
-      tags:
-      - Financial Assistance · Payments
-      summary: Report the outcome of registering the payment in Lifecare
-      description: "Reported by Draken's BFF after it registered the payment in Lifecare.\
-        \ The counterpart of the payee report, and the only thing that moves a payment\
-        \ out of PENDING_REGISTRATION. REGISTERED and ALREADY_EXISTS both set status=REGISTERED\
-        \ and store lifecarePaymentId as the payment's lifecareId; REGISTERED means\
-        \ the payment exists in Lifecare, not that it has been paid out. FAILED requires\
-        \ detail, which must be Lifecare's own message since it is shown to the caseworker\
-        \ as-is. Re-reporting the same outcome is idempotent; reporting FAILED on\
-        \ an already REGISTERED payment is a 409."
-      operationId: reportPaymentLifecareResult
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: paymentId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PaymentLifecareResult"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Payment"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "409":
-          description: Conflict
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payees:
     get:
       tags:
@@ -3471,19 +3114,20 @@ paths:
       summary: Besluta och utbetala — finalize the errand (caseworker)
       description: "Records the caseworker's decision as a PAYMENT decision on the\
         \ errand, stores the chosen communication channels and household-size flag,\
-        \ creates one PENDING_REGISTRATION payment per decided payment, and correlates\
-        \ PaymentDecisionReceived to the process (paymentDecision APPROVED for BIFALL/DELAVSLAG,\
-        \ REJECTED otherwise) — which sets GRANTED/REJECTED and polls the payment.\
-        \ A BIFALL/DELAVSLAG requires the normberäkning to be saved in Lifecare first:\
-        \ Draken saves it and sets lifecareCalculationId on the errand (PATCH .../financial-assistance/{errandId}/data)\
-        \ before the decision, otherwise 409; an AVSLAG does not. Does not send anything\
-        \ to the applicant: the response echoes the communication channels for the\
-        \ frontend to act on. Requires the errand in AWAITING_DECISION with all three\
-        \ sections approved and an identified caller (X-Sent-By); a second finalize\
-        \ is rejected with 409. Process failures and payees not yet in Lifecare are\
-        \ reported in the response, not as errors. The Lifecare writes (decision,\
-        \ payments, bevakningar, journal, documents) are Draken's BFF's, reported\
-        \ back through the lifecare-result endpoints."
+        \ and correlates PaymentDecisionReceived to the process (paymentDecision APPROVED\
+        \ for BIFALL/DELAVSLAG, REJECTED otherwise) — which sets GRANTED/REJECTED\
+        \ and, for a bifall, reads the payments from Lifecare until they are paid\
+        \ out. Creates no payments: Draken registers them directly in Lifecare. Every\
+        \ outcome requires the beslut to be saved in Lifecare and linked as lifecareDecisionId;\
+        \ a BIFALL/DELAVSLAG also requires the normberäkning saved in Lifecare and\
+        \ linked as lifecareCalculationId (both through PATCH .../financial-assistance/{errandId}/data),\
+        \ otherwise 409. An AVSLAG linked to Lifecare payments (lifecarePaymentIds)\
+        \ is refused with 409. The section approvals do not affect it. Does not send\
+        \ anything to the applicant: the response echoes the communication channels\
+        \ for the frontend to act on. Requires the errand in AWAITING_DECISION and\
+        \ an identified caller (X-Sent-By); a second finalize is rejected with 409.\
+        \ A process that could not be reached is reported in the response, not as\
+        \ an error."
       operationId: finalize
       parameters:
       - name: municipalityId
@@ -3516,8 +3160,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/FinalizeResponse"
         "409":
-          description: "Conflict - wrong status, sections not approved, already finalized,\
-            \ or a granting decision without lifecareCalculationId"
+          description: "Conflict - wrong status, already finalized, no lifecareDecisionId,\
+            \ a granting decision without lifecareCalculationId, or an avslag linked\
+            \ to Lifecare payments"
           content:
             application/problem+json:
               schema:
@@ -3880,12 +3525,19 @@ paths:
       tags:
       - Financial Assistance · Payment
       summary: Read whether the Lifecare payment has been effectuated
-      description: "Reads whether the Lifecare payments of a bifall have been registered,\
-        \ returning the effectuated flag, the payment date when effectuated and the\
-        \ reason when not. With errandId, every payment the errand's decision registered\
-        \ must be found in Lifecare by its Lifecare id; without it, any payment for\
-        \ the applicant and application month counts. caremanagement makes no payment;\
-        \ the process polls this to detect when it is done."
+      description: "Reads from Lifecare whether the payments of a bifall have been\
+        \ paid out, returning the effectuated flag, the payment date when effectuated,\
+        \ the reason when not, and the working-day deadline with an overdue flag.\
+        \ With errandId the check is errand-specific: the Lifecare payments linked\
+        \ to the errand (lifecarePaymentIds) must all be reported paid; an errand\
+        \ decided before those references existed is verified against the payment\
+        \ rows its finalize created; otherwise the applicant's Lifecare payments on\
+        \ the errand's own insats for the application month are used, never one another\
+        \ errand references, and once they are all paid they are linked to the errand.\
+        \ Overdue only after the deadline of three working days from the decision.\
+        \ Without errandId, any payment for the applicant and application month counts.\
+        \ caremanagement makes no payment; the process polls this to detect when it\
+        \ is done."
       operationId: checkPaymentStatus
       parameters:
       - name: municipalityId
@@ -5459,7 +5111,9 @@ paths:
         \ (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier\
         \ approval. Approving stamps who/when; withdrawing clears them. Approving\
         \ requires an identified caller (X-Sent-By) — an approval with no approver\
-        \ is rejected with 400."
+        \ is rejected with 400. Deprecated: approvals no longer gate finalize; the\
+        \ Lifecare statuses (final normberäkning, locked beslut, registered payment)\
+        \ replace them."
       operationId: setSectionApproval
       parameters:
       - name: municipalityId
@@ -5521,6 +5175,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+      deprecated: true
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/data:
     patch:
       tags:
@@ -7306,7 +6961,8 @@ paths:
       description: "The caseworker approval state of the three financial assistance\
         \ view sections (CALCULATION = calculation, PAYMENT = payment, DECISION =\
         \ decision). Always returns all three — a section never approved is present\
-        \ with approved=false. The same object is embedded in the errand view."
+        \ with approved=false. The same object is embedded in the errand view. Deprecated:\
+        \ approvals no longer gate finalize."
       operationId: getSectionApprovals
       parameters:
       - name: municipalityId
@@ -7352,6 +7008,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+      deprecated: true
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/rpa-context:
     get:
       tags:
@@ -7386,58 +7043,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RpaContext"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payments/count:
-    get:
-      tags:
-      - Financial Assistance · Payments
-      summary: Count the payments on an errand
-      description: How many payments are on the errand. Not recorded in the event
-        log.
-      operationId: countPayments
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PaymentCount"
         "400":
           description: Bad request
           content:
@@ -8612,390 +8217,6 @@ components:
           type: string
         message:
           type: string
-    PaymentRequest:
-      type: object
-      description: Request to create or replace a financial assistance payment on
-        an errand.
-      properties:
-        source:
-          type: string
-          description: "Provenance, defaults to CASEWORKER when omitted. LIFECARE\
-            \ (with lifecareId) posts a payment read out of Lifecare onto the errand."
-          enum:
-          - CASEWORKER
-          - LIFECARE
-          examples:
-          - CASEWORKER
-        lifecareId:
-          type: string
-          description: The payment's id in Lifecare. Set when posting a LIFECARE-sourced
-            payment (the idempotency key) or when stamping back the id of a registered
-            caseworker payment.
-          examples:
-          - "987654"
-          maxLength: 64
-          minLength: 0
-        moneyType:
-          type: string
-          description: The type of money paid out. Unconstrained — the value set comes
-            from Lifecare and isn't known yet.
-          examples:
-          - FORSORJNINGSSTOD
-          maxLength: 64
-          minLength: 0
-        paymentDate:
-          type: string
-          format: date
-          description: The date the payment is/was made
-          examples:
-          - 2026-08-25
-        amount:
-          type: number
-          description: The payment amount
-          examples:
-          - 4500.0
-        applicationMonth:
-          type: string
-          description: The application month the payment concerns
-          examples:
-          - 2026-08
-          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
-        accountingCode:
-          type: string
-          description: "The accounting code (kontering) the bistånd is booked against.\
-            \ Free text: FamilyCare exposes no catalogue of accounting codes over\
-            \ the API."
-          examples:
-          - 4631-1234
-          maxLength: 64
-          minLength: 0
-        reportedOnStakeholderIds:
-          type: array
-          description: Stakeholder ids the payment is reported on
-          items:
-            type: string
-            examples:
-            - f47ac10b-58cc-4372-a567-0e02b2c3d479
-            maxLength: 64
-            minLength: 0
-        accountingDate:
-          type: string
-          format: date
-          description: The accounting date for the payment
-          examples:
-          - 2026-08-25
-        excludedFromPayment:
-          type: boolean
-          description: Whether the payment is excluded from being paid out
-          examples:
-          - false
-        payeeId:
-          type: string
-          description: "The id of the payee row on the errand this payment pays to,\
-            \ as GET .../payees returns it. Send it when the caseworker picked an\
-            \ entry from that list — it is what lets Draken's BFF pick the payee by\
-            \ its Lifecare id instead of matching on name and account number. Omit\
-            \ it for a payee derived from the Lifecare payment history, which has\
-            \ no local row."
-          examples:
-          - a1b2c3d4-0000-0000-0000-000000000001
-        lifecarePayeeId:
-          type: string
-          description: "The payee's id in Lifecare. Send it when the caseworker picked\
-            \ a payee Lifecare already has — the list read from Lifecare, or one just\
-            \ created there — so the payment can be registered against that payee\
-            \ by id instead of matching on name and account number."
-          examples:
-          - "1234567"
-          maxLength: 64
-          minLength: 0
-        payeeStakeholderId:
-          type: string
-          description: The stakeholder id of the payee
-          examples:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-          maxLength: 64
-          minLength: 0
-        paymentMethod:
-          type: string
-          description: How the payment is made. Unconstrained — the value set comes
-            from Lifecare and isn't known yet.
-          examples:
-          - BANK_TRANSFER
-          maxLength: 64
-          minLength: 0
-        payeeName:
-          type: string
-          description: The payee's name
-          examples:
-          - Anna Andersson
-          maxLength: 255
-          minLength: 0
-        payeeAddress:
-          type: string
-          description: The payee's address
-          examples:
-          - Storgatan 1
-          maxLength: 255
-          minLength: 0
-        payeeCareOf:
-          type: string
-          description: The payee's c/o line
-          examples:
-          - c/o Bertil Bertilsson
-          maxLength: 255
-          minLength: 0
-        payeeZipCode:
-          type: string
-          description: The payee's zip code
-          examples:
-          - "85230"
-          maxLength: 16
-          minLength: 0
-        payeeCity:
-          type: string
-          description: The payee's city
-          examples:
-          - Sundsvall
-          maxLength: 255
-          minLength: 0
-        clearingNumber:
-          type: string
-          description: The payee's bank clearing number
-          examples:
-          - 8327-9
-          maxLength: 64
-          minLength: 0
-        accountNumber:
-          type: string
-          description: The payee's bank account number
-          examples:
-          - 123 456 789-0
-          maxLength: 64
-          minLength: 0
-        localPaymentNumber:
-          type: string
-          description: "The local payment number, when applicable"
-          examples:
-          - "4711"
-          maxLength: 64
-          minLength: 0
-        invoiceNumber:
-          type: string
-          description: "The invoice number, when applicable"
-          examples:
-          - 2026-00417
-          maxLength: 64
-          minLength: 0
-        usesOcr:
-          type: boolean
-          description: Whether the payment uses OCR
-          examples:
-          - false
-        messageLines:
-          type: array
-          description: Free-text message lines printed on the payment
-          items:
-            type: string
-            examples:
-            - Ekonomiskt bistånd augusti 2026
-            maxLength: 255
-            minLength: 0
-    Payment:
-      type: object
-      description: A financial assistance payment (utbetalning) on an errand.
-      properties:
-        id:
-          type: string
-          description: The payment id
-          examples:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-          readOnly: true
-        source:
-          type: string
-          description: "Provenance: CASEWORKER for one authored in Draken, LIFECARE\
-            \ for one read out of Lifecare and posted onto the errand."
-          enum:
-          - CASEWORKER
-          - LIFECARE
-          examples:
-          - CASEWORKER
-        lifecareId:
-          type: string
-          description: The payment's id in Lifecare once it exists there — null until
-            a caseworker-authored payment has been registered there; always set for
-            a LIFECARE-sourced one.
-          examples:
-          - "987654"
-        lifecareDetail:
-          type: string
-          description: Lifecare's own message when the lifecare-result report said
-            FAILED — shown to the caseworker as-is
-          examples:
-          - Betalningsmottagaren saknas i Lifecare
-          readOnly: true
-        status:
-          type: string
-          description: "Server-managed lifecycle status. DRAFT for a caseworker's\
-            \ saved draft; PENDING_REGISTRATION for one a decision created, waiting\
-            \ to be registered in Lifecare; REGISTERED once Draken's BFF has reported\
-            \ it registered (REGISTERED means it exists there, not that it has been\
-            \ paid out — whether it was effectuated is a separate question, asked\
-            \ through POST .../financial-assistance/payment-status); FAILED when it\
-            \ could not be registered, with Lifecare's reason in lifecareDetail."
-          enum:
-          - DRAFT
-          - PENDING_REGISTRATION
-          - REGISTERED
-          - FAILED
-          examples:
-          - DRAFT
-          readOnly: true
-        moneyType:
-          type: string
-          description: The type of money paid out. Unconstrained — the value set comes
-            from Lifecare and isn't known yet.
-          examples:
-          - FORSORJNINGSSTOD
-        paymentDate:
-          type: string
-          format: date
-          description: The date the payment is/was made
-          examples:
-          - 2026-08-25
-        amount:
-          type: number
-          description: The payment amount
-          examples:
-          - 4500.0
-        applicationMonth:
-          type: string
-          description: "The application month the payment concerns, yyyy-MM"
-          examples:
-          - 2026-08
-        accountingCode:
-          type: string
-          description: "The accounting code (kontering) the bistånd is booked against.\
-            \ Free text: FamilyCare exposes no catalogue of accounting codes over\
-            \ the API."
-          examples:
-          - 4631-1234
-        reportedOnStakeholderIds:
-          type: array
-          description: Stakeholder ids the payment is reported on
-          items:
-            type: string
-            examples:
-            - f47ac10b-58cc-4372-a567-0e02b2c3d479
-        accountingDate:
-          type: string
-          format: date
-          description: The accounting date for the payment
-          examples:
-          - 2026-08-25
-        excludedFromPayment:
-          type: boolean
-          description: Whether the payment is excluded from being paid out
-          examples:
-          - false
-        payeeId:
-          type: string
-          description: "The id of the payee row on the errand this payment pays to,\
-            \ as GET .../payees returns it. Null for a payee derived from the Lifecare\
-            \ payment history (no local row) and for a manual payee deleted after\
-            \ the decision — the copied payee fields below are owned by the decision\
-            \ and stay either way."
-          examples:
-          - a1b2c3d4-0000-0000-0000-000000000001
-        lifecarePayeeId:
-          type: string
-          description: "The payee's id in Lifecare, read from that payee row — set\
-            \ once the payee's creation in Lifecare has been reported back. Lets Draken's\
-            \ BFF pick the payee in Lifecare by id instead of matching on name and\
-            \ account number. Null when the payee has no local row, or when its creation\
-            \ has not been reported yet (lifecareStatus PENDING or FAILED on that\
-            \ payee)."
-          examples:
-          - "44213"
-          readOnly: true
-        payeeStakeholderId:
-          type: string
-          description: The stakeholder id of the payee
-          examples:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-        paymentMethod:
-          type: string
-          description: How the payment is made. Unconstrained — the value set comes
-            from Lifecare and isn't known yet.
-          examples:
-          - BANK_TRANSFER
-        payeeName:
-          type: string
-          description: The payee's name
-          examples:
-          - Anna Andersson
-        payeeAddress:
-          type: string
-          description: The payee's address
-          examples:
-          - Storgatan 1
-        payeeCareOf:
-          type: string
-          description: The payee's c/o line
-          examples:
-          - c/o Bertil Bertilsson
-        payeeZipCode:
-          type: string
-          description: The payee's zip code
-          examples:
-          - "85230"
-        payeeCity:
-          type: string
-          description: The payee's city
-          examples:
-          - Sundsvall
-        clearingNumber:
-          type: string
-          description: The payee's bank clearing number
-          examples:
-          - 8327-9
-        accountNumber:
-          type: string
-          description: The payee's bank account number
-          examples:
-          - 123 456 789-0
-        localPaymentNumber:
-          type: string
-          description: "The local payment number, when applicable"
-          examples:
-          - "4711"
-        invoiceNumber:
-          type: string
-          description: "The invoice number, when applicable"
-          examples:
-          - 2026-00417
-        usesOcr:
-          type: boolean
-          description: Whether the payment uses OCR
-          examples:
-          - false
-        messageLines:
-          type: array
-          description: Free-text message lines printed on the payment
-          items:
-            type: string
-            examples:
-            - Ekonomiskt bistånd augusti 2026
-        created:
-          type: string
-          format: date-time
-          description: When the payment was created
-          readOnly: true
-        modified:
-          type: string
-          format: date-time
-          description: When the payment was last modified
-          readOnly: true
     MonitoringRequest:
       type: object
       description: Request to create or replace a financial assistance monitoring
@@ -9668,17 +8889,39 @@ components:
         lifecareDecisionId:
           type: integer
           format: int32
-          description: "The Lifecare decision (beslut) id the errand concerns, set\
-            \ by the caseworker"
+          description: "Reference to the Lifecare decision (beslut) the errand concerns,\
+            \ set by Draken once the beslut is saved in Lifecare. A reference only:\
+            \ whether the beslut is locked (skrivskyddat) is Lifecare's status and\
+            \ is never stored here. finalize requires it for every outcome."
           examples:
           - 4711
         lifecareCalculationId:
           type: integer
           format: int32
-          description: "The Lifecare normberäkning (calculation) id the errand concerns,\
-            \ set by the caseworker once the calculation is saved in Lifecare"
+          description: "Reference to the Lifecare normberäkning (calculation) the\
+            \ errand concerns, set by Draken once the calculation is saved in Lifecare.\
+            \ A reference only: whether the calculation is final (slutlig) is Lifecare's\
+            \ status and is never stored here. finalize requires it for a granting\
+            \ outcome (BIFALL/DELAVSLAG)."
           examples:
           - 4242
+        lifecarePaymentIds:
+          type: array
+          description: "References to the Lifecare payments (utbetalningar) a bifall\
+            \ pays with. Set either by Draken once it has registered a payment in\
+            \ Lifecare, or by careM itself once payment-status has found the errand's\
+            \ payments paid in Lifecare on the errand's own insats. When given in\
+            \ a PATCH the list replaces the stored one; an empty list clears it. References\
+            \ only: whether a payment is registered or paid out is read from Lifecare,\
+            \ never stored here. When set, payment-status verifies exactly these ids\
+            \ against Lifecare, and no other errand can take them; finalize refuses\
+            \ an AVSLAG that carries any."
+          items:
+            type: string
+            examples:
+            - "90210"
+            maxLength: 64
+            minLength: 0
         children:
           type: array
           description: Children included in the application
@@ -11086,38 +10329,6 @@ components:
           format: date-time
           description: When the warning was last updated
           readOnly: true
-    PaymentLifecareResult:
-      type: object
-      description: Draken's BFF's report on registering a payment in Lifecare.
-      properties:
-        outcome:
-          type: string
-          description: What the BFF ended up doing
-          enum:
-          - REGISTERED
-          - ALREADY_EXISTS
-          - FAILED
-          examples:
-          - REGISTERED
-          minLength: 1
-        lifecarePaymentId:
-          type: string
-          description: "The payment id Lifecare gave, when it gave one — what CreatePaymentForService\
-            \ returns. Stored as the payment's lifecareId"
-          examples:
-          - "4"
-          maxLength: 64
-          minLength: 0
-        detail:
-          type: string
-          description: Lifecare's own message. Required when outcome is FAILED — it
-            is shown to the caseworker as-is
-          examples:
-          - Betalningsmottagaren saknas i Lifecare
-          maxLength: 1024
-          minLength: 0
-      required:
-      - outcome
     PayeeRequest:
       type: object
       description: A betalningsmottagare to add by hand on an errand.
@@ -11356,64 +10567,12 @@ components:
           minLength: 0
       required:
       - outcome
-    FinalizePayment:
-      type: object
-      description: One payment to register in Lifecare for a granting decision.
-      properties:
-        paymentDate:
-          type: string
-          format: date
-          description: The date the payment is to be made
-          examples:
-          - 2026-06-25
-        amount:
-          type: number
-          description: The payment amount in SEK
-          examples:
-          - 7900.0
-          minimum: 0
-        concernedMonth:
-          type: string
-          description: "The month the payment concerns (ISO year-month, yyyy-MM) —\
-            \ the month the process polls Lifecare payments for"
-          examples:
-          - 2026-06
-          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
-        payee:
-          $ref: "#/components/schemas/Payee"
-          description: Who the payment goes to and how
-        accountingCode:
-          type: string
-          description: Optional accounting code (kontering) for the payment
-          examples:
-          - "5011"
-          maxLength: 64
-          minLength: 0
-        localPaymentNumber:
-          type: string
-          description: "The payee's local payment number (lokalbetalningsnummer),\
-            \ for the payment methods Lifecare takes one for"
-          examples:
-          - "4711"
-          maxLength: 64
-          minLength: 0
-        invoiceNumber:
-          type: string
-          description: "The invoice number (räkningsnummer). Lifecare requires it\
-            \ for some payment methods, e.g. bankgiro via plusgiro."
-          examples:
-          - 2026-00417
-          maxLength: 64
-          minLength: 0
-      required:
-      - amount
-      - concernedMonth
-      - payee
-      - paymentDate
     FinalizeRequest:
       type: object
       description: "Finalize a financial assistance errand: record the decision and\
-        \ its payments and resume the process."
+        \ resume the process. Carries no payments - Draken registers them directly\
+        \ in Lifecare, and the process reads them from there. A payments field from\
+        \ an older client is ignored."
       properties:
         decision:
           $ref: "#/components/schemas/FinalizeDecision"
@@ -11422,12 +10581,6 @@ components:
           $ref: "#/components/schemas/CommunicationChannels"
           description: The channels chosen for sending the calculation and decision
             to the applicant
-        payments:
-          type: array
-          description: The payments to register in Lifecare. Required (at least one)
-            when the outcome carries an amount; must be empty for AVSLAG.
-          items:
-            $ref: "#/components/schemas/FinalizePayment"
         householdSizeChanged:
           type: boolean
           description: Whether the caseworker changed the household size (gemensamma
@@ -11438,110 +10591,16 @@ components:
       required:
       - communication
       - decision
-    Payee:
-      type: object
-      description: The recipient of a payment and the payment method.
-      properties:
-        id:
-          type: string
-          description: "The id of the payee row this came from, as GET .../payees\
-            \ returns it — send it whenever the caseworker picked an entry from that\
-            \ list. It is what lets Draken's BFF pick the payee by its Lifecare id\
-            \ instead of matching on name and account number. Omit it for a payee\
-            \ that has no row: one derived from the Lifecare payment history carries\
-            \ a null id in the list."
-          examples:
-          - a1b2c3d4-0000-0000-0000-000000000001
-        name:
-          type: string
-          description: Name of the payee as registered in Lifecare
-          examples:
-          - Anna Andersson
-          maxLength: 255
-          minLength: 0
-        paymentMethod:
-          type: string
-          description: "The Lifecare payment method, e.g. bank account, bankgiro,\
-            \ plusgiro or utbetalningskort"
-          examples:
-          - BANKKONTO
-          maxLength: 64
-          minLength: 0
-        clearing:
-          type: string
-          description: "Clearing number, when the payment method needs one"
-          examples:
-          - "6000"
-          maxLength: 16
-          minLength: 0
-        accountNumber:
-          type: string
-          description: "Account, bankgiro or plusgiro number, when the payment method\
-            \ needs one"
-          examples:
-          - "123456789"
-          maxLength: 64
-          minLength: 0
-        lifecarePayeeId:
-          type: string
-          description: "The payee's id in Lifecare. Send it when the caseworker picked\
-            \ a payee Lifecare already has — the list read from Lifecare, or one just\
-            \ created there — so the payment can be registered against that payee\
-            \ by id instead of matching on name and account number."
-          examples:
-          - "1234567"
-          maxLength: 64
-          minLength: 0
-        address:
-          type: string
-          description: The payee's street address
-          examples:
-          - Storgatan 1
-          maxLength: 255
-          minLength: 0
-        careOf:
-          type: string
-          description: The payee's c/o line
-          examples:
-          - c/o Bertil Bertilsson
-          maxLength: 255
-          minLength: 0
-        zipCode:
-          type: string
-          description: The payee's zip code
-          examples:
-          - "85230"
-          maxLength: 16
-          minLength: 0
-        city:
-          type: string
-          description: The payee's city
-          examples:
-          - Sundsvall
-          maxLength: 255
-          minLength: 0
-      required:
-      - name
-      - paymentMethod
     FinalizeResponse:
       type: object
-      description: "The receipt of a finalize — decision id, payment ids, process\
-        \ correlation, payee warnings and the communication channels to act on."
+      description: "The receipt of a finalize — decision id, process correlation and\
+        \ the communication channels to act on."
       properties:
         decisionId:
           type: string
           description: Id of the PAYMENT decision recorded on the errand
           examples:
           - cb20c51f-fcf3-42c0-b613-de563634a8ec
-        paymentIds:
-          type: array
-          description: "The ids of the Payment rows the finalize created, in request\
-            \ order. Draken's BFF reads each through GET .../payments/{paymentId},\
-            \ registers it in Lifecare and reports back through .../payments/{paymentId}/lifecare-result."
-          items:
-            type: string
-            examples:
-            - f47ac10b-58cc-4372-a567-0e02b2c3d479
         processMessageCorrelated:
           type: boolean
           description: "Whether the PaymentDecisionReceived message reached the process.\
@@ -11555,20 +10614,6 @@ components:
           $ref: "#/components/schemas/CommunicationChannels"
           description: The communication channels chosen — the frontend sends the
             decision through these
-        payeeWarnings:
-          type: array
-          description: "Warnings about the payees the decision pays to — a payment\
-            \ cannot be registered in Lifecare against a payee that is not there yet.\
-            \ Present when a payment names a manually added payee careM has not seen\
-            \ reported SYNCED (payees/{payeeId}/lifecare-result). Empty when every\
-            \ payee is in Lifecare. The finalize itself is not blocked by these; the\
-            \ decision and the payment rows are created either way."
-          items:
-            type: string
-            examples:
-            - Betalningsmottagaren "Sundsvalls Hyresbostäder AB" är inte upplagd i
-              Lifecare ännu – utbetalningen kan inte registreras förrän den har lagts
-              upp där.
       readOnly: true
     NormPersonInput:
       type: object
@@ -12047,9 +11092,10 @@ components:
         errandId:
           type: string
           description: |-
-            The errand whose decided payments to verify. When given, the status is effectuated only when every payment the
-            decision registered is found in Lifecare, by its Lifecare id. Without it, any Lifecare payment for the applicant and
-            application month counts — kept only for callers that predate the field.
+            The errand whose payments to verify. When given, the check is errand-specific: the Lifecare payments linked to the
+            errand (lifecarePaymentIds), else the payment rows an earlier finalize created, else the applicant's Lifecare
+            payments on the errand's own insats for the application month that no other errand references. Without it, any
+            Lifecare payment for the applicant and application month counts — kept only for callers that predate the field.
           examples:
           - a3c1f4de-2b6a-4c1e-9d3f-7e8a9b0c1d2e
         applicant:
@@ -12074,8 +11120,8 @@ components:
       properties:
         effectuated:
           type: boolean
-          description: "True when the decided payments (or, without an errand, a payment\
-            \ for the application month) are registered in Lifecare"
+          description: "True when Lifecare reports the errand's payments paid (or,\
+            \ without an errand, a payment for the application month)"
           examples:
           - true
         paymentDate:
@@ -12088,19 +11134,17 @@ components:
           description: "Why the status is not effectuated, in words a caseworker can\
             \ act on; empty when effectuated"
           examples:
-          - 1 av 2 beslutade utbetalningar är inte registrerade i Lifecare
+          - 1 av 2 kopplade utbetalningar är inte utbetalda i Lifecare ännu
         deadline:
           type: string
-          description: The last working day the errand's decided payments may wait
-            (ISO date); absent without an errand or when the errand has no decided
-            payments
+          description: "The last working day the errand's payments may wait, counted\
+            \ from the decision (ISO date); absent without an errand"
           examples:
           - 2026-09-28
         overdue:
           type: boolean
-          description: "True when the payments are still not effectuated after the\
-            \ deadline, or the bifall has no decided payments at all — the process\
-            \ then notifies the caseworker. Never closes anything."
+          description: True when the payments are still not effectuated after the
+            deadline — the process then notifies the caseworker. Never closes anything.
           examples:
           - false
     EligibilityRequest:
@@ -13455,9 +12499,12 @@ components:
           readOnly: true
         sectionApprovals:
           $ref: "#/components/schemas/SectionApprovals"
-          description: "The caseworker approval state of the three financial assistance\
-            \ view sections (calculation, payment, decision) — whether each has been\
-            \ verified as approved. Always present with all three sections."
+          deprecated: true
+          description: "DEPRECATED - being retired. The caseworker check-offs of the\
+            \ three financial assistance view sections (calculation, payment, decision).\
+            \ They no longer gate finalize; the Lifecare statuses (final normberä\
+            kning, locked beslut, registered payment) replace them. Always present\
+            \ with all three sections while it remains."
           readOnly: true
         communication:
           $ref: "#/components/schemas/CommunicationChannels"
@@ -13545,16 +12592,6 @@ components:
             or it could not be resolved
           examples:
           - 19850505T002
-    PaymentCount:
-      type: object
-      description: The number of payments on the errand
-      properties:
-        count:
-          type: integer
-          format: int64
-          description: Number of payments on the errand
-          examples:
-          - 2
     MonitoringCount:
       type: object
       description: The number of monitorings on the errand

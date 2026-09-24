@@ -84,6 +84,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);
 		assertThat(entity.getLifecareDecisionId()).isEqualTo(4711);
 		assertThat(entity.getLifecareCalculationId()).isEqualTo(4242);
+		assertThat(entity.getLifecarePaymentIds()).containsExactly("90210", "90211"); // a repeated id is one reference
 		assertThat(entity.getChildren()).hasSize(1);
 		assertThat(entity.getChildren().getFirst().getPartyId()).isEqualTo("20180101-1234");
 		assertThat(entity.getChildren().getFirst().getFirstName()).isEqualTo("Kid");
@@ -222,6 +223,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(result.getAttestedAt()).isEqualTo(ATTESTED_AT);
 		assertThat(result.getLifecareDecisionId()).isEqualTo(4711);
 		assertThat(result.getLifecareCalculationId()).isEqualTo(4242);
+		assertThat(result.getLifecarePaymentIds()).containsExactly("90210", "90211");
 		assertThat(result.getChildren()).hasSize(1);
 		assertThat(result.getCosts()).hasSize(1);
 		assertThat(result.getIncomes()).hasSize(1);
@@ -296,6 +298,7 @@ class FinancialAssistanceMapperTest {
 		assertThat(data.getAttestedAt()).isEqualTo(ATTESTED_AT);
 		assertThat(data.getLifecareDecisionId()).isEqualTo(4712);
 		assertThat(data.getLifecareCalculationId()).isEqualTo(4243);
+		assertThat(data.getLifecarePaymentIds()).containsExactly("90300");
 		assertThat(data.getChildren()).hasSize(1);
 		assertThat(data.getChildren().getFirst().getFirstName()).isEqualTo("Kid");
 		assertThat(data.getCosts()).hasSize(1);
@@ -504,6 +507,7 @@ class FinancialAssistanceMapperTest {
 			.withAttestedAt(ATTESTED_AT)
 			.withLifecareDecisionId(4711)
 			.withLifecareCalculationId(4242)
+			.withLifecarePaymentIds(List.of("90210", "90211", "90210"))
 			.withChildren(List.of(Child.create()
 				.withPartyId("20180101-1234")
 				.withFirstName("Kid")
@@ -605,6 +609,7 @@ class FinancialAssistanceMapperTest {
 			.withLifecareServiceId(7700)
 			.withLifecareDecisionId(4712)
 			.withLifecareCalculationId(4243)
+			.withLifecarePaymentIds(List.of("90300"))
 			.withHouseholdSizeChanged(true)
 			.withNotifyMinaSidor(true)
 			.withNotifyDigitalMailbox(false)

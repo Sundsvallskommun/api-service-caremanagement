@@ -5,9 +5,7 @@ import java.time.LocalDate;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizePayment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
 import static java.util.Optional.ofNullable;
@@ -15,8 +13,8 @@ import static se.sundsvall.caremanagement.decisions.service.DecisionService.LIFE
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.outcomeCarriesAmount;
 
 /**
- * Mappings for the finalize ("Besluta och utbetala") step: the request → the {@code PAYMENT} decision row, the request
- * → the entity's audit fields, and the request's payments → {@link PaymentRequest}s.
+ * Mappings for the finalize ("Besluta och utbetala") step: the request → the {@code PAYMENT} decision row, and the
+ * request → the entity's audit fields.
  */
 public final class FinalizeMapper {
 
@@ -72,36 +70,5 @@ public final class FinalizeMapper {
 					.withNotifyLetter(ofNullable(channels.getLetter()).orElse(false));
 			})
 			.orElse(null);
-	}
-
-	/** The finalize payment as a {@link PaymentRequest}, bridging the two models' naming. */
-	public static PaymentRequest toPaymentRequest(final FinalizePayment payment) {
-		final var request = PaymentRequest.create();
-		ofNullable(payment).ifPresent(source -> {
-			request.setPaymentDate(source.getPaymentDate());
-			request.setAmount(source.getAmount());
-			// concernedMonth on the finalize model, applicationMonth on the payment - same yyyy-MM, different word
-			request.setApplicationMonth(source.getConcernedMonth());
-			request.setAccountingCode(source.getAccountingCode());
-			request.setLocalPaymentNumber(source.getLocalPaymentNumber());
-			request.setInvoiceNumber(source.getInvoiceNumber());
-			ofNullable(source.getPayee()).ifPresent(payee -> {
-				// The payee row's id, when the caseworker picked one from the errand's payee list, and the payee's
-				// Lifecare id, when they picked one Lifecare already has. Either carries the link to lifecarePayeeId
-				// through to GET .../payments/{paymentId}, so the payment can be registered against the payee in Lifecare
-				// by id instead of by matching on name and account number.
-				request.setPayeeId(payee.getId());
-				request.setLifecarePayeeId(payee.getLifecarePayeeId());
-				request.setPayeeName(payee.getName());
-				request.setPaymentMethod(payee.getPaymentMethod());
-				request.setClearingNumber(payee.getClearing());
-				request.setAccountNumber(payee.getAccountNumber());
-				request.setPayeeAddress(payee.getAddress());
-				request.setPayeeCareOf(payee.getCareOf());
-				request.setPayeeZipCode(payee.getZipCode());
-				request.setPayeeCity(payee.getCity());
-			});
-		});
-		return request;
 	}
 }

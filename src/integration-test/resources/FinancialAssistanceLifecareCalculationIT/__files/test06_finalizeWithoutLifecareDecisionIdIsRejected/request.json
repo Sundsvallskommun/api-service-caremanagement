@@ -1,11 +1,10 @@
 {
 	"decision": {
-		"outcome": "BIFALL",
-		"reason": "Arbetslös, ingen ersättning/stöd",
+		"outcome": "AVSLAG",
+		"reason": "Utan försörjningshinder",
 		"periodFrom": "2026-10-01",
 		"periodTo": "2026-10-31",
-		"amount": 5200,
-		"decisionMessage": "Du beviljas ekonomiskt bistånd för oktober 2026."
+		"decisionMessage": "Din ansökan om ekonomiskt bistånd för oktober 2026 avslås."
 	},
 	"communication": {
 		"minaSidor": true,

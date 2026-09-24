@@ -1,7 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import java.math.BigDecimal;
-import java.util.List;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
@@ -29,17 +28,14 @@ class FinalizeRequestTest {
 	void testBuilderMethods() {
 		final var decision = FinalizeDecision.create().withOutcome("BIFALL").withAmount(new BigDecimal("7900"));
 		final var communication = CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false);
-		final var payments = List.of(FinalizePayment.create().withConcernedMonth("2026-06"));
 
 		final var request = FinalizeRequest.create()
 			.withDecision(decision)
 			.withCommunication(communication)
-			.withPayments(payments)
 			.withHouseholdSizeChanged(true);
 
 		assertThat(request.getDecision()).isEqualTo(decision);
 		assertThat(request.getCommunication()).isEqualTo(communication);
-		assertThat(request.getPayments()).isEqualTo(payments);
 		assertThat(request.getHouseholdSizeChanged()).isTrue();
 		assertThat(request).hasNoNullFieldsOrProperties();
 	}

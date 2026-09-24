@@ -9,16 +9,24 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
+import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.decisions.api.model.Decision;
+import se.sundsvall.caremanagement.decisions.service.DecisionService;
+import se.sundsvall.caremanagement.lifecare.service.LifecarePayment;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.time.Month.JUNE;
@@ -50,6 +58,18 @@ class FinancialAssistancePaymentServiceTest {
 	@Mock
 	private CitizenService citizenServiceMock;
 
+	@Mock
+	private ErrandService errandServiceMock;
+
+	@Mock
+	private FinancialAssistanceRepository financialAssistanceRepositoryMock;
+
+	@Mock
+	private DecisionService decisionServiceMock;
+
+	@Mock
+	private LifecareServiceIdService lifecareServiceIdServiceMock;
+
 	// "Today" is Wednesday 2026-09-23, Swedish time.
 	private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-23T10:00:00Z"), ZoneId.of("Europe/Stockholm"));
 
@@ -57,7 +77,8 @@ class FinancialAssistancePaymentServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new FinancialAssistancePaymentService(paymentStatusServiceMock, paymentServiceMock, citizenServiceMock, CLOCK);
+		service = new FinancialAssistancePaymentService(paymentStatusServiceMock, paymentServiceMock, citizenServiceMock, errandServiceMock,
+			financialAssistanceRepositoryMock, decisionServiceMock, lifecareServiceIdServiceMock, CLOCK);
 	}
 
 	private static PaymentStatusRequest errandRequest() {
@@ -66,6 +87,216 @@ class FinancialAssistancePaymentServiceTest {
 
 	private static Payment decided(final String status, final String lifecareId, final LocalDate paymentDate) {
 		return Payment.create().withSource("CASEWORKER").withStatus(status).withLifecareId(lifecareId).withPaymentDate(paymentDate);
+	}
+
+	/** The errand is linked to these Lifecare payments and was decided on the given day. */
+	private void linkedErrand(final LocalDate decisionDate, final String... lifecarePaymentIds) {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID))
+			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withLifecarePaymentIds(List.of(lifecarePaymentIds))));
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Decision.create().withDecisionType("RECOMMENDATION").withDecisionDate(LocalDate.of(2026, 9, 1)),
+			Decision.create().withDecisionType("PAYMENT").withValue("BIFALL").withDecisionDate(decisionDate)));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
+	}
+
+	@Test
+	void linkedPaymentsAreEffectuatedWhenLifecareReportsEveryOnePaid() {
+		linkedErrand(LocalDate.of(2026, 9, 21), "101", "102");
+		// The window runs from the month before the application month to a month past today, for a payment dated ahead.
+		when(paymentStatusServiceMock.paidPaymentDates(MUNICIPALITY_ID, PERSONAL_NUMBER, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 10, 23)))
+			.thenReturn(Map.of("101", "2026-09-22", "102", "2026-09-23", "999", "2026-09-24"));
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isTrue();
+		assertThat(response.getPaymentDate()).isEqualTo("2026-09-23");
+		assertThat(response.getDetail()).isNull();
+		assertThat(response.getDeadline()).isEqualTo("2026-09-24"); // Monday + 3 working days
+		assertThat(response.getOverdue()).isFalse();
+		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		// The payment rows are the old path; a linked errand never reads them.
+		verifyNoInteractions(paymentServiceMock);
+	}
+
+	@Test
+	void linkedPaymentsAreNotEffectuatedByAnotherPaymentLifecareHasPaid() {
+		linkedErrand(LocalDate.of(2026, 9, 21), "101", "102");
+		when(paymentStatusServiceMock.paidPaymentDates(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(Map.of("101", "2026-09-22", "555", "2026-09-22"));
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isFalse();
+		assertThat(response.getPaymentDate()).isNull();
+		assertThat(response.getDetail()).isEqualTo("1 av 2 kopplade utbetalningar är inte utbetalda i Lifecare ännu");
+		assertThat(response.getDeadline()).isEqualTo("2026-09-24");
+		assertThat(response.getOverdue()).isFalse();
+	}
+
+	@Test
+	void linkedPaymentsAreOverdueTheDayAfterTheThirdWorkingDayAfterTheDecision() {
+		// Decided Thursday 2026-09-17: Friday, Monday, Tuesday - the deadline is Tuesday 2026-09-22, overdue on the 23rd.
+		linkedErrand(LocalDate.of(2026, 9, 17), "101");
+		when(paymentStatusServiceMock.paidPaymentDates(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(Map.of());
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isFalse();
+		assertThat(response.getDeadline()).isEqualTo("2026-09-22");
+		assertThat(response.getOverdue()).isTrue();
+	}
+
+	@Test
+	void linkedPaymentsCountTheDeadlineFromTheDayTheDecisionWasRecordedWhenItHasNoDate() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID))
+			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withLifecarePaymentIds(List.of("101"))));
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Decision.create().withDecisionType("PAYMENT").withCreated(OffsetDateTime.parse("2026-09-16T23:30:00Z")))); // the 17th in Sweden
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
+		when(paymentStatusServiceMock.paidPaymentDates(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(Map.of());
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getDeadline()).isEqualTo("2026-09-22");
+		assertThat(response.getOverdue()).isTrue();
+	}
+
+	@Test
+	void linkedPaymentsWithoutADecisionCountFromTodaySoTheyCannotEscalate() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID))
+			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withLifecarePaymentIds(List.of("101"))));
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Decision.create().withDecisionType("PAYMENT")));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
+		when(paymentStatusServiceMock.paidPaymentDates(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(Map.of());
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getDeadline()).isEqualTo("2026-09-28"); // Wednesday + 3 working days
+		assertThat(response.getOverdue()).isFalse();
+	}
+
+	/**
+	 * An errand Draken did not link payments to, decided on the given day, whose insats in Lifecare is 7700 — the ids
+	 * the Lifecare payments on it carry are not referenced by another errand unless a test says so.
+	 */
+	private FinancialAssistanceEntity unlinkedErrand(final LocalDate decisionDate) {
+		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+		// A draft is not a decided payment, so the errand has no older payment rows to be read from.
+		when(paymentServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(decided("DRAFT", null, null)));
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Decision.create().withDecisionType("PAYMENT").withValue("BIFALL").withDecisionDate(decisionDate)));
+		when(lifecareServiceIdServiceMock.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(7700);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
+		return entity;
+	}
+
+	@Test
+	void paymentsOnTheErrandsInsatsAreFoundInLifecareAndLinkedOncePaid() {
+		final var entity = unlinkedErrand(LocalDate.of(2026, 9, 21));
+		when(paymentStatusServiceMock.registeredPayments(MUNICIPALITY_ID, PERSONAL_NUMBER, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 10, 23))).thenReturn(List.of(
+			new LifecarePayment("101", 7700, "2026-06", "2026-06-25"),
+			new LifecarePayment("102", 7700, "2026-06, 2026-07", "2026-06-26"),
+			new LifecarePayment("200", 9999, "2026-06", "2026-06-25"), // another insats
+			new LifecarePayment("300", 7700, "2026-05", "2026-05-25"), // another month
+			new LifecarePayment("400", 7700, "2026-06", "2026-06-25"), // another errand's linked payment
+			new LifecarePayment("500", 7700, "2026-06", "2026-06-25"))); // another errand's older payment row
+		when(financialAssistanceRepositoryMock.findLifecarePaymentIdsLinkedElsewhere(Set.of("101", "102", "400", "500"), ERRAND_ID)).thenReturn(List.of("400"));
+		when(paymentServiceMock.lifecareIdsOnOtherErrands(Set.of("101", "102", "400", "500"), ERRAND_ID)).thenReturn(List.of("500"));
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isTrue();
+		assertThat(response.getPaymentDate()).isEqualTo("2026-06-26");
+		assertThat(response.getDeadline()).isEqualTo("2026-09-24");
+		assertThat(response.getOverdue()).isFalse();
+		// From now on they are this decision's: linked, so the next read verifies exactly them.
+		verify(financialAssistanceRepositoryMock).save(entity);
+		assertThat(entity.getLifecarePaymentIds()).containsExactly("101", "102");
+		assertThat(entity.getLifecareServiceId()).isEqualTo(7700);
+	}
+
+	@Test
+	void paymentsOnTheInsatsWithoutAPayDateAreNotEffectuatedAndNotLinked() {
+		unlinkedErrand(LocalDate.of(2026, 9, 21));
+		when(paymentStatusServiceMock.registeredPayments(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(List.of(
+			new LifecarePayment("101", 7700, "2026-06", "2026-06-25"),
+			new LifecarePayment("102", 7700, "2026-06", null)));
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isFalse();
+		assertThat(response.getDetail()).isEqualTo("1 av 2 utbetalningar på ärendets insats är inte utbetalda i Lifecare ännu");
+		assertThat(response.getOverdue()).isFalse();
+		verify(financialAssistanceRepositoryMock, never()).save(any());
+	}
+
+	@Test
+	void aBifallWhosePaymentCareMHasNotSeenYetWaitsForTheDeadlineInsteadOfEscalatingAtOnce() {
+		unlinkedErrand(LocalDate.of(2026, 9, 21));
+		when(paymentStatusServiceMock.registeredPayments(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(List.of());
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isFalse();
+		assertThat(response.getDetail()).isEqualTo("Ingen utbetalning för 2026-06 hittas på ärendets insats i Lifecare ännu");
+		assertThat(response.getDeadline()).isEqualTo("2026-09-24");
+		assertThat(response.getOverdue()).isFalse();
+		verify(financialAssistanceRepositoryMock, never()).findLifecarePaymentIdsLinkedElsewhere(any(), any());
+	}
+
+	@Test
+	void onlyAnotherErrandsPaymentOnTheInsatsIsNeverTakenAndIsOverdueAfterTheDeadline() {
+		unlinkedErrand(LocalDate.of(2026, 9, 17));
+		when(paymentStatusServiceMock.registeredPayments(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any()))
+			.thenReturn(List.of(new LifecarePayment("400", 7700, "2026-06", "2026-06-25")));
+		when(financialAssistanceRepositoryMock.findLifecarePaymentIdsLinkedElsewhere(Set.of("400"), ERRAND_ID)).thenReturn(List.of("400"));
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isFalse();
+		assertThat(response.getDetail()).isEqualTo("Ingen utbetalning för 2026-06 hittas på ärendets insats i Lifecare ännu");
+		assertThat(response.getDeadline()).isEqualTo("2026-09-22");
+		assertThat(response.getOverdue()).isTrue();
+		verify(financialAssistanceRepositoryMock, never()).save(any());
+	}
+
+	@Test
+	void anUnknownInsatsCannotBeCheckedAndSaysSo() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
+		when(paymentServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Decision.create().withDecisionType("PAYMENT").withDecisionDate(LocalDate.of(2026, 9, 17))));
+		when(lifecareServiceIdServiceMock.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(null);
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isFalse();
+		assertThat(response.getDetail()).isEqualTo("Ärendets insats i Lifecare är okänd – utbetalningen kan inte kontrolleras");
+		assertThat(response.getOverdue()).isTrue();
+		verifyNoInteractions(paymentStatusServiceMock, citizenServiceMock);
+	}
+
+	@Test
+	void anErrandWithoutTypedDataCannotBeCheckedAndSaysSo() {
+		when(paymentServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(lifecareServiceIdServiceMock.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(7700);
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getDetail()).isEqualTo("Ärendets insats i Lifecare är okänd – utbetalningen kan inte kontrolleras");
+		assertThat(response.getOverdue()).isFalse(); // no decision: counted from today
+	}
+
+	@Test
+	void anErrandMissingInTheNamespaceYields404BeforeLifecareIsRead() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(Problem.valueOf(NOT_FOUND, "No errand"));
+		final var request = errandRequest();
+
+		assertThatThrownBy(() -> service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, request))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verifyNoInteractions(financialAssistanceRepositoryMock, paymentStatusServiceMock, paymentServiceMock);
 	}
 
 	@Test
@@ -156,20 +387,6 @@ class FinancialAssistancePaymentServiceTest {
 		assertThat(response.getEffectuated()).isFalse();
 		assertThat(response.getDetail()).isEqualTo("1 av 1 beslutade utbetalningar är inte registrerade i Lifecare");
 		verifyNoInteractions(paymentStatusServiceMock);
-	}
-
-	@Test
-	void checkPaymentStatusNotEffectuatedWithoutDecidedPayments() {
-		when(paymentServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(decided("DRAFT", null, null)));
-
-		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
-
-		assertThat(response.getEffectuated()).isFalse();
-		assertThat(response.getDetail()).isEqualTo("Ärendet har inga beslutade utbetalningar");
-		// Waiting cannot resolve a bifall without payments, so it goes to the caseworker at once.
-		assertThat(response.getOverdue()).isTrue();
-		assertThat(response.getDeadline()).isNull();
-		verifyNoInteractions(paymentStatusServiceMock, citizenServiceMock);
 	}
 
 	@Test

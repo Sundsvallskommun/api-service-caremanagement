@@ -3,16 +3,18 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import java.util.List;
 import java.util.Objects;
 import se.sundsvall.caremanagement.types.financialassistance.api.validation.ValidFinalizeRequest;
 
 /**
- * The "Besluta och utbetala" request — everything the caseworker confirmed in Draken once the calculation, payment and
- * decision sections were approved. The cross-field rules (payments iff the outcome carries an amount, amount required
- * with a granting outcome, period order) are enforced by {@link ValidFinalizeRequest}.
+ * The "Besluta och utbetala" request — the decision the caseworker confirmed in Draken and how it is sent. It carries
+ * no payments: Draken registers them directly in Lifecare, and the process reads them from there. The cross-field rules
+ * (amount required with a granting outcome, period order) are enforced by {@link ValidFinalizeRequest}.
  */
-@Schema(description = "Finalize a financial assistance errand: record the decision and its payments and resume the process.")
+@Schema(description = """
+	Finalize a financial assistance errand: record the decision and resume the process. Carries no payments - Draken \
+	registers them directly in Lifecare, and the process reads them from there. A payments field from an older client is \
+	ignored.""")
 @ValidFinalizeRequest
 public class FinalizeRequest {
 
@@ -25,10 +27,6 @@ public class FinalizeRequest {
 	@NotNull
 	@Valid
 	private CommunicationChannels communication;
-
-	@Schema(description = "The payments to register in Lifecare. Required (at least one) when the outcome carries an amount; must be empty for AVSLAG.")
-	@Valid
-	private List<FinalizePayment> payments;
 
 	@Schema(
 		description = "Whether the caseworker changed the household size (gemensamma kostnader) in the calculation draft. Recorded on the errand and served on the view. Defaults to false.",
@@ -65,19 +63,6 @@ public class FinalizeRequest {
 		return this;
 	}
 
-	public List<FinalizePayment> getPayments() {
-		return payments;
-	}
-
-	public void setPayments(final List<FinalizePayment> payments) {
-		this.payments = payments;
-	}
-
-	public FinalizeRequest withPayments(final List<FinalizePayment> payments) {
-		this.payments = payments;
-		return this;
-	}
-
 	public Boolean getHouseholdSizeChanged() {
 		return householdSizeChanged;
 	}
@@ -96,13 +81,13 @@ public class FinalizeRequest {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FinalizeRequest that = (FinalizeRequest) o;
-		return Objects.equals(decision, that.decision) && Objects.equals(communication, that.communication) && Objects.equals(payments, that.payments)
+		return Objects.equals(decision, that.decision) && Objects.equals(communication, that.communication)
 			&& Objects.equals(householdSizeChanged, that.householdSizeChanged);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(decision, communication, payments, householdSizeChanged);
+		return Objects.hash(decision, communication, householdSizeChanged);
 	}
 
 	@Override
@@ -110,7 +95,6 @@ public class FinalizeRequest {
 		return "FinalizeRequest{" +
 			"decision=" + decision +
 			", communication=" + communication +
-			", payments=" + payments +
 			", householdSizeChanged=" + householdSizeChanged +
 			'}';
 	}

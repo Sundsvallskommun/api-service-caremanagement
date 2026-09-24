@@ -1,21 +1,17 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.core.service.ErrandService;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentLifecareResult;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPayeeRepository;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Payment;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPaymentRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPayeeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPaymentEntity;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -27,8 +23,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,19 +38,11 @@ class PaymentServiceTest {
 	@Mock
 	private FaPaymentRepository repositoryMock;
 
-	@Mock
-	private FaPayeeRepository payeeRepositoryMock;
-
 	@InjectMocks
 	private PaymentService service;
 
 	private static FaPaymentEntity entity(final String id, final OffsetDateTime created) {
 		return FaPaymentEntity.create().withId(id).withErrandId(ERRAND_ID).withApplicationMonth("2026-08").withCreated(created);
-	}
-
-	private static PaymentRequest request() {
-		return PaymentRequest.create().withMoneyType("FORSORJNINGSSTOD").withAmount(new BigDecimal("4500.00")).withApplicationMonth("2026-08")
-			.withPayeeName("Anna Andersson");
 	}
 
 	@Test
@@ -69,194 +55,6 @@ class PaymentServiceTest {
 
 		assertThat(result).extracting("id").containsExactly("b1", "b2"); // created asc
 		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-	}
-
-	@Test
-	void countDelegatesAfterScopeCheck() {
-		when(repositoryMock.countByErrandId(ERRAND_ID)).thenReturn(2L);
-
-		assertThat(service.count(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(2L);
-		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-		verify(repositoryMock).countByErrandId(ERRAND_ID);
-	}
-
-	@Test
-	void getReturnsPayment() {
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null)));
-
-		final var result = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
-
-		assertThat(result.getId()).isEqualTo("b1");
-		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-	}
-
-	@Test
-	void getMissingYields404() {
-		when(repositoryMock.findByIdAndErrandId("missing", ERRAND_ID)).thenReturn(Optional.empty());
-
-		assertThatThrownBy(() -> service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
-			.hasMessage("Not Found: Payment not found on errand");
-	}
-
-	@Test
-	void createPersistsAsDraftAndReturns() {
-		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request());
-
-		final var captor = ArgumentCaptor.forClass(FaPaymentEntity.class);
-		verify(repositoryMock).save(captor.capture());
-		final var saved = captor.getValue();
-		assertThat(saved.getErrandId()).isEqualTo(ERRAND_ID);
-		assertThat(saved.getMoneyType()).isEqualTo("FORSORJNINGSSTOD");
-		assertThat(saved.getAmount()).isEqualTo(new BigDecimal("4500.00"));
-		assertThat(saved.getApplicationMonth()).isEqualTo("2026-08");
-		assertThat(saved.getPayeeName()).isEqualTo("Anna Andersson");
-		assertThat(saved.getStatus()).isEqualTo("DRAFT");
-		assertThat(result.getStatus()).isEqualTo("DRAFT");
-		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-	}
-
-	@Test
-	void createDefaultsSourceToCaseworker() {
-		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request());
-
-		final var captor = ArgumentCaptor.forClass(FaPaymentEntity.class);
-		verify(repositoryMock).save(captor.capture());
-		assertThat(captor.getValue().getSource()).isEqualTo("CASEWORKER");
-		assertThat(captor.getValue().getLifecareId()).isNull();
-		assertThat(result.getSource()).isEqualTo("CASEWORKER");
-		verify(repositoryMock, never()).findByErrandIdAndLifecareId(any(), any());
-	}
-
-	@Test
-	void createDoesNotEnqueueAnyRpaTask() {
-		// PaymentService owns no RPA client/queue dependency at all — queuing REGISTER_PAYMENT is a separate,
-		// explicit POST .../rpa-tasks call. Absence of interaction is the assertion here.
-		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request());
-
-		verify(repositoryMock).save(any());
-	}
-
-	@Test
-	void createLifecareSourcedInsertsWhenNoneExists() {
-		when(repositoryMock.findByErrandIdAndLifecareId(ERRAND_ID, "987654")).thenReturn(Optional.empty());
-		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			request().withSource("LIFECARE").withLifecareId("987654"));
-
-		final var captor = ArgumentCaptor.forClass(FaPaymentEntity.class);
-		verify(repositoryMock).save(captor.capture());
-		assertThat(captor.getValue().getId()).isNull(); // a fresh entity, id assigned on persist
-		assertThat(captor.getValue().getSource()).isEqualTo("LIFECARE");
-		assertThat(captor.getValue().getLifecareId()).isEqualTo("987654");
-		assertThat(result.getLifecareId()).isEqualTo("987654");
-	}
-
-	@Test
-	void createLifecareSourcedUpsertsOntoExisting() {
-		final var existing = entity("b1", OffsetDateTime.parse("2026-06-01T00:00:00Z")).withSource("LIFECARE").withLifecareId("987654")
-			.withMoneyType("old");
-		when(repositoryMock.findByErrandIdAndLifecareId(ERRAND_ID, "987654")).thenReturn(Optional.of(existing));
-		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			request().withSource("LIFECARE").withLifecareId("987654"));
-
-		final var captor = ArgumentCaptor.forClass(FaPaymentEntity.class);
-		verify(repositoryMock).save(captor.capture());
-		assertThat(captor.getValue().getId()).isEqualTo("b1"); // re-used the existing row, no duplicate
-		assertThat(captor.getValue().getMoneyType()).isEqualTo("FORSORJNINGSSTOD");
-		assertThat(result.getId()).isEqualTo("b1");
-	}
-
-	@Test
-	void updatePreservesProvenanceWhenNotSupplied() {
-		final var existing = entity("b1", OffsetDateTime.parse("2026-06-01T00:00:00Z")).withSource("LIFECARE").withLifecareId("987654");
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(existing));
-		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1", request());
-
-		assertThat(result.getSource()).isEqualTo("LIFECARE");
-		assertThat(result.getLifecareId()).isEqualTo("987654");
-	}
-
-	@Test
-	void updateStampsProvenanceWhenSupplied() {
-		final var existing = entity("b1", OffsetDateTime.parse("2026-06-01T00:00:00Z")); // source/lifecareId unset
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(existing));
-		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
-			request().withSource("CASEWORKER").withLifecareId("987654"));
-
-		assertThat(result.getSource()).isEqualTo("CASEWORKER");
-		assertThat(result.getLifecareId()).isEqualTo("987654");
-	}
-
-	@Test
-	void updateNeverChangesStatus() {
-		final var existing = entity("b1", OffsetDateTime.parse("2026-06-01T00:00:00Z")).withStatus("QUEUED");
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(existing));
-		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1", request());
-
-		assertThat(result.getStatus()).isEqualTo("QUEUED");
-	}
-
-	@Test
-	void updateReplacesFields() {
-		final var existing = entity("b1", OffsetDateTime.parse("2026-06-01T00:00:00Z")).withMoneyType("old");
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(existing));
-		when(repositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1", request());
-
-		assertThat(result.getMoneyType()).isEqualTo("FORSORJNINGSSTOD");
-		assertThat(result.getPayeeName()).isEqualTo("Anna Andersson");
-		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-	}
-
-	@Test
-	void updateMissingYields404() {
-		when(repositoryMock.findByIdAndErrandId("missing", ERRAND_ID)).thenReturn(Optional.empty());
-
-		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing", request()))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
-			.hasMessage("Not Found: Payment not found on errand");
-	}
-
-	@Test
-	void deleteRemoves() {
-		final var existing = entity("b1", null);
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(existing));
-
-		service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
-
-		verify(repositoryMock).delete(existing);
-		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-	}
-
-	@Test
-	void deleteMissingYields404() {
-		when(repositoryMock.findByIdAndErrandId("missing", ERRAND_ID)).thenReturn(Optional.empty());
-
-		assertThatThrownBy(() -> service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing"))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
-			.hasMessage("Not Found: Payment not found on errand");
-
-		verify(repositoryMock, never()).delete(any());
 	}
 
 	@Test
@@ -273,233 +71,31 @@ class PaymentServiceTest {
 	}
 
 	@Test
-	void createForDecisionStampsPendingRegistrationAndReturnsTheId() {
-		// A row the caseworker has decided on is not a draft — the status has to say what is actually waiting for the
-		// robot. The errand is not scope-checked here: finalize has already read it, inside the same transaction.
-		when(repositoryMock.saveAndFlush(any(FaPaymentEntity.class)))
-			.thenAnswer(invocation -> invocation.<FaPaymentEntity>getArgument(0).withId("pay-1"));
+	void lifecareIdsOnOtherErrandsAsksTheRepository() {
+		when(repositoryMock.findLifecareIdsOnOtherErrands(List.of("101", "102"), ERRAND_ID)).thenReturn(List.of("102"));
 
-		final var id = service.createForDecision(ERRAND_ID, PaymentRequest.create()
-			.withAmount(new BigDecimal("6000.00")).withApplicationMonth("2026-06").withAccountingCode("5011").withPayeeName("Hyresvärden AB"));
-
-		assertThat(id).isEqualTo("pay-1");
-		final var captor = ArgumentCaptor.forClass(FaPaymentEntity.class);
-		// saveAndFlush, so a constraint violation surfaces before finalize touches the process or the RPA queue
-		verify(repositoryMock).saveAndFlush(captor.capture());
-		assertThat(captor.getValue())
-			.returns("PENDING_REGISTRATION", FaPaymentEntity::getStatus)
-			.returns("CASEWORKER", FaPaymentEntity::getSource)
-			.returns(ERRAND_ID, FaPaymentEntity::getErrandId)
-			.returns("2026-06", FaPaymentEntity::getApplicationMonth)
-			.returns("5011", FaPaymentEntity::getAccountingCode);
+		assertThat(service.lifecareIdsOnOtherErrands(List.of("101", "102"), ERRAND_ID)).containsExactly("102");
 		verifyNoInteractions(errandServiceMock);
 	}
 
 	@Test
-	void everyStatusFitsTheColumn() throws Exception {
-		// PENDING_REGISTRATION is 20 characters and the column was varchar(16), so finalize failed with
-		// "Data too long for column 'status'" the first time it ran against a real database. The service tests mock
-		// the repository, so nothing here could see it - this reads the width off the entity instead.
-		final var column = FaPaymentEntity.class.getDeclaredField("status").getAnnotation(jakarta.persistence.Column.class);
-		final var statuses = java.util.Arrays.stream(PaymentService.class.getDeclaredFields())
-			.filter(field -> field.getName().startsWith("STATUS_"))
-			.map(field -> {
-				field.setAccessible(true);
-				try {
-					return (String) field.get(null);
-				} catch (final IllegalAccessException e) {
-					throw new IllegalStateException(e);
-				}
-			})
-			.toList();
-
-		assertThat(statuses).isNotEmpty();
-		assertThat(statuses).allSatisfy(status -> assertThat(status.length())
-			.as("status %s must fit the %d-character column", status, column.length())
-			.isLessThanOrEqualTo(column.length()));
+	void lifecareIdsOnOtherErrandsWithoutIdsDoesNotQuery() {
+		assertThat(service.lifecareIdsOnOtherErrands(List.of(), ERRAND_ID)).isEmpty();
+		verifyNoInteractions(repositoryMock);
 	}
 
 	@Test
-	void createStillYieldsADraft() {
-		// The caseworker's own save must keep working exactly as before — saving a draft never sets the robot off.
-		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+	void listCarriesWhatPaymentStatusReads() {
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(entity("b1", OffsetDateTime.parse("2026-06-01T00:00:00Z"))
+			.withSource("CASEWORKER").withStatus("REGISTERED").withLifecareId("101").withPaymentDate(LocalDate.of(2026, 8, 25))
+			.withAmount(new BigDecimal("4500.00"))));
 
-		final var payment = service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PaymentRequest.create().withAmount(new BigDecimal("500.00")));
-
-		assertThat(payment.getStatus()).isEqualTo("DRAFT");
-	}
-
-	@Test
-	void getResolvesLifecarePayeeIdFromThePayeeRow() {
-		final var payeeId = "a1b2c3d4-0000-0000-0000-000000000001";
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null).withPayeeId(payeeId)));
-		when(payeeRepositoryMock.findById(payeeId)).thenReturn(Optional.of(FaPayeeEntity.create().withId(payeeId).withLifecarePayeeId("44213")));
-
-		final var result = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
-
-		// Read through rather than copied onto the payment: the ADD_PAYEE robot reports it back onto the payee row, which
-		// can happen after the payment was created.
-		assertThat(result.getPayeeId()).isEqualTo(payeeId);
-		assertThat(result.getLifecarePayeeId()).isEqualTo("44213");
-	}
-
-	@Test
-	void getLeavesLifecarePayeeIdNullWhenTheRobotHasNotReportedYet() {
-		final var payeeId = "a1b2c3d4-0000-0000-0000-000000000001";
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null).withPayeeId(payeeId)));
-		when(payeeRepositoryMock.findById(payeeId)).thenReturn(Optional.of(FaPayeeEntity.create().withId(payeeId)));
-
-		final var result = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
-
-		assertThat(result.getLifecarePayeeId()).isNull();
-	}
-
-	@Test
-	void getLeavesLifecarePayeeIdNullWhenThePayeeRowIsGone() {
-		// The caseworker may delete a manual payee after the decision; the payment's own copied fields survive it.
-		final var payeeId = "a1b2c3d4-0000-0000-0000-000000000001";
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null).withPayeeId(payeeId)));
-		when(payeeRepositoryMock.findById(payeeId)).thenReturn(Optional.empty());
-
-		final var result = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
-
-		assertThat(result.getPayeeId()).isEqualTo(payeeId);
-		assertThat(result.getLifecarePayeeId()).isNull();
-	}
-
-	@Test
-	void getServesTheLifecarePayeeIdGivenWithThePayment() {
-		// A payee picked straight from Lifecare has no payee row; its Lifecare id was given with the payment itself.
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null).withLifecarePayeeId("1234567")));
-
-		final var result = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
-
-		assertThat(result.getLifecarePayeeId()).isEqualTo("1234567");
-		verifyNoInteractions(payeeRepositoryMock);
-	}
-
-	@Test
-	void aPaymentWithoutAPayeeRowNeverHitsThePayeeRepository() {
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null)));
-
-		final var result = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1");
-
-		assertThat(result.getLifecarePayeeId()).isNull();
-		verifyNoInteractions(payeeRepositoryMock);
-	}
-
-	@Test
-	void createCarriesThePayeeRowId() {
-		final var payeeId = "a1b2c3d4-0000-0000-0000-000000000001";
-		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request().withPayeeId(payeeId));
-
-		final var captor = ArgumentCaptor.forClass(FaPaymentEntity.class);
-		verify(repositoryMock).save(captor.capture());
-		assertThat(captor.getValue().getPayeeId()).isEqualTo(payeeId);
-	}
-
-	// ------------------------------------------------------------------------------------------------------------------
-	// The REGISTER_PAYMENT robot's report - the only thing that moves a payment out of PENDING_REGISTRATION
-	// ------------------------------------------------------------------------------------------------------------------
-
-	private static FaPaymentEntity pendingPayment() {
-		return entity("b1", null).withStatus("PENDING_REGISTRATION");
-	}
-
-	@Test
-	void registeredStampsTheLifecareIdAndClearsThePendingStatus() {
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(pendingPayment()));
-		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
-			PaymentLifecareResult.create().withOutcome("REGISTERED").withLifecarePaymentId("4"));
-
-		assertThat(result.getStatus()).isEqualTo("REGISTERED");
-		assertThat(result.getLifecareId()).isEqualTo("4");
-		assertThat(result.getLifecareDetail()).isNull();
-		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-	}
-
-	@Test
-	void alreadyExistsCountsAsSuccess() {
-		// The caseworker's intent - this payment must exist in Lifecare - is satisfied either way.
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(pendingPayment()));
-		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
-			PaymentLifecareResult.create().withOutcome("ALREADY_EXISTS"));
-
-		assertThat(result.getStatus()).isEqualTo("REGISTERED");
-	}
-
-	@Test
-	void aReReportWithoutAnIdKeepsTheOneAlreadyStored() {
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(pendingPayment().withLifecareId("4")));
-		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
-			PaymentLifecareResult.create().withOutcome("ALREADY_EXISTS"));
-
-		assertThat(result.getLifecareId()).isEqualTo("4");
-	}
-
-	@Test
-	void failedStoresLifecaresOwnMessage() {
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(pendingPayment()));
-		when(repositoryMock.save(any(FaPaymentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-		final var result = service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
-			PaymentLifecareResult.create().withOutcome("FAILED").withDetail("Betalningsmottagaren saknas i Lifecare"));
-
-		assertThat(result.getStatus()).isEqualTo("FAILED");
-		assertThat(result.getLifecareDetail()).isEqualTo("Betalningsmottagaren saknas i Lifecare");
-	}
-
-	@Test
-	void failedWithoutDetailYields400() {
-		// A FAILED with no reason is useless to the caseworker, who is the one who has to act on it.
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(pendingPayment()));
-
-		assertThatThrownBy(() -> service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
-			PaymentLifecareResult.create().withOutcome("FAILED")))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
-		verify(repositoryMock, never()).save(any(FaPaymentEntity.class));
-	}
-
-	@Test
-	void failedOnAnAlreadyRegisteredPaymentYields409() {
-		// Would silently un-register a payment that exists in Lifecare.
-		when(repositoryMock.findByIdAndErrandId("b1", ERRAND_ID)).thenReturn(Optional.of(entity("b1", null).withStatus("REGISTERED")));
-
-		assertThatThrownBy(() -> service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "b1",
-			PaymentLifecareResult.create().withOutcome("FAILED").withDetail("nagot gick fel")))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT);
-		verify(repositoryMock, never()).save(any(FaPaymentEntity.class));
-	}
-
-	@Test
-	void reportingOnAMissingPaymentYields404() {
-		when(repositoryMock.findByIdAndErrandId("missing", ERRAND_ID)).thenReturn(Optional.empty());
-
-		assertThatThrownBy(() -> service.recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "missing",
-			PaymentLifecareResult.create().withOutcome("REGISTERED")))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
-	}
-
-	@Test
-	void everyStatusStillFitsTheColumn() throws Exception {
-		// The same guard everyStatusFitsTheColumn applies, now that REGISTERED and FAILED joined the vocabulary.
-		final var column = FaPaymentEntity.class.getDeclaredField("status").getAnnotation(jakarta.persistence.Column.class);
-		for (final var field : PaymentService.class.getDeclaredFields()) {
-			if (field.getName().startsWith("STATUS_")) {
-				field.setAccessible(true);
-				assertThat((String) field.get(null)).hasSizeLessThanOrEqualTo(column.length());
-			}
-		}
+		assertThat(service.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).singleElement()
+			.returns("CASEWORKER", Payment::getSource)
+			.returns("REGISTERED", Payment::getStatus)
+			.returns("101", Payment::getLifecareId)
+			.returns(LocalDate.of(2026, 8, 25), Payment::getPaymentDate)
+			.returns("2026-08", Payment::getApplicationMonth)
+			.returns(OffsetDateTime.parse("2026-06-01T00:00:00Z"), Payment::getCreated);
 	}
 }

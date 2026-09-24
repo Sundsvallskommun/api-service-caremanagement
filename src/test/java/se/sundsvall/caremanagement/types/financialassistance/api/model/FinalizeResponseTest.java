@@ -1,6 +1,5 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
-import java.util.List;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
@@ -30,15 +29,12 @@ class FinalizeResponseTest {
 
 		final var response = FinalizeResponse.create()
 			.withDecisionId("decision-1")
-			.withPaymentIds(List.of("pay-1"))
 			.withProcessMessageCorrelated(true)
-			.withCommunication(communication)
-			.withPayeeWarnings(List.of("Betalningsmottagaren saknas i Lifecare"));
+			.withCommunication(communication);
 
 		assertThat(response.getDecisionId()).isEqualTo("decision-1");
 		assertThat(response.getProcessMessageCorrelated()).isTrue();
 		assertThat(response.getCommunication()).isEqualTo(communication);
-		assertThat(response.getPayeeWarnings()).containsExactly("Betalningsmottagaren saknas i Lifecare");
 		assertThat(response).hasNoNullFieldsOrProperties();
 	}
 

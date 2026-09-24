@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.integration.db;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -25,4 +26,15 @@ public interface FinancialAssistanceRepository extends JpaRepository<FinancialAs
 		where p.partyId = :partyId
 		""")
 	List<String> findErrandIdsByPartyId(@Param("partyId") String partyId);
+
+	/**
+	 * Which of the given Lifecare payment ids another errand already references ({@code lifecarePaymentIds}). A payment
+	 * belongs to one decision, so these can never be taken as this errand's.
+	 */
+	@Query("""
+		select distinct p from FinancialAssistanceEntity fa
+		join fa.lifecarePaymentIds p
+		where p in :lifecarePaymentIds and fa.errandId <> :errandId
+		""")
+	List<String> findLifecarePaymentIdsLinkedElsewhere(@Param("lifecarePaymentIds") Collection<String> lifecarePaymentIds, @Param("errandId") String errandId);
 }

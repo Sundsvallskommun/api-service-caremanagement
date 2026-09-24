@@ -55,8 +55,9 @@ class FinancialAssistanceApprovalResource {
 	}
 
 	@GetMapping(path = "/financial-assistance/{errandId}/sections/approvals", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Read the section approvals on an errand",
-		description = "The caseworker approval state of the three financial assistance view sections (CALCULATION = calculation, PAYMENT = payment, DECISION = decision). Always returns all three — a section never approved is present with approved=false. The same object is embedded in the errand view.",
+	@Operation(deprecated = true,
+		summary = "Read the section approvals on an errand",
+		description = "The caseworker approval state of the three financial assistance view sections (CALCULATION = calculation, PAYMENT = payment, DECISION = decision). Always returns all three — a section never approved is present with approved=false. The same object is embedded in the errand view. Deprecated: approvals no longer gate finalize.",
 		responses = @ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true))
 	ResponseEntity<SectionApprovals> getSectionApprovals(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -67,8 +68,9 @@ class FinancialAssistanceApprovalResource {
 	}
 
 	@PatchMapping(path = "/financial-assistance/{errandId}/sections/{section}/approval", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Set a section's approval (caseworker)",
-		description = "A caseworker verifies one of the financial assistance view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them. Approving requires an identified caller (X-Sent-By) — an approval with no approver is rejected with 400.",
+	@Operation(deprecated = true,
+		summary = "Set a section's approval (caseworker)",
+		description = "A caseworker verifies one of the financial assistance view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them. Approving requires an identified caller (X-Sent-By) — an approval with no approver is rejected with 400. Deprecated: approvals no longer gate finalize; the Lifecare statuses (final normberäkning, locked beslut, registered payment) replace them.",
 		responses = @ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true))
 	ResponseEntity<SectionApproval> setSectionApproval(
 		@ValidMunicipalityId @PathVariable final String municipalityId,

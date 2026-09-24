@@ -13,11 +13,10 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
- * A financial assistance payment (utbetalning) on an errand — a caseworker-drafted or Lifecare-mirrored payment row.
- * {@code status} is entirely server-managed: {@code DRAFT} for a row saved through this resource, and
- * {@code PENDING_REGISTRATION} for one a decision created. Draken's BFF registers the latter in Lifecare and reports
- * the
- * outcome through {@code POST .../payments/{paymentId}/lifecare-result}.
+ * A payment row an errand carries from the time careM held payment drafts — read internally by payment-status for
+ * errands decided before Draken registered payments directly in Lifecare. No longer served by any endpoint.
+ * {@code status} is {@code DRAFT} for a saved draft, {@code PENDING_REGISTRATION} for one a decision created that was
+ * never reported, and {@code REGISTERED}/{@code FAILED} once Draken's BFF reported it.
  */
 @Schema(description = "A financial assistance payment (utbetalning) on an errand.")
 public class Payment {

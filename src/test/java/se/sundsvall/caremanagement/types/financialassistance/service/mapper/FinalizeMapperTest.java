@@ -9,9 +9,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizePayment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -100,72 +98,4 @@ class FinalizeMapperTest {
 			.returns(false, FinancialAssistanceEntity::getNotifyLetter);
 		assertThat(FinalizeMapper.updateEntity(null, grantingRequest())).isNull();
 	}
-
-	@Test
-	void toPaymentRequestBridgesTheTwoModelsNaming() {
-		final var payment = FinalizePayment.create()
-			.withPaymentDate(LocalDate.of(2026, 6, 25))
-			.withAmount(new BigDecimal("6000.00"))
-			.withConcernedMonth("2026-06")
-			.withAccountingCode("5011")
-			.withPayee(Payee.create().withId("a1b2c3d4-0000-0000-0000-000000000001").withName("Hyresvärden AB").withPaymentMethod("BANKGIRO").withClearing("6000").withAccountNumber("123-4567"));
-
-		final var request = FinalizeMapper.toPaymentRequest(payment);
-
-		assertThat(request.getPaymentDate()).isEqualTo(LocalDate.of(2026, 6, 25));
-		assertThat(request.getAmount()).isEqualByComparingTo("6000.00");
-		assertThat(request.getApplicationMonth()).isEqualTo("2026-06"); // concernedMonth → applicationMonth
-		assertThat(request.getAccountingCode()).isEqualTo("5011");
-		assertThat(request.getPayeeName()).isEqualTo("Hyresvärden AB");
-		assertThat(request.getPaymentMethod()).isEqualTo("BANKGIRO");
-		assertThat(request.getClearingNumber()).isEqualTo("6000"); // clearing → clearingNumber
-		assertThat(request.getAccountNumber()).isEqualTo("123-4567");
-		// The link to the payee row, and through it to lifecarePayeeId - without it the REGISTER_PAYMENT robot is left
-		// matching the payee in Lifecare on name and account number.
-		assertThat(request.getPayeeId()).isEqualTo("a1b2c3d4-0000-0000-0000-000000000001");
-	}
-
-	@Test
-	void toPaymentRequestLeavesPayeeIdNullForALifecareDerivedPayee() {
-		// A payee taken from the 12-month Lifecare history has no row on the errand, so the list serves it with a null id.
-		final var payment = FinalizePayment.create()
-			.withPayee(Payee.create().withPaymentMethod("BANKGIRO"));
-
-		assertThat(FinalizeMapper.toPaymentRequest(payment).getPayeeId()).isNull();
-	}
-
-	@Test
-	void toPaymentRequestCarriesAPayeePickedStraightFromLifecare() {
-		// Draken reads the payees from Lifecare, so the picked payee has no row here - only its Lifecare id, its address,
-		// and the payment's räkningsnummer / lokalbetalningsnummer, all of which Lifecare needs to register the payment.
-		final var payment = FinalizePayment.create()
-			.withLocalPaymentNumber("4711")
-			.withInvoiceNumber("2026-00417")
-			.withPayee(Payee.create()
-				.withLifecarePayeeId("1234567")
-				.withName("Hyresvärden AB")
-				.withPaymentMethod("BANKGIRO")
-				.withAddress("Storgatan 1")
-				.withCareOf("c/o Bertil Bertilsson")
-				.withZipCode("85230")
-				.withCity("Sundsvall"));
-
-		final var request = FinalizeMapper.toPaymentRequest(payment);
-
-		assertThat(request.getPayeeId()).isNull();
-		assertThat(request.getLifecarePayeeId()).isEqualTo("1234567");
-		assertThat(request.getPayeeAddress()).isEqualTo("Storgatan 1");
-		assertThat(request.getPayeeCareOf()).isEqualTo("c/o Bertil Bertilsson");
-		assertThat(request.getPayeeZipCode()).isEqualTo("85230");
-		assertThat(request.getPayeeCity()).isEqualTo("Sundsvall");
-		assertThat(request.getLocalPaymentNumber()).isEqualTo("4711");
-		assertThat(request.getInvoiceNumber()).isEqualTo("2026-00417");
-	}
-
-	@Test
-	void toPaymentRequestIsNullSafe() {
-		assertThat(FinalizeMapper.toPaymentRequest(null).getAmount()).isNull();
-		assertThat(FinalizeMapper.toPaymentRequest(FinalizePayment.create()).getPayeeName()).isNull();
-	}
-
 }

@@ -20,11 +20,11 @@ final class FinancialAssistanceApiTags {
 	static final String WARNINGS = "Financial Assistance · Warnings";
 	static final String WARNINGS_DESC = "Acknowledgeable financial assistance income warnings on an errand — create, list and set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare step reconciles them.";
 	static final String APPROVALS = "Financial Assistance · Approvals";
-	static final String APPROVALS_DESC = "Caseworker approval state of the three financial assistance view sections (CALCULATION / PAYMENT / DECISION) — read all three, or set/withdraw one.";
+	static final String APPROVALS_DESC = "DEPRECATED - being retired. Caseworker check-offs of the three financial assistance view sections (CALCULATION / PAYMENT / DECISION). They no longer gate finalize: whether the normberäkning is final, the beslut locked and the payment registered is Lifecare's status, read from Lifecare. Kept, with their stored rows, only until Draken stops reading and setting them.";
 	static final String FINALIZE = "Financial Assistance · Finalize";
-	static final String FINALIZE_DESC = "Besluta och utbetala: record the caseworker's decision and its payments and resume the process. The Lifecare writes (decision, payments, bevakningar, journal, documents) are made by Draken's BFF, which reports them back through the lifecare-result endpoints. The calculation is committed to Lifecare by the process, and the decision is sent to the applicant by the frontend.";
+	static final String FINALIZE_DESC = "Besluta och utbetala: record the caseworker's decision and resume the process. The Lifecare writes (normberäkning, beslut, payments, bevakningar, journal, documents) are made by Draken's BFF directly in Lifecare before the decision; the errand only carries the references (lifecareCalculationId, lifecareDecisionId, lifecarePaymentIds). The decision is sent to the applicant by the frontend.";
 	static final String PAYMENT = "Financial Assistance · Payment";
-	static final String PAYMENT_DESC = "Read whether the manual Lifecare payment for the applicant and application month has been effectuated. caremanagement makes no payment itself.";
+	static final String PAYMENT_DESC = "Read from Lifecare whether the payments a bifall is linked to have been paid out. caremanagement makes no payment and stores no payment status.";
 	static final String PROPOSALS = "Financial Assistance · Proposals";
 	static final String PROPOSALS_DESC = "The decision proposal (beslutsförslag) — derived on every read from the calculation draft and the applicant's Lifecare history; only the section warnings it raises are stored. Recomputed when the CALCULATION section is approved.";
 	static final String SSBTEK = "Financial Assistance · SSBTEK";

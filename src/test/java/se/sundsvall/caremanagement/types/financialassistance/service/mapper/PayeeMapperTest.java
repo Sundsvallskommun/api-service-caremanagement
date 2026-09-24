@@ -8,7 +8,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import se.sundsvall.caremanagement.lifecare.service.model.PaymentView;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeOption;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPayeeEntity;
@@ -121,26 +120,6 @@ class PayeeMapperTest {
 	@MethodSource("differentKeys")
 	void keysDifferForDifferentAccounts(final String name, final PayeeOption one, final PayeeOption other) {
 		assertThat(PayeeMapper.key(one)).isNotEqualTo(PayeeMapper.key(other));
-	}
-
-	@Test
-	void aFinalizePayeeKeysTheSameAsTheMatchingOption() {
-		final var payee = Payee.create()
-			.withName(" Hyresvärden AB ")
-			.withPaymentMethod("BANKGIRO")
-			.withClearing(null)
-			.withAccountNumber("5555-6666");
-
-		assertThat(PayeeMapper.key(payee))
-			.isEqualTo(PayeeMapper.key(option("hyresvärden ab", "Bankgiro", "", "5555-6666")));
-	}
-
-	@Test
-	void aFinalizePayeeForAnotherAccountKeysDifferently() {
-		final var payee = Payee.create().withName("Hyresvärden AB").withPaymentMethod("Bankgiro").withAccountNumber("7777-8888");
-
-		assertThat(PayeeMapper.key(payee))
-			.isNotEqualTo(PayeeMapper.key(option("Hyresvärden AB", "Bankgiro", null, "5555-6666")));
 	}
 
 	@Test

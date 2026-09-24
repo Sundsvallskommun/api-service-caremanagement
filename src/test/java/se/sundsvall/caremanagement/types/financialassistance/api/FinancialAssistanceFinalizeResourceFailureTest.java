@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.types.financialassistance.api;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
@@ -15,9 +14,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizePayment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceFinalizeService;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
@@ -60,16 +57,7 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 				.withPeriodTo(LocalDate.of(2026, 6, 30))
 				.withAmount(new BigDecimal("7900.00")))
 			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false))
-			.withPayments(List.of(validPayment()))
 			.withHouseholdSizeChanged(false);
-	}
-
-	private static FinalizePayment validPayment() {
-		return FinalizePayment.create()
-			.withPaymentDate(LocalDate.of(2026, 6, 25))
-			.withAmount(new BigDecimal("7900.00"))
-			.withConcernedMonth("2026-06")
-			.withPayee(Payee.create().withName("Anna Andersson").withPaymentMethod("BANKKONTO"));
 	}
 
 	private static void assertConstraintViolation(final ConstraintViolationProblem response, final Tuple... violations) {
@@ -128,23 +116,12 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 	}
 
 	@Test
-	void grantingOutcomeWithoutAmountOrPayments() {
-		final var request = validRequest().withPayments(List.of());
+	void grantingOutcomeWithoutAmount() {
+		final var request = validRequest();
 		request.getDecision().withAmount(null);
 
 		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
-			tuple("decision.amount", "must be given when the outcome carries an amount (BIFALL/DELAVSLAG)"),
-			tuple("payments", "at least one payment is required when the outcome carries an amount (BIFALL/DELAVSLAG)"));
-		verifyNoInteractions(finalizeServiceMock);
-	}
-
-	@Test
-	void nonGrantingOutcomeWithPayments() {
-		final var request = validRequest();
-		request.getDecision().withOutcome("AVSLAG");
-
-		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
-			tuple("payments", "must be empty when the outcome carries no amount (AVSLAG)"));
+			tuple("decision.amount", "must be given when the outcome carries an amount (BIFALL/DELAVSLAG)"));
 		verifyNoInteractions(finalizeServiceMock);
 	}
 
@@ -166,31 +143,6 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 			tuple("communication.minaSidor", "must not be null"),
 			tuple("communication.digitalMailbox", "must not be null"),
 			tuple("communication.letter", "must not be null"));
-		verifyNoInteractions(finalizeServiceMock);
-	}
-
-	@Test
-	void invalidPayment() {
-		final var request = validRequest().withPayments(List.of(FinalizePayment.create()
-			.withAmount(new BigDecimal("0"))
-			.withConcernedMonth("2026-13")
-			.withPayee(Payee.create())));
-
-		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
-			tuple("payments[0].paymentDate", "must not be null"),
-			tuple("payments[0].amount", "must be greater than 0"),
-			tuple("payments[0].concernedMonth", "must be an ISO year-month (yyyy-MM)"),
-			tuple("payments[0].payee.name", "must not be blank"),
-			tuple("payments[0].payee.paymentMethod", "must not be blank"));
-		verifyNoInteractions(finalizeServiceMock);
-	}
-
-	@Test
-	void missingPayee() {
-		final var request = validRequest().withPayments(List.of(validPayment().withPayee(null)));
-
-		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
-			tuple("payments[0].payee", "must not be null"));
 		verifyNoInteractions(finalizeServiceMock);
 	}
 

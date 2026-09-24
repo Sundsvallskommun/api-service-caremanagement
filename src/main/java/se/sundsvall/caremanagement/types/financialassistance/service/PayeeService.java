@@ -2,10 +2,8 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.PaymentView;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeLifecareResult;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeOption;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeRequest;
@@ -27,9 +24,6 @@ import static java.util.Comparator.comparing;
 import static java.util.Comparator.naturalOrder;
 import static java.util.Comparator.nullsLast;
 import static java.util.Comparator.reverseOrder;
-import static java.util.Optional.ofNullable;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -75,9 +69,6 @@ public class PayeeService {
 
 	static final String ERROR_DETAIL_REQUIRED = "detail is required when outcome is FAILED — it is Lifecare's own message, shown to the caseworker";
 	static final String ERROR_ALREADY_SYNCED = "Payee is already SYNCED in Lifecare and cannot be reported as FAILED";
-
-	static final String WARNING_PAYEE_PENDING = "Betalningsmottagaren \"%s\" är inte upplagd i Lifecare ännu – utbetalningen kan inte registreras förrän den har lagts upp där.";
-	static final String WARNING_PAYEE_FAILED = "Betalningsmottagaren \"%s\" kunde inte läggas upp i Lifecare: %s";
 
 	private final ErrandService errandService;
 	private final HouseholdPartyService householdPartyService;
@@ -180,46 +171,6 @@ public class PayeeService {
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String payeeId) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		payeeRepository.delete(requirePayee(errandId, payeeId));
-	}
-
-	/**
-	 * The warnings finalize surfaces for the payees a decision actually pays to: a payment cannot be registered in
-	 * Lifecare against a payee that has not been created there.
-	 *
-	 * <p>
-	 * Matched per payee rather than per errand on purpose — a payee the caseworker added and then did not use must not
-	 * warn about a payment it has nothing to do with. A payee that is not among the errand's manual rows at all came
-	 * from the Lifecare payment history and is in Lifecare by definition, so it never warns.
-	 * </p>
-	 *
-	 * <p>
-	 * Returns text, and finalize does not fail on it: the decision is the caseworker's and the payment rows are created
-	 * either way. Blocking here would strand a decision that is otherwise complete.
-	 * </p>
-	 */
-	@Transactional(readOnly = true)
-	public List<String> unsyncedPayeeWarnings(final String errandId, final List<Payee> payees) {
-		final var unsynced = manualEntities(errandId).stream()
-			.filter(entity -> !LIFECARE_STATUS_SYNCED.equals(entity.getLifecareStatus()))
-			.collect(toMap(entity -> PayeeMapper.key(toPayeeOption(entity)), identity(), (first, _) -> first, LinkedHashMap::new));
-
-		return ofNullable(payees).orElseGet(List::of).stream()
-			.filter(Objects::nonNull)
-			.map(PayeeMapper::key)
-			.distinct()
-			.map(unsynced::get)
-			.filter(Objects::nonNull)
-			.map(PayeeService::warningText)
-			.toList();
-	}
-
-	/** Lifecare's own message when the creation failed, otherwise "not created yet" — both are actionable, differently. */
-	private static String warningText(final FaPayeeEntity entity) {
-		final var name = ofNullable(entity.getName()).orElse("");
-		if (LIFECARE_STATUS_FAILED.equals(entity.getLifecareStatus())) {
-			return WARNING_PAYEE_FAILED.formatted(name, ofNullable(entity.getLifecareDetail()).orElse(""));
-		}
-		return WARNING_PAYEE_PENDING.formatted(name);
 	}
 
 	private List<FaPayeeEntity> manualEntities(final String errandId) {

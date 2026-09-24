@@ -16,6 +16,7 @@ TRUNCATE TABLE errand_fa_child;
 TRUNCATE TABLE errand_fa_cost;
 TRUNCATE TABLE errand_fa_income;
 TRUNCATE TABLE errand_fa_job_application;
+TRUNCATE TABLE errand_fa_lifecare_payment;
 TRUNCATE TABLE errand_fa_norm_expense;
 TRUNCATE TABLE errand_fa_norm_income;
 TRUNCATE TABLE errand_fa_norm_person;

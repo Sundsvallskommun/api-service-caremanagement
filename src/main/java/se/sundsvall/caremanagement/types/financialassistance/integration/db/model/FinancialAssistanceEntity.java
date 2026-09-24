@@ -133,6 +133,15 @@ public class FinancialAssistanceEntity implements Auditable {
 	@Column(name = "lifecare_calculation_id")
 	private Integer lifecareCalculationId;
 
+	/**
+	 * The Lifecare payment (utbetalning) ids a bifall pays with, set by the caseworker once Draken has registered each
+	 * payment in Lifecare. Keys only: whether a payment is registered or paid out is read from Lifecare, never stored.
+	 */
+	@ElementCollection
+	@CollectionTable(name = "errand_fa_lifecare_payment", joinColumns = @JoinColumn(name = "errand_id"))
+	@Column(name = "lifecare_payment_id", length = 64)
+	private List<String> lifecarePaymentIds;
+
 	// Set by "Besluta och utbetala" (finalize) — null until the caseworker has finalized the errand.
 
 	/**
@@ -431,6 +440,14 @@ public class FinancialAssistanceEntity implements Auditable {
 		this.lifecareCalculationId = lifecareCalculationId;
 	}
 
+	public List<String> getLifecarePaymentIds() {
+		return lifecarePaymentIds;
+	}
+
+	public void setLifecarePaymentIds(final List<String> lifecarePaymentIds) {
+		this.lifecarePaymentIds = lifecarePaymentIds;
+	}
+
 	public Boolean getHouseholdSizeChanged() {
 		return householdSizeChanged;
 	}
@@ -698,6 +715,11 @@ public class FinancialAssistanceEntity implements Auditable {
 		return this;
 	}
 
+	public FinancialAssistanceEntity withLifecarePaymentIds(final List<String> lifecarePaymentIds) {
+		this.lifecarePaymentIds = lifecarePaymentIds;
+		return this;
+	}
+
 	public FinancialAssistanceEntity withHouseholdSizeChanged(final Boolean householdSizeChanged) {
 		this.householdSizeChanged = householdSizeChanged;
 		return this;
@@ -795,6 +817,7 @@ public class FinancialAssistanceEntity implements Auditable {
 			&& Objects.equals(attestation, that.attestation) && Objects.equals(attestedAt, that.attestedAt)
 			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt) && Objects.equals(lifecareServiceId, that.lifecareServiceId)
 			&& Objects.equals(lifecareDecisionId, that.lifecareDecisionId) && Objects.equals(lifecareCalculationId, that.lifecareCalculationId)
+			&& Objects.equals(lifecarePaymentIds, that.lifecarePaymentIds)
 			&& Objects.equals(householdSizeChanged, that.householdSizeChanged) && Objects.equals(notifyMinaSidor, that.notifyMinaSidor)
 			&& Objects.equals(notifyDigitalMailbox, that.notifyDigitalMailbox) && Objects.equals(notifyLetter, that.notifyLetter)
 			&& Objects.equals(children, that.children) && Objects.equals(costs, that.costs) && Objects.equals(incomes, that.incomes)
@@ -809,7 +832,7 @@ public class FinancialAssistanceEntity implements Auditable {
 		return Objects.hash(errandId, applicationType, maritalStatus, periodMonth, periodYear, periodChoice, normType,
 			hasChildrenUnder21, childrenResidenceChanged, housingForm, housingPersonCount, housingRoomsPlusKitchen, housingChanged,
 			hasIncomes, hasPendingBenefits, hasAssets, staysInMunicipality, attestation,
-			attestedAt, lastDailyRunAt, lifecareServiceId, lifecareDecisionId, lifecareCalculationId, householdSizeChanged, notifyMinaSidor, notifyDigitalMailbox, notifyLetter,
+			attestedAt, lastDailyRunAt, lifecareServiceId, lifecareDecisionId, lifecareCalculationId, lifecarePaymentIds, householdSizeChanged, notifyMinaSidor, notifyDigitalMailbox, notifyLetter,
 			children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
 			created, modified);
 	}
@@ -820,6 +843,6 @@ public class FinancialAssistanceEntity implements Auditable {
 			+ "', maritalStatus='" + maritalStatus + "', periodMonth=" + periodMonth + ", periodYear=" + periodYear
 			+ ", normType=" + normType + ", housingForm='" + housingForm + "', attestation=" + attestation
 			+ ", lastDailyRunAt=" + lastDailyRunAt + ", lifecareServiceId=" + lifecareServiceId + ", lifecareDecisionId=" + lifecareDecisionId
-			+ ", lifecareCalculationId=" + lifecareCalculationId + ", created=" + created + ", modified=" + modified + '}';
+			+ ", lifecareCalculationId=" + lifecareCalculationId + ", lifecarePaymentIds=" + lifecarePaymentIds + ", created=" + created + ", modified=" + modified + '}';
 	}
 }

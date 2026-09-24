@@ -76,8 +76,9 @@ public class FinancialAssistanceView {
 	private Decision recommendation;
 
 	@Schema(
-		description = "The caseworker approval state of the three financial assistance view sections (calculation, payment, decision) — whether each has been verified as approved. Always present with all three sections.",
-		accessMode = READ_ONLY)
+		description = "DEPRECATED - being retired. The caseworker check-offs of the three financial assistance view sections (calculation, payment, decision). They no longer gate finalize; the Lifecare statuses (final normberäkning, locked beslut, registered payment) replace them. Always present with all three sections while it remains.",
+		accessMode = READ_ONLY,
+		deprecated = true)
 	private SectionApprovals sectionApprovals;
 
 	@Schema(

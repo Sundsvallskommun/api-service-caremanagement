@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.types.financialassistance.api;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +13,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizePayment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeResponse;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceFinalizeService;
 import se.sundsvall.dept44.support.Identifier;
 
@@ -56,11 +53,6 @@ class FinancialAssistanceFinalizeResourceTest {
 				.withAmount(new BigDecimal("7900.00"))
 				.withDecisionMessage("Du beviljas ekonomiskt bistånd för juni 2026"))
 			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false))
-			.withPayments(List.of(FinalizePayment.create()
-				.withPaymentDate(LocalDate.of(2026, 6, 25))
-				.withAmount(new BigDecimal("7900.00"))
-				.withConcernedMonth("2026-06")
-				.withPayee(Payee.create().withName("Anna Andersson").withPaymentMethod("BANKKONTO").withClearing("6000").withAccountNumber("123456789"))))
 			.withHouseholdSizeChanged(false);
 	}
 
@@ -102,5 +94,29 @@ class FinancialAssistanceFinalizeResourceTest {
 			.expectStatus().isOk();
 
 		verify(finalizeServiceMock).finalize(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(request), isNull());
+	}
+
+	@Test
+	void paymentsFromAClientThatPredatesTheLifecareReferencesAreIgnored() {
+		// Draken before the change still sends its payment drafts; careM no longer reads them and creates no rows.
+		final var body = """
+			{"decision": {"outcome": "AVSLAG"},
+			 "communication": {"minaSidor": true, "digitalMailbox": false, "letter": false},
+			 "payments": [{"paymentDate": "2026-06-25", "amount": 7900, "concernedMonth": "2026-06", "payee": {"name": "Anna Andersson", "paymentMethod": "BANKKONTO"}}]}
+			""";
+		final var expected = FinalizeRequest.create()
+			.withDecision(FinalizeDecision.create().withOutcome("AVSLAG"))
+			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false));
+		when(finalizeServiceMock.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, expected, "jane02doe")).thenReturn(FinalizeResponse.create());
+
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "jane02doe; type=adAccount")
+			.contentType(APPLICATION_JSON)
+			.bodyValue(body)
+			.exchange()
+			.expectStatus().isOk();
+
+		verify(finalizeServiceMock).finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, expected, "jane02doe");
 	}
 }

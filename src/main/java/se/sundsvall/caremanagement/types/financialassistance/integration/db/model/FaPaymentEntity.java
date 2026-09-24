@@ -22,9 +22,12 @@ import org.hibernate.annotations.UuidGenerator;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * A single financial assistance payment (utbetalning) on an errand — a caseworker-drafted, decision-created or
- * Lifecare-sourced payment row. Draken's BFF registers a decided row in Lifecare itself and reports the outcome through
- * {@code .../payments/{paymentId}/lifecare-result}. Modelled after {@link FaMonitoringEntity}.
+ * A single financial assistance payment (utbetalning) on an errand, from the time careM held payment drafts and
+ * "Besluta och utbetala" created a row per decided payment. <strong>Retired and read-only:</strong> nothing writes
+ * these
+ * rows any more — Draken registers payments directly in Lifecare. They are kept, data included, because payment-status
+ * still verifies errands decided before the change against them, and as audit history. Modelled after
+ * {@link FaMonitoringEntity}.
  *
  * <p>
  * {@code source} records provenance — {@code CASEWORKER} for one authored in Draken, {@code LIFECARE} for one read out
@@ -33,9 +36,9 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  * </p>
  *
  * <p>
- * {@code status} is entirely server-managed: a caseworker's saved row is created {@code DRAFT}, and a row a decision
- * created is {@code PENDING_REGISTRATION}. Only the BFF's lifecare-result report moves the latter on, to
- * {@code REGISTERED} or to {@code FAILED} with Lifecare's own message in {@code lifecareDetail}.
+ * {@code status} was server-managed: a caseworker's saved row was {@code DRAFT}, a row a decision created
+ * {@code PENDING_REGISTRATION}, and the BFF's Lifecare report moved it on to {@code REGISTERED} or to {@code FAILED}
+ * with Lifecare's own message in {@code lifecareDetail}. A row still {@code PENDING_REGISTRATION} stays so.
  * </p>
  *
  * <p>

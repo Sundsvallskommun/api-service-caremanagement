@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -20,12 +23,7 @@ import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizePayment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -33,16 +31,12 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -59,15 +53,14 @@ class FinancialAssistanceFinalizeServiceTest {
 	private static final String DECIDED_BY = "jane02doe";
 	private static final String DECISION_ID = "decision-1";
 	private static final Integer LIFECARE_CALCULATION_ID = 4711;
+	private static final Integer LIFECARE_DECISION_ID = 815;
+	private static final List<String> LIFECARE_PAYMENT_IDS = List.of("90210", "90211");
 
 	@Mock
 	private ErrandService errandServiceMock;
 
 	@Mock
 	private FinancialAssistanceRepository repositoryMock;
-
-	@Mock
-	private SectionApprovalService sectionApprovalServiceMock;
 
 	@Mock
 	private DecisionService decisionServiceMock;
@@ -84,12 +77,6 @@ class FinancialAssistanceFinalizeServiceTest {
 	@Captor
 	private ArgumentCaptor<Map<String, Object>> variablesCaptor;
 
-	@Mock
-	private PaymentService paymentServiceMock;
-
-	@Mock
-	private PayeeService payeeServiceMock;
-
 	@InjectMocks
 	private FinancialAssistanceFinalizeService service;
 
@@ -103,52 +90,56 @@ class FinancialAssistanceFinalizeServiceTest {
 				.withAmount(new BigDecimal("7900.00"))
 				.withDecisionMessage("Du beviljas ekonomiskt bistånd"))
 			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(true))
-			.withPayments(List.of(
-				FinalizePayment.create().withPaymentDate(LocalDate.of(2026, 6, 25)).withAmount(new BigDecimal("6000.00")).withConcernedMonth("2026-06")
-					.withPayee(Payee.create().withName("Hyresvärden AB").withPaymentMethod("BANKGIRO").withAccountNumber("123-4567")).withAccountingCode("5011"),
-				FinalizePayment.create().withPaymentDate(LocalDate.of(2026, 6, 25)).withAmount(new BigDecimal("1900.00")).withConcernedMonth("2026-06")
-					.withPayee(Payee.create().withName("Anna Andersson").withPaymentMethod("BANKKONTO").withClearing("6000").withAccountNumber("123456789"))))
 			.withHouseholdSizeChanged(true);
 	}
 
 	private static FinalizeRequest rejectingRequest() {
 		return FinalizeRequest.create()
 			.withDecision(FinalizeDecision.create().withOutcome("AVSLAG").withReason("Tillgångar överstiger normen").withAmount(new BigDecimal("500")))
-			.withCommunication(CommunicationChannels.create().withMinaSidor(false).withDigitalMailbox(true).withLetter(false))
-			.withPayments(List.of());
+			.withCommunication(CommunicationChannels.create().withMinaSidor(false).withDigitalMailbox(true).withLetter(false));
 	}
 
-	private static SectionApprovals approvals(final boolean calculation, final boolean payment, final boolean decision) {
-		return SectionApprovals.create()
-			.withCalculation(SectionApproval.create().withSection("CALCULATION").withApproved(calculation))
-			.withPayment(SectionApproval.create().withSection("PAYMENT").withApproved(payment))
-			.withDecision(SectionApproval.create().withSection("DECISION").withApproved(decision));
+	/** An errand linked to its beslut, normberäkning and payments in Lifecare — what a bifall needs. */
+	private static FinancialAssistanceEntity grantable() {
+		return FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)
+			.withLifecareDecisionId(LIFECARE_DECISION_ID)
+			.withLifecareCalculationId(LIFECARE_CALCULATION_ID)
+			.withLifecarePaymentIds(LIFECARE_PAYMENT_IDS);
 	}
 
-	/**
-	 * Errand in AWAITING_DECISION, all sections approved, nothing decided yet, typed row present and the normberäkning
-	 * saved in Lifecare.
-	 */
-	private void readyErrand() {
-		readyErrand(LIFECARE_CALCULATION_ID);
+	/** An errand linked only to its beslut — all an avslag needs. */
+	private static FinancialAssistanceEntity rejectable() {
+		return FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)
+			.withLifecareDecisionId(LIFECARE_DECISION_ID);
 	}
 
-	private void readyErrand(final Integer lifecareCalculationId) {
+	/** The errand is in AWAITING_DECISION and not decided yet; the typed row is the given one. */
+	private void awaitingDecision(final FinancialAssistanceEntity entity) {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
-		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals(true, true, true));
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Decision.create().withDecisionType("RECOMMENDATION").withValue("OK")));
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withLifecareCalculationId(lifecareCalculationId)));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.ofNullable(entity));
+	}
+
+	/** As {@link #awaitingDecision}, and the decision row is created. */
+	private void readyErrand(final FinancialAssistanceEntity entity) {
+		awaitingDecision(entity);
 		when(decisionServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Decision.class))).thenReturn(DECISION_ID);
-		// The payment rows finalize creates; their ids are returned on the receipt.
-		final var ids = new java.util.concurrent.atomic.AtomicInteger();
-		lenient().when(paymentServiceMock.createForDecision(eq(ERRAND_ID), any(PaymentRequest.class)))
-			.thenAnswer(invocation -> "pay-" + ids.incrementAndGet());
-		lenient().when(payeeServiceMock.unsyncedPayeeWarnings(eq(ERRAND_ID), anyList())).thenReturn(List.of());
+	}
+
+	private void assertRefusedWithConflict(final FinalizeRequest request, final String message) {
+		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: " + message);
+
+		verify(repositoryMock, never()).save(any());
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+		verifyNoInteractions(processServiceMock);
 	}
 
 	@Test
-	void grantingFinalizeRecordsDecisionAndPaymentsAndCorrelatesApproved() {
-		readyErrand();
+	void grantingFinalizeRecordsTheDecisionAndCorrelatesApproved() {
+		readyErrand(grantable());
 
 		final var request = grantingRequest();
 		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY);
@@ -158,20 +149,20 @@ class FinancialAssistanceFinalizeServiceTest {
 		assertThat(response.getProcessMessageCorrelated()).isTrue();
 		assertThat(response.getCommunication()).isEqualTo(request.getCommunication());
 
-		// 1. The audit fields land on the entity before the decision is recorded
-		final var inOrder = inOrder(repositoryMock, decisionServiceMock, paymentServiceMock, processServiceMock);
+		// 1. The audit fields land on the entity before the decision is recorded, 2. the decision, 3. the process
+		final var inOrder = inOrder(repositoryMock, decisionServiceMock, processServiceMock);
 		inOrder.verify(repositoryMock).save(entityCaptor.capture());
 		inOrder.verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
-		inOrder.verify(paymentServiceMock, times(2)).createForDecision(eq(ERRAND_ID), any(PaymentRequest.class));
 		inOrder.verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), variablesCaptor.capture());
 
 		assertThat(entityCaptor.getValue())
 			.returns(true, FinancialAssistanceEntity::getHouseholdSizeChanged)
 			.returns(true, FinancialAssistanceEntity::getNotifyMinaSidor)
 			.returns(false, FinancialAssistanceEntity::getNotifyDigitalMailbox)
-			.returns(true, FinancialAssistanceEntity::getNotifyLetter);
+			.returns(true, FinancialAssistanceEntity::getNotifyLetter)
+			// The Lifecare references are left exactly as Draken linked them.
+			.returns(LIFECARE_PAYMENT_IDS, FinancialAssistanceEntity::getLifecarePaymentIds);
 
-		// 2. The PAYMENT decision row
 		assertThat(decisionCaptor.getValue())
 			.returns("PAYMENT", Decision::getDecisionType)
 			.returns("BIFALL", Decision::getValue)
@@ -183,22 +174,26 @@ class FinancialAssistanceFinalizeServiceTest {
 			.returns(DECIDED_BY, Decision::getCreatedBy);
 		assertThat(decisionCaptor.getValue().getAmount()).isEqualByComparingTo("7900.00");
 
-		// 3. The payment rows, one per decided utbetalning, in request order
-		final ArgumentCaptor<PaymentRequest> paymentRequestCaptor = ArgumentCaptor.captor();
-		verify(paymentServiceMock, times(2)).createForDecision(eq(ERRAND_ID), paymentRequestCaptor.capture());
-		assertThat(paymentRequestCaptor.getAllValues()).extracting(PaymentRequest::getPayeeName, PaymentRequest::getApplicationMonth, PaymentRequest::getClearingNumber)
-			.containsExactly(tuple("Hyresvärden AB", "2026-06", null), tuple("Anna Andersson", "2026-06", "6000"));
-		assertThat(response.getPaymentIds()).containsExactly("pay-1", "pay-2");
-
-		// 4. The process resumes on the approved path; the status is left to the process
+		// The process resumes on the approved path; the status is left to the process
 		assertThat(variablesCaptor.getValue()).containsExactly(Map.entry("paymentDecision", "APPROVED"));
 		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
 	}
 
 	@Test
-	void rejectingFinalizeRecordsZeroAmountSkipsPaymentsAndCorrelatesRejected() {
-		// An avslag pays nothing, so it needs no normberäkning in Lifecare.
-		readyErrand(null);
+	void partialGrantIsFinalizedLikeABifall() {
+		readyErrand(grantable());
+		final var request = grantingRequest();
+		request.getDecision().setOutcome("DELAVSLAG");
+
+		service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY);
+
+		verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), variablesCaptor.capture());
+		assertThat(variablesCaptor.getValue()).containsExactly(Map.entry("paymentDecision", "APPROVED"));
+	}
+
+	@Test
+	void rejectingFinalizeNeedsNoCalculationNorPaymentsAndCorrelatesRejected() {
+		readyErrand(rejectable());
 
 		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
 
@@ -214,12 +209,22 @@ class FinancialAssistanceFinalizeServiceTest {
 			.returns(false, FinancialAssistanceEntity::getNotifyMinaSidor)
 			.returns(true, FinancialAssistanceEntity::getNotifyDigitalMailbox)
 			.returns(false, FinancialAssistanceEntity::getNotifyLetter);
-		verify(paymentServiceMock, never()).createForDecision(any(), any());
+		verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), variablesCaptor.capture());
+		assertThat(variablesCaptor.getValue()).containsExactly(Map.entry("paymentDecision", "REJECTED"));
+	}
+
+	@Test
+	void rejectingFinalizeAcceptsAnEmptyPaymentList() {
+		readyErrand(rejectable().withLifecarePaymentIds(List.of()));
+
+		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
+
+		assertThat(response.getDecisionId()).isEqualTo(DECISION_ID);
 	}
 
 	@Test
 	void correlationFailureIsReportedNotThrown() {
-		readyErrand();
+		readyErrand(rejectable());
 		doThrow(new IllegalStateException("engine down")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), anyMap());
 
 		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
@@ -234,7 +239,7 @@ class FinancialAssistanceFinalizeServiceTest {
 
 	@Test
 	void aFailedQueueFailsTheFinalizeRatherThanLosingTheMessage() {
-		readyErrand();
+		readyErrand(rejectable());
 		doThrow(new IllegalStateException("engine down")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), anyMap());
 		doThrow(new IllegalStateException("database down")).when(processServiceMock).queueMessageRetry(any(), any(), any(), any(), anyMap(), any());
 		final var request = rejectingRequest();
@@ -253,7 +258,7 @@ class FinancialAssistanceFinalizeServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
-		verifyNoInteractions(sectionApprovalServiceMock, decisionServiceMock, repositoryMock, processServiceMock);
+		verifyNoInteractions(decisionServiceMock, repositoryMock, processServiceMock);
 	}
 
 	@Test
@@ -266,7 +271,7 @@ class FinancialAssistanceFinalizeServiceTest {
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
 			.hasMessageContaining("X-Sent-By");
 
-		verifyNoInteractions(sectionApprovalServiceMock, decisionServiceMock, repositoryMock, processServiceMock);
+		verifyNoInteractions(decisionServiceMock, repositoryMock, processServiceMock);
 	}
 
 	@Test
@@ -279,27 +284,12 @@ class FinancialAssistanceFinalizeServiceTest {
 			.hasFieldOrPropertyWithValue("status", CONFLICT)
 			.hasMessage("Conflict: errand must be in status AWAITING_DECISION to be finalized, but is in status 'SUPPLEMENT_REQUESTED'");
 
-		verifyNoInteractions(sectionApprovalServiceMock, decisionServiceMock, repositoryMock, processServiceMock);
-	}
-
-	@Test
-	void unapprovedSectionsYield409NamingThem() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
-		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals(true, false, false));
-		final var request = grantingRequest();
-
-		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT)
-			.hasMessage("Conflict: all sections must be approved before the errand can be finalized - not approved: PAYMENT, DECISION");
-
 		verifyNoInteractions(decisionServiceMock, repositoryMock, processServiceMock);
 	}
 
 	@Test
 	void alreadyFinalizedYields409() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
-		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals(true, true, true));
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Decision.create().withDecisionType("PAYMENT").withValue("BIFALL")));
 		final var request = grantingRequest();
 
@@ -312,48 +302,56 @@ class FinancialAssistanceFinalizeServiceTest {
 		verifyNoInteractions(repositoryMock, processServiceMock);
 	}
 
-	@Test
-	void grantingDecisionWithoutLifecareCalculationYields409() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
-		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals(true, true, true));
-		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
+	@ParameterizedTest
+	@ValueSource(strings = {
+		"BIFALL", "DELAVSLAG", "AVSLAG"
+	})
+	void anyDecisionWithoutLifecareDecisionYields409(final String outcome) {
+		awaitingDecision(grantable().withLifecareDecisionId(null));
 		final var request = grantingRequest();
+		request.getDecision().setOutcome(outcome);
 
-		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT)
-			.hasMessage("Conflict: a BIFALL decision requires the normberäkning to be saved in Lifecare first - save it and set lifecareCalculationId on errand 'errand-1' (PATCH .../financial-assistance/{errandId}/data) before finalizing");
+		assertRefusedWithConflict(request,
+			"a decision requires the beslut to be saved in Lifecare first - save it and set lifecareDecisionId on errand 'errand-1' (PATCH .../financial-assistance/{errandId}/data) before finalizing");
+	}
 
-		verify(repositoryMock, never()).save(any());
-		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
-		verifyNoInteractions(paymentServiceMock, payeeServiceMock, processServiceMock);
+	@ParameterizedTest
+	@ValueSource(strings = {
+		"BIFALL", "DELAVSLAG"
+	})
+	void grantingDecisionWithoutLifecareCalculationYields409(final String outcome) {
+		awaitingDecision(grantable().withLifecareCalculationId(null));
+		final var request = grantingRequest();
+		request.getDecision().setOutcome(outcome);
+
+		assertRefusedWithConflict(request, "a " + outcome
+			+ " decision requires the normberäkning to be saved in Lifecare first - save it and set lifecareCalculationId on errand 'errand-1' (PATCH .../financial-assistance/{errandId}/data) before finalizing");
+	}
+
+	@ParameterizedTest
+	@NullAndEmptySource
+	void grantingDecisionWithoutLinkedPaymentsIsFinalized(final List<String> lifecarePaymentIds) {
+		// Draken registers the payments in Lifecare without handing careM their ids; the process finds them there.
+		readyErrand(grantable().withLifecarePaymentIds(lifecarePaymentIds));
+
+		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
+
+		assertThat(response.getDecisionId()).isEqualTo(DECISION_ID);
+		verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), variablesCaptor.capture());
+		assertThat(variablesCaptor.getValue()).containsExactly(Map.entry("paymentDecision", "APPROVED"));
 	}
 
 	@Test
-	void partialGrantWithoutLifecareCalculationYields409() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
-		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals(true, true, true));
-		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
-		final var request = grantingRequest();
-		request.getDecision().setOutcome("DELAVSLAG");
+	void rejectionLinkedToLifecarePaymentsYields409() {
+		awaitingDecision(rejectable().withLifecarePaymentIds(List.of("90210")));
 
-		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", CONFLICT)
-			.hasMessageContaining("a DELAVSLAG decision requires the normberäkning to be saved in Lifecare first");
-
-		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
-		verifyNoInteractions(paymentServiceMock, processServiceMock);
+		assertRefusedWithConflict(rejectingRequest(),
+			"an AVSLAG decision pays nothing, but errand 'errand-1' is linked to Lifecare payments [90210] - remove them in Lifecare and clear lifecarePaymentIds before finalizing");
 	}
 
 	@Test
 	void missingTypedErrandYields404() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
-		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals(true, true, true));
-		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
+		awaitingDecision(null);
 		final var request = grantingRequest();
 
 		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
@@ -363,43 +361,5 @@ class FinancialAssistanceFinalizeServiceTest {
 
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 		verifyNoInteractions(processServiceMock);
-	}
-
-	@Test
-	void finalizeCarriesTheWarningForAPayeeThatIsNotInLifecareYet() {
-		readyErrand();
-		when(payeeServiceMock.unsyncedPayeeWarnings(eq(ERRAND_ID), anyList()))
-			.thenReturn(List.of("Betalningsmottagaren \"Hyresvärden AB\" är inte upplagd i Lifecare ännu"));
-
-		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
-
-		assertThat(response.getPayeeWarnings()).containsExactly("Betalningsmottagaren \"Hyresvärden AB\" är inte upplagd i Lifecare ännu");
-		// The warning is not a guard: the decision and the payment rows still happened.
-		assertThat(response.getDecisionId()).isEqualTo(DECISION_ID);
-		assertThat(response.getPaymentIds()).containsExactly("pay-1", "pay-2");
-		verify(paymentServiceMock, times(2)).createForDecision(eq(ERRAND_ID), any(PaymentRequest.class));
-	}
-
-	@Test
-	void finalizeMatchesTheWarningsAgainstThePayeesTheDecisionPaysTo() {
-		readyErrand();
-		final var payees = ArgumentCaptor.forClass(List.class);
-
-		service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
-
-		verify(payeeServiceMock).unsyncedPayeeWarnings(eq(ERRAND_ID), payees.capture());
-		assertThat(payees.getValue()).extracting("name").containsExactly("Hyresvärden AB", "Anna Andersson");
-	}
-
-	@Test
-	void finalizeWithoutPaymentsAsksAboutNoPayees() {
-		readyErrand();
-		final var payees = ArgumentCaptor.forClass(List.class);
-
-		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
-
-		verify(payeeServiceMock).unsyncedPayeeWarnings(eq(ERRAND_ID), payees.capture());
-		assertThat(payees.getValue()).isEmpty();
-		assertThat(response.getPayeeWarnings()).isEmpty();
 	}
 }

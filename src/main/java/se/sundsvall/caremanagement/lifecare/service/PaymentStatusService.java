@@ -64,6 +64,18 @@ public class PaymentStatusService {
 			.collect(toMap(payment -> String.valueOf(payment.getId()), PersonBasedPaymentDTO::getPayDate, (first, second) -> first));
 	}
 
+	/**
+	 * The applicant's Lifecare payments in a date window, as Lifecare holds them: id, the insats (service) they are
+	 * registered on, the month they concern and the PayDate when there is one. Payments without an id are left out. What
+	 * lets a caller find the payments of one decision when it has not been told their ids.
+	 */
+	public List<LifecarePayment> registeredPayments(final String municipalityId, final String applicantPersonId, final LocalDate from, final LocalDate to) {
+		return payments(municipalityId, applicantPersonId, from, to).stream()
+			.filter(payment -> payment.getId() != null)
+			.map(payment -> new LifecarePayment(String.valueOf(payment.getId()), payment.getServiceId(), payment.getConcernedMonth(), payment.getPayDate()))
+			.toList();
+	}
+
 	private List<PersonBasedPaymentDTO> payments(final String municipalityId, final String applicantPersonId, final LocalDate from, final LocalDate to) {
 		return ofNullable(lifecareFamilyCareIntegration.getPayments(municipalityId, applicantPersonId, from, to))
 			.map(ApiPaginationCompositePersonBasedPaymentDTO::getResult)

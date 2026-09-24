@@ -152,7 +152,8 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 
 		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
 			.containsExactly(tuple("PAYMENT", "BIFALL"));
-		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).hasSize(1);
+		// Draken registers the payment in Lifecare itself: careM creates no payment row, and nothing awaits registration.
+		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
 	}
 
 	@Test
@@ -169,6 +170,54 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 
 		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
 			.containsExactly(tuple("PAYMENT", "AVSLAG"));
+		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void test06_finalizeWithoutLifecareDecisionIdIsRejected() {
+		// Every outcome is a beslut Draken saves in Lifecare first; an errand not linked to one cannot be decided.
+		final var entity = financialAssistanceRepository.findByErrandId(ERRAND_ID).orElseThrow();
+		entity.setLifecareDecisionId(null);
+		financialAssistanceRepository.save(entity);
+
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/finalize")
+			.withHttpMethod(POST)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(CONFLICT)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequestAndVerifyResponse();
+
+		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void test07_paymentStatusFindsTheBifallsPaymentOnTheInsatsAndLinksIt() {
+		// A bifall as Draken makes it today: the payment is registered in Lifecare, careM is told nothing about it.
+		patchData("""
+			{"lifecareCalculationId": 4711}""");
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/finalize")
+			.withHttpMethod(POST)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withRequest("finalize-request.json")
+			.withExpectedResponseStatus(OK)
+			.sendRequest();
+
+		// The process's check: of the applicant's Lifecare payments, only the one on the errand's insats (7700) for the
+		// application month counts - not the other insats's, not the previous month's.
+		setupCall()
+			.withServicePath(PATH + "/payment-status")
+			.withHttpMethod(POST)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(OK)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequest();
+
+		// Paid, so it is now this errand's: linked, and never available to another errand.
+		assertThat(financialAssistanceRepository.findLifecarePaymentIdsLinkedElsewhere(List.of("90210", "90211", "90212"), "another-errand"))
+			.containsExactly("90210");
 		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
 	}
 

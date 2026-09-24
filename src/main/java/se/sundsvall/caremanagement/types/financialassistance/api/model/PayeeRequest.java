@@ -9,7 +9,7 @@ import java.util.Objects;
  * A betalningsmottagare the caseworker adds by hand on an errand.
  *
  * <p>
- * Free-form for the same reason {@link Payee} is: which fields a payment method actually needs is Lifecare's rule, not
+ * Free-form on purpose: which fields a payment method actually needs is Lifecare's rule, not
  * ours, and verksamheten was explicit that the form should not encode per-betalsätt field logic. {@code clearing} and
  * {@code accountNumber} are therefore optional independently — Lifecare gets what has a value, and the report back
  * carries
