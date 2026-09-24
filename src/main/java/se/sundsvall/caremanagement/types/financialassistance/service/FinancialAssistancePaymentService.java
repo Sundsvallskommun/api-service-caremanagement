@@ -12,7 +12,6 @@ import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
@@ -23,12 +22,10 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentSt
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
-import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Comparator.naturalOrder;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toCollection;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.service.NonRedDayCalendar.plusWorkingDays;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.DECISION_TYPE_PAYMENT;
@@ -62,7 +59,6 @@ public class FinancialAssistancePaymentService {
 	private static final ZoneId SWEDISH_TIME = ZoneId.of("Europe/Stockholm");
 
 	private final PaymentStatusService paymentStatusService;
-	private final CitizenService citizenService;
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final DecisionService decisionService;
@@ -70,18 +66,15 @@ public class FinancialAssistancePaymentService {
 	private final Clock clock;
 
 	@Autowired
-	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final CitizenService citizenService,
-		final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final DecisionService decisionService,
+	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final DecisionService decisionService,
 		final LifecareServiceIdService lifecareServiceIdService) {
-		this(paymentStatusService, citizenService, errandService, financialAssistanceRepository, decisionService, lifecareServiceIdService,
+		this(paymentStatusService, errandService, financialAssistanceRepository, decisionService, lifecareServiceIdService,
 			Clock.system(SWEDISH_TIME));
 	}
 
-	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final CitizenService citizenService,
-		final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final DecisionService decisionService,
+	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final DecisionService decisionService,
 		final LifecareServiceIdService lifecareServiceIdService, final Clock clock) {
 		this.paymentStatusService = paymentStatusService;
-		this.citizenService = citizenService;
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.decisionService = decisionService;
@@ -119,7 +112,7 @@ public class FinancialAssistancePaymentService {
 	public PaymentStatusResponse checkPaymentStatus(final String municipalityId, final String namespace, final PaymentStatusRequest request) {
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 		if (!hasText(request.getErrandId())) {
-			final var applicant = personalNumber(municipalityId, request.getApplicant());
+			final var applicant = request.getApplicant();
 			final PaymentStatus status = paymentStatusService.read(municipalityId, applicant, applicationMonth);
 			return PaymentStatusResponse.create()
 				.withEffectuated(status.effectuated())
@@ -158,7 +151,7 @@ public class FinancialAssistancePaymentService {
 		}
 
 		final var monthKey = applicationMonth.toString();
-		final var applicant = personalNumber(municipalityId, request.getApplicant());
+		final var applicant = request.getApplicant();
 		final var onTheInsats = paymentStatusService.registeredPayments(municipalityId, applicant, applicationMonth.minusMonths(1).atDay(1),
 			latest(applicationMonth.atEndOfMonth(), today.plusMonths(WINDOW_MONTHS_AHEAD))).stream()
 			.filter(payment -> serviceId.equals(payment.serviceId()))
@@ -210,7 +203,7 @@ public class FinancialAssistancePaymentService {
 		final var today = LocalDate.now(clock);
 		final var overdue = today.isAfter(deadline);
 
-		final var applicant = personalNumber(municipalityId, request.getApplicant());
+		final var applicant = request.getApplicant();
 		final var paid = paymentStatusService.paidPaymentDates(municipalityId, applicant, applicationMonth.minusMonths(1).atDay(1),
 			latest(applicationMonth.atEndOfMonth(), today.plusMonths(WINDOW_MONTHS_AHEAD)));
 		final var unpaid = linked.stream()
@@ -261,11 +254,5 @@ public class FinancialAssistancePaymentService {
 		return PaymentStatusResponse.create()
 			.withEffectuated(false)
 			.withDetail(detail);
-	}
-
-	/** Resolve a partyId to the personnummer the Lifecare/SSBTEK pipeline needs, or 404 when the citizen is unknown. */
-	private String personalNumber(final String municipalityId, final String partyId) {
-		return citizenService.getPersonalNumber(municipalityId, partyId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No citizen found for partyId " + partyId));
 	}
 }

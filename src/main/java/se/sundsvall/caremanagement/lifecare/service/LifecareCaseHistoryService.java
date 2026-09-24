@@ -53,13 +53,13 @@ public class LifecareCaseHistoryService {
 	/**
 	 * List the calculations registered on a person in the given period, newest-first as Lifecare returns them.
 	 *
-	 * @param  personId the person's personal identity number (the calculation owner)
+	 * @param  partyId  the person's partyId (the calculation owner)
 	 * @param  fromDate the inclusive start of the listing period
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's calculations in the period (empty when none)
 	 */
-	public List<CalculationView> listCalculations(final String municipalityId, final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getCalculations(municipalityId, personId, fromDate, toDate))
+	public List<CalculationView> listCalculations(final String municipalityId, final String partyId, final LocalDate fromDate, final LocalDate toDate) {
+		return ofNullable(lifecareFamilyCareIntegration.getCalculations(municipalityId, partyId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -70,13 +70,13 @@ public class LifecareCaseHistoryService {
 	/**
 	 * List the decisions registered on a person in the given period, newest-first as Lifecare returns them.
 	 *
-	 * @param  personId the person's personal identity number (the decision owner)
+	 * @param  partyId  the person's partyId (the decision owner)
 	 * @param  fromDate the inclusive start of the listing period
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's decisions in the period (empty when none)
 	 */
-	public List<DecisionView> listDecisions(final String municipalityId, final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getDecisions(municipalityId, personId, fromDate, toDate))
+	public List<DecisionView> listDecisions(final String municipalityId, final String partyId, final LocalDate fromDate, final LocalDate toDate) {
+		return ofNullable(lifecareFamilyCareIntegration.getDecisions(municipalityId, partyId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -88,13 +88,13 @@ public class LifecareCaseHistoryService {
 	 * List the documents registered on a person in the given period (metadata only), newest-first as Lifecare returns
 	 * them.
 	 *
-	 * @param  personId the person's personal identity number (the document owner)
+	 * @param  partyId  the person's partyId (the document owner)
 	 * @param  fromDate the inclusive start of the listing period
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's documents in the period (empty when none)
 	 */
-	public List<DocumentView> listDocuments(final String municipalityId, final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getDocuments(municipalityId, personId, fromDate, toDate))
+	public List<DocumentView> listDocuments(final String municipalityId, final String partyId, final LocalDate fromDate, final LocalDate toDate) {
+		return ofNullable(lifecareFamilyCareIntegration.getDocuments(municipalityId, partyId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedDocumentDTO::getResult)
 			.orElseGet(List::of)
 			.stream()
@@ -106,13 +106,13 @@ public class LifecareCaseHistoryService {
 	 * List the payments registered on a person in the given period, as Lifecare returns them. The payment's person list
 	 * (personal numbers) is not projected — see {@link PaymentView}.
 	 *
-	 * @param  personId the person's personal identity number (the payment owner)
+	 * @param  partyId  the person's partyId (the payment owner)
 	 * @param  fromDate the inclusive start of the listing period
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's payments in the period (empty when none)
 	 */
-	public List<PaymentView> listPayments(final String municipalityId, final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getPayments(municipalityId, personId, fromDate, toDate))
+	public List<PaymentView> listPayments(final String municipalityId, final String partyId, final LocalDate fromDate, final LocalDate toDate) {
+		return ofNullable(lifecareFamilyCareIntegration.getPayments(municipalityId, partyId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedPaymentDTO::getResult)
 			.orElseGet(List::of)
 			.stream()

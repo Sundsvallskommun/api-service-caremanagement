@@ -7,7 +7,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
@@ -15,7 +14,6 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,9 +29,6 @@ class HouseholdPartyServiceTest {
 	@Mock
 	private FinancialAssistanceRepository financialAssistanceRepositoryMock;
 
-	@Mock
-	private CitizenService citizenServiceMock;
-
 	@InjectMocks
 	private HouseholdPartyService service;
 
@@ -44,11 +39,10 @@ class HouseholdPartyServiceTest {
 			Stakeholder.create().withRole("CO_APPLICANT").withExternalId("party-b")));
 		final var applicantPerson = FaPerson.create().withRole("APPLICANT").withPartyId("party-a").withPaymentSameAsPrevious(false);
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withPersons(List.of(applicantPerson))));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "party-a")).thenReturn(Optional.of("pnr-a"));
 
 		final var household = service.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
-		assertThat(household.applicantPersonalNumber()).contains("pnr-a");
+		assertThat(household.applicantPartyId()).contains("party-a");
 		assertThat(household.coApplicantPresent()).isTrue();
 		assertThat(household.applicantPerson()).contains(applicantPerson);
 		assertThat(household.applicantName()).contains("Anna Andersson");
@@ -59,11 +53,10 @@ class HouseholdPartyServiceTest {
 		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Stakeholder.create().withRole("APPLICANT")));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withPersons(List.of(
 			FaPerson.create().withRole("APPLICANT").withPartyId("party-a")))));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "party-a")).thenReturn(Optional.empty());
 
 		final var household = service.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
-		assertThat(household.applicantPersonalNumber()).isEmpty();
+		assertThat(household.applicantPartyId()).contains("party-a");
 		assertThat(household.coApplicantPresent()).isFalse();
 		assertThat(household.applicantName()).isEmpty(); // blank stakeholder name → no display name
 	}
@@ -75,20 +68,18 @@ class HouseholdPartyServiceTest {
 
 		final var household = service.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
-		assertThat(household.applicantPersonalNumber()).isEmpty();
+		assertThat(household.applicantPartyId()).isEmpty();
 		assertThat(household.coApplicantPresent()).isFalse();
 		assertThat(household.applicantPerson()).isEmpty();
 		assertThat(household.applicantName()).isEmpty();
-		verifyNoInteractions(citizenServiceMock);
 	}
 
 	@Test
-	void coApplicantPresentFromAStakeholderWithoutAnyCitizenLookup() {
+	void coApplicantPresentFromAStakeholder() {
 		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Stakeholder.create().withRole("CO_APPLICANT").withExternalId("party-b")));
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
 
 		assertThat(service.coApplicantPresent(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isTrue();
-		verifyNoInteractions(citizenServiceMock);
 	}
 
 	@Test

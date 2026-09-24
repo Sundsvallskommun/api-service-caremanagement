@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -14,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
@@ -107,13 +107,10 @@ public class ApplicationRuleFeeder {
 
 	private final ApplicationRulesService applicationRulesService;
 	private final AttachmentService attachmentService;
-	private final CitizenService citizenService;
 
-	ApplicationRuleFeeder(final ApplicationRulesService applicationRulesService, final AttachmentService attachmentService,
-		final CitizenService citizenService) {
+	ApplicationRuleFeeder(final ApplicationRulesService applicationRulesService, final AttachmentService attachmentService) {
 		this.applicationRulesService = applicationRulesService;
 		this.attachmentService = attachmentService;
-		this.citizenService = citizenService;
 	}
 
 	/**
@@ -304,10 +301,9 @@ public class ApplicationRuleFeeder {
 
 	/**
 	 * The children in the application against the children in the previous normberäkning. Only made when the applicant
-	 * states children under 21, and only when both households can be named in full: every errand member's party id has
-	 * to resolve to the personal identity number the previous calculation is keyed on, and the previous household
-	 * itself has to have come back complete. A household missing a member it cannot name would make every renewal look
-	 * like a mismatch, so the comparison is skipped instead.
+	 * states children under 21, and only when both households can be named in full: every errand member has to carry
+	 * a party id, and the previous household itself has to have come back complete. A household missing a member it
+	 * cannot name would make every renewal look like a mismatch, so the comparison is skipped instead.
 	 */
 	private Optional<WarningService.WarningInput> childrenComparisonWarning(final String municipalityId, final FinancialAssistanceEntity errand,
 		final PreviousHousehold previous) {
@@ -316,22 +312,21 @@ public class ApplicationRuleFeeder {
 			return Optional.empty();
 		}
 
-		if (!previous.personIdsComplete()) {
+		if (!previous.partyIdsComplete()) {
 			LOG.warn("The previous calculation's household came back incomplete — skipping the children comparison");
 			return Optional.empty();
 		}
 
-		final var childIds = resolvedPersonIds(municipalityId, children(errand).map(FaChild::getPartyId).toList());
-		final var adultIds = resolvedPersonIds(municipalityId, persons(errand).map(FaPerson::getPartyId).toList());
+		final var childIds = partyIdKeys(children(errand).map(FaChild::getPartyId).toList());
+		final var adultIds = partyIdKeys(persons(errand).map(FaPerson::getPartyId).toList());
 		if (childIds.isEmpty() || adultIds.isEmpty()) {
-			LOG.warn("Could not resolve every household member to a personal identity number — skipping the children comparison");
+			LOG.warn("A household member on the errand carries no party id — skipping the children comparison");
 			return Optional.empty();
 		}
 
-		final var previousChildIds = previous.personIds().stream()
-			.map(ApplicationRuleFeeder::personIdKey)
-			.filter(StringUtils::hasText)
-			.filter(personId -> !adultIds.get().contains(personId))
+		final var previousChildIds = previous.partyIds().stream()
+			.map(ApplicationRuleFeeder::partyIdKey)
+			.filter(partyId -> !adultIds.get().contains(partyId))
 			.collect(toCollection(LinkedHashSet::new));
 
 		final var verdict = applicationRulesService.againstPreviousCalculation(municipalityId, COMPARISON_CHILDREN,
@@ -407,44 +402,23 @@ public class ApplicationRuleFeeder {
 	}
 
 	/**
-	 * The party ids resolved to the personal identity numbers the previous calculation is keyed on, or empty when any
-	 * of them cannot be resolved. Resolved numbers are compared and discarded here — never logged or persisted.
+	 * The party ids as comparison keys, or empty when any member carries none — a household short of a member cannot
+	 * be compared member by member.
 	 */
-	private Optional<Set<String>> resolvedPersonIds(final String municipalityId, final List<String> partyIds) {
-		final var resolved = new LinkedHashSet<String>();
-		for (final var partyId : partyIds) {
-			if (!hasText(partyId)) {
-				return Optional.empty();
-			}
-			final var personId = citizenPersonId(municipalityId, partyId);
-			if (personId.isEmpty()) {
-				return Optional.empty();
-			}
-			resolved.add(personId.get());
-		}
-		return Optional.of(resolved);
-	}
-
-	/** A party id's personal identity number as a comparison key, best-effort (a failed lookup reports empty). */
-	private Optional<String> citizenPersonId(final String municipalityId, final String partyId) {
-		try {
-			return citizenService.getPersonalNumber(municipalityId, partyId).map(ApplicationRuleFeeder::personIdKey).filter(StringUtils::hasText);
-		} catch (final RuntimeException e) {
-			LOG.warn("Could not resolve a household member's personal identity number", e);
+	private static Optional<Set<String>> partyIdKeys(final List<String> partyIds) {
+		if (partyIds.stream().anyMatch(partyId -> !hasText(partyId))) {
 			return Optional.empty();
 		}
+		return Optional.of(partyIds.stream()
+			.map(ApplicationRuleFeeder::partyIdKey)
+			.collect(toCollection(LinkedHashSet::new)));
 	}
 
 	/**
-	 * A personal identity number reduced to a comparison key — its last ten digits, so a 12-digit number from the
-	 * citizen register and a 10-digit one from FamilyCare still match.
+	 * A party id as a comparison key: the direct route resolves them and the integrator passes them on, so case may differ.
 	 */
-	private static String personIdKey(final String personalNumber) {
-		final var digits = ofNullable(personalNumber).orElse("").replaceAll("\\D", "");
-		if (digits.length() <= 10) {
-			return digits;
-		}
-		return digits.substring(digits.length() - 10);
+	private static String partyIdKey(final String partyId) {
+		return partyId.trim().toLowerCase(Locale.ROOT);
 	}
 
 	// ----------------------------------------------------------------------------------------------------------------

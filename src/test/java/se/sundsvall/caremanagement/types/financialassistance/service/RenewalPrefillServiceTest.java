@@ -1,12 +1,10 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareRoster;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PrefilledChild;
@@ -16,38 +14,33 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
 class RenewalPrefillServiceTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String PARTY_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-	private static final String APPLICANT_PNR = "198001012389";
 	private static final String CO_APPLICANT_PARTY_ID = "c0ffee00-0000-4000-8000-000000000002";
 	private static final String CHILD_PARTY_ID = "c0ffee00-0000-4000-8000-000000000001";
 	private static final String OTHER_CHILD_PARTY_ID = "c0ffee00-0000-4000-8000-000000000003";
 
 	@Mock
-	private CitizenService citizenServiceMock;
-
-	@Mock
 	private LifecareCaseService lifecareCaseServiceMock;
 
 	private RenewalPrefillService service() {
-		return new RenewalPrefillService(citizenServiceMock, lifecareCaseServiceMock);
+		return new RenewalPrefillService(lifecareCaseServiceMock);
 	}
 
 	@Test
 	void prefillsOnlyChildrenExcludingApplicantAndCoApplicant() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
 		final var roster = new LifecareRoster(PARTY_ID, CO_APPLICANT_PARTY_ID, List.of(
 			new LifecareRoster.Member(PARTY_ID, "Anna Andersson"),
 			new LifecareRoster.Member(CO_APPLICANT_PARTY_ID, "Björn Andersson"),
 			new LifecareRoster.Member(CHILD_PARTY_ID, "Kid Andersson")));
-		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(roster);
+		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(PARTY_ID), any())).thenReturn(roster);
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
 
@@ -60,11 +53,10 @@ class RenewalPrefillServiceTest {
 	/** The roster resolves the party ids; an unresolvable one arrives as null and the child keeps only its name. */
 	@Test
 	void childWithUnresolvablePartyIdKeepsNullPartyId() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
 		final var roster = new LifecareRoster(PARTY_ID, null, List.of(
 			new LifecareRoster.Member(PARTY_ID, "Anna Andersson"),
 			new LifecareRoster.Member(null, "Kid Andersson")));
-		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(roster);
+		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(PARTY_ID), any())).thenReturn(roster);
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
 
@@ -79,11 +71,10 @@ class RenewalPrefillServiceTest {
 	 */
 	@Test
 	void anUnidentifiableChildIsNotMistakenForAnUnidentifiableApplicant() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
 		final var roster = new LifecareRoster(null, null, List.of(
 			new LifecareRoster.Member(null, "Kid Andersson"),
 			new LifecareRoster.Member(OTHER_CHILD_PARTY_ID, "Kid Two")));
-		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any())).thenReturn(roster);
+		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(PARTY_ID), any())).thenReturn(roster);
 
 		assertThat(service().prefill(MUNICIPALITY_ID, PARTY_ID).getChildren())
 			.extracting(PrefilledChild::getPartyId, PrefilledChild::getName)
@@ -92,8 +83,7 @@ class RenewalPrefillServiceTest {
 
 	@Test
 	void emptyRosterYieldsNoChildren() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
-		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any()))
+		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(PARTY_ID), any()))
 			.thenReturn(new LifecareRoster(PARTY_ID, null, List.of()));
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
@@ -103,20 +93,19 @@ class RenewalPrefillServiceTest {
 	}
 
 	@Test
-	void unresolvedApplicantPartyIdYieldsEmptyResult() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.empty());
+	void unknownApplicantPartyIdYieldsEmptyResult() {
+		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(PARTY_ID), any()))
+			.thenThrow(Problem.valueOf(NOT_FOUND, "No citizen found for partyId " + PARTY_ID));
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);
 
 		assertThat(prefill.isLifecareChecked()).isFalse();
 		assertThat(prefill.getChildren()).isEmpty();
-		verifyNoInteractions(lifecareCaseServiceMock);
 	}
 
 	@Test
 	void lifecareFailureDegradesToEmptyResult() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).thenReturn(Optional.of(APPLICANT_PNR));
-		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(APPLICANT_PNR), any()))
+		when(lifecareCaseServiceMock.latestRoster(eq(MUNICIPALITY_ID), eq(PARTY_ID), any()))
 			.thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare unreachable"));
 
 		final var prefill = service().prefill(MUNICIPALITY_ID, PARTY_ID);

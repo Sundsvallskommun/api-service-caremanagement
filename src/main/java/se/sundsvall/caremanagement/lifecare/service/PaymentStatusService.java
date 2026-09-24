@@ -38,13 +38,13 @@ public class PaymentStatusService {
 	 * through {@link #paidPaymentDates}.
 	 * </p>
 	 *
-	 * @param  applicantPersonId the applicant's personal identity number
-	 * @param  applicationMonth  the month the payment concerns
-	 * @return                   the effectuated flag and, when effectuated, the Lifecare PayDate
+	 * @param  applicantPartyId the applicant's partyId
+	 * @param  applicationMonth the month the payment concerns
+	 * @return                  the effectuated flag and, when effectuated, the Lifecare PayDate
 	 */
-	public PaymentStatus read(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth) {
+	public PaymentStatus read(final String municipalityId, final String applicantPartyId, final YearMonth applicationMonth) {
 		final var monthKey = applicationMonth.toString();
-		return payments(municipalityId, applicantPersonId, applicationMonth.minusMonths(1).atDay(1), applicationMonth.atEndOfMonth()).stream()
+		return payments(municipalityId, applicantPartyId, applicationMonth.minusMonths(1).atDay(1), applicationMonth.atEndOfMonth()).stream()
 			.filter(payment -> hasText(payment.getPayDate()))
 			.filter(payment -> hasText(payment.getConcernedMonth()) && payment.getConcernedMonth().contains(monthKey))
 			.findFirst()
@@ -58,8 +58,8 @@ public class PaymentStatusService {
 	 *
 	 * @return Lifecare payment id to PayDate; payments without an id or a PayDate are left out
 	 */
-	public Map<String, String> paidPaymentDates(final String municipalityId, final String applicantPersonId, final LocalDate from, final LocalDate to) {
-		return payments(municipalityId, applicantPersonId, from, to).stream()
+	public Map<String, String> paidPaymentDates(final String municipalityId, final String applicantPartyId, final LocalDate from, final LocalDate to) {
+		return payments(municipalityId, applicantPartyId, from, to).stream()
 			.filter(payment -> payment.getId() != null && hasText(payment.getPayDate()))
 			.collect(toMap(payment -> String.valueOf(payment.getId()), PersonBasedPaymentDTO::getPayDate, (first, second) -> first));
 	}
@@ -69,15 +69,15 @@ public class PaymentStatusService {
 	 * registered on, the month they concern and the PayDate when there is one. Payments without an id are left out. What
 	 * lets a caller find the payments of one decision when it has not been told their ids.
 	 */
-	public List<LifecarePayment> registeredPayments(final String municipalityId, final String applicantPersonId, final LocalDate from, final LocalDate to) {
-		return payments(municipalityId, applicantPersonId, from, to).stream()
+	public List<LifecarePayment> registeredPayments(final String municipalityId, final String applicantPartyId, final LocalDate from, final LocalDate to) {
+		return payments(municipalityId, applicantPartyId, from, to).stream()
 			.filter(payment -> payment.getId() != null)
 			.map(payment -> new LifecarePayment(String.valueOf(payment.getId()), payment.getServiceId(), payment.getConcernedMonth(), payment.getPayDate()))
 			.toList();
 	}
 
-	private List<PersonBasedPaymentDTO> payments(final String municipalityId, final String applicantPersonId, final LocalDate from, final LocalDate to) {
-		return ofNullable(lifecareFamilyCareIntegration.getPayments(municipalityId, applicantPersonId, from, to))
+	private List<PersonBasedPaymentDTO> payments(final String municipalityId, final String applicantPartyId, final LocalDate from, final LocalDate to) {
+		return ofNullable(lifecareFamilyCareIntegration.getPayments(municipalityId, applicantPartyId, from, to))
 			.map(ApiPaginationCompositePersonBasedPaymentDTO::getResult)
 			.orElseGet(List::of);
 	}

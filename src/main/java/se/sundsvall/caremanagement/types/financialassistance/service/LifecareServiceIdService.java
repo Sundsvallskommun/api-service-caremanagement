@@ -63,13 +63,13 @@ public class LifecareServiceIdService {
 		}
 
 		try {
-			final var resolved = householdPartyService.household(municipalityId, namespace, errandId).applicantPersonalNumber()
+			final var resolved = householdPartyService.household(municipalityId, namespace, errandId).applicantPartyId()
 				.filter(StringUtils::hasText)
 				.flatMap(personId -> actualisationService.findFinancialAssistanceServiceId(municipalityId, personId));
 			resolved.ifPresent(serviceId -> financialAssistanceRepository.save(entity.withLifecareServiceId(serviceId)));
 			return resolved.orElse(null);
 		} catch (final RuntimeException e) {
-			// The exception type only: messages from the citizen and Lifecare lookups may carry the personal number.
+			// The exception type only: messages from the Lifecare lookup may carry the personal number.
 			LOG.warn("Could not look up the Lifecare insats for errand {} ({}); the next read tries again", errandId, e.getClass().getSimpleName());
 			return null;
 		}

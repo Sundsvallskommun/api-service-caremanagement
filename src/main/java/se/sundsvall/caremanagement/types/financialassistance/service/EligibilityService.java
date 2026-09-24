@@ -24,14 +24,12 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Eligibili
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
-import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.util.Comparator.comparing;
 import static java.util.Comparator.naturalOrder;
 import static java.util.Comparator.nullsFirst;
 import static java.util.Optional.ofNullable;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_RENEWAL;
@@ -193,10 +191,10 @@ public class EligibilityService {
 	/** The Lifecare summaries for the applicant (+ co-applicant), best-effort: an upstream failure degrades to "none". */
 	private LifecareFacts loadLifecare(final String municipalityId, final EligibilityRequest request, final LocalDate today, final boolean hasCoApplicant) {
 		try {
-			final var applicant = lifecareCaseService.summarize(municipalityId, personalNumber(municipalityId, request.getApplicant()), today);
+			final var applicant = lifecareCaseService.summarize(municipalityId, request.getApplicant(), today);
 			LifecareCaseSummary coApplicant = null;
 			if (hasCoApplicant) {
-				coApplicant = lifecareCaseService.summarize(municipalityId, personalNumber(municipalityId, request.getCoApplicant()), today);
+				coApplicant = lifecareCaseService.summarize(municipalityId, request.getCoApplicant(), today);
 			}
 			return new LifecareFacts(true, applicant, coApplicant);
 		} catch (final ThrowableProblem e) {
@@ -394,9 +392,7 @@ public class EligibilityService {
 
 	private boolean lifecareProtected(final String municipalityId, final String partyId) {
 		try {
-			return citizenService.getPersonalNumber(municipalityId, partyId)
-				.map(personalNumber -> lifecareCaseService.hasProtectedIdentity(municipalityId, personalNumber))
-				.orElse(false);
+			return lifecareCaseService.hasProtectedIdentity(municipalityId, partyId);
 		} catch (final ThrowableProblem e) {
 			return false;
 		}
@@ -523,15 +519,6 @@ public class EligibilityService {
 	private static boolean hasCoApplicantPerson(final FinancialAssistanceEntity fa) {
 		return ofNullable(fa.getPersons()).orElseGet(List::of).stream()
 			.anyMatch(person -> ROLE_CO_APPLICANT.equals(person.getRole()) && hasText(person.getPartyId()));
-	}
-
-	/**
-	 * Resolve a partyId to the personnummer Lifecare needs; throws (caught upstream → lifecareChecked=false) when
-	 * unknown.
-	 */
-	private String personalNumber(final String municipalityId, final String partyId) {
-		return citizenService.getPersonalNumber(municipalityId, partyId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No citizen found for partyId " + partyId));
 	}
 
 	private static boolean periodEquals(final FinancialAssistanceEntity fa, final YearMonth month) {

@@ -3,7 +3,6 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,7 +10,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
@@ -42,9 +40,6 @@ class ApplicationRuleFeederTest {
 	@Mock
 	private AttachmentService attachmentServiceMock;
 
-	@Mock
-	private CitizenService citizenServiceMock;
-
 	@InjectMocks
 	private ApplicationRuleFeeder feeder;
 
@@ -63,7 +58,6 @@ class ApplicationRuleFeederTest {
 		// every other question is unanswered on an empty application → not asked at all
 		verify(applicationRulesServiceMock).question(MUNICIPALITY_ID, "BILAGOR", "NEJ");
 		verifyNoMoreInteractions(applicationRulesServiceMock);
-		verifyNoInteractions(citizenServiceMock);
 	}
 
 	@Test
@@ -318,20 +312,18 @@ class ApplicationRuleFeederTest {
 		assertThat(feeder.previousCalculationWarnings(MUNICIPALITY_ID, errand, PreviousHousehold.empty())).isEmpty();
 		assertThat(feeder.previousCalculationWarnings(MUNICIPALITY_ID, errand, null)).isEmpty();
 
-		verifyNoInteractions(applicationRulesServiceMock, citizenServiceMock);
+		verifyNoInteractions(applicationRulesServiceMock);
 	}
 
 	@Test
-	void previousCalculationWarningsComparesChildrenOnPersonalIdentityNumbers() {
+	void previousCalculationWarningsComparesChildrenOnPartyIds() {
 		final var errand = FinancialAssistanceEntity.create()
 			.withHasChildrenUnder21(true)
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("adult-1")))
 			.withChildren(List.of(FaChild.create().withPartyId("child-1")));
 
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "child-1")).thenReturn(Optional.of("201801012380"));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "adult-1")).thenReturn(Optional.of("199001011234"));
 		// the previous calculation carries the applicant plus a child that is not in the application
-		final var previous = new PreviousHousehold(Set.of("199001011234", "201801012380", "202001019876"), true, 3, null, null, null);
+		final var previous = new PreviousHousehold(Set.of("adult-1", "child-1", "child-2"), true, 3, null, null, null);
 
 		when(applicationRulesServiceMock.againstPreviousCalculation(MUNICIPALITY_ID, "BARN_PERSONNUMMER", false))
 			.thenReturn(flagged("CHILDREN_MISMATCH_PREVIOUS_CALCULATION", "Barns personnummer stämmer inte"));
@@ -343,16 +335,14 @@ class ApplicationRuleFeederTest {
 	}
 
 	@Test
-	void previousCalculationWarningsMatchesTenAndTwelveDigitPersonalNumbers() {
+	void previousCalculationWarningsMatchesPartyIdsRegardlessOfCase() {
 		final var errand = FinancialAssistanceEntity.create()
 			.withHasChildrenUnder21(true)
-			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("adult-1")))
-			.withChildren(List.of(FaChild.create().withPartyId("child-1")));
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("f47ac10b-58cc-4372-a567-0e02b2c3d479")))
+			.withChildren(List.of(FaChild.create().withPartyId("c0ffee00-0000-4000-8000-00000000000a")));
 
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "child-1")).thenReturn(Optional.of("201801012380"));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "adult-1")).thenReturn(Optional.of("199001011234"));
-		// FamilyCare's shorter, hyphenated spelling of the same two people
-		final var previous = new PreviousHousehold(Set.of("900101-1234", "180101-2380"), true, 2, null, null, null);
+		// the citizen register's upper-case spelling of the same two people
+		final var previous = new PreviousHousehold(Set.of("F47AC10B-58CC-4372-A567-0E02B2C3D479", "C0FFEE00-0000-4000-8000-00000000000A"), true, 2, null, null, null);
 
 		when(applicationRulesServiceMock.againstPreviousCalculation(MUNICIPALITY_ID, "BARN_PERSONNUMMER", true)).thenReturn(unflagged());
 
@@ -361,8 +351,7 @@ class ApplicationRuleFeederTest {
 
 	/**
 	 * A previous household missing a member it could not name is short exactly one child, which would read as a
-	 * mismatch that never happened. The comparison is skipped instead — and no citizen lookup is spent discovering
-	 * that, since the verdict is already decided.
+	 * mismatch that never happened. The comparison is skipped instead.
 	 */
 	@Test
 	void previousCalculationWarningsSkipsTheChildrenComparisonWhenThePreviousHouseholdIsIncomplete() {
@@ -371,10 +360,9 @@ class ApplicationRuleFeederTest {
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("adult-1")))
 			.withChildren(List.of(FaChild.create().withPartyId("child-1")));
 
-		final var previous = new PreviousHousehold(Set.of("199001011234"), false, 2, null, null, null);
+		final var previous = new PreviousHousehold(Set.of("adult-1"), false, 2, null, null, null);
 
 		assertThat(feeder.previousCalculationWarnings(MUNICIPALITY_ID, errand, previous)).isEmpty();
-		verifyNoInteractions(citizenServiceMock);
 	}
 
 	@Test
@@ -382,23 +370,7 @@ class ApplicationRuleFeederTest {
 		final var errand = FinancialAssistanceEntity.create()
 			.withHasChildrenUnder21(false)
 			.withChildren(List.of(FaChild.create().withPartyId("child-1")));
-		final var previous = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, null);
-
-		assertThat(feeder.previousCalculationWarnings(MUNICIPALITY_ID, errand, previous)).isEmpty();
-
-		verifyNoInteractions(citizenServiceMock);
-		verify(applicationRulesServiceMock, never()).againstPreviousCalculation(anyString(), eq("BARN_PERSONNUMMER"), anyBoolean());
-	}
-
-	@Test
-	void previousCalculationWarningsSkipsTheChildrenComparisonWhenAMemberCannotBeResolved() {
-		final var errand = FinancialAssistanceEntity.create()
-			.withHasChildrenUnder21(true)
-			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("adult-1")))
-			.withChildren(List.of(FaChild.create().withPartyId("child-1")));
-		final var previous = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, null);
-
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "child-1")).thenReturn(Optional.empty());
+		final var previous = new PreviousHousehold(Set.of("adult-1"), true, 1, null, null, null);
 
 		assertThat(feeder.previousCalculationWarnings(MUNICIPALITY_ID, errand, previous)).isEmpty();
 
@@ -406,15 +378,16 @@ class ApplicationRuleFeederTest {
 	}
 
 	@Test
-	void previousCalculationWarningsSkipsTheChildrenComparisonWhenTheCitizenLookupFails() {
+	void previousCalculationWarningsSkipsTheChildrenComparisonWhenAnAdultHasNoPartyId() {
 		final var errand = FinancialAssistanceEntity.create()
 			.withHasChildrenUnder21(true)
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT")))
 			.withChildren(List.of(FaChild.create().withPartyId("child-1")));
-		final var previous = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, null);
-
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "child-1")).thenThrow(new RuntimeException("citizen down"));
+		final var previous = new PreviousHousehold(Set.of("child-1"), true, 1, null, null, null);
 
 		assertThat(feeder.previousCalculationWarnings(MUNICIPALITY_ID, errand, previous)).isEmpty();
+
+		verify(applicationRulesServiceMock, never()).againstPreviousCalculation(anyString(), eq("BARN_PERSONNUMMER"), anyBoolean());
 	}
 
 	@Test
@@ -422,11 +395,11 @@ class ApplicationRuleFeederTest {
 		final var errand = FinancialAssistanceEntity.create()
 			.withHasChildrenUnder21(true)
 			.withChildren(List.of(FaChild.create().withFirstName("Astrid")));
-		final var previous = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, null);
+		final var previous = new PreviousHousehold(Set.of("adult-1"), true, 1, null, null, null);
 
 		assertThat(feeder.previousCalculationWarnings(MUNICIPALITY_ID, errand, previous)).isEmpty();
 
-		verifyNoInteractions(citizenServiceMock, applicationRulesServiceMock);
+		verifyNoInteractions(applicationRulesServiceMock);
 	}
 
 	@Test
@@ -448,7 +421,7 @@ class ApplicationRuleFeederTest {
 	@Test
 	void previousCalculationWarningsSkipsTheCountComparisonWhenTheHousingSituationChanged() {
 		final var errand = FinancialAssistanceEntity.create().withHousingChanged(true).withHousingPersonCount(4);
-		final var previous = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, null);
+		final var previous = new PreviousHousehold(Set.of("adult-1"), true, 1, null, null, null);
 
 		assertThat(feeder.previousCalculationWarnings(MUNICIPALITY_ID, errand, previous)).isEmpty();
 
@@ -458,7 +431,7 @@ class ApplicationRuleFeederTest {
 	@Test
 	void previousCalculationWarningsSkipsTheCountComparisonWhenTheApplicationStatesNoCount() {
 		final var errand = FinancialAssistanceEntity.create().withHousingChanged(false);
-		final var previous = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, null);
+		final var previous = new PreviousHousehold(Set.of("adult-1"), true, 1, null, null, null);
 
 		assertThat(feeder.previousCalculationWarnings(MUNICIPALITY_ID, errand, previous)).isEmpty();
 
@@ -468,7 +441,7 @@ class ApplicationRuleFeederTest {
 	@Test
 	void previousCalculationWarningsReadsTheFreeTextNormAndFillsBothPlaceholders() {
 		final var errand = FinancialAssistanceEntity.create().withNormType(List.of("OTHER_NORM"));
-		final var previous = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, " Riksnorm 2026 ");
+		final var previous = new PreviousHousehold(Set.of("adult-1"), true, 1, null, null, " Riksnorm 2026 ");
 
 		when(applicationRulesServiceMock.againstPreviousCalculation(MUNICIPALITY_ID, "NORM", false))
 			.thenReturn(flagged("NORM_MISMATCH_PREVIOUS_CALCULATION",
@@ -484,7 +457,7 @@ class ApplicationRuleFeederTest {
 	@Test
 	void previousCalculationWarningsReadsAnUnrecognisedFreeTextNormAsAnotherNorm() {
 		final var errand = FinancialAssistanceEntity.create().withNormType(List.of("OTHER_NORM"));
-		final var previous = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, "Norm för eget boende");
+		final var previous = new PreviousHousehold(Set.of("adult-1"), true, 1, null, null, "Norm för eget boende");
 
 		when(applicationRulesServiceMock.againstPreviousCalculation(MUNICIPALITY_ID, "NORM", true)).thenReturn(unflagged());
 
@@ -494,7 +467,7 @@ class ApplicationRuleFeederTest {
 	@Test
 	void previousCalculationWarningsPrefersTheNationalNormWhenBothAreTicked() {
 		final var errand = FinancialAssistanceEntity.create().withNormType(List.of("OTHER_NORM", "NATIONAL_NORM"));
-		final var previous = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, "Riksnorm");
+		final var previous = new PreviousHousehold(Set.of("adult-1"), true, 1, null, null, "Riksnorm");
 
 		when(applicationRulesServiceMock.againstPreviousCalculation(MUNICIPALITY_ID, "NORM", true)).thenReturn(unflagged());
 
@@ -503,8 +476,8 @@ class ApplicationRuleFeederTest {
 
 	@Test
 	void previousCalculationWarningsSkipsTheNormComparisonWhenEitherSideIsBlank() {
-		final var withoutPreviousNorm = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, "   ");
-		final var withPreviousNorm = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, "Riksnorm");
+		final var withoutPreviousNorm = new PreviousHousehold(Set.of("adult-1"), true, 1, null, null, "   ");
+		final var withPreviousNorm = new PreviousHousehold(Set.of("adult-1"), true, 1, null, null, "Riksnorm");
 
 		assertThat(feeder.previousCalculationWarnings(MUNICIPALITY_ID,
 			FinancialAssistanceEntity.create().withNormType(List.of("NATIONAL_NORM")), withoutPreviousNorm)).isEmpty();

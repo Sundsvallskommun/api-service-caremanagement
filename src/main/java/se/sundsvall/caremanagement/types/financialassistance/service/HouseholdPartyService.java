@@ -5,7 +5,6 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
@@ -18,30 +17,28 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_CO_APPLICANT;
 
 /**
- * Resolves the errand's household parties for the section proposals: the applicant's personnummer (for the Lifecare
+ * Resolves the errand's household parties for the section proposals: the applicant's partyId (for the Lifecare
  * reads), whether there is a medsökande, and the applicant's application-payload person row (for the stated payment
  * account). The partyId per role is the errand's stakeholder of the role first, the application payload's person row as
- * fallback ({@link #resolvePartyId}). Personal numbers are resolved on demand and never stored or logged.
+ * fallback ({@link #resolvePartyId}).
  */
 @Service
 public class HouseholdPartyService {
 
 	private final StakeholderService stakeholderService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
-	private final CitizenService citizenService;
 
-	HouseholdPartyService(final StakeholderService stakeholderService, final FinancialAssistanceRepository financialAssistanceRepository,
-		final CitizenService citizenService) {
+	HouseholdPartyService(final StakeholderService stakeholderService, final FinancialAssistanceRepository financialAssistanceRepository) {
 		this.stakeholderService = stakeholderService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
-		this.citizenService = citizenService;
 	}
 
 	/**
-	 * The resolved household: the applicant's personnummer (empty when unresolvable), the co-applicant presence, the
-	 * applicant's payment details and display name.
+	 * The resolved household: the applicant's partyId (empty when the errand names no applicant), the co-applicant
+	 * presence, the applicant's payment details and display name. The partyId is what the Lifecare reads take, so
+	 * nothing here needs the citizen service.
 	 */
-	public record Household(Optional<String> applicantPersonalNumber, boolean coApplicantPresent, Optional<FaPerson> applicantPerson, Optional<String> applicantName) {
+	public record Household(Optional<String> applicantPartyId, boolean coApplicantPresent, Optional<FaPerson> applicantPerson, Optional<String> applicantName) {
 	}
 
 	/** Resolve the household for an errand the caller has already scope-checked. */
@@ -52,8 +49,7 @@ public class HouseholdPartyService {
 			.map(FinancialAssistanceEntity::getPersons)
 			.orElse(List.of());
 
-		final var applicantPersonalNumber = resolvePartyId(stakeholders, persons, ROLE_APPLICANT)
-			.flatMap(partyId -> citizenService.getPersonalNumber(municipalityId, partyId));
+		final var applicantPartyId = resolvePartyId(stakeholders, persons, ROLE_APPLICANT);
 		final var coApplicantPresent = resolvePartyId(stakeholders, persons, ROLE_CO_APPLICANT).isPresent();
 		final var applicantPerson = persons.stream()
 			.filter(person -> ROLE_APPLICANT.equals(person.getRole()))
@@ -65,7 +61,7 @@ public class HouseholdPartyService {
 			.map(Optional::get)
 			.findFirst();
 
-		return new Household(applicantPersonalNumber, coApplicantPresent, applicantPerson, applicantName);
+		return new Household(applicantPartyId, coApplicantPresent, applicantPerson, applicantName);
 	}
 
 	/**

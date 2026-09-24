@@ -25,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.integration.ByteArrayMultipartFile;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 import se.sundsvall.dept44.problem.Problem;
@@ -44,9 +43,9 @@ import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
  *
  * <p>
  * This is the route that works from outside the municipal network — see {@link LifecareFamilyCare} for why the direct
- * one does not. The cost is a translation in both directions: the integrator is keyed on {@code partyId} while this
- * interface speaks FamilyCare's personal identity numbers, so every person-scoped call resolves the number to a party
- * id first, and the responses are mapped back into FamilyCare's DTOs so nothing downstream has to change.
+ * one does not. The integrator is keyed on {@code partyId}, which is what this interface takes, so arguments pass
+ * straight through; only the responses are translated, mapped back into FamilyCare's DTOs so nothing downstream has
+ * to change.
  *
  * <p>
  * Operations that are not translated yet fail loudly with {@code NOT_IMPLEMENTED} rather than returning an empty
@@ -59,15 +58,12 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 
 	private static final Logger LOG = LoggerFactory.getLogger(LifecareIntegratorIntegration.class);
 	private static final String NOT_PORTED = "Operation '%s' is not available through the lifecare-integrator route yet";
-	private static final String NO_PARTY_ID = "No party id could be resolved for the person";
 	private static final String MISSING_FIELDS = "The assembled %s is missing required field(s): %s";
 
 	private final LifecareIntegratorClient client;
-	private final CitizenService citizenService;
 
-	public LifecareIntegratorIntegration(final LifecareIntegratorClient client, final CitizenService citizenService) {
+	public LifecareIntegratorIntegration(final LifecareIntegratorClient client) {
 		this.client = client;
-		this.citizenService = citizenService;
 	}
 
 	/** Everything this route hands back identifies a person by {@code partyId}; see {@link IntegratorCaseMapper}. */
@@ -77,43 +73,37 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 	}
 
 	@Override
-	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		final var partyId = resolvePartyId(municipalityId, personId);
+	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching calculations", () -> IntegratorCalculationMapper.toFamilyCare(
 			client.getCalculations(municipalityId, partyId, startDate, endDate)));
 	}
 
 	@Override
-	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		final var partyId = resolvePartyId(municipalityId, personId);
+	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching decisions", () -> IntegratorCaseMapper.toDecisions(
 			client.getDecisions(municipalityId, partyId, startDate, endDate)));
 	}
 
 	@Override
-	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		final var partyId = resolvePartyId(municipalityId, personId);
+	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching actualisations", () -> IntegratorCaseMapper.toActualisations(
 			client.getActualisations(municipalityId, partyId, startDate, endDate), partyId));
 	}
 
 	@Override
-	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		final var partyId = resolvePartyId(municipalityId, personId);
+	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching payments", () -> IntegratorCaseMapper.toPayments(
 			client.getPayments(municipalityId, partyId, startDate, endDate)));
 	}
 
 	@Override
-	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		final var partyId = resolvePartyId(municipalityId, personId);
+	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching services", () -> IntegratorCaseMapper.toServices(
 			client.getServices(municipalityId, partyId, startDate, endDate)));
 	}
 
 	@Override
-	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
-		final var partyId = resolvePartyId(municipalityId, personId);
+	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching documents", () -> IntegratorCaseMapper.toDocuments(
 			client.getDocuments(municipalityId, partyId, startDate, endDate)));
 	}
@@ -124,14 +114,12 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 	}
 
 	@Override
-	public PersonBasedPersonDTO getPerson(final String municipalityId, final String personId) {
-		final var partyId = resolvePartyId(municipalityId, personId);
+	public PersonBasedPersonDTO getPerson(final String municipalityId, final String partyId) {
 		return call("fetching the person", () -> IntegratorCaseMapper.toPerson(client.getPerson(municipalityId, partyId), partyId));
 	}
 
 	@Override
-	public List<PersonBasedContactDTO> getContacts(final String municipalityId, final String personId) {
-		final var partyId = resolvePartyId(municipalityId, personId);
+	public List<PersonBasedContactDTO> getContacts(final String municipalityId, final String partyId) {
 		return call("fetching contacts", () -> IntegratorCaseMapper.toContacts(client.getContacts(municipalityId, partyId)));
 	}
 
@@ -143,15 +131,13 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 	}
 
 	@Override
-	public PersonBasedCalculationProposalDTO getCalculationProposal(final String municipalityId, final String personId) {
-		final var partyId = resolvePartyId(municipalityId, personId);
+	public PersonBasedCalculationProposalDTO getCalculationProposal(final String municipalityId, final String partyId) {
 		return call("fetching the calculation proposal", () -> IntegratorProposalMapper.toCalculationProposal(
 			client.getCalculationProposal(municipalityId, partyId)));
 	}
 
 	@Override
-	public PersonBasedAktualiseringProposalDTO getActualisationProposal(final String municipalityId, final String personId) {
-		final var partyId = resolvePartyId(municipalityId, personId);
+	public PersonBasedAktualiseringProposalDTO getActualisationProposal(final String municipalityId, final String partyId) {
 		return call("fetching the actualisation proposal", () -> IntegratorProposalMapper.toActualisationProposal(
 			client.getActualisationProposal(municipalityId, partyId)));
 	}
@@ -165,7 +151,7 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 	 */
 	@Override
 	public Integer createCalculation(final String municipalityId, final PostCalculationBodyRequest body) {
-		final var request = IntegratorWriteMapper.toCalculation(body, resolvePartyId(municipalityId, body.getPersonId()));
+		final var request = IntegratorWriteMapper.toCalculation(body, body.getPersonId());
 		requirePresent("calculation",
 			new RequiredField("normId", request.getNormId()),
 			new RequiredField("calculationDate", request.getCalculationDate()),
@@ -177,7 +163,7 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 
 	@Override
 	public Integer createActualisation(final String municipalityId, final PostAktualiseringsBodyRequest body) {
-		final var request = IntegratorWriteMapper.toActualisation(body, resolvePartyId(municipalityId, body.getPersonId()));
+		final var request = IntegratorWriteMapper.toActualisation(body, body.getPersonId());
 		requirePresent("actualisation", new RequiredField("date", request.getDate()), new RequiredField("typeId", request.getTypeId()));
 
 		return call("creating an actualisation", () -> createdId(client.createActualisation(municipalityId, request)));
@@ -204,17 +190,17 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 	// so they are left alone rather than translated on spec. Everything careM actually calls is ported.
 
 	@Override
-	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
+	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
 		throw notPorted("getInvestigations");
 	}
 
 	@Override
-	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
+	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
 		throw notPorted("getExecutions");
 	}
 
 	@Override
-	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String municipalityId, final String personId, final LocalDate startDate, final LocalDate endDate) {
+	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
 		throw notPorted("getResourceAllocations");
 	}
 
@@ -240,11 +226,6 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 
 	private static Integer createdId(final CreatedResource created) {
 		return ofNullable(created).map(CreatedResource::getId).orElse(null);
-	}
-
-	private String resolvePartyId(final String municipalityId, final String personId) {
-		return citizenService.getPartyId(municipalityId, personId)
-			.orElseThrow(() -> Problem.valueOf(BAD_GATEWAY, NO_PARTY_ID));
 	}
 
 	private static ThrowableProblem notPorted(final String operation) {

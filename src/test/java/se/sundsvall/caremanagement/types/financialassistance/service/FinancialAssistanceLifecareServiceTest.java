@@ -3,7 +3,6 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,7 +11,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationExpenseView;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationIncomeView;
@@ -42,9 +40,6 @@ class FinancialAssistanceLifecareServiceTest {
 	private static final String APPLICANT_PARTY_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 
 	@Mock
-	private CitizenService citizenServiceMock;
-
-	@Mock
 	private LifecareCaseHistoryService lifecareCaseHistoryServiceMock;
 
 	@Spy
@@ -55,14 +50,13 @@ class FinancialAssistanceLifecareServiceTest {
 
 	@Test
 	void listCalculationsResolvesPartyDefaultsPeriodAndMaps() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		final var view = new CalculationView(7001, "Riksnorm 2026", "2026-06-01", "2026-06-30", BigDecimal.valueOf(12000.0), BigDecimal.valueOf(9500.0), BigDecimal.valueOf(500.0), BigDecimal.valueOf(10500.0),
 			BigDecimal.valueOf(1200.0), BigDecimal.valueOf(800.0), BigDecimal.valueOf(-2000.0), BigDecimal.valueOf(8500.0), Boolean.TRUE,
 			List.of(new CalculationPersonView("200001011234", "Barn Andersson", BigDecimal.valueOf(4500.0), null, null)),
 			List.of(new CalculationIncomeView("Lön", BigDecimal.valueOf(12000.0), "2026-05-15", BigDecimal.valueOf(0.0), null)),
 			List.of(new CalculationExpenseView("Hyra", BigDecimal.valueOf(7500.0), BigDecimal.valueOf(7000.0))),
 			List.of(new CalculationExpenseView("Tandvård", BigDecimal.valueOf(500.0), BigDecimal.valueOf(500.0))));
-		when(lifecareCaseHistoryServiceMock.listCalculations(eq(MUNICIPALITY_ID), eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
+		when(lifecareCaseHistoryServiceMock.listCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
 
 		final var result = service.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null);
 
@@ -78,30 +72,17 @@ class FinancialAssistanceLifecareServiceTest {
 
 		final var fromCaptor = ArgumentCaptor.forClass(LocalDate.class);
 		final var toCaptor = ArgumentCaptor.forClass(LocalDate.class);
-		verify(lifecareCaseHistoryServiceMock).listCalculations(eq(MUNICIPALITY_ID), eq("199001011234"), fromCaptor.capture(), toCaptor.capture());
+		verify(lifecareCaseHistoryServiceMock).listCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), fromCaptor.capture(), toCaptor.capture());
 		assertThat(toCaptor.getValue()).isEqualTo(LocalDate.now());
 		assertThat(fromCaptor.getValue()).isEqualTo(toCaptor.getValue().minusMonths(24));
 	}
 
 	@Test
-	void listCalculationsUnresolvedPartyIdYields404() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.empty());
-
-		assertThatThrownBy(() -> service.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
-			.hasMessage("Not Found: No citizen found for partyId f47ac10b-58cc-4372-a567-0e02b2c3d479");
-
-		verify(lifecareCaseHistoryServiceMock, never()).listCalculations(eq(MUNICIPALITY_ID), any(), any(), any());
-	}
-
-	@Test
 	void listDecisionsResolvesPartyDefaultsPeriodAndMaps() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		final var view = new DecisionView(9900, "2026-06-02", "Bifall", "2026-06-01", "2026-06-30", "Beviljas enligt norm",
 			"Anna Andersson", "IFO", 2, BigDecimal.valueOf(8500.0), "198001019999", "Sammanboende",
 			List.of(new DecisionPersonView("198001019999", "Sven Svensson", Boolean.TRUE)));
-		when(lifecareCaseHistoryServiceMock.listDecisions(eq(MUNICIPALITY_ID), eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
+		when(lifecareCaseHistoryServiceMock.listDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
 
 		final var result = service.listDecisions(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 
@@ -111,13 +92,12 @@ class FinancialAssistanceLifecareServiceTest {
 			assertThat(decision.getAmount()).isEqualTo(BigDecimal.valueOf(8500.0));
 			assertThat(decision.getPersons()).singleElement().satisfies(person -> assertThat(person.getCoApplicant()).isTrue());
 		});
-		verify(lifecareCaseHistoryServiceMock).listDecisions(MUNICIPALITY_ID, "199001011234", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
+		verify(lifecareCaseHistoryServiceMock).listDecisions(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));
 	}
 
 	@Test
 	void listDecisionsKeepsOnlyEbDecisions() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(lifecareCaseHistoryServiceMock.listDecisions(eq(MUNICIPALITY_ID), eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(
+		when(lifecareCaseHistoryServiceMock.listDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(
 			decision(88, "Vux Individuellt behovsprövad öppenvård 11 kap 1 § SoL, bifall", 21, ""),
 			decision(83, "Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall", 2, "2026-09-01"),
 			decision(71, "BoU Egenavgift tas ut enligt 32 kap 3 § SoL", 16, ""),
@@ -137,9 +117,8 @@ class FinancialAssistanceLifecareServiceTest {
 
 	@Test
 	void listDocumentsResolvesPartyAndMaps() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		final var view = new DocumentView("doc-1", "Beslut försörjningsstöd", "2026-06-02", "Beslut", "9900", "Decision");
-		when(lifecareCaseHistoryServiceMock.listDocuments(eq(MUNICIPALITY_ID), eq("199001011234"), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
+		when(lifecareCaseHistoryServiceMock.listDocuments(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
 
 		final var result = service.listDocuments(MUNICIPALITY_ID, APPLICANT_PARTY_ID, null, null);
 
@@ -148,13 +127,12 @@ class FinancialAssistanceLifecareServiceTest {
 			assertThat(document.getTitle()).isEqualTo("Beslut försörjningsstöd");
 			assertThat(document.getDocumentType()).isEqualTo("Beslut");
 		});
-		verify(lifecareCaseHistoryServiceMock).listDocuments(eq(MUNICIPALITY_ID), eq("199001011234"), any(LocalDate.class), any(LocalDate.class));
+		verify(lifecareCaseHistoryServiceMock).listDocuments(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(LocalDate.class), any(LocalDate.class));
 	}
 
 	@Test
 	void readDocumentContentForwardsBytesWhenOwnedByApplicant() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(lifecareCaseHistoryServiceMock.listDocuments(eq(MUNICIPALITY_ID), eq("199001011234"), any(LocalDate.class), any(LocalDate.class)))
+		when(lifecareCaseHistoryServiceMock.listDocuments(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(LocalDate.class), any(LocalDate.class)))
 			.thenReturn(List.of(new DocumentView("doc-1", "Beslut", "2026-06-02", "Beslut", "9900", "Decision")));
 		when(lifecareCaseHistoryServiceMock.documentContent(MUNICIPALITY_ID, "doc-1")).thenReturn("%PDFBigDecimal.valueOf(-1.4)".getBytes());
 
@@ -166,8 +144,7 @@ class FinancialAssistanceLifecareServiceTest {
 
 	@Test
 	void readDocumentContentForeignDocumentYields404() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(lifecareCaseHistoryServiceMock.listDocuments(eq(MUNICIPALITY_ID), eq("199001011234"), any(LocalDate.class), any(LocalDate.class)))
+		when(lifecareCaseHistoryServiceMock.listDocuments(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(LocalDate.class), any(LocalDate.class)))
 			.thenReturn(List.of(new DocumentView("doc-1", "Beslut", "2026-06-02", "Beslut", "9900", "Decision")));
 
 		assertThatThrownBy(() -> service.readDocumentContent(MUNICIPALITY_ID, APPLICANT_PARTY_ID, "doc-OTHER", null, null))

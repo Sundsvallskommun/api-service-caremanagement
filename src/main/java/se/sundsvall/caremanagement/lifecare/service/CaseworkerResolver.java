@@ -27,7 +27,7 @@ import static java.util.Optional.ofNullable;
  * <p>
  * Resolution is intentionally lenient — any step that yields nothing (no Service, no caseworker name, no matching
  * user) returns {@link Optional#empty()} so the caller can create the intake without a caseworker rather than fail.
- * Names are matched case-insensitively and trimmed; disabled users are skipped. No personId or name is logged here.
+ * Names are matched case-insensitively and trimmed; disabled users are skipped. No partyId or name is logged here.
  */
 @Service
 public class CaseworkerResolver {
@@ -47,12 +47,12 @@ public class CaseworkerResolver {
 	/**
 	 * Resolve the caseworker for the applicant as of the intake date.
 	 *
-	 * @param  personId      the applicant's personal identity number
+	 * @param  partyId       the applicant's partyId
 	 * @param  referenceDate the intake date (bounds the Service lookback window)
 	 * @return               the resolved caseworker, or empty when none can be determined
 	 */
-	public Optional<ResolvedCaseworker> resolve(final String municipalityId, final String personId, final LocalDate referenceDate) {
-		return mostRecentServiceCaseworker(municipalityId, personId, referenceDate)
+	public Optional<ResolvedCaseworker> resolve(final String municipalityId, final String partyId, final LocalDate referenceDate) {
+		return mostRecentServiceCaseworker(municipalityId, partyId, referenceDate)
 			.flatMap(name -> findUserByFullName(municipalityId, name))
 			.map(CaseworkerResolver::toResolvedCaseworker);
 	}
@@ -67,10 +67,10 @@ public class CaseworkerResolver {
 	 * the wording. So a closed insats no longer places an errand; a returnee whose case ended last year now reaches
 	 * the default assignee instead of their old caseworker.
 	 */
-	private Optional<String> mostRecentServiceCaseworker(final String municipalityId, final String personId, final LocalDate referenceDate) {
+	private Optional<String> mostRecentServiceCaseworker(final String municipalityId, final String partyId, final LocalDate referenceDate) {
 		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		return ofNullable(lifecareFamilyCareIntegration.getServices(municipalityId, personId, start, referenceDate))
+		return ofNullable(lifecareFamilyCareIntegration.getServices(municipalityId, partyId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedServiceDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(Objects::nonNull)

@@ -119,7 +119,7 @@ public class DecisionProposalService {
 	public DecisionProposal get(final String municipalityId, final String namespace, final String errandId) {
 		final var basis = proposalBasisService.basis(municipalityId, namespace, errandId);
 		final var draft = basis.draft();
-		final var previousDecisionRead = basis.household().applicantPersonalNumber()
+		final var previousDecisionRead = basis.household().applicantPartyId()
 			.flatMap(applicant -> basis.applicationMonth().map(month -> previousDecision(municipalityId, applicant, month)))
 			.orElseGet(() -> LifecareRead.succeeded(Optional.<DecisionView>empty()));
 		final var previousDecision = previousDecisionRead.value();
@@ -128,7 +128,7 @@ public class DecisionProposalService {
 		final var reason = previousDecision.map(DecisionView::reason).filter(text -> hasText(text));
 		final var coApplicantReason = previousDecision.map(DecisionView::reasonCoApplicant).filter(text -> hasText(text));
 
-		final var recoveryClaimsRead = basis.household().applicantPersonalNumber()
+		final var recoveryClaimsRead = basis.household().applicantPartyId()
 			.flatMap(applicant -> basis.applicationMonth().map(month -> recoveryClaims(municipalityId, applicant, month)))
 			.orElseGet(() -> LifecareRead.succeeded(List.<DecisionView>of()));
 

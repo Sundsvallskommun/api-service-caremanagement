@@ -59,17 +59,17 @@ public final class ActualisationAssembler {
 	/**
 	 * Build the FamilyCare actualisation body for one applicant and intake date.
 	 *
-	 * @param  applicantPersonId the applicant's personal identity number (the FamilyCare actualisation owner)
-	 * @param  proposalDTO       the FamilyCare actualisation proposal supplying the code lists; may be {@code null}
-	 * @param  date              the intake date
-	 * @param  caseworkerId      the resolved FamilyCare caseworker id; {@code null}/blank leaves it unset
-	 * @return                   the assembled {@link PostAktualiseringsBodyRequest}
+	 * @param  applicantPartyId the applicant's partyId (the FamilyCare actualisation owner)
+	 * @param  proposalDTO      the FamilyCare actualisation proposal supplying the code lists; may be {@code null}
+	 * @param  date             the intake date
+	 * @param  caseworkerId     the resolved FamilyCare caseworker id; {@code null}/blank leaves it unset
+	 * @return                  the assembled {@link PostAktualiseringsBodyRequest}
 	 */
-	public static Selection assemble(final String applicantPersonId, final PersonBasedAktualiseringProposalDTO proposalDTO, final LocalDate date,
+	public static Selection assemble(final String applicantPartyId, final PersonBasedAktualiseringProposalDTO proposalDTO, final LocalDate date,
 		final String caseworkerId, final ActualisationProperties names) {
 
 		final var body = new PostAktualiseringsBodyRequest()
-			.personId(applicantPersonId)
+			.personId(applicantPartyId)
 			.date(startOfDay(date));
 		final var misses = new ArrayList<String>();
 

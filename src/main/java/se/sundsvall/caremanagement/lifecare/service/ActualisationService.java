@@ -48,16 +48,16 @@ public class ActualisationService {
 	 * id is returned so the caller can assign the careM errand. Caseworker resolution is best-effort — a lookup failure
 	 * is logged and the intake is still created without a caseworker.
 	 *
-	 * @param  applicantPersonId the applicant's personal identity number (the FamilyCare actualisation owner)
-	 * @param  date              the intake date
-	 * @return                   the created actualisation id and the errand assignee ({@code null} when no caseworker was
-	 *                           found)
+	 * @param  applicantPartyId the applicant's partyId (the FamilyCare actualisation owner)
+	 * @param  date             the intake date
+	 * @return                  the created actualisation id and the errand assignee ({@code null} when no caseworker was
+	 *                          found)
 	 */
-	public ActualisationResult createActualisation(final String municipalityId, final String applicantPersonId, final LocalDate date) {
-		final var caseworker = resolveCaseworker(municipalityId, applicantPersonId, date);
+	public ActualisationResult createActualisation(final String municipalityId, final String applicantPartyId, final LocalDate date) {
+		final var caseworker = resolveCaseworker(municipalityId, applicantPartyId, date);
 
-		final var proposal = lifecareFamilyCareIntegration.getActualisationProposal(municipalityId, applicantPersonId);
-		final var selection = ActualisationAssembler.assemble(applicantPersonId, proposal, date,
+		final var proposal = lifecareFamilyCareIntegration.getActualisationProposal(municipalityId, applicantPartyId);
+		final var selection = ActualisationAssembler.assemble(applicantPartyId, proposal, date,
 			caseworker.map(ResolvedCaseworker::caseworkerId).orElse(null), actualisationProperties);
 		// A name that is not in the catalogue falls back to the first offered value, which is the guess the
 		// configuration exists to remove - so it must never pass silently.
@@ -75,18 +75,18 @@ public class ActualisationService {
 	 * (reminders, jobbstimulans, document proposals). Chosen by the same rule an intake is linked with, see
 	 * {@link ActualisationAssembler#linkedServiceId}.
 	 *
-	 * @param  personId the person's personal identity number
-	 * @return          the service id, or empty when the person has no open EB insats
+	 * @param  partyId the person's partyId
+	 * @return         the service id, or empty when the person has no open EB insats
 	 */
-	public Optional<Integer> findFinancialAssistanceServiceId(final String municipalityId, final String personId) {
-		final var proposal = lifecareFamilyCareIntegration.getActualisationProposal(municipalityId, personId);
+	public Optional<Integer> findFinancialAssistanceServiceId(final String municipalityId, final String partyId) {
+		final var proposal = lifecareFamilyCareIntegration.getActualisationProposal(municipalityId, partyId);
 		return ActualisationAssembler.linkedServiceId(proposal, actualisationProperties);
 	}
 
 	/** Best-effort caseworker resolution — never blocks intake creation; a lookup failure resolves to no caseworker. */
-	private Optional<ResolvedCaseworker> resolveCaseworker(final String municipalityId, final String applicantPersonId, final LocalDate date) {
+	private Optional<ResolvedCaseworker> resolveCaseworker(final String municipalityId, final String applicantPartyId, final LocalDate date) {
 		try {
-			return caseworkerResolver.resolve(municipalityId, applicantPersonId, date);
+			return caseworkerResolver.resolve(municipalityId, applicantPartyId, date);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not resolve caseworker for actualisation; creating intake without one: {}", e.getMessage());
 			return Optional.empty();
@@ -99,13 +99,13 @@ public class ActualisationService {
 	 * and are
 	 * formatted as ISO local dates. An empty/absent FamilyCare page maps to an empty list.
 	 *
-	 * @param  personId the person's personal identity number (the actualisation owner)
+	 * @param  partyId  the person's partyId (the actualisation owner)
 	 * @param  fromDate the inclusive start of the listing period
 	 * @param  toDate   the inclusive end of the listing period
 	 * @return          the person's actualisations in the period (newest-first as Lifecare returns them)
 	 */
-	public List<ActualisationSummary> listActualisations(final String municipalityId, final String personId, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(lifecareFamilyCareIntegration.getActualisations(municipalityId, personId, fromDate, toDate))
+	public List<ActualisationSummary> listActualisations(final String municipalityId, final String partyId, final LocalDate fromDate, final LocalDate toDate) {
+		return ofNullable(lifecareFamilyCareIntegration.getActualisations(municipalityId, partyId, fromDate, toDate))
 			.map(ApiPaginationCompositePersonBasedAktualiseringDTO::getResult)
 			.orElseGet(List::of)
 			.stream()

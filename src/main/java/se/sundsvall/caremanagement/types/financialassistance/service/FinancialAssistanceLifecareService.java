@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareCalculation;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.LifecareDecision;
@@ -17,8 +16,8 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /**
  * The applicant's Lifecare case-history reads — calculations, decisions and documents (metadata + content) served
- * straight from Lifecare. caremanagement only forwards; the applicant is identified by partyId (resolved to a
- * personnummer via the citizen service). Document content is gated on ownership so a caller cannot read another
+ * straight from Lifecare. caremanagement only forwards; the applicant is identified by partyId, which the Lifecare
+ * route takes as-is. Document content is gated on ownership so a caller cannot read another
  * applicant's document by its Lifecare-global id.
  */
 @Service
@@ -29,29 +28,26 @@ public class FinancialAssistanceLifecareService {
 	private static final int ACTUALISATION_LOOKBACK_MONTHS = 24;
 	private static final String DOCUMENT_NOT_FOUND_MESSAGE = "No Lifecare document '%s' found for the given applicant";
 
-	private final CitizenService citizenService;
 	private final LifecareCaseHistoryService lifecareCaseHistoryService;
 	private final LifecareDecisionFilter lifecareDecisionFilter;
 
-	FinancialAssistanceLifecareService(final CitizenService citizenService, final LifecareCaseHistoryService lifecareCaseHistoryService,
+	FinancialAssistanceLifecareService(final LifecareCaseHistoryService lifecareCaseHistoryService,
 		final LifecareDecisionFilter lifecareDecisionFilter) {
-		this.citizenService = citizenService;
 		this.lifecareCaseHistoryService = lifecareCaseHistoryService;
 		this.lifecareDecisionFilter = lifecareDecisionFilter;
 	}
 
 	/**
 	 * List the applicant's Lifecare calculations — the full case-history read the frontend renders
-	 * straight from Lifecare. The applicant is identified by partyId (resolved to a personnummer via the citizen service —
-	 * 404 when unknown). The period defaults to the last {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when
+	 * straight from Lifecare. The applicant is identified by partyId. The period defaults to the last
+	 * {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when
 	 * {@code from}/{@code to} are omitted.
 	 */
 	public List<LifecareCalculation> listCalculations(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
-		final var applicant = personalNumber(municipalityId, partyId);
 		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
 		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
 
-		return lifecareCaseHistoryService.listCalculations(municipalityId, applicant, fromDate, toDate).stream()
+		return lifecareCaseHistoryService.listCalculations(municipalityId, partyId, fromDate, toDate).stream()
 			.map(LifecareHistoryMapper::toCalculation)
 			.toList();
 	}
@@ -60,15 +56,14 @@ public class FinancialAssistanceLifecareService {
 	 * List the applicant's ekonomiskt bistånd decisions in Lifecare — served straight from Lifecare, less the decisions
 	 * from other IFO areas (Vux, BoU, LVM …) that FamilyCare returns alongside them (see
 	 * {@link LifecareDecisionFilter#isFinancialAssistance}). The EB utredningsbeslut stay in. The applicant is
-	 * identified by partyId (resolved to a personnummer via the citizen service — 404 when unknown). The period defaults
+	 * identified by partyId. The period defaults
 	 * to the last {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when {@code from}/{@code to} are omitted.
 	 */
 	public List<LifecareDecision> listDecisions(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
-		final var applicant = personalNumber(municipalityId, partyId);
 		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
 		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
 
-		return lifecareCaseHistoryService.listDecisions(municipalityId, applicant, fromDate, toDate).stream()
+		return lifecareCaseHistoryService.listDecisions(municipalityId, partyId, fromDate, toDate).stream()
 			.filter(lifecareDecisionFilter::isFinancialAssistance)
 			.map(LifecareHistoryMapper::toDecision)
 			.toList();
@@ -76,7 +71,7 @@ public class FinancialAssistanceLifecareService {
 
 	/**
 	 * List the applicant's Lifecare documents (metadata) — served straight from Lifecare. The applicant is identified by
-	 * partyId (resolved to a personnummer via the citizen service — 404 when unknown). The period defaults to the last
+	 * partyId. The period defaults to the last
 	 * {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when {@code from}/{@code to} are omitted. The content of a
 	 * single document is fetched via {@link #readDocumentContent(String, String, String, LocalDate, LocalDate)}.
 	 */
@@ -90,11 +85,10 @@ public class FinancialAssistanceLifecareService {
 	 * would bypass the Spring proxy — Sonar S6809).
 	 */
 	private List<LifecareDocument> documentsFor(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
-		final var applicant = personalNumber(municipalityId, partyId);
 		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
 		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
 
-		return lifecareCaseHistoryService.listDocuments(municipalityId, applicant, fromDate, toDate).stream()
+		return lifecareCaseHistoryService.listDocuments(municipalityId, partyId, fromDate, toDate).stream()
 			.map(LifecareHistoryMapper::toDocument)
 			.toList();
 	}
@@ -112,11 +106,5 @@ public class FinancialAssistanceLifecareService {
 			throw Problem.valueOf(NOT_FOUND, DOCUMENT_NOT_FOUND_MESSAGE.formatted(documentId));
 		}
 		return lifecareCaseHistoryService.documentContent(municipalityId, documentId);
-	}
-
-	/** Resolve a partyId to the personnummer the Lifecare/SSBTEK pipeline needs, or 404 when the citizen is unknown. */
-	private String personalNumber(final String municipalityId, final String partyId) {
-		return citizenService.getPersonalNumber(municipalityId, partyId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No citizen found for partyId " + partyId));
 	}
 }

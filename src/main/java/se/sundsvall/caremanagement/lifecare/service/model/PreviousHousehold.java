@@ -13,16 +13,17 @@ import java.util.Set;
  * (best-effort).
  *
  * <p>
- * {@code personIds} are personal identity numbers whichever FamilyCare route answered — the direct one says so
- * already, the integrator answers with party ids and {@code LifecareCaseService} resolves them.
- * {@code personIdsComplete} is {@code false} when at least one member could not be resolved; the set is then short of
+ * {@code partyIds} are party ids whichever FamilyCare route answered — the integrator says so already, the direct
+ * one answers with personal identity numbers and {@code LifecareCaseService} resolves them. They are compared against
+ * the errand's own members, which careM holds by party id, so the integrator route needs no lookup at all.
+ * {@code partyIdsComplete} is {@code false} when at least one member could not be resolved; the set is then short of
  * a member it cannot name, so a caller comparing households member by member has to skip rather than report the
  * difference as a real one. {@code memberCount} is the previous calculation's own member count and stays right either
  * way.
  */
 public record PreviousHousehold(
-	Set<String> personIds,
-	boolean personIdsComplete,
+	Set<String> partyIds,
+	boolean partyIdsComplete,
 	int memberCount,
 	BigDecimal normSum,
 	BigDecimal housingCost,

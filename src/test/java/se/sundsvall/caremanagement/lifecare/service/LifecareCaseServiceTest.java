@@ -60,12 +60,12 @@ class LifecareCaseServiceTest {
 	}
 
 	private void noActualisations() {
-		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO());
 	}
 
 	private void noCalculations() {
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO());
 	}
 
@@ -77,12 +77,12 @@ class LifecareCaseServiceTest {
 			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId("198202022397").isCoApplicant(true));
 
 		noActualisations();
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().addResultItem(decision));
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(new PersonBasedCalculationDTO()));
 
-		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(summary.hasFootprint()).isTrue();
 		assertThat(summary.decisionMonths()).containsExactlyInAnyOrder(YearMonth.of(2026, MAY), YearMonth.of(2026, JUNE));
@@ -93,14 +93,14 @@ class LifecareCaseServiceTest {
 
 	@Test
 	void footprintFromActualisationOnly() {
-		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO()
 				.addResultItem(new PersonBasedAktualiseringDTO().status("Aktuell")));
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 		noCalculations();
 
-		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(summary.hasFootprint()).isTrue();
 		assertThat(summary.hasOpenCase()).isTrue();
@@ -111,26 +111,26 @@ class LifecareCaseServiceTest {
 
 	@Test
 	void openCaseStatusMatchIsCaseAndWhitespaceInsensitive() {
-		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO()
 				.addResultItem(new PersonBasedAktualiseringDTO().status("  aKtUeLl ")));
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 		noCalculations();
 
-		assertThat(service().summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE).hasOpenCase()).isTrue();
+		assertThat(service().summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE).hasOpenCase()).isTrue();
 	}
 
 	@Test
 	void aStatusOutsideTheOpenVocabularyIsNotAnOpenCase() {
-		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO()
 				.addResultItem(new PersonBasedAktualiseringDTO().status("Avslutad")));
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 		noCalculations();
 
-		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(summary.hasFootprint()).isTrue();
 		assertThat(summary.hasOpenCase()).isFalse();
@@ -139,14 +139,14 @@ class LifecareCaseServiceTest {
 	@Test
 	void anActualisationWithoutAReadableStatusLeavesTheOpenCaseUnknown() {
 		// FamilyCare's status vocabulary is not fully confirmed — an unreadable status must report "unknown", not "closed".
-		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO()
 				.addResultItem(new PersonBasedAktualiseringDTO().status(" ")));
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 		noCalculations();
 
-		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(summary.hasFootprint()).isTrue();
 		assertThat(summary.hasOpenCase()).isNull();
@@ -154,27 +154,27 @@ class LifecareCaseServiceTest {
 
 	@Test
 	void blankConfiguredStatusesAreIgnored() {
-		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedAktualiseringDTO()
 				.addResultItem(new PersonBasedAktualiseringDTO().status("Aktuell")));
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 		noCalculations();
 
 		final var service = new LifecareCaseService(integrationMock, citizenServiceMock, 13, List.of(" ", "Aktuell"));
 
-		assertThat(service.summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE).hasOpenCase()).isTrue();
+		assertThat(service.summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE).hasOpenCase()).isTrue();
 	}
 
 	@Test
 	void footprintFromCalculationOnly() {
 		noActualisations();
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(new PersonBasedCalculationDTO()));
 
-		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(summary.hasFootprint()).isTrue();
 		assertThat(summary.hasCalculation()).isTrue();
@@ -183,11 +183,11 @@ class LifecareCaseServiceTest {
 	@Test
 	void noFootprintYieldsEmptySummary() {
 		noActualisations();
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 		noCalculations();
 
-		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(summary.hasFootprint()).isFalse();
 		assertThat(summary.decisionMonths()).isEmpty();
@@ -198,11 +198,11 @@ class LifecareCaseServiceTest {
 
 	@Test
 	void nullCompositesAreToleratedAsEmpty() {
-		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any())).thenReturn(null);
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any())).thenReturn(null);
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any())).thenReturn(null);
+		when(integrationMock.getActualisations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(null);
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(null);
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(null);
 
-		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(summary.hasFootprint()).isFalse();
 		assertThat(summary.decisionMonths()).isEmpty();
@@ -211,12 +211,12 @@ class LifecareCaseServiceTest {
 	@Test
 	void decisionMonthsFromSingleDateAndCoApplicantScalar() {
 		noActualisations();
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO()
 				.addResultItem(new PersonBasedDecisionDTO().toDate("2026-06-30").coApplicant("198202022397")));
 		noCalculations();
 
-		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(summary.decisionMonths()).containsExactly(YearMonth.of(2026, JUNE));
 		assertThat(summary.hasCoApplicant()).isTrue();
@@ -227,11 +227,11 @@ class LifecareCaseServiceTest {
 		final var older = new PersonBasedDecisionDTO().toDate("2026-03-31").coApplicant("197001010000");
 		final var newer = new PersonBasedDecisionDTO().toDate("2026-05-31"); // no co-applicant
 		noActualisations();
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().result(List.of(older, newer)));
 		noCalculations();
 
-		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(summary.latestDecisionPeriod()).isEqualTo(YearMonth.of(2026, MAY));
 		assertThat(summary.hasCoApplicant()).isFalse(); // newest decision has none
@@ -252,12 +252,12 @@ class LifecareCaseServiceTest {
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CO_APPLICANT)).thenReturn(Optional.of(CO_APPLICANT_PARTY_ID));
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CHILD)).thenReturn(Optional.of(CHILD_PARTY_ID));
 
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(olderCalc, newerCalc)));
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO().addResultItem(decision));
 
-		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(roster.applicant()).isEqualTo(APPLICANT_PARTY_ID);
 		assertThat(roster.coApplicant()).isEqualTo(CO_APPLICANT_PARTY_ID);
@@ -271,14 +271,14 @@ class LifecareCaseServiceTest {
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT).name("Anna"))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("  ").name("Blank"));
 
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(calc));
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO()
 				.addResultItem(new PersonBasedDecisionDTO().toDate("2026-06-30").coApplicant("Bo Berg")));
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(APPLICANT_PARTY_ID));
 
-		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(roster.members()).extracting(LifecareRoster.Member::partyId).containsExactly(APPLICANT_PARTY_ID);
 		// FamilyCare's own co-applicant field is free text, not an identity, so it is passed through as it came.
@@ -287,26 +287,26 @@ class LifecareCaseServiceTest {
 
 	@Test
 	void latestRosterEmptyWhenNoCalculationsOrDecisions() {
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO());
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO());
 
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(APPLICANT_PARTY_ID));
+		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
-		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT, REFERENCE);
-
+		// the applicant is the argument itself — already a party id, so no citizen lookup
 		assertThat(roster.applicant()).isEqualTo(APPLICANT_PARTY_ID);
 		assertThat(roster.coApplicant()).isNull();
+		verifyNoInteractions(citizenServiceMock);
 		assertThat(roster.members()).isEmpty();
 	}
 
 	@Test
 	void latestRosterToleratesNullComposites() {
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any())).thenReturn(null);
-		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any())).thenReturn(null);
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(null);
+		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(null);
 
-		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT, REFERENCE);
+		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
 		assertThat(roster.members()).isEmpty();
 		assertThat(roster.coApplicant()).isNull();
@@ -322,19 +322,19 @@ class LifecareCaseServiceTest {
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Bostadsbidrag")); // duplicate collapses
 		final var thisMonth = new PersonBasedCalculationDTO().toDate("2026-06-30")
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Bostadsbidrag"));
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, thisMonth)));
 
-		final var types = service().previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+		final var types = service().previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
 
 		assertThat(types).containsExactlyInAnyOrder("Bostadsbidrag", "Dagersättning");
 	}
 
 	@Test
 	void previousCalculationIncomeTypesEmptyWhenNoPriorCalc() {
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any())).thenReturn(null);
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(null);
 
-		assertThat(service().previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE))).isEmpty();
+		assertThat(service().previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE))).isEmpty();
 	}
 
 	@Test
@@ -345,11 +345,11 @@ class LifecareCaseServiceTest {
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD_PARTY_ID).name("NILSSON OLLE")
 				.deviationFromDate("2026-05-01T00:00:00").deviationToDate("2026-05-15"))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(" ")); // blank filtered out
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
 		when(integrationMock.respondsWithPartyId()).thenReturn(true);
 
-		final var family = service().previousFamily(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+		final var family = service().previousFamily(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
 
 		assertThat(family.complete()).isTrue();
 		assertThat(family.commonHouseholdCost()).isEqualByComparingTo("1234");
@@ -365,12 +365,12 @@ class LifecareCaseServiceTest {
 		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT).deviationFromDate("not a date"))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("201801012380"));
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(APPLICANT_PARTY_ID));
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, "201801012380")).thenReturn(Optional.empty());
 
-		final var family = service().previousFamily(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+		final var family = service().previousFamily(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
 
 		assertThat(family.complete()).isFalse();
 		assertThat(family.commonHouseholdCost()).isNull();
@@ -380,10 +380,10 @@ class LifecareCaseServiceTest {
 
 	@Test
 	void previousFamilyIsEmptyWithoutAPreviousCalculation() {
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of()));
 
-		final var family = service().previousFamily(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+		final var family = service().previousFamily(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
 
 		assertThat(family.isEmpty()).isTrue();
 		assertThat(family).isEqualTo(PreviousFamily.empty());
@@ -403,42 +403,41 @@ class LifecareCaseServiceTest {
 			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Electricity").approvedAmount(900.0)) // not housing
 			.norm("Riksnorm 2026");
 		final var current = new PersonBasedCalculationDTO().toDate("2026-06-30"); // not strictly before June -> excluded
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, current)));
+		// The direct route answers with personal identity numbers, so each member is resolved to its party id.
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(APPLICANT_PARTY_ID));
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CHILD)).thenReturn(Optional.of(CHILD_PARTY_ID));
 
-		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
 
-		assertThat(household.personIds()).containsExactlyInAnyOrder(APPLICANT, "201801012380");
-		assertThat(household.personIdsComplete()).isTrue();
+		assertThat(household.partyIds()).containsExactlyInAnyOrder(APPLICANT_PARTY_ID, CHILD_PARTY_ID);
+		assertThat(household.partyIdsComplete()).isTrue();
 		assertThat(household.memberCount()).isEqualTo(2);
-		// The direct route answers with personal identity numbers, so nothing is resolved.
-		verifyNoInteractions(citizenServiceMock);
 		assertThat(household.normSum()).isEqualTo(BigDecimal.valueOf(12345.0));
 		assertThat(household.housingCost()).isEqualTo(BigDecimal.valueOf(7500.0)); // 6000 (approved) + 1500 (applied fallback)
 		assertThat(household.norm()).isEqualTo("Riksnorm 2026");
 	}
 
 	/**
-	 * The integrator answers with party ids, so the previous household is resolved to the personal identity numbers
-	 * the errand's members are compared against. Left unresolved, {@code ApplicationRuleFeeder} would be matching
-	 * party ids against personnummer and every renewal with children would report a household mismatch.
+	 * The integrator answers with party ids — the same identity the errand's members carry — so the previous household
+	 * is passed through as it is, with no citizen lookup at all.
 	 */
 	@Test
-	void previousHouseholdResolvesPartyIdsToPersonalIdentityNumbersOnTheIntegratorRoute() {
+	void previousHouseholdPassesPartyIdsThroughOnTheIntegratorRoute() {
 		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD_PARTY_ID));
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
 		when(integrationMock.respondsWithPartyId()).thenReturn(true);
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CHILD_PARTY_ID)).thenReturn(Optional.of(CHILD));
 
-		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
 
-		assertThat(household.personIds()).containsExactlyInAnyOrder(APPLICANT, CHILD);
-		assertThat(household.personIdsComplete()).isTrue();
+		assertThat(household.partyIds()).containsExactlyInAnyOrder(APPLICANT_PARTY_ID, CHILD_PARTY_ID);
+		assertThat(household.partyIdsComplete()).isTrue();
 		assertThat(household.memberCount()).isEqualTo(2);
+		verifyNoInteractions(citizenServiceMock);
 	}
 
 	/**
@@ -449,18 +448,17 @@ class LifecareCaseServiceTest {
 	@Test
 	void previousHouseholdIsIncompleteWhenAMemberDoesNotResolve() {
 		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
-			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID))
-			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD_PARTY_ID));
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD));
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
-		when(integrationMock.respondsWithPartyId()).thenReturn(true);
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(APPLICANT));
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CHILD_PARTY_ID)).thenReturn(Optional.empty());
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(APPLICANT_PARTY_ID));
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CHILD)).thenReturn(Optional.empty());
 
-		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
 
-		assertThat(household.personIds()).containsExactly(APPLICANT);
-		assertThat(household.personIdsComplete()).isFalse();
+		assertThat(household.partyIds()).containsExactly(APPLICANT_PARTY_ID);
+		assertThat(household.partyIdsComplete()).isFalse();
 		assertThat(household.memberCount()).isEqualTo(2);
 	}
 
@@ -477,14 +475,14 @@ class LifecareCaseServiceTest {
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD).amount(2100.0))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CO_APPLICANT)) // no amount -> skipped
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("198001019999").amount(50.0)); // unresolvable -> skipped
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous)));
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(APPLICANT_PARTY_ID));
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CHILD)).thenReturn(Optional.of(CHILD_PARTY_ID));
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, CO_APPLICANT)).thenReturn(Optional.of(CO_APPLICANT_PARTY_ID));
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, "198001019999")).thenReturn(Optional.empty());
 
-		final var amounts = service().previousPersonAmounts(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+		final var amounts = service().previousPersonAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
 
 		assertThat(amounts).hasSize(2)
 			.containsEntry(APPLICANT_PARTY_ID, BigDecimal.valueOf(1431.0))
@@ -496,11 +494,11 @@ class LifecareCaseServiceTest {
 	void previousPersonAmountsPassesPartyIdsThroughOnTheIntegratorRoute() {
 		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID).amount(1431.0));
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
 		when(integrationMock.respondsWithPartyId()).thenReturn(true);
 
-		final var amounts = service().previousPersonAmounts(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+		final var amounts = service().previousPersonAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
 
 		assertThat(amounts).containsExactly(entry(APPLICANT_PARTY_ID, BigDecimal.valueOf(1431.0)));
 		verifyNoInteractions(citizenServiceMock);
@@ -508,18 +506,18 @@ class LifecareCaseServiceTest {
 
 	@Test
 	void previousPersonAmountsEmptyWhenNoPriorCalculation() {
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any())).thenReturn(null);
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(null);
 
-		assertThat(service().previousPersonAmounts(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE))).isEmpty();
+		assertThat(service().previousPersonAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE))).isEmpty();
 	}
 
 	@Test
 	void previousHouseholdEmptyWhenNoPriorCalculation() {
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any())).thenReturn(null);
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(null);
 
-		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
 
-		assertThat(household.personIds()).isEmpty();
+		assertThat(household.partyIds()).isEmpty();
 		assertThat(household.memberCount()).isZero();
 		assertThat(household.normSum()).isNull();
 		assertThat(household.housingCost()).isNull();
@@ -538,10 +536,10 @@ class LifecareCaseServiceTest {
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Barnbidrag/Flerbarnstillägg").amountApplicant(1250.0)) // unmapped
 			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Barnpension").amountApplicant(2000.0)); // never a pension insurance
 		final var current = new PersonBasedCalculationDTO().toDate("2026-06-30"); // not strictly before June
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous, current)));
 
-		final var amounts = service().previousCalculationIncomeAmounts(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+		final var amounts = service().previousCalculationIncomeAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
 
 		assertThat(amounts).containsOnlyKeys("SALARY", "OCCUPATIONAL_PENSION_INSURANCE", "CHILD_SUPPORT");
 		assertThat(amounts.get("SALARY")).isEqualByComparingTo("15500");
@@ -551,37 +549,37 @@ class LifecareCaseServiceTest {
 
 	@Test
 	void previousCalculationIncomeAmountsEmptyWhenNoPriorCalculation() {
-		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any())).thenReturn(null);
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(null);
 
-		assertThat(service().previousCalculationIncomeAmounts(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE))).isEmpty();
+		assertThat(service().previousCalculationIncomeAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE))).isEmpty();
 	}
 
 	@Test
 	void protectedIdentityFromAddressProtection() {
-		when(integrationMock.getPerson(MUNICIPALITY_ID, APPLICANT)).thenReturn(new PersonBasedPersonDTO().addressProtection(true));
+		when(integrationMock.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(new PersonBasedPersonDTO().addressProtection(true));
 
-		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT)).isTrue();
+		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isTrue();
 	}
 
 	@Test
 	void protectedIdentityFromProtectedRegistration() {
-		when(integrationMock.getPerson(MUNICIPALITY_ID, APPLICANT)).thenReturn(new PersonBasedPersonDTO().protectedRegistration(true));
+		when(integrationMock.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(new PersonBasedPersonDTO().protectedRegistration(true));
 
-		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT)).isTrue();
+		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isTrue();
 	}
 
 	@Test
 	void notProtectedWhenFlagsUnsetOrAbsent() {
-		when(integrationMock.getPerson(MUNICIPALITY_ID, APPLICANT)).thenReturn(new PersonBasedPersonDTO());
+		when(integrationMock.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(new PersonBasedPersonDTO());
 
-		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT)).isFalse();
+		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isFalse();
 	}
 
 	@Test
 	void notProtectedWhenNoPersonRecord() {
-		when(integrationMock.getPerson(MUNICIPALITY_ID, APPLICANT)).thenReturn(null);
+		when(integrationMock.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(null);
 
-		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT)).isFalse();
+		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isFalse();
 	}
 
 	@Test

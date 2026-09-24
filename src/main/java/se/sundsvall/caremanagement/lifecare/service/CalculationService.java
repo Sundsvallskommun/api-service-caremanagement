@@ -82,10 +82,10 @@ public class CalculationService {
 	 * operaton-classified incomes resolved against the applicant's calculation proposal. Comparison-period incomes the
 	 * previous month already transferred are dropped first. Writes nothing to Lifecare.
 	 */
-	public List<FamilyCareIncomeLine> incomeLines(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
-		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPersonId);
+	public List<FamilyCareIncomeLine> incomeLines(final String municipalityId, final String applicantPartyId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPartyId);
 		final var transferable = ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
-			parse(classifiedIncomesJson), previousIncomeTypes(municipalityId, applicantPersonId, applicationMonth));
+			parse(classifiedIncomesJson), previousIncomeTypes(municipalityId, applicantPartyId, applicationMonth));
 		return ClassifiedIncomeToFamilyCareMapper.toIncomeLines(transferable, proposal);
 	}
 
@@ -105,10 +105,10 @@ public class CalculationService {
 	 * @param  classifiedIncomesJson the {@code classifiedIncomes} payload
 	 * @return                       the comparison-period incomes being transferred now, in engine order
 	 */
-	public List<ClassifiedIncome> lateTransferredComparisonIncomes(final String municipalityId, final String applicantPersonId,
+	public List<ClassifiedIncome> lateTransferredComparisonIncomes(final String municipalityId, final String applicantPartyId,
 		final YearMonth applicationMonth, final String classifiedIncomesJson) {
 		return ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
-			parse(classifiedIncomesJson), previousIncomeTypes(municipalityId, applicantPersonId, applicationMonth)).stream()
+			parse(classifiedIncomesJson), previousIncomeTypes(municipalityId, applicantPartyId, applicationMonth)).stream()
 			.filter(ClassifiedIncome::isFromComparisonPeriod)
 			.toList();
 	}
@@ -118,9 +118,9 @@ public class CalculationService {
 	 * comparison-period incomes as before: an income counted twice shows up as a duplicate warning on the case, an
 	 * income silently withheld shows up as nothing at all.
 	 */
-	private List<String> previousIncomeTypes(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth) {
+	private List<String> previousIncomeTypes(final String municipalityId, final String applicantPartyId, final YearMonth applicationMonth) {
 		try {
-			return lifecareCaseService.previousCalculationIncomeTypes(municipalityId, applicantPersonId, applicationMonth);
+			return lifecareCaseService.previousCalculationIncomeTypes(municipalityId, applicantPartyId, applicationMonth);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous month's calculation — transferring the comparison period unfiltered", e);
 			return List.of();
@@ -131,9 +131,9 @@ public class CalculationService {
 	 * Whether this month's classified incomes cover every income type the previous calculation had. Best-effort: a failure
 	 * reading the previous month is treated as complete so the financial assistance process is not wedged.
 	 */
-	public Completeness completeness(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
-		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPersonId);
-		final var missing = missingPreviousIncomeTypes(municipalityId, applicantPersonId, applicationMonth, parse(classifiedIncomesJson), proposal);
+	public Completeness completeness(final String municipalityId, final String applicantPartyId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPartyId);
+		final var missing = missingPreviousIncomeTypes(municipalityId, applicantPartyId, applicationMonth, parse(classifiedIncomesJson), proposal);
 		return new Completeness(missing.isEmpty(), missing);
 	}
 
@@ -150,9 +150,9 @@ public class CalculationService {
 	 * {@link CalculationAssembler#matchingNormId}) and otherwise the first of {@code fallbackNames} found among the
 	 * norms whose window covers the month ({@link CalculationAssembler#selectNormId}). One proposal read either way.
 	 */
-	public NormChoice selectNormId(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth,
+	public NormChoice selectNormId(final String municipalityId, final String applicantPartyId, final YearMonth applicationMonth,
 		final List<String> preferredNames, final List<String> fallbackNames) {
-		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPersonId);
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPartyId);
 		return CalculationAssembler.matchingNormId(proposal, applicationMonth, preferredNames)
 			.map(normId -> new NormChoice(normId, true))
 			.orElseGet(() -> new NormChoice(CalculationAssembler.selectNormId(proposal, applicationMonth, fallbackNames).orElse(null), false));
@@ -167,10 +167,10 @@ public class CalculationService {
 	 *
 	 * @return the created Lifecare calculation id
 	 */
-	public Integer commitEffective(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth, final CalculationHeader header,
+	public Integer commitEffective(final String municipalityId, final String applicantPartyId, final YearMonth applicationMonth, final CalculationHeader header,
 		final List<EffectiveIncome> incomes, final List<EffectiveExpense> expenses, final List<EffectivePerson> persons) {
 
-		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPersonId);
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPartyId);
 		final var incomeTypeIds = MapperUtil.indexIncomeTypeIds(proposal);
 		final var incomeDtos = ofNullable(incomes).orElseGet(List::of).stream().map(income -> toIncomeDto(income, incomeTypeIds)).toList();
 
@@ -188,7 +188,7 @@ public class CalculationService {
 		final var sections = new CalculationSections(incomeDtos, expenseDtos, specialExpenseDtos, personDtos, header);
 		// No norm types here: the draft header carries the norm already chosen by selectNormId and overrides whatever
 		// the assembler would pick, so this argument only feeds a fallback that the header makes unreachable.
-		final var body = CalculationAssembler.assemble(applicantPersonId, proposal, sections, applicationMonth, List.of());
+		final var body = CalculationAssembler.assemble(applicantPartyId, proposal, sections, applicationMonth, List.of());
 		return lifecareFamilyCareIntegration.createCalculation(municipalityId, body);
 	}
 
@@ -274,10 +274,10 @@ public class CalculationService {
 		return ofNullable(date).map(value -> value.atStartOfDay().atOffset(ZoneOffset.UTC)).orElse(null);
 	}
 
-	private List<String> missingPreviousIncomeTypes(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth,
+	private List<String> missingPreviousIncomeTypes(final String municipalityId, final String applicantPartyId, final YearMonth applicationMonth,
 		final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
 		try {
-			final var previousTypes = lifecareCaseService.previousCalculationIncomeTypes(municipalityId, applicantPersonId, applicationMonth);
+			final var previousTypes = lifecareCaseService.previousCalculationIncomeTypes(municipalityId, applicantPartyId, applicationMonth);
 			return ClassifiedIncomeToFamilyCareMapper.missingPreviousIncomeTypes(previousTypes, classified, proposal);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not determine calculation completeness against the previous month — treating as complete", e);

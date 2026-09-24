@@ -19,6 +19,7 @@ import generated.se.sundsvall.lifecarefamilycare.User;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -38,6 +39,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -71,6 +73,12 @@ class LifecareFamilyCareIntegrationTest {
 	@InjectMocks
 	private LifecareFamilyCareIntegration integration;
 
+	/** Arguments are party ids; this route resolves them to the personal identity number FamilyCare keys on. */
+	@BeforeEach
+	void resolveApplicant() {
+		lenient().when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSON_ID));
+	}
+
 	/**
 	 * FamilyCare answers with personal identity numbers — the interface default. LifecareCaseService branches on this
 	 * to decide whether a person in a response still has to be resolved to a partyId, so a silent flip here would put
@@ -82,6 +90,23 @@ class LifecareFamilyCareIntegrationTest {
 		verifyNoInteractions(clientMock);
 	}
 
+	/**
+	 * A party id the citizen service does not know never reaches FamilyCare: the read fails as the citizen lookup it
+	 * is, not as a Lifecare error.
+	 */
+	@Test
+	void unknownPartyIdFailsBeforeFamilyCareIsCalled() {
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CHILD_PARTY_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> integration.getCalculations(MUNICIPALITY_ID, CHILD_PARTY_ID, START, END))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.isEqualTo("No citizen found for partyId " + CHILD_PARTY_ID);
+
+		verifyNoInteractions(clientMock);
+	}
+
 	// ---- Person-based reads ------------------------------------------------------------------------------------------
 
 	@Test
@@ -89,7 +114,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new PersonBasedPersonDTO();
 		when(clientMock.getPerson(PERSON_ID)).thenReturn(response);
 
-		assertThat(integration.getPerson(MUNICIPALITY_ID, PERSON_ID)).isSameAs(response);
+		assertThat(integration.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isSameAs(response);
 		verify(clientMock).getPerson(PERSON_ID);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -99,7 +124,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = List.of(new PersonBasedContactDTO());
 		when(clientMock.getContacts(PERSON_ID)).thenReturn(response);
 
-		assertThat(integration.getContacts(MUNICIPALITY_ID, PERSON_ID)).isSameAs(response);
+		assertThat(integration.getContacts(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isSameAs(response);
 		verify(clientMock).getContacts(PERSON_ID);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -109,7 +134,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedAktualiseringDTO();
 		when(clientMock.getActualisations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getActualisations(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getActualisations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, START, END)).isSameAs(response);
 		verify(clientMock).getActualisations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -119,7 +144,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedCalculationDTO();
 		when(clientMock.getCalculations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getCalculations(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, START, END)).isSameAs(response);
 		verify(clientMock).getCalculations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -129,7 +154,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedDecisionDTO();
 		when(clientMock.getDecisions(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getDecisions(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getDecisions(MUNICIPALITY_ID, APPLICANT_PARTY_ID, START, END)).isSameAs(response);
 		verify(clientMock).getDecisions(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -139,7 +164,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedPaymentDTO();
 		when(clientMock.getPayments(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getPayments(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getPayments(MUNICIPALITY_ID, APPLICANT_PARTY_ID, START, END)).isSameAs(response);
 		verify(clientMock).getPayments(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -149,7 +174,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedInvestigationDTO();
 		when(clientMock.getInvestigations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getInvestigations(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getInvestigations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, START, END)).isSameAs(response);
 		verify(clientMock).getInvestigations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -159,7 +184,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedServiceDTO();
 		when(clientMock.getServices(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getServices(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getServices(MUNICIPALITY_ID, APPLICANT_PARTY_ID, START, END)).isSameAs(response);
 		verify(clientMock).getServices(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -169,7 +194,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedExecutionDTO();
 		when(clientMock.getExecutions(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getExecutions(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getExecutions(MUNICIPALITY_ID, APPLICANT_PARTY_ID, START, END)).isSameAs(response);
 		verify(clientMock).getExecutions(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -200,7 +225,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new ApiPaginationCompositePersonBasedResourceAllocationDTO();
 		when(clientMock.getResourceAllocations(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenReturn(response);
 
-		assertThat(integration.getResourceAllocations(MUNICIPALITY_ID, PERSON_ID, START, END)).isSameAs(response);
+		assertThat(integration.getResourceAllocations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, START, END)).isSameAs(response);
 		verify(clientMock).getResourceAllocations(PERSON_ID, START_WIRE, END_WIRE, null, null, false);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -209,7 +234,7 @@ class LifecareFamilyCareIntegrationTest {
 	void getDecisionsFailure() {
 		when(clientMock.getDecisions(PERSON_ID, START_WIRE, END_WIRE, null, null, false)).thenThrow(new RuntimeException("timeout"));
 
-		assertThatThrownBy(() -> integration.getDecisions(MUNICIPALITY_ID, PERSON_ID, START, END))
+		assertThatThrownBy(() -> integration.getDecisions(MUNICIPALITY_ID, APPLICANT_PARTY_ID, START, END))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
@@ -225,7 +250,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new PersonBasedAktualiseringProposalDTO();
 		when(clientMock.getActualisationProposal(PERSON_ID)).thenReturn(response);
 
-		assertThat(integration.getActualisationProposal(MUNICIPALITY_ID, PERSON_ID)).isSameAs(response);
+		assertThat(integration.getActualisationProposal(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isSameAs(response);
 		verify(clientMock).getActualisationProposal(PERSON_ID);
 		verifyNoMoreInteractions(clientMock);
 	}
@@ -234,7 +259,7 @@ class LifecareFamilyCareIntegrationTest {
 	void getActualisationProposalFailure() {
 		when(clientMock.getActualisationProposal(PERSON_ID)).thenThrow(Problem.valueOf(NOT_FOUND, "boom"));
 
-		assertThatThrownBy(() -> integration.getActualisationProposal(MUNICIPALITY_ID, PERSON_ID))
+		assertThatThrownBy(() -> integration.getActualisationProposal(MUNICIPALITY_ID, APPLICANT_PARTY_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
@@ -245,17 +270,18 @@ class LifecareFamilyCareIntegrationTest {
 
 	@Test
 	void createActualisation() {
-		final var body = new PostAktualiseringsBodyRequest();
+		final var body = new PostAktualiseringsBodyRequest().personId(APPLICANT_PARTY_ID);
 		when(clientMock.createActualisation(body)).thenReturn(4711);
 
 		assertThat(integration.createActualisation(MUNICIPALITY_ID, body)).isEqualTo(4711);
+		assertThat(body.getPersonId()).isEqualTo(PERSON_ID);
 		verify(clientMock).createActualisation(body);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void createActualisationFailure() {
-		final var body = new PostAktualiseringsBodyRequest();
+		final var body = new PostAktualiseringsBodyRequest().personId(APPLICANT_PARTY_ID);
 		when(clientMock.createActualisation(body)).thenThrow(new RuntimeException("connection reset"));
 
 		assertThatThrownBy(() -> integration.createActualisation(MUNICIPALITY_ID, body))
@@ -272,24 +298,25 @@ class LifecareFamilyCareIntegrationTest {
 		final var response = new PersonBasedCalculationProposalDTO();
 		when(clientMock.getCalculationProposal(PERSON_ID)).thenReturn(response);
 
-		assertThat(integration.getCalculationProposal(MUNICIPALITY_ID, PERSON_ID)).isSameAs(response);
+		assertThat(integration.getCalculationProposal(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isSameAs(response);
 		verify(clientMock).getCalculationProposal(PERSON_ID);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void createCalculation() {
-		final var body = new PostCalculationBodyRequest();
+		final var body = new PostCalculationBodyRequest().personId(APPLICANT_PARTY_ID);
 		when(clientMock.createCalculation(body)).thenReturn(99);
 
 		assertThat(integration.createCalculation(MUNICIPALITY_ID, body)).isEqualTo(99);
+		assertThat(body.getPersonId()).isEqualTo(PERSON_ID);
 		verify(clientMock).createCalculation(body);
 		verifyNoMoreInteractions(clientMock);
 	}
 
 	@Test
 	void createCalculationFailure() {
-		final var body = new PostCalculationBodyRequest();
+		final var body = new PostCalculationBodyRequest().personId(APPLICANT_PARTY_ID);
 		when(clientMock.createCalculation(body)).thenThrow(Problem.valueOf(BAD_GATEWAY, "upstream down"));
 
 		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, body))
@@ -310,7 +337,7 @@ class LifecareFamilyCareIntegrationTest {
 	@Test
 	void createCalculationResolvesHouseholdPartyIdsToPersonalIdentityNumbers() {
 		final var body = new PostCalculationBodyRequest()
-			.personId(PERSON_ID)
+			.personId(APPLICANT_PARTY_ID)
 			.calculationPersons(List.of(
 				new PersonBasedCalculationPersonPostDTO().personId(APPLICANT_PARTY_ID).numberOfDays(30),
 				new PersonBasedCalculationPersonPostDTO().personId(CHILD_PARTY_ID).numberOfDays(15)));
@@ -337,7 +364,7 @@ class LifecareFamilyCareIntegrationTest {
 	@Test
 	void createCalculationFailsWhenAHouseholdMemberHasNoPersonalIdentityNumber() {
 		final var body = new PostCalculationBodyRequest()
-			.personId(PERSON_ID)
+			.personId(APPLICANT_PARTY_ID)
 			.calculationPersons(List.of(
 				new PersonBasedCalculationPersonPostDTO().personId(APPLICANT_PARTY_ID),
 				new PersonBasedCalculationPersonPostDTO().personId(CHILD_PARTY_ID)));
@@ -354,17 +381,20 @@ class LifecareFamilyCareIntegrationTest {
 		verifyNoInteractions(clientMock);
 	}
 
-	/** A row with no party id at all is the same failure, without spending a citizen lookup to discover it. */
+	/** A row with no party id at all is the same failure, without spending a citizen lookup on the row. */
 	@Test
 	void createCalculationFailsWhenAHouseholdMemberHasNoPartyId() {
 		final var body = new PostCalculationBodyRequest()
+			.personId(APPLICANT_PARTY_ID)
 			.calculationPersons(List.of(new PersonBasedCalculationPersonPostDTO().personId(" ")));
 
 		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, body))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
 
-		verifyNoInteractions(clientMock, citizenServiceMock);
+		verify(citizenServiceMock).getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID);
+		verifyNoMoreInteractions(citizenServiceMock);
+		verifyNoInteractions(clientMock);
 	}
 
 	@Test
@@ -406,7 +436,7 @@ class LifecareFamilyCareIntegrationTest {
 		final var leaky = "GET https://lifecare-familycare/Persons?personId=200001012384&key=SUPER-SECRET-KEY HTTP/1.1";
 		when(clientMock.getPerson(PERSON_ID)).thenThrow(new RuntimeException(leaky));
 
-		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, PERSON_ID))
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
@@ -424,7 +454,7 @@ class LifecareFamilyCareIntegrationTest {
 		// ThrowableProblem causes are already clean — keep status + detail for self-diagnosing logs.
 		when(clientMock.getPerson(PERSON_ID)).thenThrow(Problem.valueOf(NOT_FOUND, "person not found"));
 
-		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, PERSON_ID))
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())

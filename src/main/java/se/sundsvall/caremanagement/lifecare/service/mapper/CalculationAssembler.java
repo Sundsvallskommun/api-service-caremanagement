@@ -42,14 +42,14 @@ public final class CalculationAssembler {
 	/**
 	 * Build the FamilyCare calculation body for one applicant and application month.
 	 *
-	 * @param  applicantPersonId  the applicant's personnummer (the FamilyCare calculation owner)
+	 * @param  applicantPartyId   the applicant's partyId (the FamilyCare calculation owner)
 	 * @param  proposal           the FamilyCare calculation proposal supplying the link ids; may be {@code null}
 	 * @param  calculationIncomes the prepared FamilyCare income rows; may be {@code null}
 	 * @param  applicationMonth   the month the application concerns
 	 * @return                    the assembled {@link PostCalculationBodyRequest}
 	 */
 	public static PostCalculationBodyRequest assemble(
-		final String applicantPersonId,
+		final String applicantPartyId,
 		final PersonBasedCalculationProposalDTO proposal,
 		final List<PersonBasedCalculationIncomePostDTO> calculationIncomes,
 		final YearMonth applicationMonth,
@@ -57,7 +57,7 @@ public final class CalculationAssembler {
 
 		final var monthStart = applicationMonth.atDay(1);
 		final var body = new PostCalculationBodyRequest()
-			.personId(applicantPersonId)
+			.personId(applicantPartyId)
 			.calculationDate(startOfDay(monthStart))
 			.calculationFromDate(startOfDay(monthStart))
 			.calculationToDate(startOfDay(applicationMonth.atEndOfMonth()))
@@ -77,20 +77,20 @@ public final class CalculationAssembler {
 	 * selection of {@link #assemble(String, PersonBasedCalculationProposalDTO, List, YearMonth)}; adds the expenses and
 	 * persons and, when given, overrides the proposal-selected norm with the one chosen on the draft header.
 	 *
-	 * @param  applicantPersonId the applicant's personnummer (the FamilyCare calculation owner)
-	 * @param  proposal          the FamilyCare calculation proposal supplying the link ids; may be {@code null}
-	 * @param  sections          the income/expense/special-expense/person rows + draft header; fields may be {@code null}
-	 * @param  applicationMonth  the month the application concerns
-	 * @return                   the assembled {@link PostCalculationBodyRequest}
+	 * @param  applicantPartyId the applicant's partyId (the FamilyCare calculation owner)
+	 * @param  proposal         the FamilyCare calculation proposal supplying the link ids; may be {@code null}
+	 * @param  sections         the income/expense/special-expense/person rows + draft header; fields may be {@code null}
+	 * @param  applicationMonth the month the application concerns
+	 * @return                  the assembled {@link PostCalculationBodyRequest}
 	 */
 	public static PostCalculationBodyRequest assemble(
-		final String applicantPersonId,
+		final String applicantPartyId,
 		final PersonBasedCalculationProposalDTO proposal,
 		final CalculationSections sections,
 		final YearMonth applicationMonth,
 		final List<String> normNames) {
 
-		final var body = assemble(applicantPersonId, proposal, sections.incomes(), applicationMonth, normNames);
+		final var body = assemble(applicantPartyId, proposal, sections.incomes(), applicationMonth, normNames);
 		ofNullable(sections.expenses()).ifPresent(body::calculationExpenses);
 		ofNullable(sections.specialExpenses()).ifPresent(body::calculationSpecialExpenses);
 		ofNullable(sections.persons()).ifPresent(body::calculationPersons);

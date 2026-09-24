@@ -181,7 +181,7 @@ public class PayeeService {
 
 	/** The payees seen on the applicant's Lifecare payments in the lookback window, most recently paid first, distinct. */
 	private List<PayeeOption> lifecareOptions(final String municipalityId, final String namespace, final String errandId) {
-		final var applicant = householdPartyService.household(municipalityId, namespace, errandId).applicantPersonalNumber();
+		final var applicant = householdPartyService.household(municipalityId, namespace, errandId).applicantPartyId();
 		if (applicant.isEmpty()) {
 			return List.of();
 		}

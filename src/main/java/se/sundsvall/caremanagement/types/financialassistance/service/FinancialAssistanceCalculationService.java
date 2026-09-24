@@ -190,10 +190,11 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/**
-	 * What one prepare run works from: the request's resolved identifiers plus the errand it targets. The month is kept
-	 * both parsed (for the Lifecare reads) and verbatim (the draft header stores the request's own string).
+	 * What one prepare run works from: the request's identifiers plus the errand it targets. The applicant is the
+	 * partyId the Lifecare reads take; only the age is derived from the personnummer, which is not kept. The month is
+	 * kept both parsed (for the Lifecare reads) and verbatim (the draft header stores the request's own string).
 	 */
-	private record PrepareInput(String namespace, String errandId, String applicant, YearMonth applicationMonth, String applicationMonthValue,
+	private record PrepareInput(String namespace, String errandId, String applicant, Integer applicantAge, YearMonth applicationMonth, String applicationMonthValue,
 		String classifiedIncomes, DayCheckBasis dayCheckBasis, FinancialAssistanceEntity errand) {}
 
 	/**
@@ -238,7 +239,8 @@ public class FinancialAssistanceCalculationService {
 
 	/**
 	 * Resolve everything the run needs before any work is done: the errand is scope-checked (404 outside this
-	 * namespace/municipality), the applicant party id resolved to a personal number, and the classified incomes required —
+	 * namespace/municipality), the applicant's age read off the personnummer behind the party id — the one lookup a
+	 * prepare run makes — and the classified incomes required —
 	 * the SSBTEK rules are evaluated in the process, not here.
 	 */
 	private PrepareInput gather(final String municipalityId, final String namespace, final CalculationRequest request) {
@@ -247,13 +249,14 @@ public class FinancialAssistanceCalculationService {
 
 		// Validated in this order so the caller gets the most specific rejection first: an unresolvable applicant, then a
 		// missing classifiedIncomes, then a missing typed errand.
-		final var applicant = personalNumber(municipalityId, request.getApplicant());
+		final var applicant = request.getApplicant();
+		final var applicantAge = ageFromPnr(personalNumber(municipalityId, applicant));
 		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
 		final var classifiedIncomes = requireClassifiedIncomes(request);
 		final var errand = financialAssistanceRepository.findByErrandId(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No financial-assistance errand for id " + errandId));
 
-		return new PrepareInput(namespace, errandId, applicant, applicationMonth, request.getApplicationMonth(), classifiedIncomes, request.getDayCheckBasis(), errand);
+		return new PrepareInput(namespace, errandId, applicant, applicantAge, applicationMonth, request.getApplicationMonth(), classifiedIncomes, request.getDayCheckBasis(), errand);
 	}
 
 	/**
@@ -277,7 +280,7 @@ public class FinancialAssistanceCalculationService {
 	private DraftRefresh refreshDraft(final String municipalityId, final PrepareInput input, final PreviousHousehold previous) {
 		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
 		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, input.errandId(), input.errand(),
-			previousExpenseAmounts(municipalityId, input.applicant(), input.applicationMonth()), ageFromPnr(input.applicant()));
+			previousExpenseAmounts(municipalityId, input.applicant(), input.applicationMonth()), input.applicantAge());
 		// NORM-04: norm, familj and gemensamma kostnader come from the previous normberäkning (regelverk återansökan);
 		// the application only fills in what FamilyCare's read model lacks, and the rest is flagged.
 		final var previousFamilyRead = previousFamily(municipalityId, input.applicant(), input.applicationMonth());
@@ -610,7 +613,7 @@ public class FinancialAssistanceCalculationService {
 		}
 	}
 
-	/** Resolve a partyId to the personnummer the Lifecare/SSBTEK pipeline needs, or 404 when the citizen is unknown. */
+	/** Resolve a partyId to its personnummer (read for the applicant's age), or 404 when the citizen is unknown. */
 	private String personalNumber(final String municipalityId, final String partyId) {
 		return citizenService.getPersonalNumber(municipalityId, partyId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No citizen found for partyId " + partyId));

@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.api.model.PatchErrand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
@@ -80,17 +79,15 @@ public class FinancialAssistanceActualisationService {
 
 	private final ActualisationService actualisationService;
 	private final AttachmentService attachmentService;
-	private final CitizenService citizenService;
 	private final DecisionService decisionService;
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 
 	FinancialAssistanceActualisationService(final ActualisationService actualisationService, final AttachmentService attachmentService,
-		final CitizenService citizenService, final DecisionService decisionService,
+		final DecisionService decisionService,
 		final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository) {
 		this.actualisationService = actualisationService;
 		this.attachmentService = attachmentService;
-		this.citizenService = citizenService;
 		this.decisionService = decisionService;
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
@@ -103,7 +100,7 @@ public class FinancialAssistanceActualisationService {
 	 * case's audit trail.
 	 */
 	public ActualisationResponse createActualisation(final String municipalityId, final String namespace, final ActualisationRequest request) {
-		final var applicant = personalNumber(municipalityId, request.getApplicant());
+		final var applicant = request.getApplicant();
 		final var intakeDate = intakeDate(request);
 		final var result = actualisationService.createActualisation(municipalityId, applicant, intakeDate);
 
@@ -239,8 +236,7 @@ public class FinancialAssistanceActualisationService {
 
 	/**
 	 * List the Lifecare actualisations (case intakes) registered on the applicant, so a caseworker can pick which one a
-	 * supplementary application is archived to. The applicant is identified by partyId (resolved to a
-	 * personnummer via the citizen service — 404 when unknown). The period defaults to the last
+	 * supplementary application is archived to. The applicant is identified by partyId. The period defaults to the last
 	 * {@value #ACTUALISATION_LOOKBACK_MONTHS} months up to today when {@code from}/{@code to} are omitted.
 	 */
 	@Transactional(readOnly = true)
@@ -254,11 +250,10 @@ public class FinancialAssistanceActualisationService {
 	 * (which would bypass the Spring proxy — Sonar S6809).
 	 */
 	private List<Actualisation> actualisationsFor(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
-		final var applicant = personalNumber(municipalityId, partyId);
 		final var toDate = ofNullable(to).orElseGet(LocalDate::now);
 		final var fromDate = ofNullable(from).orElseGet(() -> toDate.minusMonths(ACTUALISATION_LOOKBACK_MONTHS));
 
-		return actualisationService.listActualisations(municipalityId, applicant, fromDate, toDate).stream()
+		return actualisationService.listActualisations(municipalityId, partyId, fromDate, toDate).stream()
 			.map(FinancialAssistanceActualisationService::toActualisation)
 			.toList();
 	}
@@ -322,11 +317,5 @@ public class FinancialAssistanceActualisationService {
 			.withInvestigationId(summary.investigationId())
 			.withServiceId(summary.serviceId())
 			.withDecisionId(summary.decisionId());
-	}
-
-	/** Resolve a partyId to the personnummer the Lifecare/SSBTEK pipeline needs, or 404 when the citizen is unknown. */
-	private String personalNumber(final String municipalityId, final String partyId) {
-		return citizenService.getPersonalNumber(municipalityId, partyId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No citizen found for partyId " + partyId));
 	}
 }

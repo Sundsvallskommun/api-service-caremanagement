@@ -89,14 +89,14 @@ public class ProposalBasisService {
 		final var draft = draftService.get(errandId); // 404 when no draft
 		final var household = householdPartyService.household(municipalityId, namespace, errandId);
 		final var applicationMonth = ofNullable(draft.getApplicationMonth()).filter(month -> hasText(month)).map(YearMonth::parse);
-		final var savedCalculation = household.applicantPersonalNumber()
+		final var savedCalculation = household.applicantPartyId()
 			.flatMap(applicant -> applicationMonth.flatMap(month -> savedCalculation(municipalityId, errandId, applicant, draft, month)));
 		if (savedCalculation.isPresent()) {
 			final var calculation = savedCalculation.get();
 			return new ProposalBasis(draft, household, applicationMonth, ofNullable(calculation.normSum()), Optional.of(calculation.balance().negate()),
 				Optional.of(AMOUNT_BASIS_LIFECARE_CALCULATION));
 		}
-		final var normSum = household.applicantPersonalNumber()
+		final var normSum = household.applicantPartyId()
 			.flatMap(applicant -> applicationMonth.flatMap(month -> previousNormSum(municipalityId, applicant, month)));
 		final var estimatedAmount = normSum.map(norm -> ProposalMapper.estimatedAmount(draft, norm));
 		return new ProposalBasis(draft, household, applicationMonth, normSum, estimatedAmount, estimatedAmount.map(amount -> AMOUNT_BASIS_ESTIMATE));

@@ -37,7 +37,6 @@ import generated.se.sundsvall.lifecareintegrator.Person;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -46,7 +45,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.multipart.MultipartFile;
-import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static generated.se.sundsvall.lifecareintegrator.Decision.SourceEnum.FAMILY_CARE;
@@ -74,7 +72,6 @@ class LifecareIntegratorIntegrationTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
 
-	private static final String PERSON_ID = "200001012384";
 	private static final String PARTY_ID = "6a5c3d18-1f2b-4e77-9c0a-2b3d4e5f6a7b";
 	private static final LocalDate START = LocalDate.of(2026, APRIL, 1);
 	private static final LocalDate END = LocalDate.of(2026, JUNE, 30);
@@ -82,22 +79,17 @@ class LifecareIntegratorIntegrationTest {
 	@Mock
 	private LifecareIntegratorClient clientMock;
 
-	@Mock
-	private CitizenService citizenServiceMock;
-
 	@InjectMocks
 	private LifecareIntegratorIntegration integration;
 
 	@Test
-	void getCalculationsResolvesThePersonToAPartyIdBeforeCalling() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+	void getCalculationsPassesThePartyIdStraightThrough() {
 		when(clientMock.getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new PagedCalculationResponse());
 
-		integration.getCalculations(MUNICIPALITY_ID, PERSON_ID, START, END);
+		integration.getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END);
 
-		verify(citizenServiceMock).getPartyId(MUNICIPALITY_ID, PERSON_ID);
 		verify(clientMock).getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END);
-		verifyNoMoreInteractions(clientMock, citizenServiceMock);
+		verifyNoMoreInteractions(clientMock);
 	}
 
 	/**
@@ -107,7 +99,6 @@ class LifecareIntegratorIntegrationTest {
 	 */
 	@Test
 	void getCalculationsMapsTheIntegratorsModelBackToFamilyCare() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new PagedCalculationResponse()
 			.meta(new PagingMetaData().page(1).limit(20).totalPages(3).totalRecords(42L))
 			.calculations(List.of(new Calculation()
@@ -131,7 +122,7 @@ class LifecareIntegratorIntegrationTest {
 				.expenses(List.of(new CalculationExpense().type("Hyra").appliedAmount(BigDecimal.valueOf(6500.0))))
 				.specialExpenses(List.of(new CalculationExpense().type("Tandvård").approvedAmount(BigDecimal.valueOf(450.0)))))));
 
-		final var result = integration.getCalculations(MUNICIPALITY_ID, PERSON_ID, START, END);
+		final var result = integration.getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END);
 
 		assertThat(result.getPageNumber()).isEqualTo(1);
 		assertThat(result.getPageSize()).isEqualTo(20);
@@ -175,25 +166,12 @@ class LifecareIntegratorIntegrationTest {
 
 	@Test
 	void getCalculationsWithNoResponseYieldsAnEmptyResultRatherThanNull() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(null);
 
-		final var result = integration.getCalculations(MUNICIPALITY_ID, PERSON_ID, START, END);
+		final var result = integration.getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END);
 
 		assertThat(result.getResult()).isEmpty();
 		assertThat(result.getPageNumber()).isNull();
-	}
-
-	@Test
-	void getCalculationsWithoutAResolvablePartyIdFailsBeforeCallingTheIntegrator() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.empty());
-
-		assertThatThrownBy(() -> integration.getCalculations(MUNICIPALITY_ID, PERSON_ID, START, END))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
-			.hasMessageContaining("No party id");
-
-		verify(clientMock, never()).getCalculations(any(), any(), any(), any());
 	}
 
 	/**
@@ -202,10 +180,9 @@ class LifecareIntegratorIntegrationTest {
 	 */
 	@Test
 	void getCalculationsTranslatesAnUpstreamFailureIntoBadGateway() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END)).thenThrow(new IllegalStateException("GET /2281/calculations?partyId=" + PARTY_ID));
 
-		assertThatThrownBy(() -> integration.getCalculations(MUNICIPALITY_ID, PERSON_ID, START, END))
+		assertThatThrownBy(() -> integration.getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.hasMessageContaining("fetching calculations")
@@ -216,58 +193,53 @@ class LifecareIntegratorIntegrationTest {
 	// ---- The remaining ported reads ---------------------------------------------------------------------------------
 	//
 	// The field-by-field translation is IntegratorCaseMapperTest's job; what matters here is that each operation
-	// resolves the person to a party id first and hands the mapped result back.
+	// passes the party id straight through and hands the mapped result back.
 
 	@Test
 	void getDecisionsGoesThroughTheIntegrator() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getDecisions(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new DecisionsResponse()
 			.decisions(List.of(new Decision().source(FAMILY_CARE).decisionId("4711"))));
 
-		assertThat(integration.getDecisions(MUNICIPALITY_ID, PERSON_ID, START, END).getResult())
+		assertThat(integration.getDecisions(MUNICIPALITY_ID, PARTY_ID, START, END).getResult())
 			.singleElement().extracting(PersonBasedDecisionDTO::getId).isEqualTo(4711);
 		verify(clientMock).getDecisions(MUNICIPALITY_ID, PARTY_ID, START, END);
 	}
 
 	@Test
 	void getActualisationsGoesThroughTheIntegrator() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getActualisations(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new PagedActualisationResponse()
 			.actualisations(List.of(new Actualisation().id(12))));
 
-		assertThat(integration.getActualisations(MUNICIPALITY_ID, PERSON_ID, START, END).getResult())
+		assertThat(integration.getActualisations(MUNICIPALITY_ID, PARTY_ID, START, END).getResult())
 			.singleElement().extracting(PersonBasedAktualiseringDTO::getPersonId).isEqualTo(PARTY_ID);
 		verify(clientMock).getActualisations(MUNICIPALITY_ID, PARTY_ID, START, END);
 	}
 
 	@Test
 	void getPaymentsGoesThroughTheIntegrator() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getPayments(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new PagedPaymentResponse()
 			.payments(List.of(new Payment().id(9))));
 
-		assertThat(integration.getPayments(MUNICIPALITY_ID, PERSON_ID, START, END).getResult()).hasSize(1);
+		assertThat(integration.getPayments(MUNICIPALITY_ID, PARTY_ID, START, END).getResult()).hasSize(1);
 		verify(clientMock).getPayments(MUNICIPALITY_ID, PARTY_ID, START, END);
 	}
 
 	@Test
 	void getServicesGoesThroughTheIntegrator() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getServices(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new PagedServiceResponse()
 			.services(List.of(new CaseService().id(3).caseworker("Karin Karlsson"))));
 
-		assertThat(integration.getServices(MUNICIPALITY_ID, PERSON_ID, START, END).getResult())
+		assertThat(integration.getServices(MUNICIPALITY_ID, PARTY_ID, START, END).getResult())
 			.singleElement().extracting(PersonBasedServiceDTO::getCaseworker).isEqualTo("Karin Karlsson");
 		verify(clientMock).getServices(MUNICIPALITY_ID, PARTY_ID, START, END);
 	}
 
 	@Test
 	void getDocumentsGoesThroughTheIntegrator() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getDocuments(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new PagedDocumentResponse()
 			.documents(List.of(new DocumentMetadata().id("doc-1"))));
 
-		assertThat(integration.getDocuments(MUNICIPALITY_ID, PERSON_ID, START, END).getResult()).hasSize(1);
+		assertThat(integration.getDocuments(MUNICIPALITY_ID, PARTY_ID, START, END).getResult()).hasSize(1);
 		verify(clientMock).getDocuments(MUNICIPALITY_ID, PARTY_ID, START, END);
 	}
 
@@ -278,15 +250,13 @@ class LifecareIntegratorIntegrationTest {
 		when(clientMock.getDocumentContent(MUNICIPALITY_ID, "doc-1")).thenReturn(content);
 
 		assertThat(integration.getDocumentContent(MUNICIPALITY_ID, "doc-1")).isEqualTo(content);
-		verifyNoInteractions(citizenServiceMock);
 	}
 
 	@Test
 	void getPersonGoesThroughTheIntegrator() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getPerson(MUNICIPALITY_ID, PARTY_ID)).thenReturn(new Person().name("Berit Berg").addressProtection(true));
 
-		assertThat(integration.getPerson(MUNICIPALITY_ID, PERSON_ID))
+		assertThat(integration.getPerson(MUNICIPALITY_ID, PARTY_ID))
 			.returns(PARTY_ID, PersonBasedPersonDTO::getPersonId)
 			.returns("Berit Berg", PersonBasedPersonDTO::getName)
 			.returns(true, PersonBasedPersonDTO::getAddressProtection);
@@ -294,10 +264,9 @@ class LifecareIntegratorIntegrationTest {
 
 	@Test
 	void getContactsGoesThroughTheIntegrator() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getContacts(MUNICIPALITY_ID, PARTY_ID)).thenReturn(List.of(new Contact().name("Anna Andersson")));
 
-		assertThat(integration.getContacts(MUNICIPALITY_ID, PERSON_ID))
+		assertThat(integration.getContacts(MUNICIPALITY_ID, PARTY_ID))
 			.singleElement().extracting(PersonBasedContactDTO::getName).isEqualTo("Anna Andersson");
 	}
 
@@ -308,25 +277,22 @@ class LifecareIntegratorIntegrationTest {
 
 		assertThat(integration.getUsers(MUNICIPALITY_ID, 100, null, null, null))
 			.singleElement().extracting(User::getFullName).isEqualTo("Karin Karlsson");
-		verifyNoInteractions(citizenServiceMock);
 	}
 
 	@Test
 	void getCalculationProposalGoesThroughTheIntegrator() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getCalculationProposal(MUNICIPALITY_ID, PARTY_ID)).thenReturn(new CalculationProposal().actualisationMandatory(true));
 
-		assertThat(integration.getCalculationProposal(MUNICIPALITY_ID, PERSON_ID).getAktualiseringMandatory()).isTrue();
+		assertThat(integration.getCalculationProposal(MUNICIPALITY_ID, PARTY_ID).getAktualiseringMandatory()).isTrue();
 		verify(clientMock).getCalculationProposal(MUNICIPALITY_ID, PARTY_ID);
 	}
 
 	@Test
 	void getActualisationProposalGoesThroughTheIntegrator() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.getActualisationProposal(MUNICIPALITY_ID, PARTY_ID)).thenReturn(new ActualisationProposal()
 			.organizations(List.of(new Organization().name("IFO Ekonomiskt bistånd"))));
 
-		assertThat(integration.getActualisationProposal(MUNICIPALITY_ID, PERSON_ID).getOrganizations())
+		assertThat(integration.getActualisationProposal(MUNICIPALITY_ID, PARTY_ID).getOrganizations())
 			.singleElement().extracting(PersonBasedAktualiseringsOrganizationDTO::getName).isEqualTo("IFO Ekonomiskt bistånd");
 		verify(clientMock).getActualisationProposal(MUNICIPALITY_ID, PARTY_ID);
 	}
@@ -334,8 +300,7 @@ class LifecareIntegratorIntegrationTest {
 	// ---- Writes -----------------------------------------------------------------------------------------------------
 
 	@Test
-	void createCalculationResolvesTheApplicantAndReturnsTheCreatedId() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+	void createCalculationPassesTheApplicantsPartyIdAndReturnsTheCreatedId() {
 		when(clientMock.createCalculation(eq(MUNICIPALITY_ID), any())).thenReturn(new CreatedResource().id(5012));
 
 		final var created = integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody());
@@ -353,9 +318,8 @@ class LifecareIntegratorIntegrationTest {
 	 */
 	@Test
 	void createCalculationNamesTheRequiredFieldsTheBodyIsMissing() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 
-		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, new PostCalculationBodyRequest().personId(PERSON_ID)))
+		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, new PostCalculationBodyRequest().personId(PARTY_ID)))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
 			.hasMessageContaining("normId")
@@ -369,7 +333,6 @@ class LifecareIntegratorIntegrationTest {
 	/** An unparseable date is a missing date, reported by name rather than as a stack trace from the mapper. */
 	@Test
 	void createCalculationRejectsAnUnparseableDateByName() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 
 		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody().calculationToDate("garbage")))
 			.isInstanceOf(ThrowableProblem.class)
@@ -381,22 +344,10 @@ class LifecareIntegratorIntegrationTest {
 	}
 
 	@Test
-	void createCalculationWithoutAResolvableApplicantNeverWrites() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.empty());
-
-		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody()))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
-
-		verify(clientMock, never()).createCalculation(any(), any());
-	}
-
-	@Test
-	void createActualisationResolvesTheApplicantAndReturnsTheCreatedId() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+	void createActualisationPassesTheApplicantsPartyIdAndReturnsTheCreatedId() {
 		when(clientMock.createActualisation(eq(MUNICIPALITY_ID), any())).thenReturn(new CreatedResource().id(88));
 
-		final var body = new PostAktualiseringsBodyRequest().personId(PERSON_ID).date("2026-06-12T00:00:00").type(1);
+		final var body = new PostAktualiseringsBodyRequest().personId(PARTY_ID).date("2026-06-12T00:00:00").type(1);
 
 		assertThat(integration.createActualisation(MUNICIPALITY_ID, body)).isEqualTo(88);
 		final var request = ArgumentCaptor.forClass(CreateActualisationRequest.class);
@@ -407,9 +358,8 @@ class LifecareIntegratorIntegrationTest {
 
 	@Test
 	void createActualisationNamesTheRequiredFieldsTheBodyIsMissing() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 
-		assertThatThrownBy(() -> integration.createActualisation(MUNICIPALITY_ID, new PostAktualiseringsBodyRequest().personId(PERSON_ID)))
+		assertThatThrownBy(() -> integration.createActualisation(MUNICIPALITY_ID, new PostAktualiseringsBodyRequest().personId(PARTY_ID)))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
 			.hasMessageContaining("date")
@@ -421,7 +371,6 @@ class LifecareIntegratorIntegrationTest {
 	/** A create that answers without an id yields null rather than an exception; the caller decides what that means. */
 	@Test
 	void aCreateWithNoIdInTheResponseYieldsNull() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 		when(clientMock.createCalculation(eq(MUNICIPALITY_ID), any())).thenReturn(new CreatedResource());
 
 		assertThat(integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody())).isNull();
@@ -444,7 +393,6 @@ class LifecareIntegratorIntegrationTest {
 		assertThat(file.getValue().getOriginalFilename()).isEqualTo("hyra.pdf");
 		assertThat(file.getValue().getContentType()).isEqualTo(APPLICATION_PDF_VALUE);
 		assertThatNoException().isThrownBy(() -> assertThat(file.getValue().getBytes()).isEqualTo(content));
-		verifyNoInteractions(citizenServiceMock);
 	}
 
 	@Test
@@ -461,7 +409,7 @@ class LifecareIntegratorIntegrationTest {
 
 	private static PostCalculationBodyRequest completeCalculationBody() {
 		return new PostCalculationBodyRequest()
-			.personId(PERSON_ID)
+			.personId(PARTY_ID)
 			.normId(7)
 			.calculationDate("2026-06-01T00:00:00")
 			.calculationFromDate("2026-06-01T00:00:00")
@@ -474,15 +422,15 @@ class LifecareIntegratorIntegrationTest {
 	 */
 	@Test
 	void unportedOperationsFailInsteadOfAnsweringEmpty() {
-		assertThatThrownBy(() -> integration.getInvestigations(MUNICIPALITY_ID, PERSON_ID, START, END))
+		assertThatThrownBy(() -> integration.getInvestigations(MUNICIPALITY_ID, PARTY_ID, START, END))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_IMPLEMENTED)
 			.hasMessageContaining("getInvestigations");
 
-		assertThatThrownBy(() -> integration.getExecutions(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.getResourceAllocations(MUNICIPALITY_ID, PERSON_ID, START, END)).isInstanceOf(ThrowableProblem.class);
+		assertThatThrownBy(() -> integration.getExecutions(MUNICIPALITY_ID, PARTY_ID, START, END)).isInstanceOf(ThrowableProblem.class);
+		assertThatThrownBy(() -> integration.getResourceAllocations(MUNICIPALITY_ID, PARTY_ID, START, END)).isInstanceOf(ThrowableProblem.class);
 
-		verifyNoInteractions(clientMock, citizenServiceMock);
+		verifyNoInteractions(clientMock);
 	}
 
 	/**

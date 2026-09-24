@@ -31,15 +31,22 @@ import java.util.List;
  * certificate, and is published on the WSO2 test gateway — so it is the route that works from outside.
  *
  * <p>
- * The interface exists so that choice stays a configuration decision rather than a code change. The method signatures
+ * The interface exists so that choice stays a configuration decision rather than a code change. The response types
  * are FamilyCare's own: an implementation that talks to the integrator is responsible for translating its models back
  * into these, which keeps the ~180 references to FamilyCare DTOs across the {@code lifecare} package untouched. Pick an
  * implementation with {@code integration.lifecare-familycare.provider}.
  *
  * <p>
+ * Every person-scoped argument is a {@code partyId} — the identity careM holds for a person. The integrator is keyed
+ * on it and takes it as-is; the direct route resolves it to the personal identity number FamilyCare keys on, once, at
+ * the edge. Arguments used to be personal identity numbers, which made the integrator route resolve a number the
+ * caller had itself just resolved from the very same partyId: two citizen lookups that cancelled each other out on
+ * every read.
+ *
+ * <p>
  * Every method leads with {@code municipalityId}. FamilyCare itself has no notion of one — the direct client talks to
  * a single Lifecare instance — but the integrator is an ordinary multi-tenant dept44 service that takes it in the path,
- * and it is also what {@code CitizenService} needs to turn a personal identity number into a {@code partyId}. Carrying
+ * and it is also what {@code CitizenService} needs to turn a {@code partyId} into a personal identity number. Carrying
  * it on the interface keeps the tenant explicit rather than pinned in configuration.
  *
  * <p>
@@ -51,8 +58,8 @@ public interface LifecareFamilyCare {
 
 	/**
 	 * Whether the {@code personId} fields in this route's <em>responses</em> hold a {@code partyId} rather than a
-	 * personal identity number. Arguments are always personal identity numbers, on both routes; it is what comes back
-	 * that differs, because the integrator is keyed on {@code partyId} and never emits a personnummer.
+	 * personal identity number. Arguments are always party ids, on both routes; it is what comes back that differs,
+	 * because the direct route hands FamilyCare's own personal identity numbers back untranslated.
 	 *
 	 * <p>
 	 * Anything that compares a person in a response against one it passed in, or resolves a person in a response
@@ -65,49 +72,48 @@ public interface LifecareFamilyCare {
 
 	// ---- Person-based reads ------------------------------------------------------------------------------------------
 
-	PersonBasedPersonDTO getPerson(String municipalityId, String personId);
+	PersonBasedPersonDTO getPerson(String municipalityId, String partyId);
 
-	List<PersonBasedContactDTO> getContacts(String municipalityId, String personId);
+	List<PersonBasedContactDTO> getContacts(String municipalityId, String partyId);
 
-	ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(String municipalityId, String personId, LocalDate startDate, LocalDate endDate);
+	ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
-	ApiPaginationCompositePersonBasedCalculationDTO getCalculations(String municipalityId, String personId, LocalDate startDate, LocalDate endDate);
+	ApiPaginationCompositePersonBasedCalculationDTO getCalculations(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
-	ApiPaginationCompositePersonBasedDecisionDTO getDecisions(String municipalityId, String personId, LocalDate startDate, LocalDate endDate);
+	ApiPaginationCompositePersonBasedDecisionDTO getDecisions(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
-	ApiPaginationCompositePersonBasedPaymentDTO getPayments(String municipalityId, String personId, LocalDate startDate, LocalDate endDate);
+	ApiPaginationCompositePersonBasedPaymentDTO getPayments(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
-	ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(String municipalityId, String personId, LocalDate startDate, LocalDate endDate);
+	ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
-	ApiPaginationCompositePersonBasedServiceDTO getServices(String municipalityId, String personId, LocalDate startDate, LocalDate endDate);
+	ApiPaginationCompositePersonBasedServiceDTO getServices(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
-	ApiPaginationCompositePersonBasedExecutionDTO getExecutions(String municipalityId, String personId, LocalDate startDate, LocalDate endDate);
+	ApiPaginationCompositePersonBasedExecutionDTO getExecutions(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
-	ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(String municipalityId, String personId, LocalDate startDate, LocalDate endDate);
+	ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
 	List<User> getUsers(String municipalityId, Integer limit, Integer offset, String modifiedAfter, String modifiedBefore);
 
-	ApiPaginationCompositePersonBasedDocumentDTO getDocuments(String municipalityId, String personId, LocalDate startDate, LocalDate endDate);
+	ApiPaginationCompositePersonBasedDocumentDTO getDocuments(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
 	byte[] getDocumentContent(String municipalityId, String id);
 
 	// ---- Write-back (actualisation + calculation) and the proposals that drive it ----------------------------------
 
-	PersonBasedAktualiseringProposalDTO getActualisationProposal(String municipalityId, String personId);
+	PersonBasedAktualiseringProposalDTO getActualisationProposal(String municipalityId, String partyId);
 
 	Integer createActualisation(String municipalityId, PostAktualiseringsBodyRequest body);
 
-	PersonBasedCalculationProposalDTO getCalculationProposal(String municipalityId, String personId);
+	PersonBasedCalculationProposalDTO getCalculationProposal(String municipalityId, String partyId);
 
 	/**
-	 * Create a calculation. The body's own {@code personId} is the applicant's personal identity number, as everywhere
-	 * else on this interface; the {@code calculationPersons} rows are the documented exception and carry a
-	 * {@code partyId}, because that is the identity careM holds for a household member.
+	 * Create a calculation. The body's own {@code personId} and every {@code calculationPersons} row carry a
+	 * {@code partyId}, as everywhere else on this interface.
 	 *
 	 * <p>
-	 * Each implementation translates what its route needs and nothing more: the integrator resolves the applicant to a
-	 * party id, the direct client resolves the household rows to personal identity numbers. Neither ever has to undo
-	 * the other's work, and nothing upstream of here has to know which route is wired.
+	 * Each implementation translates what its route needs and nothing more: the integrator passes the party ids
+	 * through, the direct client resolves them to personal identity numbers. Nothing upstream of here has to know which
+	 * route is wired.
 	 */
 	Integer createCalculation(String municipalityId, PostCalculationBodyRequest body);
 
