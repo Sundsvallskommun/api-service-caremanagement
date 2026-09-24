@@ -140,6 +140,42 @@ class DecisionProposalServiceTest {
 	}
 
 	@Test
+	void recoveryClaimsInLifecareAreShownOnTheDecisionTab() {
+		// FLAG-05: a decision mot återbetalning within 36 months is flagged; the eftergift and the ordinary bifall are not.
+		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30"))).thenReturn(List.of());
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2023-06-01"), LocalDate.parse("2026-06-30"))).thenReturn(List.of(
+			new DecisionView(41, "2024-02-10T00:00:00", "EK Bistånd mot återbetalning 9 kap 1 § SoL", "2024-02-01", "2024-02-29", "", "Anna", "IFO", 2, new BigDecimal("3200.00"), null, null,
+				List.of()),
+			new DecisionView(42, "2024-03-10", "EK Återkrav", null, null, "", "Anna", "IFO", 2, null, null, null, List.of()),
+			new DecisionView(43, "2024-05-10", "EK Bistånd som eftergift", "2024-02-01", "2024-02-29", "", "Anna", "IFO", 2, new BigDecimal("3200"), null, null, List.of()),
+			decision("Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall", "Arbetslös, ingen ersättning/stöd")));
+		final var captor = ArgumentCaptor.forClass(List.class);
+		when(warningServiceMock.reconcileByTypes(eq(ERRAND_ID), eq(DECISION_PROPOSAL_TYPES), captor.capture())).thenReturn(List.of());
+
+		service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		@SuppressWarnings("unchecked")
+		final List<WarningService.WarningInput> inputs = captor.getValue();
+		assertThat(inputs).extracting(WarningService.WarningInput::type, WarningService.WarningInput::sourceKey, WarningService.WarningInput::message).containsExactly(
+			tuple("RECOVERY_CLAIM", "recovery-claim:41",
+				"Återkrav i Lifecare: EK Bistånd mot återbetalning 9 kap 1 § SoL, beslutat 2024-02-10 för 2024-02-01–2024-02-29, 3200 kronor – kontrollera återbetalning och saldo i Lifecare"),
+			tuple("RECOVERY_CLAIM", "recovery-claim:42",
+				"Återkrav i Lifecare: EK Återkrav, beslutat 2024-03-10 för okänd period – kontrollera återbetalning och saldo i Lifecare"));
+	}
+
+	@Test
+	void aFailedRecoveryClaimReadIsBestEffort() {
+		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30"))).thenReturn(List.of());
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2023-06-01"), LocalDate.parse("2026-06-30")))
+			.thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+
+		assertThat(service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).getWarnings()).isEmpty();
+	}
+
+	@Test
 	void avslagWhenTheEstimateIsNotPositive() {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("1000"))));
 		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30"))).thenReturn(List.of());

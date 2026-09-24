@@ -111,6 +111,8 @@ public class WarningService {
 	public static final String TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT = "PREVIOUS_DECISION_ADVANCE_ON_BENEFIT";
 	public static final String TYPE_EXPENSE_PARTIALLY_REJECTED = "EXPENSE_PARTIALLY_REJECTED";
 	public static final String TYPE_CO_APPLICANT_SPLIT_PAYMENT = "CO_APPLICANT_SPLIT_PAYMENT";
+	/** FLAG-05: the applicant has a Lifecare decision mot återbetalning (återkrav) — shown on the DECISION tab. */
+	public static final String TYPE_RECOVERY_CLAIM = "RECOVERY_CLAIM";
 
 	/**
 	 * SSBTEK could not be read on this run, so the income rules were deliberately not evaluated. Distinct from
@@ -150,7 +152,7 @@ public class WarningService {
 	private static final String SOURCE_KEY_SSBTEK = "SSBTEK";
 
 	/** The warning types the decision proposal owns (shown on the DECISION tab). */
-	public static final Set<String> DECISION_PROPOSAL_TYPES = Set.of(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT, TYPE_EXPENSE_PARTIALLY_REJECTED);
+	public static final Set<String> DECISION_PROPOSAL_TYPES = Set.of(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT, TYPE_EXPENSE_PARTIALLY_REJECTED, TYPE_RECOVERY_CLAIM);
 	/** The warning types the payment warnings own (shown on the PAYMENT tab). */
 	public static final Set<String> PAYMENT_PROPOSAL_TYPES = Set.of(TYPE_CO_APPLICANT_SPLIT_PAYMENT);
 	/**
@@ -209,7 +211,8 @@ public class WarningService {
 		Map.entry(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "Familjen skiljer mot ansökan"),
 		Map.entry(TYPE_FAMILY_DEVIATING_PERIOD, "Kontrollera omfattning"),
 		Map.entry(TYPE_COMMON_HOUSEHOLD_COST_CHECK, "Kontrollera gemensamma hushållskostnader"),
-		Map.entry(TYPE_PREVIOUS_NORM_NOT_AVAILABLE, "Föregående norm saknas för månaden"));
+		Map.entry(TYPE_PREVIOUS_NORM_NOT_AVAILABLE, "Föregående norm saknas för månaden"),
+		Map.entry(TYPE_RECOVERY_CLAIM, "Återkrav i Lifecare"));
 
 	/** Warning status → Swedish display name. */
 	private static final Map<String, String> STATUS_DISPLAY_NAME = Map.ofEntries(

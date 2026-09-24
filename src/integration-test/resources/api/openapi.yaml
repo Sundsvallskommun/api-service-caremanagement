@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:56352
+- url: http://localhost:63021
   description: Generated server url
 security:
 - sentBy: []
@@ -11166,6 +11166,7 @@ components:
           - FAMILY_DEVIATING_PERIOD
           - COMMON_HOUSEHOLD_COST_CHECK
           - PREVIOUS_NORM_NOT_AVAILABLE
+          - RECOVERY_CLAIM
           examples:
           - EXPENSE_CAPPED
         typeDisplayName:

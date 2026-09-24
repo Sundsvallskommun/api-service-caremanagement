@@ -97,6 +97,16 @@ class ProposalMapperTest {
 	}
 
 	@Test
+	void isRecoveryClaimMatchesADecisionMotAterbetalning() {
+		assertThat(ProposalMapper.isRecoveryClaim(decision("EK Bistånd mot återbetalning 9 kap 1 § SoL", null))).isTrue();
+		assertThat(ProposalMapper.isRecoveryClaim(decision("EK ÅTERKRAV 9 kap 2 § SoL", null))).isTrue();
+		// an eftergift forgives the claim, it is not one
+		assertThat(ProposalMapper.isRecoveryClaim(decision("EK Bistånd som eftergift av återbetalning", null))).isFalse();
+		assertThat(ProposalMapper.isRecoveryClaim(decision("Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall", "Återbetalning av skuld"))).isFalse();
+		assertThat(ProposalMapper.isRecoveryClaim(decision(null, null))).isFalse();
+	}
+
+	@Test
 	void isAdvanceOnBenefitMatchesTypeOnlyCaseInsensitively() {
 		assertThat(ProposalMapper.isAdvanceOnBenefit(decision("EK Förskott på förmån 12 Kap 1 § och 33 kap 2 § SoL, bifall", "Arbetslös, ingen ersättning/stöd"))).isTrue();
 		assertThat(ProposalMapper.isAdvanceOnBenefit(decision("EK FÖRSKOTT på förmån, avslag", null))).isTrue();

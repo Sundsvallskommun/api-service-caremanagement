@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Stream;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
@@ -108,6 +109,22 @@ public final class ProposalMapper {
 	/** The amount as a plain integer-ish string for warning texts ("8500", "1250.5"). */
 	public static String plain(final BigDecimal amount) {
 		return orZero(amount).stripTrailingZeros().toPlainString();
+	}
+
+	/**
+	 * Whether a Lifecare decision is an återkrav — a decision “mot återbetalning”, whose money Lifecare marks as owed
+	 * back (IFO-handboken, Beslut – Bistånd mot återbetalning). FamilyCare's decision read carries the decision type as
+	 * text and no category, so the type is matched case-insensitively on återbetalning or återkrav, the way
+	 * {@link #isAdvanceOnBenefit} matches förskott. An eftergift decision, which forgives such money, is not one.
+	 * The municipality's own type names are not configured for ekonomiskt bistånd yet; the match is to be verified
+	 * against them.
+	 */
+	public static boolean isRecoveryClaim(final DecisionView decision) {
+		return ofNullable(decision.type())
+			.map(type -> type.toLowerCase(Locale.ROOT))
+			.filter(type -> type.contains("återbetalning") || type.contains("återkrav"))
+			.filter(type -> !type.contains("eftergift"))
+			.isPresent();
 	}
 
 	/**

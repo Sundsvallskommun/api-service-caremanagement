@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Prop
 import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.DECISION_PROPOSAL_TYPES;
 import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_EXPENSE_PARTIALLY_REJECTED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_RECOVERY_CLAIM;
 
 /**
  * The decision proposal (beslutsförslag) — verksamheten's rule for the DECISION tab once the normberäkning is
@@ -78,6 +81,13 @@ public class DecisionProposalService {
 		"Utan försörjningshinder");
 
 	static final String WARNING_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT = "Föregående beslut i Lifecare var förskott på förmån – kontrollera vilket beslut som ska fattas";
+	/**
+	 * How far back återkrav are looked for. Money owed back stays owed across many applications, so this reaches further
+	 * than the previous-decision lookup; FamilyCare's decision read has no balance, so an old claim that has since been
+	 * repaid or forgiven is shown too, and the caseworker checks the balance in Lifecare.
+	 */
+	static final int RECOVERY_CLAIM_LOOKBACK_MONTHS = 36;
+	static final String WARNING_RECOVERY_CLAIM = "Återkrav i Lifecare: %s, beslutat %s för %s – kontrollera återbetalning och saldo i Lifecare";
 	static final String WARNING_EXPENSE_PARTIALLY_REJECTED = "Ansökt belopp för %s är %s kronor, %s kronor har inte godkänts – delavslag";
 
 	private final ProposalBasisService proposalBasisService;
@@ -108,7 +118,11 @@ public class DecisionProposalService {
 		final var reason = previousDecision.map(DecisionView::reason).filter(text -> hasText(text));
 		final var coApplicantReason = previousDecision.map(DecisionView::reasonCoApplicant).filter(text -> hasText(text));
 
-		final var warnings = warningService.reconcileByTypes(errandId, DECISION_PROPOSAL_TYPES, warningInputs(previousDecision, partiallyRejected));
+		final var recoveryClaims = basis.household().applicantPersonalNumber()
+			.flatMap(applicant -> basis.applicationMonth().map(month -> recoveryClaims(municipalityId, applicant, month)))
+			.orElseGet(List::of);
+
+		final var warnings = warningService.reconcileByTypes(errandId, DECISION_PROPOSAL_TYPES, warningInputs(previousDecision, partiallyRejected, recoveryClaims));
 
 		return DecisionProposal.create()
 			.withOutcome(outcome.orElse(null))
@@ -148,14 +162,52 @@ public class DecisionProposalService {
 		return List.copyOf(options);
 	}
 
-	private static List<WarningService.WarningInput> warningInputs(final Optional<DecisionView> previousDecision, final List<NormExpenseRow> partiallyRejected) {
+	private static List<WarningService.WarningInput> warningInputs(final Optional<DecisionView> previousDecision, final List<NormExpenseRow> partiallyRejected,
+		final List<DecisionView> recoveryClaims) {
 		final var inputs = new ArrayList<WarningService.WarningInput>();
 		previousDecision.filter(ProposalMapper::isAdvanceOnBenefit)
 			.ifPresent(_ -> inputs.add(new WarningService.WarningInput(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT, "previous-decision", WARNING_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT)));
 		partiallyRejected.forEach(row -> inputs.add(new WarningService.WarningInput(TYPE_EXPENSE_PARTIALLY_REJECTED, ProposalMapper.expenseSourceKey(row),
 			WARNING_EXPENSE_PARTIALLY_REJECTED.formatted(ProposalMapper.expenseLabel(row), ProposalMapper.plain(row.getAppliedAmount()),
 				ProposalMapper.plain(row.getAppliedAmount().subtract(orZero(row)))))));
+		recoveryClaims.forEach(claim -> inputs.add(new WarningService.WarningInput(TYPE_RECOVERY_CLAIM, "recovery-claim:" + claim.id(),
+			WARNING_RECOVERY_CLAIM.formatted(claim.type(), datePart(claim.date()), recoveryPeriod(claim)))));
 		return inputs;
+	}
+
+	/** The claim's period and amount as the caseworker reads it, leaving out what Lifecare did not carry. */
+	private static String recoveryPeriod(final DecisionView claim) {
+		final var period = Stream.of(datePart(claim.fromDate()), datePart(claim.toDate()))
+			.filter(text -> hasText(text))
+			.collect(Collectors.joining("–"));
+		final var amount = Optional.ofNullable(claim.amount()).map(value -> ProposalMapper.plain(value) + " kronor").orElse("");
+		final var parts = Stream.of(period, amount).filter(text -> hasText(text)).toList();
+		if (parts.isEmpty()) {
+			return "okänd period";
+		}
+		return String.join(", ", parts);
+	}
+
+	private static String datePart(final String value) {
+		return Optional.ofNullable(value).filter(text -> text.length() >= 10).map(text -> text.substring(0, 10)).orElse(value);
+	}
+
+	/**
+	 * The applicant's återkrav in Lifecare — decisions mot återbetalning within {@value #RECOVERY_CLAIM_LOOKBACK_MONTHS}
+	 * months up to the application month, newest first. Best-effort, like the previous-decision read: a failed read
+	 * shows no claim rather than failing the proposal.
+	 */
+	private List<DecisionView> recoveryClaims(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
+		try {
+			return lifecareCaseHistoryService.listDecisions(municipalityId, applicant, applicationMonth.minusMonths(RECOVERY_CLAIM_LOOKBACK_MONTHS).atDay(1),
+				applicationMonth.atEndOfMonth())
+				.stream()
+				.filter(ProposalMapper::isRecoveryClaim)
+				.toList();
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not read the applicant's återkrav in Lifecare — the decision proposal is computed without them", e);
+			return List.of();
+		}
 	}
 
 	private static java.math.BigDecimal orZero(final NormExpenseRow row) {
