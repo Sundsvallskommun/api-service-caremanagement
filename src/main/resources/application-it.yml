@@ -1,6 +1,13 @@
 #========================================
 # Test profile settings (IT tests)
 #========================================
+# Bind the test server to the loopback address the test clients call. On a wildcard bind (the default) macOS hands
+# the random port out even when another local process already listens on 127.0.0.1 at that number - IntelliJ's
+# SonarLint backend holds a dozen such ports - and the test client, calling localhost, then reaches that process
+# instead: a whole test class fails with 400/404 from a server that is not ours (seen 2026-09-24, Apache-HttpCore on
+# 127.0.0.1:64120). Bound to 127.0.0.1, the random port is only ever one that is free there.
+server:
+  address: 127.0.0.1
 logging:
   level:
     root: INFO
