@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
-class RpaContextServiceTest {
+class HouseholdIdentifiersServiceTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
@@ -45,7 +45,7 @@ class RpaContextServiceTest {
 	private CitizenService citizenServiceMock;
 
 	@InjectMocks
-	private RpaContextService service;
+	private HouseholdIdentifiersService service;
 
 	@Test
 	void resolvesHouseholdPersonalNumbersFromApplicationPersons() {

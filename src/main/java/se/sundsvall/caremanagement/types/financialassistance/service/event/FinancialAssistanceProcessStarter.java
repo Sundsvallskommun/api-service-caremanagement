@@ -52,7 +52,8 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * The household's personnummer are deliberately <strong>not</strong> seeded, though the SSBTEK lookup keys on them.
  * The engine persists every process variable in {@code ACT_RU_VARIABLE} and keeps it in {@code ACT_HI_VARINST} for the
  * model's history TTL — 180 days on this one — where no gallring reaches it and anyone with Cockpit can read it. The
- * beredning step resolves them per run from {@code /rpa-context} instead, which puts every disclosure in the errand's
+ * beredning step resolves them per run from {@code /household-identifiers} instead, which puts every disclosure in the
+ * errand's
  * event log.
  */
 @Component

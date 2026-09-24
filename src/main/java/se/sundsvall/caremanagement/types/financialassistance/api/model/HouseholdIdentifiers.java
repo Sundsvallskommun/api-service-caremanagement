@@ -4,13 +4,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * The errand number and the household's personal numbers, fetched per run by the Operaton process's beredning step
- * ({@code prepare-income-basis}) so the personal numbers never become process variables. The name is kept from the
- * retired RPA integration. Every read of this resource lands in the errand's event log with the caller's
+ * ({@code prepare-income-basis}) so the personal numbers never become process variables.
+ * Every read of this resource lands in the errand's event log with the caller's
  * {@code X-Sent-By} identity, so each personal-number disclosure is traceable.
  */
 @Schema(description = "The errand number and the household's personal numbers. Fetched per process run so the personal numbers "
 	+ "never become process variables; every read is recorded in the errand's event log.")
-public record RpaContext(
+public record HouseholdIdentifiers(
 
 	@Schema(description = "The errand's human-readable number — what a person searches for in Draken", examples = "EB-2026-000123") String errandNumber,
 

@@ -70,9 +70,6 @@ final class ErrandEventDescriber {
 		Map.entry("monitorings", new String[] {
 			"bevakning", "bevakningar"
 		}),
-		Map.entry("sections", new String[] {
-			"sektion", "sektioner"
-		}),
 		Map.entry("status-history", new String[] {
 			"statushistorik", "statushistorik"
 		}),
@@ -87,6 +84,9 @@ final class ErrandEventDescriber {
 		}),
 		Map.entry("ssbtek", new String[] {
 			"SSBTEK-underlag", "SSBTEK-underlag"
+		}),
+		Map.entry("household-identifiers", new String[] {
+			"hushållets personnummer", "hushållets personnummer"
 		}));
 
 	private ErrandEventDescriber() {}

@@ -7,7 +7,7 @@ import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.RpaContext;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.HouseholdIdentifiers;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
@@ -16,7 +16,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_CO_APPLICANT;
 
 /**
- * Assembles the {@link RpaContext} the process's beredning step ({@code prepare-income-basis}) fetches per run: the
+ * Assembles the {@link HouseholdIdentifiers} the process's beredning step ({@code prepare-income-basis}) fetches per
+ * run: the
  * errand's human-readable number plus the household's personal numbers, resolved on demand via the citizen lookup. The
  * partyId per role is taken from the errand's stakeholders first (the canonical promoted identity — some intake flows
  * leave the application payload's person list empty) and falls back to the financial assistance person rows. Serving
@@ -24,14 +25,14 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * store and makes every disclosure traceable in the errand's event log.
  */
 @Service
-public class RpaContextService {
+public class HouseholdIdentifiersService {
 
 	private final ErrandService errandService;
 	private final StakeholderService stakeholderService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final CitizenService citizenService;
 
-	RpaContextService(final ErrandService errandService, final StakeholderService stakeholderService,
+	HouseholdIdentifiersService(final ErrandService errandService, final StakeholderService stakeholderService,
 		final FinancialAssistanceRepository financialAssistanceRepository, final CitizenService citizenService) {
 		this.errandService = errandService;
 		this.stakeholderService = stakeholderService;
@@ -39,9 +40,9 @@ public class RpaContextService {
 		this.citizenService = citizenService;
 	}
 
-	/** The RPA context for an errand. Scoped: throws {@code 404} when the errand is missing here. */
+	/** The household identifiers for an errand. Scoped: throws {@code 404} when the errand is missing here. */
 	@Transactional(readOnly = true)
-	public RpaContext get(final String municipalityId, final String namespace, final String errandId) {
+	public HouseholdIdentifiers get(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 
 		final var stakeholders = stakeholderService.readAll(municipalityId, namespace, errandId);
@@ -49,7 +50,7 @@ public class RpaContextService {
 			.map(FinancialAssistanceEntity::getPersons)
 			.orElse(List.of());
 
-		return new RpaContext(
+		return new HouseholdIdentifiers(
 			errand.getErrandNumber(),
 			resolvePersonalNumber(municipalityId, stakeholders, persons, ROLE_APPLICANT),
 			resolvePersonalNumber(municipalityId, stakeholders, persons, ROLE_CO_APPLICANT));

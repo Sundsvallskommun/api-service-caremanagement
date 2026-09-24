@@ -31,6 +31,10 @@ tags:
   description: "Financial assistance monitorings — date-bound watch/reminder objects\
     \ on an errand, with full CRUD. Unlike the income warnings they carry no acknowledge\
     \ lifecycle."
+- name: Financial Assistance · Household identifiers
+  description: "The errand number and the household's personal numbers, served on\
+    \ demand to the process's beredning step (prepare-income-basis) so they never\
+    \ become process variables. Every read lands in the errand's event log."
 - name: Notifications
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen and mark them handled when acted on; expired ones are
@@ -101,10 +105,6 @@ tags:
     \ one of the three application-type slugs (financial-assistance-new / -renewal\
     \ / -supplementary); read and replace the typed data via the shared financial-assistance\
     \ path."
-- name: Financial Assistance · RPA context
-  description: "The errand number and the household's personal numbers, served on\
-    \ demand to the process's beredning step (prepare-income-basis) so they never\
-    \ become process variables. Every read lands in the errand's event log."
 - name: Financial Assistance · Lifecare history
   description: "Read the applicant's case history straight from Lifecare — the calculations,\
     \ decisions and documents — plus a single document's PDF content. Keyed by partyId\
@@ -6875,12 +6875,10 @@ paths:
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/rpa-context:
     get:
       tags:
-      - Financial Assistance · RPA context
-      summary: Read the RPA context for an errand
-      description: "Read per run by the process's prepare-income-basis worker: resolves\
-        \ the errand number and the applicant's (and any co-applicant's) personal\
-        \ number for the lookups. The path and name are kept from the retired RPA\
-        \ integration."
+      - Financial Assistance · Household identifiers
+      summary: Read the errand number and the household's personal numbers (old path)
+      description: "DEPRECATED - the old name of GET .../household-identifiers, kept\
+        \ only until the process worker calls the new path."
       operationId: getRpaContext
       parameters:
       - name: municipalityId
@@ -6905,7 +6903,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RpaContext"
+                $ref: "#/components/schemas/HouseholdIdentifiers"
         "400":
           description: Bad request
           content:
@@ -6926,6 +6924,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+      deprecated: true
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payees/{payeeId}:
     get:
       tags:
@@ -7068,6 +7067,59 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MonitoringCount"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/household-identifiers:
+    get:
+      tags:
+      - Financial Assistance · Household identifiers
+      summary: Read the errand number and the household's personal numbers
+      description: "Read per run by the process's prepare-income-basis worker: resolves\
+        \ the errand number and the applicant's (and any co-applicant's) personal\
+        \ number for the lookups."
+      operationId: getHouseholdIdentifiers
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HouseholdIdentifiers"
         "400":
           description: Bad request
           content:
@@ -8051,10 +8103,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -12356,7 +12408,7 @@ components:
           description: "The answer per responding agency (af, csn, fk, skv, so, tns,\
             \ miv), forwarded verbatim from SSBTEK. Shapes differ per agency and are\
             \ not modelled; an agency that did not answer may be absent or empty."
-    RpaContext:
+    HouseholdIdentifiers:
       type: object
       description: The errand number and the household's personal numbers. Fetched
         per process run so the personal numbers never become process variables; every

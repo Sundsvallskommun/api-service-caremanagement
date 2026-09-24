@@ -47,6 +47,8 @@ class ErrandEventDescriberTest {
 		assertThat(ErrandEventDescriber.describe("GET", List.of("calculation", "draft"), false)).isEqualTo("Visade utkastberäkning");
 		// GUI-01: the manual SSBTEK read, logged on the errand
 		assertThat(ErrandEventDescriber.describe("GET", List.of("ssbtek"), false)).isEqualTo("Visade SSBTEK-underlag");
+		// The process's read of the household's personal numbers is a disclosure, logged in words
+		assertThat(ErrandEventDescriber.describe("GET", List.of("household-identifiers"), false)).isEqualTo("Visade hushållets personnummer");
 		assertThat(ErrandEventDescriber.describe("GET", List.of("data"), false)).isEqualTo("Visade ärendeuppgifter");
 	}
 

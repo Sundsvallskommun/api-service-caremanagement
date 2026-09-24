@@ -137,7 +137,8 @@ class FinancialAssistanceProcessStarterTest {
 	/**
 	 * The engine persists every process variable in ACT_RU_VARIABLE and keeps it in ACT_HI_VARINST for the model's
 	 * history TTL — 180 days here — where no gallring reaches it and Cockpit reads it in the clear. Personnummer
-	 * therefore never travel as process variables; the beredning step resolves them per run from /rpa-context, where
+	 * therefore never travel as process variables; the beredning step resolves them per run from /household-identifiers,
+	 * where
 	 * each disclosure is recorded on the errand. Seeding them again would be invisible until someone opened Cockpit.
 	 */
 	@Test

@@ -9,8 +9,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.RpaContext;
-import se.sundsvall.caremanagement.types.financialassistance.service.RpaContextService;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.HouseholdIdentifiers;
+import se.sundsvall.caremanagement.types.financialassistance.service.HouseholdIdentifiersService;
 
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,35 +23,52 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
 @ActiveProfiles("junit")
-class RpaContextResourceTest {
+class HouseholdIdentifiersResourceTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = randomUUID().toString();
-	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/rpa-context";
+	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/household-identifiers";
+	private static final String OLD_PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/rpa-context";
 
 	@MockitoBean
-	private RpaContextService serviceMock;
+	private HouseholdIdentifiersService serviceMock;
 
 	@Autowired
 	private WebTestClient webTestClient;
 
 	@Test
-	void getRpaContext() {
+	void getHouseholdIdentifiers() {
 		when(serviceMock.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
-			.thenReturn(new RpaContext("EB-2026-000123", "19800101T001", null));
+			.thenReturn(new HouseholdIdentifiers("EB-2026-000123", "19800101T001", null));
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.exchange()
 			.expectStatus().isOk()
 			.expectHeader().contentType(APPLICATION_JSON)
-			.expectBody(RpaContext.class)
+			.expectBody(HouseholdIdentifiers.class)
 			.returnResult()
 			.getResponseBody();
 
-		assertThat(response).isEqualTo(new RpaContext("EB-2026-000123", "19800101T001", null));
+		assertThat(response).isEqualTo(new HouseholdIdentifiers("EB-2026-000123", "19800101T001", null));
 		verify(serviceMock).get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	@Test
+	void theOldPathServesTheSameUntilTheWorkerHasMoved() {
+		when(serviceMock.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(new HouseholdIdentifiers("EB-2026-000123", "19800101T001", "19850505T002"));
+
+		final var response = webTestClient.get()
+			.uri(uri -> uri.path(OLD_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(HouseholdIdentifiers.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isEqualTo(new HouseholdIdentifiers("EB-2026-000123", "19800101T001", "19850505T002"));
 	}
 
 	@Test
