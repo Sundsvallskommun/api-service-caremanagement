@@ -2,9 +2,8 @@
  * Journal service layer.
  *
  * <p>
- * Exposed so the financial assistance supplements ingest can upsert Lifecare journal-entry mirrors through
- * {@link se.sundsvall.caremanagement.journal.service.JournalEntryService#mirrorFromLifecare} without reaching into the
- * module's API or persistence layer.
+ * Exposed as a named interface so other modules can use the journal services without reaching into the module's API
+ * or persistence layer. Its original consumer, the financial assistance Lifecare mirror, was retired 2026-09-24.
  * </p>
  */
 @NamedInterface("service")

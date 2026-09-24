@@ -2,13 +2,11 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import se.sundsvall.caremanagement.rpa.service.RpaAction;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizePayment;
@@ -104,72 +102,6 @@ class FinalizeMapperTest {
 	}
 
 	@Test
-	void toDecisionContentCarriesTheDecisionAndTheChoices() {
-		final var content = FinalizeMapper.toDecisionContent(grantingRequest(), "decision-1");
-
-		assertThat(content).containsOnly(
-			java.util.Map.entry("decisionId", "decision-1"),
-			java.util.Map.entry("outcome", "BIFALL"),
-			java.util.Map.entry("reason", "Inkomster enligt SSBTEK"),
-			java.util.Map.entry("coApplicantReason", "Beviljad"),
-			java.util.Map.entry("periodFrom", "2026-06-01"),
-			java.util.Map.entry("periodTo", "2026-06-30"),
-			java.util.Map.entry("amount", "7900.00"),
-			java.util.Map.entry("communicationChannels", "MINA_SIDOR,DIGITAL_MAILBOX"),
-			java.util.Map.entry("householdSizeChanged", "true"));
-	}
-
-	@Test
-	void toDecisionContentLeavesNullsOut() {
-		final var request = FinalizeRequest.create().withDecision(FinalizeDecision.create().withOutcome("AVSLAG"));
-
-		assertThat(FinalizeMapper.toDecisionContent(request, null)).containsOnly(
-			java.util.Map.entry("outcome", "AVSLAG"),
-			java.util.Map.entry("amount", "0"),
-			java.util.Map.entry("communicationChannels", ""),
-			java.util.Map.entry("householdSizeChanged", "false"));
-		assertThat(FinalizeMapper.toDecisionContent(null, "decision-1")).containsOnly(java.util.Map.entry("decisionId", "decision-1"));
-	}
-
-	@Test
-	void toPaymentIdContentCarriesNothingButTheId() {
-		// The whole point of the change: the payee's name, clearing and account number must not reach the Orchestrator
-		// queue store. The robot reads them through GET .../payments/{paymentId}.
-		assertThat(FinalizeMapper.toPaymentIdContent("p-1")).containsOnly(java.util.Map.entry("paymentId", "p-1"));
-		assertThat(FinalizeMapper.toPaymentIdContent(null)).isEmpty();
-	}
-
-	@Test
-	void toLegacyPaymentContentCarriesTheOldFieldsBesideThePaymentId() {
-		// The bridge form. It writes the payee's bank details to the queue - that is the cost of keeping an
-		// unreleased robot working, and why the flag defaults off once the robot is over.
-		final var payment = FinalizePayment.create()
-			.withPaymentDate(LocalDate.of(2026, 6, 25))
-			.withAmount(new BigDecimal("6000.00"))
-			.withConcernedMonth("2026-06")
-			.withAccountingCode("5011")
-			.withPayee(Payee.create().withName("Hyresvärden AB").withPaymentMethod("BANKGIRO").withClearing("6000").withAccountNumber("123-4567"));
-
-		assertThat(FinalizeMapper.toLegacyPaymentContent("p-1", payment, 2)).containsOnly(
-			java.util.Map.entry("paymentId", "p-1"),
-			java.util.Map.entry("sequence", "2"),
-			java.util.Map.entry("paymentDate", "2026-06-25"),
-			java.util.Map.entry("amount", "6000.00"),
-			java.util.Map.entry("concernedMonth", "2026-06"),
-			java.util.Map.entry("accountingCode", "5011"),
-			java.util.Map.entry("payeeName", "Hyresvärden AB"),
-			java.util.Map.entry("paymentMethod", "BANKGIRO"),
-			java.util.Map.entry("clearing", "6000"),
-			java.util.Map.entry("accountNumber", "123-4567"));
-	}
-
-	@Test
-	void toLegacyPaymentContentStillCarriesThePaymentIdWithNoPayment() {
-		assertThat(FinalizeMapper.toLegacyPaymentContent("p-1", null, 1))
-			.containsOnly(java.util.Map.entry("paymentId", "p-1"), java.util.Map.entry("sequence", "1"));
-	}
-
-	@Test
 	void toPaymentRequestBridgesTheTwoModelsNaming() {
 		final var payment = FinalizePayment.create()
 			.withPaymentDate(LocalDate.of(2026, 6, 25))
@@ -236,37 +168,4 @@ class FinalizeMapperTest {
 		assertThat(FinalizeMapper.toPaymentRequest(FinalizePayment.create()).getPayeeName()).isNull();
 	}
 
-	@Test
-	void toIdListContentJoinsIdsAndCounts() {
-		assertThat(FinalizeMapper.toIdListContent("monitoringIds", List.of("m-1", "m-2")))
-			.containsOnly(java.util.Map.entry("monitoringIds", "m-1,m-2"), java.util.Map.entry("count", "2"));
-		assertThat(FinalizeMapper.toIdListContent("documentIds", null))
-			.containsOnly(java.util.Map.entry("documentIds", ""), java.util.Map.entry("count", "0"));
-	}
-
-	@ParameterizedTest
-	@MethodSource("channelListArguments")
-	void toChannelList(final CommunicationChannels channels, final String expected) {
-		assertThat(FinalizeMapper.toChannelList(channels)).isEqualTo(expected);
-	}
-
-	private static Stream<Arguments> channelListArguments() {
-		return Stream.of(
-			Arguments.of(null, ""),
-			Arguments.of(CommunicationChannels.create(), ""),
-			Arguments.of(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(true).withLetter(true), "MINA_SIDOR,DIGITAL_MAILBOX,LETTER"),
-			Arguments.of(CommunicationChannels.create().withMinaSidor(false).withDigitalMailbox(false).withLetter(true), "LETTER"),
-			Arguments.of(CommunicationChannels.create().withMinaSidor(true), "MINA_SIDOR"));
-	}
-
-	@Test
-	void toRpaTask() {
-		final var task = FinalizeMapper.toRpaTask(RpaAction.WRITE_DECISION, "ns:e:WRITE_DECISION", true);
-
-		assertThat(task.getAction()).isEqualTo("WRITE_DECISION");
-		assertThat(task.getReference()).isEqualTo("ns:e:WRITE_DECISION");
-		assertThat(task.getEnqueued()).isTrue();
-
-		assertThat(FinalizeMapper.toRpaTask(null, null, false)).hasAllNullFieldsOrPropertiesExcept("enqueued");
-	}
 }

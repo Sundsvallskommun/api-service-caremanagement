@@ -18,7 +18,6 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeP
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeResponse;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.RpaTask;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceFinalizeService;
 import se.sundsvall.dept44.support.Identifier;
 
@@ -71,7 +70,6 @@ class FinancialAssistanceFinalizeResourceTest {
 		final var expected = FinalizeResponse.create()
 			.withDecisionId("decision-1")
 			.withProcessMessageCorrelated(true)
-			.withRpaTasks(List.of(RpaTask.create().withAction("WRITE_DECISION").withReference(NAMESPACE + ":" + ERRAND_ID + ":WRITE_DECISION").withEnqueued(true)))
 			.withCommunication(request.getCommunication());
 		when(finalizeServiceMock.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe")).thenReturn(expected);
 

@@ -7,9 +7,8 @@ import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
 /**
- * The report from whoever wrote a decision into Lifecare — the {@code WRITE_DECISION} robot today, possibly Draken's
- * BFF — on how that went. The same shape as the payee and payment reports: outcome, the id Lifecare gave, and
- * Lifecare's own message.
+ * The report from Draken's BFF, which writes the decision into Lifecare itself, on how that went. The same shape as
+ * the payee and payment reports: outcome, the id Lifecare gave, and Lifecare's own message.
  *
  * <p>
  * {@code ALREADY_EXISTS} counts as success. {@code detail} is required on {@code FAILED} and must be what Lifecare

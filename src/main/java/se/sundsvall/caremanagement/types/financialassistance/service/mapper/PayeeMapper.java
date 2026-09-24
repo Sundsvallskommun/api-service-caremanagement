@@ -31,7 +31,7 @@ public final class PayeeMapper {
 			.withLastPaidOn(view.payDate());
 	}
 
-	/** A MANUAL option: a stored row on the errand, carrying the state of its ADD_PAYEE robot task. */
+	/** A MANUAL option: a stored row on the errand, carrying the state of its creation in Lifecare. */
 	public static PayeeOption toPayeeOption(final FaPayeeEntity entity) {
 		return PayeeOption.create()
 			.withId(entity.getId())
@@ -58,7 +58,7 @@ public final class PayeeMapper {
 	/**
 	 * The identity of a payee for de-duplication: the four fields that make it a distinct account to pay to, trimmed
 	 * and case-folded so "ANNA ANDERSSON" and "Anna Andersson " are not offered twice. This is what collapses a manually
-	 * added payee into its LIFECARE twin once the robot has put it into Lifecare and a payment has gone to it.
+	 * added payee into its LIFECARE twin once it has been put into Lifecare and a payment has gone to it.
 	 */
 	public static PayeeKey key(final PayeeOption option) {
 		return key(option.getName(), option.getPaymentMethod(), option.getClearing(), option.getAccountNumber());

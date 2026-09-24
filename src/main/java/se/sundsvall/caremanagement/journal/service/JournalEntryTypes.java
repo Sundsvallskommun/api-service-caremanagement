@@ -11,7 +11,7 @@ import se.sundsvall.caremanagement.journal.api.model.JournalEntryType;
  * Lifecare journal types ("Typ"/Journaltyp) are configured per municipality (IFO-handbok §3.4.16.4 / §3.4.17), so this
  * is <em>not</em> an authoritative Sundsvall set and {@code JournalEntry.type} is intentionally not validated against
  * it.
- * It exists so the frontend (Draken) has a dropdown source now and an RPA flow has a label to select later. Replace
+ * It exists so the frontend (Draken) has a dropdown source and a Lifecare label to select. Replace
  * with the real Sundsvall Lifecare configuration once known. {@code "Journalfört meddelande"} is the one confirmed
  * value
  * (from the Lifecare screens); the rest are common IFO journal types, provisional until verified.
@@ -21,7 +21,7 @@ public final class JournalEntryTypes {
 
 	private JournalEntryTypes() {}
 
-	/** Provisional journal entry types. The Swedish {@code displayName} is what an RPA flow selects in Lifecare. */
+	/** Provisional journal entry types. The Swedish {@code displayName} is what gets selected in Lifecare. */
 	public static final List<JournalEntryType> TYPES = List.of(
 		type("JOURNALED_MESSAGE", "Journalfört meddelande"),
 		type("SERVICE_NOTE", "Tjänsteanteckning"),

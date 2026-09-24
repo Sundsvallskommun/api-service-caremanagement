@@ -3,8 +3,8 @@
  * {@link se.sundsvall.caremanagement.journal journal entries}: in Lifecare both live in the same "Dokumentation"
  * container and share the same shape (Typ, Rubrik, text, Datum/Tid, authorship) and the write-protection lifecycle —
  * but a
- * Dokument is its own concept with its own type catalogue (Dokumenttyp), modelled here so it can later be RPA:ed into
- * Lifecare.
+ * Dokument is its own concept with its own type catalogue (Dokumenttyp), modelled here so Draken's BFF can write it
+ * into Lifecare.
  *
  * <p>
  * Each document carries a {@code type} (Lifecare "Typ"/Dokumenttyp — a municipality-configured value; the

@@ -1,7 +1,7 @@
 /**
  * Journal module — journalanteckningar (case-journal entries) attached to an errand. Universal across all errand types,
  * the same altitude as {@link se.sundsvall.caremanagement.notes Notes}, but richer: it models the Lifecare
- * journalanteckning shape so it can later be RPA:ed straight into Lifecare.
+ * journalanteckning shape so Draken's BFF can write it straight into Lifecare.
  *
  * <p>
  * Each entry carries a {@code type} (Lifecare "Typ"/Journaltyp — a municipality-configured, free-text value; the

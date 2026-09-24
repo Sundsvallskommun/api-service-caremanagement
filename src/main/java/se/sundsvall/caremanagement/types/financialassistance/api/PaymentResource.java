@@ -45,8 +45,8 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payments")
 @Tag(name = "Financial Assistance · Payments",
-	description = "Financial assistance payments (utbetalningar) on an errand, with full CRUD. Created as DRAFT and never auto-queued for "
-		+ "RPA — queuing the REGISTER_PAYMENT robot task is a separate POST .../rpa-tasks call.")
+	description = "Financial assistance payments (utbetalningar) on an errand, with full CRUD. Saved as DRAFT; a payment a decision "
+		+ "created is registered in Lifecare by Draken's BFF, which reports the outcome through POST .../{paymentId}/lifecare-result.")
 @ApiResponses(value = {
 	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
 		Problem.class, ConstraintViolationProblem.class
@@ -64,7 +64,7 @@ class PaymentResource {
 
 	@PostMapping(consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Create a payment on an errand",
-		description = "Creates a payment on the errand as a DRAFT. Does not queue any RPA task. Returns the created payment and its Location.",
+		description = "Creates a payment on the errand as a DRAFT. Nothing is written to Lifecare. Returns the created payment and its Location.",
 		responses = {
 			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
 		})
@@ -120,8 +120,8 @@ class PaymentResource {
 	}
 
 	@PostMapping(path = "/{paymentId}/lifecare-result", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Report what the REGISTER_PAYMENT robot did in Lifecare",
-		description = "The counterpart of the ADD_PAYEE report, and the only thing that moves a payment out of PENDING_REGISTRATION. "
+	@Operation(summary = "Report the outcome of registering the payment in Lifecare",
+		description = "Reported by Draken's BFF after it registered the payment in Lifecare. The counterpart of the payee report, and the only thing that moves a payment out of PENDING_REGISTRATION. "
 			+ "REGISTERED and ALREADY_EXISTS both set status=REGISTERED and store lifecarePaymentId as the payment's lifecareId; "
 			+ "REGISTERED means the payment exists in Lifecare, not that it has been paid out. FAILED requires detail, which must be "
 			+ "Lifecare's own message since it is shown to the caseworker as-is. Re-reporting the same outcome is idempotent; "

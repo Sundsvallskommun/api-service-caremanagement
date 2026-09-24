@@ -31,22 +31,18 @@ import static org.springframework.util.StringUtils.hasText;
  *
  * <p>
  * A payment carries a {@code source} ({@code CASEWORKER}, the default, or {@code LIFECARE}) and an optional
- * {@code lifecareId}, exactly like {@link MonitoringService monitorings}: RPA surfaces a Lifecare payment by POSTing
- * {@code source=LIFECARE} with its {@code lifecareId} (idempotent per errand + lifecareId, so re-runs don't
- * duplicate), and mirrors a caseworker payment the other way, later stamping back the {@code lifecareId} it was given
- * in Lifecare. The provenance fields are system/RPA-managed: an update only touches them when supplied, so a
- * caseworker edit never drops them.
+ * {@code lifecareId}, exactly like {@link MonitoringService monitorings}: a Lifecare payment is posted with
+ * {@code source=LIFECARE} and its {@code lifecareId} (idempotent per errand + lifecareId, so re-posts don't
+ * duplicate). The provenance fields are system-managed: an update only touches them when supplied, so a caseworker
+ * edit never drops them.
  * </p>
  *
  * <p>
  * {@code status} is entirely server-managed and is deliberately absent from {@link PaymentRequest} — a create always
- * yields {@code DRAFT}, and this method does <em>not</em> enqueue any RPA task. A caseworker must be able to save a
- * draft payment without setting the robot off; queuing the {@code REGISTER_PAYMENT} RPA task (which fetches the rest
- * of the payment via {@code GET .../payments/{paymentId}}, carrying only the {@code paymentId} in the queue item, so
- * personal data never enters the Orchestrator queue) is a separate, explicit {@code POST .../rpa-tasks} call — the
- * same two-call shape every other RPA action in this service uses. The one thing that does move {@code status} is the
- * robot's own report through {@link #recordLifecareResult}: {@code PENDING_REGISTRATION} becomes {@code REGISTERED}
- * or {@code FAILED} when the {@code REGISTER_PAYMENT} robot says what happened.
+ * yields {@code DRAFT}, and nothing is written to Lifecare from here. A payment a decision created is
+ * {@code PENDING_REGISTRATION}; Draken's BFF reads it via {@code GET .../payments/{paymentId}}, registers it in
+ * Lifecare itself, and its report through {@link #recordLifecareResult} is the one thing that moves {@code status}:
+ * {@code PENDING_REGISTRATION} becomes {@code REGISTERED} or {@code FAILED}.
  * </p>
  */
 @Service
@@ -56,19 +52,20 @@ public class PaymentService {
 	static final String SOURCE_LIFECARE = "LIFECARE";
 	static final String STATUS_DRAFT = "DRAFT";
 	/**
-	 * A payment created by "Besluta och utbetala" and queued to the robot. Deliberately not {@code DRAFT}: a row the
+	 * A payment created by "Besluta och utbetala", waiting to be registered. Deliberately not {@code DRAFT}: a row the
 	 * caseworker has decided on is not a draft, and calling it one would make the status useless for seeing what is
-	 * actually waiting to be registered in Lifecare. The {@code REGISTER_PAYMENT} robot clears it by reporting through
+	 * actually waiting to be registered in Lifecare. Draken's BFF clears it by reporting through
 	 * {@link #recordLifecareResult}.
 	 */
 	static final String STATUS_PENDING_REGISTRATION = "PENDING_REGISTRATION";
 
 	/**
-	 * The robot reported the payment into Lifecare. It exists there; whether it has been paid out is a separate question.
+	 * The payment was reported registered in Lifecare. It exists there; whether it has been paid out is a separate
+	 * question.
 	 */
 	static final String STATUS_REGISTERED = "REGISTERED";
 
-	/** The robot could not register the payment. Lifecare's own reason is on the row, and the caseworker sees it. */
+	/** The payment could not be registered in Lifecare. Lifecare's own reason is on the row, and the caseworker sees it. */
 	static final String STATUS_FAILED = "FAILED";
 
 	static final String OUTCOME_FAILED = "FAILED";
@@ -112,7 +109,7 @@ public class PaymentService {
 
 	/**
 	 * Create a payment on an errand as a {@code DRAFT} — or, for a Lifecare-sourced one carrying a {@code lifecareId},
-	 * upsert it so RPA re-runs don't duplicate. Does not enqueue any RPA task; see this class's javadoc. Scoped: throws
+	 * upsert it so re-posts don't duplicate. Writes nothing to Lifecare; see this class's javadoc. Scoped: throws
 	 * {@code 404} when the errand is missing.
 	 */
 	@Transactional
@@ -135,7 +132,7 @@ public class PaymentService {
 
 	/**
 	 * Create the payment a finalize ("Besluta och utbetala") decided on, as {@code PENDING_REGISTRATION}, and return
-	 * its id for the {@code REGISTER_PAYMENT} queue item. Separate from {@link #create} because that one is the
+	 * its id for the finalize receipt. Separate from {@link #create} because that one is the
 	 * caseworker's draft-saving path and must keep yielding {@code DRAFT}.
 	 *
 	 * <p>
@@ -147,8 +144,8 @@ public class PaymentService {
 	@Transactional
 	public String createForDecision(final String errandId, final PaymentRequest request) {
 		// saveAndFlush, not save: an ordinary save only queues the insert in the persistence context, and JPA flushes
-		// it at commit - after finalize has already correlated the process message and queued the RPA items, which are
-		// external and cannot be rolled back. A constraint violation would then leave the engine believing a decision
+		// it at commit - after finalize has already correlated the process message, which is external and cannot be
+		// rolled back. A constraint violation would then leave the engine believing a decision
 		// was made while careM has no decision and no payment row. Flushing here makes the database the first thing
 		// that can fail, so the rollback is complete.
 		return paymentRepository.saveAndFlush(applyRequest(FaPaymentEntity.create(), request)
@@ -165,7 +162,7 @@ public class PaymentService {
 	public Payment update(final String municipalityId, final String namespace, final String errandId, final String paymentId, final PaymentRequest request) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		final var entity = applyRequest(requirePayment(errandId, paymentId), request);
-		// Provenance is system/RPA-managed: only overwrite when the request supplies it, so a caseworker edit keeps it.
+		// Provenance is system-managed: only overwrite when the request supplies it, so a caseworker edit keeps it.
 		if (hasText(request.getSource())) {
 			entity.setSource(resolveSource(request.getSource()));
 		}
@@ -176,7 +173,7 @@ public class PaymentService {
 	}
 
 	/**
-	 * Record the {@code REGISTER_PAYMENT} robot's report — the counterpart of the {@code ADD_PAYEE} one, and the only
+	 * Record Draken's BFF's registration report — the counterpart of the payee one, and the only
 	 * thing that moves a payment out of {@code PENDING_REGISTRATION}. {@code REGISTERED} and {@code ALREADY_EXISTS}
 	 * both count as success: the caseworker's intent, "this payment must exist in Lifecare", is satisfied either way.
 	 *
@@ -264,7 +261,7 @@ public class PaymentService {
 	/**
 	 * The payment as the API serves it. {@code lifecarePayeeId} is the one given with the payment when the caseworker
 	 * picked a payee straight from Lifecare. Otherwise it is read from the payee row rather than copied at create time:
-	 * the ADD_PAYEE robot reports it back onto that row, possibly after this payment was created, so a copy would go
+	 * the payee's lifecare-result report puts it on that row, possibly after this payment was created, so a copy would go
 	 * stale. Null when neither is there.
 	 */
 	private Payment toPayment(final FaPaymentEntity entity) {

@@ -125,7 +125,7 @@ class DecisionResource {
 	@PostMapping(path = "/{decisionId}/lifecare-result", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Report the outcome of writing the decision into Lifecare",
 		description = """
-			For whoever writes the decision into Lifecare — the WRITE_DECISION robot today, possibly Draken's BFF. WRITTEN \
+			For Draken's BFF, which writes the decision into Lifecare itself. WRITTEN \
 			and ALREADY_EXISTS mark the decision SYNCED and store Lifecare's id; FAILED marks it FAILED with Lifecare's own \
 			message, which the caseworker sees. Re-posting the same outcome is harmless; FAILED on a SYNCED decision is a \
 			409.""",

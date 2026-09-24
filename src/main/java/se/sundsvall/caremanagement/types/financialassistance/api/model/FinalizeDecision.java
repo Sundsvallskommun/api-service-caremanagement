@@ -13,7 +13,7 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 
 /**
  * The caseworker's decision on the application, as entered in the Draken decision section. Recorded on the errand as a
- * {@code PAYMENT} decision and written into Lifecare by the RPA {@code WRITE_DECISION} item.
+ * {@code PAYMENT} decision; Draken's BFF writes it into Lifecare and reports back through {@code .../lifecare-result}.
  */
 @Schema(description = "The caseworker's decision on the application — outcome, period, amount and what is communicated to the applicant.")
 public class FinalizeDecision {

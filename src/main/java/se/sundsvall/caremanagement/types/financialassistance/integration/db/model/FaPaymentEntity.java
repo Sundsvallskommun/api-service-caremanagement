@@ -22,23 +22,20 @@ import org.hibernate.annotations.UuidGenerator;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * A single financial assistance payment (utbetalning) on an errand — a caseworker-drafted or Lifecare-mirrored payment
- * row that RPA, once queued separately via the {@code REGISTER_PAYMENT} RPA action, registers in Lifecare. Modelled
- * after {@link FaMonitoringEntity}.
+ * A single financial assistance payment (utbetalning) on an errand — a caseworker-drafted, decision-created or
+ * Lifecare-sourced payment row. Draken's BFF registers a decided row in Lifecare itself and reports the outcome through
+ * {@code .../payments/{paymentId}/lifecare-result}. Modelled after {@link FaMonitoringEntity}.
  *
  * <p>
  * {@code source} records provenance — {@code CASEWORKER} for one authored in Draken, {@code LIFECARE} for one read out
- * of Lifecare by RPA and surfaced here on the errand. {@code lifecareId} is the payment's id in Lifecare once it
- * exists there — null for a caseworker row not yet mirrored, the idempotency key RPA upserts LIFECARE rows on.
+ * of Lifecare and posted onto the errand. {@code lifecareId} is the payment's id in Lifecare once it exists there —
+ * null for a caseworker row not yet registered, the idempotency key LIFECARE rows are upserted on.
  * </p>
  *
  * <p>
- * {@code status} is entirely server-managed and has two values today: a caseworker's saved row is created
- * {@code DRAFT} (queuing RPA is a separate, explicit {@code POST .../rpa-tasks} call — see {@code PaymentService}),
- * and a row a decision created is {@code PENDING_REGISTRATION}. Nothing clears the latter: the
- * {@code REGISTER_PAYMENT} robot has no endpoint to report its result on, so a decided payment stays
- * {@code PENDING_REGISTRATION} whatever happens in Lifecare. Adding that result endpoint is what would introduce a
- * terminal value here.
+ * {@code status} is entirely server-managed: a caseworker's saved row is created {@code DRAFT}, and a row a decision
+ * created is {@code PENDING_REGISTRATION}. Only the BFF's lifecare-result report moves the latter on, to
+ * {@code REGISTERED} or to {@code FAILED} with Lifecare's own message in {@code lifecareDetail}.
  * </p>
  *
  * <p>
@@ -48,7 +45,7 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  */
 @Entity
 @Table(name = "errand_financial_assistance_payment", indexes = {
-	// Unique: lifecareId is the idempotency key RPA upserts on — a duplicate pair would break the upsert lookup.
+	// Unique: lifecareId is the idempotency key LIFECARE rows are upserted on — a duplicate pair would break the lookup.
 	@Index(name = "uq_fa_payment_errand_id_lifecare_id", columnList = "errand_id, lifecare_id", unique = true)
 })
 public class FaPaymentEntity {
@@ -67,7 +64,7 @@ public class FaPaymentEntity {
 	@Column(name = "lifecare_id", length = 64)
 	private String lifecareId;
 
-	/** Lifecare's own message when the REGISTER_PAYMENT robot reported FAILED — shown to the caseworker as-is. */
+	/** Lifecare's own message when the lifecare-result report said FAILED — shown to the caseworker as-is. */
 	@Column(name = "lifecare_detail", length = 1024)
 	private String lifecareDetail;
 
@@ -107,8 +104,8 @@ public class FaPaymentEntity {
 	 * The {@link FaPayeeEntity} row this payment pays to, when the payee came from the errand's payee list. Null for a
 	 * payee derived from the Lifecare payment history (those have no local row) and for a manual payee the caseworker
 	 * deleted afterwards — the copied name/method/clearing/account fields are owned by the decision and stay either
-	 * way. It exists so the {@code REGISTER_PAYMENT} robot can be handed the payee's Lifecare id instead of matching
-	 * on name and account number.
+	 * way. It exists so Draken's BFF can pick the payee's Lifecare id when it registers the payment, instead of
+	 * matching on name and account number.
 	 */
 	@Column(name = "payee_id", length = 36)
 	private String payeeId;

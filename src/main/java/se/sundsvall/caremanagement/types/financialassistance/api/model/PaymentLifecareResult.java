@@ -7,32 +7,32 @@ import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
 /**
- * The {@code REGISTER_PAYMENT} robot's report on what happened when it tried to register a decided payment in
+ * Draken's BFF's report on what happened when it tried to register a decided payment in
  * Lifecare. The counterpart of {@link PayeeLifecareResult}, and deliberately the same shape: outcome, the id Lifecare
  * gave, and Lifecare's own message.
  *
  * <p>
- * Without this report a decided payment stays {@code PENDING_REGISTRATION} for ever, whatever the robot managed to do
+ * Without this report a decided payment stays {@code PENDING_REGISTRATION} for ever, whatever the BFF managed to do
  * — the status could say no more than that it was decided and the Lifecare state unknown.
  * </p>
  *
  * <p>
  * {@code REGISTERED} means the payment now exists in Lifecare, not that it has been paid out. Whether it has been
  * effectuated is a separate question the process asks through {@code POST .../financial-assistance/payment-status};
- * this report is only about the registration the robot performed.
+ * this report is only about the registration the BFF performed.
  * </p>
  *
  * <p>
  * {@code ALREADY_EXISTS} counts as success, as it does for a payee. It is expected to be rare here: Lifecare offers no
- * way to ask whether a payment has already been registered, so the robot can usually only report it when it happens to
+ * way to ask whether a payment has already been registered, so the BFF can usually only report it when it happens to
  * recognise the row. {@code detail} is required on {@code FAILED} and must be what Lifecare actually said, because
  * that text is what the caseworker gets to see.
  * </p>
  */
-@Schema(description = "The REGISTER_PAYMENT robot's report on registering a payment in Lifecare.")
+@Schema(description = "Draken's BFF's report on registering a payment in Lifecare.")
 public class PaymentLifecareResult {
 
-	@Schema(description = "What the robot ended up doing", examples = "REGISTERED", requiredMode = Schema.RequiredMode.REQUIRED, allowableValues = {
+	@Schema(description = "What the BFF ended up doing", examples = "REGISTERED", requiredMode = Schema.RequiredMode.REQUIRED, allowableValues = {
 		"REGISTERED", "ALREADY_EXISTS", "FAILED"
 	})
 	@NotBlank

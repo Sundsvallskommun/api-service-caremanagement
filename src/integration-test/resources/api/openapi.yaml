@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:57275
+- url: http://localhost:56337
   description: Generated server url
 security:
 - sentBy: []
@@ -16,10 +16,6 @@ tags:
   description: The decision proposal (beslutsförslag) — derived on every read from
     the calculation draft and the applicant's Lifecare history; only the section warnings
     it raises are stored. Recomputed when the CALCULATION section is approved.
-- name: Financial Assistance · Lifecare supplements
-  description: "The RPA robot's single delivery endpoint — one near-raw Lifecare dump\
-    \ per errand (bevakningar, document list, jobbstimulans), routed and upserted\
-    \ by CareManagement, answered with a per-item receipt."
 - name: Statistics
   description: Read-only errand statistics for the caseworker interface
 - name: Co-caseworkers
@@ -29,6 +25,10 @@ tags:
 - name: Permits
   description: "Permits issued on an errand: validity period, conditions and status.\
     \ Revoking sets the status to REVOKED."
+- name: Financial Assistance · Payments
+  description: "Financial assistance payments (utbetalningar) on an errand, with full\
+    \ CRUD. Saved as DRAFT; a payment a decision created is registered in Lifecare\
+    \ by Draken's BFF, which reports the outcome through POST .../{paymentId}/lifecare-result."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
 - name: Financial Assistance · Monitorings
@@ -39,11 +39,14 @@ tags:
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen and mark them handled when acted on; expired ones are
     purged by a daily background job.
+- name: Financial Assistance · Finalize
+  description: "Besluta och utbetala: record the caseworker's decision and its payments\
+    \ and resume the process. The Lifecare writes (decision, payments, bevakningar,\
+    \ journal, documents) are made by Draken's BFF, which reports them back through\
+    \ the lifecare-result endpoints. The calculation is committed to Lifecare by the\
+    \ process, and the decision is sent to the applicant by the frontend."
 - name: Status History
   description: Status transition log for an errand
-- name: RPA
-  description: Enqueue UiPath RPA tasks (Lifecare write-backs / supplement fetches)
-    for an errand
 - name: Metadata
   description: Metadata (lookup) operations
 - name: Namespace config
@@ -78,23 +81,9 @@ tags:
 - name: Errand Types
   description: "Describes the errand types: their statuses, stakeholder roles and\
     \ the fields a type's data payload should carry, as form guidance for clients."
-- name: Financial Assistance · Job stimulus periods
-  description: "The errand's jobbstimulans periods, mirrored out of Lifecare by the\
-    \ RPA supplements delivery. Read-only — the set is replaced wholesale by each\
-    \ delivery."
-- name: Financial Assistance · Finalize
-  description: "Besluta och utbetala: record the caseworker's decision, hand the Lifecare\
-    \ write-backs (decision, payments, bevakningar, journal, documents) to RPA and\
-    \ resume the process. The calculation is committed to Lifecare by the process,\
-    \ and the decision is sent to the applicant by the frontend."
 - name: Referrals
   description: "Referrals/consultations on an errand: receiving authority, due date,\
     \ free-text response and status (SENT → RESPONDED)."
-- name: Financial Assistance · RPA context
-  description: "The context an RPA robot needs to act on an errand in Lifecare — the\
-    \ errand number and the household's personal numbers, served on demand so they\
-    \ never persist in the Orchestrator queue store. Every read lands in the errand's\
-    \ event log."
 - name: Financial Assistance · Payees
   description: "The betalningsmottagare selectable for an errand's payment form: the\
     \ payees seen on the applicant's Lifecare payments in the last 12 months, plus\
@@ -115,6 +104,14 @@ tags:
     \ one of the three application-type slugs (financial-assistance-new / -renewal\
     \ / -supplementary); read and replace the typed data via the shared financial-assistance\
     \ path."
+- name: Financial Assistance · Job stimulus periods
+  description: "The errand's jobbstimulans periods as stored — mirrored out of Lifecare\
+    \ before that mirroring was retired, and no longer refreshed. Read-only; kept\
+    \ until Draken reads jobbstimulans live from Lifecare."
+- name: Financial Assistance · RPA context
+  description: "The errand number and the household's personal numbers, served on\
+    \ demand to the process's beredning step (prepare-income-basis) so they never\
+    \ become process variables. Every read lands in the errand's event log."
 - name: Financial Assistance · Lifecare history
   description: "Read the applicant's case history straight from Lifecare — the calculations,\
     \ decisions and documents — plus a single document's PDF content. Keyed by partyId\
@@ -122,10 +119,6 @@ tags:
     \ the last 24 months. caremanagement only forwards the reads."
 - name: Documents
   description: Formal case documents attached to an errand
-- name: Financial Assistance · Payments
-  description: "Financial assistance payments (utbetalningar) on an errand, with full\
-    \ CRUD. Created as DRAFT and never auto-queued for RPA — queuing the REGISTER_PAYMENT\
-    \ robot task is a separate POST .../rpa-tasks call."
 - name: Errands
   description: Errand operations
 - name: Financial Assistance · Payment
@@ -1216,52 +1209,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/rpa-tasks:
-    post:
-      tags:
-      - RPA
-      summary: Enqueue an RPA task for an errand
-      operationId: enqueue
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RpaTaskRequest"
-        required: true
-      responses:
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "202":
-          description: Accepted - the RPA task was enqueued
   /{municipalityId}/{namespace}/errands/{errandId}/referrals:
     get:
       tags:
@@ -2551,11 +2498,11 @@ paths:
       tags:
       - Errand decisions
       summary: Report the outcome of writing the decision into Lifecare
-      description: "For whoever writes the decision into Lifecare — the WRITE_DECISION\
-        \ robot today, possibly Draken's BFF. WRITTEN and ALREADY_EXISTS mark the\
-        \ decision SYNCED and store Lifecare's id; FAILED marks it FAILED with Lifecare's\
-        \ own message, which the caseworker sees. Re-posting the same outcome is harmless;\
-        \ FAILED on a SYNCED decision is a 409."
+      description: "For Draken's BFF, which writes the decision into Lifecare itself.\
+        \ WRITTEN and ALREADY_EXISTS mark the decision SYNCED and store Lifecare's\
+        \ id; FAILED marks it FAILED with Lifecare's own message, which the caseworker\
+        \ sees. Re-posting the same outcome is harmless; FAILED on a SYNCED decision\
+        \ is a 409."
       operationId: recordLifecareResult
       parameters:
       - name: municipalityId
@@ -3076,8 +3023,8 @@ paths:
       tags:
       - Financial Assistance · Payments
       summary: Create a payment on an errand
-      description: Creates a payment on the errand as a DRAFT. Does not queue any
-        RPA task. Returns the created payment and its Location.
+      description: Creates a payment on the errand as a DRAFT. Nothing is written
+        to Lifecare. Returns the created payment and its Location.
       operationId: createPayment
       parameters:
       - name: municipalityId
@@ -3138,15 +3085,15 @@ paths:
     post:
       tags:
       - Financial Assistance · Payments
-      summary: Report what the REGISTER_PAYMENT robot did in Lifecare
-      description: "The counterpart of the ADD_PAYEE report, and the only thing that\
-        \ moves a payment out of PENDING_REGISTRATION. REGISTERED and ALREADY_EXISTS\
-        \ both set status=REGISTERED and store lifecarePaymentId as the payment's\
-        \ lifecareId; REGISTERED means the payment exists in Lifecare, not that it\
-        \ has been paid out. FAILED requires detail, which must be Lifecare's own\
-        \ message since it is shown to the caseworker as-is. Re-reporting the same\
-        \ outcome is idempotent; reporting FAILED on an already REGISTERED payment\
-        \ is a 409."
+      summary: Report the outcome of registering the payment in Lifecare
+      description: "Reported by Draken's BFF after it registered the payment in Lifecare.\
+        \ The counterpart of the payee report, and the only thing that moves a payment\
+        \ out of PENDING_REGISTRATION. REGISTERED and ALREADY_EXISTS both set status=REGISTERED\
+        \ and store lifecarePaymentId as the payment's lifecareId; REGISTERED means\
+        \ the payment exists in Lifecare, not that it has been paid out. FAILED requires\
+        \ detail, which must be Lifecare's own message since it is shown to the caseworker\
+        \ as-is. Re-reporting the same outcome is idempotent; reporting FAILED on\
+        \ an already REGISTERED payment is a 409."
       operationId: reportPaymentLifecareResult
       parameters:
       - name: municipalityId
@@ -3272,11 +3219,11 @@ paths:
       tags:
       - Financial Assistance · Payees
       summary: Add a betalningsmottagare by hand
-      description: "Stores the payee on the errand so it is selectable immediately,\
-        \ and queues the ADD_PAYEE robot task that puts it into Lifecare. The payee\
-        \ starts as lifecareStatus=PENDING. An identical payee already on the errand\
-        \ is returned as-is instead of being duplicated. A queue outage does not fail\
-        \ the call — the payee stays PENDING."
+      description: "Stores the payee on the errand so it is selectable immediately.\
+        \ It is created in Lifecare by Draken's BFF, which reports back through POST\
+        \ .../{payeeId}/lifecare-result; until then the payee is lifecareStatus=PENDING.\
+        \ An identical payee already on the errand is returned as-is instead of being\
+        \ duplicated."
       operationId: createPayee
       parameters:
       - name: municipalityId
@@ -3337,9 +3284,9 @@ paths:
     post:
       tags:
       - Financial Assistance · Payees
-      summary: Report what the ADD_PAYEE robot did in Lifecare
-      description: "ADDED and ALREADY_EXISTS both set lifecareStatus=SYNCED — the\
-        \ robot is told not to create a duplicate, and the caseworker's intent is\
+      summary: Report the outcome of creating the payee in Lifecare
+      description: "ADDED and ALREADY_EXISTS both set lifecareStatus=SYNCED — a payee\
+        \ already in Lifecare is not created twice, and the caseworker's intent is\
         \ satisfied either way. FAILED requires detail, which must be Lifecare's own\
         \ message since it is shown to the caseworker as-is. Re-reporting the same\
         \ outcome is idempotent; reporting FAILED on an already SYNCED payee is a\
@@ -3520,70 +3467,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare-supplements:
-    post:
-      tags:
-      - Financial Assistance · Lifecare supplements
-      summary: Deliver a Lifecare supplements dump for an errand
-      description: "Ingests one near-raw dump of the Lifecare Professional Web responses\
-        \ for the errand's client. Sections: reminders[] (upserted as LIFECARE-sourced\
-        \ monitorings per reminderId), documents[] (routed on documentType — 3 to\
-        \ journal, 0 to documents — and upserted per row id), jobStimulus (the errand's\
-        \ full period set is replaced). Omit a section to leave that area untouched;\
-        \ deliver it empty to mean 'fetched, nothing there'. Returns 200 with a per-item\
-        \ receipt even when individual items fail — only a structurally unreadable\
-        \ envelope is rejected."
-      operationId: deliverSupplements
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LifecareSupplements"
-        required: true
-      responses:
-        "200":
-          description: Delivery processed — see the per-item receipt
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SupplementsIngestResult"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/finalize:
     post:
       tags:
@@ -3591,16 +3474,16 @@ paths:
       summary: Besluta och utbetala — finalize the errand (caseworker)
       description: "Records the caseworker's decision as a PAYMENT decision on the\
         \ errand, stores the chosen communication channels and household-size flag,\
-        \ hands the Lifecare write-backs to RPA (WRITE_DECISION, one REGISTER_PAYMENT\
-        \ per payment, and WRITE_MONITORING / WRITE_JOURNAL / WRITE_DOCUMENT for locally\
-        \ authored items), and correlates PaymentDecisionReceived to the process (paymentDecision\
-        \ APPROVED for BIFALL/DELAVSLAG, REJECTED otherwise) — which commits the normberä\
-        kning, sets GRANTED/REJECTED and polls the payment. Does not send anything\
-        \ to the applicant: the response echoes the communication channels for the\
-        \ frontend to act on. Requires the errand in AWAITING_DECISION with all three\
-        \ sections approved and an identified caller (X-Sent-By); a second finalize\
-        \ is rejected with 409. RPA and process failures are reported in the response,\
-        \ not as errors."
+        \ creates one PENDING_REGISTRATION payment per decided payment, and correlates\
+        \ PaymentDecisionReceived to the process (paymentDecision APPROVED for BIFALL/DELAVSLAG,\
+        \ REJECTED otherwise) — which commits the normberäkning, sets GRANTED/REJECTED\
+        \ and polls the payment. Does not send anything to the applicant: the response\
+        \ echoes the communication channels for the frontend to act on. Requires the\
+        \ errand in AWAITING_DECISION with all three sections approved and an identified\
+        \ caller (X-Sent-By); a second finalize is rejected with 409. Process failures\
+        \ and payees not yet in Lifecare are reported in the response, not as errors.\
+        \ The Lifecare writes (decision, payments, bevakningar, journal, documents)\
+        \ are Draken's BFF's, reported back through the lifecare-result endpoints."
       operationId: finalize
       parameters:
       - name: municipalityId
@@ -7492,9 +7375,10 @@ paths:
       tags:
       - Financial Assistance · RPA context
       summary: Read the RPA context for an errand
-      description: "The robot's first call after picking up a queue item: resolves\
+      description: "Read per run by the process's prepare-income-basis worker: resolves\
         \ the errand number and the applicant's (and any co-applicant's) personal\
-        \ number for the Lifecare lookup."
+        \ number for the lookups. The path and name are kept from the retired RPA\
+        \ integration."
       operationId: getRpaContext
       parameters:
       - name: municipalityId
@@ -7597,9 +7481,8 @@ paths:
       tags:
       - Financial Assistance · Payees
       summary: Read a manually added betalningsmottagare
-      description: "The ADD_PAYEE robot's second call: the payee's name, payment method,\
-        \ clearing and account number. The queue item carries only the payeeId, so\
-        \ these never enter the Orchestrator queue store."
+      description: "The payee's name, payment method, clearing and account number\
+        \ — read by Draken's BFF when it creates the payee in Lifecare."
       operationId: getPayee
       parameters:
       - name: municipalityId
@@ -8851,10 +8734,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -8889,9 +8772,8 @@ components:
       properties:
         source:
           type: string
-          description: "Provenance, defaults to CASEWORKER when omitted. RPA POSTs\
-            \ LIFECARE (with lifecareId) to surface a payment read out of Lifecare\
-            \ onto the errand."
+          description: "Provenance, defaults to CASEWORKER when omitted. LIFECARE\
+            \ (with lifecareId) posts a payment read out of Lifecare onto the errand."
           enum:
           - CASEWORKER
           - LIFECARE
@@ -8899,7 +8781,7 @@ components:
           - CASEWORKER
         lifecareId:
           type: string
-          description: The payment's id in Lifecare. Set by RPA when surfacing a LIFECARE-sourced
+          description: The payment's id in Lifecare. Set when posting a LIFECARE-sourced
             payment (the idempotency key) or when stamping back the id of a registered
             caseworker payment.
           examples:
@@ -8964,10 +8846,10 @@ components:
           type: string
           description: "The id of the payee row on the errand this payment pays to,\
             \ as GET .../payees returns it. Send it when the caseworker picked an\
-            \ entry from that list — it is what lets the REGISTER_PAYMENT robot be\
-            \ handed the payee's Lifecare id instead of matching on name and account\
-            \ number. Omit it for a payee derived from the Lifecare payment history,\
-            \ which has no local row."
+            \ entry from that list — it is what lets Draken's BFF pick the payee by\
+            \ its Lifecare id instead of matching on name and account number. Omit\
+            \ it for a payee derived from the Lifecare payment history, which has\
+            \ no local row."
           examples:
           - a1b2c3d4-0000-0000-0000-000000000001
         lifecarePayeeId:
@@ -9085,7 +8967,7 @@ components:
         source:
           type: string
           description: "Provenance: CASEWORKER for one authored in Draken, LIFECARE\
-            \ for one read out of Lifecare by RPA and surfaced here on the errand."
+            \ for one read out of Lifecare and posted onto the errand."
           enum:
           - CASEWORKER
           - LIFECARE
@@ -9094,13 +8976,13 @@ components:
         lifecareId:
           type: string
           description: The payment's id in Lifecare once it exists there — null until
-            RPA has registered a caseworker-authored payment; always set for a LIFECARE-sourced
-            one.
+            a caseworker-authored payment has been registered there; always set for
+            a LIFECARE-sourced one.
           examples:
           - "987654"
         lifecareDetail:
           type: string
-          description: Lifecare's own message when the REGISTER_PAYMENT robot reported
+          description: Lifecare's own message when the lifecare-result report said
             FAILED — shown to the caseworker as-is
           examples:
           - Betalningsmottagaren saknas i Lifecare
@@ -9109,11 +8991,11 @@ components:
           type: string
           description: "Server-managed lifecycle status. DRAFT for a caseworker's\
             \ saved draft; PENDING_REGISTRATION for one a decision created, waiting\
-            \ for the robot; REGISTERED once the REGISTER_PAYMENT robot has reported\
-            \ it into Lifecare (REGISTERED means it exists there, not that it has\
-            \ been paid out — whether it was effectuated is a separate question, asked\
-            \ through POST .../financial-assistance/payment-status); FAILED when the\
-            \ robot could not register it, with Lifecare's reason in lifecareDetail."
+            \ to be registered in Lifecare; REGISTERED once Draken's BFF has reported\
+            \ it registered (REGISTERED means it exists there, not that it has been\
+            \ paid out — whether it was effectuated is a separate question, asked\
+            \ through POST .../financial-assistance/payment-status); FAILED when it\
+            \ could not be registered, with Lifecare's reason in lifecareDetail."
           enum:
           - DRAFT
           - PENDING_REGISTRATION
@@ -9181,11 +9063,11 @@ components:
         lifecarePayeeId:
           type: string
           description: "The payee's id in Lifecare, read from that payee row — set\
-            \ once the ADD_PAYEE robot has reported it back. The REGISTER_PAYMENT\
-            \ robot uses it to pick the payee in Lifecare by id instead of matching\
-            \ on name and account number. Null when the payee has no local row, or\
-            \ when the robot has not reported yet (lifecareStatus PENDING or FAILED\
-            \ on that payee)."
+            \ once the payee's creation in Lifecare has been reported back. Lets Draken's\
+            \ BFF pick the payee in Lifecare by id instead of matching on name and\
+            \ account number. Null when the payee has no local row, or when its creation\
+            \ has not been reported yet (lifecareStatus PENDING or FAILED on that\
+            \ payee)."
           examples:
           - "44213"
           readOnly: true
@@ -9274,9 +9156,8 @@ components:
       properties:
         source:
           type: string
-          description: "Provenance, defaults to CASEWORKER when omitted. RPA POSTs\
-            \ LIFECARE (with lifecareId) to surface a monitoring read out of Lifecare\
-            \ onto the errand."
+          description: "Provenance, defaults to CASEWORKER when omitted. LIFECARE\
+            \ (with lifecareId) posts a monitoring read out of Lifecare onto the errand."
           enum:
           - CASEWORKER
           - LIFECARE
@@ -9284,9 +9165,9 @@ components:
           - CASEWORKER
         lifecareId:
           type: string
-          description: The monitoring's id in Lifecare. Set by RPA when surfacing
-            a LIFECARE-sourced monitoring (the idempotency key) or when stamping back
-            the id of a mirrored caseworker monitoring.
+          description: The monitoring's id in Lifecare. Set when posting a LIFECARE-sourced
+            monitoring (the idempotency key) or when stamping back the id of a caseworker
+            monitoring written there.
           examples:
           - "987654"
           maxLength: 64
@@ -9339,9 +9220,9 @@ components:
           readOnly: true
         source:
           type: string
-          description: "Provenance: CASEWORKER for one authored in Draken (RPA mirrors\
-            \ it onto the person in Lifecare), LIFECARE for one read out of Lifecare\
-            \ by RPA and surfaced here on the errand."
+          description: "Provenance: CASEWORKER for one authored in Draken (Draken's\
+            \ BFF writes it onto the person in Lifecare), LIFECARE for one read out\
+            \ of Lifecare and posted onto the errand."
           enum:
           - CASEWORKER
           - LIFECARE
@@ -9350,8 +9231,8 @@ components:
         lifecareId:
           type: string
           description: The monitoring's id in Lifecare once it exists there — null
-            until RPA has mirrored a caseworker-authored monitoring; always set for
-            a LIFECARE-sourced one.
+            until a caseworker-authored monitoring has been written there; always
+            set for a LIFECARE-sourced one.
           examples:
           - "987654"
         title:
@@ -10387,40 +10268,6 @@ components:
           description: Contact channels for the stakeholder
           items:
             $ref: "#/components/schemas/ContactChannel"
-    RpaTaskRequest:
-      type: object
-      description: Request to enqueue a UiPath RPA task on an errand.
-      properties:
-        action:
-          type: string
-          description: The RPA action — selects the Lifecare flow the robot runs
-          enum:
-          - FETCH_SUPPLEMENTS
-          - WRITE_NORMBERAKNING
-          - WRITE_DECISION
-          - WRITE_JOURNAL
-          - WRITE_DOCUMENT
-          - WRITE_MONITORING
-          - REGISTER_PAYMENT
-          - ADD_PAYEE
-          examples:
-          - FETCH_SUPPLEMENTS
-          minLength: 1
-        parameters:
-          type: object
-          additionalProperties:
-            type: string
-          description: "Optional extra hints for the robot, merged into the queue\
-            \ item SpecificContent. For REGISTER_PAYMENT, carries only the key 'paymentId'\
-            \ (the payment's id on the errand) — the robot fetches everything else\
-            \ via GET .../payments/{paymentId}, instead of putting payee names, account\
-            \ numbers or other personal data on the Orchestrator queue, the same reason\
-            \ RpaContext is fetched per queue item rather than riding along in it.\
-            \ ADD_PAYEE carries only the key 'payeeId' for the same reason."
-          examples:
-          - paymentId: f47ac10b-58cc-4372-a567-0e02b2c3d479
-      required:
-      - action
     Referral:
       type: object
       description: "A referral/consultation on an errand, with the receiving authority,\
@@ -10812,13 +10659,13 @@ components:
         source:
           type: string
           description: "Provenance — CASEWORKER for a journal entry authored in Draken,\
-            \ LIFECARE for one read out of Lifecare by RPA and mirrored onto the errand"
+            \ LIFECARE for one read out of Lifecare onto the errand"
           examples:
           - CASEWORKER
         lifecareId:
           type: string
           description: The journal entry's id in Lifecare's document list — set on
-            LIFECARE-sourced mirrors (the RPA upsert key)
+            LIFECARE-sourced rows
           examples:
           - "27"
         type:
@@ -10988,13 +10835,13 @@ components:
         source:
           type: string
           description: "Provenance — CASEWORKER for a document authored in Draken,\
-            \ LIFECARE for one read out of Lifecare by RPA and mirrored onto the errand"
+            \ LIFECARE for one read out of Lifecare onto the errand"
           examples:
           - CASEWORKER
         lifecareId:
           type: string
           description: The document's id in Lifecare's document list — set on LIFECARE-sourced
-            mirrors (the RPA upsert key)
+            rows
           examples:
           - "27"
         type:
@@ -11380,12 +11227,11 @@ components:
           readOnly: true
     PaymentLifecareResult:
       type: object
-      description: The REGISTER_PAYMENT robot's report on registering a payment in
-        Lifecare.
+      description: Draken's BFF's report on registering a payment in Lifecare.
       properties:
         outcome:
           type: string
-          description: What the robot ended up doing
+          description: What the BFF ended up doing
           enum:
           - REGISTERED
           - ALREADY_EXISTS
@@ -11493,8 +11339,8 @@ components:
           readOnly: true
         lifecareStatus:
           type: string
-          description: "For a MANUAL option, how far the ADD_PAYEE robot task has\
-            \ got: PENDING until the robot reports back, then SYNCED or FAILED. Null\
+          description: "For a MANUAL option, how far its creation in Lifecare has\
+            \ got: PENDING until it is reported back, then SYNCED or FAILED. Null\
             \ for a LIFECARE option, which is in Lifecare by definition"
           enum:
           - PENDING
@@ -11505,7 +11351,8 @@ components:
           readOnly: true
         lifecarePayeeId:
           type: string
-          description: "The payee id Lifecare gave the robot, when it reported one"
+          description: "The payee id Lifecare gave, when the lifecare-result report\
+            \ carried one"
           examples:
           - "44213"
           readOnly: true
@@ -11531,11 +11378,11 @@ components:
           readOnly: true
     PayeeLifecareResult:
       type: object
-      description: The ADD_PAYEE robot's report on adding a payee to Lifecare.
+      description: The report on adding a payee to Lifecare.
       properties:
         outcome:
           type: string
-          description: What the robot ended up doing
+          description: What ended up happening in Lifecare
           enum:
           - ADDED
           - ALREADY_EXISTS
@@ -11560,267 +11407,6 @@ components:
           minLength: 0
       required:
       - outcome
-    LifecareDocumentRow:
-      type: object
-      description: One row from Lifecare's document list — journal notes (documentType
-        3) and regular documents (documentType 0) share this shape.
-      properties:
-        id:
-          type: string
-          description: The row's id in Lifecare's document list — the upsert key together
-            with documentType. Rows without it are skipped.
-          examples:
-          - "27"
-        title:
-          type: string
-          description: Title (Lifecare 'Rubrik'); becomes the mirrored heading
-          examples:
-          - Journalanteckning
-        date:
-          type: string
-          description: Documented date (yyyy-MM-dd). Required — rows without a parseable
-            date are reported FAILED.
-          examples:
-          - 2026-08-05
-        time:
-          type: string
-          description: "Documented time (HH:mm); optional, midnight when absent"
-          examples:
-          - 11:06
-        type:
-          type: string
-          description: "Type display text (Lifecare 'Typ'); becomes the mirrored type,\
-            \ falling back to typeCode"
-          examples:
-          - Journalanteckning
-        typeCode:
-          type: string
-          description: "Type code (Lifecare notes: 1 Journalanteckning; documents:\
-            \ e.g. 13 BE Brev, 14 BE Dokument)"
-          examples:
-          - "1"
-        documentType:
-          type: string
-          description: "Row discriminator: 3 = journal note, 0 = regular document.\
-            \ Other values are reported SKIPPED."
-          examples:
-          - "3"
-        content:
-          type: string
-          description: Body as Lifecare returns it — HTML with entities. Decoded and
-            stripped to plain text before storage.
-          examples:
-          - <p>Hej! Vill bara informera att jag f&aring;tt jobb.</p>
-        updateSignature:
-          type: string
-          description: The signature of the last writer in Lifecare; becomes the mirrored
-            author
-          examples:
-          - carola01winberg
-        updateDate:
-          type: string
-          description: "Lifecare's last-update date (yyyy-MM-dd, day precision only);\
-            \ informational"
-          examples:
-          - 2026-08-05
-        documentType_Name:
-          type: string
-          description: Lifecare's textual name for documentType; informational
-          examples:
-          - JournalNote
-    LifecareJobStimulus:
-      type: object
-      description: "The jobbstimulans periods from Lifecare's GetJobStimulusForService\
-        \ — the applicant's and, when present, the co-applicant's."
-      properties:
-        applicant:
-          $ref: "#/components/schemas/LifecareJobStimulusParty"
-          description: The applicant's period set
-        coApplicant:
-          $ref: "#/components/schemas/LifecareJobStimulusParty"
-          description: The co-applicant's period set; null or an empty object when
-            there is no co-applicant
-    LifecareJobStimulusParty:
-      type: object
-      description: One party's jobbstimulans periods.
-      properties:
-        periods:
-          type: array
-          description: The party's periods
-          items:
-            $ref: "#/components/schemas/LifecareJobStimulusPeriod"
-    LifecareJobStimulusPeriod:
-      type: object
-      description: One jobbstimulans period. Lifecare's unstable jobStimulusId is
-        intentionally absent.
-      properties:
-        fromDate:
-          type: string
-          description: Period start (yyyy-MM-dd). Required — periods without a parseable
-            date are reported FAILED.
-          examples:
-          - 2021-01-01
-        toDate:
-          type: string
-          description: Period end (yyyy-MM-dd); optional
-          examples:
-          - 2021-12-31
-        markedForRemoval:
-          type: boolean
-          description: Lifecare's removal flag — a period marked for removal is dropped
-            on ingest
-          examples:
-          - false
-    LifecareReminder:
-      type: object
-      description: One bevakning row as Lifecare's ListRemindersByServiceId returns
-        it. The stable reminderId is the upsert key.
-      properties:
-        reminderId:
-          type: string
-          description: Lifecare's stable reminder id — the idempotency key. Rows without
-            it are skipped.
-          examples:
-          - "4"
-        reminderDate:
-          type: string
-          description: The monitoring date (yyyy-MM-dd). Required — rows without a
-            parseable date are reported FAILED.
-          examples:
-          - 2026-10-17
-        status:
-          type: string
-          description: "Status code (Lifecare: 1 Pågår, 2 Klar, 3 Ej påbörjad, 4 Vä\
-            ntar — a snapshot, not a definition)"
-          examples:
-          - "1"
-        statusText:
-          type: string
-          description: Status display text; may be null
-          examples:
-          - Pågår
-        priority:
-          type: string
-          description: "Priority code (Lifecare: 1 Hög, 2 Normal, 3 Låg)"
-          examples:
-          - "2"
-        priorityText:
-          type: string
-          description: Priority display text; may be null
-          examples:
-          - Normal
-        type:
-          type: string
-          description: Reminder type code
-          examples:
-          - "3"
-        typeText:
-          type: string
-          description: Reminder type display text; may be null
-          examples:
-          - Manuell bevakning insats
-        text:
-          type: string
-          description: The caseworker's free text
-          examples:
-          - Följ upp inkomstuppgifter från CSN
-        caseworkerId:
-          type: string
-          description: The caseworker id in Lifecare
-          examples:
-          - TEST
-        caseworkerName:
-          type: string
-          description: The caseworker's display name
-          examples:
-          - Test Handläggare
-        objectType:
-          type: string
-          description: "What the reminder sits on (Lifecare: 7083 IFO.Insats, 7040\
-            \ IFO.Aktualisering)"
-          examples:
-          - "7083"
-        objectTypeName:
-          type: string
-          description: Object type display name
-          examples:
-          - IFO.Insats
-    LifecareSupplements:
-      type: object
-      description: "RPA supplements delivery envelope — a near-raw dump of the Lifecare\
-        \ Professional Web responses for the errand's client. An omitted section means\
-        \ 'not fetched this run'; an empty section means 'fetched, nothing there'.\
-        \ Unknown fields are ignored."
-      properties:
-        capturedAt:
-          type: string
-          description: The robot's capture date (day precision — Lifecare's own timestamps
-            carry no more)
-          examples:
-          - 2026-08-25
-        reminders:
-          type: array
-          description: "Rows from Lifecare's ListRemindersByServiceId (bevakningar).\
-            \ Upserted as LIFECARE-sourced monitorings on the errand, keyed per reminderId."
-          items:
-            $ref: "#/components/schemas/LifecareReminder"
-        documents:
-          type: array
-          description: Rows from Lifecare's document list — journal notes (documentType
-            3) and regular documents (documentType 0) alike. CareManagement routes
-            each row on documentType; the robot does not need to tell them apart.
-          items:
-            $ref: "#/components/schemas/LifecareDocumentRow"
-        jobStimulus:
-          $ref: "#/components/schemas/LifecareJobStimulus"
-          description: "The response from Lifecare's GetJobStimulusForService. Replaces\
-            \ the errand's full jobbstimulans period set — Lifecare regenerates all\
-            \ period ids on every save, so ids are never used as keys."
-    SupplementsIngestOutcome:
-      type: object
-      description: Receipt for one delivered item in a supplements ingest.
-      properties:
-        section:
-          type: string
-          description: The envelope section the item came from
-          enum:
-          - reminders
-          - documents
-          - jobStimulus
-          examples:
-          - documents
-        lifecareId:
-          type: string
-          description: "The item's Lifecare id, when it has one"
-          examples:
-          - "27"
-        outcome:
-          type: string
-          description: What happened to the item
-          enum:
-          - CREATED
-          - UPDATED
-          - UNCHANGED
-          - REPLACED
-          - SKIPPED
-          - FAILED
-          examples:
-          - CREATED
-        detail:
-          type: string
-          description: "Human-readable detail — the skip/failure reason, or a summary\
-            \ for REPLACED"
-          examples:
-          - 3 periods
-    SupplementsIngestResult:
-      type: object
-      description: Receipt for a supplements ingest — one outcome per delivered item.
-      properties:
-        results:
-          type: array
-          description: "One outcome per delivered item, in delivery order"
-          items:
-            $ref: "#/components/schemas/SupplementsIngestOutcome"
     CommunicationChannels:
       type: object
       description: The channels chosen for communicating the calculation and decision
@@ -11965,8 +11551,8 @@ components:
       - paymentDate
     FinalizeRequest:
       type: object
-      description: "Finalize a financial assistance errand: record the decision, hand\
-        \ the Lifecare write-backs to RPA and resume the process."
+      description: "Finalize a financial assistance errand: record the decision and\
+        \ its payments and resume the process."
       properties:
         decision:
           $ref: "#/components/schemas/FinalizeDecision"
@@ -11984,9 +11570,8 @@ components:
         householdSizeChanged:
           type: boolean
           description: Whether the caseworker changed the household size (gemensamma
-            kostnader) in the calculation draft. When true the robot answers 'Ja'
-            to Lifecare's prompt about saving the changed common costs when it writes
-            the normberäkning. Defaults to false.
+            kostnader) in the calculation draft. Recorded on the errand and served
+            on the view. Defaults to false.
           examples:
           - false
       required:
@@ -12000,10 +11585,10 @@ components:
           type: string
           description: "The id of the payee row this came from, as GET .../payees\
             \ returns it — send it whenever the caseworker picked an entry from that\
-            \ list. It is what lets the REGISTER_PAYMENT robot be handed the payee's\
-            \ Lifecare id instead of matching on name and account number. Omit it\
-            \ for a payee that has no row: one derived from the Lifecare payment history\
-            \ carries a null id in the list."
+            \ list. It is what lets Draken's BFF pick the payee by its Lifecare id\
+            \ instead of matching on name and account number. Omit it for a payee\
+            \ that has no row: one derived from the Lifecare payment history carries\
+            \ a null id in the list."
           examples:
           - a1b2c3d4-0000-0000-0000-000000000001
         name:
@@ -12079,8 +11664,8 @@ components:
       - paymentMethod
     FinalizeResponse:
       type: object
-      description: "The receipt of a finalize — decision id, process correlation,\
-        \ RPA tasks and the communication channels to act on."
+      description: "The receipt of a finalize — decision id, payment ids, process\
+        \ correlation, payee warnings and the communication channels to act on."
       properties:
         decisionId:
           type: string
@@ -12090,8 +11675,8 @@ components:
         paymentIds:
           type: array
           description: "The ids of the Payment rows the finalize created, in request\
-            \ order. The REGISTER_PAYMENT queue items carry these and nothing else\
-            \ - the robot reads each payment through GET .../payments/{paymentId}."
+            \ order. Draken's BFF reads each through GET .../payments/{paymentId},\
+            \ registers it in Lifecare and reports back through .../payments/{paymentId}/lifecare-result."
           items:
             type: string
             examples:
@@ -12105,12 +11690,6 @@ components:
             \ the process-messages endpoint is only needed if the retry gives up."
           examples:
           - true
-        rpaTasks:
-          type: array
-          description: "The RPA write-back tasks the finalize step tried to enqueue,\
-            \ one per Lifecare step"
-          items:
-            $ref: "#/components/schemas/RpaTask"
         communication:
           $ref: "#/components/schemas/CommunicationChannels"
           description: The communication channels chosen — the frontend sends the
@@ -12119,37 +11698,16 @@ components:
           type: array
           description: "Warnings about the payees the decision pays to — a payment\
             \ cannot be registered in Lifecare against a payee that is not there yet.\
-            \ Present when a payment names a manually added payee whose ADD_PAYEE\
-            \ robot task has not reported SYNCED. Empty when every payee is in Lifecare.\
-            \ The finalize itself is not blocked by these; the decision, the payment\
-            \ rows and the queue items are created either way."
+            \ Present when a payment names a manually added payee careM has not seen\
+            \ reported SYNCED (payees/{payeeId}/lifecare-result). Empty when every\
+            \ payee is in Lifecare. The finalize itself is not blocked by these; the\
+            \ decision and the payment rows are created either way."
           items:
             type: string
             examples:
             - Betalningsmottagaren "Sundsvalls Hyresbostäder AB" är inte upplagd i
-              Lifecare ännu – utbetalningen kan inte registreras förrän roboten har
-              lagt upp den.
-      readOnly: true
-    RpaTask:
-      type: object
-      description: One RPA write-back task the finalize step tried to enqueue.
-      properties:
-        action:
-          type: string
-          description: The RPA action
-          examples:
-          - WRITE_DECISION
-        reference:
-          type: string
-          description: The queue item reference the Orchestrator knows the task by
-          examples:
-          - FINANCIAL_ASSISTANCE:cb20c51f-fcf3-42c0-b613-de563634a8ec:WRITE_DECISION
-        enqueued:
-          type: boolean
-          description: Whether the task is on the queue (false when RPA is disabled
-            or the enqueue failed)
-          examples:
-          - true
+              Lifecare ännu – utbetalningen kan inte registreras förrän den har lagts
+              upp där.
       readOnly: true
     NormPersonInput:
       type: object
@@ -14049,8 +13607,7 @@ components:
         householdSizeChanged:
           type: boolean
           description: Whether the caseworker changed the household size (gemensamma
-            kostnader) when finalizing — forwarded to the RPA normberäkning write.
-            Null until the errand has been finalized.
+            kostnader) when finalizing. Null until the errand has been finalized.
           readOnly: true
     SectionApprovals:
       type: object
@@ -14079,9 +13636,9 @@ components:
           - 3
     RpaContext:
       type: object
-      description: The context an RPA robot needs to act on an errand in Lifecare.
-        Fetched per queue item so personal numbers never persist in the Orchestrator
-        queue store; every read is recorded in the errand's event log.
+      description: The errand number and the household's personal numbers. Fetched
+        per process run so the personal numbers never become process variables; every
+        read is recorded in the errand's event log.
       properties:
         errandNumber:
           type: string
@@ -14093,7 +13650,7 @@ components:
           type: string
           description: "The applicant's personal number (12 characters, may contain\
             \ letters). Null when it could not be resolved — treat as an error on\
-            \ the robot side."
+            \ the caller's side."
           examples:
           - 19800101T001
         coApplicantPersonId:

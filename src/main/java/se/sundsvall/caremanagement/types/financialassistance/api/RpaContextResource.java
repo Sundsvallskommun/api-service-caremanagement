@@ -30,8 +30,8 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/rpa-context")
 @Tag(name = "Financial Assistance · RPA context",
-	description = "The context an RPA robot needs to act on an errand in Lifecare — the errand number and the household's personal numbers, "
-		+ "served on demand so they never persist in the Orchestrator queue store. Every read lands in the errand's event log.")
+	description = "The errand number and the household's personal numbers, served on demand to the process's beredning step "
+		+ "(prepare-income-basis) so they never become process variables. Every read lands in the errand's event log.")
 @ApiResponses(value = {
 	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
 		Problem.class, ConstraintViolationProblem.class
@@ -49,8 +49,8 @@ class RpaContextResource {
 
 	@GetMapping(produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read the RPA context for an errand",
-		description = "The robot's first call after picking up a queue item: resolves the errand number and the applicant's (and any "
-			+ "co-applicant's) personal number for the Lifecare lookup.",
+		description = "Read per run by the process's prepare-income-basis worker: resolves the errand number and the applicant's (and "
+			+ "any co-applicant's) personal number for the lookups. The path and name are kept from the retired RPA integration.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 		})

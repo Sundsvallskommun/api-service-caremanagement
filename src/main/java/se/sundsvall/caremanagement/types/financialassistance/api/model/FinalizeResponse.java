@@ -8,16 +8,17 @@ import java.util.Objects;
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 
 /**
- * The receipt of a finalize: the recorded decision, whether the process was resumed, the per-task RPA outcome, and the
- * communication channels echoed back so the Draken BFF can send the decision the way the caseworker asked.
+ * The receipt of a finalize: the recorded decision and payments, whether the process was resumed, payee warnings, and
+ * the communication channels echoed back so the Draken BFF can send the decision the way the caseworker asked.
  */
-@Schema(description = "The receipt of a finalize — decision id, process correlation, RPA tasks and the communication channels to act on.", accessMode = READ_ONLY)
+@Schema(description = "The receipt of a finalize — decision id, payment ids, process correlation, payee warnings and the communication channels to act on.", accessMode = READ_ONLY)
 public class FinalizeResponse {
 
 	@Schema(description = "Id of the PAYMENT decision recorded on the errand", examples = "cb20c51f-fcf3-42c0-b613-de563634a8ec")
 	private String decisionId;
 
-	@ArraySchema(arraySchema = @Schema(description = "The ids of the Payment rows the finalize created, in request order. The REGISTER_PAYMENT queue items carry these and nothing else - the robot reads each payment through GET .../payments/{paymentId}."),
+	@ArraySchema(arraySchema = @Schema(
+		description = "The ids of the Payment rows the finalize created, in request order. Draken's BFF reads each through GET .../payments/{paymentId}, registers it in Lifecare and reports back through .../payments/{paymentId}/lifecare-result."),
 		schema = @Schema(implementation = String.class, examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479"))
 	private List<String> paymentIds;
 
@@ -26,15 +27,12 @@ public class FinalizeResponse {
 		examples = "true")
 	private Boolean processMessageCorrelated;
 
-	@Schema(description = "The RPA write-back tasks the finalize step tried to enqueue, one per Lifecare step")
-	private List<RpaTask> rpaTasks;
-
 	@Schema(description = "The communication channels chosen — the frontend sends the decision through these")
 	private CommunicationChannels communication;
 
 	@ArraySchema(arraySchema = @Schema(
-		description = "Warnings about the payees the decision pays to — a payment cannot be registered in Lifecare against a payee that is not there yet. Present when a payment names a manually added payee whose ADD_PAYEE robot task has not reported SYNCED. Empty when every payee is in Lifecare. The finalize itself is not blocked by these; the decision, the payment rows and the queue items are created either way."),
-		schema = @Schema(implementation = String.class, examples = "Betalningsmottagaren \"Sundsvalls Hyresbostäder AB\" är inte upplagd i Lifecare ännu – utbetalningen kan inte registreras förrän roboten har lagt upp den."))
+		description = "Warnings about the payees the decision pays to — a payment cannot be registered in Lifecare against a payee that is not there yet. Present when a payment names a manually added payee careM has not seen reported SYNCED (payees/{payeeId}/lifecare-result). Empty when every payee is in Lifecare. The finalize itself is not blocked by these; the decision and the payment rows are created either way."),
+		schema = @Schema(implementation = String.class, examples = "Betalningsmottagaren \"Sundsvalls Hyresbostäder AB\" är inte upplagd i Lifecare ännu – utbetalningen kan inte registreras förrän den har lagts upp där."))
 	private List<String> payeeWarnings;
 
 	public static FinalizeResponse create() {
@@ -93,19 +91,6 @@ public class FinalizeResponse {
 		return this;
 	}
 
-	public List<RpaTask> getRpaTasks() {
-		return rpaTasks;
-	}
-
-	public void setRpaTasks(final List<RpaTask> rpaTasks) {
-		this.rpaTasks = rpaTasks;
-	}
-
-	public FinalizeResponse withRpaTasks(final List<RpaTask> rpaTasks) {
-		this.rpaTasks = rpaTasks;
-		return this;
-	}
-
 	public CommunicationChannels getCommunication() {
 		return communication;
 	}
@@ -125,12 +110,12 @@ public class FinalizeResponse {
 			return false;
 		final FinalizeResponse that = (FinalizeResponse) o;
 		return Objects.equals(decisionId, that.decisionId) && Objects.equals(paymentIds, that.paymentIds) && Objects.equals(processMessageCorrelated, that.processMessageCorrelated)
-			&& Objects.equals(rpaTasks, that.rpaTasks) && Objects.equals(communication, that.communication) && Objects.equals(payeeWarnings, that.payeeWarnings);
+			&& Objects.equals(communication, that.communication) && Objects.equals(payeeWarnings, that.payeeWarnings);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(decisionId, paymentIds, processMessageCorrelated, rpaTasks, communication, payeeWarnings);
+		return Objects.hash(decisionId, paymentIds, processMessageCorrelated, communication, payeeWarnings);
 	}
 
 	@Override
@@ -139,7 +124,6 @@ public class FinalizeResponse {
 			"decisionId='" + decisionId + '\'' +
 			", paymentIds=" + paymentIds +
 			", processMessageCorrelated=" + processMessageCorrelated +
-			", rpaTasks=" + rpaTasks +
 			", communication=" + communication +
 			", payeeWarnings=" + payeeWarnings +
 			'}';

@@ -14,7 +14,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 
 /**
- * One utbetalning the robot registers in Lifecare ({@code REGISTER_PAYMENT}). A granting decision may be paid out in
+ * One utbetalning to register in Lifecare (done by Draken's BFF). A granting decision may be paid out in
  * several payments (e.g. rent to the landlord and the rest to the applicant), so the finalize request carries a list.
  */
 @Schema(description = "One payment to register in Lifecare for a granting decision.")

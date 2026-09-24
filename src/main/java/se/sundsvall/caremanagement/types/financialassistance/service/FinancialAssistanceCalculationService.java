@@ -26,7 +26,6 @@ import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
-import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationResponse;
@@ -44,7 +43,6 @@ import static java.lang.Boolean.TRUE;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_NORMBERAKNING;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_AWAITING_DECISION;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_SUPPLEMENT_REQUESTED;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
@@ -68,8 +66,6 @@ public class FinancialAssistanceCalculationService {
 	private static final String CREATED_BY = "drakel";
 	private static final String VALUE_REVIEW_REQUIRED = "REVIEW_REQUIRED";
 	private static final String VALUE_OK = "OK";
-	/** SpecificContent key on the WRITE_NORMBERAKNING item — the same key the finalize WRITE_DECISION item uses. */
-	static final String KEY_HOUSEHOLD_SIZE_CHANGED = "householdSizeChanged";
 
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
@@ -84,13 +80,12 @@ public class FinancialAssistanceCalculationService {
 	private final PeriodRuleFeeder periodRuleFeeder;
 	private final MissingIncomeFeeder missingIncomeFeeder;
 	private final LateTransferFeeder lateTransferFeeder;
-	private final RpaService rpaService;
 	private final LifecareServiceIdService lifecareServiceIdService;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
-		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder, final RpaService rpaService,
+		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder,
 		final LifecareServiceIdService lifecareServiceIdService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
@@ -105,7 +100,6 @@ public class FinancialAssistanceCalculationService {
 		this.periodRuleFeeder = periodRuleFeeder;
 		this.missingIncomeFeeder = missingIncomeFeeder;
 		this.lateTransferFeeder = lateTransferFeeder;
-		this.rpaService = rpaService;
 		this.lifecareServiceIdService = lifecareServiceIdService;
 	}
 
@@ -345,11 +339,6 @@ public class FinancialAssistanceCalculationService {
 			lifecareServiceIdService.currentOrResolve(municipalityId, namespace, errandId));
 		final var calculationId = calculationService.commitEffective(municipalityId, applicant, applicationMonth, calculationHeader, incomes, expenses, persons);
 
-		// The calculation is now in Lifecare via the FamilyCare API; ask RPA to mirror the rest of the decision surface that
-		// has no
-		// FamilyCare endpoint. Best-effort — the Lifecare write already succeeded, so a queue hiccup must not fail the commit.
-		triggerRpaWrite(municipalityId, namespace, errandId);
-
 		return CalculationResponse.create()
 			.withCalculationId(calculationId)
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
@@ -388,7 +377,6 @@ public class FinancialAssistanceCalculationService {
 			lifecareServiceIdService.currentOrResolve(municipalityId, namespace, errandId));
 
 		final var calculationId = calculationService.commitEffective(municipalityId, applicant, applicationMonth, header, incomes, expenses, persons);
-		triggerRpaWrite(municipalityId, namespace, errandId);
 
 		return CalculationResponse.create().withCalculationId(calculationId);
 	}
@@ -422,24 +410,6 @@ public class FinancialAssistanceCalculationService {
 	public CalculationDraft patchDraftHeader(final String municipalityId, final String namespace, final String errandId, final NormHeaderInput input) {
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		return draftService.patchHeader(errandId, input);
-	}
-
-	/**
-	 * Enqueue the {@code WRITE_NORMBERAKNING} RPA item, swallowing any failure — RPA mirroring must never roll back a
-	 * successful Lifecare write. This is the <em>only</em> producer of that item: the finalize step deliberately does not
-	 * enqueue it, since the process reaches this commit right after the decision is correlated. The item carries the
-	 * {@code householdSizeChanged} flag finalize stored on the errand, so the robot knows to answer "Ja" when Lifecare asks
-	 * whether the changed gemensamma kostnader should be saved (absent before finalize → {@code false}).
-	 */
-	private void triggerRpaWrite(final String municipalityId, final String namespace, final String errandId) {
-		try {
-			final var householdSizeChanged = financialAssistanceRepository.findByErrandId(errandId)
-				.map(FinancialAssistanceEntity::getHouseholdSizeChanged)
-				.orElse(false);
-			rpaService.enqueue(municipalityId, namespace, errandId, WRITE_NORMBERAKNING, Map.of(KEY_HOUSEHOLD_SIZE_CHANGED, String.valueOf(householdSizeChanged)));
-		} catch (final Exception e) {
-			LOG.warn("RPA enqueue {} failed for errand {} — Lifecare write already committed, continuing", sanitizeForLogging(WRITE_NORMBERAKNING.name()), sanitizeForLogging(errandId), e);
-		}
 	}
 
 	private static String requireClassifiedIncomes(final CalculationRequest request) {

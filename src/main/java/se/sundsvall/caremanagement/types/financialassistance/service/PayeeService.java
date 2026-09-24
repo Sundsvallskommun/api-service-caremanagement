@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -15,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.PaymentView;
-import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeLifecareResult;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeOption;
@@ -36,7 +34,6 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.ADD_PAYEE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.PayeeMapper.toPayeeOption;
 
 /**
@@ -55,9 +52,9 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.mapp
  *
  * <p>
  * A manually added payee is a bridging state, not a second register: {@code POST} stores it so it is selectable now and
- * queues the {@code ADD_PAYEE} robot to put it into Lifecare, after which the ordinary payment history carries it. When
- * that has happened the manual row and its Lifecare twin collapse into one option, so the list does not grow a
- * duplicate.
+ * waits for whoever creates it in Lifecare to report back through {@code .../payees/{payeeId}/lifecare-result}, after
+ * which the ordinary payment history carries it. When that has happened the manual row and its Lifecare twin collapse
+ * into one option, so the list does not grow a duplicate.
  * </p>
  */
 @Service
@@ -76,27 +73,23 @@ public class PayeeService {
 	static final String OUTCOME_ALREADY_EXISTS = "ALREADY_EXISTS";
 	static final String OUTCOME_FAILED = "FAILED";
 
-	static final String KEY_PAYEE_ID = "payeeId";
-
 	static final String ERROR_DETAIL_REQUIRED = "detail is required when outcome is FAILED — it is Lifecare's own message, shown to the caseworker";
 	static final String ERROR_ALREADY_SYNCED = "Payee is already SYNCED in Lifecare and cannot be reported as FAILED";
 
-	static final String WARNING_PAYEE_PENDING = "Betalningsmottagaren \"%s\" är inte upplagd i Lifecare ännu – utbetalningen kan inte registreras förrän roboten har lagt upp den.";
+	static final String WARNING_PAYEE_PENDING = "Betalningsmottagaren \"%s\" är inte upplagd i Lifecare ännu – utbetalningen kan inte registreras förrän den har lagts upp där.";
 	static final String WARNING_PAYEE_FAILED = "Betalningsmottagaren \"%s\" kunde inte läggas upp i Lifecare: %s";
 
 	private final ErrandService errandService;
 	private final HouseholdPartyService householdPartyService;
 	private final LifecareCaseHistoryService lifecareCaseHistoryService;
 	private final FaPayeeRepository payeeRepository;
-	private final RpaService rpaService;
 
 	PayeeService(final ErrandService errandService, final HouseholdPartyService householdPartyService,
-		final LifecareCaseHistoryService lifecareCaseHistoryService, final FaPayeeRepository payeeRepository, final RpaService rpaService) {
+		final LifecareCaseHistoryService lifecareCaseHistoryService, final FaPayeeRepository payeeRepository) {
 		this.errandService = errandService;
 		this.householdPartyService = householdPartyService;
 		this.lifecareCaseHistoryService = lifecareCaseHistoryService;
 		this.payeeRepository = payeeRepository;
-		this.rpaService = rpaService;
 	}
 
 	/**
@@ -121,7 +114,7 @@ public class PayeeService {
 	}
 
 	/**
-	 * A single payee on an errand — the robot's second call. Scoped: throws {@code 404} when the errand or payee is
+	 * A single payee on an errand. Scoped: throws {@code 404} when the errand or payee is
 	 * missing.
 	 */
 	@Transactional(readOnly = true)
@@ -131,13 +124,9 @@ public class PayeeService {
 	}
 
 	/**
-	 * Add a payee by hand and queue the robot that puts it into Lifecare. An identical payee already on the errand is
-	 * reused rather than duplicated, so a double submit does not put the same account in the dropdown twice.
-	 *
-	 * <p>
-	 * The enqueue is guarded: a queue outage must not lose the caseworker's payee. The row stays {@code PENDING}, which
-	 * is exactly what it would be while waiting for the robot anyway, and re-posting the same payee queues it again.
-	 * </p>
+	 * Add a payee by hand. It starts {@code PENDING} until its Lifecare creation is reported back. An identical payee
+	 * already on the errand is reused rather than duplicated, so a double submit does not put the same account in the
+	 * dropdown twice.
 	 */
 	@Transactional
 	public PayeeOption create(final String municipalityId, final String namespace, final String errandId, final PayeeRequest request) {
@@ -152,13 +141,12 @@ public class PayeeService {
 			.withErrandId(errandId)
 			.withLifecareStatus(LIFECARE_STATUS_PENDING));
 
-		enqueueAddPayee(municipalityId, namespace, errandId, saved.getId());
 		return toPayeeOption(saved);
 	}
 
 	/**
-	 * Record the {@code ADD_PAYEE} robot's report. {@code ALREADY_EXISTS} counts as success — the robot is told not to
-	 * create a duplicate, and the caseworker's intent is satisfied either way. Re-posting the same outcome is
+	 * Record the report of the payee's creation in Lifecare. {@code ALREADY_EXISTS} counts as success — the writer does
+	 * not create a duplicate, and the caseworker's intent is satisfied either way. Re-posting the same outcome is
 	 * idempotent; reporting {@code FAILED} on a payee already {@code SYNCED} is a {@code 409}, because that would
 	 * silently un-sync a payee a payment may already be pointing at.
 	 */
@@ -196,7 +184,7 @@ public class PayeeService {
 
 	/**
 	 * The warnings finalize surfaces for the payees a decision actually pays to: a payment cannot be registered in
-	 * Lifecare against a payee the robot has not managed to create there.
+	 * Lifecare against a payee that has not been created there.
 	 *
 	 * <p>
 	 * Matched per payee rather than per errand on purpose — a payee the caseworker added and then did not use must not
@@ -205,9 +193,8 @@ public class PayeeService {
 	 * </p>
 	 *
 	 * <p>
-	 * Returns text, and finalize does not fail on it: the decision is the caseworker's, the payment rows and the queue
-	 * items are created either way, and a robot that cannot find the payee reports that on its own queue item. Blocking
-	 * here would strand a decision that is otherwise complete.
+	 * Returns text, and finalize does not fail on it: the decision is the caseworker's and the payment rows are created
+	 * either way. Blocking here would strand a decision that is otherwise complete.
 	 * </p>
 	 */
 	@Transactional(readOnly = true)
@@ -226,7 +213,7 @@ public class PayeeService {
 			.toList();
 	}
 
-	/** Lifecare's own message when the robot failed, otherwise "not created yet" — both are actionable, differently. */
+	/** Lifecare's own message when the creation failed, otherwise "not created yet" — both are actionable, differently. */
 	private static String warningText(final FaPayeeEntity entity) {
 		final var name = ofNullable(entity.getName()).orElse("");
 		if (LIFECARE_STATUS_FAILED.equals(entity.getLifecareStatus())) {
@@ -279,16 +266,4 @@ public class PayeeService {
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "Payee not found on errand"));
 	}
 
-	/**
-	 * Queue the robot, keyed per payee so the Orchestrator's dedup does not collapse a second payee on the same errand
-	 * into the first. Best-effort: the payee is already saved and usable locally, and losing the queue item must not
-	 * lose it.
-	 */
-	private void enqueueAddPayee(final String municipalityId, final String namespace, final String errandId, final String payeeId) {
-		try {
-			rpaService.enqueue(municipalityId, namespace, errandId, ADD_PAYEE, payeeId, Map.of(KEY_PAYEE_ID, payeeId));
-		} catch (final RuntimeException e) {
-			LOG.warn("Could not queue the ADD_PAYEE task for payee {} — the payee stays PENDING", payeeId, e);
-		}
-	}
 }

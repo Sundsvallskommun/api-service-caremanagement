@@ -11,7 +11,7 @@ import java.util.Objects;
  * Two provenances share the shape. A {@code LIFECARE} option is derived from the applicant's actual Lifecare payments
  * in the last 12 months and has no {@code id}: FamilyCare exposes no payee register, so a past payment is the only
  * evidence a payee exists. A {@code MANUAL} option is a row the caseworker added on this errand, and carries the
- * {@code lifecareStatus} of the {@code ADD_PAYEE} robot task that puts it into Lifecare.
+ * {@code lifecareStatus} of its creation in Lifecare.
  * </p>
  */
 @Schema(description = "A selectable betalningsmottagare — either derived from the applicant's Lifecare payment history or added by hand on the errand.")
@@ -37,7 +37,7 @@ public class PayeeOption {
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String source;
 
-	@Schema(description = "For a MANUAL option, how far the ADD_PAYEE robot task has got: PENDING until the robot reports back, then SYNCED or FAILED. Null for a LIFECARE option, which is in Lifecare by definition",
+	@Schema(description = "For a MANUAL option, how far its creation in Lifecare has got: PENDING until it is reported back, then SYNCED or FAILED. Null for a LIFECARE option, which is in Lifecare by definition",
 		examples = "PENDING",
 		allowableValues = {
 			"PENDING", "SYNCED", "FAILED"
@@ -45,7 +45,7 @@ public class PayeeOption {
 		accessMode = Schema.AccessMode.READ_ONLY)
 	private String lifecareStatus;
 
-	@Schema(description = "The payee id Lifecare gave the robot, when it reported one", examples = "44213", accessMode = Schema.AccessMode.READ_ONLY)
+	@Schema(description = "The payee id Lifecare gave, when the lifecare-result report carried one", examples = "44213", accessMode = Schema.AccessMode.READ_ONLY)
 	private String lifecarePayeeId;
 
 	@Schema(description = "Lifecare's own message when lifecareStatus is FAILED — shown to the caseworker as-is", examples = "Kontonummer har fel format", accessMode = Schema.AccessMode.READ_ONLY)

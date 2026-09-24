@@ -19,8 +19,8 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 	indexes = {
 		@Index(name = "idx_journal_entry_errand_id", columnList = "errand_id"),
 		@Index(name = "idx_journal_entry_entry_date_time", columnList = "entry_date_time"),
-		// Unique: lifecareId is the idempotency key the RPA supplements ingest upserts on — a duplicate pair would break
-		// the upsert lookup.
+		// Unique: at most one row per Lifecare id on an errand. Kept from the retired Lifecare mirror, whose rows V1_21
+		// removed.
 		@Index(name = "uq_journal_entry_errand_id_lifecare_id", columnList = "errand_id, lifecare_id", unique = true)
 	})
 public class JournalEntryEntity {

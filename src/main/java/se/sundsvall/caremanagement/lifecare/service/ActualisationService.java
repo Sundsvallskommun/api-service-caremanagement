@@ -16,7 +16,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
 import static java.util.Optional.ofNullable;
 
 /**
- * Creates a financial-assistance intake (actualisation) in Lifecare FamilyCare — the "API instead of RPA" case-intake
+ * Creates a financial-assistance intake (actualisation) in Lifecare FamilyCare through the API — the case-intake
  * step. Fetches the applicant's FamilyCare actualisation proposal, assembles the {@code PostAktualiseringsBodyRequest}
  * against it (via {@link ActualisationAssembler}), posts it, and returns the created actualisation id.
  *
@@ -123,8 +123,8 @@ public class ActualisationService {
 	}
 
 	/**
-	 * Upload a generated PDF and bind it to an existing Lifecare actualisation (the "API instead of RPA" document
-	 * write-back used by the conversation-archiving job). The file is sent as {@code application/pdf}.
+	 * Upload a generated PDF and bind it to an existing Lifecare actualisation (the document write-back used by the
+	 * conversation-archiving job). The file is sent as {@code application/pdf}.
 	 *
 	 * @param actualisationId    the Lifecare actualisation the document is bound to
 	 * @param fileName           the file name shown in Lifecare

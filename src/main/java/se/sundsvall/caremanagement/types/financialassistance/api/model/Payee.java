@@ -8,13 +8,13 @@ import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 
 /**
  * Who a payment goes to and how. Free-form on purpose: the payment methods and account formats are Lifecare's, and
- * the robot types them into the Lifecare payment form as given.
+ * they are entered into Lifecare as given.
  */
 @Schema(description = "The recipient of a payment and the payment method.")
 public class Payee {
 
 	@Schema(description = "The id of the payee row this came from, as GET .../payees returns it — send it whenever the caseworker "
-		+ "picked an entry from that list. It is what lets the REGISTER_PAYMENT robot be handed the payee's Lifecare id "
+		+ "picked an entry from that list. It is what lets Draken's BFF pick the payee by its Lifecare id "
 		+ "instead of matching on name and account number. Omit it for a payee that has no row: one derived from the "
 		+ "Lifecare payment history carries a null id in the list.", examples = "a1b2c3d4-0000-0000-0000-000000000001")
 	@ValidUuid(nullable = true)

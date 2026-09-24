@@ -15,8 +15,9 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 /**
  * A financial assistance payment (utbetalning) on an errand — a caseworker-drafted or Lifecare-mirrored payment row.
  * {@code status} is entirely server-managed: {@code DRAFT} for a row saved through this resource, and
- * {@code PENDING_REGISTRATION} for one a decision created. Queuing the robot to register it in Lifecare is a separate
- * {@code POST .../rpa-tasks} call with the {@code REGISTER_PAYMENT} action.
+ * {@code PENDING_REGISTRATION} for one a decision created. Draken's BFF registers the latter in Lifecare and reports
+ * the
+ * outcome through {@code POST .../payments/{paymentId}/lifecare-result}.
  */
 @Schema(description = "A financial assistance payment (utbetalning) on an errand.")
 public class Payment {
@@ -24,26 +25,26 @@ public class Payment {
 	@Schema(description = "The payment id", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", accessMode = Schema.AccessMode.READ_ONLY)
 	private String id;
 
-	@Schema(description = "Provenance: CASEWORKER for one authored in Draken, LIFECARE for one read out of Lifecare by RPA and "
-		+ "surfaced here on the errand.", examples = "CASEWORKER", allowableValues = {
+	@Schema(description = "Provenance: CASEWORKER for one authored in Draken, LIFECARE for one read out of Lifecare and "
+		+ "posted onto the errand.", examples = "CASEWORKER", allowableValues = {
 			"CASEWORKER", "LIFECARE"
 	})
 	private String source;
 
-	@Schema(description = "The payment's id in Lifecare once it exists there — null until RPA has registered a caseworker-authored "
-		+ "payment; always set for a LIFECARE-sourced one.", examples = "987654")
+	@Schema(description = "The payment's id in Lifecare once it exists there — null until a caseworker-authored payment has been "
+		+ "registered there; always set for a LIFECARE-sourced one.", examples = "987654")
 	private String lifecareId;
 
-	@Schema(description = "Lifecare's own message when the REGISTER_PAYMENT robot reported FAILED — shown to the caseworker as-is",
+	@Schema(description = "Lifecare's own message when the lifecare-result report said FAILED — shown to the caseworker as-is",
 		examples = "Betalningsmottagaren saknas i Lifecare",
 		accessMode = Schema.AccessMode.READ_ONLY)
 	private String lifecareDetail;
 
 	@Schema(description = "Server-managed lifecycle status. DRAFT for a caseworker's saved draft; PENDING_REGISTRATION for one a "
-		+ "decision created, waiting for the robot; REGISTERED once the REGISTER_PAYMENT robot has reported it into Lifecare "
+		+ "decision created, waiting to be registered in Lifecare; REGISTERED once Draken's BFF has reported it registered "
 		+ "(REGISTERED means it exists there, not that it has been paid out — whether it was effectuated is a separate "
-		+ "question, asked through POST .../financial-assistance/payment-status); FAILED when the robot could not register "
-		+ "it, with Lifecare's reason in lifecareDetail.", examples = "DRAFT", allowableValues = {
+		+ "question, asked through POST .../financial-assistance/payment-status); FAILED when it could not be registered, "
+		+ "with Lifecare's reason in lifecareDetail.", examples = "DRAFT", allowableValues = {
 			"DRAFT", "PENDING_REGISTRATION", "REGISTERED", "FAILED"
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String status;
@@ -81,9 +82,9 @@ public class Payment {
 		examples = "a1b2c3d4-0000-0000-0000-000000000001")
 	private String payeeId;
 
-	@Schema(description = "The payee's id in Lifecare, read from that payee row — set once the ADD_PAYEE robot has reported it back. "
-		+ "The REGISTER_PAYMENT robot uses it to pick the payee in Lifecare by id instead of matching on name and account "
-		+ "number. Null when the payee has no local row, or when the robot has not reported yet (lifecareStatus PENDING or "
+	@Schema(description = "The payee's id in Lifecare, read from that payee row — set once the payee's creation in Lifecare has been reported "
+		+ "back. Lets Draken's BFF pick the payee in Lifecare by id instead of matching on name and account number. Null "
+		+ "when the payee has no local row, or when its creation has not been reported yet (lifecareStatus PENDING or "
 		+ "FAILED on that payee).", examples = "44213", accessMode = Schema.AccessMode.READ_ONLY)
 	private String lifecarePayeeId;
 

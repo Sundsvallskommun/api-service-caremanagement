@@ -85,7 +85,7 @@ public class FinancialAssistanceView {
 		accessMode = READ_ONLY)
 	private CommunicationChannels communication;
 
-	@Schema(description = "Whether the caseworker changed the household size (gemensamma kostnader) when finalizing — forwarded to the RPA normberäkning write. Null until the errand has been finalized.", accessMode = READ_ONLY)
+	@Schema(description = "Whether the caseworker changed the household size (gemensamma kostnader) when finalizing. Null until the errand has been finalized.", accessMode = READ_ONLY)
 	private Boolean householdSizeChanged;
 
 	public static FinancialAssistanceView create() {

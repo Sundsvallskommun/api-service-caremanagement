@@ -4,8 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 
 /**
- * A jobbstimulans period on the errand, mirrored out of Lifecare by the RPA supplements ingest. Decision support for
- * the handläggare — the actual jobbstimulans amount on the normberäkning stays the caseworker's call.
+ * A jobbstimulans period on the errand, mirrored out of Lifecare before that mirroring was retired (no longer
+ * refreshed). Decision support for the handläggare — the actual jobbstimulans amount on the normberäkning stays the
+ * caseworker's call.
  */
 @Schema(description = "A jobbstimulans period on the errand, mirrored out of Lifecare.")
 public record JobStimulusPeriod(

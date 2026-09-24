@@ -3,7 +3,6 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,7 +14,6 @@ import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.PaymentView;
-import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeLifecareResult;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PayeeRequest;
@@ -27,13 +25,11 @@ import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.ADD_PAYEE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.PayeeService.LIFECARE_STATUS_FAILED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.PayeeService.LIFECARE_STATUS_PENDING;
 import static se.sundsvall.caremanagement.types.financialassistance.service.PayeeService.LIFECARE_STATUS_SYNCED;
@@ -60,9 +56,6 @@ class PayeeServiceTest {
 
 	@Mock
 	private FaPayeeRepository payeeRepositoryMock;
-
-	@Mock
-	private RpaService rpaServiceMock;
 
 	@InjectMocks
 	private PayeeService service;
@@ -189,7 +182,7 @@ class PayeeServiceTest {
 	}
 
 	@Test
-	void createStoresPendingAndQueuesTheRobotKeyedOnThePayee() {
+	void createStoresThePayeePending() {
 		when(payeeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 		when(payeeRepositoryMock.save(any(FaPayeeEntity.class))).thenAnswer(invocation -> ((FaPayeeEntity) invocation.getArgument(0)).withId(PAYEE_ID));
 
@@ -205,7 +198,6 @@ class PayeeServiceTest {
 		final var entity = ArgumentCaptor.forClass(FaPayeeEntity.class);
 		verify(payeeRepositoryMock).save(entity.capture());
 		assertThat(entity.getValue().getErrandId()).isEqualTo(ERRAND_ID);
-		verify(rpaServiceMock).enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, ADD_PAYEE, PAYEE_ID, Map.of("payeeId", PAYEE_ID));
 	}
 
 	@Test
@@ -222,22 +214,6 @@ class PayeeServiceTest {
 		assertThat(result.getId()).isEqualTo(PAYEE_ID);
 		assertThat(result.getLifecareStatus()).isEqualTo(LIFECARE_STATUS_SYNCED);
 		verify(payeeRepositoryMock, never()).save(any());
-		verifyNoInteractions(rpaServiceMock);
-	}
-
-	@Test
-	void createKeepsThePayeeWhenTheQueueIsDown() {
-		when(payeeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(payeeRepositoryMock.save(any(FaPayeeEntity.class))).thenAnswer(invocation -> ((FaPayeeEntity) invocation.getArgument(0)).withId(PAYEE_ID));
-		when(rpaServiceMock.enqueue(anyString(), anyString(), anyString(), any(), anyString(), any())).thenThrow(new IllegalStateException("Orchestrator down"));
-
-		final var result = service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, PayeeRequest.create()
-			.withName("Ny Mottagare")
-			.withPaymentMethod("Plusgiro")
-			.withAccountNumber("333"));
-
-		assertThat(result.getId()).isEqualTo(PAYEE_ID);
-		assertThat(result.getLifecareStatus()).isEqualTo(LIFECARE_STATUS_PENDING);
 	}
 
 	@Test

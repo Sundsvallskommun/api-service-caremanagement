@@ -27,11 +27,10 @@ import static org.springframework.util.StringUtils.hasText;
  *
  * <p>
  * A monitoring carries a {@code source} ({@code CASEWORKER}, the default, or {@code LIFECARE}) and an optional
- * {@code lifecareId}. Lifecare FamilyCare exposes no watch/reminder endpoint, so the mirror is driven out-of-band by
- * RPA: RPA surfaces a Lifecare watch/reminder by POSTing {@code source=LIFECARE} with its {@code lifecareId}
- * (idempotent per errand + lifecareId, so re-runs don't duplicate), and mirrors a caseworker monitoring the other way,
- * later stamping back the {@code lifecareId} it was given in Lifecare. The provenance fields are system/RPA-managed: an
- * update only touches them when supplied, so a caseworker edit never drops them.
+ * {@code lifecareId}. A Lifecare watch/reminder is posted with {@code source=LIFECARE} and its {@code lifecareId}
+ * (idempotent per errand + lifecareId, so re-posts don't duplicate); a caseworker monitoring is written into Lifecare
+ * by Draken's BFF, which can stamp back the {@code lifecareId} it got there. The provenance fields are
+ * system-managed: an update only touches them when supplied, so a caseworker edit never drops them.
  * </p>
  */
 @Service
@@ -73,8 +72,8 @@ public class MonitoringService {
 	}
 
 	/**
-	 * Create a monitoring on an errand — or, for a Lifecare-sourced one carrying a {@code lifecareId}, upsert it so RPA
-	 * re-runs don't duplicate. Scoped: throws {@code 404} when the errand is missing, {@code 400} on a bad date range.
+	 * Create a monitoring on an errand — or, for a Lifecare-sourced one carrying a {@code lifecareId}, upsert it so
+	 * re-posts don't duplicate. Scoped: throws {@code 404} when the errand is missing, {@code 400} on a bad date range.
 	 */
 	@Transactional
 	public Monitoring create(final String municipalityId, final String namespace, final String errandId, final MonitoringRequest request) {
@@ -113,7 +112,7 @@ public class MonitoringService {
 			.withStartDate(request.getStartDate())
 			.withEndDate(request.getEndDate())
 			.withCreatedBy(request.getCreatedBy());
-		// Provenance is system/RPA-managed: only overwrite when the request supplies it, so a caseworker edit keeps it.
+		// Provenance is system-managed: only overwrite when the request supplies it, so a caseworker edit keeps it.
 		if (hasText(request.getSource())) {
 			entity.setSource(resolveSource(request.getSource()));
 		}

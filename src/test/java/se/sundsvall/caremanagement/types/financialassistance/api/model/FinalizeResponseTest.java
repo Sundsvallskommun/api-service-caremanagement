@@ -26,20 +26,17 @@ class FinalizeResponseTest {
 
 	@Test
 	void testBuilderMethods() {
-		final var tasks = List.of(RpaTask.create().withAction("WRITE_DECISION").withEnqueued(true));
 		final var communication = CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false);
 
 		final var response = FinalizeResponse.create()
 			.withDecisionId("decision-1")
 			.withPaymentIds(List.of("pay-1"))
 			.withProcessMessageCorrelated(true)
-			.withRpaTasks(tasks)
 			.withCommunication(communication)
 			.withPayeeWarnings(List.of("Betalningsmottagaren saknas i Lifecare"));
 
 		assertThat(response.getDecisionId()).isEqualTo("decision-1");
 		assertThat(response.getProcessMessageCorrelated()).isTrue();
-		assertThat(response.getRpaTasks()).isEqualTo(tasks);
 		assertThat(response.getCommunication()).isEqualTo(communication);
 		assertThat(response.getPayeeWarnings()).containsExactly("Betalningsmottagaren saknas i Lifecare");
 		assertThat(response).hasNoNullFieldsOrProperties();

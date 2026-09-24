@@ -24,16 +24,15 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  * "Monitorings".
  *
  * <p>
- * {@code source} records provenance — {@code CASEWORKER} for one authored in Draken (RPA later mirrors it onto
- * the person in Lifecare), {@code LIFECARE} for one read out of Lifecare by RPA and surfaced here on the errand. The
- * FamilyCare API carries no bevakningar endpoint, so the sync is out-of-band: {@code lifecareId} is the monitoring's id
- * in Lifecare once it exists there — null for a caseworker row not yet mirrored, the idempotency key RPA upserts
- * LIFECARE rows on, and (by its presence) the "synced" marker.
+ * {@code source} records provenance — {@code CASEWORKER} for one authored in Draken (Draken's BFF writes it onto the
+ * person in Lifecare), {@code LIFECARE} for one read out of Lifecare and posted onto the errand. {@code lifecareId} is
+ * the monitoring's id in Lifecare once it exists there — null for a caseworker row not yet written there, the
+ * idempotency key LIFECARE rows are upserted on, and (by its presence) the "synced" marker.
  * </p>
  */
 @Entity
 @Table(name = "errand_financial_assistance_monitoring", indexes = {
-	// Unique: lifecareId is the idempotency key RPA upserts on — a duplicate pair would break the upsert lookup.
+	// Unique: lifecareId is the idempotency key LIFECARE rows are upserted on — a duplicate pair would break the lookup.
 	@Index(name = "uq_fa_monitoring_errand_id_lifecare_id", columnList = "errand_id, lifecare_id", unique = true)
 })
 public class FaMonitoringEntity {

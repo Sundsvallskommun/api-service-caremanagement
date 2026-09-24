@@ -80,9 +80,9 @@ class PayeeResource {
 
 	@PostMapping(consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Add a betalningsmottagare by hand",
-		description = "Stores the payee on the errand so it is selectable immediately, and queues the ADD_PAYEE robot task that puts it "
-			+ "into Lifecare. The payee starts as lifecareStatus=PENDING. An identical payee already on the errand is returned as-is "
-			+ "instead of being duplicated. A queue outage does not fail the call — the payee stays PENDING.",
+		description = "Stores the payee on the errand so it is selectable immediately. It is created in Lifecare by Draken's BFF, which "
+			+ "reports back through POST .../{payeeId}/lifecare-result; until then the payee is lifecareStatus=PENDING. An identical "
+			+ "payee already on the errand is returned as-is instead of being duplicated.",
 		responses = {
 			@ApiResponse(responseCode = "201", headers = @Header(name = LOCATION, schema = @Schema(type = "string")), description = "Successful operation", useReturnTypeSchema = true)
 		})
@@ -100,8 +100,8 @@ class PayeeResource {
 
 	@GetMapping(path = "/{payeeId}", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read a manually added betalningsmottagare",
-		description = "The ADD_PAYEE robot's second call: the payee's name, payment method, clearing and account number. The queue item "
-			+ "carries only the payeeId, so these never enter the Orchestrator queue store.",
+		description = "The payee's name, payment method, clearing and account number — read by Draken's BFF when it creates the "
+			+ "payee in Lifecare.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
 		})
@@ -115,8 +115,8 @@ class PayeeResource {
 	}
 
 	@PostMapping(path = "/{payeeId}/lifecare-result", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Report what the ADD_PAYEE robot did in Lifecare",
-		description = "ADDED and ALREADY_EXISTS both set lifecareStatus=SYNCED — the robot is told not to create a duplicate, and the "
+	@Operation(summary = "Report the outcome of creating the payee in Lifecare",
+		description = "ADDED and ALREADY_EXISTS both set lifecareStatus=SYNCED — a payee already in Lifecare is not created twice, and the "
 			+ "caseworker's intent is satisfied either way. FAILED requires detail, which must be Lifecare's own message since it is shown "
 			+ "to the caseworker as-is. Re-reporting the same outcome is idempotent; reporting FAILED on an already SYNCED payee is a 409.",
 		responses = {

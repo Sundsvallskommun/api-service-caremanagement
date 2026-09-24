@@ -6,31 +6,24 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
-import se.sundsvall.caremanagement.document.service.DocumentService;
-import se.sundsvall.caremanagement.journal.service.JournalEntryService;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
-import se.sundsvall.caremanagement.rpa.service.RpaAction;
-import se.sundsvall.caremanagement.rpa.service.RpaService;
-import se.sundsvall.caremanagement.rpa.service.RpaService.EnqueueOutcome;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizePayment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Monitoring;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentRequest;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.RpaTask;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
@@ -45,7 +38,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
@@ -56,13 +48,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
-import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.REGISTER_PAYMENT;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_DECISION;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_DOCUMENT;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_JOURNAL;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_MONITORING;
 
 @ExtendWith(MockitoExtension.class)
 class FinancialAssistanceFinalizeServiceTest {
@@ -72,7 +58,6 @@ class FinancialAssistanceFinalizeServiceTest {
 	private static final String ERRAND_ID = "errand-1";
 	private static final String DECIDED_BY = "jane02doe";
 	private static final String DECISION_ID = "decision-1";
-	private static final String REFERENCE_PREFIX = NAMESPACE + ":" + ERRAND_ID + ":";
 
 	@Mock
 	private ErrandService errandServiceMock;
@@ -87,28 +72,13 @@ class FinancialAssistanceFinalizeServiceTest {
 	private DecisionService decisionServiceMock;
 
 	@Mock
-	private RpaService rpaServiceMock;
-
-	@Mock
 	private ProcessService processServiceMock;
-
-	@Mock
-	private MonitoringService monitoringServiceMock;
-
-	@Mock
-	private JournalEntryService journalEntryServiceMock;
-
-	@Mock
-	private DocumentService documentServiceMock;
 
 	@Captor
 	private ArgumentCaptor<Decision> decisionCaptor;
 
 	@Captor
 	private ArgumentCaptor<FinancialAssistanceEntity> entityCaptor;
-
-	@Captor
-	private ArgumentCaptor<Map<String, String>> contentCaptor;
 
 	@Captor
 	private ArgumentCaptor<Map<String, Object>> variablesCaptor;
@@ -119,23 +89,8 @@ class FinancialAssistanceFinalizeServiceTest {
 	@Mock
 	private PayeeService payeeServiceMock;
 
-	/**
-	 * Built by hand rather than with {@code @InjectMocks}: the service takes a primitive {@code boolean}, which
-	 * Mockito cannot supply. {@code false} is the <strong>target</strong> contract — paymentId only. The transitional
-	 * form has its own test.
-	 */
+	@InjectMocks
 	private FinancialAssistanceFinalizeService service;
-
-	@BeforeEach
-	void setUp() {
-		service = finalizeService(false);
-	}
-
-	private FinancialAssistanceFinalizeService finalizeService(final boolean legacyPaymentFields) {
-		return new FinancialAssistanceFinalizeService(errandServiceMock, repositoryMock, sectionApprovalServiceMock,
-			decisionServiceMock, rpaServiceMock, processServiceMock, monitoringServiceMock, journalEntryServiceMock,
-			documentServiceMock, paymentServiceMock, payeeServiceMock, legacyPaymentFields);
-	}
 
 	private static FinalizeRequest grantingRequest() {
 		return FinalizeRequest.create()
@@ -176,37 +131,16 @@ class FinancialAssistanceFinalizeServiceTest {
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Decision.create().withDecisionType("RECOMMENDATION").withValue("OK")));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
 		when(decisionServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Decision.class))).thenReturn(DECISION_ID);
-		// The payment rows finalize creates; their ids are what the queue items carry.
+		// The payment rows finalize creates; their ids are returned on the receipt.
 		final var ids = new java.util.concurrent.atomic.AtomicInteger();
 		lenient().when(paymentServiceMock.createForDecision(eq(ERRAND_ID), any(PaymentRequest.class)))
 			.thenAnswer(invocation -> "pay-" + ids.incrementAndGet());
 		lenient().when(payeeServiceMock.unsyncedPayeeWarnings(eq(ERRAND_ID), anyList())).thenReturn(List.of());
 	}
 
-	private void rpaEnqueuesEverything() {
-		when(rpaServiceMock.enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(RpaAction.class), any(), anyMap()))
-			.thenAnswer(invocation -> {
-				final RpaAction action = invocation.getArgument(3);
-				final String suffix = invocation.getArgument(4);
-				final String reference;
-				if (suffix == null) {
-					reference = REFERENCE_PREFIX + action;
-				} else {
-					reference = REFERENCE_PREFIX + action + ":" + suffix;
-				}
-				return new EnqueueOutcome(reference, true);
-			});
-	}
-
 	@Test
-	void grantingFinalizeRecordsDecisionEnqueuesWriteBacksAndCorrelatesApproved() {
+	void grantingFinalizeRecordsDecisionAndPaymentsAndCorrelatesApproved() {
 		readyErrand();
-		rpaEnqueuesEverything();
-		when(monitoringServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
-			Monitoring.create().withId("m-lifecare").withSource("LIFECARE").withLifecareId("42"),
-			Monitoring.create().withId("m-local").withSource("CASEWORKER")));
-		when(journalEntryServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of("j-1", "j-2"));
-		when(documentServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
 
 		final var request = grantingRequest();
 		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY);
@@ -215,18 +149,12 @@ class FinancialAssistanceFinalizeServiceTest {
 		assertThat(response.getDecisionId()).isEqualTo(DECISION_ID);
 		assertThat(response.getProcessMessageCorrelated()).isTrue();
 		assertThat(response.getCommunication()).isEqualTo(request.getCommunication());
-		assertThat(response.getRpaTasks()).extracting(RpaTask::getAction, RpaTask::getReference, RpaTask::getEnqueued).containsExactly(
-			tuple("WRITE_DECISION", REFERENCE_PREFIX + "WRITE_DECISION", true),
-			tuple("REGISTER_PAYMENT", REFERENCE_PREFIX + "REGISTER_PAYMENT:pay-1", true),
-			tuple("REGISTER_PAYMENT", REFERENCE_PREFIX + "REGISTER_PAYMENT:pay-2", true),
-			tuple("WRITE_MONITORING", REFERENCE_PREFIX + "WRITE_MONITORING", true),
-			tuple("WRITE_JOURNAL", REFERENCE_PREFIX + "WRITE_JOURNAL", true));
 
 		// 1. The audit fields land on the entity before the decision is recorded
-		final var inOrder = inOrder(repositoryMock, decisionServiceMock, rpaServiceMock, processServiceMock);
+		final var inOrder = inOrder(repositoryMock, decisionServiceMock, paymentServiceMock, processServiceMock);
 		inOrder.verify(repositoryMock).save(entityCaptor.capture());
 		inOrder.verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
-		inOrder.verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(WRITE_DECISION), isNull(), anyMap());
+		inOrder.verify(paymentServiceMock, times(2)).createForDecision(eq(ERRAND_ID), any(PaymentRequest.class));
 		inOrder.verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), variablesCaptor.capture());
 
 		assertThat(entityCaptor.getValue())
@@ -247,39 +175,12 @@ class FinancialAssistanceFinalizeServiceTest {
 			.returns(DECIDED_BY, Decision::getCreatedBy);
 		assertThat(decisionCaptor.getValue().getAmount()).isEqualByComparingTo("7900.00");
 
-		// 3. The queue items: decision content, one per payment with its own suffix, id lists for the local rows only
-		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(WRITE_DECISION), isNull(), contentCaptor.capture());
-		assertThat(contentCaptor.getValue())
-			.containsEntry("decisionId", DECISION_ID)
-			.containsEntry("outcome", "BIFALL")
-			.containsEntry("reason", "Inkomster enligt SSBTEK")
-			.containsEntry("periodFrom", "2026-06-01")
-			.containsEntry("periodTo", "2026-06-30")
-			.containsEntry("amount", "7900.00")
-			.containsEntry("communicationChannels", "MINA_SIDOR,LETTER")
-			.containsEntry("householdSizeChanged", "true");
-
-		// The payment rows are created first, and the queue item carries nothing but the id — no payee name, clearing or
-		// account number ever reaches the Orchestrator queue store.
+		// 3. The payment rows, one per decided utbetalning, in request order
 		final ArgumentCaptor<PaymentRequest> paymentRequestCaptor = ArgumentCaptor.captor();
 		verify(paymentServiceMock, times(2)).createForDecision(eq(ERRAND_ID), paymentRequestCaptor.capture());
 		assertThat(paymentRequestCaptor.getAllValues()).extracting(PaymentRequest::getPayeeName, PaymentRequest::getApplicationMonth, PaymentRequest::getClearingNumber)
 			.containsExactly(tuple("Hyresvärden AB", "2026-06", null), tuple("Anna Andersson", "2026-06", "6000"));
 		assertThat(response.getPaymentIds()).containsExactly("pay-1", "pay-2");
-
-		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(REGISTER_PAYMENT), eq("pay-1"), contentCaptor.capture());
-		assertThat(contentCaptor.getValue()).containsOnly(java.util.Map.entry("paymentId", "pay-1"));
-		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(REGISTER_PAYMENT), eq("pay-2"), contentCaptor.capture());
-		assertThat(contentCaptor.getValue()).containsOnly(java.util.Map.entry("paymentId", "pay-2"));
-
-		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(WRITE_MONITORING), isNull(), contentCaptor.capture());
-		assertThat(contentCaptor.getValue()).containsEntry("monitoringIds", "m-local").containsEntry("count", "1");
-		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(WRITE_JOURNAL), isNull(), contentCaptor.capture());
-		assertThat(contentCaptor.getValue()).containsEntry("journalEntryIds", "j-1,j-2").containsEntry("count", "2");
-		verify(rpaServiceMock, never()).enqueue(any(), any(), any(), eq(WRITE_DOCUMENT), any(), anyMap());
-		// WRITE_NORMBERAKNING is the commit path's item, never finalize's
-		verify(rpaServiceMock, never()).enqueue(any(), any(), any(), eq(RpaAction.WRITE_NORMBERAKNING), any(), anyMap());
-		verify(rpaServiceMock, never()).enqueue(any(), any(), any());
 
 		// 4. The process resumes on the approved path; the status is left to the process
 		assertThat(variablesCaptor.getValue()).containsExactly(Map.entry("paymentDecision", "APPROVED"));
@@ -289,14 +190,9 @@ class FinancialAssistanceFinalizeServiceTest {
 	@Test
 	void rejectingFinalizeRecordsZeroAmountSkipsPaymentsAndCorrelatesRejected() {
 		readyErrand();
-		rpaEnqueuesEverything();
-		when(monitoringServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(journalEntryServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(documentServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of("d-1"));
 
 		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
 
-		assertThat(response.getRpaTasks()).extracting(RpaTask::getAction).containsExactly("WRITE_DECISION", "WRITE_DOCUMENT");
 		assertThat(response.getProcessMessageCorrelated()).isTrue();
 
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
@@ -309,54 +205,12 @@ class FinancialAssistanceFinalizeServiceTest {
 			.returns(false, FinancialAssistanceEntity::getNotifyMinaSidor)
 			.returns(true, FinancialAssistanceEntity::getNotifyDigitalMailbox)
 			.returns(false, FinancialAssistanceEntity::getNotifyLetter);
-		verify(rpaServiceMock, never()).enqueue(any(), any(), any(), eq(REGISTER_PAYMENT), any(), anyMap());
-	}
-
-	@Test
-	void rpaFailuresAreReportedNotThrown() {
-		readyErrand();
-		when(rpaServiceMock.enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(RpaAction.class), any(), anyMap()))
-			.thenThrow(Problem.valueOf(INTERNAL_SERVER_ERROR, "Orchestrator down"));
-		when(monitoringServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(journalEntryServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(documentServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-
-		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
-
-		assertThat(response.getDecisionId()).isEqualTo(DECISION_ID);
-		assertThat(response.getRpaTasks()).extracting(RpaTask::getAction, RpaTask::getReference, RpaTask::getEnqueued).containsExactly(
-			tuple("WRITE_DECISION", null, false),
-			tuple("REGISTER_PAYMENT", null, false),
-			tuple("REGISTER_PAYMENT", null, false));
-		// the process is still resumed — the decision is recorded, the robot steps can be re-enqueued
-		verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), anyMap());
-		assertThat(response.getProcessMessageCorrelated()).isTrue();
-	}
-
-	@Test
-	void rpaDisabledIsReportedAsNotEnqueuedWithReference() {
-		readyErrand();
-		when(rpaServiceMock.enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(RpaAction.class), any(), anyMap()))
-			.thenReturn(new EnqueueOutcome("ref", false));
-		when(monitoringServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(journalEntryServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(documentServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-
-		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
-
-		assertThat(response.getRpaTasks()).singleElement().satisfies(task -> {
-			assertThat(task.getReference()).isEqualTo("ref");
-			assertThat(task.getEnqueued()).isFalse();
-		});
+		verify(paymentServiceMock, never()).createForDecision(any(), any());
 	}
 
 	@Test
 	void correlationFailureIsReportedNotThrown() {
 		readyErrand();
-		rpaEnqueuesEverything();
-		when(monitoringServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(journalEntryServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(documentServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
 		doThrow(new IllegalStateException("engine down")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), anyMap());
 
 		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
@@ -372,10 +226,6 @@ class FinancialAssistanceFinalizeServiceTest {
 	@Test
 	void aFailedQueueFailsTheFinalizeRatherThanLosingTheMessage() {
 		readyErrand();
-		rpaEnqueuesEverything();
-		when(monitoringServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(journalEntryServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(documentServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
 		doThrow(new IllegalStateException("engine down")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), anyMap());
 		doThrow(new IllegalStateException("database down")).when(processServiceMock).queueMessageRetry(any(), any(), any(), any(), anyMap(), any());
 		final var request = rejectingRequest();
@@ -394,7 +244,7 @@ class FinancialAssistanceFinalizeServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
-		verifyNoInteractions(sectionApprovalServiceMock, decisionServiceMock, repositoryMock, rpaServiceMock, processServiceMock);
+		verifyNoInteractions(sectionApprovalServiceMock, decisionServiceMock, repositoryMock, processServiceMock);
 	}
 
 	@Test
@@ -407,7 +257,7 @@ class FinancialAssistanceFinalizeServiceTest {
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
 			.hasMessageContaining("X-Sent-By");
 
-		verifyNoInteractions(sectionApprovalServiceMock, decisionServiceMock, repositoryMock, rpaServiceMock, processServiceMock);
+		verifyNoInteractions(sectionApprovalServiceMock, decisionServiceMock, repositoryMock, processServiceMock);
 	}
 
 	@Test
@@ -420,7 +270,7 @@ class FinancialAssistanceFinalizeServiceTest {
 			.hasFieldOrPropertyWithValue("status", CONFLICT)
 			.hasMessage("Conflict: errand must be in status AWAITING_DECISION to be finalized, but is in status 'SUPPLEMENT_REQUESTED'");
 
-		verifyNoInteractions(sectionApprovalServiceMock, decisionServiceMock, repositoryMock, rpaServiceMock, processServiceMock);
+		verifyNoInteractions(sectionApprovalServiceMock, decisionServiceMock, repositoryMock, processServiceMock);
 	}
 
 	@Test
@@ -434,7 +284,7 @@ class FinancialAssistanceFinalizeServiceTest {
 			.hasFieldOrPropertyWithValue("status", CONFLICT)
 			.hasMessage("Conflict: all sections must be approved before the errand can be finalized - not approved: PAYMENT, DECISION");
 
-		verifyNoInteractions(decisionServiceMock, repositoryMock, rpaServiceMock, processServiceMock);
+		verifyNoInteractions(decisionServiceMock, repositoryMock, processServiceMock);
 	}
 
 	@Test
@@ -450,7 +300,7 @@ class FinancialAssistanceFinalizeServiceTest {
 			.hasMessageContaining("already carries a PAYMENT decision");
 
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
-		verifyNoInteractions(repositoryMock, rpaServiceMock, processServiceMock);
+		verifyNoInteractions(repositoryMock, processServiceMock);
 	}
 
 	@Test
@@ -467,47 +317,19 @@ class FinancialAssistanceFinalizeServiceTest {
 			.hasMessage("Not Found: No financial-assistance errand for id errand-1");
 
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
-		verifyNoInteractions(rpaServiceMock, processServiceMock);
-	}
-
-	@Test
-	void theLegacyQueueFormCarriesTheOldFieldsAlongsideThePaymentId() {
-		// The bridge for a robot that has not been released against the paymentId contract yet. It writes the payee's
-		// bank details to the queue, which is what the flag exists to switch off once the robot is over.
-		final var legacyService = finalizeService(true);
-		readyErrand();
-		rpaEnqueuesEverything();
-		when(monitoringServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(journalEntryServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-		when(documentServiceMock.listLocallyAuthoredIds(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
-
-		legacyService.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
-
-		verify(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(REGISTER_PAYMENT), eq("pay-1"), contentCaptor.capture());
-		assertThat(contentCaptor.getValue())
-			.containsEntry("paymentId", "pay-1")
-			.containsEntry("sequence", "1")
-			.containsEntry("paymentDate", "2026-06-25")
-			.containsEntry("amount", "6000.00")
-			.containsEntry("concernedMonth", "2026-06")
-			.containsEntry("payeeName", "Hyresvärden AB")
-			.containsEntry("paymentMethod", "BANKGIRO")
-			.containsEntry("accountNumber", "123-4567");
-		// the rows are still created, so switching the flag off later needs no data migration
-		verify(paymentServiceMock, times(2)).createForDecision(eq(ERRAND_ID), any(PaymentRequest.class));
+		verifyNoInteractions(processServiceMock);
 	}
 
 	@Test
 	void finalizeCarriesTheWarningForAPayeeThatIsNotInLifecareYet() {
 		readyErrand();
-		rpaEnqueuesEverything();
 		when(payeeServiceMock.unsyncedPayeeWarnings(eq(ERRAND_ID), anyList()))
 			.thenReturn(List.of("Betalningsmottagaren \"Hyresvärden AB\" är inte upplagd i Lifecare ännu"));
 
 		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
 
 		assertThat(response.getPayeeWarnings()).containsExactly("Betalningsmottagaren \"Hyresvärden AB\" är inte upplagd i Lifecare ännu");
-		// The warning is not a guard: the decision, the payment rows and the queue items all still happened.
+		// The warning is not a guard: the decision and the payment rows still happened.
 		assertThat(response.getDecisionId()).isEqualTo(DECISION_ID);
 		assertThat(response.getPaymentIds()).containsExactly("pay-1", "pay-2");
 		verify(paymentServiceMock, times(2)).createForDecision(eq(ERRAND_ID), any(PaymentRequest.class));
@@ -516,7 +338,6 @@ class FinancialAssistanceFinalizeServiceTest {
 	@Test
 	void finalizeMatchesTheWarningsAgainstThePayeesTheDecisionPaysTo() {
 		readyErrand();
-		rpaEnqueuesEverything();
 		final var payees = ArgumentCaptor.forClass(List.class);
 
 		service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
@@ -528,8 +349,6 @@ class FinancialAssistanceFinalizeServiceTest {
 	@Test
 	void finalizeWithoutPaymentsAsksAboutNoPayees() {
 		readyErrand();
-		when(rpaServiceMock.enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(RpaAction.class), any(), anyMap()))
-			.thenReturn(new RpaService.EnqueueOutcome("ref", true));
 		final var payees = ArgumentCaptor.forClass(List.class);
 
 		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);

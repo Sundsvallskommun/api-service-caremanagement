@@ -7,19 +7,19 @@ import java.util.Objects;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
 /**
- * The {@code ADD_PAYEE} robot's report on what happened when it tried to put a manually added payee into Lifecare.
+ * The report on what happened when a manually added payee was put into Lifecare.
  *
  * <p>
- * {@code ALREADY_EXISTS} counts as success: the robot is told not to create a duplicate when the payee is already on
+ * {@code ALREADY_EXISTS} counts as success: no duplicate is created when the payee is already on
  * the client, and the caseworker's intent — "this payee must be selectable in Lifecare" — is satisfied either way.
  * {@code detail} is required on {@code FAILED} and must be what Lifecare actually said, because that text is what the
  * caseworker gets to see.
  * </p>
  */
-@Schema(description = "The ADD_PAYEE robot's report on adding a payee to Lifecare.")
+@Schema(description = "The report on adding a payee to Lifecare.")
 public class PayeeLifecareResult {
 
-	@Schema(description = "What the robot ended up doing", examples = "ADDED", requiredMode = Schema.RequiredMode.REQUIRED, allowableValues = {
+	@Schema(description = "What ended up happening in Lifecare", examples = "ADDED", requiredMode = Schema.RequiredMode.REQUIRED, allowableValues = {
 		"ADDED", "ALREADY_EXISTS", "FAILED"
 	})
 	@NotBlank

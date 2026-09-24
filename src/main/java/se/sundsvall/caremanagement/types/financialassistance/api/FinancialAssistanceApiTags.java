@@ -22,7 +22,7 @@ final class FinancialAssistanceApiTags {
 	static final String APPROVALS = "Financial Assistance · Approvals";
 	static final String APPROVALS_DESC = "Caseworker approval state of the three financial assistance view sections (CALCULATION / PAYMENT / DECISION) — read all three, or set/withdraw one.";
 	static final String FINALIZE = "Financial Assistance · Finalize";
-	static final String FINALIZE_DESC = "Besluta och utbetala: record the caseworker's decision, hand the Lifecare write-backs (decision, payments, bevakningar, journal, documents) to RPA and resume the process. The calculation is committed to Lifecare by the process, and the decision is sent to the applicant by the frontend.";
+	static final String FINALIZE_DESC = "Besluta och utbetala: record the caseworker's decision and its payments and resume the process. The Lifecare writes (decision, payments, bevakningar, journal, documents) are made by Draken's BFF, which reports them back through the lifecare-result endpoints. The calculation is committed to Lifecare by the process, and the decision is sent to the applicant by the frontend.";
 	static final String PAYMENT = "Financial Assistance · Payment";
 	static final String PAYMENT_DESC = "Read whether the manual Lifecare payment for the applicant and application month has been effectuated. caremanagement makes no payment itself.";
 	static final String PROPOSALS = "Financial Assistance · Proposals";

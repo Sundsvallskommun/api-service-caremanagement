@@ -21,14 +21,14 @@ public class Monitoring {
 	@Schema(description = "The monitoring id", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", accessMode = Schema.AccessMode.READ_ONLY)
 	private String id;
 
-	@Schema(description = "Provenance: CASEWORKER for one authored in Draken (RPA mirrors it onto the person in Lifecare), "
-		+ "LIFECARE for one read out of Lifecare by RPA and surfaced here on the errand.", examples = "CASEWORKER", allowableValues = {
+	@Schema(description = "Provenance: CASEWORKER for one authored in Draken (Draken's BFF writes it onto the person in Lifecare), "
+		+ "LIFECARE for one read out of Lifecare and posted onto the errand.", examples = "CASEWORKER", allowableValues = {
 			"CASEWORKER", "LIFECARE"
 	})
 	private String source;
 
-	@Schema(description = "The monitoring's id in Lifecare once it exists there — null until RPA has mirrored a caseworker-authored "
-		+ "monitoring; always set for a LIFECARE-sourced one.", examples = "987654")
+	@Schema(description = "The monitoring's id in Lifecare once it exists there — null until a caseworker-authored monitoring has been "
+		+ "written there; always set for a LIFECARE-sourced one.", examples = "987654")
 	private String lifecareId;
 
 	@Schema(description = "Short headline for the monitoring", examples = "Follow up income details from CSN")

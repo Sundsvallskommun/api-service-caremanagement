@@ -8,8 +8,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME;
 
 /**
- * A document (formal case document) attached to an errand — the Lifecare document shape, captured so it can later be
- * RPA:ed into Lifecare.
+ * A document (formal case document) attached to an errand — the Lifecare document shape, captured so Draken's BFF can
+ * write it into Lifecare.
  */
 @Schema(description = "A document (formal case document) attached to an errand")
 public class Document {
@@ -20,10 +20,10 @@ public class Document {
 	@Schema(description = "Errand id this document belongs to")
 	private String errandId;
 
-	@Schema(description = "Provenance — CASEWORKER for a document authored in Draken, LIFECARE for one read out of Lifecare by RPA and mirrored onto the errand", examples = "CASEWORKER")
+	@Schema(description = "Provenance — CASEWORKER for a document authored in Draken, LIFECARE for one read out of Lifecare onto the errand", examples = "CASEWORKER")
 	private String source;
 
-	@Schema(description = "The document's id in Lifecare's document list — set on LIFECARE-sourced mirrors (the RPA upsert key)", examples = "27")
+	@Schema(description = "The document's id in Lifecare's document list — set on LIFECARE-sourced rows", examples = "27")
 	private String lifecareId;
 
 	@Schema(description = "Document type (Lifecare 'Typ'/Dokumenttyp). A municipality-configured value; see the metadata catalogue for a provisional set.", examples = "Brev")

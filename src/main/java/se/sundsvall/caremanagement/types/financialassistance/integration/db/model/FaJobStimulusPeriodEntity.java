@@ -16,9 +16,10 @@ import org.hibernate.annotations.UuidGenerator;
 import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 
 /**
- * A jobbstimulans period on an errand, mirrored out of Lifecare by the RPA supplements ingest. Lifecare's own
- * {@code jobStimulusId} is deliberately not stored: Lifecare deletes and recreates the whole period set on every save,
- * so its ids are one-shot — each delivery therefore replaces the errand's full period set instead of upserting rows.
+ * A jobbstimulans period on an errand, mirrored out of Lifecare before that mirroring was retired (2026-09-24); the
+ * stored periods are served as-is and no longer refreshed. Lifecare's own {@code jobStimulusId} was deliberately not
+ * stored: Lifecare deletes and recreates the whole period set on every save, so its ids are one-shot — each delivery
+ * therefore replaced the errand's full period set instead of upserting rows.
  * {@code role} says whose period it is (the applicant's or the co-applicant's).
  */
 @Entity

@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +24,6 @@ import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
-import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.DayCheckBasis;
@@ -48,14 +46,12 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_NORMBERAKNING;
 
 @ExtendWith(MockitoExtension.class)
 class FinancialAssistanceCalculationServiceTest {
@@ -105,9 +101,6 @@ class FinancialAssistanceCalculationServiceTest {
 	private LateTransferFeeder lateTransferFeederMock;
 
 	@Mock
-	private RpaService rpaServiceMock;
-
-	@Mock
 	private LifecareServiceIdService lifecareServiceIdServiceMock;
 
 	@InjectMocks
@@ -124,8 +117,6 @@ class FinancialAssistanceCalculationServiceTest {
 		when(draftServiceMock.livePersons(ERRAND_ID)).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
 		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(4712);
 		when(lifecareServiceIdServiceMock.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(2);
-		// finalize stored the household-size flag on the errand → the WRITE_NORMBERAKNING item forwards it to the robot
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withHouseholdSizeChanged(true)));
 
 		final var request = CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID)
@@ -136,7 +127,6 @@ class FinancialAssistanceCalculationServiceTest {
 		assertThat(response.getCalculationId()).isEqualTo(4712);
 		assertThat(response.getUnhandledIncomes()).containsExactly("Något (EJ_PA_LISTAN)");
 		assertThat(response.getChangeWarnings()).containsExactly("Bostadsbidrag: -23%");
-		verify(rpaServiceMock).enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, WRITE_NORMBERAKNING, Map.of("householdSizeChanged", "true"));
 
 		final ArgumentCaptor<List<EffectiveIncome>> incomeCaptor = ArgumentCaptor.captor();
 		final ArgumentCaptor<CalculationHeader> headerCaptor = ArgumentCaptor.forClass(CalculationHeader.class);
@@ -149,19 +139,6 @@ class FinancialAssistanceCalculationServiceTest {
 		});
 		// commit does not touch the errand status/recommendation — that is prepare's job
 		verifyNoInteractions(decisionServiceMock);
-	}
-
-	@Test
-	void commitSwallowsAnRpaFailureAfterTheLifecareWrite() {
-		final var month = YearMonth.of(2026, JUNE);
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(7)));
-		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(4712);
-		doThrow(new IllegalStateException("No RPA folder id")).when(rpaServiceMock).enqueue(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(WRITE_NORMBERAKNING), any());
-
-		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
-
-		assertThat(service.commitCalculation(MUNICIPALITY_ID, NAMESPACE, request).getCalculationId()).isEqualTo(4712);
 	}
 
 	@Test
@@ -187,7 +164,7 @@ class FinancialAssistanceCalculationServiceTest {
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
 		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-		verifyNoInteractions(citizenServiceMock, draftServiceMock, calculationServiceMock, rpaServiceMock);
+		verifyNoInteractions(citizenServiceMock, draftServiceMock, calculationServiceMock);
 	}
 
 	@Test
@@ -397,8 +374,6 @@ class FinancialAssistanceCalculationServiceTest {
 		final ArgumentCaptor<List<EffectiveIncome>> effectiveCaptor = ArgumentCaptor.captor();
 		verify(calculationServiceMock).commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), effectiveCaptor.capture(), any(), any());
 		assertThat(effectiveCaptor.getValue()).singleElement().satisfies(income -> assertThat(income.typeId()).isEqualTo(11));
-		// not finalized (no flag on the errand) → the robot is told the household size is unchanged
-		verify(rpaServiceMock).enqueue(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, WRITE_NORMBERAKNING, Map.of("householdSizeChanged", "false"));
 	}
 
 	@Test

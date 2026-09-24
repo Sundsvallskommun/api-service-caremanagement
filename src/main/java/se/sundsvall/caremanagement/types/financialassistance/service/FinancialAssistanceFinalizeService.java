@@ -2,28 +2,19 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
-import se.sundsvall.caremanagement.document.service.DocumentService;
-import se.sundsvall.caremanagement.journal.service.JournalEntryService;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
-import se.sundsvall.caremanagement.rpa.service.RpaAction;
-import se.sundsvall.caremanagement.rpa.service.RpaService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizePayment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeResponse;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Monitoring;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.RpaTask;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.dept44.problem.Problem;
@@ -33,26 +24,15 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.REGISTER_PAYMENT;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_DECISION;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_DOCUMENT;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_JOURNAL;
-import static se.sundsvall.caremanagement.rpa.service.RpaAction.WRITE_MONITORING;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_AWAITING_DECISION;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.outcomeCarriesAmount;
-import static se.sundsvall.caremanagement.types.financialassistance.service.MonitoringService.SOURCE_LIFECARE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessMessages.MESSAGE_PAYMENT_DECISION_RECEIVED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessMessages.PAYMENT_DECISION_APPROVED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessMessages.PAYMENT_DECISION_REJECTED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessMessages.VARIABLE_PAYMENT_DECISION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.DECISION_TYPE_PAYMENT;
-import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toDecisionContent;
-import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toIdListContent;
-import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toLegacyPaymentContent;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentDecision;
-import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentIdContent;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toPaymentRequest;
-import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.toRpaTask;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.updateEntity;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
@@ -63,30 +43,24 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * <ol>
  * <li>records the finalize choices on the errand (communication channels, household-size flag);</li>
  * <li>records the decision as a {@code PAYMENT} {@code Decision} row — the audit trail;</li>
- * <li>hands the Lifecare write-backs to RPA (the FamilyCare API has no write endpoints for these): the decision +
- * underrättelse, one item per utbetalning, and the locally authored bevakningar / journal entries / documents;</li>
+ * <li>records one {@code Payment} row per decided utbetalning, which Draken's BFF registers directly in Lifecare and
+ * acknowledges through {@code .../payments/{paymentId}/lifecare-result};</li>
  * <li>correlates {@code PaymentDecisionReceived} to the waiting process, which then commits the normberäkning to
  * Lifecare, sets the status and polls the payment.</li>
  * </ol>
  *
  * <p>
- * Steps 3 and 4 are best-effort and reported in the response rather than failing the call: the decision is recorded
- * either way, an RPA item that did not get queued can be re-enqueued through the RPA endpoint, and an uncorrelated
- * message is queued, in this transaction, for the scheduled process-message retry. {@code WRITE_NORMBERAKNING} is
- * <strong>not</strong> enqueued
- * here — the process's commit step ({@code FinancialAssistanceCalculationService#commitCalculation}) does that, and it
- * reads the household-size flag stored in step 1. Sending the decision to the applicant (step 6 of the verksamhet's
- * flow) is the Draken BFF's job; this service only records and echoes the chosen channels.
+ * Step 4 is best-effort and reported in the response rather than failing the call: the decision is recorded either
+ * way, and an uncorrelated message is queued, in this transaction, for the scheduled process-message retry. The
+ * Lifecare writes — decision, utbetalningar, bevakningar, journal, documents — are all the Draken BFF's, done directly
+ * against Lifecare; nothing is queued for a robot (RPA was retired 2026-09-24). Sending the decision to the applicant
+ * (step 6 of the verksamhet's flow) is the BFF's job too; this service only records and echoes the chosen channels.
  */
 @Service
 @Transactional
 public class FinancialAssistanceFinalizeService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(FinancialAssistanceFinalizeService.class);
-
-	static final String KEY_MONITORING_IDS = "monitoringIds";
-	static final String KEY_JOURNAL_ENTRY_IDS = "journalEntryIds";
-	static final String KEY_DOCUMENT_IDS = "documentIds";
 
 	private static final String ERROR_NO_TYPED_ERRAND = "No financial-assistance errand for id %s";
 	private static final String ERROR_NO_DECIDER = "a decision can only be recorded by an identified user - the X-Sent-By header is required";
@@ -98,32 +72,20 @@ public class FinancialAssistanceFinalizeService {
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final SectionApprovalService sectionApprovalService;
 	private final DecisionService decisionService;
-	private final RpaService rpaService;
 	private final ProcessService processService;
-	private final MonitoringService monitoringService;
-	private final JournalEntryService journalEntryService;
-	private final DocumentService documentService;
 	private final PaymentService paymentService;
 	private final PayeeService payeeService;
-	private final boolean legacyPaymentFields;
 
 	FinancialAssistanceFinalizeService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository,
-		final SectionApprovalService sectionApprovalService, final DecisionService decisionService, final RpaService rpaService,
-		final ProcessService processService, final MonitoringService monitoringService, final JournalEntryService journalEntryService,
-		final DocumentService documentService, final PaymentService paymentService, final PayeeService payeeService,
-		@Value("${financial-assistance.rpa.register-payment.legacy-fields:true}") final boolean legacyPaymentFields) {
+		final SectionApprovalService sectionApprovalService, final DecisionService decisionService,
+		final ProcessService processService, final PaymentService paymentService, final PayeeService payeeService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.sectionApprovalService = sectionApprovalService;
 		this.decisionService = decisionService;
-		this.rpaService = rpaService;
 		this.processService = processService;
-		this.monitoringService = monitoringService;
-		this.journalEntryService = journalEntryService;
-		this.documentService = documentService;
 		this.paymentService = paymentService;
 		this.payeeService = payeeService;
-		this.legacyPaymentFields = legacyPaymentFields;
 	}
 
 	/**
@@ -132,7 +94,7 @@ public class FinancialAssistanceFinalizeService {
 	 * {@code AWAITING_DECISION}, when a section is not approved, or when a {@code PAYMENT} decision already exists.
 	 *
 	 * @param  decidedBy the authenticated caseworker (X-Sent-By) — becomes the decision's {@code createdBy}
-	 * @return           the receipt: decision id, whether the process was resumed, the per-task RPA outcome, the channels
+	 * @return           the receipt: decision id, payment ids, whether the process was resumed, the channels
 	 */
 	public FinalizeResponse finalize(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request, final String decidedBy) {
 		final var errand = errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
@@ -143,30 +105,26 @@ public class FinancialAssistanceFinalizeService {
 		final var entity = financialAssistanceRepository.findByErrandId(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERROR_NO_TYPED_ERRAND.formatted(errandId)));
 
-		// 1. The audit fields first: the household-size flag must be on the errand before the process (resumed in step 4)
-		// runs the commit that enqueues WRITE_NORMBERAKNING.
+		// 1. The audit fields first (communication channels, household-size flag), so they are on the errand before the
+		// process is resumed in step 4.
 		financialAssistanceRepository.save(updateEntity(entity, request));
 
 		// 2. The decision row.
 		final var decisionId = decisionService.create(municipalityId, namespace, errandId,
 			toPaymentDecision(request, decidedBy, LocalDate.now(ZoneId.systemDefault())));
 
-		// 3. The payment rows, before the queue and inside this transaction: a row that fails to save has to roll the
-		// decision back with it, rather than leave an errand with a decision and no payments for the robot to find.
+		// 3. The payment rows, inside this transaction: a row that fails to save has to roll the decision back with it,
+		// rather than leave an errand with a decision and no payments for the BFF to register.
 		final var paymentIds = createPayments(errandId, request);
 
-		// 4. The Lifecare write-backs, each its own best-effort queue item.
-		final var rpaTasks = enqueueWriteBacks(municipalityId, namespace, errandId, request, decisionId, paymentIds);
-
-		// 4b. A payment cannot be registered in Lifecare against a payee that is not there yet, so the receipt says which
-		// of the decided payees the ADD_PAYEE robot has not reported SYNCED for. Deliberately a warning and not a guard:
-		// the decision is the caseworker's, and the rows and queue items above already exist — refusing here would strand
-		// an otherwise complete decision over something the robot may finish a second later.
+		// 3b. A payment cannot be registered in Lifecare against a payee that is not there yet, so the receipt says which
+		// of the decided payees careM has not seen reported SYNCED. Deliberately a warning and not a guard: the decision is
+		// the caseworker's, and refusing here would strand an otherwise complete decision.
 		final var payeeWarnings = payeeService.unsyncedPayeeWarnings(errandId, decidedPayees(request));
 		payeeWarnings.forEach(warning -> LOG.warn("Errand {} finalized with a payee that is not in Lifecare yet: {}",
 			sanitizeForLogging(errandId), sanitizeForLogging(warning)));
 
-		// 5. Resume the process.
+		// 4. Resume the process.
 		final var correlated = correlatePaymentDecision(municipalityId, namespace, errandId, request.getDecision().getOutcome());
 
 		LOG.info("Finalized errand {} with outcome {} (decision {}, process correlated: {})", sanitizeForLogging(errandId),
@@ -176,7 +134,6 @@ public class FinancialAssistanceFinalizeService {
 			.withDecisionId(decisionId)
 			.withPaymentIds(paymentIds)
 			.withProcessMessageCorrelated(correlated)
-			.withRpaTasks(rpaTasks)
 			.withCommunication(request.getCommunication())
 			.withPayeeWarnings(payeeWarnings);
 	}
@@ -225,34 +182,8 @@ public class FinancialAssistanceFinalizeService {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
-	// RPA write-backs
+	// Payments
 	// ------------------------------------------------------------------------------------------------------------------
-
-	/**
-	 * One queue item per Lifecare step: the decision, each payment (with its own reference suffix so the Orchestrator's
-	 * dedup does not collapse them), and the bevakningar / journal entries / documents authored here that Lifecare does
-	 * not have yet — the latter three only when there is anything to mirror.
-	 */
-	private List<RpaTask> enqueueWriteBacks(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request, final String decisionId,
-		final List<String> paymentIds) {
-
-		final var tasks = new ArrayList<RpaTask>();
-		tasks.add(enqueue(municipalityId, namespace, errandId, WRITE_DECISION, null, toDecisionContent(request, decisionId)));
-
-		// The reference suffix is the payment id rather than a position in the list, so the Orchestrator's dedup keys
-		// on the row the item is actually about.
-		final List<FinalizePayment> payments = ofNullable(request.getPayments()).orElseGet(List::of);
-		for (var index = 0; index < paymentIds.size(); index++) {
-			final var paymentId = paymentIds.get(index);
-			tasks.add(enqueue(municipalityId, namespace, errandId, REGISTER_PAYMENT, paymentId,
-				paymentContent(paymentId, payments.get(index), index + 1)));
-		}
-
-		enqueueIfAny(tasks, municipalityId, namespace, errandId, WRITE_MONITORING, KEY_MONITORING_IDS, () -> localMonitoringIds(municipalityId, namespace, errandId));
-		enqueueIfAny(tasks, municipalityId, namespace, errandId, WRITE_JOURNAL, KEY_JOURNAL_ENTRY_IDS, () -> journalEntryService.listLocallyAuthoredIds(municipalityId, namespace, errandId));
-		enqueueIfAny(tasks, municipalityId, namespace, errandId, WRITE_DOCUMENT, KEY_DOCUMENT_IDS, () -> documentService.listLocallyAuthoredIds(municipalityId, namespace, errandId));
-		return tasks;
-	}
 
 	/** The payees the decision actually pays to, in request order — what the payee warnings are matched against. */
 	private static List<Payee> decidedPayees(final FinalizeRequest request) {
@@ -262,63 +193,13 @@ public class FinancialAssistanceFinalizeService {
 	}
 
 	/**
-	 * The queue item for one payment. The contract is {@code paymentId} and nothing else — the robot reads the payment
-	 * through {@code GET .../payments/{paymentId}}, which is what keeps the payee's name, clearing and account number
-	 * out of the Orchestrator queue store.
-	 *
-	 * <p>
-	 * While {@code financial-assistance.rpa.register-payment.legacy-fields} is on, the pre-2026-09-21 fields ride
-	 * along as well, so a robot that has not been released against the new contract keeps working. That form does
-	 * write the personal data, so the flag is a bridge, not a setting: release the robot, set it to {@code false},
-	 * and the leak is closed without another careM deploy.
-	 * </p>
-	 */
-	private Map<String, String> paymentContent(final String paymentId, final FinalizePayment payment, final int sequence) {
-		if (legacyPaymentFields) {
-			return toLegacyPaymentContent(paymentId, payment, sequence);
-		}
-		return toPaymentIdContent(paymentId);
-	}
-
-	/**
-	 * Persist the decided payments and return their ids, in request order. Each becomes a {@code Payment} row the
-	 * robot — and Draken's payment tab — reads through the Payment resource; the queue item carries only the id.
+	 * Persist the decided payments and return their ids, in request order. Each becomes a {@code Payment} row Draken's
+	 * BFF registers in Lifecare and acknowledges back.
 	 */
 	private List<String> createPayments(final String errandId, final FinalizeRequest request) {
 		return ofNullable(request.getPayments()).orElseGet(List::<FinalizePayment>of).stream()
 			.map(payment -> paymentService.createForDecision(errandId, toPaymentRequest(payment)))
 			.toList();
-	}
-
-	/** The monitorings created or changed in Draken — everything not mirrored from Lifecare. */
-	private List<String> localMonitoringIds(final String municipalityId, final String namespace, final String errandId) {
-		return monitoringService.list(municipalityId, namespace, errandId).stream()
-			.filter(monitoring -> !SOURCE_LIFECARE.equals(monitoring.getSource()))
-			.map(Monitoring::getId)
-			.toList();
-	}
-
-	private void enqueueIfAny(final List<RpaTask> tasks, final String municipalityId, final String namespace, final String errandId, final RpaAction action, final String key,
-		final Supplier<List<String>> ids) {
-		final var values = ids.get();
-		if (!values.isEmpty()) {
-			tasks.add(enqueue(municipalityId, namespace, errandId, action, null, toIdListContent(key, values)));
-		}
-	}
-
-	/**
-	 * Enqueue one item, swallowing any failure into the receipt — the decision is already recorded, so a queue hiccup
-	 * must not fail the finalize; the caseworker sees {@code enqueued=false} and the step can be re-run via the RPA
-	 * endpoint.
-	 */
-	private RpaTask enqueue(final String municipalityId, final String namespace, final String errandId, final RpaAction action, final String referenceSuffix, final Map<String, String> content) {
-		try {
-			final var outcome = rpaService.enqueue(municipalityId, namespace, errandId, action, referenceSuffix, content);
-			return toRpaTask(action, outcome.reference(), outcome.enqueued());
-		} catch (final Exception e) {
-			LOG.warn("RPA enqueue {} failed for errand {} — decision already recorded, continuing", sanitizeForLogging(action.name()), sanitizeForLogging(errandId), e);
-			return toRpaTask(action, null, false);
-		}
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

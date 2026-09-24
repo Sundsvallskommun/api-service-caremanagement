@@ -18,12 +18,12 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_CO_APPLICANT;
 
 /**
- * Assembles the {@link RpaContext} a robot fetches as its first step after picking up a queue item: the errand's
- * human-readable number plus the household's personal numbers, resolved on demand via the citizen lookup. The partyId
- * per role is taken from the errand's stakeholders first (the canonical promoted identity — some intake flows leave the
- * application payload's person list empty) and falls back to the financial assistance person rows. Serving the personal
- * numbers here — instead of putting them in the queue item — keeps them out of the Orchestrator queue store and makes
- * every disclosure traceable in the errand's event log.
+ * Assembles the {@link RpaContext} the process's beredning step ({@code prepare-income-basis}) fetches per run: the
+ * errand's human-readable number plus the household's personal numbers, resolved on demand via the citizen lookup. The
+ * partyId per role is taken from the errand's stakeholders first (the canonical promoted identity — some intake flows
+ * leave the application payload's person list empty) and falls back to the financial assistance person rows. Serving
+ * the personal numbers here — instead of seeding them as process variables — keeps them out of the engine's variable
+ * store and makes every disclosure traceable in the errand's event log.
  */
 @Service
 public class RpaContextService {
@@ -41,7 +41,7 @@ public class RpaContextService {
 		this.citizenService = citizenService;
 	}
 
-	/** The robot context for an errand. Scoped: throws {@code 404} when the errand is missing here. */
+	/** The RPA context for an errand. Scoped: throws {@code 404} when the errand is missing here. */
 	@Transactional(readOnly = true)
 	public RpaContext get(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)

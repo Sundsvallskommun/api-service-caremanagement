@@ -12,7 +12,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.validation.Vali
  * decision sections were approved. The cross-field rules (payments iff the outcome carries an amount, amount required
  * with a granting outcome, period order) are enforced by {@link ValidFinalizeRequest}.
  */
-@Schema(description = "Finalize a financial assistance errand: record the decision, hand the Lifecare write-backs to RPA and resume the process.")
+@Schema(description = "Finalize a financial assistance errand: record the decision and its payments and resume the process.")
 @ValidFinalizeRequest
 public class FinalizeRequest {
 
@@ -31,7 +31,7 @@ public class FinalizeRequest {
 	private List<FinalizePayment> payments;
 
 	@Schema(
-		description = "Whether the caseworker changed the household size (gemensamma kostnader) in the calculation draft. When true the robot answers 'Ja' to Lifecare's prompt about saving the changed common costs when it writes the normberäkning. Defaults to false.",
+		description = "Whether the caseworker changed the household size (gemensamma kostnader) in the calculation draft. Recorded on the errand and served on the view. Defaults to false.",
 		examples = "false")
 	private Boolean householdSizeChanged;
 

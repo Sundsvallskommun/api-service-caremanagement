@@ -1,8 +1,6 @@
 package se.sundsvall.caremanagement.journal.service;
 
-import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Objects;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,7 +12,6 @@ import se.sundsvall.caremanagement.journal.integration.db.JournalEntryRepository
 import se.sundsvall.caremanagement.journal.integration.db.model.JournalEntryEntity;
 import se.sundsvall.caremanagement.journal.service.event.JournalEntryCreated;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
-import se.sundsvall.caremanagement.shared.MirrorOutcome;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.OffsetDateTime.now;
@@ -41,7 +38,6 @@ import static se.sundsvall.caremanagement.journal.integration.db.model.JournalEn
 public class JournalEntryService {
 
 	static final String SOURCE_CASEWORKER = "CASEWORKER";
-	static final String SOURCE_LIFECARE = "LIFECARE";
 
 	private final JournalEntryRepository journalEntryRepository;
 	private final ApplicationEventPublisher publisher;
@@ -81,22 +77,6 @@ public class JournalEntryService {
 			.toList();
 	}
 
-	/**
-	 * The ids of the errand's journal entries that were authored here rather than mirrored from Lifecare — everything
-	 * whose {@code source} is not {@code LIFECARE}. These are the entries Lifecare does not yet have, so they are what the
-	 * financial assistance finalize step hands to the RPA {@code WRITE_JOURNAL} item; the robot fetches each entry back
-	 * through the journal API by id. Exposed as ids only so the caller (another module) needs no journal model type.
-	 */
-	@Transactional(readOnly = true)
-	public List<String> listLocallyAuthoredIds(final String municipalityId, final String namespace, final String errandId) {
-		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
-
-		return journalEntryRepository.findByErrandIdOrderByEntryDateTimeDescCreatedDesc(errandId).stream()
-			.filter(entity -> !SOURCE_LIFECARE.equals(entity.getSource()))
-			.map(JournalEntryEntity::getId)
-			.toList();
-	}
-
 	@Transactional(readOnly = true)
 	public JournalEntry read(final String municipalityId, final String namespace, final String errandId, final String journalEntryId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
@@ -123,66 +103,6 @@ public class JournalEntryService {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		journalEntryRepository.delete(requireWorking(findForUpdate(errandId, journalEntryId), "deleted"));
-	}
-
-	/**
-	 * Upsert the mirror of a Lifecare journal entry onto the errand — the receiving end of the RPA supplements ingest.
-	 * The Lifecare record is authoritative: on the first delivery a {@code LOCKED} {@code LIFECARE}-sourced entry is
-	 * created (a mirror is never editable in Draken), and a re-delivery of the same {@code (errandId, lifecareId)}
-	 * refreshes the mirrored fields in place — deliberately bypassing the write-protection that guards caseworker
-	 * edits, since the update represents Lifecare's own state, not a user edit.
-	 */
-	public MirrorOutcome mirrorFromLifecare(final String municipalityId, final String namespace, final String errandId, final LifecareJournalEntryMirror mirror) {
-		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
-
-		final var timestamp = now(systemDefault()).truncatedTo(MILLIS);
-		final var existing = journalEntryRepository.findByErrandIdAndLifecareId(errandId, mirror.lifecareId());
-
-		final var entity = existing.orElseGet(() -> JournalEntryEntity.create()
-			.withErrandId(errandId)
-			.withSource(SOURCE_LIFECARE)
-			.withLifecareId(mirror.lifecareId())
-			.withStatus(LOCKED)
-			.withCreatedBy(mirror.createdBy())
-			.withCreated(timestamp)
-			.withLockedBy(mirror.createdBy())
-			.withLocked(timestamp));
-		final var changed = existing.isEmpty() || !mirrors(entity, mirror);
-		entity
-			.withType(mirror.type())
-			.withHeading(mirror.heading())
-			.withText(mirror.text())
-			.withEntryDateTime(mirror.entryDateTime());
-		if (existing.isPresent() && changed) {
-			entity
-				.withModifiedBy(mirror.createdBy())
-				.withModified(timestamp);
-		}
-
-		final var saved = journalEntryRepository.save(entity);
-		if (existing.isEmpty()) {
-			publisher.publishEvent(new JournalEntryCreated(saved.getId(), errandId, municipalityId, namespace, mirror.type(), mirror.createdBy(), timestamp));
-		}
-		return new MirrorOutcome(saved.getId(), existing.isEmpty(), changed);
-	}
-
-	/**
-	 * Does the stored mirror already carry exactly what Lifecare delivered? The robot re-delivers the same rows on every
-	 * fetch, and a re-delivery that changes nothing must not touch the modification stamp.
-	 */
-	private static boolean mirrors(final JournalEntryEntity entity, final LifecareJournalEntryMirror mirror) {
-		return Objects.equals(entity.getType(), mirror.type())
-			&& Objects.equals(entity.getHeading(), mirror.heading())
-			&& Objects.equals(entity.getText(), mirror.text())
-			&& sameMoment(entity.getEntryDateTime(), mirror.entryDateTime());
-	}
-
-	/** Instant equality — a stored timestamp read back from the database may carry a different offset than delivered. */
-	private static boolean sameMoment(final OffsetDateTime stored, final OffsetDateTime delivered) {
-		if (stored == null || delivered == null) {
-			return (stored == null) && (delivered == null);
-		}
-		return stored.toInstant().equals(delivered.toInstant());
 	}
 
 	/** Lock the entry (write-protection) — it becomes an immutable finalised record. Already-locked entries 409. */

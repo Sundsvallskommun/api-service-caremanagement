@@ -31,7 +31,7 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/job-stimulus-periods")
 @Tag(name = "Financial Assistance · Job stimulus periods",
-	description = "The errand's jobbstimulans periods, mirrored out of Lifecare by the RPA supplements delivery. Read-only — the set is replaced wholesale by each delivery.")
+	description = "The errand's jobbstimulans periods as stored — mirrored out of Lifecare before that mirroring was retired, and no longer refreshed. Read-only; kept until Draken reads jobbstimulans live from Lifecare.")
 @ApiResponses(value = {
 	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
 		Problem.class, ConstraintViolationProblem.class

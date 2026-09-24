@@ -22,8 +22,8 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 @Schema(description = "Request to create or replace a financial assistance payment on an errand.")
 public class PaymentRequest {
 
-	@Schema(description = "Provenance, defaults to CASEWORKER when omitted. RPA POSTs LIFECARE (with lifecareId) to surface a "
-		+ "payment read out of Lifecare onto the errand.", examples = "CASEWORKER", allowableValues = {
+	@Schema(description = "Provenance, defaults to CASEWORKER when omitted. LIFECARE (with lifecareId) posts a payment read out "
+		+ "of Lifecare onto the errand.", examples = "CASEWORKER", allowableValues = {
 			"CASEWORKER", "LIFECARE"
 	})
 	@OneOf(value = {
@@ -31,7 +31,7 @@ public class PaymentRequest {
 	}, nullable = true)
 	private String source;
 
-	@Schema(description = "The payment's id in Lifecare. Set by RPA when surfacing a LIFECARE-sourced payment (the idempotency key) "
+	@Schema(description = "The payment's id in Lifecare. Set when posting a LIFECARE-sourced payment (the idempotency key) "
 		+ "or when stamping back the id of a registered caseworker payment.", examples = "987654")
 	@Size(max = 64)
 	private String lifecareId;
@@ -67,7 +67,7 @@ public class PaymentRequest {
 	private boolean excludedFromPayment;
 
 	@Schema(description = "The id of the payee row on the errand this payment pays to, as GET .../payees returns it. Send it when "
-		+ "the caseworker picked an entry from that list — it is what lets the REGISTER_PAYMENT robot be handed the payee's "
+		+ "the caseworker picked an entry from that list — it is what lets Draken's BFF pick the payee by its "
 		+ "Lifecare id instead of matching on name and account number. Omit it for a payee derived from the Lifecare payment "
 		+ "history, which has no local row.", examples = "a1b2c3d4-0000-0000-0000-000000000001")
 	@ValidUuid(nullable = true)

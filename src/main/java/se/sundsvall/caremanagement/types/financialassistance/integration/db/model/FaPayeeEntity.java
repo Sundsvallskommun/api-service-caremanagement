@@ -21,13 +21,14 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  *
  * <p>
  * Deliberately errand-scoped rather than person-scoped, and deliberately not a payee register: the row is a bridging
- * state. The caseworker needs the payee in the dropdown now; the {@code ADD_PAYEE} robot writes it into Lifecare; from
+ * state. The caseworker needs the payee in the dropdown now; Draken's BFF creates it in Lifecare; from
  * the next återansökan onwards it arrives through the ordinary 12-month payment history like any other payee. Keying it
  * to the person would turn it into a second, competing register that nothing reconciles.
  * </p>
  *
  * <p>
- * {@code lifecareStatus} tracks that hand-over — {@code PENDING} until the robot reports back, then {@code SYNCED} or
+ * {@code lifecareStatus} tracks that hand-over — {@code PENDING} until the creation is reported back, then
+ * {@code SYNCED} or
  * {@code FAILED} with Lifecare's own message in {@code lifecareDetail}. A payment must not be registered against a
  * payee that is not in Lifecare, so the status is what finalize warns on.
  * </p>

@@ -63,15 +63,8 @@ spring:
             client-secret: ${INTEGRATION_FINANCIAL_AID_CLIENT_SECRET}
             authorization-grant-type: client_credentials
             provider: financial-aid
-          # The two opt-in integrations below keep placeholder credentials, so a deploy that uses neither needs no
-          # secrets for them: RPA is switched by integration.rpa.enabled (no Orchestrator, enabled=false, never used),
-          # and lifecare-integrator only wakes up when integration.lifecare-familycare.provider=integrator.
-          rpa:
-            client-id: ${INTEGRATION_RPA_CLIENT_ID:placeholder}
-            client-secret: ${INTEGRATION_RPA_CLIENT_SECRET:placeholder}
-            authorization-grant-type: client_credentials
-            provider: rpa
-            scope: OR.Queues, OR.Queues.Read, OR.Queues.Write
+          # The opt-in integration below keeps placeholder credentials, so a deploy that does not use it needs no
+          # secrets for it: lifecare-integrator only wakes up when integration.lifecare-familycare.provider=integrator.
           lifecare-integrator:
             client-id: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_ID:placeholder}
             client-secret: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_SECRET:placeholder}
@@ -86,8 +79,6 @@ spring:
             token-uri: ${INTEGRATION_CITIZEN_TOKEN_URI}
           financial-aid:
             token-uri: ${INTEGRATION_FINANCIAL_AID_TOKEN_URI}
-          rpa:
-            token-uri: ${INTEGRATION_RPA_TOKEN_URI:http://localhost/token}
           lifecare-integrator:
             token-uri: ${INTEGRATION_LIFECARE_INTEGRATOR_TOKEN_URI:http://localhost/token}
 #========================================
@@ -99,7 +90,7 @@ integration:
     read-timeout: 30
   # lifecare-integrator — the route to FamilyCare that works from outside the municipal network. Only used when
   # integration.lifecare-familycare.provider=integrator; the credentials carry placeholders so a deploy on the direct
-  # route needs none of them, the same pattern as RPA.
+  # route needs none of them.
   # read-timeout 90: an attachment upload onto a Lifecare actualisation measured 41.5 s against the live API on
   # 2026-09-23, and the integrator's own read timeout to FamilyCare is raised to 90 to match. The two are equal rather
   # than staggered, so a FamilyCare call that runs the full 90 s may be cut here first; raise this above the
@@ -152,23 +143,6 @@ integration:
     # financial-assistance.eligibility.require-open-case is turned on. Confirm the vocabulary against production
     # Lifecare before adding values here.
     open-actualisation-statuses: Aktuell
-  # UiPath Orchestrator RPA — enqueues financial assistance Lifecare write/fetch jobs as queue items (AddQueueItem). url is the
-  # Orchestrator base; queue is the single financial assistance queue (the action travels in the item SpecificContent); folderIds map
-  # municipalityId → Orchestrator folder (X-UIPATH-OrganizationUnitId). OAuth2 via the rpa registration above. Set
-  # enabled=false to make every enqueue a logged no-op (environments without an Orchestrator).
-    # enabled defaults false so an unconfigured deploy is a logged no-op (no errors); set INTEGRATION_RPA_ENABLED=true
-    # plus INTEGRATION_RPA_URL/_TOKEN_URI to actually enqueue (in Drakel: the internal WireMock host + its /token stub).
-  rpa:
-    url: ${INTEGRATION_RPA_URL:http://localhost}
-    enabled: ${INTEGRATION_RPA_ENABLED:false}
-    # RpaAction names that stay a logged no-op even while RPA is enabled — for handing one action at a time over to
-    # another executor (Draken's BFF writing to Lifecare directly). Comma-separated, e.g. WRITE_JOURNAL,WRITE_DOCUMENT.
-    disabled-actions: ${INTEGRATION_RPA_DISABLED_ACTIONS:}
-    queue: ${INTEGRATION_RPA_QUEUE:RakelEkonomisktBistand}
-    folder-ids:
-      2281: ${INTEGRATION_RPA_FOLDER_ID_2281:1}
-    connect-timeout: 5
-    read-timeout: 30
 #========================================
 # Notification settings
 #========================================
@@ -227,16 +201,6 @@ lifecare:
 # Financial assistance settings
 #========================================
 financial-assistance:
-  rpa:
-    register-payment:
-      # The REGISTER_PAYMENT queue item carries the paymentId and nothing else; the robot reads the payment through
-      # GET .../payments/{paymentId}, so the payee's name, clearing and account number never enter the Orchestrator
-      # queue store. This keeps the pre-2026-09-21 fields on the item as well, for the window where careM has been
-      # released and the robot has not.
-      # ⚠️ While it is true the personal data IS written to the queue. It is a bridge, not a setting: release the
-      # robot against the paymentId contract, set this to false, and the leak closes with no careM deploy. Default
-      # true so an unattended upgrade cannot break a running robot.
-      legacy-fields: ${FINANCIAL_ASSISTANCE_RPA_LEGACY_PAYMENT_FIELDS:true}
   eligibility:
     # Staleness bound for the per-month duplicate-application check: an ongoing caremanagement application older than
     # this no longer counts as "pågående" for the month it concerns. Whether an application blocks is decided by its

@@ -128,8 +128,8 @@ public class FinancialAssistanceEntity implements Auditable {
 	// Set by "Besluta och utbetala" (finalize) — null until the caseworker has finalized the errand.
 
 	/**
-	 * Whether the caseworker changed the household size (gemensamma kostnader) — forwarded to the WRITE_NORMBERAKNING
-	 * robot.
+	 * Whether the caseworker changed the household size (gemensamma kostnader) — recorded at finalize and served on the
+	 * view; careM itself does not act on it.
 	 */
 	@Column(name = "household_size_changed")
 	private Boolean householdSizeChanged;
