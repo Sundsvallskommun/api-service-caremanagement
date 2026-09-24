@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
+import se.sundsvall.caremanagement.types.financialassistance.configuration.DecisionProposalProperties;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaWarningRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaWarningEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -69,7 +70,7 @@ class DecisionProposalLifecareReadFailureTest {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(new ProposalBasisService.ProposalBasis(draft, household,
 			Optional.of(YearMonth.parse("2026-06")), Optional.of(new BigDecimal("6200")), Optional.of(new BigDecimal("6200"))));
 		service = new DecisionProposalService(proposalBasisServiceMock, lifecareCaseHistoryServiceMock, new WarningService(warningRepositoryMock),
-			new LifecareDecisionFilter(Set.of(2)));
+			new LifecareDecisionFilter(Set.of(2)), new DecisionProposalProperties(36));
 	}
 
 	private static DecisionView recoveryClaim() {

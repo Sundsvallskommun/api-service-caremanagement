@@ -226,3 +226,8 @@ financial-assistance:
     # decision proposal's previous decision is the newest of them that covers a period. A Lifecare catalogue id
     # (2 in Lifecare test), so override per environment. Comma-separated.
     decision-service-ids: ${FINANCIAL_ASSISTANCE_LIFECARE_DECISION_SERVICE_IDS:2}
+  decision-proposal:
+    # FLAG-05: how far back (months, ending at the application month) återkrav are looked for in Lifecare. Money owed
+    # back stays owed across many applications, so this reaches further than the previous-decision lookup; FamilyCare's
+    # decision read has no balance, so a claim since repaid or forgiven is shown too and the caseworker checks it.
+    recovery-claim-lookback-months: ${FINANCIAL_ASSISTANCE_RECOVERY_CLAIM_LOOKBACK_MONTHS:36}

@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
@@ -17,6 +18,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.DecisionProposal;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
+import se.sundsvall.caremanagement.types.financialassistance.configuration.DecisionProposalProperties;
 import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceSchema;
 import se.sundsvall.caremanagement.types.financialassistance.service.mapper.ProposalMapper;
 
@@ -51,6 +53,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Warn
  * </p>
  */
 @Service
+@EnableConfigurationProperties(DecisionProposalProperties.class)
 public class DecisionProposalService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(DecisionProposalService.class);
@@ -91,12 +94,6 @@ public class DecisionProposalService {
 		"Utan försörjningshinder");
 
 	static final String WARNING_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT = "Föregående beslut i Lifecare var förskott på förmån – kontrollera vilket beslut som ska fattas";
-	/**
-	 * How far back återkrav are looked for. Money owed back stays owed across many applications, so this reaches further
-	 * than the previous-decision lookup; FamilyCare's decision read has no balance, so an old claim that has since been
-	 * repaid or forgiven is shown too, and the caseworker checks the balance in Lifecare.
-	 */
-	static final int RECOVERY_CLAIM_LOOKBACK_MONTHS = 36;
 	static final String WARNING_RECOVERY_CLAIM = "Återkrav i Lifecare: %s, beslutat %s för %s – kontrollera återbetalning och saldo i Lifecare";
 	static final String WARNING_EXPENSE_PARTIALLY_REJECTED = "Ansökt belopp för %s är %s kronor, %s kronor har inte godkänts – delavslag";
 
@@ -104,13 +101,15 @@ public class DecisionProposalService {
 	private final LifecareCaseHistoryService lifecareCaseHistoryService;
 	private final WarningService warningService;
 	private final LifecareDecisionFilter lifecareDecisionFilter;
+	private final DecisionProposalProperties properties;
 
 	DecisionProposalService(final ProposalBasisService proposalBasisService, final LifecareCaseHistoryService lifecareCaseHistoryService,
-		final WarningService warningService, final LifecareDecisionFilter lifecareDecisionFilter) {
+		final WarningService warningService, final LifecareDecisionFilter lifecareDecisionFilter, final DecisionProposalProperties properties) {
 		this.proposalBasisService = proposalBasisService;
 		this.lifecareCaseHistoryService = lifecareCaseHistoryService;
 		this.warningService = warningService;
 		this.lifecareDecisionFilter = lifecareDecisionFilter;
+		this.properties = properties;
 	}
 
 	/**
@@ -245,13 +244,17 @@ public class DecisionProposalService {
 	}
 
 	/**
-	 * The applicant's återkrav in Lifecare — decisions mot återbetalning within {@value #RECOVERY_CLAIM_LOOKBACK_MONTHS}
-	 * months up to the application month, newest first. Best-effort, like the previous-decision read: a failed read
+	 * The applicant's återkrav in Lifecare — decisions mot återbetalning within
+	 * {@code financial-assistance.decision-proposal.recovery-claim-lookback-months} months up to the application month,
+	 * newest first. The lookback reaches further than the previous-decision lookup, since money owed back stays owed
+	 * across many applications; FamilyCare's decision read has no balance, so an old claim that has since been repaid or
+	 * forgiven is shown too, and the caseworker checks the balance in Lifecare. Best-effort, like the previous-decision
+	 * read: a failed read
 	 * shows no new claim rather than failing the proposal, and is reported as failed so the claims already shown stay.
 	 */
 	private LifecareRead<List<DecisionView>> recoveryClaims(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
-			return LifecareRead.succeeded(lifecareCaseHistoryService.listDecisions(municipalityId, applicant, applicationMonth.minusMonths(RECOVERY_CLAIM_LOOKBACK_MONTHS).atDay(1),
+			return LifecareRead.succeeded(lifecareCaseHistoryService.listDecisions(municipalityId, applicant, applicationMonth.minusMonths(properties.recoveryClaimLookbackMonths()).atDay(1),
 				applicationMonth.atEndOfMonth())
 				.stream()
 				.filter(ProposalMapper::isRecoveryClaim)

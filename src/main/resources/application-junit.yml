@@ -44,6 +44,8 @@ caremanagement:
 financial-assistance:
   eligibility:
     return-all-types: false
+  decision-proposal:
+    recovery-claim-lookback-months: 24
 spring:
   cache:
     type: none

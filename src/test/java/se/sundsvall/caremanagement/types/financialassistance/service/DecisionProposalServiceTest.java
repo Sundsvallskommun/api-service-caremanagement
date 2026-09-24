@@ -21,6 +21,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
+import se.sundsvall.caremanagement.types.financialassistance.configuration.DecisionProposalProperties;
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,6 +55,9 @@ class DecisionProposalServiceTest {
 
 	@Spy
 	private LifecareDecisionFilter lifecareDecisionFilterSpy = new LifecareDecisionFilter(Set.of(2));
+
+	@Spy
+	private DecisionProposalProperties properties = new DecisionProposalProperties(36);
 
 	@InjectMocks
 	private DecisionProposalService service;
@@ -164,6 +168,20 @@ class DecisionProposalServiceTest {
 				"Återkrav i Lifecare: EK Bistånd mot återbetalning 9 kap 1 § SoL, beslutat 2024-02-10 för 2024-02-01–2024-02-29, 3200 kronor – kontrollera återbetalning och saldo i Lifecare"),
 			tuple("RECOVERY_CLAIM", "recovery-claim:42",
 				"Återkrav i Lifecare: EK Återkrav, beslutat 2024-03-10 för okänd period – kontrollera återbetalning och saldo i Lifecare"));
+	}
+
+	@Test
+	void theRecoveryClaimLookbackIsConfigurable() {
+		final var configured = new DecisionProposalService(proposalBasisServiceMock, lifecareCaseHistoryServiceMock, warningServiceMock, lifecareDecisionFilterSpy,
+			new DecisionProposalProperties(24));
+		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30"))).thenReturn(List.of());
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2024-06-01"), LocalDate.parse("2026-06-30"))).thenReturn(List.of());
+
+		configured.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		// 24 months back from June 2026, not the default 36.
+		verify(lifecareCaseHistoryServiceMock).listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2024-06-01"), LocalDate.parse("2026-06-30"));
 	}
 
 	@Test
