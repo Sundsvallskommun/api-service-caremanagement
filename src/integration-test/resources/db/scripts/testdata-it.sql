@@ -20,6 +20,10 @@ INSERT INTO namespace_config (id, municipality_id, namespace, display_name, shor
     (1, '2281', 'MY_NAMESPACE',    'My namespace',    'MY',   '2025-01-01 12:00:00.000000', '2025-01-01 12:00:00.000000'),
     (2, '2281', 'OTHER_NAMESPACE', 'Other namespace', 'OTHR', '2025-01-01 12:00:00.000000', '2025-01-01 12:00:00.000000');
 
+-- User settings
+INSERT INTO user_settings (id, municipality_id, ad_account, ssbtek_open_in_new_window, created, modified) VALUES
+    (1, '2281', 'joe01doe', 0, '2025-01-01 12:00:00.000000', '2025-01-01 12:00:00.000000');
+
 -- Errands (slim envelope — category / contact_reason / parameters / externalTags all gone)
 INSERT INTO errand (id, municipality_id, namespace, title, type_slug, status, description, priority, reporter_user_id, assigned_user_id, process_definition_name, process_instance_id, created, modified, touched) VALUES
     ('11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'Errand one',   'TYPE-1', 'NEW', 'First errand description',  'HIGH',   'reporter1', 'assignee1', NULL,           NULL,             '2025-01-02 09:00:00.000000', '2025-01-02 09:00:00.000000', '2025-01-02 09:00:00.000000'),

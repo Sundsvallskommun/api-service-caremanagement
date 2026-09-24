@@ -42,6 +42,8 @@ tags:
   description: "The errand number and the household's personal numbers, served on\
     \ demand to the process's beredning step (prepare-income-basis) so they never\
     \ become process variables. Every read lands in the errand's event log."
+- name: User settings
+  description: Per-user (AD account) settings
 - name: Notifications
   description: User-facing notifications raised against an errand. Recipients (`ownerId`)
     acknowledge them when seen and mark them handled when acted on; expired ones are
@@ -381,6 +383,127 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/user-settings/{adAccount}:
+    get:
+      tags:
+      - User settings
+      summary: Read user settings
+      description: Returns the defaults for a user who has never saved any settings
+        — never 404.
+      operationId: readUserSettings
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: adAccount
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^[A-Za-z0-9._-]{1,64}$"
+        example: joe01doe
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+      - User settings
+      summary: Create or replace user settings
+      operationId: saveUserSettings
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: adAccount
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^[A-Za-z0-9._-]{1,64}$"
+        example: joe01doe
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSettings"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+      - User settings
+      summary: Reset user settings to the defaults
+      operationId: deleteUserSettings
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: adAccount
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^[A-Za-z0-9._-]{1,64}$"
+        example: joe01doe
+      responses:
+        "204":
+          description: Successful operation
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
         "500":
           description: Internal server error
           content:
@@ -8207,6 +8330,35 @@ components:
           format: date-time
           description: When the monitoring was last updated
           readOnly: true
+    UserSettings:
+      type: object
+      description: Settings for one user (AD account). A user who has never saved
+        any settings gets the defaults.
+      properties:
+        adAccount:
+          type: string
+          description: The user's AD account (lower case)
+          examples:
+          - joe01doe
+          readOnly: true
+        ssbtekOpenInNewWindow:
+          type: boolean
+          description: Whether the SSBTEK view opens in a new window. Defaults to
+            true.
+          examples:
+          - true
+        created:
+          type: string
+          format: date-time
+          description: "Created timestamp, null while the user runs on defaults"
+          readOnly: true
+        modified:
+          type: string
+          format: date-time
+          description: "Modified timestamp, null while the user runs on defaults"
+          readOnly: true
+      required:
+      - ssbtekOpenInNewWindow
     NamespaceConfig:
       type: object
       description: NamespaceConfig model

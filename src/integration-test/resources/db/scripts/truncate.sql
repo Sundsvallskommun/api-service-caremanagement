@@ -45,4 +45,5 @@ TRUNCATE TABLE errand_number_sequence;
 TRUNCATE TABLE lookup;
 TRUNCATE TABLE namespace_config;
 TRUNCATE TABLE shedlock;
+TRUNCATE TABLE user_settings;
 SET FOREIGN_KEY_CHECKS = 1;
