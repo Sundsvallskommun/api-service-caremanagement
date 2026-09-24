@@ -28,22 +28,22 @@ import java.util.stream.Stream;
  * </p>
  *
  * <p>
- * <strong>The eves (svar 2026-09-24 §1).</strong> Julafton and nyårsafton are not helgdagar in the law, and
- * verksamheten has decided they are ordinary ersättningsdagar: they count as non-red unless they fall on a weekend.
- * <strong>Midsommarafton</strong> (always a Friday) was not mentioned in the answer and is still open. Until it is
- * decided the calendar does not guess: {@link #nonRedDays(YearMonth)} returns the count under <em>both</em> readings
- * of midsommarafton and the table accepts a day count that matches either, so the warning is only raised when the
- * payment disagrees with both. Every month but June therefore gets one exact number.
+ * <strong>The eves (svar 2026-09-24 §1, kompletterande besked 2026-09-23).</strong> Julafton, nyårsafton and
+ * midsommarafton are not helgdagar in the law, and verksamheten has decided all three are ordinary ersättningsdagar:
+ * they count as non-red unless they fall on a weekend. The check was cross-read against a real payment for a whole
+ * June, which was for 22 days — June 2026's count with midsommarafton as an ordinary day.
  * </p>
  *
  * <p>
- * <strong>When the answer comes, change {@link #EVE_READING} — nothing else.</strong> {@link EveReading#EVE_IS_RED}
- * or {@link EveReading#EVE_IS_NOT_RED} makes both counts the same number, and the tolerance disappears everywhere.
+ * <strong>{@link #EVE_READING} records that decision.</strong> While midsommarafton was open it stood at
+ * {@link EveReading#UNDECIDED}, returning both readings so the table accepted either. Decided, both counts are the same
+ * number and the table's tolerance input ({@code ickeRodaDagarAlternativ}) simply repeats {@code ickeRodaDagar}; it is
+ * kept so the published DMN does not have to change with the answer.
  * </p>
  */
 final class NonRedDayCalendar {
 
-	/** How midsommarafton is read — the one eve verksamheten has not decided. */
+	/** How midsommarafton is read. */
 	enum EveReading {
 		/** Verksamheten has not decided: accept a day count that matches either reading. */
 		UNDECIDED,
@@ -54,16 +54,17 @@ final class NonRedDayCalendar {
 	}
 
 	/**
-	 * THE switch for the open midsommarafton question (verksamhetens svar 2026-09-24 §1, "Kvar att reda ut"). Set it to
-	 * the answer once it is given.
+	 * Midsommarafton is an ersättningsdag: verksamhetens kompletterande besked 2026-09-23, recorded in svar 2026-09-24
+	 * §1.
 	 */
-	static final EveReading EVE_READING = EveReading.UNDECIDED;
+	static final EveReading EVE_READING = EveReading.EVE_IS_NOT_RED;
 
 	/**
 	 * The non-red day counts a payment's day count is accepted against.
 	 *
 	 * @param count            the count with midsommarafton as an ordinary day, or the decided reading's count
-	 * @param alternativeCount the count with midsommarafton as a red day, or the decided reading's count again
+	 * @param alternativeCount the count with midsommarafton as a red day while undecided, or the decided reading's count
+	 *                         again
 	 */
 	record NonRedDays(int count, int alternativeCount) {}
 

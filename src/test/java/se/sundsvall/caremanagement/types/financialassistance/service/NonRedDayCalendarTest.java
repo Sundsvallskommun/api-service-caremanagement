@@ -81,11 +81,12 @@ class NonRedDayCalendarTest {
 	}
 
 	@Test
-	void theSwitchIsStillUndecided() {
-		// Fails on purpose the day someone flips EVE_READING, so the verksamhet's answer is recorded in the tests too.
-		assertThat(NonRedDayCalendar.EVE_READING).isEqualTo(UNDECIDED);
-		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, 6))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 21));
-		// Julafton and nyårsafton are decided as ersättningsdagar: December has one exact count.
+	void theSwitchRecordsThatMidsommaraftonIsAnErsattningsdag() {
+		// Verksamhetens besked 2026-09-23: midsommarafton is not red. A real payment for a whole June was for 22 days.
+		assertThat(NonRedDayCalendar.EVE_READING).isEqualTo(EVE_IS_NOT_RED);
+		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, 6))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
+		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2025, 6))).isEqualTo(new NonRedDayCalendar.NonRedDays(20, 20));
+		// Julafton and nyårsafton are ersättningsdagar too (svar 2026-09-24): December has one exact count.
 		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, 12))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
 	}
 

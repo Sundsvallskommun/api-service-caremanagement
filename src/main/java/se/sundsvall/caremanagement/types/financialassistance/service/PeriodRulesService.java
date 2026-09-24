@@ -73,9 +73,8 @@ public class PeriodRulesService {
 	 *                              without a payment
 	 * @param days                  the days the payment is for ({@code uttagnaDagar}), possibly a half day
 	 * @param nonRedDays            the non-red days of the covered month ({@code ickeRodaDagar})
-	 * @param nonRedDaysAlternative the same under the other, still open, midsommarafton reading
-	 *                              ({@code ickeRodaDagarAlternativ}); equal
-	 *                              to {@code nonRedDays} once verksamheten has answered, see {@link NonRedDayCalendar}
+	 * @param nonRedDaysAlternative the tolerance input ({@code ickeRodaDagarAlternativ}); equal to {@code nonRedDays}
+	 *                              since verksamheten decided midsommarafton, see {@link NonRedDayCalendar}
 	 */
 	public record DayCheck(Boolean economicDecision, Boolean allDaysConsumed, boolean paymentFound, Boolean periodReadable,
 		BigDecimal days, Integer nonRedDays, Integer nonRedDaysAlternative) {}

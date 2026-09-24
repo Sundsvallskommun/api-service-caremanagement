@@ -141,15 +141,15 @@ class PeriodRuleFeederTest {
 	}
 
 	@Test
-	void aMonthWithMidsummerEveSendsBothReadings() {
+	void midsommaraftonIsAnErsattningsdag() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(PeriodVerdict.none());
 		final var payment = control(dayBenefit(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30), BigDecimal.valueOf(22)));
 
 		feeder.periodWarnings(MUNICIPALITY_ID, YearMonth.of(2026, 7), List.of(payment),
 			DayCheckBasis.create().withEconomicDecisionPeriods(List.of(period(LocalDate.of(2026, 6, 1), null))).withAllDaysConsumed(false));
 
-		// June 2026: 22 non-red days, 21 with midsommarafton (Friday 19th) red - the one eve verksamheten has not decided.
-		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(22), 22, 21));
+		// June 2026: 22 non-red days with midsommarafton (Friday 19th) an ordinary day - decided 2026-09-23, no tolerance left.
+		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(22), 22, 22));
 	}
 
 	@Test
