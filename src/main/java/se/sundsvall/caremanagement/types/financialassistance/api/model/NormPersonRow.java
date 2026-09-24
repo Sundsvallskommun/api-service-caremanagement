@@ -72,9 +72,6 @@ public class NormPersonRow {
 		accessMode = Schema.AccessMode.READ_ONLY)
 	private BigDecimal amount;
 
-	@Schema(description = "The job stimulus amount applied to the member", examples = "1000.00")
-	private BigDecimal jobStimulusAmount;
-
 	@Schema(description = "Whether the row is soft-deleted (excluded from the calculation, not resurrected by the daily refresh)", accessMode = Schema.AccessMode.READ_ONLY)
 	private boolean deleted;
 
@@ -288,19 +285,6 @@ public class NormPersonRow {
 		return this;
 	}
 
-	public BigDecimal getJobStimulusAmount() {
-		return jobStimulusAmount;
-	}
-
-	public void setJobStimulusAmount(final BigDecimal jobStimulusAmount) {
-		this.jobStimulusAmount = jobStimulusAmount;
-	}
-
-	public NormPersonRow withJobStimulusAmount(final BigDecimal jobStimulusAmount) {
-		this.jobStimulusAmount = jobStimulusAmount;
-		return this;
-	}
-
 	public boolean isDeleted() {
 		return deleted;
 	}
@@ -363,7 +347,7 @@ public class NormPersonRow {
 			&& Objects.equals(roleDisplayName, that.roleDisplayName) && Objects.equals(name, that.name)
 			&& Objects.equals(processDays, that.processDays) && Objects.equals(caseworkerDays, that.caseworkerDays) && Objects.equals(effectiveDays, that.effectiveDays)
 			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
-			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(amount, that.amount) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount)
+			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(amount, that.amount)
 			&& Objects.equals(note, that.note)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
@@ -371,7 +355,7 @@ public class NormPersonRow {
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, origin, position, partyId, role, roleDisplayName, name, processDays, caseworkerDays, effectiveDays, included, deviationFromDate, deviationToDate, normInterval,
-			amount, jobStimulusAmount, deleted, note, created, updated);
+			amount, deleted, note, created, updated);
 	}
 
 	@Override
@@ -392,7 +376,6 @@ public class NormPersonRow {
 			", deviationToDate=" + deviationToDate +
 			", normInterval='" + normInterval + '\'' +
 			", amount=" + amount +
-			", jobStimulusAmount=" + jobStimulusAmount +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +
 			", created=" + created +

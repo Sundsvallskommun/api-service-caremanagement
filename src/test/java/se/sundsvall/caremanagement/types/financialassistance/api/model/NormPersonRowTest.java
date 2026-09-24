@@ -56,7 +56,6 @@ class NormPersonRowTest {
 		final var deviationToDate = LocalDate.of(2026, JUNE, 15);
 		final var normInterval = "MONTH";
 		final var amount = BigDecimal.valueOf(1431.00);
-		final var jobStimulusAmount = BigDecimal.valueOf(1000.00);
 		final var deleted = true;
 		final var note = "note";
 		final var created = now();
@@ -78,7 +77,6 @@ class NormPersonRowTest {
 			.withDeviationToDate(deviationToDate)
 			.withNormInterval(normInterval)
 			.withAmount(amount)
-			.withJobStimulusAmount(jobStimulusAmount)
 			.withDeleted(deleted)
 			.withNote(note)
 			.withCreated(created)
@@ -100,7 +98,6 @@ class NormPersonRowTest {
 		assertThat(result.getDeviationToDate()).isEqualTo(deviationToDate);
 		assertThat(result.getNormInterval()).isEqualTo(normInterval);
 		assertThat(result.getAmount()).isEqualTo(amount);
-		assertThat(result.getJobStimulusAmount()).isEqualTo(jobStimulusAmount);
 		assertThat(result.isDeleted()).isEqualTo(deleted);
 		assertThat(result.getNote()).isEqualTo(note);
 		assertThat(result.getCreated()).isEqualTo(created);

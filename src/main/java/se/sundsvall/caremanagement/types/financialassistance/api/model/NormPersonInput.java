@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -46,9 +45,6 @@ public class NormPersonInput {
 	@Schema(description = "The norm interval applied to the member", examples = "4-6 år")
 	@Size(max = 64)
 	private String normInterval;
-
-	@Schema(description = "The job stimulus amount applied to the member", examples = "1000.00")
-	private BigDecimal jobStimulusAmount;
 
 	@Schema(description = "Free-text note", examples = "Justerat efter inlämnat underlag")
 	private String note;
@@ -161,19 +157,6 @@ public class NormPersonInput {
 		return this;
 	}
 
-	public BigDecimal getJobStimulusAmount() {
-		return jobStimulusAmount;
-	}
-
-	public void setJobStimulusAmount(final BigDecimal jobStimulusAmount) {
-		this.jobStimulusAmount = jobStimulusAmount;
-	}
-
-	public NormPersonInput withJobStimulusAmount(final BigDecimal jobStimulusAmount) {
-		this.jobStimulusAmount = jobStimulusAmount;
-		return this;
-	}
-
 	public String getNote() {
 		return note;
 	}
@@ -195,12 +178,12 @@ public class NormPersonInput {
 		return Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
 			&& Objects.equals(caseworkerDays, that.caseworkerDays) && Objects.equals(included, that.included) && Objects.equals(deviationFromDate, that.deviationFromDate)
 			&& Objects.equals(deviationToDate, that.deviationToDate) && Objects.equals(normInterval, that.normInterval)
-			&& Objects.equals(jobStimulusAmount, that.jobStimulusAmount) && Objects.equals(note, that.note);
+			&& Objects.equals(note, that.note);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(partyId, role, name, caseworkerDays, included, deviationFromDate, deviationToDate, normInterval, jobStimulusAmount, note);
+		return Objects.hash(partyId, role, name, caseworkerDays, included, deviationFromDate, deviationToDate, normInterval, note);
 	}
 
 	@Override
@@ -214,7 +197,6 @@ public class NormPersonInput {
 			", deviationFromDate=" + deviationFromDate +
 			", deviationToDate=" + deviationToDate +
 			", normInterval='" + normInterval + '\'' +
-			", jobStimulusAmount=" + jobStimulusAmount +
 			", note='" + note + '\'' +
 			'}';
 	}

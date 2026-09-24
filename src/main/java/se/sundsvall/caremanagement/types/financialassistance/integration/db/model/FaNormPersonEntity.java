@@ -84,9 +84,6 @@ public class FaNormPersonEntity {
 	@Column(name = "amount", precision = 12, scale = 2)
 	private BigDecimal amount;
 
-	@Column(name = "job_stimulus_amount", precision = 12, scale = 2)
-	private BigDecimal jobStimulusAmount;
-
 	@Column(name = "deleted")
 	private boolean deleted;
 
@@ -299,19 +296,6 @@ public class FaNormPersonEntity {
 		return this;
 	}
 
-	public BigDecimal getJobStimulusAmount() {
-		return jobStimulusAmount;
-	}
-
-	public void setJobStimulusAmount(final BigDecimal jobStimulusAmount) {
-		this.jobStimulusAmount = jobStimulusAmount;
-	}
-
-	public FaNormPersonEntity withJobStimulusAmount(final BigDecimal jobStimulusAmount) {
-		this.jobStimulusAmount = jobStimulusAmount;
-		return this;
-	}
-
 	public boolean isDeleted() {
 		return deleted;
 	}
@@ -376,14 +360,14 @@ public class FaNormPersonEntity {
 			&& Objects.equals(name, that.name)
 			&& Objects.equals(processDays, that.processDays) && Objects.equals(caseworkerDays, that.caseworkerDays)
 			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
-			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(amount, that.amount) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount)
+			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(amount, that.amount)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, origin, position, partyId, role, name, processDays, caseworkerDays, included, deviationFromDate, deviationToDate, normInterval,
-			amount, jobStimulusAmount, deleted, created, updated);
+			amount, deleted, created, updated);
 	}
 
 	@Override
@@ -403,7 +387,6 @@ public class FaNormPersonEntity {
 			", deviationToDate=" + deviationToDate +
 			", normInterval='" + normInterval + '\'' +
 			", amount=" + amount +
-			", jobStimulusAmount=" + jobStimulusAmount +
 			", deleted=" + deleted +
 			", created=" + created +
 			", updated=" + updated +

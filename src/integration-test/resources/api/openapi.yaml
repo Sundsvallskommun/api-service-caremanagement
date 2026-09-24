@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:65459
+- url: http://localhost:64175
   description: Generated server url
 security:
 - sentBy: []
@@ -3122,12 +3122,14 @@ paths:
         \ a BIFALL/DELAVSLAG also requires the normberäkning saved in Lifecare and\
         \ linked as lifecareCalculationId (both through PATCH .../financial-assistance/{errandId}/data),\
         \ otherwise 409. An AVSLAG linked to Lifecare payments (lifecarePaymentIds)\
-        \ is refused with 409. The section approvals do not affect it. Does not send\
-        \ anything to the applicant: the response echoes the communication channels\
-        \ for the frontend to act on. Requires the errand in AWAITING_DECISION and\
-        \ an identified caller (X-Sent-By); a second finalize is rejected with 409.\
-        \ A process that could not be reached is reported in the response, not as\
-        \ an error."
+        \ is refused with 409. The section approvals do not affect it. A decision\
+        \ on a normberäkning linked as lifecareCalculationId purges careM's calculation\
+        \ draft: the decided calculation is Lifecare's, and the draft read answers\
+        \ 404 from then on. Does not send anything to the applicant: the response\
+        \ echoes the communication channels for the frontend to act on. Requires the\
+        \ errand in AWAITING_DECISION and an identified caller (X-Sent-By); a second\
+        \ finalize is rejected with 409. A process that could not be reached is reported\
+        \ in the response, not as an error."
       operationId: finalize
       parameters:
       - name: municipalityId
@@ -5111,9 +5113,10 @@ paths:
         \ (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier\
         \ approval. Approving stamps who/when; withdrawing clears them. Approving\
         \ requires an identified caller (X-Sent-By) — an approval with no approver\
-        \ is rejected with 400. Deprecated: approvals no longer gate finalize; the\
-        \ Lifecare statuses (final normberäkning, locked beslut, registered payment)\
-        \ replace them."
+        \ is rejected with 400. Deprecated: approvals no longer gate finalize and\
+        \ trigger nothing else (the medsökande payment warning is reconciled by the\
+        \ daily prepare); the Lifecare statuses (final normberäkning, locked beslut,\
+        \ registered payment) replace them."
       operationId: setSectionApproval
       parameters:
       - name: municipalityId
@@ -7350,9 +7353,11 @@ paths:
       tags:
       - Financial Assistance · Calculation
       summary: Read the draft calculation
-      description: The FamilyCare income rows the financial assistance process prepared
-        (not yet created in Lifecare) for the caseworker to review and edit before
-        a decision. 404 when no draft exists yet.
+      description: "The FamilyCare income rows the financial assistance process prepared\
+        \ (not yet created in Lifecare) for the caseworker to review and edit before\
+        \ a decision. 404 when no draft exists yet, and after a decision on a normberä\
+        kning saved in Lifecare (lifecareCalculationId), when finalize has purged\
+        \ it."
       operationId: getDraft
       parameters:
       - name: municipalityId
@@ -10673,11 +10678,6 @@ components:
           - 4-6 år
           maxLength: 64
           minLength: 0
-        jobStimulusAmount:
-          type: number
-          description: The job stimulus amount applied to the member
-          examples:
-          - 1000.0
         note:
           type: string
           description: Free-text note
@@ -10773,11 +10773,6 @@ components:
           examples:
           - 1431.0
           readOnly: true
-        jobStimulusAmount:
-          type: number
-          description: The job stimulus amount applied to the member
-          examples:
-          - 1000.0
         deleted:
           type: boolean
           description: "Whether the row is soft-deleted (excluded from the calculation,\

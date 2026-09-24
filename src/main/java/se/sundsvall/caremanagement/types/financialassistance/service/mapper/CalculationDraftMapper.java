@@ -114,7 +114,7 @@ public final class CalculationDraftMapper {
 			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withPartyId(e.getPartyId()).withRole(e.getRole()).withRoleDisplayName(roleDisplayName(e.getRole())).withName(e.getName())
 			.withProcessDays(e.getProcessDays()).withCaseworkerDays(e.getCaseworkerDays()).withEffectiveDays(effective)
 			.withIncluded(e.isIncluded()).withDeviationFromDate(e.getDeviationFromDate()).withDeviationToDate(e.getDeviationToDate())
-			.withNormInterval(e.getNormInterval()).withAmount(e.getAmount()).withJobStimulusAmount(e.getJobStimulusAmount())
+			.withNormInterval(e.getNormInterval()).withAmount(e.getAmount())
 			.withDeleted(e.isDeleted()).withNote(e.getNote()).withCreated(e.getCreated()).withUpdated(e.getUpdated());
 	}
 
@@ -144,7 +144,7 @@ public final class CalculationDraftMapper {
 			.withPartyId(input.getPartyId()).withRole(input.getRole()).withName(input.getName())
 			.withCaseworkerDays(input.getCaseworkerDays()).withIncluded(input.getIncluded() == null || input.getIncluded())
 			.withDeviationFromDate(input.getDeviationFromDate()).withDeviationToDate(input.getDeviationToDate())
-			.withNormInterval(input.getNormInterval()).withJobStimulusAmount(input.getJobStimulusAmount()).withNote(input.getNote());
+			.withNormInterval(input.getNormInterval()).withNote(input.getNote());
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

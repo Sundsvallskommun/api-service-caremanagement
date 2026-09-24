@@ -55,7 +55,6 @@ class FaNormPersonEntityTest {
 		final var deviationToDate = LocalDate.of(2026, JUNE, 15);
 		final var normInterval = "MONTH";
 		final var amount = BigDecimal.valueOf(1431.00);
-		final var jobStimulusAmount = BigDecimal.valueOf(1000.00);
 		final var deleted = true;
 		final var note = "note";
 		final var created = now();
@@ -76,7 +75,6 @@ class FaNormPersonEntityTest {
 			.withDeviationToDate(deviationToDate)
 			.withNormInterval(normInterval)
 			.withAmount(amount)
-			.withJobStimulusAmount(jobStimulusAmount)
 			.withDeleted(deleted)
 			.withNote(note)
 			.withCreated(created)
@@ -97,7 +95,6 @@ class FaNormPersonEntityTest {
 		assertThat(entity.getDeviationToDate()).isEqualTo(deviationToDate);
 		assertThat(entity.getNormInterval()).isEqualTo(normInterval);
 		assertThat(entity.getAmount()).isEqualTo(amount);
-		assertThat(entity.getJobStimulusAmount()).isEqualTo(jobStimulusAmount);
 		assertThat(entity.isDeleted()).isEqualTo(deleted);
 		assertThat(entity.getNote()).isEqualTo(note);
 		assertThat(entity.getCreated()).isEqualTo(created);

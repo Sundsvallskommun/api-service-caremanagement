@@ -250,7 +250,6 @@ public class DraftService {
 		entity.setDeviationFromDate(input.getDeviationFromDate());
 		entity.setDeviationToDate(input.getDeviationToDate());
 		entity.setNormInterval(input.getNormInterval());
-		entity.setJobStimulusAmount(input.getJobStimulusAmount());
 		entity.setNote(input.getNote());
 		return CalculationDraftMapper.toPersonRow(personRepository.save(entity));
 	}
