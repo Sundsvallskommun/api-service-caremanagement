@@ -29,14 +29,15 @@ public class Warning {
 		"NORM_MISMATCH_PREVIOUS_CALCULATION", "SSBTEK_DAY_CHECK", "PARENTAL_BENEFIT_PERIOD_CHECK",
 		"PREVIOUS_DECISION_ADVANCE_ON_BENEFIT", "EXPENSE_PARTIALLY_REJECTED", "CO_APPLICANT_SPLIT_PAYMENT", "SSBTEK_READ_FAILED", "INCOME_MISSING_PREVIOUS_PERIOD",
 		"INCOME_TRANSFERRED_LATE", "FAMILY_DIFFERS_FROM_APPLICATION", "FAMILY_DEVIATING_PERIOD", "COMMON_HOUSEHOLD_COST_CHECK",
-		"PREVIOUS_NORM_NOT_AVAILABLE", "RECOVERY_CLAIM"
+		"PREVIOUS_NORM_NOT_AVAILABLE", "RECOVERY_CLAIM", "LIFECARE_READ_FAILED"
 	})
 	private String type;
 
 	@Schema(description = "Swedish display name for the warning type", examples = "Kapad kostnad", accessMode = Schema.AccessMode.READ_ONLY)
 	private String typeDisplayName;
 
-	@Schema(description = "The Draken view section (tab) the warning belongs to — derived from the type: the decision proposal's types are DECISION, the payment warnings' are PAYMENT, everything else is CALCULATION",
+	@Schema(
+		description = "The Draken view section (tab) the warning belongs to — derived from the type: the decision proposal's types are DECISION, the payment warnings' are PAYMENT, a LIFECARE_READ_FAILED is on the tab whose warnings depend on the failed read (its sourceKey), everything else is CALCULATION",
 		examples = "CALCULATION",
 		allowableValues = {
 			"CALCULATION", "DECISION", "PAYMENT"

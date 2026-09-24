@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -15,12 +16,20 @@ import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.DecisionProposal;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceSchema;
 import se.sundsvall.caremanagement.types.financialassistance.service.mapper.ProposalMapper;
 
+import static java.util.Comparator.comparing;
+import static java.util.Comparator.naturalOrder;
+import static java.util.Comparator.nullsLast;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.service.ProposalBasisService.EXPLANATION_NO_NORM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.DECISION_PROPOSAL_TYPES;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.PREVIOUS_DECISION_TYPES;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.RECOVERY_CLAIM_TYPES;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.SOURCE_KEY_LIFECARE_PREVIOUS_DECISION;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.SOURCE_KEY_LIFECARE_RECOVERY_CLAIMS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_EXPENSE_PARTIALLY_REJECTED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_RECOVERY_CLAIM;
@@ -37,7 +46,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Warn
  * Compute-on-read: the proposal is derived data and nothing but the warnings is persisted, so a read is idempotent and
  * always fresh. It is also run when the CALCULATION section is approved (see
  * {@link FinancialAssistanceApprovalService}). Lifecare reads are best-effort — a failed read leaves the previous
- * decision (and the warnings that depend on it) out rather than failing the proposal.
+ * decision out rather than failing the proposal, raises a {@code LIFECARE_READ_FAILED} warning, and leaves the warnings
+ * that depend on the read as they were until a read succeeds.
  * </p>
  */
 @Service
@@ -111,18 +121,21 @@ public class DecisionProposalService {
 	public DecisionProposal get(final String municipalityId, final String namespace, final String errandId) {
 		final var basis = proposalBasisService.basis(municipalityId, namespace, errandId);
 		final var draft = basis.draft();
-		final var previousDecision = basis.household().applicantPersonalNumber()
-			.flatMap(applicant -> basis.applicationMonth().flatMap(month -> previousDecision(municipalityId, applicant, month)));
+		final var previousDecisionRead = basis.household().applicantPersonalNumber()
+			.flatMap(applicant -> basis.applicationMonth().map(month -> previousDecision(municipalityId, applicant, month)))
+			.orElseGet(() -> LifecareRead.succeeded(Optional.<DecisionView>empty()));
+		final var previousDecision = previousDecisionRead.value();
 		final var partiallyRejected = ProposalMapper.partiallyRejectedExpenses(draft);
 		final var outcome = basis.estimatedAmount().map(amount -> ProposalMapper.outcome(amount, partiallyRejected));
 		final var reason = previousDecision.map(DecisionView::reason).filter(text -> hasText(text));
 		final var coApplicantReason = previousDecision.map(DecisionView::reasonCoApplicant).filter(text -> hasText(text));
 
-		final var recoveryClaims = basis.household().applicantPersonalNumber()
+		final var recoveryClaimsRead = basis.household().applicantPersonalNumber()
 			.flatMap(applicant -> basis.applicationMonth().map(month -> recoveryClaims(municipalityId, applicant, month)))
-			.orElseGet(List::of);
+			.orElseGet(() -> LifecareRead.succeeded(List.<DecisionView>of()));
 
-		final var warnings = warningService.reconcileByTypes(errandId, DECISION_PROPOSAL_TYPES, warningInputs(previousDecision, partiallyRejected, recoveryClaims));
+		final var warnings = warnings(errandId, previousDecisionRead, recoveryClaimsRead,
+			warningInputs(previousDecision, partiallyRejected, recoveryClaimsRead.value()));
 
 		return DecisionProposal.create()
 			.withOutcome(outcome.orElse(null))
@@ -142,6 +155,45 @@ public class DecisionProposalService {
 			.withPhraseText(outcome.map(value -> ProposalMapper.phraseText(value, ProposalMapper.childrenInCalculation(draft))).orElse(null))
 			.withPreviousDecision(previousDecision.map(ProposalMapper::toPreviousDecision).orElse(null))
 			.withWarnings(warnings);
+	}
+
+	/**
+	 * The outcome of one best-effort Lifecare read: the value (empty on failure) and whether the read failed — a failed
+	 * read must not be taken for "nothing there", or the warnings depending on it would be auto-closed.
+	 */
+	private record LifecareRead<T>(T value, boolean failed) {
+
+		static <T> LifecareRead<T> succeeded(final T value) {
+			return new LifecareRead<>(value, false);
+		}
+
+		static <T> LifecareRead<T> failed(final T emptyValue) {
+			return new LifecareRead<>(emptyValue, true);
+		}
+	}
+
+	/**
+	 * Reconcile the DECISION-section warnings. A failed Lifecare read raises its read-failure warning and leaves the
+	 * warnings that depend on it exactly as they were — an open återkrav stays open through an outage — while a
+	 * successful read closes its read-failure warning. Returns every DECISION-section warning, oldest first.
+	 */
+	private List<Warning> warnings(final String errandId, final LifecareRead<Optional<DecisionView>> previousDecisionRead,
+		final LifecareRead<List<DecisionView>> recoveryClaimsRead, final List<WarningService.WarningInput> inputs) {
+
+		final var unverified = new HashSet<String>();
+		if (previousDecisionRead.failed()) {
+			unverified.addAll(PREVIOUS_DECISION_TYPES);
+		}
+		if (recoveryClaimsRead.failed()) {
+			unverified.addAll(RECOVERY_CLAIM_TYPES);
+		}
+		final var proposalWarnings = warningService.reconcileByTypes(errandId, DECISION_PROPOSAL_TYPES, unverified, inputs);
+		final var previousDecisionFailure = warningService.reconcileLifecareReadFailure(errandId, SOURCE_KEY_LIFECARE_PREVIOUS_DECISION, previousDecisionRead.failed());
+		final var recoveryClaimsFailure = warningService.reconcileLifecareReadFailure(errandId, SOURCE_KEY_LIFECARE_RECOVERY_CLAIMS, recoveryClaimsRead.failed());
+		return Stream.of(proposalWarnings, previousDecisionFailure, recoveryClaimsFailure)
+			.flatMap(List::stream)
+			.sorted(comparing(Warning::getCreated, nullsLast(naturalOrder())))
+			.toList();
 	}
 
 	private static String explanation(final ProposalBasisService.ProposalBasis basis) {
@@ -195,18 +247,18 @@ public class DecisionProposalService {
 	/**
 	 * The applicant's återkrav in Lifecare — decisions mot återbetalning within {@value #RECOVERY_CLAIM_LOOKBACK_MONTHS}
 	 * months up to the application month, newest first. Best-effort, like the previous-decision read: a failed read
-	 * shows no claim rather than failing the proposal.
+	 * shows no new claim rather than failing the proposal, and is reported as failed so the claims already shown stay.
 	 */
-	private List<DecisionView> recoveryClaims(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
+	private LifecareRead<List<DecisionView>> recoveryClaims(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
-			return lifecareCaseHistoryService.listDecisions(municipalityId, applicant, applicationMonth.minusMonths(RECOVERY_CLAIM_LOOKBACK_MONTHS).atDay(1),
+			return LifecareRead.succeeded(lifecareCaseHistoryService.listDecisions(municipalityId, applicant, applicationMonth.minusMonths(RECOVERY_CLAIM_LOOKBACK_MONTHS).atDay(1),
 				applicationMonth.atEndOfMonth())
 				.stream()
 				.filter(ProposalMapper::isRecoveryClaim)
-				.toList();
+				.toList());
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the applicant's återkrav in Lifecare — the decision proposal is computed without them", e);
-			return List.of();
+			return LifecareRead.failed(List.of());
 		}
 	}
 
@@ -218,17 +270,17 @@ public class DecisionProposalService {
 	 * The applicant's most recent ekonomiskt bistånd decision within the lookback window ending at the application month
 	 * — Lifecare lists every IFO decision on the person newest-first, so the first one that is an EB decision covering a
 	 * period (see {@link LifecareDecisionFilter#isPreviousDecisionCandidate}). Best-effort: a failed read degrades to
-	 * "no previous decision".
+	 * "no previous decision" and is reported as failed.
 	 */
-	private Optional<DecisionView> previousDecision(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
+	private LifecareRead<Optional<DecisionView>> previousDecision(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
-			return lifecareCaseHistoryService.listDecisions(municipalityId, applicant, applicationMonth.minusMonths(PREVIOUS_DECISION_LOOKBACK_MONTHS).atDay(1), applicationMonth.atEndOfMonth())
+			return LifecareRead.succeeded(lifecareCaseHistoryService.listDecisions(municipalityId, applicant, applicationMonth.minusMonths(PREVIOUS_DECISION_LOOKBACK_MONTHS).atDay(1), applicationMonth.atEndOfMonth())
 				.stream()
 				.filter(lifecareDecisionFilter::isPreviousDecisionCandidate)
-				.findFirst();
+				.findFirst());
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous Lifecare decision — the decision proposal is computed without it", e);
-			return Optional.empty();
+			return LifecareRead.failed(Optional.empty());
 		}
 	}
 }

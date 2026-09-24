@@ -46,6 +46,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -148,7 +149,7 @@ class FinancialAssistanceCalculationServiceTest {
 
 		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, true);
-		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any());
+		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any(), any());
 		verify(warningServiceMock, never()).reconcileRuleWarnings(any(), any(), any(), any(), any());
 		verifyNoInteractions(draftServiceMock, calculationFeederMock, decisionServiceMock);
 		assertThat(response.isInformationComplete()).isFalse();
@@ -212,13 +213,43 @@ class FinancialAssistanceCalculationServiceTest {
 
 		verify(draftServiceMock).refresh(eq(ERRAND_ID), eq("2026-06"), eq(1), eq(List.of("NATIONAL_NORM")), eq(personRows), any(), any());
 		final ArgumentCaptor<List<WarningService.WarningInput>> warnings = ArgumentCaptor.captor();
-		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID), any(), any(), any(), any(), warnings.capture());
+		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID), any(), any(), any(), any(), warnings.capture(), eq(Set.of()));
+		// The family was read, so any earlier read-failure warning closes itself.
+		verify(warningServiceMock).reconcileLifecareReadFailure(ERRAND_ID, "lifecare-read:previous-family", false);
 		assertThat(warnings.getValue()).contains(familyWarning)
 			.anySatisfy(warning -> {
 				assertThat(warning.type()).isEqualTo(WarningService.TYPE_PREVIOUS_NORM_NOT_AVAILABLE);
 				assertThat(warning.message()).isEqualTo(
 					"Normen i föregående normberäkning (Specnorm 2025) finns inte för ansökningsmånaden – normen är vald efter ansökan, kontrollera den");
 			});
+	}
+
+	@Test
+	void prepareWithAFailedPreviousFamilyReadRaisesTheReadFailureAndLeavesTheFamilyWarningsAlone() {
+		// A failed read is not "no previous calculation": the NORM-04 warnings from the last successful read must not be
+		// auto-closed on its strength, and the handläggare is told the family could not be checked.
+		final var month = YearMonth.of(2026, JUNE);
+		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM"));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
+		when(calculationServiceMock.completeness(MUNICIPALITY_ID, "199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("AWAITING_DECISION"));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
+		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, "199001011234", month)).thenReturn(PreviousHousehold.empty());
+		when(lifecareCaseServiceMock.previousFamily(MUNICIPALITY_ID, "199001011234", month)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare down"));
+		when(calculationServiceMock.selectNormId(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), eq(List.of()), any())).thenReturn(new CalculationService.NormChoice(7, false));
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, CalculationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]"));
+
+		// The household falls back to the application, as before ...
+		verify(calculationFeederMock).personRows(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(errand), any(), eq(PreviousFamily.empty()));
+		// ... but no family warning is computed from the empty family, the family types are left as they were ...
+		verify(calculationFeederMock, never()).familyWarnings(any(), any());
+		verify(calculationFeederMock, never()).commonHouseholdCostWarnings(any(), any());
+		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID), any(), any(), any(), any(), any(), eq(WarningService.PREVIOUS_FAMILY_TYPES));
+		// ... and the failure is raised.
+		verify(warningServiceMock).reconcileLifecareReadFailure(ERRAND_ID, "lifecare-read:previous-family", true);
 	}
 
 	/** A first application: no previous normberäkning, so the norm comes from the application. */
@@ -262,7 +293,7 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
 		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("SUPPLEMENT_REQUESTED");
 		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID),
-			eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")), eq(List.of("Dagersättning")), any(), any());
+			eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")), eq(List.of("Dagersättning")), any(), any(), eq(Set.of()));
 		// No lifecareCalculationId yet: the draft is refreshed, so the full calculation reconcile runs.
 		verify(draftServiceMock).refresh(eq(ERRAND_ID), eq("2026-06"), eq(7), eq(List.of("NATIONAL_NORM")), any(), any(), any());
 		verify(warningServiceMock, never()).reconcileRuleWarnings(any(), any(), any(), any(), any());
@@ -301,7 +332,7 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(calculationFeederMock, never()).housingDeltaWarnings(any(), any(), any());
 
 		// Only the SSBTEK income warnings and the draft-independent rule warnings are reconciled.
-		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any());
+		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any(), any());
 		final ArgumentCaptor<List<WarningService.WarningInput>> rules = ArgumentCaptor.captor();
 		verify(warningServiceMock).reconcileRuleWarnings(eq(ERRAND_ID), eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")),
 			eq(List.of("Dagersättning")), rules.capture());

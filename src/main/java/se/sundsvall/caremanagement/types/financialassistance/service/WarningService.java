@@ -122,6 +122,27 @@ public class WarningService {
 	public static final String TYPE_SSBTEK_READ_FAILED = "SSBTEK_READ_FAILED";
 
 	/**
+	 * A Lifecare read that other warnings depend on failed on this run — the återkrav, the previous decision or the
+	 * previous normberäkning's family. Without it a failed read would look like "nothing to warn about": the dependent
+	 * warnings would be auto-closed, and a closed warning is never re-opened, so a real återkrav could stay hidden after
+	 * the next successful read. One warning per failed read (see the {@code SOURCE_KEY_LIFECARE_*} keys), closed by the
+	 * next run in which that read succeeds; the warnings that depend on the read are left as they were in the failed run.
+	 */
+	public static final String TYPE_LIFECARE_READ_FAILED = "LIFECARE_READ_FAILED";
+
+	/** Source keys of {@link #TYPE_LIFECARE_READ_FAILED} — one per Lifecare read whose dependent warnings it guards. */
+	public static final String SOURCE_KEY_LIFECARE_RECOVERY_CLAIMS = "lifecare-read:recovery-claims";
+	public static final String SOURCE_KEY_LIFECARE_PREVIOUS_DECISION = "lifecare-read:previous-decision";
+	public static final String SOURCE_KEY_LIFECARE_PREVIOUS_FAMILY = "lifecare-read:previous-family";
+
+	/** The handläggare-facing text per failed Lifecare read, in the same voice as the SSBTEK read failure. */
+	private static final Map<String, String> LIFECARE_READ_FAILED_MESSAGES = Map.of(
+		SOURCE_KEY_LIFECARE_RECOVERY_CLAIMS, "Återkrav i Lifecare kunde inte läsas – eventuella återkrav visas inte, kontrollera dem i Lifecare. Nytt försök görs vid nästa uppdatering",
+		SOURCE_KEY_LIFECARE_PREVIOUS_DECISION, "Föregående beslut i Lifecare kunde inte läsas – beslutsförslaget saknar föregående beslut, kontrollera det i Lifecare. Nytt försök görs vid nästa uppdatering",
+		SOURCE_KEY_LIFECARE_PREVIOUS_FAMILY,
+		"Familjen i föregående normberäkning kunde inte läsas från Lifecare – hushållet är taget från ansökan och familjevarningarna är inte kontrollerade, kontrollera mot Lifecare. Nytt försök görs vid nästa uppdatering");
+
+	/**
 	 * Verksamhetens own wording for a failed read — the handläggare is told a retry is coming, not that data is missing
 	 * — carrying the time of the attempt, so “nytt försök görs snart igen” can be judged against a clock rather than
 	 * taken on faith. Each failed run refreshes the text, so the time is always the most recent attempt; the warning's
@@ -162,6 +183,17 @@ public class WarningService {
 	 */
 	public static final Set<String> SSBTEK_READ_FAILURE_TYPES = Set.of(TYPE_SSBTEK_READ_FAILED);
 	/**
+	 * The Lifecare read-failure warning is reconciled on its own too, per read (type + source key): each read raises or
+	 * closes its own row, and no other reconcile creates or auto-closes one.
+	 */
+	public static final Set<String> LIFECARE_READ_FAILURE_TYPES = Set.of(TYPE_LIFECARE_READ_FAILED);
+	/** The warning types that depend on the previous Lifecare decision read. */
+	public static final Set<String> PREVIOUS_DECISION_TYPES = Set.of(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT);
+	/** The warning types that depend on the återkrav read. */
+	public static final Set<String> RECOVERY_CLAIM_TYPES = Set.of(TYPE_RECOVERY_CLAIM);
+	/** The NORM-04 warning types that depend on the previous normberäkning's family read. */
+	public static final Set<String> PREVIOUS_FAMILY_TYPES = Set.of(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, TYPE_FAMILY_DEVIATING_PERIOD, TYPE_COMMON_HOUSEHOLD_COST_CHECK);
+	/**
 	 * The warning types that describe careM's calculation draft — raised by refreshing it: the rows the refresh added or
 	 * saw disappear, the expense feed (reasonableness review + cap), the NORM-04 family copied from the previous
 	 * normberäkning, the late comparison-period transfer and the duplicate incomes read from the merged draft — plus the
@@ -176,6 +208,12 @@ public class WarningService {
 	public static final String SECTION_CALCULATION = "CALCULATION";
 	public static final String SECTION_DECISION = "DECISION";
 	public static final String SECTION_PAYMENT = "PAYMENT";
+
+	/** The Draken tab each Lifecare read failure is shown on — the tab whose warnings depend on that read. */
+	private static final Map<String, String> LIFECARE_READ_FAILED_SECTIONS = Map.of(
+		SOURCE_KEY_LIFECARE_RECOVERY_CLAIMS, SECTION_DECISION,
+		SOURCE_KEY_LIFECARE_PREVIOUS_DECISION, SECTION_DECISION,
+		SOURCE_KEY_LIFECARE_PREVIOUS_FAMILY, SECTION_CALCULATION);
 
 	public static final String STATUS_OPEN = "OPEN";
 	public static final String STATUS_ACKNOWLEDGED = "ACKNOWLEDGED";
@@ -217,6 +255,7 @@ public class WarningService {
 		Map.entry(TYPE_EXPENSE_PARTIALLY_REJECTED, "Utgift delvis ej godkänd – delavslag"),
 		Map.entry(TYPE_CO_APPLICANT_SPLIT_PAYMENT, "Medsökande – kontrollera delad utbetalning"),
 		Map.entry(TYPE_SSBTEK_READ_FAILED, "SSBTEK kunde inte läsas"),
+		Map.entry(TYPE_LIFECARE_READ_FAILED, "Lifecare kunde inte läsas"),
 		Map.entry(TYPE_INCOME_MISSING_PREVIOUS_PERIOD, "Inkomst saknas mot föregående SSBTEK-period"),
 		Map.entry(TYPE_INCOME_TRANSFERRED_LATE, "Inkomst överförd i efterhand"),
 		Map.entry(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "Familjen skiljer mot ansökan"),
@@ -250,7 +289,19 @@ public class WarningService {
 	@Transactional
 	public void reconcileCalculationWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final DraftChanges draftChanges, final List<WarningInput> sectionWarnings) {
+		reconcileCalculationWarnings(errandId, unhandled, changes, missing, draftChanges, sectionWarnings, Set.of());
+	}
 
+	/**
+	 * {@link #reconcileCalculationWarnings(String, List, List, List, DraftChanges, List)}, leaving the
+	 * {@code unverifiedTypes} exactly as they were: a Lifecare read those warnings depend on failed on this run, so their
+	 * absence proves nothing and must not auto-close them. No {@code sectionWarnings} input may carry one of them.
+	 */
+	@Transactional
+	public void reconcileCalculationWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
+		final List<String> missing, final DraftChanges draftChanges, final List<WarningInput> sectionWarnings, final Set<String> unverifiedTypes) {
+
+		final var unverified = ofNullable(unverifiedTypes).orElseGet(Set::of);
 		final var inputs = ssbtekIncomeWarnings(unhandled, changes, missing);
 
 		if (draftChanges != null) {
@@ -261,9 +312,15 @@ public class WarningService {
 		}
 
 		ofNullable(sectionWarnings).ifPresent(inputs::addAll);
+		inputs.stream()
+			.filter(input -> unverified.contains(input.type()))
+			.findFirst()
+			.ifPresent(input -> {
+				throw new IllegalArgumentException("warning type " + input.type() + " is unverified on this run");
+			});
 		// The calculation owns every type except the separately reconciled ones — those live and die with their own
-		// reconcile, so the daily prepare must neither create nor auto-close them.
-		reconcile(errandId, inputs, type -> !isSeparatelyReconciled(type));
+		// reconcile, so the daily prepare must neither create nor auto-close them — and the unverified ones.
+		reconcile(errandId, inputs, type -> !isSeparatelyReconciled(type) && !unverified.contains(type));
 	}
 
 	/**
@@ -308,13 +365,24 @@ public class WarningService {
 	 */
 	@Transactional
 	public List<Warning> reconcileByTypes(final String errandId, final Set<String> ownedTypes, final List<WarningInput> current) {
+		return reconcileByTypes(errandId, ownedTypes, Set.of(), current);
+	}
+
+	/**
+	 * {@link #reconcileByTypes(String, Set, List)}, leaving the {@code unverifiedTypes} (a subset of {@code ownedTypes})
+	 * exactly as they were: a Lifecare read those warnings depend on failed on this run, so their absence proves nothing
+	 * and must not auto-close them. They are still returned. No {@code current} input may carry one of them.
+	 */
+	@Transactional
+	public List<Warning> reconcileByTypes(final String errandId, final Set<String> ownedTypes, final Set<String> unverifiedTypes, final List<WarningInput> current) {
+		final var unverified = ofNullable(unverifiedTypes).orElseGet(Set::of);
 		current.stream()
-			.filter(input -> !ownedTypes.contains(input.type()))
+			.filter(input -> !ownedTypes.contains(input.type()) || unverified.contains(input.type()))
 			.findFirst()
 			.ifPresent(input -> {
 				throw new IllegalArgumentException("warning type " + input.type() + " is not owned by this reconcile");
 			});
-		reconcile(errandId, current, ownedTypes::contains);
+		reconcile(errandId, current, type -> ownedTypes.contains(type) && !unverified.contains(type));
 		return warningRepository.findByErrandId(errandId).stream()
 			.filter(entity -> ownedTypes.contains(entity.getType()))
 			.sorted(comparing(FaWarningEntity::getCreated, nullsLast(naturalOrder())))
@@ -339,11 +407,48 @@ public class WarningService {
 	}
 
 	/**
+	 * Raise or clear the read-failure warning of one Lifecare read ({@code sourceKey}, one of the
+	 * {@code SOURCE_KEY_LIFECARE_*} keys): {@code true} on a run where the read failed, {@code false} on one where it
+	 * succeeded — the reconcile then auto-closes the warning. Only that read's row is touched. Returns that row, when
+	 * there is one, so a section proposal can show it with its own warnings.
+	 */
+	@Transactional
+	public List<Warning> reconcileLifecareReadFailure(final String errandId, final String sourceKey, final boolean readFailed) {
+		final var message = ofNullable(LIFECARE_READ_FAILED_MESSAGES.get(sourceKey))
+			.orElseThrow(() -> new IllegalArgumentException("unknown Lifecare read " + sourceKey));
+		final List<WarningInput> current;
+		if (readFailed) {
+			current = List.of(new WarningInput(TYPE_LIFECARE_READ_FAILED, sourceKey, message));
+		} else {
+			current = List.of();
+		}
+		final Predicate<FaWarningEntity> owned = entity -> TYPE_LIFECARE_READ_FAILED.equals(entity.getType()) && sourceKey.equals(entity.getSourceKey());
+		reconcileEntities(errandId, current, owned);
+		return warningRepository.findByErrandId(errandId).stream()
+			.filter(owned)
+			.sorted(comparing(FaWarningEntity::getCreated, nullsLast(naturalOrder())))
+			.map(WarningService::toWarning)
+			.toList();
+	}
+
+	/**
 	 * Types reconciled by something other than the daily calculation reconcile — the two section proposals and the
-	 * SSBTEK read failure. The calculation reconcile must neither create nor auto-close these.
+	 * SSBTEK and Lifecare read failures. The calculation reconcile must neither create nor auto-close these.
 	 */
 	private static boolean isSeparatelyReconciled(final String type) {
-		return DECISION_PROPOSAL_TYPES.contains(type) || PAYMENT_PROPOSAL_TYPES.contains(type) || SSBTEK_READ_FAILURE_TYPES.contains(type);
+		return DECISION_PROPOSAL_TYPES.contains(type) || PAYMENT_PROPOSAL_TYPES.contains(type) || SSBTEK_READ_FAILURE_TYPES.contains(type)
+			|| LIFECARE_READ_FAILURE_TYPES.contains(type);
+	}
+
+	/**
+	 * The Draken tab a warning belongs to — a Lifecare read failure is shown on the tab whose warnings depend on that
+	 * read; otherwise by type.
+	 */
+	static String sectionOf(final String type, final String sourceKey) {
+		if (TYPE_LIFECARE_READ_FAILED.equals(type)) {
+			return ofNullable(sourceKey).map(LIFECARE_READ_FAILED_SECTIONS::get).orElse(SECTION_CALCULATION);
+		}
+		return sectionOf(type);
 	}
 
 	/** The Draken tab a warning type belongs to — the section proposals own theirs, everything else is the calculation. */
@@ -369,8 +474,13 @@ public class WarningService {
 	 * method would bypass the Spring proxy and silently run without one.
 	 */
 	void reconcile(final String errandId, final List<WarningInput> current, final Predicate<String> owned) {
+		reconcileEntities(errandId, current, entity -> owned.test(entity.getType()));
+	}
+
+	/** {@link #reconcile}, with ownership decided per stored warning rather than per type. */
+	private void reconcileEntities(final String errandId, final List<WarningInput> current, final Predicate<FaWarningEntity> owned) {
 		final var existing = warningRepository.findByErrandId(errandId).stream()
-			.filter(entity -> owned.test(entity.getType()))
+			.filter(owned)
 			.toList();
 		final var currentKeys = current.stream().map(input -> key(input.type(), input.sourceKey())).collect(toSet());
 
@@ -467,7 +577,7 @@ public class WarningService {
 			.withId(entity.getId())
 			.withType(entity.getType())
 			.withTypeDisplayName(TYPE_DISPLAY_NAME.get(entity.getType()))
-			.withSection(sectionOf(entity.getType()))
+			.withSection(sectionOf(entity.getType(), entity.getSourceKey()))
 			.withSourceKey(entity.getSourceKey())
 			.withMessage(entity.getMessage())
 			.withStatus(entity.getStatus())

@@ -153,7 +153,7 @@ class WarningServiceTest {
 			.map(WarningServiceTest::readConstant)
 			.toList();
 
-		assertThat(types).hasSize(41);
+		assertThat(types).hasSize(42);
 		assertThat(types).allSatisfy(type -> {
 			assertThat(displayNames).as("display name for %s", type).containsKey(type);
 			assertThat(displayNames.get(type)).as("display name for %s", type).isNotBlank();
@@ -408,5 +408,108 @@ class WarningServiceTest {
 		assertThat(WarningService.sectionOf("EXPENSE_PARTIALLY_REJECTED")).isEqualTo("DECISION");
 		assertThat(WarningService.sectionOf("CO_APPLICANT_SPLIT_PAYMENT")).isEqualTo("PAYMENT");
 		assertThat(WarningService.sectionOf("MISSING_SSBTEK")).isEqualTo("CALCULATION");
+	}
+
+	@Test
+	void sectionOfPutsALifecareReadFailureOnTheTabItsReadFeeds() {
+		assertThat(WarningService.sectionOf("LIFECARE_READ_FAILED", "lifecare-read:recovery-claims")).isEqualTo("DECISION");
+		assertThat(WarningService.sectionOf("LIFECARE_READ_FAILED", "lifecare-read:previous-decision")).isEqualTo("DECISION");
+		assertThat(WarningService.sectionOf("LIFECARE_READ_FAILED", "lifecare-read:previous-family")).isEqualTo("CALCULATION");
+		assertThat(WarningService.sectionOf("LIFECARE_READ_FAILED", null)).isEqualTo("CALCULATION");
+		assertThat(WarningService.sectionOf("RECOVERY_CLAIM", "recovery-claim:41")).isEqualTo("DECISION");
+	}
+
+	@Test
+	void reconcileLifecareReadFailureRaisesOneWarningPerRead() {
+		final var otherRead = warning("LIFECARE_READ_FAILED", "lifecare-read:previous-decision", "OPEN");
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(otherRead));
+		when(repositoryMock.save(any(FaWarningEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.reconcileLifecareReadFailure(ERRAND_ID, "lifecare-read:recovery-claims", true);
+
+		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
+		verify(repositoryMock).save(captor.capture());
+		assertThat(captor.getValue())
+			.returns("LIFECARE_READ_FAILED", FaWarningEntity::getType)
+			.returns("lifecare-read:recovery-claims", FaWarningEntity::getSourceKey)
+			.returns("OPEN", FaWarningEntity::getStatus)
+			.returns("Återkrav i Lifecare kunde inte läsas – eventuella återkrav visas inte, kontrollera dem i Lifecare. Nytt försök görs vid nästa uppdatering",
+				FaWarningEntity::getMessage);
+		// Another read's failure is not this reconcile's to close.
+		assertThat(otherRead.getStatus()).isEqualTo("OPEN");
+	}
+
+	@Test
+	void reconcileLifecareReadFailureClosesItselfWhenTheReadSucceeds() {
+		final var readFailure = warning("LIFECARE_READ_FAILED", "lifecare-read:previous-family", "OPEN").withCreated(OffsetDateTime.parse("2026-06-01T00:00:00Z"));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(readFailure));
+		when(repositoryMock.save(any(FaWarningEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.reconcileLifecareReadFailure(ERRAND_ID, "lifecare-read:previous-family", false);
+
+		assertThat(readFailure.getStatus()).isEqualTo("CLOSED");
+		assertThat(readFailure.isAutoResolved()).isTrue();
+		assertThat(result).singleElement().satisfies(warning -> {
+			assertThat(warning.getSection()).isEqualTo("CALCULATION");
+			assertThat(warning.getTypeDisplayName()).isEqualTo("Lifecare kunde inte läsas");
+		});
+	}
+
+	@Test
+	void reconcileLifecareReadFailureRejectsAnUnknownRead() {
+		assertThrows(IllegalArgumentException.class, () -> service.reconcileLifecareReadFailure(ERRAND_ID, "lifecare-read:unknown", true));
+		verify(repositoryMock, never()).save(any());
+	}
+
+	@Test
+	void reconcileByTypesLeavesTheUnverifiedTypesAsTheyWereButReturnsThem() {
+		final var claim = warning("RECOVERY_CLAIM", "recovery-claim:41", "OPEN"); // its read failed → must stay open
+		final var stale = warning("EXPENSE_PARTIALLY_REJECTED", "INTERNET", "OPEN"); // verified and gone → auto-close
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(claim, stale));
+		when(repositoryMock.save(any(FaWarningEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var result = service.reconcileByTypes(ERRAND_ID, WarningService.DECISION_PROPOSAL_TYPES, Set.of("RECOVERY_CLAIM"), List.of());
+
+		assertThat(claim.getStatus()).isEqualTo("OPEN");
+		assertThat(stale.getStatus()).isEqualTo("CLOSED");
+		verify(repositoryMock, never()).save(claim);
+		assertThat(result).extracting(Warning::getType).containsExactlyInAnyOrder("RECOVERY_CLAIM", "EXPENSE_PARTIALLY_REJECTED");
+	}
+
+	@Test
+	void reconcileByTypesRejectsAnInputOfAnUnverifiedType() {
+		final var input = List.of(new WarningService.WarningInput("RECOVERY_CLAIM", "recovery-claim:1", "text"));
+		final var owned = WarningService.DECISION_PROPOSAL_TYPES;
+		final var unverified = Set.of("RECOVERY_CLAIM");
+
+		assertThrows(IllegalArgumentException.class, () -> service.reconcileByTypes(ERRAND_ID, owned, unverified, input));
+		verify(repositoryMock, never()).save(any());
+	}
+
+	@Test
+	void calculationReconcileLeavesTheUnverifiedTypesAndTheLifecareReadFailureAlone() {
+		final var family = warning("FAMILY_DIFFERS_FROM_APPLICATION", "not-in-previous:p-2", "OPEN"); // its read failed → stays
+		final var readFailure = warning("LIFECARE_READ_FAILED", "lifecare-read:previous-family", "OPEN"); // reconciled separately
+		final var missing = warning("MISSING_SSBTEK", "Dagersättning", "OPEN"); // verified and gone → auto-close
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(family, readFailure, missing));
+
+		service.reconcileCalculationWarnings(ERRAND_ID, List.of(), List.of(), List.of(), null, List.of(), WarningService.PREVIOUS_FAMILY_TYPES);
+
+		assertThat(family.getStatus()).isEqualTo("OPEN");
+		assertThat(readFailure.getStatus()).isEqualTo("OPEN");
+		assertThat(missing.getStatus()).isEqualTo("CLOSED");
+		verify(repositoryMock).save(missing);
+		verify(repositoryMock, never()).save(family);
+		verify(repositoryMock, never()).save(readFailure);
+	}
+
+	@Test
+	void calculationReconcileRejectsAnInputOfAnUnverifiedType() {
+		final var inputs = List.of(new WarningService.WarningInput("COMMON_HOUSEHOLD_COST_CHECK", "common-household-cost", "text"));
+		final var unverified = WarningService.PREVIOUS_FAMILY_TYPES;
+
+		assertThrows(IllegalArgumentException.class,
+			() -> service.reconcileCalculationWarnings(ERRAND_ID, List.of(), List.of(), List.of(), null, inputs, unverified));
+		verify(repositoryMock, never()).save(any());
 	}
 }

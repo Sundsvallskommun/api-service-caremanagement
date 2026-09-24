@@ -11021,6 +11021,7 @@ components:
           - COMMON_HOUSEHOLD_COST_CHECK
           - PREVIOUS_NORM_NOT_AVAILABLE
           - RECOVERY_CLAIM
+          - LIFECARE_READ_FAILED
           examples:
           - EXPENSE_CAPPED
         typeDisplayName:
@@ -11033,7 +11034,8 @@ components:
           type: string
           description: "The Draken view section (tab) the warning belongs to — derived\
             \ from the type: the decision proposal's types are DECISION, the payment\
-            \ warnings' are PAYMENT, everything else is CALCULATION"
+            \ warnings' are PAYMENT, a LIFECARE_READ_FAILED is on the tab whose warnings\
+            \ depend on the failed read (its sourceKey), everything else is CALCULATION"
           enum:
           - CALCULATION
           - DECISION

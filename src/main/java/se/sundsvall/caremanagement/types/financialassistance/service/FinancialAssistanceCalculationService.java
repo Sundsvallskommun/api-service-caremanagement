@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -184,7 +185,22 @@ public class FinancialAssistanceCalculationService {
 	 */
 	private record DraftRefresh(DraftChanges changes, List<WarningService.WarningInput> expenseWarnings, List<WarningService.WarningInput> housingWarnings,
 		List<WarningService.WarningInput> lateTransferWarnings,
-		List<WarningService.WarningInput> duplicateWarnings, List<WarningService.WarningInput> familyWarnings) {}
+		List<WarningService.WarningInput> duplicateWarnings, List<WarningService.WarningInput> familyWarnings, boolean previousFamilyReadFailed) {
+
+		/** The warning types this refresh could not verify — a Lifecare read they depend on failed — and so must not close. */
+		Set<String> unverifiedTypes() {
+			if (previousFamilyReadFailed) {
+				return WarningService.PREVIOUS_FAMILY_TYPES;
+			}
+			return Set.of();
+		}
+	}
+
+	/**
+	 * The previous normberäkning's family, and whether reading it failed — a failed read must not be taken for "no
+	 * previous calculation", or the NORM-04 warnings would be auto-closed.
+	 */
+	private record PreviousFamilyRead(PreviousFamily family, boolean failed) {}
 
 	/**
 	 * The warnings that do not depend on careM's draft — the återansökan application rules, the
@@ -246,15 +262,15 @@ public class FinancialAssistanceCalculationService {
 			previousExpenseAmounts(municipalityId, input.applicant(), input.applicationMonth()), ageFromPnr(input.applicant()));
 		// NORM-04: norm, familj and gemensamma kostnader come from the previous normberäkning (regelverk återansökan);
 		// the application only fills in what FamilyCare's read model lacks, and the rest is flagged.
-		final var previousFamily = previousFamily(municipalityId, input.applicant(), input.applicationMonth());
+		final var previousFamilyRead = previousFamily(municipalityId, input.applicant(), input.applicationMonth());
+		final var previousFamily = previousFamilyRead.family();
 		final var personRows = calculationFeeder.personRows(municipalityId, input.namespace(), input.errandId(), input.errand(),
 			previousPersonAmounts(municipalityId, input.applicant(), input.applicationMonth()), previousFamily);
 		final var norm = calculationService.selectNormId(municipalityId, input.applicant(), input.applicationMonth(), previousNormNames(previous.norm()),
 			normNames(input.errand().getNormType()));
 		final var changes = draftService.refresh(input.errandId(), input.applicationMonthValue(), norm.normId(), input.errand().getNormType(),
 			personRows, incomeRows, expenseFeed.rows());
-		final var familyWarnings = Stream.of(calculationFeeder.familyWarnings(input.errand(), previousFamily),
-			calculationFeeder.commonHouseholdCostWarnings(previousFamily, input.errand()), previousNormWarnings(previous.norm(), norm))
+		final var familyWarnings = Stream.of(previousFamilyWarnings(input.errand(), previousFamilyRead), previousNormWarnings(previous.norm(), norm))
 			.flatMap(List::stream)
 			.toList();
 
@@ -269,7 +285,23 @@ public class FinancialAssistanceCalculationService {
 		// The housing-cost change is frozen with the draft: it is about the calculation's boendekostnad, which the
 		// caseworker owns in Lifecare once the normberäkning is saved there.
 		final var housingWarnings = calculationFeeder.housingDeltaWarnings(municipalityId, input.errand(), previous);
-		return new DraftRefresh(changes, expenseFeed.warnings(), housingWarnings, lateTransferWarnings, duplicateWarnings, familyWarnings);
+		return new DraftRefresh(changes, expenseFeed.warnings(), housingWarnings, lateTransferWarnings, duplicateWarnings, familyWarnings,
+			previousFamilyRead.failed());
+	}
+
+	/**
+	 * The NORM-04 family warnings — none when the previous family could not be read: an empty family is not evidence that
+	 * the household matches, so the warnings from the last successful read are left as they were (see
+	 * {@link DraftRefresh#unverifiedTypes()}).
+	 */
+	private List<WarningService.WarningInput> previousFamilyWarnings(final FinancialAssistanceEntity errand, final PreviousFamilyRead previousFamilyRead) {
+		if (previousFamilyRead.failed()) {
+			return List.of();
+		}
+		return Stream.of(calculationFeeder.familyWarnings(errand, previousFamilyRead.family()),
+			calculationFeeder.commonHouseholdCostWarnings(previousFamilyRead.family(), errand))
+			.flatMap(List::stream)
+			.toList();
 	}
 
 	/**
@@ -318,10 +350,14 @@ public class FinancialAssistanceCalculationService {
 			.withMissingIncomeTypes(completeness.missingIncomeTypes());
 	}
 
-	/** Reconcile every calculation warning of a run that refreshed the draft. */
+	/**
+	 * Reconcile every calculation warning of a run that refreshed the draft — except those a failed Lifecare read left
+	 * unverified — and raise or close the previous-family read-failure warning.
+	 */
 	private void reconcileWithDraft(final PrepareInput input, final CalculationResponse response, final DraftRefresh refresh, final RuleWarnings rules) {
 		warningService.reconcileCalculationWarnings(input.errandId(), response.getUnhandledIncomes(), response.getChangeWarnings(),
-			response.getMissingIncomeTypes(), refresh.changes(), allWarnings(refresh, rules));
+			response.getMissingIncomeTypes(), refresh.changes(), allWarnings(refresh, rules), refresh.unverifiedTypes());
+		warningService.reconcileLifecareReadFailure(input.errandId(), WarningService.SOURCE_KEY_LIFECARE_PREVIOUS_FAMILY, refresh.previousFamilyReadFailed());
 	}
 
 	/**
@@ -349,13 +385,16 @@ public class FinancialAssistanceCalculationService {
 		}
 	}
 
-	/** The previous calculation's family, best-effort — a failed Lifecare read leaves the household to the application. */
-	private PreviousFamily previousFamily(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
+	/**
+	 * The previous calculation's family, best-effort — a failed Lifecare read leaves the household to the application and
+	 * is reported as failed, so the NORM-04 warnings are not closed on the strength of a read that never happened.
+	 */
+	private PreviousFamilyRead previousFamily(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
-			return lifecareCaseService.previousFamily(municipalityId, applicant, applicationMonth);
+			return new PreviousFamilyRead(lifecareCaseService.previousFamily(municipalityId, applicant, applicationMonth), false);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation family — the household is taken from the application", e);
-			return PreviousFamily.empty();
+			return new PreviousFamilyRead(PreviousFamily.empty(), true);
 		}
 	}
 

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +26,7 @@ import se.sundsvall.dept44.problem.Problem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -89,7 +91,7 @@ class DecisionProposalServiceTest {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft, Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
 		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(List.of(decision("Bifall", "Boendekostnad"), decision("Avslag", "Äldre")));
-		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of(), List.of())).thenReturn(List.of());
 
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -122,7 +124,7 @@ class DecisionProposalServiceTest {
 			.thenReturn(List.of(decision("Förskott på förmån", "Arbetslös, ingen ersättning/stöd")));
 		final var reconciled = List.of(Warning.create().withType("EXPENSE_PARTIALLY_REJECTED"));
 		final var captor = ArgumentCaptor.forClass(List.class);
-		when(warningServiceMock.reconcileByTypes(eq(ERRAND_ID), eq(DECISION_PROPOSAL_TYPES), captor.capture())).thenReturn(reconciled);
+		when(warningServiceMock.reconcileByTypes(eq(ERRAND_ID), eq(DECISION_PROPOSAL_TYPES), eq(Set.of()), captor.capture())).thenReturn(reconciled);
 
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -130,7 +132,7 @@ class DecisionProposalServiceTest {
 		assertThat(proposal.getPhraseText()).isEqualTo("Bifall månad utan barn");
 		assertThat(proposal.getReason()).isEqualTo("Arbetslös, ingen ersättning/stöd");
 		assertThat(proposal.getReasonOptions()).containsExactlyElementsOf(DEFAULT_REASON_OPTIONS); // already in the catalogue → no duplicate
-		assertThat(proposal.getWarnings()).isSameAs(reconciled);
+		assertThat(proposal.getWarnings()).containsExactlyElementsOf(reconciled);
 		@SuppressWarnings("unchecked")
 		final List<WarningService.WarningInput> inputs = captor.getValue();
 		assertThat(inputs).extracting(WarningService.WarningInput::type, WarningService.WarningInput::sourceKey, WarningService.WarningInput::message).containsExactly(
@@ -151,7 +153,7 @@ class DecisionProposalServiceTest {
 			new DecisionView(43, "2024-05-10", "EK Bistånd som eftergift", "2024-02-01", "2024-02-29", "", "Anna", "IFO", 2, new BigDecimal("3200"), null, null, List.of()),
 			decision("Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall", "Arbetslös, ingen ersättning/stöd")));
 		final var captor = ArgumentCaptor.forClass(List.class);
-		when(warningServiceMock.reconcileByTypes(eq(ERRAND_ID), eq(DECISION_PROPOSAL_TYPES), captor.capture())).thenReturn(List.of());
+		when(warningServiceMock.reconcileByTypes(eq(ERRAND_ID), eq(DECISION_PROPOSAL_TYPES), eq(Set.of()), captor.capture())).thenReturn(List.of());
 
 		service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -165,21 +167,31 @@ class DecisionProposalServiceTest {
 	}
 
 	@Test
-	void aFailedRecoveryClaimReadIsBestEffort() {
+	void aFailedRecoveryClaimReadRaisesTheReadFailureAndLeavesTheClaimsAsTheyWere() {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
 		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30"))).thenReturn(List.of());
 		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2023-06-01"), LocalDate.parse("2026-06-30")))
 			.thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
-		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+		final var claim = Warning.create().withType("RECOVERY_CLAIM").withCreated(OffsetDateTime.parse("2026-06-01T08:00:00Z"));
+		final var readFailure = Warning.create().withType("LIFECARE_READ_FAILED").withCreated(OffsetDateTime.parse("2026-06-02T08:00:00Z"));
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of("RECOVERY_CLAIM"), List.of())).thenReturn(List.of(claim));
+		// lenient: the same method is also called, unstubbed, for the previous-decision read
+		lenient().when(warningServiceMock.reconcileLifecareReadFailure(ERRAND_ID, "lifecare-read:recovery-claims", true)).thenReturn(List.of(readFailure));
 
-		assertThat(service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).getWarnings()).isEmpty();
+		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		// The proposal is still computed, the claim already shown stays, and the failure is shown next to it.
+		assertThat(proposal.getOutcome()).isEqualTo("BIFALL");
+		assertThat(proposal.getWarnings()).containsExactly(claim, readFailure);
+		// The previous-decision read succeeded, so its read-failure warning is closed.
+		verify(warningServiceMock).reconcileLifecareReadFailure(ERRAND_ID, "lifecare-read:previous-decision", false);
 	}
 
 	@Test
 	void avslagWhenTheEstimateIsNotPositive() {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("1000"))));
 		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30"))).thenReturn(List.of());
-		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of(), List.of())).thenReturn(List.of());
 
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -193,7 +205,7 @@ class DecisionProposalServiceTest {
 	@Test
 	void noNormMeansNoOutcomeButAnExplanation() {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.empty(), Optional.empty()));
-		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of(), List.of())).thenReturn(List.of());
 
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -204,16 +216,18 @@ class DecisionProposalServiceTest {
 	}
 
 	@Test
-	void aFailedLifecareDecisionReadIsBestEffort() {
+	void aFailedLifecareDecisionReadRaisesTheReadFailureAndLeavesTheAdvanceWarningAsItWas() {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
 		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30"))).thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
-		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of("PREVIOUS_DECISION_ADVANCE_ON_BENEFIT"), List.of())).thenReturn(List.of());
 
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		assertThat(proposal.getOutcome()).isEqualTo("BIFALL");
 		assertThat(proposal.getPreviousDecision()).isNull();
-		verify(warningServiceMock).reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of());
+		verify(warningServiceMock).reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of("PREVIOUS_DECISION_ADVANCE_ON_BENEFIT"), List.of());
+		verify(warningServiceMock).reconcileLifecareReadFailure(ERRAND_ID, "lifecare-read:previous-decision", true);
+		verify(warningServiceMock).reconcileLifecareReadFailure(ERRAND_ID, "lifecare-read:recovery-claims", false);
 	}
 
 	@Test
@@ -221,7 +235,7 @@ class DecisionProposalServiceTest {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
 		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(List.of(decision("Bifall", "Arbetslös, ingen ersättning/stöd", "Astrid Testsson", "Hemarbetande")));
-		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of(), List.of())).thenReturn(List.of());
 
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -237,7 +251,7 @@ class DecisionProposalServiceTest {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
 		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(List.of(decision("Bifall", "Utan försörjningshinder", "Astrid Testsson", "  ")));
-		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of(), List.of())).thenReturn(List.of());
 
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -256,7 +270,7 @@ class DecisionProposalServiceTest {
 				otherDecision("Okänd tjänst", null, "2026-05-01"),
 				decision("Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall", "Arbetslös, ingen ersättning/stöd"),
 				decision("Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall", "Arbetar heltid, otillräcklig inkomst")));
-		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of(), List.of())).thenReturn(List.of());
 
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -269,7 +283,7 @@ class DecisionProposalServiceTest {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
 		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(List.of(otherDecision("BoU Avgift förälder grundbeslut", 16, ""), otherDecision("EK Beslut om ekonomiskt bistånd under nuvarande förhållande", 2, "")));
-		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, List.of())).thenReturn(List.of());
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of(), List.of())).thenReturn(List.of());
 
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
