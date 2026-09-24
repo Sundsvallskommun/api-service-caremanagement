@@ -7,7 +7,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.RpaContext;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -32,7 +31,7 @@ class LifecareServiceIdServiceTest {
 	private FinancialAssistanceRepository repositoryMock;
 
 	@Mock
-	private RpaContextService rpaContextServiceMock;
+	private HouseholdPartyService householdPartyServiceMock;
 
 	@Mock
 	private ActualisationService actualisationServiceMock;
@@ -40,12 +39,16 @@ class LifecareServiceIdServiceTest {
 	@InjectMocks
 	private LifecareServiceIdService service;
 
+	private static HouseholdPartyService.Household household(final String applicantPersonalNumber) {
+		return new HouseholdPartyService.Household(Optional.ofNullable(applicantPersonalNumber), false, Optional.empty(), Optional.empty());
+	}
+
 	@Test
 	void storedInsatsIsReturnedWithoutLookingItUp() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withLifecareServiceId(7700)));
 
 		assertThat(service.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(7700);
-		verifyNoInteractions(rpaContextServiceMock, actualisationServiceMock);
+		verifyNoInteractions(householdPartyServiceMock, actualisationServiceMock);
 		verify(repositoryMock, never()).save(any());
 	}
 
@@ -53,7 +56,7 @@ class LifecareServiceIdServiceTest {
 	void missingInsatsIsLookedUpAndStored() {
 		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
-		when(rpaContextServiceMock.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(new RpaContext("EB-26090001", APPLICANT, null));
+		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(APPLICANT));
 		when(actualisationServiceMock.findFinancialAssistanceServiceId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(7700));
 
 		assertThat(service.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(7700);
@@ -64,7 +67,7 @@ class LifecareServiceIdServiceTest {
 	@Test
 	void noOpenInsatsStoresNothing() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()));
-		when(rpaContextServiceMock.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(new RpaContext("EB-26090001", APPLICANT, null));
+		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(APPLICANT));
 		when(actualisationServiceMock.findFinancialAssistanceServiceId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.empty());
 
 		assertThat(service.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isNull();
@@ -74,7 +77,7 @@ class LifecareServiceIdServiceTest {
 	@Test
 	void unresolvableApplicantLooksNothingUp() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()));
-		when(rpaContextServiceMock.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(new RpaContext("EB-26090001", null, null));
+		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(null));
 
 		assertThat(service.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isNull();
 		verifyNoInteractions(actualisationServiceMock);
@@ -83,7 +86,7 @@ class LifecareServiceIdServiceTest {
 	@Test
 	void failedLookupAnswersNullSoTheErrandStillOpens() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()));
-		when(rpaContextServiceMock.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(new RpaContext("EB-26090001", APPLICANT, null));
+		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(APPLICANT));
 		when(actualisationServiceMock.findFinancialAssistanceServiceId(MUNICIPALITY_ID, APPLICANT)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare down"));
 
 		assertThat(service.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isNull();
@@ -95,6 +98,6 @@ class LifecareServiceIdServiceTest {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
 
 		assertThat(service.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isNull();
-		verifyNoInteractions(rpaContextServiceMock, actualisationServiceMock);
+		verifyNoInteractions(householdPartyServiceMock, actualisationServiceMock);
 	}
 }

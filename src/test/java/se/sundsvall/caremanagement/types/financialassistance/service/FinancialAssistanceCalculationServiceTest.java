@@ -97,6 +97,9 @@ class FinancialAssistanceCalculationServiceTest {
 	@Mock
 	private LateTransferFeeder lateTransferFeederMock;
 
+	@Mock
+	private PaymentWarningService paymentWarningServiceMock;
+
 	@InjectMocks
 	private FinancialAssistanceCalculationService service;
 
@@ -151,7 +154,7 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, true);
 		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any(), any());
 		verify(warningServiceMock, never()).reconcileRuleWarnings(any(), any(), any(), any(), any());
-		verifyNoInteractions(draftServiceMock, calculationFeederMock, decisionServiceMock);
+		verifyNoInteractions(draftServiceMock, calculationFeederMock, decisionServiceMock, paymentWarningServiceMock);
 		assertThat(response.isInformationComplete()).isFalse();
 		assertThat(errand.getLastDailyRunAt()).isNotNull();
 	}
@@ -351,6 +354,8 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
 		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("SUPPLEMENT_REQUESTED");
 		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, false);
+		// A frozen draft does not freeze the medsökande payment warning: it concerns the household, not the draft.
+		verify(paymentWarningServiceMock).reconcile(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		assertThat(errand.getLastDailyRunAt()).isCloseTo(OffsetDateTime.now(), within(10, SECONDS));
 		verify(repositoryMock).save(errand);
 	}
@@ -391,6 +396,8 @@ class FinancialAssistanceCalculationServiceTest {
 
 		// A run that read SSBTEK closes any read-failure warning an earlier run left behind.
 		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, false);
+		// The medsökande payment warning follows the household on every run, whatever the section approvals say.
+		verify(paymentWarningServiceMock).reconcile(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test

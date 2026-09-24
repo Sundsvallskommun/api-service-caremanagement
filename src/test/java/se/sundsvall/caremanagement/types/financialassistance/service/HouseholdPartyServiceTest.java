@@ -81,4 +81,31 @@ class HouseholdPartyServiceTest {
 		assertThat(household.applicantName()).isEmpty();
 		verifyNoInteractions(citizenServiceMock);
 	}
+
+	@Test
+	void coApplicantPresentFromAStakeholderWithoutAnyCitizenLookup() {
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Stakeholder.create().withRole("CO_APPLICANT").withExternalId("party-b")));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
+
+		assertThat(service.coApplicantPresent(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isTrue();
+		verifyNoInteractions(citizenServiceMock);
+	}
+
+	@Test
+	void coApplicantPresentFallsBackToTheApplicationsPersonRows() {
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withPersons(List.of(
+			FaPerson.create().withRole("CO_APPLICANT").withPartyId("party-b")))));
+
+		assertThat(service.coApplicantPresent(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isTrue();
+	}
+
+	@Test
+	void noCoApplicantWhenNeitherSourceHasOne() {
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Stakeholder.create().withRole("CO_APPLICANT")));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withPersons(List.of(
+			FaPerson.create().withRole("APPLICANT").withPartyId("party-a")))));
+
+		assertThat(service.coApplicantPresent(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isFalse();
+	}
 }

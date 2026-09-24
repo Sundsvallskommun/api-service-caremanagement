@@ -1,10 +1,8 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.util.List;
-import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
@@ -59,25 +57,8 @@ public class RpaContextService {
 
 	/** The personal number for the household member with the given role, or {@code null} when absent or unresolvable. */
 	private String resolvePersonalNumber(final String municipalityId, final List<Stakeholder> stakeholders, final List<FaPerson> persons, final String role) {
-		return resolvePartyId(stakeholders, persons, role)
+		return HouseholdPartyService.resolvePartyId(stakeholders, persons, role)
 			.flatMap(partyId -> citizenService.getPersonalNumber(municipalityId, partyId))
 			.orElse(null);
-	}
-
-	/**
-	 * The partyId for a household role: the errand's stakeholder of that role first (the canonical promoted identity),
-	 * falling back to the application payload's person row — some intake flows populate only one of the two.
-	 */
-	static Optional<String> resolvePartyId(final List<Stakeholder> stakeholders, final List<FaPerson> persons, final String role) {
-		return stakeholders.stream()
-			.filter(stakeholder -> role.equals(stakeholder.getRole()))
-			.map(Stakeholder::getExternalId)
-			.filter(StringUtils::hasText)
-			.findFirst()
-			.or(() -> persons.stream()
-				.filter(person -> role.equals(person.getRole()))
-				.map(FaPerson::getPartyId)
-				.filter(StringUtils::hasText)
-				.findFirst());
 	}
 }

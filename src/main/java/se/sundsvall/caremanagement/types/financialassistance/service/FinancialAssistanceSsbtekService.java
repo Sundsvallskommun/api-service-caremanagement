@@ -126,7 +126,7 @@ public class FinancialAssistanceSsbtekService {
 		final var persons = financialAssistanceRepository.findByErrandId(errandId)
 			.map(FinancialAssistanceEntity::getPersons)
 			.orElseGet(List::of);
-		return RpaContextService.resolvePartyId(stakeholderService.readAll(municipalityId, namespace, errandId), persons, role)
+		return HouseholdPartyService.resolvePartyId(stakeholderService.readAll(municipalityId, namespace, errandId), persons, role)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "Errand %s has no household member with role %s".formatted(errandId, role)));
 	}
 

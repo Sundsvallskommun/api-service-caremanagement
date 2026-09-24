@@ -8,7 +8,6 @@ import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 
-import static java.util.Optional.ofNullable;
 import static org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED;
 
 /**
@@ -37,13 +36,13 @@ public class LifecareServiceIdService {
 	private static final Logger LOG = LoggerFactory.getLogger(LifecareServiceIdService.class);
 
 	private final FinancialAssistanceRepository financialAssistanceRepository;
-	private final RpaContextService rpaContextService;
+	private final HouseholdPartyService householdPartyService;
 	private final ActualisationService actualisationService;
 
-	LifecareServiceIdService(final FinancialAssistanceRepository financialAssistanceRepository, final RpaContextService rpaContextService,
+	LifecareServiceIdService(final FinancialAssistanceRepository financialAssistanceRepository, final HouseholdPartyService householdPartyService,
 		final ActualisationService actualisationService) {
 		this.financialAssistanceRepository = financialAssistanceRepository;
-		this.rpaContextService = rpaContextService;
+		this.householdPartyService = householdPartyService;
 		this.actualisationService = actualisationService;
 	}
 
@@ -64,7 +63,7 @@ public class LifecareServiceIdService {
 		}
 
 		try {
-			final var resolved = ofNullable(rpaContextService.get(municipalityId, namespace, errandId).applicantPersonId())
+			final var resolved = householdPartyService.household(municipalityId, namespace, errandId).applicantPersonalNumber()
 				.filter(StringUtils::hasText)
 				.flatMap(personId -> actualisationService.findFinancialAssistanceServiceId(municipalityId, personId));
 			resolved.ifPresent(serviceId -> financialAssistanceRepository.save(entity.withLifecareServiceId(serviceId)));

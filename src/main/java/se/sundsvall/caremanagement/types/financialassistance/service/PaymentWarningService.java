@@ -10,8 +10,9 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Warn
 
 /**
  * The PAYMENT-section warnings: when there is a medsökande the caseworker is warned to check for delad utbetalning.
- * Reconciled when the DECISION section is approved, so the warning is on the errand when the caseworker moves on to the
- * payment.
+ * Reconciled by every daily prepare, so the warning is on the errand before the caseworker reaches the payment and
+ * follows the household when a medsökande is added or removed. (It used to be reconciled when the DECISION section was
+ * approved; the section approvals no longer drive anything.)
  */
 @Service
 public class PaymentWarningService {
@@ -29,8 +30,7 @@ public class PaymentWarningService {
 	/** Reconcile the PAYMENT-section warnings of an errand the caller has already scope-checked. */
 	@Transactional
 	public List<Warning> reconcile(final String municipalityId, final String namespace, final String errandId) {
-		final var household = householdPartyService.household(municipalityId, namespace, errandId);
-		return warningService.reconcileByTypes(errandId, PAYMENT_PROPOSAL_TYPES, warningInputs(household.coApplicantPresent()));
+		return warningService.reconcileByTypes(errandId, PAYMENT_PROPOSAL_TYPES, warningInputs(householdPartyService.coApplicantPresent(municipalityId, namespace, errandId)));
 	}
 
 	private static List<WarningService.WarningInput> warningInputs(final boolean coApplicantPresent) {

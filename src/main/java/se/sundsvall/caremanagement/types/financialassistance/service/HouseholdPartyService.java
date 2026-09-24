@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
@@ -19,8 +20,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 /**
  * Resolves the errand's household parties for the section proposals: the applicant's personnummer (for the Lifecare
  * reads), whether there is a medsökande, and the applicant's application-payload person row (for the stated payment
- * account). Uses the same partyId resolution as {@link RpaContextService} — the errand's stakeholder of the role first,
- * the application payload's person row as fallback. Personal numbers are resolved on demand and never stored or logged.
+ * account). The partyId per role is the errand's stakeholder of the role first, the application payload's person row as
+ * fallback ({@link #resolvePartyId}). Personal numbers are resolved on demand and never stored or logged.
  */
 @Service
 public class HouseholdPartyService {
@@ -51,9 +52,9 @@ public class HouseholdPartyService {
 			.map(FinancialAssistanceEntity::getPersons)
 			.orElse(List.of());
 
-		final var applicantPersonalNumber = RpaContextService.resolvePartyId(stakeholders, persons, ROLE_APPLICANT)
+		final var applicantPersonalNumber = resolvePartyId(stakeholders, persons, ROLE_APPLICANT)
 			.flatMap(partyId -> citizenService.getPersonalNumber(municipalityId, partyId));
-		final var coApplicantPresent = RpaContextService.resolvePartyId(stakeholders, persons, ROLE_CO_APPLICANT).isPresent();
+		final var coApplicantPresent = resolvePartyId(stakeholders, persons, ROLE_CO_APPLICANT).isPresent();
 		final var applicantPerson = persons.stream()
 			.filter(person -> ROLE_APPLICANT.equals(person.getRole()))
 			.findFirst();
@@ -65,6 +66,35 @@ public class HouseholdPartyService {
 			.findFirst();
 
 		return new Household(applicantPersonalNumber, coApplicantPresent, applicantPerson, applicantName);
+	}
+
+	/**
+	 * The partyId for a household role: the errand's stakeholder of that role first (the canonical promoted identity),
+	 * falling back to the application payload's person row — some intake flows populate only one of the two.
+	 */
+	static Optional<String> resolvePartyId(final List<Stakeholder> stakeholders, final List<FaPerson> persons, final String role) {
+		return stakeholders.stream()
+			.filter(stakeholder -> role.equals(stakeholder.getRole()))
+			.map(Stakeholder::getExternalId)
+			.filter(StringUtils::hasText)
+			.findFirst()
+			.or(() -> persons.stream()
+				.filter(person -> role.equals(person.getRole()))
+				.map(FaPerson::getPartyId)
+				.filter(StringUtils::hasText)
+				.findFirst());
+	}
+
+	/**
+	 * Whether the errand's household has a medsökande. Local data only (stakeholders and the application's person rows) —
+	 * no citizen lookup — so a caller on the daily prepare path cannot be failed by the citizen register.
+	 */
+	@Transactional(readOnly = true)
+	public boolean coApplicantPresent(final String municipalityId, final String namespace, final String errandId) {
+		final var persons = financialAssistanceRepository.findByErrandId(errandId)
+			.map(FinancialAssistanceEntity::getPersons)
+			.orElse(List.of());
+		return resolvePartyId(stakeholderService.readAll(municipalityId, namespace, errandId), persons, ROLE_CO_APPLICANT).isPresent();
 	}
 
 	private static Optional<String> displayName(final Stakeholder stakeholder) {

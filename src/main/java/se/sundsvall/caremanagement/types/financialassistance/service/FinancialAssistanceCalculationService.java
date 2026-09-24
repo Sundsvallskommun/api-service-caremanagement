@@ -81,11 +81,12 @@ public class FinancialAssistanceCalculationService {
 	private final PeriodRuleFeeder periodRuleFeeder;
 	private final MissingIncomeFeeder missingIncomeFeeder;
 	private final LateTransferFeeder lateTransferFeeder;
+	private final PaymentWarningService paymentWarningService;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
-		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder) {
+		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder, final PaymentWarningService paymentWarningService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
@@ -99,6 +100,7 @@ public class FinancialAssistanceCalculationService {
 		this.periodRuleFeeder = periodRuleFeeder;
 		this.missingIncomeFeeder = missingIncomeFeeder;
 		this.lateTransferFeeder = lateTransferFeeder;
+		this.paymentWarningService = paymentWarningService;
 	}
 
 	/**
@@ -120,7 +122,7 @@ public class FinancialAssistanceCalculationService {
 	 * boendekostnad. Everything that works from SSBTEK and the application continues unchanged: the
 	 * completeness verdict, the SSBTEK income warnings and the draft-independent rule warnings, the one-time
 	 * {@code RECOMMENDATION} decision (on careM's basis — agreed with Draken), the completeness status, the read-failure
-	 * warning and the daily-run stamp.
+	 * warning, the medsökande payment warning and the daily-run stamp.
 	 */
 	public CalculationResponse prepareCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
 		if (TRUE.equals(request.getSsbtekError())) {
@@ -138,6 +140,8 @@ public class FinancialAssistanceCalculationService {
 			() -> reconcileKeepingDraft(input, response, rules));
 		// This run read SSBTEK, so any read-failure warning from an earlier run has served its purpose and closes itself.
 		warningService.reconcileSsbtekReadFailure(input.errandId(), false);
+		// The medsökande / delad utbetalning warning follows the household, independent of the draft.
+		paymentWarningService.reconcile(municipalityId, namespace, input.errandId());
 		applyCompletenessStatus(municipalityId, namespace, input.errandId(), response.isInformationComplete());
 		stampDailyRun(input.errand());
 		return response;

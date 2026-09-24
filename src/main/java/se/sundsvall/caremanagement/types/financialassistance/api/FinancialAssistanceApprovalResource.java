@@ -70,7 +70,7 @@ class FinancialAssistanceApprovalResource {
 	@PatchMapping(path = "/financial-assistance/{errandId}/sections/{section}/approval", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(deprecated = true,
 		summary = "Set a section's approval (caseworker)",
-		description = "A caseworker verifies one of the financial assistance view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them. Approving requires an identified caller (X-Sent-By) — an approval with no approver is rejected with 400. Deprecated: approvals no longer gate finalize; the Lifecare statuses (final normberäkning, locked beslut, registered payment) replace them.",
+		description = "A caseworker verifies one of the financial assistance view sections (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier approval. Approving stamps who/when; withdrawing clears them. Approving requires an identified caller (X-Sent-By) — an approval with no approver is rejected with 400. Deprecated: approvals no longer gate finalize and trigger nothing else (the medsökande payment warning is reconciled by the daily prepare); the Lifecare statuses (final normberäkning, locked beslut, registered payment) replace them.",
 		responses = @ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true))
 	ResponseEntity<SectionApproval> setSectionApproval(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
