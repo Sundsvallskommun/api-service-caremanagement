@@ -1,0 +1,13 @@
+{
+	"request": {
+		"method": "GET",
+		"urlPath": "/api-citizen/2281/aaaaaaaa-0000-4000-8000-000000000001/personnumber"
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "text/plain"
+		},
+		"body": "199001011234",
+		"status": 200
+	}
+}

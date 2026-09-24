@@ -20,7 +20,7 @@ final class FinancialAssistanceApiTags {
 	static final String WARNINGS = "Financial Assistance · Warnings";
 	static final String WARNINGS_DESC = "Acknowledgeable financial assistance income warnings on an errand — create, list and set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare step reconciles them.";
 	static final String FINALIZE = "Financial Assistance · Finalize";
-	static final String FINALIZE_DESC = "Besluta och utbetala: record the caseworker's decision and resume the process. The Lifecare writes (normberäkning, beslut, payments, bevakningar, journal, documents) are made by Draken's BFF directly in Lifecare before the decision; the errand only carries the references (lifecareCalculationId, lifecareDecisionId, lifecarePaymentIds). The decision is sent to the applicant by the frontend.";
+	static final String FINALIZE_DESC = "Besluta och utbetala: record the caseworker's decision and resume the process. The Lifecare writes (beslut, payments, bevakningar, journal, documents, and the normberäkning beyond the daily prepare's proposal) are made by Draken's BFF directly in Lifecare before the decision; the errand only carries the references (lifecareCalculationId, lifecareDecisionId, lifecarePaymentIds). The decision is sent to the applicant by the frontend.";
 	static final String PAYMENT = "Financial Assistance · Payment";
 	static final String PAYMENT_DESC = "Read from Lifecare whether the payments a bifall is linked to have been paid out. caremanagement makes no payment and stores no payment status.";
 	static final String PROPOSALS = "Financial Assistance · Proposals";

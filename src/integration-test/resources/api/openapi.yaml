@@ -25,6 +25,13 @@ tags:
 - name: Permits
   description: "Permits issued on an errand: validity period, conditions and status.\
     \ Revoking sets the status to REVOKED."
+- name: Financial Assistance · Finalize
+  description: "Besluta och utbetala: record the caseworker's decision and resume\
+    \ the process. The Lifecare writes (beslut, payments, bevakningar, journal, documents,\
+    \ and the normberäkning beyond the daily prepare's proposal) are made by Draken's\
+    \ BFF directly in Lifecare before the decision; the errand only carries the references\
+    \ (lifecareCalculationId, lifecareDecisionId, lifecarePaymentIds). The decision\
+    \ is sent to the applicant by the frontend."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
 - name: Financial Assistance · Monitorings
@@ -41,12 +48,6 @@ tags:
     purged by a daily background job.
 - name: Status History
   description: Status transition log for an errand
-- name: Financial Assistance · Finalize
-  description: "Besluta och utbetala: record the caseworker's decision and resume\
-    \ the process. The Lifecare writes (normberäkning, beslut, payments, bevakningar,\
-    \ journal, documents) are made by Draken's BFF directly in Lifecare before the\
-    \ decision; the errand only carries the references (lifecareCalculationId, lifecareDecisionId,\
-    \ lifecarePaymentIds). The decision is sent to the applicant by the frontend."
 - name: Metadata
   description: Metadata (lookup) operations
 - name: Namespace config
@@ -3634,11 +3635,14 @@ paths:
         \ type the previous calculation had (informationComplete + missingIncomeTypes),\
         \ records the income warnings on the errand as a single Decision(RECOMMENDATION),\
         \ and reflects completeness in the errand status (SUPPLEMENT_REQUESTED ⇄ AWAITING_DECISION).\
-        \ Never creates a calculation in Lifecare — Draken saves the normberäkning\
-        \ in Lifecare and sets lifecareCalculationId on the errand. Once lifecareCalculationId\
-        \ is set, the draft is no longer refreshed and its warnings stay as they were;\
-        \ the SSBTEK warnings, recommendation and status still update. The financial\
-        \ assistance process calls this each daily loop."
+        \ The first run that finds the information complete, on an errand without\
+        \ lifecareCalculationId, creates the draft in Lifecare as the normberäkning\
+        \ proposal and sets lifecareCalculationId (best-effort: a failed create is\
+        \ retried by the next run, and Draken may create the calculation itself meanwhile).\
+        \ Once lifecareCalculationId is set, the draft is no longer refreshed and\
+        \ its warnings stay as they were; the SSBTEK warnings, recommendation and\
+        \ status still update. The financial assistance process calls this each daily\
+        \ loop."
       operationId: prepareCalculation
       parameters:
       - name: municipalityId
@@ -8763,10 +8767,12 @@ components:
           type: integer
           format: int32
           description: "Reference to the Lifecare normberäkning (calculation) the\
-            \ errand concerns, set by Draken once the calculation is saved in Lifecare.\
-            \ A reference only: whether the calculation is final (slutlig) is Lifecare's\
-            \ status and is never stored here. finalize requires it for a granting\
-            \ outcome (BIFALL/DELAVSLAG)."
+            \ errand concerns. Set by the daily prepare when it creates the proposal\
+            \ in Lifecare, or by Draken when it saves a calculation for an errand\
+            \ that has none; once set it is not replaced by the prepare step. Draken\
+            \ updates this calculation rather than creating another. A reference only:\
+            \ whether the calculation is final (slutlig) is Lifecare's status and\
+            \ is never stored here. finalize requires it for a granting outcome (BIFALL/DELAVSLAG)."
           examples:
           - 4242
         lifecarePaymentIds:

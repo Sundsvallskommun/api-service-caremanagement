@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
@@ -28,6 +29,45 @@ class CalculationDraftMapperTest {
 		assertThat(CalculationDraftMapper.effectiveAmount(null, new BigDecimal("9"))).isEqualByComparingTo("9");
 		assertThat(CalculationDraftMapper.effectiveDays(12, 30)).isEqualTo(12);
 		assertThat(CalculationDraftMapper.effectiveDays(null, 30)).isEqualTo(30);
+	}
+
+	@Test
+	void toEffectiveIncomeCarriesTheTypeNameForACaseworkerRowWithoutTypeId() {
+		final var entity = FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeName("Lön efter skatt")
+			.withApplicantCaseworkerAmount(new BigDecimal("5000"));
+
+		final var income = CalculationDraftMapper.toEffectiveIncome(entity);
+
+		assertThat(income.typeId()).isNull();
+		assertThat(income.typeName()).isEqualTo("Lön efter skatt");
+		assertThat(income.applicantAmount()).isEqualByComparingTo("5000");
+	}
+
+	@Test
+	void toEffectiveExpenseTakesTheCaseworkerAmountAsApprovedAndKeepsTheAppliedAmount() {
+		final var entity = FaNormExpenseEntity.create().withCostType("HOUSING_COST").withBucket(BUCKET_EXPENSE).withAppliedAmount(new BigDecimal("7000"))
+			.withProcessAmount(new BigDecimal("6500")).withCaseworkerAmount(new BigDecimal("6800")).withNote("note");
+
+		final var expense = CalculationDraftMapper.toEffectiveExpense(entity);
+
+		assertThat(expense.costType()).isEqualTo("HOUSING_COST");
+		assertThat(expense.bucket()).isEqualTo(BUCKET_EXPENSE);
+		assertThat(expense.appliedAmount()).isEqualByComparingTo("7000");
+		assertThat(expense.approvedAmount()).isEqualByComparingTo("6800");
+		assertThat(expense.note()).isEqualTo("note");
+	}
+
+	@Test
+	void toEffectivePersonFallsBackToTheProcessDays() {
+		final var entity = FaNormPersonEntity.create().withPartyId("party-1").withProcessDays(30)
+			.withDeviationFromDate(LocalDate.of(2026, 6, 10)).withDeviationToDate(LocalDate.of(2026, 6, 20));
+
+		final var person = CalculationDraftMapper.toEffectivePerson(entity);
+
+		assertThat(person.partyId()).isEqualTo("party-1");
+		assertThat(person.numberOfDays()).isEqualTo(30);
+		assertThat(person.deviationFromDate()).isEqualTo(LocalDate.of(2026, 6, 10));
+		assertThat(person.deviationToDate()).isEqualTo(LocalDate.of(2026, 6, 20));
 	}
 
 	@Test

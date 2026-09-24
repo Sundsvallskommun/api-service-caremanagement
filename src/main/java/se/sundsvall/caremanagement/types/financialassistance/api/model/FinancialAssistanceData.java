@@ -126,8 +126,9 @@ public class FinancialAssistanceData {
 	private Integer lifecareDecisionId;
 
 	@Schema(description = """
-		Reference to the Lifecare normberäkning (calculation) the errand concerns, set by Draken once the calculation is saved \
-		in Lifecare. A reference only: whether the calculation is final (slutlig) is Lifecare's status and is never stored \
+		Reference to the Lifecare normberäkning (calculation) the errand concerns. Set by the daily prepare when it creates the \
+		proposal in Lifecare, or by Draken when it saves a calculation for an errand that has none; once set it is not \
+		replaced by the prepare step. Draken updates this calculation rather than creating another. A reference only: whether the calculation is final (slutlig) is Lifecare's status and is never stored \
 		here. finalize requires it for a granting outcome (BIFALL/DELAVSLAG).""", examples = "4242")
 	private Integer lifecareCalculationId;
 

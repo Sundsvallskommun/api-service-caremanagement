@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.TimeZoneStorageType;
 import se.sundsvall.caremanagement.shared.Auditable;
@@ -23,8 +24,15 @@ import static org.hibernate.Length.LONG32;
  * ({@code errand_id} is set from the envelope id, not generated). Repeating groups — children, costs, incomes, pending
  * benefits, assets, per-person details, planning, planned activities and job applications — are owned
  * {@code @ElementCollection} value tables ({@code errand_fa_*}) that cascade with the row.
+ *
+ * <p>
+ * {@code @DynamicUpdate}: an update writes only the columns that changed. The row has several writers that hold it
+ * for seconds at a time — the daily prepare loads it, reads Lifecare and SSBTEK, then stamps {@code lastDailyRunAt}
+ * — while Draken's BFF sets {@code lifecareCalculationId} / {@code lifecareDecisionId} through its PATCH. Writing
+ * every column would put the stale {@code null} the prepare loaded back over the id the BFF saved in between.
  */
 @Entity
+@DynamicUpdate
 @Table(name = "errand_financial_assistance")
 @EntityListeners(AuditableListener.class)
 public class FinancialAssistanceEntity implements Auditable {

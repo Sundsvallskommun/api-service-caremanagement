@@ -24,6 +24,7 @@ import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
@@ -34,6 +35,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeade
 import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.caremanagement.types.financialassistance.service.mapper.CalculationDraftMapper;
 import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -46,11 +48,12 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
- * The financial-assistance calculation pipeline — preparing the (editable) draft calculation from the
- * process-classified incomes without touching Lifecare ({@link #prepareCalculation}), and the editable draft itself
- * (get/patch header). careM never creates the normberäkning in Lifecare: Draken's BFF owns that write, saves the
- * calculation before the decision (bifall takes its amount from it) and sets its id on the errand as
- * {@code lifecareCalculationId}. The errand envelope, its strongly-typed application data and the case-history reads
+ * The financial-assistance calculation pipeline — preparing the draft calculation from the process-classified incomes
+ * and, once the SSBTEK basis is complete, posting it to Lifecare as the normberäkning proposal
+ * ({@link #prepareCalculation}), and the draft itself (get/patch header). The proposal is linked on the errand as
+ * {@code lifecareCalculationId}; from then on the caseworker continues it in Lifecare through Draken's BFF, which
+ * updates that calculation rather than creating another. The errand envelope, its strongly-typed application data and
+ * the case-history reads
  * stay on the per-resource FinancialAssistanceErrandService / FinancialAssistanceLifecareService /
  * FinancialAssistanceActualisationService / FinancialAssistancePaymentService.
  */
@@ -82,11 +85,13 @@ public class FinancialAssistanceCalculationService {
 	private final MissingIncomeFeeder missingIncomeFeeder;
 	private final LateTransferFeeder lateTransferFeeder;
 	private final PaymentWarningService paymentWarningService;
+	private final LifecareServiceIdService lifecareServiceIdService;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
-		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder, final PaymentWarningService paymentWarningService) {
+		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder, final PaymentWarningService paymentWarningService,
+		final LifecareServiceIdService lifecareServiceIdService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
@@ -101,20 +106,26 @@ public class FinancialAssistanceCalculationService {
 		this.missingIncomeFeeder = missingIncomeFeeder;
 		this.lateTransferFeeder = lateTransferFeeder;
 		this.paymentWarningService = paymentWarningService;
+		this.lifecareServiceIdService = lifecareServiceIdService;
 	}
 
 	/**
-	 * Prepare — but do <strong>not</strong> create in Lifecare — the calculation for the application month from incomes
-	 * already classified by the operaton rules. The financial assistance process calls this each daily loop: it reports
-	 * whether the
-	 * information is complete (does this month cover every income type the previous calculation had?), records the income
-	 * warnings on the errand as a single {@code Decision(RECOMMENDATION)} the caseworker reviews, and reflects
-	 * completeness in the errand status ({@code SUPPLEMENT_REQUESTED} while incomplete, {@code AWAITING_DECISION} when
-	 * complete). No Lifecare calculation is created here — careM never creates one; Draken's BFF does.
+	 * Prepare the calculation for the application month from incomes already classified by the operaton rules. The
+	 * financial assistance process calls this each daily loop: it reports whether the information is complete (does this
+	 * month cover every income type the previous calculation had?), records the income warnings on the errand as a single
+	 * {@code Decision(RECOMMENDATION)} the caseworker reviews, and reflects completeness in the errand status
+	 * ({@code SUPPLEMENT_REQUESTED} while incomplete, {@code AWAITING_DECISION} when complete).
 	 *
 	 * <p>
-	 * <strong>Once the errand carries a {@code lifecareCalculationId}, the Lifecare normberäkning is the truth.</strong>
-	 * The caseworker has saved the calculation in Lifecare from Draken, so careM's draft is no longer refreshed — a
+	 * <strong>The first run that finds the information complete creates the normberäkning proposal in Lifecare</strong>
+	 * ({@link #proposeInLifecare}) — verksamheten wants the caseworker to meet the proposal in Lifecare, not as a careM
+	 * draft. Waiting for completeness is deliberate: the proposal is created once and never refreshed (FamilyCare can
+	 * create a calculation but not update one), so creating it on an incomplete SSBTEK basis would freeze the gap into it.
+	 * Until then the draft keeps refreshing daily as before.
+	 *
+	 * <p>
+	 * <strong>Once the errand carries a {@code lifecareCalculationId}, the Lifecare normberäkning is the truth</strong>,
+	 * whether this step or the caseworker (through Draken) created it. careM's draft is no longer refreshed — a
 	 * refresh would overwrite nothing the caseworker sees any more, and the warnings it raises would describe a draft
 	 * nobody uses. Those draft warnings ({@link WarningService#DRAFT_REFRESH_TYPES}: the new/dropped rows, the expense
 	 * feed, the NORM-04 family, the late transfer and the duplicate incomes) are then left exactly as they last were,
@@ -138,6 +149,9 @@ public class FinancialAssistanceCalculationService {
 		refresh.ifPresentOrElse(
 			draft -> reconcileWithDraft(input, response, draft, rules),
 			() -> reconcileKeepingDraft(input, response, rules));
+		if (refresh.isPresent() && response.isInformationComplete()) {
+			proposeInLifecare(municipalityId, input);
+		}
 		// This run read SSBTEK, so any read-failure warning from an earlier run has served its purpose and closes itself.
 		warningService.reconcileSsbtekReadFailure(input.errandId(), false);
 		// The medsökande / delad utbetalning warning follows the household, independent of the draft.
@@ -373,6 +387,51 @@ public class FinancialAssistanceCalculationService {
 			response.getMissingIncomeTypes(), rules.all());
 	}
 
+	/**
+	 * Post the refreshed draft to Lifecare as the normberäkning proposal and link it on the errand. Best-effort: a
+	 * failed create leaves the errand without a link, and the next daily run — or the caseworker saving from Draken —
+	 * creates it instead, so a Lifecare outage never wedges the process.
+	 *
+	 * <p>
+	 * The link is conditional ({@link FinancialAssistanceRepository#linkLifecareCalculationIfAbsent}): Draken's BFF
+	 * creates a calculation when the errand has none, so the two can race. Whichever links first wins; the loser's
+	 * calculation stays in Lifecare unlinked (FamilyCare has no delete), and the warning below is the trace of it.
+	 */
+	private void proposeInLifecare(final String municipalityId, final PrepareInput input) {
+		final Integer calculationId;
+		try {
+			calculationId = commitDraft(municipalityId, input);
+		} catch (final RuntimeException e) {
+			// The exception type only: Lifecare's error detail may echo the calculation body.
+			LOG.warn("Could not create the normberäkning proposal in Lifecare for errand {} ({}); the next run tries again",
+				sanitizeForLogging(input.errandId()), e.getClass().getSimpleName());
+			return;
+		}
+		if (financialAssistanceRepository.linkLifecareCalculationIfAbsent(input.errandId(), calculationId) == 1) {
+			// Keep the loaded entity in step with the row, so nothing later in this run treats the errand as unlinked.
+			input.errand().setLifecareCalculationId(calculationId);
+			LOG.info("Created the normberäkning proposal {} in Lifecare for errand {}", calculationId, sanitizeForLogging(input.errandId()));
+			return;
+		}
+		LOG.warn("Errand {} got a normberäkning linked while the prepare step created Lifecare calculation {}; that calculation is left unlinked",
+			sanitizeForLogging(input.errandId()), calculationId);
+	}
+
+	/** The draft's effective rows (live, not soft-deleted), posted to Lifecare FamilyCare. Returns the calculation id. */
+	private Integer commitDraft(final String municipalityId, final PrepareInput input) {
+		final var errandId = input.errandId();
+		final var header = draftService.header(errandId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft calculation for errand " + errandId));
+		final var incomes = draftService.liveIncomes(errandId).stream().map(CalculationDraftMapper::toEffectiveIncome).toList();
+		final var expenses = draftService.liveExpenses(errandId).stream().map(CalculationDraftMapper::toEffectiveExpense).toList();
+		final var persons = draftService.livePersons(errandId).stream().map(CalculationDraftMapper::toEffectivePerson).toList();
+
+		final var calculationHeader = new CalculationHeader(header.getNormId(), header.getCalculationFromDate(), header.getCalculationToDate(),
+			header.getCalculationDate(), header.getHasCustomHouseholdSize(), header.getHouseholdSize(),
+			lifecareServiceIdService.currentOrResolve(municipalityId, input.namespace(), errandId));
+		return calculationService.commitEffective(municipalityId, input.applicant(), input.applicationMonth(), calculationHeader, incomes, expenses, persons);
+	}
+
 	/** Stamp the errand with this daily-loop run so Draken can show "last checked" and ops can spot stale loops. */
 	private void stampDailyRun(final FinancialAssistanceEntity errand) {
 		errand.setLastDailyRunAt(OffsetDateTime.now(ZoneId.systemDefault()));
@@ -512,7 +571,7 @@ public class FinancialAssistanceCalculationService {
 			response.getMissingIncomeTypes().stream().map("Saknas fortfarande i SSBTEK: "::concat))
 			.flatMap(stream -> stream)
 			.toList();
-		final var header = "Inkomstunderlag förberett (preliminärt – normberäkningen sparas i Lifecare av handläggaren). ";
+		final var header = "Inkomstunderlag förberett (preliminärt – förslaget på normberäkning skapas i Lifecare när underlaget är komplett). ";
 		final String description;
 		if (warnings.isEmpty()) {
 			description = header + "Inga varningar – inkomsterna kunde överföras utan anmärkning.";

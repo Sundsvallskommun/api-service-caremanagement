@@ -1,0 +1,15 @@
+{
+	"request": {
+		"method": "POST",
+		"urlPath": "/api-operaton/2281/decision-definitions/evaluate"
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"results": []
+		},
+		"status": 200
+	}
+}

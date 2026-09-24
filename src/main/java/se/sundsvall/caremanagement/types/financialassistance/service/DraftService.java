@@ -6,6 +6,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -259,6 +260,30 @@ public class DraftService {
 		final var entity = requirePerson(errandId, rowId);
 		entity.setDeleted(deleted);
 		return CalculationDraftMapper.toPersonRow(personRepository.save(entity));
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
+	// Lifecare path — the effective (live, non-deleted) rows the prepare step posts as the proposal in Lifecare.
+	// ------------------------------------------------------------------------------------------------------------------
+
+	@Transactional(readOnly = true)
+	public Optional<FaCalculationDraftEntity> header(final String errandId) {
+		return calculationDraftRepository.findById(errandId);
+	}
+
+	@Transactional(readOnly = true)
+	public List<FaNormIncomeEntity> liveIncomes(final String errandId) {
+		return incomeRepository.findByErrandId(errandId).stream().filter(row -> !row.isDeleted()).toList();
+	}
+
+	@Transactional(readOnly = true)
+	public List<FaNormExpenseEntity> liveExpenses(final String errandId) {
+		return expenseRepository.findByErrandId(errandId).stream().filter(row -> !row.isDeleted()).toList();
+	}
+
+	@Transactional(readOnly = true)
+	public List<FaNormPersonEntity> livePersons(final String errandId) {
+		return personRepository.findByErrandId(errandId).stream().filter(row -> !row.isDeleted() && row.isIncluded()).toList();
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

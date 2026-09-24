@@ -5,6 +5,7 @@ import generated.se.sundsvall.lifecareintegrator.CalculationProposal;
 import generated.se.sundsvall.lifecareintegrator.Caseworker;
 import generated.se.sundsvall.lifecareintegrator.Contact;
 import generated.se.sundsvall.lifecareintegrator.CreateActualisationRequest;
+import generated.se.sundsvall.lifecareintegrator.CreateCalculationRequest;
 import generated.se.sundsvall.lifecareintegrator.CreatedResource;
 import generated.se.sundsvall.lifecareintegrator.DecisionsResponse;
 import generated.se.sundsvall.lifecareintegrator.PagedActualisationResponse;
@@ -119,6 +120,9 @@ public interface LifecareIntegratorClient {
 	//
 	// These three write into Lifecare. The integrator answers 201 with the created id for the two creates and 204 for
 	// the upload.
+
+	@PostMapping(path = "/{municipalityId}/calculations", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	CreatedResource createCalculation(@PathVariable final String municipalityId, @RequestBody final CreateCalculationRequest body);
 
 	@PostMapping(path = "/{municipalityId}/actualisations", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	CreatedResource createActualisation(@PathVariable final String municipalityId, @RequestBody final CreateActualisationRequest body);

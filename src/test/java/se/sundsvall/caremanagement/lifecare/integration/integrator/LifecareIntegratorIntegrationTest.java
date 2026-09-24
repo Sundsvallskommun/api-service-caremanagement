@@ -7,6 +7,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedServiceDTO;
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
+import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.User;
 import generated.se.sundsvall.lifecareintegrator.Actualisation;
 import generated.se.sundsvall.lifecareintegrator.ActualisationProposal;
@@ -19,6 +20,7 @@ import generated.se.sundsvall.lifecareintegrator.CaseService;
 import generated.se.sundsvall.lifecareintegrator.Caseworker;
 import generated.se.sundsvall.lifecareintegrator.Contact;
 import generated.se.sundsvall.lifecareintegrator.CreateActualisationRequest;
+import generated.se.sundsvall.lifecareintegrator.CreateCalculationRequest;
 import generated.se.sundsvall.lifecareintegrator.CreatedResource;
 import generated.se.sundsvall.lifecareintegrator.Decision;
 import generated.se.sundsvall.lifecareintegrator.DecisionsResponse;
@@ -332,28 +334,61 @@ class LifecareIntegratorIntegrationTest {
 	// ---- Writes -----------------------------------------------------------------------------------------------------
 
 	@Test
-	void createActualisationWithoutAResolvableApplicantNeverWrites() {
-		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.empty());
+	void createCalculationResolvesTheApplicantAndReturnsTheCreatedId() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+		when(clientMock.createCalculation(eq(MUNICIPALITY_ID), any())).thenReturn(new CreatedResource().id(5012));
 
-		assertThatThrownBy(() -> integration.createActualisation(MUNICIPALITY_ID, completeActualisationBody()))
+		final var created = integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody());
+
+		assertThat(created).isEqualTo(5012);
+		final var request = ArgumentCaptor.forClass(CreateCalculationRequest.class);
+		verify(clientMock).createCalculation(eq(MUNICIPALITY_ID), request.capture());
+		assertThat(request.getValue().getPartyId()).isEqualTo(PARTY_ID);
+		assertThat(request.getValue().getNormId()).isEqualTo(7);
+	}
+
+	/**
+	 * The integrator declares these non-nullable. Naming them beats a constraint violation from two hops away, and it
+	 * has to happen before the call so an incomplete body never reaches Lifecare.
+	 */
+	@Test
+	void createCalculationNamesTheRequiredFieldsTheBodyIsMissing() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
+
+		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, new PostCalculationBodyRequest().personId(PERSON_ID)))
 			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessageContaining("normId")
+			.hasMessageContaining("calculationDate")
+			.hasMessageContaining("calculationFromDate")
+			.hasMessageContaining("calculationToDate");
 
-		verify(clientMock, never()).createActualisation(any(), any());
+		verify(clientMock, never()).createCalculation(any(), any());
 	}
 
 	/** An unparseable date is a missing date, reported by name rather than as a stack trace from the mapper. */
 	@Test
-	void createActualisationRejectsAnUnparseableDateByName() {
+	void createCalculationRejectsAnUnparseableDateByName() {
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
 
-		assertThatThrownBy(() -> integration.createActualisation(MUNICIPALITY_ID, completeActualisationBody().date("garbage")))
+		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody().calculationToDate("garbage")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
-			.hasMessageContaining("date")
-			.hasMessageNotContaining("typeId");
+			.hasMessageContaining("calculationToDate")
+			.hasMessageNotContaining("normId");
 
-		verify(clientMock, never()).createActualisation(any(), any());
+		verify(clientMock, never()).createCalculation(any(), any());
+	}
+
+	@Test
+	void createCalculationWithoutAResolvableApplicantNeverWrites() {
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody()))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+
+		verify(clientMock, never()).createCalculation(any(), any());
 	}
 
 	@Test
@@ -387,9 +422,9 @@ class LifecareIntegratorIntegrationTest {
 	@Test
 	void aCreateWithNoIdInTheResponseYieldsNull() {
 		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, PERSON_ID)).thenReturn(Optional.of(PARTY_ID));
-		when(clientMock.createActualisation(eq(MUNICIPALITY_ID), any())).thenReturn(new CreatedResource());
+		when(clientMock.createCalculation(eq(MUNICIPALITY_ID), any())).thenReturn(new CreatedResource());
 
-		assertThat(integration.createActualisation(MUNICIPALITY_ID, completeActualisationBody())).isNull();
+		assertThat(integration.createCalculation(MUNICIPALITY_ID, completeCalculationBody())).isNull();
 	}
 
 	/**
@@ -424,8 +459,13 @@ class LifecareIntegratorIntegrationTest {
 			.hasMessageNotContaining("connection reset");
 	}
 
-	private static PostAktualiseringsBodyRequest completeActualisationBody() {
-		return new PostAktualiseringsBodyRequest().personId(PERSON_ID).date("2026-06-12T00:00:00").type(1);
+	private static PostCalculationBodyRequest completeCalculationBody() {
+		return new PostCalculationBodyRequest()
+			.personId(PERSON_ID)
+			.normId(7)
+			.calculationDate("2026-06-01T00:00:00")
+			.calculationFromDate("2026-06-01T00:00:00")
+			.calculationToDate("2026-06-30T00:00:00");
 	}
 
 	/**

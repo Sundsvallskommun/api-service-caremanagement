@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -22,7 +23,11 @@ import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
@@ -30,6 +35,9 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.DayCheckBasis;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCalculationDraftEntity;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -99,6 +107,9 @@ class FinancialAssistanceCalculationServiceTest {
 
 	@Mock
 	private PaymentWarningService paymentWarningServiceMock;
+
+	@Mock
+	private LifecareServiceIdService lifecareServiceIdServiceMock;
 
 	@InjectMocks
 	private FinancialAssistanceCalculationService service;
@@ -300,6 +311,9 @@ class FinancialAssistanceCalculationServiceTest {
 		// No lifecareCalculationId yet: the draft is refreshed, so the full calculation reconcile runs.
 		verify(draftServiceMock).refresh(eq(ERRAND_ID), eq("2026-06"), eq(7), eq(List.of("NATIONAL_NORM")), any(), any(), any());
 		verify(warningServiceMock, never()).reconcileRuleWarnings(any(), any(), any(), any(), any());
+		// An incomplete basis is never frozen into a Lifecare proposal: the draft keeps refreshing until it is complete.
+		verify(calculationServiceMock, never()).commitEffective(any(), any(), any(), any(), any(), any(), any());
+		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
 	}
 
 	@Test
@@ -324,7 +338,10 @@ class FinancialAssistanceCalculationServiceTest {
 		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		// The draft is left alone: no refresh, no feed, no family copy, no late transfer, no duplicate read.
-		verifyNoInteractions(draftServiceMock, lateTransferFeederMock);
+		verifyNoInteractions(draftServiceMock, lateTransferFeederMock, lifecareServiceIdServiceMock);
+		// A linked calculation is never proposed again.
+		verify(calculationServiceMock, never()).commitEffective(any(), any(), any(), any(), any(), any(), any());
+		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
 		verify(calculationFeederMock, never()).incomeRows(any(), any());
 		verify(calculationFeederMock, never()).expenseFeed(any(), any(), any(), any(), any());
 		verify(calculationFeederMock, never()).personRows(any(), any(), any(), any(), any(), any());
@@ -398,6 +415,107 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, false);
 		// The medsökande payment warning follows the household on every run.
 		verify(paymentWarningServiceMock).reconcile(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	/** A complete run on an errand with no linked calculation. */
+	private FinancialAssistanceEntity completeRun(final YearMonth month) {
+		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
+		noPreviousCalculation(month);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
+		when(calculationServiceMock.completeness(MUNICIPALITY_ID, "199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("SUPPLEMENT_REQUESTED"));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
+		return errand;
+	}
+
+	/** {@link #completeRun}, with a refreshed draft that has one row per section. */
+	private FinancialAssistanceEntity completeRunWithDraft(final YearMonth month) {
+		final var errand = completeRun(month);
+		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(7)
+			.withCalculationFromDate(LocalDate.of(2026, 6, 1)).withCalculationToDate(LocalDate.of(2026, 6, 30)).withCalculationDate(LocalDate.of(2026, 6, 1))));
+		when(draftServiceMock.liveIncomes(ERRAND_ID)).thenReturn(List.of(FaNormIncomeEntity.create().withTypeId(20).withApplicantProcessAmount(new BigDecimal("5000"))));
+		when(draftServiceMock.liveExpenses(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("HOUSING_COST").withProcessAmount(new BigDecimal("6500"))));
+		when(draftServiceMock.livePersons(ERRAND_ID)).thenReturn(List.of(FaNormPersonEntity.create().withPartyId(APPLICANT_PARTY_ID).withProcessDays(30)));
+		when(lifecareServiceIdServiceMock.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(55);
+		return errand;
+	}
+
+	private static CalculationRequest completeRequest() {
+		return CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]");
+	}
+
+	@Test
+	void prepareCreatesTheProposalInLifecareOnceTheBasisIsComplete() {
+		final var month = YearMonth.of(2026, JUNE);
+		final var errand = completeRunWithDraft(month);
+		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(), any(), any(), any())).thenReturn(777);
+		when(repositoryMock.linkLifecareCalculationIfAbsent(ERRAND_ID, 777)).thenReturn(1);
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest());
+
+		// The draft's effective rows go to Lifecare with the header's norm and period and the errand's EB insats.
+		final ArgumentCaptor<CalculationHeader> header = ArgumentCaptor.captor();
+		final ArgumentCaptor<List<EffectiveIncome>> incomes = ArgumentCaptor.captor();
+		final ArgumentCaptor<List<EffectiveExpense>> expenses = ArgumentCaptor.captor();
+		final ArgumentCaptor<List<EffectivePerson>> persons = ArgumentCaptor.captor();
+		verify(calculationServiceMock).commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), header.capture(), incomes.capture(), expenses.capture(), persons.capture());
+		assertThat(header.getValue().normId()).isEqualTo(7);
+		assertThat(header.getValue().calculationFromDate()).isEqualTo(LocalDate.of(2026, 6, 1));
+		assertThat(header.getValue().calculationToDate()).isEqualTo(LocalDate.of(2026, 6, 30));
+		assertThat(header.getValue().serviceId()).isEqualTo(55);
+		assertThat(incomes.getValue()).singleElement().satisfies(income -> assertThat(income.applicantAmount()).isEqualByComparingTo("5000"));
+		assertThat(expenses.getValue()).singleElement().satisfies(expense -> assertThat(expense.approvedAmount()).isEqualByComparingTo("6500"));
+		assertThat(persons.getValue()).singleElement().satisfies(person -> assertThat(person.partyId()).isEqualTo(APPLICANT_PARTY_ID));
+
+		// Linked on the errand, and the loaded entity carries the id so the run stamp cannot write the old value back.
+		verify(repositoryMock).linkLifecareCalculationIfAbsent(ERRAND_ID, 777);
+		assertThat(errand.getLifecareCalculationId()).isEqualTo(777);
+		verify(repositoryMock).save(errand);
+	}
+
+	@Test
+	void prepareLeavesTheProposalToTheNextRunWhenLifecareRefusesIt() {
+		final var month = YearMonth.of(2026, JUNE);
+		final var errand = completeRunWithDraft(month);
+		when(calculationServiceMock.commitEffective(any(), any(), any(), any(), any(), any(), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare said no"));
+
+		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest());
+
+		// Best-effort: nothing is linked, and the rest of the run completes as usual.
+		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
+		assertThat(errand.getLifecareCalculationId()).isNull();
+		assertThat(response.isInformationComplete()).isTrue();
+		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
+		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
+		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("AWAITING_DECISION");
+		verify(repositoryMock).save(errand);
+	}
+
+	@Test
+	void prepareLeavesItsProposalUnlinkedWhenDrakenLinkedOneFirst() {
+		final var month = YearMonth.of(2026, JUNE);
+		final var errand = completeRunWithDraft(month);
+		when(calculationServiceMock.commitEffective(any(), any(), any(), any(), any(), any(), any())).thenReturn(778);
+		when(repositoryMock.linkLifecareCalculationIfAbsent(ERRAND_ID, 778)).thenReturn(0);
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest());
+
+		// The BFF's link stands: the loaded entity is not given this run's id, so the stamp never overwrites it.
+		assertThat(errand.getLifecareCalculationId()).isNull();
+		verify(repositoryMock).save(errand);
+	}
+
+	@Test
+	void prepareDoesNotProposeWithoutADraftHeader() {
+		final var month = YearMonth.of(2026, JUNE);
+		completeRun(month);
+		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.empty());
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest());
+
+		verify(calculationServiceMock, never()).commitEffective(any(), any(), any(), any(), any(), any(), any());
+		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
 	}
 
 	@Test

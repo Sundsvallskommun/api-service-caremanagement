@@ -5,8 +5,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
 @CircuitBreaker(name = "financialAssistanceRepository")
@@ -37,4 +39,18 @@ public interface FinancialAssistanceRepository extends JpaRepository<FinancialAs
 		where p in :lifecarePaymentIds and fa.errandId <> :errandId
 		""")
 	List<String> findLifecarePaymentIdsLinkedElsewhere(@Param("lifecarePaymentIds") Collection<String> lifecarePaymentIds, @Param("errandId") String errandId);
+
+	/**
+	 * Link a Lifecare calculation to the errand, but only when none is linked yet. The prepare step and Draken's BFF
+	 * can both create the calculation; whichever links first wins, and the other learns it lost from the {@code 0}.
+	 *
+	 * @return the number of rows updated — {@code 1} when this call linked the id, {@code 0} when one was already linked
+	 */
+	@Modifying
+	@Transactional
+	@Query("""
+		update FinancialAssistanceEntity fa set fa.lifecareCalculationId = :lifecareCalculationId
+		where fa.errandId = :errandId and fa.lifecareCalculationId is null
+		""")
+	int linkLifecareCalculationIfAbsent(@Param("errandId") String errandId, @Param("lifecareCalculationId") Integer lifecareCalculationId);
 }

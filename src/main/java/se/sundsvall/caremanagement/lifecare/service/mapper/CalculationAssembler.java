@@ -1,26 +1,118 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationAktualiseringDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationIncomePostDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationNormDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationServiceDTO;
+import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.util.StringUtils;
+import se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationSections;
 
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.startOfDay;
 import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.normalize;
 
 /**
- * Chooses the norm for a calculation month from the FamilyCare calculation proposal — the norm catalogue the proposal
- * offers the person, matched by name against the month's window. careM used to assemble and post the whole
- * calculation body from here; that write moved to Draken's BFF, which owns the normberäkning in Lifecare, and only the
- * norm choice for careM's draft remains.
+ * Assembles the full FamilyCare {@link PostCalculationBodyRequest} for an SSBTEK-driven calculation by combining the
+ * FamilyCare calculation proposal (the service / investigation / norm / actualisation links FamilyCare offers for the
+ * person) with the prepared income rows and the application month.
+ *
+ * <p>
+ * Where the proposal offers a choice: the first actualisation is taken when one is mandatory, and the norm covering the
+ * application month — falling back to the first. No service or investigation is taken from the proposal: those lists
+ * are all of the person's open insatser and utredningar across socialtjänsten, so "the first" can be a Vux utredning
+ * or a BoU insats, and FamilyCare refuses a calculation carrying both. The insats comes from the draft header instead
+ * (the errand's own EB insats), and only when the proposal offers it. The calculation
+ * spans the application month. Expenses are left to the caseworker and household size to FamilyCare (left unset →
+ * FamilyCare derives it from the proposal's household). These selections are intentionally simple and isolated here so
+ * they are easy to refine once real FamilyCare proposals are available.
  */
 public final class CalculationAssembler {
 
 	private CalculationAssembler() {}
+
+	/**
+	 * Build the FamilyCare calculation body for one applicant and application month.
+	 *
+	 * @param  applicantPersonId  the applicant's personnummer (the FamilyCare calculation owner)
+	 * @param  proposal           the FamilyCare calculation proposal supplying the link ids; may be {@code null}
+	 * @param  calculationIncomes the prepared FamilyCare income rows; may be {@code null}
+	 * @param  applicationMonth   the month the application concerns
+	 * @return                    the assembled {@link PostCalculationBodyRequest}
+	 */
+	public static PostCalculationBodyRequest assemble(
+		final String applicantPersonId,
+		final PersonBasedCalculationProposalDTO proposal,
+		final List<PersonBasedCalculationIncomePostDTO> calculationIncomes,
+		final YearMonth applicationMonth,
+		final List<String> normNames) {
+
+		final var monthStart = applicationMonth.atDay(1);
+		final var body = new PostCalculationBodyRequest()
+			.personId(applicantPersonId)
+			.calculationDate(startOfDay(monthStart))
+			.calculationFromDate(startOfDay(monthStart))
+			.calculationToDate(startOfDay(applicationMonth.atEndOfMonth()))
+			.calculationIncomes(ofNullable(calculationIncomes).orElseGet(List::of));
+
+		ofNullable(proposal).ifPresent(p -> {
+			normIdForMonth(p, monthStart, normNames).ifPresent(body::normId);
+			mandatoryAktualiseringId(p).ifPresent(body::aktualiseringId);
+		});
+
+		return body;
+	}
+
+	/**
+	 * Build the full three-section FamilyCare calculation body — incomes (subtracted), expenses (added) and the
+	 * household persons (the norm base) — for one applicant and application month. Reuses the income + proposal-link
+	 * selection of {@link #assemble(String, PersonBasedCalculationProposalDTO, List, YearMonth)}; adds the expenses and
+	 * persons and, when given, overrides the proposal-selected norm with the one chosen on the draft header.
+	 *
+	 * @param  applicantPersonId the applicant's personnummer (the FamilyCare calculation owner)
+	 * @param  proposal          the FamilyCare calculation proposal supplying the link ids; may be {@code null}
+	 * @param  sections          the income/expense/special-expense/person rows + draft header; fields may be {@code null}
+	 * @param  applicationMonth  the month the application concerns
+	 * @return                   the assembled {@link PostCalculationBodyRequest}
+	 */
+	public static PostCalculationBodyRequest assemble(
+		final String applicantPersonId,
+		final PersonBasedCalculationProposalDTO proposal,
+		final CalculationSections sections,
+		final YearMonth applicationMonth,
+		final List<String> normNames) {
+
+		final var body = assemble(applicantPersonId, proposal, sections.incomes(), applicationMonth, normNames);
+		ofNullable(sections.expenses()).ifPresent(body::calculationExpenses);
+		ofNullable(sections.specialExpenses()).ifPresent(body::calculationSpecialExpenses);
+		ofNullable(sections.persons()).ifPresent(body::calculationPersons);
+		ofNullable(sections.header()).ifPresent(h -> {
+			applyHeader(body, h);
+			offeredServiceId(proposal, h.serviceId()).ifPresent(body::serviceId);
+		});
+		return body;
+	}
+
+	/**
+	 * Apply the draft header onto the body — the chosen norm overrides the proposal selection, dates + household when
+	 * set.
+	 */
+	private static void applyHeader(final PostCalculationBodyRequest body, final CalculationHeader header) {
+		ofNullable(header.normId()).ifPresent(body::normId);
+		ofNullable(header.calculationFromDate()).map(FamilyCareDates::startOfDay).ifPresent(body::calculationFromDate);
+		ofNullable(header.calculationToDate()).map(FamilyCareDates::startOfDay).ifPresent(body::calculationToDate);
+		ofNullable(header.calculationDate()).map(FamilyCareDates::startOfDay).ifPresent(body::calculationDate);
+		ofNullable(header.hasCustomHouseholdSize()).ifPresent(body::hasCustomHouseholdSize);
+		ofNullable(header.householdSize()).ifPresent(body::householdSize);
+	}
 
 	/**
 	 * The norm id for the application month — the one the application's {@code normType} names among those covering
@@ -52,6 +144,17 @@ public final class CalculationAssembler {
 			.map(PersonBasedCalculationNormDTO::getId)
 			.filter(Objects::nonNull)
 			.findFirst();
+	}
+
+	/**
+	 * The errand's insats, when the proposal offers it. An insats the proposal does not list is closed or belongs to
+	 * someone else; linking it would be refused, so the calculation is then left unlinked.
+	 */
+	private static Optional<Integer> offeredServiceId(final PersonBasedCalculationProposalDTO proposal, final Integer serviceId) {
+		return ofNullable(serviceId).filter(id -> ofNullable(proposal)
+			.map(PersonBasedCalculationProposalDTO::getServices).orElseGet(List::of).stream()
+			.map(PersonBasedCalculationServiceDTO::getId)
+			.anyMatch(id::equals));
 	}
 
 	/**
@@ -99,6 +202,17 @@ public final class CalculationAssembler {
 	private static boolean matchesAnyLabel(final PersonBasedCalculationNormDTO norm, final List<String> labels) {
 		final var name = normalize(norm.getName());
 		return labels.stream().map(MapperUtil::normalize).anyMatch(label -> !label.isEmpty() && name.startsWith(label));
+	}
+
+	/** Only link an actualisation when FamilyCare says one is mandatory; then take the first offered. */
+	private static Optional<Integer> mandatoryAktualiseringId(final PersonBasedCalculationProposalDTO proposal) {
+		if (!Boolean.TRUE.equals(proposal.getAktualiseringMandatory())) {
+			return Optional.empty();
+		}
+		return ofNullable(proposal.getAktualiserings()).orElseGet(List::of).stream()
+			.map(PersonBasedCalculationAktualiseringDTO::getId)
+			.filter(Objects::nonNull)
+			.findFirst();
 	}
 
 	private static boolean covers(final PersonBasedCalculationNormDTO norm, final LocalDate date) {

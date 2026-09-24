@@ -1,0 +1,25 @@
+{
+	"request": {
+		"method": "GET",
+		"urlPath": "/api-lifecare-familycare/apifc/v1/Calculations/Proposals",
+		"queryParameters": {
+			"personId": {
+				"equalTo": "199001011234"
+			}
+		}
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"Services": [
+				{
+					"Id": 7700,
+					"Name": "Ekonomiskt bistånd"
+				}
+			]
+		},
+		"status": 200
+	}
+}

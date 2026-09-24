@@ -1,5 +1,7 @@
 package apptest;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
 import static net.javacrumbs.jsonunit.core.Option.IGNORING_EXTRA_FIELDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,9 +34,16 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 
 /**
- * The contract between Draken and careM around the Lifecare normberäkning: Draken saves the calculation in Lifecare and
- * PATCHes its id onto the errand as {@code lifecareCalculationId}; from then on the daily prepare leaves careM's draft
- * alone, and only then may a granting decision be finalized.
+ * The contract between Draken and careM around the Lifecare normberäkning. The first daily prepare that finds the
+ * SSBTEK basis complete posts careM's draft to Lifecare as the proposal and links it on the errand as
+ * {@code lifecareCalculationId}; when that create fails — or Draken saves a calculation first — Draken's BFF creates it
+ * and PATCHes the id instead. Either way, from then on the daily prepare leaves careM's draft alone, and only then may a
+ * granting decision be finalized.
+ *
+ * <p>
+ * Only test13 stubs the FamilyCare create. Everywhere else the create has no stub and fails, which is the best-effort
+ * path: the errand stays unlinked and the draft keeps refreshing, exactly as when Lifecare refuses the proposal.
+ * </p>
  *
  * <p>
  * One application type (återansökan) is covered: none of these paths — the data PATCH, the draft refresh or the
@@ -105,7 +114,8 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 
 	@Test
 	void test02_prepareRefreshesTheDraftUntilTheCalculationIsSavedInLifecare() throws JacksonException {
-		// Run 1, no lifecareCalculationId: the draft is built from the application — the applicant and the rent.
+		// Run 1, no lifecareCalculationId: the draft is built from the application — the applicant and the rent. The
+		// proposal create has no stub here and fails, so the errand stays unlinked and the next run refreshes again.
 		prepare();
 		assertThat(draft().getExpenses()).extracting(NormExpenseRow::getCostType).containsExactly("RENT");
 
@@ -310,6 +320,28 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 			.withHttpMethod(GET)
 			.withExpectedResponseStatus(NOT_FOUND)
 			.sendRequest();
+	}
+
+	@Test
+	void test13_prepareCreatesTheProposalInLifecareAndFreezesTheDraft() throws JacksonException {
+		// Run 1 finds the basis complete and posts the draft to Lifecare — the applicant's personnummer on the body and on
+		// the household row, the errand's EB insats (the stub matches on all three) — and links the created id.
+		prepare();
+		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_ID)).hasValueSatisfying(entity -> assertThat(entity.getLifecareCalculationId()).isEqualTo(9001));
+		final var proposed = draft();
+
+		// The link is first-come: a second create (Draken's BFF racing the prepare) cannot replace it.
+		assertThat(financialAssistanceRepository.linkLifecareCalculationIfAbsent(ERRAND_ID, 9002)).isZero();
+		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_ID)).hasValueSatisfying(entity -> assertThat(entity.getLifecareCalculationId()).isEqualTo(9001));
+
+		// Run 2, after the application gains a cost: the proposal is frozen, so the draft is not refreshed and nothing
+		// new is created in Lifecare.
+		patchData("""
+			{"costs": [{"costType": "RENT", "appliedAmount": 6500}, {"costType": "ELECTRICITY", "appliedAmount": 400}]}""");
+		prepare();
+		assertThat(draft()).usingRecursiveComparison().isEqualTo(proposed);
+		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_ID)).hasValueSatisfying(entity -> assertThat(entity.getLifecareCalculationId()).isEqualTo(9001));
+		wiremock.verify(1, postRequestedFor(urlPathEqualTo("/api-lifecare-familycare/apifc/v1/Calculations")));
 	}
 
 	/**

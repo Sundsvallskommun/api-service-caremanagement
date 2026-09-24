@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
@@ -157,6 +160,32 @@ public final class CalculationDraftMapper {
 
 	public static Integer effectiveDays(final Integer caseworkerDays, final Integer processDays) {
 		return ofNullable(caseworkerDays).orElse(processDays);
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
+	// Live draft row -> effective FamilyCare row (the effective value of each row, ready to post to Lifecare FamilyCare).
+	// ------------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * One live income row → its effective FamilyCare income (applicant + co-applicant effective amounts), ready to post.
+	 */
+	public static EffectiveIncome toEffectiveIncome(final FaNormIncomeEntity row) {
+		return new EffectiveIncome(row.getTypeId(), row.getTypeName(),
+			effectiveAmount(row.getApplicantCaseworkerAmount(), row.getApplicantProcessAmount()), row.getApplicantAmountDate(),
+			effectiveAmount(row.getCoapplicantCaseworkerAmount(), row.getCoapplicantProcessAmount()), row.getCoapplicantAmountDate(),
+			row.getNote());
+	}
+
+	public static EffectiveExpense toEffectiveExpense(final FaNormExpenseEntity row) {
+		return new EffectiveExpense(row.getCostType(), row.getBucket(),
+			row.getAppliedAmount(),
+			effectiveAmount(row.getCaseworkerAmount(), row.getProcessAmount()),
+			row.getNote());
+	}
+
+	public static EffectivePerson toEffectivePerson(final FaNormPersonEntity row) {
+		return new EffectivePerson(row.getPartyId(), effectiveDays(row.getCaseworkerDays(), row.getProcessDays()),
+			row.getDeviationFromDate(), row.getDeviationToDate());
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

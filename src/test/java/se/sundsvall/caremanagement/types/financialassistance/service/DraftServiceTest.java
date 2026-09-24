@@ -315,6 +315,27 @@ class DraftServiceTest {
 	}
 
 	@Test
+	void liveReadersFilterOutSoftDeletedRows() {
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withTypeId(20), FaNormIncomeEntity.create().withTypeId(21).withDeleted(true)));
+		when(expenseRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("HOUSING_COST")));
+		when(personRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormPersonEntity.create().withPartyId("p1").withIncluded(true), FaNormPersonEntity.create().withPartyId("p2").withIncluded(false)));
+
+		assertThat(service.liveIncomes(ERRAND_ID)).hasSize(1);
+		assertThat(service.liveExpenses(ERRAND_ID)).hasSize(1);
+		assertThat(service.livePersons(ERRAND_ID)).hasSize(1); // p2 excluded (is included = false)
+	}
+
+	@Test
+	void headerDelegatesToRepository() {
+		final var header = FaCalculationDraftEntity.create().withErrandId(ERRAND_ID);
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.of(header));
+
+		assertThat(service.header(ERRAND_ID)).contains(header);
+	}
+
+	@Test
 	void patchHeaderUpdatesNormAndHouseholdThenReturnsDraft() {
 		final var header = FaCalculationDraftEntity.create().withErrandId(ERRAND_ID);
 		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.of(header));

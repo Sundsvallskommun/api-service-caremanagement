@@ -14,6 +14,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalD
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
+import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.User;
 import java.time.LocalDate;
 import java.util.List;
@@ -97,6 +98,18 @@ public interface LifecareFamilyCare {
 	Integer createActualisation(String municipalityId, PostAktualiseringsBodyRequest body);
 
 	PersonBasedCalculationProposalDTO getCalculationProposal(String municipalityId, String personId);
+
+	/**
+	 * Create a calculation. The body's own {@code personId} is the applicant's personal identity number, as everywhere
+	 * else on this interface; the {@code calculationPersons} rows are the documented exception and carry a
+	 * {@code partyId}, because that is the identity careM holds for a household member.
+	 *
+	 * <p>
+	 * Each implementation translates what its route needs and nothing more: the integrator resolves the applicant to a
+	 * party id, the direct client resolves the household rows to personal identity numbers. Neither ever has to undo
+	 * the other's work, and nothing upstream of here has to know which route is wired.
+	 */
+	Integer createCalculation(String municipalityId, PostCalculationBodyRequest body);
 
 	void postActualisationAttachment(String municipalityId, Integer actualisationId, String documentType, String documentSenderType,
 		String title, String senderName, String fileName, byte[] content);

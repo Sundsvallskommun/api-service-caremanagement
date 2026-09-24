@@ -1,0 +1,24 @@
+{
+	"request": {
+		"method": "POST",
+		"urlPath": "/api-lifecare-familycare/apifc/v1/Calculations",
+		"bodyPatterns": [
+			{
+				"matchesJsonPath": "$[?(@.PersonId == '199001011234')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.ServiceId == 7700)]"
+			},
+			{
+				"matchesJsonPath": "$.CalculationPersons[?(@.PersonId == '199001011234')]"
+			}
+		]
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"body": "9001",
+		"status": 200
+	}
+}
