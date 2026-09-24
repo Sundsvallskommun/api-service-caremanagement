@@ -24,7 +24,6 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpen
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaCalculationDraftRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormExpenseRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormPersonRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPaymentRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaSectionApprovalRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaWarningRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
@@ -76,9 +75,6 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 
 	@Autowired
 	private DecisionRepository decisionRepository;
-
-	@Autowired
-	private FaPaymentRepository paymentRepository;
 
 	@Autowired
 	private FaSectionApprovalRepository sectionApprovalRepository;
@@ -147,9 +143,8 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequestAndVerifyResponse();
 
-		// Nothing is recorded: no decision, no payment.
+		// Nothing is recorded.
 		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).isEmpty();
-		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
 	}
 
 	@Test
@@ -170,8 +165,6 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 
 		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
 			.containsExactly(tuple("PAYMENT", "BIFALL"));
-		// Draken registers the payment in Lifecare itself: careM creates no payment row, and nothing awaits registration.
-		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
 	}
 
 	@Test
@@ -188,7 +181,6 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 
 		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
 			.containsExactly(tuple("PAYMENT", "AVSLAG"));
-		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
 	}
 
 	@Test
@@ -236,7 +228,6 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 		// Paid, so it is now this errand's: linked, and never available to another errand.
 		assertThat(financialAssistanceRepository.findLifecarePaymentIdsLinkedElsewhere(List.of("90210", "90211", "90212"), "another-errand"))
 			.containsExactly("90210");
-		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
 	}
 
 	@Test
@@ -262,7 +253,6 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 			.containsExactly(tuple("PAYMENT", "BIFALL"));
 		assertThat(sectionApprovalRepository.findByErrandId(ERRAND_ID)).extracting(FaSectionApprovalEntity::getSection, FaSectionApprovalEntity::isApproved)
 			.containsExactlyInAnyOrder(tuple("CALCULATION", true), tuple("DECISION", false));
-		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
 	}
 
 	@Test
@@ -282,7 +272,6 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 
 		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
 			.containsExactly(tuple("PAYMENT", "BIFALL"));
-		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
 	}
 
 	@Test

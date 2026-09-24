@@ -17,8 +17,7 @@ public class PaymentStatusRequest {
 
 	@Schema(description = """
 		The errand whose payments to verify. When given, the check is errand-specific: the Lifecare payments linked to the
-		errand (lifecarePaymentIds), else the payment rows an earlier finalize created, else the applicant's Lifecare
-		payments on the errand's own insats for the application month that no other errand references. Without it, any
+		errand (lifecarePaymentIds), else the applicant's Lifecare payments on the errand's own insats for the application month that no other errand references. Without it, any
 		Lifecare payment for the applicant and application month counts — kept only for callers that predate the field.""", examples = "a3c1f4de-2b6a-4c1e-9d3f-7e8a9b0c1d2e")
 	@ValidUuid(nullable = true)
 	private String errandId;

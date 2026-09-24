@@ -19,7 +19,6 @@ import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.LifecarePayment;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatus;
 import se.sundsvall.caremanagement.lifecare.service.PaymentStatusService;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.Payment;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PaymentStatusResponse;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
@@ -32,9 +31,6 @@ import static java.util.stream.Collectors.toCollection;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.service.NonRedDayCalendar.plusWorkingDays;
-import static se.sundsvall.caremanagement.types.financialassistance.service.PaymentService.SOURCE_CASEWORKER;
-import static se.sundsvall.caremanagement.types.financialassistance.service.PaymentService.STATUS_DRAFT;
-import static se.sundsvall.caremanagement.types.financialassistance.service.PaymentService.STATUS_REGISTERED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.DECISION_TYPE_PAYMENT;
 
 /**
@@ -52,8 +48,6 @@ public class FinancialAssistancePaymentService {
 	static final String DETAIL_NONE_ON_INSATS = "Ingen utbetalning för %s hittas på ärendets insats i Lifecare ännu";
 	static final String DETAIL_ON_INSATS_NOT_PAID = "%d av %d utbetalningar på ärendets insats är inte utbetalda i Lifecare ännu";
 	static final String DETAIL_LINKED_NOT_PAID = "%d av %d kopplade utbetalningar är inte utbetalda i Lifecare ännu";
-	static final String DETAIL_NOT_REGISTERED = "%d av %d beslutade utbetalningar är inte registrerade i Lifecare";
-	static final String DETAIL_NOT_FOUND_IN_LIFECARE = "%d av %d registrerade utbetalningar hittas inte som utbetalda i Lifecare";
 
 	/** How long a bifall may wait for its payments before the process tells the caseworker (decided 2026-09-23). */
 	static final int DEADLINE_WORKING_DAYS = 3;
@@ -68,7 +62,6 @@ public class FinancialAssistancePaymentService {
 	private static final ZoneId SWEDISH_TIME = ZoneId.of("Europe/Stockholm");
 
 	private final PaymentStatusService paymentStatusService;
-	private final PaymentService paymentService;
 	private final CitizenService citizenService;
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
@@ -77,18 +70,17 @@ public class FinancialAssistancePaymentService {
 	private final Clock clock;
 
 	@Autowired
-	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final PaymentService paymentService, final CitizenService citizenService,
+	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final CitizenService citizenService,
 		final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final DecisionService decisionService,
 		final LifecareServiceIdService lifecareServiceIdService) {
-		this(paymentStatusService, paymentService, citizenService, errandService, financialAssistanceRepository, decisionService, lifecareServiceIdService,
+		this(paymentStatusService, citizenService, errandService, financialAssistanceRepository, decisionService, lifecareServiceIdService,
 			Clock.system(SWEDISH_TIME));
 	}
 
-	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final PaymentService paymentService, final CitizenService citizenService,
+	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final CitizenService citizenService,
 		final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final DecisionService decisionService,
 		final LifecareServiceIdService lifecareServiceIdService, final Clock clock) {
 		this.paymentStatusService = paymentStatusService;
-		this.paymentService = paymentService;
 		this.citizenService = citizenService;
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
@@ -106,8 +98,6 @@ public class FinancialAssistancePaymentService {
 	 * <ol>
 	 * <li>the errand carries {@code lifecarePaymentIds}: exactly those ids must be reported paid by Lifecare
 	 * ({@link #checkLinkedPayments});</li>
-	 * <li>the errand was decided before the Lifecare references, and its finalize created payment rows: those rows are
-	 * verified the way they were decided ({@link #checkLegacyPaymentRows});</li>
 	 * <li>otherwise — Draken registers the payments in Lifecare without telling careM their ids — the payments are found
 	 * in Lifecare on the errand's own insats for the application month, leaving out every id another errand references
 	 * ({@link #checkPaymentsOnTheInsats}). Once they are all paid they are linked to the errand, so from then on they are
@@ -143,20 +133,13 @@ public class FinancialAssistancePaymentService {
 		if (!linked.isEmpty()) {
 			return checkLinkedPayments(municipalityId, namespace, request, applicationMonth, List.copyOf(linked));
 		}
-		final var decidedRows = paymentService.list(municipalityId, namespace, errandId).stream()
-			.filter(payment -> SOURCE_CASEWORKER.equals(payment.getSource()))
-			.filter(payment -> !STATUS_DRAFT.equals(payment.getStatus()))
-			.toList();
-		if (!decidedRows.isEmpty()) {
-			return checkLegacyPaymentRows(municipalityId, request, applicationMonth, decidedRows);
-		}
 		return checkPaymentsOnTheInsats(municipalityId, namespace, request, applicationMonth, entity);
 	}
 
 	/**
 	 * The payments Draken registered in Lifecare without linking their ids: the applicant's Lifecare payments on the
 	 * errand's insats that concern the application month, less every id another errand references (its
-	 * {@code lifecarePaymentIds}, or the Lifecare id on one of its older payment rows). Effectuated when there is at
+	 * {@code lifecarePaymentIds}). Effectuated when there is at
 	 * least one and Lifecare reports a PayDate for each; they are then linked to the errand, which turns every later
 	 * check into {@link #checkLinkedPayments} and keeps them from ever counting for another errand. The deadline counts
 	 * from the day of the errand's {@code PAYMENT} decision.
@@ -186,7 +169,6 @@ public class FinancialAssistancePaymentService {
 		}
 		final var ids = onTheInsats.stream().map(LifecarePayment::id).collect(toCollection(LinkedHashSet::new));
 		final var taken = new HashSet<>(financialAssistanceRepository.findLifecarePaymentIdsLinkedElsewhere(ids, errandId));
-		taken.addAll(paymentService.lifecareIdsOnOtherErrands(ids, errandId));
 		final var own = onTheInsats.stream()
 			.filter(payment -> !taken.contains(payment.id()))
 			.toList();
@@ -275,87 +257,10 @@ public class FinancialAssistancePaymentService {
 		return first;
 	}
 
-	/**
-	 * Errands decided before the Lifecare references: finalize then created one {@code Payment} row per decided payment,
-	 * which Draken's BFF registered in Lifecare and acknowledged with the Lifecare id. Kept so that those errands, and the
-	 * process instances still polling them, are verified exactly as they were decided. The decided payments are the
-	 * errand's own caseworker rows past {@code DRAFT}; each must be {@code REGISTERED} with a Lifecare id <em>and</em>
-	 * that id must be among the applicant's paid Lifecare payments. The deadline counts from the day the rows were
-	 * created, and the Lifecare window stretches to cover the decided payment dates.
-	 */
-	private PaymentStatusResponse checkLegacyPaymentRows(final String municipalityId, final PaymentStatusRequest request, final YearMonth applicationMonth,
-		final List<Payment> decided) {
-
-		final var deadline = deadline(decided);
-		final var overdue = LocalDate.now(clock).isAfter(deadline);
-
-		final var unregistered = decided.stream()
-			.filter(payment -> !STATUS_REGISTERED.equals(payment.getStatus()) || !hasText(payment.getLifecareId()))
-			.count();
-		if (unregistered > 0) {
-			return notEffectuated(DETAIL_NOT_REGISTERED.formatted(unregistered, decided.size())).withDeadline(deadline.toString()).withOverdue(overdue);
-		}
-
-		final var applicant = personalNumber(municipalityId, request.getApplicant());
-		final var paid = paymentStatusService.paidPaymentDates(municipalityId, applicant, windowStart(applicationMonth, decided), windowEnd(applicationMonth, decided));
-		final var missing = decided.stream()
-			.filter(payment -> !paid.containsKey(payment.getLifecareId()))
-			.count();
-		if (missing > 0) {
-			return notEffectuated(DETAIL_NOT_FOUND_IN_LIFECARE.formatted(missing, decided.size())).withDeadline(deadline.toString()).withOverdue(overdue);
-		}
-
-		return PaymentStatusResponse.create()
-			.withEffectuated(true)
-			.withDeadline(deadline.toString())
-			.withOverdue(false)
-			.withPaymentDate(decided.stream()
-				.map(payment -> paid.get(payment.getLifecareId()))
-				.max(naturalOrder())
-				.orElse(null));
-	}
-
 	private static PaymentStatusResponse notEffectuated(final String detail) {
 		return PaymentStatusResponse.create()
 			.withEffectuated(false)
 			.withDetail(detail);
-	}
-
-	/**
-	 * The last working day the payments may wait: {@value #DEADLINE_WORKING_DAYS} working days after the day the first of
-	 * them was created, which is the day finalize ran. A row without a timestamp counts from today, so it can only
-	 * postpone, never trigger, an escalation.
-	 */
-	private LocalDate deadline(final List<Payment> decided) {
-		final var decidedOn = decided.stream()
-			.map(Payment::getCreated)
-			.filter(Objects::nonNull)
-			.map(created -> created.atZoneSameInstant(SWEDISH_TIME).toLocalDate())
-			.min(naturalOrder())
-			.orElseGet(() -> LocalDate.now(clock));
-		return plusWorkingDays(decidedOn, DEADLINE_WORKING_DAYS);
-	}
-
-	/** The month before the application month, or the earliest decided payment date when that is earlier. */
-	private static LocalDate windowStart(final YearMonth applicationMonth, final List<Payment> decided) {
-		final var monthStart = applicationMonth.minusMonths(1).atDay(1);
-		return decided.stream()
-			.map(Payment::getPaymentDate)
-			.filter(Objects::nonNull)
-			.filter(date -> date.isBefore(monthStart))
-			.min(naturalOrder())
-			.orElse(monthStart);
-	}
-
-	/** The end of the application month, or the latest decided payment date when that is later. */
-	private static LocalDate windowEnd(final YearMonth applicationMonth, final List<Payment> decided) {
-		final var monthEnd = applicationMonth.atEndOfMonth();
-		return decided.stream()
-			.map(Payment::getPaymentDate)
-			.filter(Objects::nonNull)
-			.filter(date -> date.isAfter(monthEnd))
-			.max(naturalOrder())
-			.orElse(monthEnd);
 	}
 
 	/** Resolve a partyId to the personnummer the Lifecare/SSBTEK pipeline needs, or 404 when the citizen is unknown. */

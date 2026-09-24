@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:64175
+- url: http://localhost:53757
   description: Generated server url
 security:
 - sentBy: []
@@ -3531,15 +3531,13 @@ paths:
         \ paid out, returning the effectuated flag, the payment date when effectuated,\
         \ the reason when not, and the working-day deadline with an overdue flag.\
         \ With errandId the check is errand-specific: the Lifecare payments linked\
-        \ to the errand (lifecarePaymentIds) must all be reported paid; an errand\
-        \ decided before those references existed is verified against the payment\
-        \ rows its finalize created; otherwise the applicant's Lifecare payments on\
-        \ the errand's own insats for the application month are used, never one another\
-        \ errand references, and once they are all paid they are linked to the errand.\
-        \ Overdue only after the deadline of three working days from the decision.\
-        \ Without errandId, any payment for the applicant and application month counts.\
-        \ caremanagement makes no payment; the process polls this to detect when it\
-        \ is done."
+        \ to the errand (lifecarePaymentIds) must all be reported paid; otherwise\
+        \ the applicant's Lifecare payments on the errand's own insats for the application\
+        \ month are used, never one another errand references, and once they are all\
+        \ paid they are linked to the errand. Overdue only after the deadline of three\
+        \ working days from the decision. Without errandId, any payment for the applicant\
+        \ and application month counts. caremanagement makes no payment; the process\
+        \ polls this to detect when it is done."
       operationId: checkPaymentStatus
       parameters:
       - name: municipalityId
@@ -11088,8 +11086,7 @@ components:
           type: string
           description: |-
             The errand whose payments to verify. When given, the check is errand-specific: the Lifecare payments linked to the
-            errand (lifecarePaymentIds), else the payment rows an earlier finalize created, else the applicant's Lifecare
-            payments on the errand's own insats for the application month that no other errand references. Without it, any
+            errand (lifecarePaymentIds), else the applicant's Lifecare payments on the errand's own insats for the application month that no other errand references. Without it, any
             Lifecare payment for the applicant and application month counts — kept only for callers that predate the field.
           examples:
           - a3c1f4de-2b6a-4c1e-9d3f-7e8a9b0c1d2e

@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.operaton.integration.db.ProcessMessageRetryRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaPaymentRepository;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 
@@ -44,9 +43,6 @@ class FinalizeProcessMessageRetryIT extends AbstractAppTest {
 	private ProcessMessageRetryRepository retryRepository;
 
 	@Autowired
-	private FaPaymentRepository paymentRepository;
-
-	@Autowired
 	private ProcessMessageRetryWorker retryWorker;
 
 	@Test
@@ -60,10 +56,8 @@ class FinalizeProcessMessageRetryIT extends AbstractAppTest {
 			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequestAndVerifyResponse();
 
-		// The decision is saved although the process was not reached (the response carries its id), careM creates no
-		// payment - Draken registers it in Lifecare - ...
-		assertThat(paymentRepository.findByErrandId(ERRAND_ID)).isEmpty();
-		// ... and the message is saved too, waiting for the scheduled retry.
+		// The decision is saved although the process was not reached (the response carries its id), and the message is
+		// saved too, waiting for the scheduled retry.
 		assertThat(retryRepository.findAll()).singleElement().satisfies(retry -> {
 			assertThat(retry.getErrandId()).isEqualTo(ERRAND_ID);
 			assertThat(retry.getMessageName()).isEqualTo("PaymentDecisionReceived");
