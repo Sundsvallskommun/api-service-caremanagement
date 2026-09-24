@@ -60,9 +60,6 @@ tags:
 - name: Process messages
   description: Send BPMN message correlation events to the process instance currently
     running for an errand
-- name: Financial Assistance · Calculation
-  description: "The calculation: prepare the calculation each daily loop (no Lifecare\
-    \ write), commit it to Lifecare after a decision, and read or edit the draft header."
 - name: Financial Assistance · Intake
   description: "Pre-application and case-intake calls: eligibility routing (common\
     \ entry point), renewal pre-fill from Lifecare, the income/cost type metadata\
@@ -99,15 +96,15 @@ tags:
   description: "Decision audit trail on an errand. Stores both system-generated decisions\
     \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
     \ (e.g. caseworker APPROVE/REJECT), distinguished by `decisionType`."
+- name: Financial Assistance · Calculation
+  description: "The calculation: prepare the calculation draft each daily loop (no\
+    \ Lifecare write — Draken saves the normberäkning in Lifecare), and read or edit\
+    \ the draft header."
 - name: Financial Assistance · Errands
   description: "Create, read and replace financial assistance errands. Create against\
     \ one of the three application-type slugs (financial-assistance-new / -renewal\
     \ / -supplementary); read and replace the typed data via the shared financial-assistance\
     \ path."
-- name: Financial Assistance · Job stimulus periods
-  description: "The errand's jobbstimulans periods as stored — mirrored out of Lifecare\
-    \ before that mirroring was retired, and no longer refreshed. Read-only; kept\
-    \ until Draken reads jobbstimulans live from Lifecare."
 - name: Financial Assistance · RPA context
   description: "The errand number and the household's personal numbers, served on\
     \ demand to the process's beredning step (prepare-income-basis) so they never\
@@ -3476,10 +3473,11 @@ paths:
         \ errand, stores the chosen communication channels and household-size flag,\
         \ creates one PENDING_REGISTRATION payment per decided payment, and correlates\
         \ PaymentDecisionReceived to the process (paymentDecision APPROVED for BIFALL/DELAVSLAG,\
-        \ REJECTED otherwise) — which commits the normberäkning, sets GRANTED/REJECTED\
-        \ and polls the payment. Does not send anything to the applicant: the response\
-        \ echoes the communication channels for the frontend to act on. Requires the\
-        \ errand in AWAITING_DECISION with all three sections approved and an identified\
+        \ REJECTED otherwise) — which sets GRANTED/REJECTED and polls the payment\
+        \ (the normberäkning is already in Lifecare, saved from Draken before the\
+        \ decision). Does not send anything to the applicant: the response echoes\
+        \ the communication channels for the frontend to act on. Requires the errand\
+        \ in AWAITING_DECISION with all three sections approved and an identified\
         \ caller (X-Sent-By); a second finalize is rejected with 409. Process failures\
         \ and payees not yet in Lifecare are reported in the response, not as errors.\
         \ The Lifecare writes (decision, payments, bevakningar, journal, documents)\
@@ -3989,122 +3987,12 @@ paths:
         \ type the previous calculation had (informationComplete + missingIncomeTypes),\
         \ records the income warnings on the errand as a single Decision(RECOMMENDATION),\
         \ and reflects completeness in the errand status (SUPPLEMENT_REQUESTED ⇄ AWAITING_DECISION).\
-        \ Does NOT create a calculation in Lifecare — the financial assistance process\
-        \ calls this each daily loop. Use /commit after a decision to create it in\
-        \ Lifecare."
+        \ Never creates a calculation in Lifecare — Draken saves the normberäkning\
+        \ in Lifecare and sets lifecareCalculationId on the errand. Once lifecareCalculationId\
+        \ is set, the draft is no longer refreshed and its warnings stay as they were;\
+        \ the SSBTEK warnings, recommendation and status still update. The financial\
+        \ assistance process calls this each daily loop."
       operationId: prepareCalculation
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CalculationRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CalculationResponse"
-        "502":
-          description: Bad Gateway
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/calculation/from-application:
-    post:
-      tags:
-      - Financial Assistance · Calculation
-      summary: Create the calculation in Lifecare straight from the application (new
-        application)
-      description: "Builds the calculation from the data the citizen declared in the\
-        \ application — incomes resolved to FamilyCare types by name, expenses and\
-        \ household from the same feeder the renewal path uses — and creates it in\
-        \ Lifecare FamilyCare in one shot, returning the created calculation id. No\
-        \ SSBTEK, no daily loop, no caseworker draft. Used by the new application\
-        \ process."
-      operationId: commitFromApplication
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CalculationRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CalculationResponse"
-        "502":
-          description: Bad Gateway
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/calculation/commit:
-    post:
-      tags:
-      - Financial Assistance · Calculation
-      summary: Create the calculation in Lifecare (after decision)
-      description: "Builds the calculation from the classified incomes and creates\
-        \ it in Lifecare FamilyCare, returning the created calculation id. Called\
-        \ once a decision is taken — never during the daily SSBTEK loop."
-      operationId: commitCalculation
       parameters:
       - name: municipalityId
         in: path
@@ -7730,58 +7618,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/job-stimulus-periods:
-    get:
-      tags:
-      - Financial Assistance · Job stimulus periods
-      summary: List the errand's jobbstimulans periods
-      operationId: listJobStimulusPeriods
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/JobStimulusPeriod"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/form-snapshot:
     get:
       tags:
@@ -9834,6 +9670,13 @@ components:
             \ by the caseworker"
           examples:
           - 4711
+        lifecareCalculationId:
+          type: integer
+          format: int32
+          description: "The Lifecare normberäkning (calculation) id the errand concerns,\
+            \ set by the caseworker once the calculation is saved in Lifecare"
+          examples:
+          - 4242
         children:
           type: array
           description: Children included in the application
@@ -13718,30 +13561,6 @@ components:
           description: Number of monitorings on the errand
           examples:
           - 2
-    JobStimulusPeriod:
-      type: object
-      description: "A jobbstimulans period on the errand, mirrored out of Lifecare."
-      properties:
-        role:
-          type: string
-          description: Whose period it is
-          enum:
-          - APPLICANT
-          - CO_APPLICANT
-          examples:
-          - APPLICANT
-        fromDate:
-          type: string
-          format: date
-          description: Period start
-          examples:
-          - 2021-01-01
-        toDate:
-          type: string
-          format: date
-          description: Period end; null for an open period
-          examples:
-          - 2021-12-31
     FormSnapshot:
       type: object
       description: Self-describing snapshot of the form as it was rendered and answered.

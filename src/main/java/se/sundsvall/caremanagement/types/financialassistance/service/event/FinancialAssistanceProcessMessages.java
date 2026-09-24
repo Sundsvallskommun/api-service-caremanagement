@@ -17,7 +17,7 @@ public final class FinancialAssistanceProcessMessages {
 	/** The process variable the gateway routes on. */
 	public static final String VARIABLE_PAYMENT_DECISION = "paymentDecision";
 
-	/** The variable value for a granting decision — commit the normberäkning, GRANTED, poll the payment. */
+	/** The variable value for a granting decision — GRANTED, poll the payment. */
 	public static final String PAYMENT_DECISION_APPROVED = "APPROVED";
 
 	/** The variable value for a non-granting decision — REJECTED, close. */

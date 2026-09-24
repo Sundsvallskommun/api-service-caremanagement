@@ -14,7 +14,6 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalD
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
-import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.User;
 import generated.se.sundsvall.lifecareintegrator.CreatedResource;
 import java.time.LocalDate;
@@ -157,23 +156,6 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 	}
 
 	// ---- Writes ------------------------------------------------------------------------------------------------------
-
-	/**
-	 * Creates the calculation in Lifecare. The fields the integrator requires are checked here rather than left to the
-	 * gateway, so a body careM assembled incompletely comes back naming what is missing instead of as an opaque 400
-	 * from two hops away.
-	 */
-	@Override
-	public Integer createCalculation(final String municipalityId, final PostCalculationBodyRequest body) {
-		final var request = IntegratorWriteMapper.toCalculation(body, resolvePartyId(municipalityId, body.getPersonId()));
-		requirePresent("calculation",
-			new RequiredField("normId", request.getNormId()),
-			new RequiredField("calculationDate", request.getCalculationDate()),
-			new RequiredField("calculationFromDate", request.getCalculationFromDate()),
-			new RequiredField("calculationToDate", request.getCalculationToDate()));
-
-		return call("creating a calculation", () -> createdId(client.createCalculation(municipalityId, request)));
-	}
 
 	@Override
 	public Integer createActualisation(final String municipalityId, final PostAktualiseringsBodyRequest body) {

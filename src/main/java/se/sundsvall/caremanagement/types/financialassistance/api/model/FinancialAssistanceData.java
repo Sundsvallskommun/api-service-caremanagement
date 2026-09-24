@@ -120,6 +120,9 @@ public class FinancialAssistanceData {
 	@Schema(description = "The Lifecare decision (beslut) id the errand concerns, set by the caseworker", examples = "4711")
 	private Integer lifecareDecisionId;
 
+	@Schema(description = "The Lifecare normberäkning (calculation) id the errand concerns, set by the caseworker once the calculation is saved in Lifecare", examples = "4242")
+	private Integer lifecareCalculationId;
+
 	@ArraySchema(arraySchema = @Schema(description = "Children included in the application"), schema = @Schema(implementation = Child.class))
 	@Valid
 	private List<Child> children;
@@ -485,6 +488,19 @@ public class FinancialAssistanceData {
 		return this;
 	}
 
+	public Integer getLifecareCalculationId() {
+		return lifecareCalculationId;
+	}
+
+	public void setLifecareCalculationId(final Integer lifecareCalculationId) {
+		this.lifecareCalculationId = lifecareCalculationId;
+	}
+
+	public FinancialAssistanceData withLifecareCalculationId(final Integer lifecareCalculationId) {
+		this.lifecareCalculationId = lifecareCalculationId;
+		return this;
+	}
+
 	public List<Child> getChildren() {
 		return children;
 	}
@@ -622,7 +638,7 @@ public class FinancialAssistanceData {
 			&& Objects.equals(hasPendingBenefits, that.hasPendingBenefits) && Objects.equals(hasAssets, that.hasAssets)
 			&& Objects.equals(staysInMunicipality, that.staysInMunicipality) && Objects.equals(stayDescription, that.stayDescription)
 			&& Objects.equals(attestation, that.attestation) && Objects.equals(attestedAt, that.attestedAt)
-			&& Objects.equals(lifecareDecisionId, that.lifecareDecisionId)
+			&& Objects.equals(lifecareDecisionId, that.lifecareDecisionId) && Objects.equals(lifecareCalculationId, that.lifecareCalculationId)
 			&& Objects.equals(children, that.children) && Objects.equals(costs, that.costs) && Objects.equals(incomes, that.incomes)
 			&& Objects.equals(pendingBenefits, that.pendingBenefits) && Objects.equals(assets, that.assets)
 			&& Objects.equals(persons, that.persons) && Objects.equals(plannings, that.plannings)
@@ -635,7 +651,7 @@ public class FinancialAssistanceData {
 			otherBenefitDescription, livelihoodDescription, hasChildrenUnder21, childrenResidenceChanged,
 			childrenResidenceChangeDescription, housingForm, housingPersonCount, housingRoomsPlusKitchen,
 			housingDescription, housingChanged, housingChangeDescription, hasIncomes, hasPendingBenefits, hasAssets,
-			staysInMunicipality, stayDescription, attestation, attestedAt, lifecareDecisionId, children, costs, incomes, pendingBenefits, assets,
+			staysInMunicipality, stayDescription, attestation, attestedAt, lifecareDecisionId, lifecareCalculationId, children, costs, incomes, pendingBenefits, assets,
 			persons, plannings, plannedActivities, jobApplications);
 	}
 
@@ -652,6 +668,7 @@ public class FinancialAssistanceData {
 			+ ", housingChangeDescription='" + housingChangeDescription + "', hasIncomes=" + hasIncomes + ", hasPendingBenefits="
 			+ hasPendingBenefits + ", hasAssets=" + hasAssets + ", staysInMunicipality=" + staysInMunicipality
 			+ ", stayDescription='" + stayDescription + "', attestation=" + attestation + ", attestedAt=" + attestedAt + ", lifecareDecisionId=" + lifecareDecisionId
+			+ ", lifecareCalculationId=" + lifecareCalculationId
 			+ ", children=" + children + ", costs=" + costs + ", incomes=" + incomes + ", pendingBenefits=" + pendingBenefits
 			+ ", assets=" + assets + ", persons=" + persons + ", plannings=" + plannings + ", plannedActivities="
 			+ plannedActivities + ", jobApplications=" + jobApplications + '}';

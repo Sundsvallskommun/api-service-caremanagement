@@ -9,6 +9,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,9 +23,6 @@ import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
-import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
-import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
-import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
@@ -34,9 +32,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.DayCheckB
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
-import se.sundsvall.caremanagement.types.financialassistance.service.mapper.CalculationDraftMapper;
 import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -50,11 +46,12 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * The financial-assistance calculation pipeline — preparing the (editable) draft calculation from the
- * process-classified incomes without touching Lifecare ({@link #prepareCalculation}) and, once a decision is taken,
- * committing the effective draft to Lifecare FamilyCare ({@link #commitCalculation}). This service also owns the
- * editable draft (get/patch header) and the from-application commit; the errand envelope, its strongly-typed
- * application data and the case-history reads stay on the per-resource FinancialAssistanceErrandService /
- * FinancialAssistanceLifecareService / FinancialAssistanceActualisationService / FinancialAssistancePaymentService.
+ * process-classified incomes without touching Lifecare ({@link #prepareCalculation}), and the editable draft itself
+ * (get/patch header). careM never creates the normberäkning in Lifecare: Draken's BFF owns that write, saves the
+ * calculation before the decision (bifall takes its amount from it) and sets its id on the errand as
+ * {@code lifecareCalculationId}. The errand envelope, its strongly-typed application data and the case-history reads
+ * stay on the per-resource FinancialAssistanceErrandService / FinancialAssistanceLifecareService /
+ * FinancialAssistanceActualisationService / FinancialAssistancePaymentService.
  */
 @Service
 @Transactional
@@ -83,13 +80,11 @@ public class FinancialAssistanceCalculationService {
 	private final PeriodRuleFeeder periodRuleFeeder;
 	private final MissingIncomeFeeder missingIncomeFeeder;
 	private final LateTransferFeeder lateTransferFeeder;
-	private final LifecareServiceIdService lifecareServiceIdService;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
-		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder,
-		final LifecareServiceIdService lifecareServiceIdService) {
+		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
@@ -103,7 +98,6 @@ public class FinancialAssistanceCalculationService {
 		this.periodRuleFeeder = periodRuleFeeder;
 		this.missingIncomeFeeder = missingIncomeFeeder;
 		this.lateTransferFeeder = lateTransferFeeder;
-		this.lifecareServiceIdService = lifecareServiceIdService;
 	}
 
 	/**
@@ -113,18 +107,36 @@ public class FinancialAssistanceCalculationService {
 	 * information is complete (does this month cover every income type the previous calculation had?), records the income
 	 * warnings on the errand as a single {@code Decision(RECOMMENDATION)} the caseworker reviews, and reflects
 	 * completeness in the errand status ({@code SUPPLEMENT_REQUESTED} while incomplete, {@code AWAITING_DECISION} when
-	 * complete).
-	 * No Lifecare calculation is created here — that happens only after a decision, via {@link #commitCalculation}.
+	 * complete). No Lifecare calculation is created here — careM never creates one; Draken's BFF does.
+	 *
+	 * <p>
+	 * <strong>Once the errand carries a {@code lifecareCalculationId}, the Lifecare normberäkning is the truth.</strong>
+	 * The caseworker has saved the calculation in Lifecare from Draken, so careM's draft is no longer refreshed — a
+	 * refresh would overwrite nothing the caseworker sees any more, and the warnings it raises would describe a draft
+	 * nobody uses. Those draft warnings ({@link WarningService#DRAFT_REFRESH_TYPES}: the new/dropped rows, the expense
+	 * feed, the NORM-04 family, the late transfer and the duplicate incomes) are then left exactly as they last were,
+	 * neither refreshed nor auto-closed. Everything that works from SSBTEK and the application continues unchanged: the
+	 * completeness verdict, the SSBTEK income warnings and the draft-independent rule warnings, the one-time
+	 * {@code RECOMMENDATION} decision (on careM's basis — agreed with Draken), the completeness status, the read-failure
+	 * warning and the daily-run stamp.
 	 */
 	public CalculationResponse prepareCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
 		if (TRUE.equals(request.getSsbtekError())) {
 			return prepareAfterReadFailure(municipalityId, namespace, request);
 		}
 		final var input = gather(municipalityId, namespace, request);
-		final var refresh = refreshDraft(municipalityId, input);
+		final var previous = previousHousehold(municipalityId, input.applicant(), input.applicationMonth());
+		final var refresh = refreshDraftUnlessSavedInLifecare(municipalityId, input, previous);
+		final var rules = ruleWarnings(municipalityId, input, previous);
 		final var response = completeness(municipalityId, request, input);
 
-		publish(municipalityId, namespace, input, refresh, response);
+		recordRecommendationOnce(municipalityId, namespace, input.errandId(), response);
+		refresh.ifPresentOrElse(
+			draft -> reconcileWithDraft(input, response, draft, rules),
+			() -> reconcileKeepingDraft(input, response, rules));
+		// This run read SSBTEK, so any read-failure warning from an earlier run has served its purpose and closes itself.
+		warningService.reconcileSsbtekReadFailure(input.errandId(), false);
+		applyCompletenessStatus(municipalityId, namespace, input.errandId(), response.isInformationComplete());
 		stampDailyRun(input.errand());
 		return response;
 	}
@@ -164,8 +176,29 @@ public class FinancialAssistanceCalculationService {
 	private record PrepareInput(String namespace, String errandId, String applicant, YearMonth applicationMonth, String applicationMonthValue,
 		String classifiedIncomes, DayCheckBasis dayCheckBasis, FinancialAssistanceEntity errand) {}
 
-	/** What refreshing the draft produced: the per-row changes to reconcile, and the warnings the feed raised. */
-	private record DraftRefresh(DraftChanges changes, List<WarningService.WarningInput> warnings) {}
+	/**
+	 * What refreshing the draft produced: the per-row changes to reconcile, and the warnings the refresh raised — the
+	 * expense feed, the late comparison-period transfer, the duplicate incomes and the NORM-04 family. All of them are
+	 * {@link WarningService#DRAFT_REFRESH_TYPES}.
+	 */
+	private record DraftRefresh(DraftChanges changes, List<WarningService.WarningInput> expenseWarnings, List<WarningService.WarningInput> lateTransferWarnings,
+		List<WarningService.WarningInput> duplicateWarnings, List<WarningService.WarningInput> familyWarnings) {}
+
+	/**
+	 * The warnings that do not depend on careM's draft — the housing-cost delta, the återansökan application rules, the
+	 * income/household comparisons against the previous normberäkning, the SSBTEK period check and the missing-income
+	 * check. Evaluated on every successful run, whether or not the draft is refreshed.
+	 */
+	private record RuleWarnings(List<WarningService.WarningInput> housingWarnings, List<WarningService.WarningInput> questionWarnings,
+		List<WarningService.WarningInput> incomeWarnings, List<WarningService.WarningInput> comparisonWarnings, List<WarningService.WarningInput> periodWarnings,
+		List<WarningService.WarningInput> missingIncomeWarnings) {
+
+		List<WarningService.WarningInput> all() {
+			return Stream.of(housingWarnings, questionWarnings, incomeWarnings, comparisonWarnings, periodWarnings, missingIncomeWarnings)
+				.flatMap(List::stream)
+				.toList();
+		}
+	}
 
 	/**
 	 * Resolve everything the run needs before any work is done: the errand is scope-checked (404 outside this
@@ -188,17 +221,29 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/**
-	 * Compute the fresh process rows for the three sections, then merge them into the editable draft (the merge keeps the
-	 * caseworker's values + soft-deletes; only the process columns are refreshed). The expense feed and the household
-	 * comparison also raise the section warnings reconciled in {@link #publish}.
+	 * The draft refresh, unless the caseworker has already saved the normberäkning in Lifecare (the errand carries a
+	 * {@code lifecareCalculationId}) — from then on the Lifecare calculation is the truth and the draft stays as it is.
 	 */
-	private DraftRefresh refreshDraft(final String municipalityId, final PrepareInput input) {
+	private Optional<DraftRefresh> refreshDraftUnlessSavedInLifecare(final String municipalityId, final PrepareInput input, final PreviousHousehold previous) {
+		if (input.errand().getLifecareCalculationId() != null) {
+			LOG.info("Errand {} has a normberäkning saved in Lifecare — the draft is not refreshed", sanitizeForLogging(input.errandId()));
+			return Optional.empty();
+		}
+		return Optional.of(refreshDraft(municipalityId, input, previous));
+	}
+
+	/**
+	 * Compute the fresh process rows for the three sections, then merge them into the editable draft (the merge keeps the
+	 * caseworker's values + soft-deletes; only the process columns are refreshed). The expense feed, the family
+	 * comparison, the late transfer and the duplicate check also raise the draft warnings reconciled in
+	 * {@link #reconcileWithDraft}.
+	 */
+	private DraftRefresh refreshDraft(final String municipalityId, final PrepareInput input, final PreviousHousehold previous) {
 		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
 		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, input.errandId(), input.errand(),
 			previousExpenseAmounts(municipalityId, input.applicant(), input.applicationMonth()), ageFromPnr(input.applicant()));
 		// NORM-04: norm, familj and gemensamma kostnader come from the previous normberäkning (regelverk återansökan);
 		// the application only fills in what FamilyCare's read model lacks, and the rest is flagged.
-		final var previous = previousHousehold(municipalityId, input.applicant(), input.applicationMonth());
 		final var previousFamily = previousFamily(municipalityId, input.applicant(), input.applicationMonth());
 		final var personRows = calculationFeeder.personRows(municipalityId, input.namespace(), input.errandId(), input.errand(),
 			previousPersonAmounts(municipalityId, input.applicant(), input.applicationMonth()), previousFamily);
@@ -211,24 +256,6 @@ public class FinancialAssistanceCalculationService {
 			.flatMap(List::stream)
 			.toList();
 
-		final var housingWarnings = calculationFeeder.housingDeltaWarnings(municipalityId, input.errand(), previous);
-		// The verksamhet's återansökan regelverk, evaluated in the engine: the warnings that follow from the answers in
-		// the application, the income comparison against the previous normberäkning, and the children/household-count/norm
-		// comparisons against it.
-		final var questionWarnings = applicationRuleFeeder.applicationQuestionWarnings(municipalityId, input.errandId(), input.errand());
-		final var incomeWarnings = applicationRuleFeeder.incomeComparisonWarnings(municipalityId, input.errand(),
-			previousIncomeAmounts(municipalityId, input.applicant(), input.applicationMonth()));
-		final var comparisonWarnings = applicationRuleFeeder.previousCalculationWarnings(municipalityId, input.errand(), previous);
-		// Parsed once and handed to both feeders below - it was parsed twice here until the missing-income feeder
-		// arrived and made the duplication obvious.
-		final var classifiedIncomes = calculationService.classifiedIncomes(input.classifiedIncomes());
-		// The SSBTEK period check (rakel-eb-periodkontroll): the dagersättning day check for aktivitetsstöd/etablerings-/
-		// utvecklingsersättning, gated on AF's ekonomiska beslut and FK's 450 days. The control month is the month
-		// before the application month - the SSBTEK kontrollperiod.
-		final var periodWarnings = periodRuleFeeder.periodWarnings(municipalityId, input.applicationMonth().minusMonths(1), classifiedIncomes,
-			input.dayCheckBasis());
-		// Verksamhetens "föregående månad = facit": an income SSBTEK reported last month and not this one.
-		final var missingIncomeWarnings = missingIncomeFeeder.missingIncomeWarnings(classifiedIncomes);
 		// The one rule that both moves money and warns: a comparison-period income last month's calculation never took,
 		// which the transfer above has just picked up. The set comes from the transfer's own filter, not a second
 		// reading of the rule, so the warning cannot claim something the draft did not do.
@@ -237,10 +264,44 @@ public class FinancialAssistanceCalculationService {
 		// Read after the merge, not before: the duplicate only exists once the refreshed process rows sit alongside
 		// whatever the caseworker has added by hand.
 		final var duplicateWarnings = draftService.duplicateIncomeWarnings(input.errandId());
-		return new DraftRefresh(changes, Stream.of(expenseFeed.warnings(), housingWarnings, questionWarnings, incomeWarnings,
-			comparisonWarnings, periodWarnings, missingIncomeWarnings, lateTransferWarnings, duplicateWarnings, familyWarnings)
+		return new DraftRefresh(changes, expenseFeed.warnings(), lateTransferWarnings, duplicateWarnings, familyWarnings);
+	}
+
+	/**
+	 * The warnings that follow from SSBTEK and the application rather than from careM's draft — evaluated on every
+	 * successful run, including one where the draft is no longer refreshed.
+	 */
+	private RuleWarnings ruleWarnings(final String municipalityId, final PrepareInput input, final PreviousHousehold previous) {
+		final var housingWarnings = calculationFeeder.housingDeltaWarnings(municipalityId, input.errand(), previous);
+		// The verksamhet's återansökan regelverk, evaluated in the engine: the warnings that follow from the answers in
+		// the application, the income comparison against the previous normberäkning, and the children/household-count/norm
+		// comparisons against it.
+		final var questionWarnings = applicationRuleFeeder.applicationQuestionWarnings(municipalityId, input.errandId(), input.errand());
+		final var incomeWarnings = applicationRuleFeeder.incomeComparisonWarnings(municipalityId, input.errand(),
+			previousIncomeAmounts(municipalityId, input.applicant(), input.applicationMonth()));
+		final var comparisonWarnings = applicationRuleFeeder.previousCalculationWarnings(municipalityId, input.errand(), previous);
+		// Parsed once and handed to both feeders below.
+		final var classifiedIncomes = calculationService.classifiedIncomes(input.classifiedIncomes());
+		// The SSBTEK period check (rakel-eb-periodkontroll): the dagersättning day check for aktivitetsstöd/etablerings-/
+		// utvecklingsersättning, gated on AF's ekonomiska beslut and FK's 450 days. The control month is the month
+		// before the application month - the SSBTEK kontrollperiod.
+		final var periodWarnings = periodRuleFeeder.periodWarnings(municipalityId, input.applicationMonth().minusMonths(1), classifiedIncomes,
+			input.dayCheckBasis());
+		// Verksamhetens "föregående månad = facit": an income SSBTEK reported last month and not this one.
+		final var missingIncomeWarnings = missingIncomeFeeder.missingIncomeWarnings(classifiedIncomes);
+		return new RuleWarnings(housingWarnings, questionWarnings, incomeWarnings, comparisonWarnings, periodWarnings, missingIncomeWarnings);
+	}
+
+	/**
+	 * Every warning of a run that refreshed the draft, in the order the reconcile has always received them — the order
+	 * new warnings are created in.
+	 */
+	private static List<WarningService.WarningInput> allWarnings(final DraftRefresh refresh, final RuleWarnings rules) {
+		return Stream.of(refresh.expenseWarnings(), rules.housingWarnings(), rules.questionWarnings(), rules.incomeWarnings(),
+			rules.comparisonWarnings(), rules.periodWarnings(), rules.missingIncomeWarnings(), refresh.lateTransferWarnings(),
+			refresh.duplicateWarnings(), refresh.familyWarnings())
 			.flatMap(List::stream)
-			.toList());
+			.toList();
 	}
 
 	/** The verdict the process asked for: does this month cover every income type the previous calculation had? */
@@ -253,15 +314,19 @@ public class FinancialAssistanceCalculationService {
 			.withMissingIncomeTypes(completeness.missingIncomeTypes());
 	}
 
-	/** Surface the run on the errand: the one recommendation, the reconciled warnings and the completeness status. */
-	private void publish(final String municipalityId, final String namespace, final PrepareInput input, final DraftRefresh refresh,
-		final CalculationResponse response) {
-		recordRecommendationOnce(municipalityId, namespace, input.errandId(), response);
+	/** Reconcile every calculation warning of a run that refreshed the draft. */
+	private void reconcileWithDraft(final PrepareInput input, final CalculationResponse response, final DraftRefresh refresh, final RuleWarnings rules) {
 		warningService.reconcileCalculationWarnings(input.errandId(), response.getUnhandledIncomes(), response.getChangeWarnings(),
-			response.getMissingIncomeTypes(), refresh.changes(), refresh.warnings());
-		// This run read SSBTEK, so any read-failure warning from an earlier run has served its purpose and closes itself.
-		warningService.reconcileSsbtekReadFailure(input.errandId(), false);
-		applyCompletenessStatus(municipalityId, namespace, input.errandId(), response.isInformationComplete());
+			response.getMissingIncomeTypes(), refresh.changes(), allWarnings(refresh, rules));
+	}
+
+	/**
+	 * Reconcile the warnings of a run that did not refresh the draft (the normberäkning is saved in Lifecare): only the
+	 * SSBTEK income warnings and the rule warnings — the draft warnings stay as they last were.
+	 */
+	private void reconcileKeepingDraft(final PrepareInput input, final CalculationResponse response, final RuleWarnings rules) {
+		warningService.reconcileRuleWarnings(input.errandId(), response.getUnhandledIncomes(), response.getChangeWarnings(),
+			response.getMissingIncomeTypes(), rules.all());
 	}
 
 	/** Stamp the errand with this daily-loop run so Draken can show "last checked" and ops can spot stale loops. */
@@ -359,86 +424,6 @@ public class FinancialAssistanceCalculationService {
 	}
 
 	/**
-	 * Create the calculation in Lifecare FamilyCare from the classified incomes — called once a decision is taken, never
-	 * during the daily SSBTEK loop. Returns the created calculation id (plus the completeness verdict for reference).
-	 */
-	public CalculationResponse commitCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
-		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
-		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		final var applicant = personalNumber(municipalityId, request.getApplicant());
-		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
-
-		// Post the (possibly caseworker-edited) draft to Lifecare: the effective value of each live row, soft-deleted rows
-		// skipped.
-		final var header = draftService.header(errandId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No draft calculation to commit for errand " + errandId));
-		final var incomes = draftService.liveIncomes(errandId).stream().map(CalculationDraftMapper::toEffectiveIncome).toList();
-		final var expenses = draftService.liveExpenses(errandId).stream().map(CalculationDraftMapper::toEffectiveExpense).toList();
-		final var persons = draftService.livePersons(errandId).stream().map(CalculationDraftMapper::toEffectivePerson).toList();
-
-		final var calculationHeader = new CalculationHeader(header.getNormId(), header.getCalculationFromDate(), header.getCalculationToDate(),
-			header.getCalculationDate(), header.getHasCustomHouseholdSize(), header.getHouseholdSize(),
-			lifecareServiceIdService.currentOrResolve(municipalityId, namespace, errandId));
-		final var calculationId = calculationService.commitEffective(municipalityId, applicant, applicationMonth, calculationHeader, incomes, expenses, persons);
-
-		return CalculationResponse.create()
-			.withCalculationId(calculationId)
-			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
-			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of));
-	}
-
-	/**
-	 * Create the calculation in Lifecare FamilyCare straight from the incomes, costs and household the citizen declared in
-	 * the application — the new application path: no SSBTEK, no daily loop, no caseworker draft. Incomes come from the
-	 * application's own declared incomes (resolved to FamilyCare types by name), expenses and persons from the same feeder
-	 * the renewal path uses (both already application-sourced), and the norm from the proposal for the application month.
-	 * Posts in one shot and returns the created calculation id.
-	 */
-	public CalculationResponse commitFromApplication(final String municipalityId, final String namespace, final CalculationRequest request) {
-		final var errandId = request.getErrandId(); // required + UUID-validated on CalculationRequest (bean validation)
-		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		final var applicant = personalNumber(municipalityId, request.getApplicant());
-		final var applicationMonth = YearMonth.parse(request.getApplicationMonth());
-		final var errand = financialAssistanceRepository.findByErrandId(errandId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "No financial-assistance errand for id " + errandId));
-
-		// Incomes straight from the application, but folded + converted through the same pipeline as the SSBTEK path
-		// (CalculationFeeder.incomeRows → toEffectiveIncome); expenses + persons via the same feeder, already application-
-		// sourced. Nothing here is calculation logic of its own — only the application's data fed into the existing engine.
-		final var incomeLines = calculationService.applicationIncomeLines(municipalityId, applicant, toApplicationIncomes(errand.getIncomes()));
-		final var incomes = calculationFeeder.incomeRows(errandId, incomeLines).stream()
-			.map(CalculationDraftMapper::toEffectiveIncome).toList();
-		final var expenses = calculationFeeder.applicationExpenseRows(errandId, errand).stream()
-			.map(CalculationDraftMapper::toEffectiveExpense).toList();
-		// No previous calculation on a new application, and toEffectivePerson does not carry the amount anyway.
-		final var persons = calculationFeeder.personRows(municipalityId, namespace, errandId, errand, Map.of(), PreviousFamily.empty()).stream()
-			.map(CalculationDraftMapper::toEffectivePerson).toList();
-
-		final var normId = calculationService.selectNormId(municipalityId, applicant, applicationMonth, normNames(errand.getNormType()));
-		final var header = new CalculationHeader(normId, applicationMonth.atDay(1), applicationMonth.atEndOfMonth(), LocalDate.now(ZoneId.systemDefault()), false, null,
-			lifecareServiceIdService.currentOrResolve(municipalityId, namespace, errandId));
-
-		final var calculationId = calculationService.commitEffective(municipalityId, applicant, applicationMonth, header, incomes, expenses, persons);
-
-		return CalculationResponse.create().withCalculationId(calculationId);
-	}
-
-	/** The application's declared incomes as the neutral {@link ApplicationIncome} the FamilyCare mapper consumes. */
-	private static List<ApplicationIncome> toApplicationIncomes(final List<FaIncome> incomes) {
-		return ofNullable(incomes).orElseGet(List::of).stream()
-			.map(income -> new ApplicationIncome(income.getIncomeType(), income.getAmount(), income.getIncomeDate(), toRole(income.getRecipient())))
-			.toList();
-	}
-
-	/** Map the application recipient code to a role — anything but the explicit co-applicant code is the applicant. */
-	private static ApplicantRole toRole(final String recipient) {
-		if (ApplicantRole.CO_APPLICANT.name().equals(recipient)) {
-			return ApplicantRole.CO_APPLICANT;
-		}
-		return ApplicantRole.APPLICANT;
-	}
-
-	/**
 	 * The (editable) draft calculation for an errand — the FamilyCare income rows the caseworker reviews and may edit
 	 * before a decision. Scoped: throws {@code 404} when the errand (or its draft) is missing.
 	 */
@@ -463,8 +448,9 @@ public class FinancialAssistanceCalculationService {
 	 * Surface the calculation's income warnings on the errand as a single {@code Decision(RECOMMENDATION)} — written
 	 * once (the daily loop re-runs prepare, but the recommendation is not duplicated). The value is {@code
 	 * REVIEW_REQUIRED} when there is anything to review (unhandled or significantly changed incomes, or still-missing
-	 * SSBTEK data) and {@code OK} otherwise; the description lists the warnings in plain language. No Lifecare calculation
-	 * exists yet, so the recommendation is explicitly preliminary.
+	 * SSBTEK data) and {@code OK} otherwise; the description lists the warnings in plain language. It is written on
+	 * careM's SSBTEK basis whether or not the caseworker has saved the normberäkning in Lifecare yet, so it is explicitly
+	 * preliminary.
 	 */
 	private void recordRecommendationOnce(final String municipalityId, final String namespace, final String errandId, final CalculationResponse response) {
 		final var alreadyRecorded = decisionService.readAll(municipalityId, namespace, errandId).stream()
@@ -479,7 +465,7 @@ public class FinancialAssistanceCalculationService {
 			response.getMissingIncomeTypes().stream().map("Saknas fortfarande i SSBTEK: "::concat))
 			.flatMap(stream -> stream)
 			.toList();
-		final var header = "Inkomstunderlag förberett (preliminärt – normberäkningen skapas i Lifecare efter beslut). ";
+		final var header = "Inkomstunderlag förberett (preliminärt – normberäkningen sparas i Lifecare av handläggaren). ";
 		final String description;
 		if (warnings.isEmpty()) {
 			description = header + "Inga varningar – inkomsterna kunde överföras utan anmärkning.";

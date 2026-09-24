@@ -13,6 +13,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 
 import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.APPLICANT;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;
 
@@ -73,37 +74,37 @@ class ClassifiedIncomeToFamilyCareMapperTest {
 	}
 
 	@Test
-	void resolvesCategoryToFamilyCareTypeIdAndMergesByRole() {
-		final var rows = ClassifiedIncomeToFamilyCareMapper.toCalculationIncomes(List.of(
+	void resolvesCategoryToFamilyCareTypeIdAndSumsPerTypeAndRecipient() {
+		final var lines = ClassifiedIncomeToFamilyCareMapper.toIncomeLines(List.of(
 			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED_KVITTNING", "1850", APPLICANT),
+			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED_KVITTNING", "150", APPLICANT),
 			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED_KVITTNING", "200", CO_APPLICANT),
 			classified("Dagersättning", "Dagersättning", "TA_MED", "5000", APPLICANT)),
 			proposal());
 
-		assertThat(rows).hasSize(2);
-		final var bostadsbidrag = rows.stream().filter(row -> row.getId() == 20).findFirst().orElseThrow();
-		assertThat(bostadsbidrag.getApplicantAmount()).isEqualTo(1850.0);
-		assertThat(bostadsbidrag.getCoApplicantAmount()).isEqualTo(200.0);
-		final var dagersattning = rows.stream().filter(row -> row.getId() == 30).findFirst().orElseThrow();
-		assertThat(dagersattning.getApplicantAmount()).isEqualTo(5000.0);
-		assertThat(dagersattning.getCoApplicantAmount()).isNull();
+		assertThat(lines)
+			.extracting(line -> line.typeId(), line -> line.recipient(), line -> line.amount().intValue())
+			.containsExactlyInAnyOrder(
+				tuple(20, "APPLICANT", 2000),
+				tuple(20, "CO_APPLICANT", 200),
+				tuple(30, "APPLICANT", 5000));
 	}
 
 	@Test
 	void skipsNonTransferableAndUnknownCategory() {
-		final var rows = ClassifiedIncomeToFamilyCareMapper.toCalculationIncomes(List.of(
+		final var lines = ClassifiedIncomeToFamilyCareMapper.toIncomeLines(List.of(
 			classified("Handikappersättning", "-", "EJ_TA_MED", "100", APPLICANT),
 			classified("Underhållsstöd", "-", "EJ_PA_LISTAN", "100", APPLICANT),
 			classified("Okänd", "Okänd kategori", "TA_MED", "100", APPLICANT),
 			classified("Tom", "-", "TA_MED", "100", APPLICANT)),
 			proposal());
 
-		assertThat(rows).isEmpty();
+		assertThat(lines).isEmpty();
 	}
 
 	@Test
 	void nullClassifiedYieldsEmpty() {
-		assertThat(ClassifiedIncomeToFamilyCareMapper.toCalculationIncomes(null, proposal())).isEmpty();
+		assertThat(ClassifiedIncomeToFamilyCareMapper.toIncomeLines(null, proposal())).isEmpty();
 	}
 
 	@Test

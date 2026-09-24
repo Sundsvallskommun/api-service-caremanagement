@@ -14,7 +14,6 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalD
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
-import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.User;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.List;
@@ -240,16 +239,6 @@ public interface LifecareFamilyCareClient {
 	@GetMapping(path = "/apifc/v1/Calculations/Proposals", produces = APPLICATION_JSON_VALUE)
 	PersonBasedCalculationProposalDTO getCalculationProposal(
 		@RequestParam("personId") final String personId);
-
-	/**
-	 * Create a calculation (calculation) in Lifecare FamilyCare.
-	 *
-	 * @param  body the calculation to create (codes resolved from {@link #getCalculationProposal(String)})
-	 * @return      the id of the created calculation
-	 */
-	@PostMapping(path = "/apifc/v1/Calculations", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	Integer createCalculation(
-		@RequestBody final PostCalculationBodyRequest body);
 
 	/**
 	 * Upload a document and bind it to an actualisation. Multipart {@code form-data} (the {@code domain}/{@code key} query

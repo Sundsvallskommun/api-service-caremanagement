@@ -87,6 +87,7 @@ public final class FinancialAssistanceMapper {
 				.withAttestation(d.getAttestation())
 				.withAttestedAt(d.getAttestedAt())
 				.withLifecareDecisionId(d.getLifecareDecisionId())
+				.withLifecareCalculationId(d.getLifecareCalculationId())
 				.withChildren(mapList(d.getChildren(), FinancialAssistanceMapper::toFaChild))
 				.withCosts(mapList(d.getCosts(), FinancialAssistanceMapper::toFaCost))
 				.withIncomes(mapList(d.getIncomes(), FinancialAssistanceMapper::toFaIncome))
@@ -132,6 +133,7 @@ public final class FinancialAssistanceMapper {
 		ofNullable(source.getAttestation()).ifPresent(entity::setAttestation);
 		ofNullable(source.getAttestedAt()).ifPresent(entity::setAttestedAt);
 		ofNullable(source.getLifecareDecisionId()).ifPresent(entity::setLifecareDecisionId);
+		ofNullable(source.getLifecareCalculationId()).ifPresent(entity::setLifecareCalculationId);
 		ofNullable(mapList(source.getChildren(), FinancialAssistanceMapper::toFaChild)).ifPresent(value -> entity.setChildren(new ArrayList<>(value)));
 		ofNullable(mapList(source.getCosts(), FinancialAssistanceMapper::toFaCost)).ifPresent(value -> entity.setCosts(new ArrayList<>(value)));
 		ofNullable(mapList(source.getIncomes(), FinancialAssistanceMapper::toFaIncome)).ifPresent(value -> entity.setIncomes(new ArrayList<>(value)));
@@ -172,6 +174,7 @@ public final class FinancialAssistanceMapper {
 				.withAttestation(e.getAttestation())
 				.withAttestedAt(e.getAttestedAt())
 				.withLifecareDecisionId(e.getLifecareDecisionId())
+				.withLifecareCalculationId(e.getLifecareCalculationId())
 				.withChildren(mapList(e.getChildren(), FinancialAssistanceMapper::toChild))
 				.withCosts(mapList(e.getCosts(), FinancialAssistanceMapper::toCost))
 				.withIncomes(mapList(e.getIncomes(), FinancialAssistanceMapper::toIncome))

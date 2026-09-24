@@ -39,11 +39,6 @@ public final class MapperUtil {
 		return ofNullable(value).map(BigDecimal::valueOf).orElse(null);
 	}
 
-	/** The reverse of {@link #toAmount(Double)} — only for filling a generated FamilyCare DTO on the way out. */
-	public static Double toWireAmount(final BigDecimal value) {
-		return ofNullable(value).map(BigDecimal::doubleValue).orElse(null);
-	}
-
 	/**
 	 * Index a proposal's calculation income types by normalized name → FamilyCare type id, keeping insertion order and
 	 * the first id when two types normalize to the same name. Types with a null name or id are skipped.

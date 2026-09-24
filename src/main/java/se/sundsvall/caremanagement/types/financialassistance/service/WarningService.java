@@ -161,6 +161,16 @@ public class WarningService {
 	 * very next run — including a run that failed the same way.
 	 */
 	public static final Set<String> SSBTEK_READ_FAILURE_TYPES = Set.of(TYPE_SSBTEK_READ_FAILED);
+	/**
+	 * The warning types that describe careM's calculation draft — raised by refreshing it: the rows the refresh added or
+	 * saw disappear, the expense feed (reasonableness review + cap), the NORM-04 family copied from the previous
+	 * normberäkning, the late comparison-period transfer and the duplicate incomes read from the merged draft. Once the
+	 * caseworker has saved the normberäkning in Lifecare the draft is no longer refreshed, so these stay as they last
+	 * were: {@link #reconcileRuleWarnings} neither creates nor auto-closes them.
+	 */
+	public static final Set<String> DRAFT_REFRESH_TYPES = Set.of(TYPE_NEW_INCOME, TYPE_NEW_EXPENSE, TYPE_NEW_PERSON, TYPE_INCOME_DROPPED,
+		TYPE_EXPENSE_REVIEW, TYPE_EXPENSE_CAPPED, TYPE_INCOME_DUPLICATED, TYPE_INCOME_TRANSFERRED_LATE, TYPE_FAMILY_DIFFERS_FROM_APPLICATION,
+		TYPE_FAMILY_DEVIATING_PERIOD, TYPE_COMMON_HOUSEHOLD_COST_CHECK, TYPE_PREVIOUS_NORM_NOT_AVAILABLE);
 
 	public static final String SECTION_CALCULATION = "CALCULATION";
 	public static final String SECTION_DECISION = "DECISION";
@@ -240,10 +250,7 @@ public class WarningService {
 	public void reconcileCalculationWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final DraftChanges draftChanges, final List<WarningInput> sectionWarnings) {
 
-		final List<WarningInput> inputs = new ArrayList<>();
-		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
-		ofList(changes).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_CHANGE, sourceKey(text), text)));
-		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Saknas fortfarande i SSBTEK: " + text)));
+		final var inputs = ssbtekIncomeWarnings(unhandled, changes, missing);
 
 		if (draftChanges != null) {
 			ofList(draftChanges.addedIncomes()).forEach(text -> inputs.add(new WarningInput(TYPE_NEW_INCOME, sourceKey(text), "Ny inkomst i SSBTEK, ej införd i beräkningen: " + text)));
@@ -256,6 +263,39 @@ public class WarningService {
 		// The calculation owns every type except the separately reconciled ones — those live and die with their own
 		// reconcile, so the daily prepare must neither create nor auto-close them.
 		reconcile(errandId, inputs, type -> !isSeparatelyReconciled(type));
+	}
+
+	/**
+	 * Reconcile the calculation warnings of a run that did <strong>not</strong> refresh the draft — the caseworker has
+	 * saved the normberäkning in Lifecare, and that is now the truth. The SSBTEK income warnings (unhandled / changed /
+	 * still-missing) and the rule warnings that do not depend on the draft are reconciled as usual; the
+	 * {@link #DRAFT_REFRESH_TYPES} are left exactly as they last were — neither created, refreshed nor auto-closed. Every
+	 * {@code ruleWarnings} input must carry a type outside {@link #DRAFT_REFRESH_TYPES}.
+	 */
+	@Transactional
+	public void reconcileRuleWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
+		final List<String> missing, final List<WarningInput> ruleWarnings) {
+
+		final var rules = ofNullable(ruleWarnings).orElseGet(List::of);
+		rules.stream()
+			.filter(input -> DRAFT_REFRESH_TYPES.contains(input.type()))
+			.findFirst()
+			.ifPresent(input -> {
+				throw new IllegalArgumentException("warning type " + input.type() + " belongs to the draft refresh");
+			});
+
+		final var inputs = ssbtekIncomeWarnings(unhandled, changes, missing);
+		inputs.addAll(rules);
+		reconcile(errandId, inputs, type -> !isSeparatelyReconciled(type) && !DRAFT_REFRESH_TYPES.contains(type));
+	}
+
+	/** The rules income warnings the process sent: unhandled, significantly changed and still-missing incomes. */
+	private static List<WarningInput> ssbtekIncomeWarnings(final List<String> unhandled, final List<String> changes, final List<String> missing) {
+		final List<WarningInput> inputs = new ArrayList<>();
+		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
+		ofList(changes).forEach(text -> inputs.add(new WarningInput(TYPE_INCOME_CHANGE, sourceKey(text), text)));
+		ofList(missing).forEach(text -> inputs.add(new WarningInput(TYPE_MISSING_SSBTEK, text, "Saknas fortfarande i SSBTEK: " + text)));
+		return inputs;
 	}
 
 	/**
@@ -288,9 +328,12 @@ public class WarningService {
 	 */
 	@Transactional
 	public void reconcileSsbtekReadFailure(final String errandId, final boolean readFailed) {
-		final var current = readFailed
-			? List.of(new WarningInput(TYPE_SSBTEK_READ_FAILED, SOURCE_KEY_SSBTEK, ssbtekReadFailureMessage(OffsetDateTime.now(SSBTEK_READ_FAILED_ZONE))))
-			: List.<WarningInput>of();
+		final List<WarningInput> current;
+		if (readFailed) {
+			current = List.of(new WarningInput(TYPE_SSBTEK_READ_FAILED, SOURCE_KEY_SSBTEK, ssbtekReadFailureMessage(OffsetDateTime.now(SSBTEK_READ_FAILED_ZONE))));
+		} else {
+			current = List.of();
+		}
 		reconcile(errandId, current, SSBTEK_READ_FAILURE_TYPES::contains);
 	}
 

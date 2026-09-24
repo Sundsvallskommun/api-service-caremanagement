@@ -22,10 +22,9 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  * The draft calculation header for an errand — one row per errand, holding the application month and the selected
  * norm. The section rows (persons, incomes, expenses) live in their own tables ({@code errand_fa_norm_person},
  * {@code errand_fa_norm_income}, {@code errand_fa_norm_expense}), each row owning its process and caseworker values
- * separately. The financial assistance process prepares the draft each day without writing to Lifecare; on a decision
- * the effective
- * values
- * are posted. The errand id is the primary key.
+ * separately. The financial assistance process prepares the draft each day without writing to Lifecare; careM never
+ * posts it — the caseworker saves the normberäkning in Lifecare from Draken, after which the draft is no longer
+ * refreshed. The errand id is the primary key.
  */
 @Entity
 @Table(name = "errand_financial_assistance_calculation_draft")

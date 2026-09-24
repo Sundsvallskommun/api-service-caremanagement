@@ -1,7 +1,6 @@
 package se.sundsvall.caremanagement.lifecare.service.mapper;
 
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationCalculationIncomeTypeDTO;
-import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationIncomePostDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -23,8 +22,6 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
-import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.APPLICANT;
-import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;
 
 /**
  * Maps incomes already classified by the operaton rules to FamilyCare calculation income rows. The raw list decision is
@@ -72,35 +69,9 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 	}
 
 	/**
-	 * Map the classified incomes to FamilyCare calculation rows for the given calculation proposal.
-	 *
-	 * @param  classified the incomes classified by the operaton rules (maybe {@code null})
-	 * @param  proposal   the FamilyCare calculation proposal whose {@code calculationIncomeTypes} supply the numeric type
-	 *                    ids
-	 * @return            the FamilyCare income rows (incomes resolving to the same type id are merged)
-	 */
-	public static List<PersonBasedCalculationIncomePostDTO> toCalculationIncomes(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
-		final var typeIdByName = MapperUtil.indexIncomeTypeIds(proposal);
-
-		return ofNullable(classified).orElseGet(List::of).stream()
-			.filter(Objects::nonNull)
-			.filter(ClassifiedIncomeToFamilyCareMapper::isTransferable)
-			.map(income -> resolve(income, typeIdByName))
-			.filter(Objects::nonNull)
-			// Drop role-less incomes — they can't be attributed to the applicant or co-applicant amount, so (consistent
-			// with toIncomeLines) they must not leak into the note either.
-			.filter(resolved -> resolved.income().role() != null)
-			.collect(groupingBy(Resolved::typeId, LinkedHashMap::new, toList()))
-			.entrySet().stream()
-			.map(entry -> toDto(entry.getKey(), entry.getValue()))
-			.toList();
-	}
-
-	/**
 	 * Map the classified incomes to draft income lines — one line per (FamilyCare income type, recipient), the
 	 * granularity the calculation draft stores so a caseworker can override or soft-delete a single person's income of a
-	 * type. The same transferability + type-id resolution as {@link #toCalculationIncomes} is used; the difference is the
-	 * rows are not folded across recipients.
+	 * type. Incomes of the same type and recipient are summed into one line.
 	 *
 	 * @param  classified the incomes classified by the operaton rules (maybe {@code null})
 	 * @param  proposal   the FamilyCare proposal whose {@code calculationIncomeTypes} supply the type ids and names
@@ -142,7 +113,7 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 	/**
 	 * The previous-month FamilyCare income-type names not covered by this month's classified incomes — the basis for the
 	 * financial assistance "all last month's calculation values present" completeness check. Matching is on the normalised
-	 * type name, the same key {@link #toCalculationIncomes} resolves on, so the two months compare like-for-like. An empty
+	 * type name, the same key {@link #toIncomeLines} resolves on, so the two months compare like-for-like. An empty
 	 * result means every previous income type has a transferable income this month (i.e. the information is complete).
 	 *
 	 * @param  previousTypeNames the income-type names on the previous calculation (FamilyCare {@code getType()})
@@ -185,16 +156,6 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 		return new Resolved(typeId, classified.income());
 	}
 
-	private static PersonBasedCalculationIncomePostDTO toDto(final Integer typeId, final List<Resolved> group) {
-		return new PersonBasedCalculationIncomePostDTO()
-			.id(typeId)
-			.applicantAmount(toDouble(sumByRole(group, APPLICANT)))
-			.applicantAmountDate(MapperUtil.toOffsetDateTime(latestDateByRole(group, APPLICANT)))
-			.coApplicantAmount(toDouble(sumByRole(group, CO_APPLICANT)))
-			.coApplicantAmountDate(MapperUtil.toOffsetDateTime(latestDateByRole(group, CO_APPLICANT)))
-			.note(noteFor(group));
-	}
-
 	private static BigDecimal sumByRole(final List<Resolved> group, final ApplicantRole role) {
 		return group.stream()
 			.map(Resolved::income)
@@ -228,10 +189,6 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 			.filter(Objects::nonNull)
 			.filter(value -> !value.isBlank())
 			.collect(joining(" / "));
-	}
-
-	private static Double toDouble(final BigDecimal value) {
-		return ofNullable(value).map(BigDecimal::doubleValue).orElse(null);
 	}
 
 	/** An income that resolved to a concrete FamilyCare income-type id, pending aggregation. */

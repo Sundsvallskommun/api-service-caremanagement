@@ -22,11 +22,7 @@ import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
-import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
-import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
-import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
-import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
@@ -34,10 +30,6 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.DayCheckBasis;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCalculationDraftEntity;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -47,7 +39,6 @@ import static java.time.Month.JUNE;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -105,46 +96,8 @@ class FinancialAssistanceCalculationServiceTest {
 	@Mock
 	private LateTransferFeeder lateTransferFeederMock;
 
-	@Mock
-	private LifecareServiceIdService lifecareServiceIdServiceMock;
-
 	@InjectMocks
 	private FinancialAssistanceCalculationService service;
-
-	@Test
-	void commitPostsEffectiveRowsAndReturnsId() {
-		final var month = YearMonth.of(2026, JUNE);
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(7)));
-		when(draftServiceMock.liveIncomes(ERRAND_ID)).thenReturn(List.of(
-			FaNormIncomeEntity.create().withTypeId(20).withApplicantProcessAmount(new BigDecimal("1000")).withApplicantCaseworkerAmount(new BigDecimal("1100"))));
-		when(draftServiceMock.liveExpenses(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
-		when(draftServiceMock.livePersons(ERRAND_ID)).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
-		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(4712);
-		when(lifecareServiceIdServiceMock.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(2);
-
-		final var request = CalculationRequest.create()
-			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID)
-			.withUnhandledIncomes(List.of("Något (EJ_PA_LISTAN)")).withChangeWarnings(List.of("Bostadsbidrag: -23%"));
-
-		final var response = service.commitCalculation(MUNICIPALITY_ID, NAMESPACE, request);
-
-		assertThat(response.getCalculationId()).isEqualTo(4712);
-		assertThat(response.getUnhandledIncomes()).containsExactly("Något (EJ_PA_LISTAN)");
-		assertThat(response.getChangeWarnings()).containsExactly("Bostadsbidrag: -23%");
-
-		final ArgumentCaptor<List<EffectiveIncome>> incomeCaptor = ArgumentCaptor.captor();
-		final ArgumentCaptor<CalculationHeader> headerCaptor = ArgumentCaptor.forClass(CalculationHeader.class);
-		verify(calculationServiceMock).commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), headerCaptor.capture(), incomeCaptor.capture(), any(), any());
-		// The calculation is created under the errand's own EB insats.
-		assertThat(headerCaptor.getValue().serviceId()).isEqualTo(2);
-		assertThat(incomeCaptor.getValue()).singleElement().satisfies(income -> {
-			assertThat(income.typeId()).isEqualTo(20);
-			assertThat(income.applicantAmount()).isEqualByComparingTo(BigDecimal.valueOf(1100.0)); // caseworker value wins over the process value
-		});
-		// commit does not touch the errand status/recommendation — that is prepare's job
-		verifyNoInteractions(decisionServiceMock);
-	}
 
 	@Test
 	void prepareScopeChecksTheErrandBeforeDoingAnything() {
@@ -157,44 +110,6 @@ class FinancialAssistanceCalculationServiceTest {
 
 		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verifyNoInteractions(citizenServiceMock, repositoryMock, calculationServiceMock, draftServiceMock);
-	}
-
-	@Test
-	void commitScopeChecksTheErrandBeforeDoingAnything() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(Problem.valueOf(NOT_FOUND, "No errand"));
-		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
-
-		assertThatThrownBy(() -> service.commitCalculation(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
-
-		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-		verifyNoInteractions(citizenServiceMock, draftServiceMock, calculationServiceMock);
-	}
-
-	@Test
-	void commitFromApplicationScopeChecksTheErrandBeforeDoingAnything() {
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(Problem.valueOf(NOT_FOUND, "No errand"));
-		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
-
-		assertThatThrownBy(() -> service.commitFromApplication(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
-
-		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-		verifyNoInteractions(citizenServiceMock, repositoryMock, calculationServiceMock);
-	}
-
-	@Test
-	void commitYields404WhenNoDraftHeader() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.empty());
-		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
-
-		assertThatThrownBy(() -> service.commitCalculation(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
-			.hasMessage("Not Found: No draft calculation to commit for errand errand-1");
 	}
 
 	@Test
@@ -234,6 +149,7 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, true);
 		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any());
+		verify(warningServiceMock, never()).reconcileRuleWarnings(any(), any(), any(), any(), any());
 		verifyNoInteractions(draftServiceMock, calculationFeederMock, decisionServiceMock);
 		assertThat(response.isInformationComplete()).isFalse();
 		assertThat(errand.getLastDailyRunAt()).isNotNull();
@@ -347,6 +263,64 @@ class FinancialAssistanceCalculationServiceTest {
 		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("SUPPLEMENT_REQUESTED");
 		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID),
 			eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")), eq(List.of("Dagersättning")), any(), any());
+		// No lifecareCalculationId yet: the draft is refreshed, so the full calculation reconcile runs.
+		verify(draftServiceMock).refresh(eq(ERRAND_ID), eq("2026-06"), eq(7), eq(List.of("NATIONAL_NORM")), any(), any(), any());
+		verify(warningServiceMock, never()).reconcileRuleWarnings(any(), any(), any(), any(), any());
+	}
+
+	@Test
+	void prepareWithACalculationSavedInLifecareKeepsTheDraftAndItsWarnings() {
+		// Draken has saved the normberäkning in Lifecare and set its id on the errand: that calculation is the truth, so
+		// the draft is not refreshed and its warnings are not reconciled. The SSBTEK work carries on as before.
+		final var month = YearMonth.of(2026, JUNE);
+		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM")).withLifecareCalculationId(4242);
+		final var questionWarning = new WarningService.WarningInput(WarningService.TYPE_PENDING_BENEFIT, "pending-benefit", "text");
+		final var previous = new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, "Riksnorm 2025");
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
+		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, "199001011234", month)).thenReturn(previous);
+		when(applicationRuleFeederMock.applicationQuestionWarnings(MUNICIPALITY_ID, ERRAND_ID, errand)).thenReturn(List.of(questionWarning));
+		when(calculationServiceMock.completeness(MUNICIPALITY_ID, "199001011234", month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("UNDER_REVIEW"));
+
+		final var request = CalculationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[json]")
+			.withUnhandledIncomes(List.of("Bostadstillägg (NOT_ON_WHITELIST)")).withChangeWarnings(List.of("Bostadsbidrag: -23%"));
+
+		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
+
+		// The draft is left alone: no refresh, no feed, no family copy, no late transfer, no duplicate read.
+		verifyNoInteractions(draftServiceMock, lateTransferFeederMock);
+		verify(calculationFeederMock, never()).incomeRows(any(), any());
+		verify(calculationFeederMock, never()).expenseFeed(any(), any(), any(), any(), any());
+		verify(calculationFeederMock, never()).personRows(any(), any(), any(), any(), any(), any());
+		verify(calculationServiceMock, never()).incomeLines(any(), any(), any(), any());
+		verify(calculationServiceMock, never()).selectNormId(any(), any(), any(), any(), any());
+		verify(lifecareCaseServiceMock, never()).previousFamily(any(), any(), any());
+
+		// Only the SSBTEK income warnings and the draft-independent rule warnings are reconciled.
+		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any());
+		final ArgumentCaptor<List<WarningService.WarningInput>> rules = ArgumentCaptor.captor();
+		verify(warningServiceMock).reconcileRuleWarnings(eq(ERRAND_ID), eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")),
+			eq(List.of("Dagersättning")), rules.capture());
+		assertThat(rules.getValue()).containsExactly(questionWarning);
+		verify(calculationFeederMock).housingDeltaWarnings(MUNICIPALITY_ID, errand, previous);
+		verify(applicationRuleFeederMock).previousCalculationWarnings(MUNICIPALITY_ID, errand, previous);
+		verify(periodRuleFeederMock).periodWarnings(eq(MUNICIPALITY_ID), eq(YearMonth.of(2026, 5)), any(), any());
+		verify(missingIncomeFeederMock).missingIncomeWarnings(any());
+
+		// Completeness, the one-time recommendation, the status, the read-failure close and the run stamp are unchanged.
+		assertThat(response.isInformationComplete()).isFalse();
+		assertThat(response.getMissingIncomeTypes()).containsExactly("Dagersättning");
+		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
+		assertThat(decisionCaptor.getValue().getValue()).isEqualTo("REVIEW_REQUIRED");
+		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
+		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
+		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("SUPPLEMENT_REQUESTED");
+		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, false);
+		assertThat(errand.getLastDailyRunAt()).isCloseTo(OffsetDateTime.now(), within(10, SECONDS));
+		verify(repositoryMock).save(errand);
 	}
 
 	@Test
@@ -407,54 +381,6 @@ class FinancialAssistanceCalculationServiceTest {
 
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
-	}
-
-	@Test
-	void commitFromApplicationFeedsApplicationDataThroughTheSamePipeline() {
-		final var month = YearMonth.of(2026, JUNE);
-		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withIncomes(List.of(
-			FaIncome.create().withIncomeType("SALARY").withAmount(new BigDecimal("18500")).withRecipient("APPLICANT"),
-			FaIncome.create().withIncomeType("SWISH_DEPOSITS").withAmount(new BigDecimal("300")).withRecipient("CO_APPLICANT")));
-
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
-		when(calculationServiceMock.applicationIncomeLines(eq(MUNICIPALITY_ID), eq("199001011234"), any()))
-			.thenReturn(List.of(new FamilyCareIncomeLine(11, "Lön efter skatt", "APPLICANT", new BigDecimal("18500"), null, "Ansökan")));
-		when(calculationFeederMock.incomeRows(eq(ERRAND_ID), any())).thenReturn(List.of(
-			FaNormIncomeEntity.create().withTypeId(11).withApplicantProcessAmount(new BigDecimal("18500"))));
-		when(calculationFeederMock.applicationExpenseRows(eq(ERRAND_ID), any())).thenReturn(
-			List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
-		when(calculationFeederMock.personRows(any(), any(), eq(ERRAND_ID), any(), any(), any())).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
-		when(calculationServiceMock.selectNormId(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any())).thenReturn(7);
-		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(5001);
-
-		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
-		final var response = service.commitFromApplication(MUNICIPALITY_ID, NAMESPACE, request);
-
-		assertThat(response.getCalculationId()).isEqualTo(5001);
-
-		// The application's declared incomes are mapped to the neutral ApplicationIncome (recipient → role) and handed to
-		// the existing income pipeline — not a parallel calculation engine.
-		final ArgumentCaptor<List<ApplicationIncome>> incomeCaptor = ArgumentCaptor.captor();
-		verify(calculationServiceMock).applicationIncomeLines(eq(MUNICIPALITY_ID), eq("199001011234"), incomeCaptor.capture());
-		assertThat(incomeCaptor.getValue()).extracting(ApplicationIncome::incomeType, income -> income.role().name())
-			.containsExactly(tuple("SALARY", "APPLICANT"), tuple("SWISH_DEPOSITS", "CO_APPLICANT"));
-
-		final ArgumentCaptor<List<EffectiveIncome>> effectiveCaptor = ArgumentCaptor.captor();
-		verify(calculationServiceMock).commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), effectiveCaptor.capture(), any(), any());
-		assertThat(effectiveCaptor.getValue()).singleElement().satisfies(income -> assertThat(income.typeId()).isEqualTo(11));
-	}
-
-	@Test
-	void commitFromApplicationYields404WhenErrandMissing() {
-		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
-		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID);
-
-		assertThatThrownBy(() -> service.commitFromApplication(MUNICIPALITY_ID, NAMESPACE, request))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
-			.hasMessage("Not Found: No financial-assistance errand for id errand-1");
 	}
 
 	@Test

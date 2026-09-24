@@ -6,7 +6,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -186,7 +185,7 @@ public class DraftService {
 	@Transactional
 	public NormIncomeRow addIncome(final String errandId, final NormIncomeInput input) {
 		if ((input.getTypeId() == null) && !StringUtils.hasText(input.getTypeName())) {
-			// Without an id or a name the row can never be sent to Lifecare, and the commit would fail long after this.
+			// Without an id or a name the row names no FamilyCare income type, so it could never be carried into the normberäkning.
 			throw Problem.valueOf(BAD_REQUEST, "An income row needs a typeId or a typeName");
 		}
 		requireHeader(errandId);
@@ -261,30 +260,6 @@ public class DraftService {
 		final var entity = requirePerson(errandId, rowId);
 		entity.setDeleted(deleted);
 		return CalculationDraftMapper.toPersonRow(personRepository.save(entity));
-	}
-
-	// ------------------------------------------------------------------------------------------------------------------
-	// Commit path — the effective (live, non-deleted) rows posted to Lifecare on a decision.
-	// ------------------------------------------------------------------------------------------------------------------
-
-	@Transactional(readOnly = true)
-	public Optional<FaCalculationDraftEntity> header(final String errandId) {
-		return calculationDraftRepository.findById(errandId);
-	}
-
-	@Transactional(readOnly = true)
-	public List<FaNormIncomeEntity> liveIncomes(final String errandId) {
-		return incomeRepository.findByErrandId(errandId).stream().filter(row -> !row.isDeleted()).toList();
-	}
-
-	@Transactional(readOnly = true)
-	public List<FaNormExpenseEntity> liveExpenses(final String errandId) {
-		return expenseRepository.findByErrandId(errandId).stream().filter(row -> !row.isDeleted()).toList();
-	}
-
-	@Transactional(readOnly = true)
-	public List<FaNormPersonEntity> livePersons(final String errandId) {
-		return personRepository.findByErrandId(errandId).stream().filter(row -> !row.isDeleted() && row.isIncluded()).toList();
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

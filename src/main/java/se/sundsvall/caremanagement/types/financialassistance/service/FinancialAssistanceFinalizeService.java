@@ -45,8 +45,8 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * <li>records the decision as a {@code PAYMENT} {@code Decision} row — the audit trail;</li>
  * <li>records one {@code Payment} row per decided utbetalning, which Draken's BFF registers directly in Lifecare and
  * acknowledges through {@code .../payments/{paymentId}/lifecare-result};</li>
- * <li>correlates {@code PaymentDecisionReceived} to the waiting process, which then commits the normberäkning to
- * Lifecare, sets the status and polls the payment.</li>
+ * <li>correlates {@code PaymentDecisionReceived} to the waiting process, which then sets the status and polls the
+ * payment. The normberäkning is already in Lifecare — Draken saves it before the decision.</li>
  * </ol>
  *
  * <p>
@@ -208,7 +208,7 @@ public class FinancialAssistanceFinalizeService {
 
 	/**
 	 * Resume the process waiting at the decision gateway: {@code paymentDecision=APPROVED} for a granting outcome (the
-	 * process commits the normberäkning, sets GRANTED and polls the payment), {@code REJECTED} otherwise. The status is
+	 * process sets GRANTED and polls the payment), {@code REJECTED} otherwise. The status is
 	 * the process's to set, never this service's. Best-effort: an unreachable engine is reported as
 	 * {@code processMessageCorrelated=false}, and the message is queued for the scheduled retry in the transaction that
 	 * records the decision — so a saved decision cannot leave its process waiting before the decision gateway. If the

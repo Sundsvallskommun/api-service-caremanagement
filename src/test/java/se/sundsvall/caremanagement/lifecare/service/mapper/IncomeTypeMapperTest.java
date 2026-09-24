@@ -52,7 +52,7 @@ class IncomeTypeMapperTest {
 
 	@Test
 	void everyUnambiguousForwardNameResolvesBack() {
-		final var forward = ApplicationIncomeToFamilyCareMapper.APPLICATION_TYPE_TO_FC_NAME;
+		final var forward = IncomeTypeMapper.APPLICATION_TYPE_TO_FC_NAME;
 
 		forward.forEach((incomeType, familyCareName) -> {
 			final var sharedName = forward.values().stream().filter(familyCareName::equals).count() > 1;

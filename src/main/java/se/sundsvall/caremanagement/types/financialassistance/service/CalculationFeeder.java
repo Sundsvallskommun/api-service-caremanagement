@@ -168,22 +168,6 @@ public class CalculationFeeder {
 		return new ExpenseFeed(List.copyOf(rows), List.copyOf(warnings));
 	}
 
-	/**
-	 * The application's expense rows for the direct new-application commit — applied amount + the cost type's static
-	 * bucket, with no history rule tree (a new application has no previous month) and no warnings. The rule tree applies
-	 * to the daily-prepare draft ({@link #expenseFeed}) instead, where there is history and a caseworker review before
-	 * commit.
-	 */
-	public List<FaNormExpenseEntity> applicationExpenseRows(final String errandId, final FinancialAssistanceEntity errand) {
-		return ofNullable(errand.getCosts()).orElseGet(List::of).stream()
-			.map(cost -> FaNormExpenseEntity.create()
-				.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
-				.withCostType(cost.getCostType()).withOtherSubType(cost.getOtherSubType()).withSpecification(cost.getSpecification())
-				.withAppliedAmount(cost.getAppliedAmount()).withProcessAmount(cost.getAppliedAmount())
-				.withBucket(ExpenseRulesService.bucketForCostType(cost.getCostType())))
-			.toList();
-	}
-
 	/** The number of persons in the household — the declared housingPersonCount, else persons + children. */
 	private static Integer householdSize(final FinancialAssistanceEntity errand) {
 		final var declared = errand.getHousingPersonCount();

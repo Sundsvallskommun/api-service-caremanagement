@@ -31,18 +31,6 @@ class CalculationDraftMapperTest {
 	}
 
 	@Test
-	void toEffectiveIncomeCarriesTheTypeNameForACaseworkerRowWithoutTypeId() {
-		final var entity = FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeName("Lön efter skatt")
-			.withApplicantCaseworkerAmount(new BigDecimal("5000"));
-
-		final var income = CalculationDraftMapper.toEffectiveIncome(entity);
-
-		assertThat(income.typeId()).isNull();
-		assertThat(income.typeName()).isEqualTo("Lön efter skatt");
-		assertThat(income.applicantAmount()).isEqualByComparingTo("5000");
-	}
-
-	@Test
 	void toIncomeRowComputesTheEffectiveAmounts() {
 		final var entity = FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20)
 			.withApplicantProcessAmount(new BigDecimal("1000")).withApplicantCaseworkerAmount(new BigDecimal("1200"))

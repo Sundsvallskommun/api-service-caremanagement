@@ -14,7 +14,7 @@ final class FinancialAssistanceApiTags {
 	static final String INTAKE = "Financial Assistance · Intake";
 	static final String INTAKE_DESC = "Pre-application and case-intake calls: eligibility routing (common entry point), renewal pre-fill from Lifecare, the income/cost type metadata catalogue, and Lifecare actualisation (case intake).";
 	static final String CALCULATION = "Financial Assistance · Calculation";
-	static final String CALCULATION_DESC = "The calculation: prepare the calculation each daily loop (no Lifecare write), commit it to Lifecare after a decision, and read or edit the draft header.";
+	static final String CALCULATION_DESC = "The calculation: prepare the calculation draft each daily loop (no Lifecare write — Draken saves the normberäkning in Lifecare), and read or edit the draft header.";
 	static final String DRAFT_ROWS = "Financial Assistance · Draft rows";
 	static final String DRAFT_ROWS_DESC = "Caseworker edits to the draft calculation rows — add, edit, soft-delete and restore income, expense and person rows. Each touches only the caseworker value / note / soft-delete; the process columns are owned by the daily prepare.";
 	static final String WARNINGS = "Financial Assistance · Warnings";

@@ -15,7 +15,7 @@ import static java.util.stream.Collectors.toSet;
 /**
  * Resolves a FamilyCare (Lifecare normberäkning) income-type <em>name</em> back to the financial assistance
  * {@code Income.incomeType} it corresponds to — the reverse direction of
- * {@link ApplicationIncomeToFamilyCareMapper#APPLICATION_TYPE_TO_FC_NAME}, used to read a previous calculation's
+ * {@link #APPLICATION_TYPE_TO_FC_NAME}, used to read a previous calculation's
  * amounts per application income type for the återansökan income comparison
  * ({@code Decision_inkomstMotForegaende}).
  *
@@ -41,6 +41,22 @@ import static java.util.stream.Collectors.toSet;
  */
 public final class IncomeTypeMapper {
 
+	private static final String FAMILYCARE_OTHER_INCOME = "Övriga inkomster";
+
+	/**
+	 * The application income code → FamilyCare income-type name table. The values must match the names Lifecare returns
+	 * in the calculation proposal ({@code calculationIncomeTypes}); matching is case-insensitive and trim-insensitive.
+	 * Edit here when the FamilyCare catalogue or the application's income codes change.
+	 */
+	static final Map<String, String> APPLICATION_TYPE_TO_FC_NAME = Map.of(
+		"SALARY", "Lön efter skatt",
+		"SWISH_DEPOSITS", "Swish/Insättningar/Överföringar",
+		"OCCUPATIONAL_PENSION_INSURANCE", "Pension/SA/Livränta/Omvårdnadsbidrag",
+		"CHILD_SUPPORT", "Underhållsstöd",
+		"RENT_SHARE_FROM_CHILD", FAMILYCARE_OTHER_INCOME,
+		"OTHER_INCOME", FAMILYCARE_OTHER_INCOME,
+		"FINANCIAL_AID_OTHER_MUNICIPALITY", FAMILYCARE_OTHER_INCOME);
+
 	/**
 	 * Normalized FamilyCare income-type name → financial assistance income type. Derived from the forward map, minus
 	 * the names more than one income type posts to.
@@ -50,7 +66,7 @@ public final class IncomeTypeMapper {
 	private IncomeTypeMapper() {}
 
 	private static Map<String, String> invertUnambiguous() {
-		final var forward = ApplicationIncomeToFamilyCareMapper.APPLICATION_TYPE_TO_FC_NAME;
+		final var forward = APPLICATION_TYPE_TO_FC_NAME;
 		final Set<String> ambiguous = forward.values().stream()
 			.map(MapperUtil::normalize)
 			.collect(groupingBy(identity(), counting()))

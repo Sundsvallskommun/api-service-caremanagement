@@ -54,7 +54,7 @@ class FinancialAssistanceCalculationResource {
 
 	@PostMapping(path = "/financial-assistance/calculation/prepare", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Prepare the calculation (no Lifecare write)",
-		description = "Reports whether this month's classified incomes cover every income type the previous calculation had (informationComplete + missingIncomeTypes), records the income warnings on the errand as a single Decision(RECOMMENDATION), and reflects completeness in the errand status (SUPPLEMENT_REQUESTED ⇄ AWAITING_DECISION). Does NOT create a calculation in Lifecare — the financial assistance process calls this each daily loop. Use /commit after a decision to create it in Lifecare.",
+		description = "Reports whether this month's classified incomes cover every income type the previous calculation had (informationComplete + missingIncomeTypes), records the income warnings on the errand as a single Decision(RECOMMENDATION), and reflects completeness in the errand status (SUPPLEMENT_REQUESTED ⇄ AWAITING_DECISION). Never creates a calculation in Lifecare — Draken saves the normberäkning in Lifecare and sets lifecareCalculationId on the errand. Once lifecareCalculationId is set, the draft is no longer refreshed and its warnings stay as they were; the SSBTEK warnings, recommendation and status still update. The financial assistance process calls this each daily loop.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -65,36 +65,6 @@ class FinancialAssistanceCalculationResource {
 		@Valid @NotNull @RequestBody final CalculationRequest request) {
 
 		return ok(calculationService.prepareCalculation(municipalityId, namespace, request));
-	}
-
-	@PostMapping(path = "/financial-assistance/calculation/commit", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Create the calculation in Lifecare (after decision)",
-		description = "Builds the calculation from the classified incomes and creates it in Lifecare FamilyCare, returning the created calculation id. Called once a decision is taken — never during the daily SSBTEK loop.",
-		responses = {
-			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
-		})
-	ResponseEntity<CalculationResponse> commitCalculation(
-		@ValidMunicipalityId @PathVariable final String municipalityId,
-		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@Valid @NotNull @RequestBody final CalculationRequest request) {
-
-		return ok(calculationService.commitCalculation(municipalityId, namespace, request));
-	}
-
-	@PostMapping(path = "/financial-assistance/calculation/from-application", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Create the calculation in Lifecare straight from the application (new application)",
-		description = "Builds the calculation from the data the citizen declared in the application — incomes resolved to FamilyCare types by name, expenses and household from the same feeder the renewal path uses — and creates it in Lifecare FamilyCare in one shot, returning the created calculation id. No SSBTEK, no daily loop, no caseworker draft. Used by the new application process.",
-		responses = {
-			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
-		})
-	ResponseEntity<CalculationResponse> commitFromApplication(
-		@ValidMunicipalityId @PathVariable final String municipalityId,
-		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@Valid @NotNull @RequestBody final CalculationRequest request) {
-
-		return ok(calculationService.commitFromApplication(municipalityId, namespace, request));
 	}
 
 	@GetMapping(path = "/financial-assistance/{errandId}/calculation/draft", produces = APPLICATION_JSON_VALUE)

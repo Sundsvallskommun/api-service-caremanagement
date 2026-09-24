@@ -279,29 +279,6 @@ class CalculationFeederTest {
 	}
 
 	@Test
-	void applicationExpenseRowsUseAppliedAmountAndStaticBucketWithoutRulesOrWarnings() {
-		final var rent = FaCost.create().withCostType("RENT").withSpecification("spec").withAppliedAmount(new BigDecimal("9000"));
-		final var medicine = FaCost.create().withCostType("MEDICINE").withAppliedAmount(new BigDecimal("400"));
-		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(rent, medicine));
-
-		final var rows = feeder.applicationExpenseRows(ERRAND_ID, errand);
-
-		assertThat(rows).hasSize(2);
-		final var rentRow = rows.getFirst();
-		assertThat(rentRow.getCostType()).isEqualTo("RENT");
-		assertThat(rentRow.getProcessAmount()).isEqualByComparingTo(new BigDecimal("9000"));
-		assertThat(rentRow.getAppliedAmount()).isEqualByComparingTo(new BigDecimal("9000"));
-		assertThat(rentRow.getBucket()).isEqualTo("EXPENSE");
-		assertThat(rows.get(1).getBucket()).isEqualTo("SPECIAL_EXPENSE");
-		verifyNoInteractions(expenseRulesServiceMock);
-	}
-
-	@Test
-	void applicationExpenseRowsHandlesNullCosts() {
-		assertThat(feeder.applicationExpenseRows(ERRAND_ID, FinancialAssistanceEntity.create())).isEmpty();
-	}
-
-	@Test
 	void personRowsMapsPersonsAndChildren() {
 		final var applicant = FaPerson.create().withRole("APPLICANT").withPartyId("p-1");
 		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(

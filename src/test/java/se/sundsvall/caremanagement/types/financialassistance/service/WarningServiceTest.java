@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -237,6 +238,56 @@ class WarningServiceTest {
 		verify(repositoryMock).save(captor.capture()); // only the calculation one auto-closes
 		assertThat(captor.getValue().getType()).isEqualTo("MISSING_SSBTEK");
 		assertThat(proposalWarning.getStatus()).isEqualTo("OPEN");
+	}
+
+	@Test
+	void reconcileRuleWarningsLeavesTheDraftWarningsAsTheyWere() {
+		// The normberäkning is saved in Lifecare: the draft warnings are neither refreshed nor auto-closed.
+		final var draftWarnings = WarningService.DRAFT_REFRESH_TYPES.stream()
+			.map(type -> warning(type, "draft-" + type, "OPEN"))
+			.toList();
+		final var staleRule = warning("PENDING_BENEFIT", "pending-benefit", "OPEN"); // no longer computed → auto-close
+		final var staleSsbtek = warning("MISSING_SSBTEK", "Dagersättning", "ACKNOWLEDGED"); // no longer computed → auto-close
+		final var proposalWarning = warning("EXPENSE_PARTIALLY_REJECTED", "RENT", "OPEN"); // another section → untouched
+		final var existing = new ArrayList<>(draftWarnings);
+		existing.addAll(List.of(staleRule, staleSsbtek, proposalWarning));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(existing);
+
+		service.reconcileRuleWarnings(ERRAND_ID, List.of("Bostadstillägg (NOT_ON_WHITELIST)"), List.of(), List.of(),
+			List.of(new WarningService.WarningInput("STAY_OUTSIDE_MUNICIPALITY", "stay", "Vistelse")));
+
+		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
+		verify(repositoryMock, times(4)).save(captor.capture()); // two inserts + two auto-closes
+		assertThat(captor.getAllValues())
+			.extracting(FaWarningEntity::getType, FaWarningEntity::getStatus)
+			.containsExactlyInAnyOrder(
+				tuple("UNHANDLED_INCOME", "OPEN"),
+				tuple("STAY_OUTSIDE_MUNICIPALITY", "OPEN"),
+				tuple("PENDING_BENEFIT", "CLOSED"),
+				tuple("MISSING_SSBTEK", "CLOSED"));
+		assertThat(draftWarnings).allSatisfy(draftWarning -> assertThat(draftWarning.getStatus()).isEqualTo("OPEN"));
+		assertThat(proposalWarning.getStatus()).isEqualTo("OPEN");
+	}
+
+	@Test
+	void reconcileRuleWarningsRefusesADraftWarning() {
+		final var draftWarning = List.of(new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, "RENT", "Kapad"));
+
+		assertThatThrownBy(() -> service.reconcileRuleWarnings(ERRAND_ID, List.of(), List.of(), List.of(), draftWarning))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("warning type EXPENSE_CAPPED belongs to the draft refresh");
+		verify(repositoryMock, never()).save(any());
+	}
+
+	@Test
+	void reconcileRuleWarningsToleratesNullRuleWarnings() {
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+
+		service.reconcileRuleWarnings(ERRAND_ID, null, null, List.of("Dagersättning"), null);
+
+		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
+		verify(repositoryMock).save(captor.capture());
+		assertThat(captor.getValue().getType()).isEqualTo("MISSING_SSBTEK");
 	}
 
 	@Test
