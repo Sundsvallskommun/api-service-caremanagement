@@ -9,7 +9,7 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 
 import static java.util.Optional.ofNullable;
-import static org.springframework.transaction.annotation.Propagation.REQUIRES_NEW;
+import static org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED;
 
 /**
  * The errand's Lifecare insats id — the applicant's open financial-assistance service in Lifecare, the key
@@ -24,8 +24,11 @@ import static org.springframework.transaction.annotation.Propagation.REQUIRES_NE
  *
  * <p>
  * Best-effort by design. The lookup reaches the citizen register and Lifecare; if either is down the errand must still
- * open, so a failure answers {@code null} and the next read tries again. It runs in a transaction of its own
- * because the errand read around it is read-only.
+ * open, so a failure answers {@code null} and the next read tries again. It runs outside the errand read's (read-only)
+ * transaction and outside any transaction of its own: a lookup that fails inside a transactional service marks the
+ * surrounding transaction rollback-only, so catching the failure would still fail the commit — and with it the read
+ * ({@code UnexpectedRollbackException}, a 500 on every errand read while the citizen register was down). The one
+ * write, storing a resolved id, runs in the repository's own transaction.
  * </p>
  */
 @Service
@@ -50,7 +53,7 @@ public class LifecareServiceIdService {
 	 *
 	 * @return the insats id, or {@code null} when there is no errand data, no open EB insats, or the lookup failed
 	 */
-	@Transactional(propagation = REQUIRES_NEW)
+	@Transactional(propagation = NOT_SUPPORTED)
 	public Integer currentOrResolve(final String municipalityId, final String namespace, final String errandId) {
 		final var entity = financialAssistanceRepository.findByErrandId(errandId).orElse(null);
 		if (entity == null) {
