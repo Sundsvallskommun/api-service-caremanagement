@@ -351,7 +351,7 @@ class FinancialAssistanceMapperTest {
 
 		final var view = FinancialAssistanceMapper.toView(envelope, entity);
 
-		assertThat(view).isNotNull().hasNoNullFieldsOrPropertiesExcept("applicantName", "recommendation", "sectionApprovals");
+		assertThat(view).isNotNull().hasNoNullFieldsOrPropertiesExcept("applicantName", "recommendation");
 		assertThat(view.getId()).isEqualTo("errand-1");
 		assertThat(view.getErrandNumber()).isEqualTo("EB-26060042");
 		assertThat(view.getMunicipalityId()).isEqualTo("2281");

@@ -113,12 +113,6 @@ final class ErrandEventDescriber {
 			}
 			return "Återställde " + singular(resource) + calculationContext(tail, resource);
 		}
-		if ("approval".equals(leaf) || "approvals".equals(leaf)) {
-			if ("GET".equals(method)) {
-				return "Visade sektionsgodkännanden";
-			}
-			return "Godkände en sektion";
-		}
 		if ("acknowledged".equals(leaf)) {
 			return "Kvitterade notiser";
 		}

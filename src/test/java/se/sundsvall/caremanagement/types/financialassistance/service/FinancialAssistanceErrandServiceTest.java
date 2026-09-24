@@ -25,8 +25,6 @@ import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CreateFinancialAssistanceRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Person;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApprovals;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -73,9 +71,6 @@ class FinancialAssistanceErrandServiceTest {
 
 	@Mock
 	private DecisionService decisionServiceMock;
-
-	@Mock
-	private SectionApprovalService sectionApprovalServiceMock;
 
 	@Mock
 	private LifecareServiceIdService lifecareServiceIdServiceMock;
@@ -252,8 +247,6 @@ class FinancialAssistanceErrandServiceTest {
 			.thenReturn(Errand.create().withId(ERRAND_ID).withTypeSlug(SLUG_NEW).withStatus("RECEIVED"));
 		when(repositoryMock.findByErrandId(ERRAND_ID))
 			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withApplicationType("NEW")));
-		final var approvals = SectionApprovals.create().withCalculation(SectionApproval.create().withSection("CALCULATION").withApproved(true));
-		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals);
 		when(lifecareServiceIdServiceMock.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(7700);
 
 		final var view = service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
@@ -261,7 +254,6 @@ class FinancialAssistanceErrandServiceTest {
 		assertThat(view.getId()).isEqualTo(ERRAND_ID);
 		assertThat(view.getData()).isNotNull();
 		assertThat(view.getData().getApplicationType()).isEqualTo("NEW");
-		assertThat(view.getSectionApprovals()).isSameAs(approvals);
 		assertThat(view.getLifecareServiceId()).isEqualTo(7700);
 	}
 

@@ -60,8 +60,7 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * payments directly in Lifecare. finalize refuses an errand that lacks a required reference, and an avslag linked to
  * payments. These are references: careM does not claim that the calculation is final, the beslut locked or a
  * payment paid out because an id is there — those statuses are Lifecare's, read from Lifecare (payment-status for the
- * process; Draken reads the rest itself). careM creates no payments, and neither the section approvals nor any payee
- * state affects this call.
+ * process; Draken reads the rest itself). careM creates no payments, and no payee state affects this call.
  *
  * <p>
  * Step 3 is best-effort and reported in the response rather than failing the call: the decision is recorded either

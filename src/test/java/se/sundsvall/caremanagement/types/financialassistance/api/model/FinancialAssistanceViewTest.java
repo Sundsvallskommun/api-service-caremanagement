@@ -25,10 +25,6 @@ class FinancialAssistanceViewTest {
 	private static final OffsetDateTime LAST_DAILY_RUN_AT = OffsetDateTime.parse("2026-06-06T03:00:00Z");
 	private static final FinancialAssistanceData DATA = FinancialAssistanceData.create().withApplicationType("NEW");
 	private static final Decision RECOMMENDATION = Decision.create().withDecisionType("RECOMMENDATION").withValue("OK");
-	private static final SectionApprovals SECTION_APPROVALS = SectionApprovals.create()
-		.withCalculation(SectionApproval.create().withSection("CALCULATION").withApproved(true))
-		.withPayment(SectionApproval.create().withSection("PAYMENT").withApproved(false))
-		.withDecision(SectionApproval.create().withSection("DECISION").withApproved(false));
 	private static final CommunicationChannels COMMUNICATION = CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false);
 
 	@BeforeAll
@@ -67,7 +63,6 @@ class FinancialAssistanceViewTest {
 			.withLifecareServiceId(7700)
 			.withData(DATA)
 			.withRecommendation(RECOMMENDATION)
-			.withSectionApprovals(SECTION_APPROVALS)
 			.withCommunication(COMMUNICATION)
 			.withHouseholdSizeChanged(true);
 
@@ -89,7 +84,6 @@ class FinancialAssistanceViewTest {
 		assertThat(view.getLifecareServiceId()).isEqualTo(7700);
 		assertThat(view.getData()).isEqualTo(DATA);
 		assertThat(view.getRecommendation()).isEqualTo(RECOMMENDATION);
-		assertThat(view.getSectionApprovals()).isEqualTo(SECTION_APPROVALS);
 		assertThat(view.getCommunication()).isEqualTo(COMMUNICATION);
 		assertThat(view.getHouseholdSizeChanged()).isTrue();
 		assertThat(view).hasNoNullFieldsOrProperties();

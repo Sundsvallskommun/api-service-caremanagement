@@ -19,8 +19,6 @@ final class FinancialAssistanceApiTags {
 	static final String DRAFT_ROWS_DESC = "Caseworker edits to the draft calculation rows — add, edit, soft-delete and restore income, expense and person rows. Each touches only the caseworker value / note / soft-delete; the process columns are owned by the daily prepare.";
 	static final String WARNINGS = "Financial Assistance · Warnings";
 	static final String WARNINGS_DESC = "Acknowledgeable financial assistance income warnings on an errand — create, list and set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare step reconciles them.";
-	static final String APPROVALS = "Financial Assistance · Approvals";
-	static final String APPROVALS_DESC = "DEPRECATED - being retired. Caseworker check-offs of the three financial assistance view sections (CALCULATION / PAYMENT / DECISION). They no longer gate finalize: whether the normberäkning is final, the beslut locked and the payment registered is Lifecare's status, read from Lifecare. Kept, with their stored rows, only until Draken stops reading and setting them.";
 	static final String FINALIZE = "Financial Assistance · Finalize";
 	static final String FINALIZE_DESC = "Besluta och utbetala: record the caseworker's decision and resume the process. The Lifecare writes (normberäkning, beslut, payments, bevakningar, journal, documents) are made by Draken's BFF directly in Lifecare before the decision; the errand only carries the references (lifecareCalculationId, lifecareDecisionId, lifecarePaymentIds). The decision is sent to the applicant by the frontend.";
 	static final String PAYMENT = "Financial Assistance · Payment";

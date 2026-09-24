@@ -46,8 +46,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Warn
  *
  * <p>
  * Compute-on-read: the proposal is derived data and nothing but the warnings is persisted, so a read is idempotent and
- * always fresh. It is also run when the CALCULATION section is approved (see
- * {@link FinancialAssistanceApprovalService}). Lifecare reads are best-effort — a failed read leaves the previous
+ * always fresh. Lifecare reads are best-effort — a failed read leaves the previous
  * decision out rather than failing the proposal, raises a {@code LIFECARE_READ_FAILED} warning, and leaves the warnings
  * that depend on the read as they were until a read succeeds.
  * </p>

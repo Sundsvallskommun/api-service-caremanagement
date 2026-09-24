@@ -29,7 +29,6 @@ TRUNCATE TABLE errand_financial_assistance;
 TRUNCATE TABLE errand_financial_assistance_calculation_draft;
 TRUNCATE TABLE errand_financial_assistance_monitoring;
 TRUNCATE TABLE errand_financial_assistance_payee;
-TRUNCATE TABLE errand_financial_assistance_section_approval;
 TRUNCATE TABLE errand_financial_assistance_warning;
 TRUNCATE TABLE errand_form_snapshot;
 TRUNCATE TABLE errand_message;

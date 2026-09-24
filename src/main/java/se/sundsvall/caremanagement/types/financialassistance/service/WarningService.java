@@ -104,9 +104,8 @@ public class WarningService {
 	/** The previous normberäkning's norm could not be found among the norms for the application month. */
 	public static final String TYPE_PREVIOUS_NORM_NOT_AVAILABLE = "PREVIOUS_NORM_NOT_AVAILABLE";
 
-	// Section warnings — raised by the decision proposal (DECISION tab, recomputed on every read and on CALCULATION
-	// approval) and the payment warnings (PAYMENT tab, recomputed on DECISION approval). They are reconciled per owning
-	// section
+	// Section warnings — raised by the decision proposal (DECISION tab, recomputed on every read) and the payment
+	// warnings (PAYMENT tab, reconciled by the daily prepare). They are reconciled per owning section
 	// ({@link #reconcileByTypes}), so the daily calculation reconcile never touches them and vice versa.
 	public static final String TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT = "PREVIOUS_DECISION_ADVANCE_ON_BENEFIT";
 	public static final String TYPE_EXPENSE_PARTIALLY_REJECTED = "EXPENSE_PARTIALLY_REJECTED";

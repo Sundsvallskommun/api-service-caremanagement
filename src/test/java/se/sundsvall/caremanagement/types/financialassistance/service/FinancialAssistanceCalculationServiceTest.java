@@ -396,7 +396,7 @@ class FinancialAssistanceCalculationServiceTest {
 
 		// A run that read SSBTEK closes any read-failure warning an earlier run left behind.
 		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, false);
-		// The medsökande payment warning follows the household on every run, whatever the section approvals say.
+		// The medsökande payment warning follows the household on every run.
 		verify(paymentWarningServiceMock).reconcile(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 

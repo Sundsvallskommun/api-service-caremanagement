@@ -11,8 +11,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Warn
 /**
  * The PAYMENT-section warnings: when there is a medsökande the caseworker is warned to check for delad utbetalning.
  * Reconciled by every daily prepare, so the warning is on the errand before the caseworker reaches the payment and
- * follows the household when a medsökande is added or removed. (It used to be reconciled when the DECISION section was
- * approved; the section approvals no longer drive anything.)
+ * follows the household when a medsökande is added or removed.
  */
 @Service
 public class PaymentWarningService {

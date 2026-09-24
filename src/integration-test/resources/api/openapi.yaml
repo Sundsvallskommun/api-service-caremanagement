@@ -25,12 +25,6 @@ tags:
 - name: Permits
   description: "Permits issued on an errand: validity period, conditions and status.\
     \ Revoking sets the status to REVOKED."
-- name: Financial Assistance · Approvals
-  description: "DEPRECATED - being retired. Caseworker check-offs of the three financial\
-    \ assistance view sections (CALCULATION / PAYMENT / DECISION). They no longer\
-    \ gate finalize: whether the normberäkning is final, the beslut locked and the\
-    \ payment registered is Lifecare's status, read from Lifecare. Kept, with their\
-    \ stored rows, only until Draken stops reading and setting them."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
 - name: Financial Assistance · Monitorings
@@ -3122,14 +3116,13 @@ paths:
         \ a BIFALL/DELAVSLAG also requires the normberäkning saved in Lifecare and\
         \ linked as lifecareCalculationId (both through PATCH .../financial-assistance/{errandId}/data),\
         \ otherwise 409. An AVSLAG linked to Lifecare payments (lifecarePaymentIds)\
-        \ is refused with 409. The section approvals do not affect it. A decision\
-        \ on a normberäkning linked as lifecareCalculationId purges careM's calculation\
-        \ draft: the decided calculation is Lifecare's, and the draft read answers\
-        \ 404 from then on. Does not send anything to the applicant: the response\
-        \ echoes the communication channels for the frontend to act on. Requires the\
-        \ errand in AWAITING_DECISION and an identified caller (X-Sent-By); a second\
-        \ finalize is rejected with 409. A process that could not be reached is reported\
-        \ in the response, not as an error."
+        \ is refused with 409. A decision on a normberäkning linked as lifecareCalculationId\
+        \ purges careM's calculation draft: the decided calculation is Lifecare's,\
+        \ and the draft read answers 404 from then on. Does not send anything to the\
+        \ applicant: the response echoes the communication channels for the frontend\
+        \ to act on. Requires the errand in AWAITING_DECISION and an identified caller\
+        \ (X-Sent-By); a second finalize is rejected with 409. A process that could\
+        \ not be reached is reported in the response, not as an error."
       operationId: finalize
       parameters:
       - name: municipalityId
@@ -5102,81 +5095,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/sections/{section}/approval:
-    patch:
-      tags:
-      - Financial Assistance · Approvals
-      summary: Set a section's approval (caseworker)
-      description: "A caseworker verifies one of the financial assistance view sections\
-        \ (CALCULATION / PAYMENT / DECISION) as approved, or withdraws an earlier\
-        \ approval. Approving stamps who/when; withdrawing clears them. Approving\
-        \ requires an identified caller (X-Sent-By) — an approval with no approver\
-        \ is rejected with 400. Deprecated: approvals no longer gate finalize and\
-        \ trigger nothing else (the medsökande payment warning is reconciled by the\
-        \ daily prepare); the Lifecare statuses (final normberäkning, locked beslut,\
-        \ registered payment) replace them."
-      operationId: setSectionApproval
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: section
-        in: path
-        description: The section to approve
-        required: true
-        schema:
-          type: string
-          enum:
-          - CALCULATION
-          - PAYMENT
-          - DECISION
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SectionApprovalRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SectionApproval"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-      deprecated: true
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/data:
     patch:
       tags:
@@ -6954,62 +6872,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/sections/approvals:
-    get:
-      tags:
-      - Financial Assistance · Approvals
-      summary: Read the section approvals on an errand
-      description: "The caseworker approval state of the three financial assistance\
-        \ view sections (CALCULATION = calculation, PAYMENT = payment, DECISION =\
-        \ decision). Always returns all three — a section never approved is present\
-        \ with approved=false. The same object is embedded in the errand view. Deprecated:\
-        \ approvals no longer gate finalize."
-      operationId: getSectionApprovals
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SectionApprovals"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-      deprecated: true
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/rpa-context:
     get:
       tags:
@@ -11752,48 +11614,6 @@ components:
       - documentDateTime
       - heading
       - type
-    SectionApprovalRequest:
-      type: object
-      description: Set the approval state of a financial assistance view section.
-      properties:
-        approved:
-          type: boolean
-          description: Whether the section is approved (true) or its approval withdrawn
-            (false)
-          examples:
-          - true
-      required:
-      - approved
-    SectionApproval:
-      type: object
-      description: A caseworker's approval of one section of the financial assistance
-        view (calculation / payment / decision).
-      properties:
-        section:
-          type: string
-          description: The section this approval concerns
-          enum:
-          - CALCULATION
-          - PAYMENT
-          - DECISION
-          examples:
-          - CALCULATION
-        approved:
-          type: boolean
-          description: Whether the section has been verified as approved by a caseworker
-          examples:
-          - true
-        approvedBy:
-          type: string
-          description: The caseworker who approved the section (null while not approved)
-          examples:
-          - jane02doe
-          readOnly: true
-        approvedAt:
-          type: string
-          format: date-time
-          description: When the section was approved (null while not approved)
-          readOnly: true
     NormHeaderInput:
       type: object
       description: "Caseworker edit of the calculation header — norm, calculation\
@@ -12489,15 +12309,6 @@ components:
             \ pipeline has computed it, the recommended amount/period to prefill the\
             \ Decision form."
           readOnly: true
-        sectionApprovals:
-          $ref: "#/components/schemas/SectionApprovals"
-          deprecated: true
-          description: "DEPRECATED - being retired. The caseworker check-offs of the\
-            \ three financial assistance view sections (calculation, payment, decision).\
-            \ They no longer gate finalize; the Lifecare statuses (final normberä\
-            kning, locked beslut, registered payment) replace them. Always present\
-            \ with all three sections while it remains."
-          readOnly: true
         communication:
           $ref: "#/components/schemas/CommunicationChannels"
           description: "The communication channels the caseworker chose when finalizing\
@@ -12509,20 +12320,6 @@ components:
           description: Whether the caseworker changed the household size (gemensamma
             kostnader) when finalizing. Null until the errand has been finalized.
           readOnly: true
-    SectionApprovals:
-      type: object
-      description: "The caseworker approval state of the three financial assistance\
-        \ view sections (calculation, payment, decision)."
-      properties:
-        calculation:
-          $ref: "#/components/schemas/SectionApproval"
-          description: Approval of the calculation (calculation) section
-        payment:
-          $ref: "#/components/schemas/SectionApproval"
-          description: Approval of the payment (payment) section
-        decision:
-          $ref: "#/components/schemas/SectionApproval"
-          description: Approval of the decision (decision) section
     WarningCount:
       type: object
       description: The number of active (OPEN/ACKNOWLEDGED) income warnings on the

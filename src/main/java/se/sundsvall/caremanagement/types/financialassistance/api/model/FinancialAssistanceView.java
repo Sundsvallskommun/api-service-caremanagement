@@ -76,12 +76,6 @@ public class FinancialAssistanceView {
 	private Decision recommendation;
 
 	@Schema(
-		description = "DEPRECATED - being retired. The caseworker check-offs of the three financial assistance view sections (calculation, payment, decision). They no longer gate finalize; the Lifecare statuses (final normberäkning, locked beslut, registered payment) replace them. Always present with all three sections while it remains.",
-		accessMode = READ_ONLY,
-		deprecated = true)
-	private SectionApprovals sectionApprovals;
-
-	@Schema(
 		description = "The communication channels the caseworker chose when finalizing the errand (Besluta och utbetala), or null until then. The Draken BFF sends the decision through these; caremanagement only records the choice.",
 		accessMode = READ_ONLY)
 	private CommunicationChannels communication;
@@ -327,19 +321,6 @@ public class FinancialAssistanceView {
 		return this;
 	}
 
-	public SectionApprovals getSectionApprovals() {
-		return sectionApprovals;
-	}
-
-	public void setSectionApprovals(final SectionApprovals sectionApprovals) {
-		this.sectionApprovals = sectionApprovals;
-	}
-
-	public FinancialAssistanceView withSectionApprovals(final SectionApprovals sectionApprovals) {
-		this.sectionApprovals = sectionApprovals;
-		return this;
-	}
-
 	public CommunicationChannels getCommunication() {
 		return communication;
 	}
@@ -380,14 +361,14 @@ public class FinancialAssistanceView {
 			&& Objects.equals(modified, that.modified) && Objects.equals(touched, that.touched)
 			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt) && Objects.equals(lifecareServiceId, that.lifecareServiceId)
 			&& Objects.equals(data, that.data)
-			&& Objects.equals(recommendation, that.recommendation) && Objects.equals(sectionApprovals, that.sectionApprovals)
+			&& Objects.equals(recommendation, that.recommendation)
 			&& Objects.equals(communication, that.communication) && Objects.equals(householdSizeChanged, that.householdSizeChanged);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandNumber, municipalityId, namespace, typeSlug, title, status, priority, reporterUserId,
-			assignedUserId, processInstanceId, created, modified, touched, lastDailyRunAt, lifecareServiceId, data, recommendation, sectionApprovals,
+			assignedUserId, processInstanceId, created, modified, touched, lastDailyRunAt, lifecareServiceId, data, recommendation,
 			communication, householdSizeChanged);
 	}
 
@@ -398,7 +379,7 @@ public class FinancialAssistanceView {
 			+ "', status='" + status + "', priority='" + priority + "', reporterUserId='" + reporterUserId
 			+ "', assignedUserId='" + assignedUserId + "', processInstanceId='" + processInstanceId + "', created=" + created
 			+ ", modified=" + modified + ", touched=" + touched + ", lastDailyRunAt=" + lastDailyRunAt + ", lifecareServiceId=" + lifecareServiceId + ", data=" + data
-			+ ", recommendation=" + recommendation + ", sectionApprovals=" + sectionApprovals + ", communication=" + communication
+			+ ", recommendation=" + recommendation + ", communication=" + communication
 			+ ", householdSizeChanged=" + householdSizeChanged + '}';
 	}
 }

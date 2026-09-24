@@ -53,8 +53,6 @@ class ErrandEventDescriberTest {
 	@Test
 	void actionStyleLeaves() {
 		assertThat(ErrandEventDescriber.describe("POST", List.of("calculation", "draft", "incomes", "restore"), false)).isEqualTo("Återställde inkomst i utkastberäkningen");
-		assertThat(ErrandEventDescriber.describe("POST", List.of("sections", "INKOMSTER", "approval"), false)).isEqualTo("Godkände en sektion");
-		assertThat(ErrandEventDescriber.describe("GET", List.of("sections", "approvals"), false)).isEqualTo("Visade sektionsgodkännanden");
 		assertThat(ErrandEventDescriber.describe("PATCH", List.of("notifications", "acknowledged"), false)).isEqualTo("Kvitterade notiser");
 	}
 
