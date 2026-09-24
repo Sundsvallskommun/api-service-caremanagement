@@ -164,13 +164,14 @@ public class WarningService {
 	/**
 	 * The warning types that describe careM's calculation draft — raised by refreshing it: the rows the refresh added or
 	 * saw disappear, the expense feed (reasonableness review + cap), the NORM-04 family copied from the previous
-	 * normberäkning, the late comparison-period transfer and the duplicate incomes read from the merged draft. Once the
-	 * caseworker has saved the normberäkning in Lifecare the draft is no longer refreshed, so these stay as they last
-	 * were: {@link #reconcileRuleWarnings} neither creates nor auto-closes them.
+	 * normberäkning, the late comparison-period transfer and the duplicate incomes read from the merged draft — plus the
+	 * housing-cost change, which is about the calculation's boendekostnad even though it compares the application with
+	 * the previous normberäkning. Once the caseworker has saved the normberäkning in Lifecare the draft is no longer
+	 * refreshed, so these stay as they last were: {@link #reconcileRuleWarnings} neither creates nor auto-closes them.
 	 */
 	public static final Set<String> DRAFT_REFRESH_TYPES = Set.of(TYPE_NEW_INCOME, TYPE_NEW_EXPENSE, TYPE_NEW_PERSON, TYPE_INCOME_DROPPED,
 		TYPE_EXPENSE_REVIEW, TYPE_EXPENSE_CAPPED, TYPE_INCOME_DUPLICATED, TYPE_INCOME_TRANSFERRED_LATE, TYPE_FAMILY_DIFFERS_FROM_APPLICATION,
-		TYPE_FAMILY_DEVIATING_PERIOD, TYPE_COMMON_HOUSEHOLD_COST_CHECK, TYPE_PREVIOUS_NORM_NOT_AVAILABLE);
+		TYPE_FAMILY_DEVIATING_PERIOD, TYPE_COMMON_HOUSEHOLD_COST_CHECK, TYPE_PREVIOUS_NORM_NOT_AVAILABLE, TYPE_HOUSING_COST_CHANGE);
 
 	public static final String SECTION_CALCULATION = "CALCULATION";
 	public static final String SECTION_DECISION = "DECISION";

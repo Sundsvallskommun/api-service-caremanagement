@@ -297,6 +297,8 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(calculationServiceMock, never()).incomeLines(any(), any(), any(), any());
 		verify(calculationServiceMock, never()).selectNormId(any(), any(), any(), any(), any());
 		verify(lifecareCaseServiceMock, never()).previousFamily(any(), any(), any());
+		// The housing-cost change is frozen with the draft: it concerns the calculation's boendekostnad.
+		verify(calculationFeederMock, never()).housingDeltaWarnings(any(), any(), any());
 
 		// Only the SSBTEK income warnings and the draft-independent rule warnings are reconciled.
 		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any());
@@ -304,7 +306,6 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(warningServiceMock).reconcileRuleWarnings(eq(ERRAND_ID), eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")),
 			eq(List.of("Dagersättning")), rules.capture());
 		assertThat(rules.getValue()).containsExactly(questionWarning);
-		verify(calculationFeederMock).housingDeltaWarnings(MUNICIPALITY_ID, errand, previous);
 		verify(applicationRuleFeederMock).previousCalculationWarnings(MUNICIPALITY_ID, errand, previous);
 		verify(periodRuleFeederMock).periodWarnings(eq(MUNICIPALITY_ID), eq(YearMonth.of(2026, 5)), any(), any());
 		verify(missingIncomeFeederMock).missingIncomeWarnings(any());

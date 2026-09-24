@@ -115,7 +115,8 @@ public class FinancialAssistanceCalculationService {
 	 * refresh would overwrite nothing the caseworker sees any more, and the warnings it raises would describe a draft
 	 * nobody uses. Those draft warnings ({@link WarningService#DRAFT_REFRESH_TYPES}: the new/dropped rows, the expense
 	 * feed, the NORM-04 family, the late transfer and the duplicate incomes) are then left exactly as they last were,
-	 * neither refreshed nor auto-closed. Everything that works from SSBTEK and the application continues unchanged: the
+	 * neither refreshed nor auto-closed — and so is the housing-cost change, which concerns the calculation's
+	 * boendekostnad. Everything that works from SSBTEK and the application continues unchanged: the
 	 * completeness verdict, the SSBTEK income warnings and the draft-independent rule warnings, the one-time
 	 * {@code RECOMMENDATION} decision (on careM's basis — agreed with Draken), the completeness status, the read-failure
 	 * warning and the daily-run stamp.
@@ -178,23 +179,24 @@ public class FinancialAssistanceCalculationService {
 
 	/**
 	 * What refreshing the draft produced: the per-row changes to reconcile, and the warnings the refresh raised — the
-	 * expense feed, the late comparison-period transfer, the duplicate incomes and the NORM-04 family. All of them are
-	 * {@link WarningService#DRAFT_REFRESH_TYPES}.
+	 * expense feed, the housing-cost change, the late comparison-period transfer, the duplicate incomes and the NORM-04
+	 * family. All of them are {@link WarningService#DRAFT_REFRESH_TYPES}.
 	 */
-	private record DraftRefresh(DraftChanges changes, List<WarningService.WarningInput> expenseWarnings, List<WarningService.WarningInput> lateTransferWarnings,
+	private record DraftRefresh(DraftChanges changes, List<WarningService.WarningInput> expenseWarnings, List<WarningService.WarningInput> housingWarnings,
+		List<WarningService.WarningInput> lateTransferWarnings,
 		List<WarningService.WarningInput> duplicateWarnings, List<WarningService.WarningInput> familyWarnings) {}
 
 	/**
-	 * The warnings that do not depend on careM's draft — the housing-cost delta, the återansökan application rules, the
+	 * The warnings that do not depend on careM's draft — the återansökan application rules, the
 	 * income/household comparisons against the previous normberäkning, the SSBTEK period check and the missing-income
 	 * check. Evaluated on every successful run, whether or not the draft is refreshed.
 	 */
-	private record RuleWarnings(List<WarningService.WarningInput> housingWarnings, List<WarningService.WarningInput> questionWarnings,
+	private record RuleWarnings(List<WarningService.WarningInput> questionWarnings,
 		List<WarningService.WarningInput> incomeWarnings, List<WarningService.WarningInput> comparisonWarnings, List<WarningService.WarningInput> periodWarnings,
 		List<WarningService.WarningInput> missingIncomeWarnings) {
 
 		List<WarningService.WarningInput> all() {
-			return Stream.of(housingWarnings, questionWarnings, incomeWarnings, comparisonWarnings, periodWarnings, missingIncomeWarnings)
+			return Stream.of(questionWarnings, incomeWarnings, comparisonWarnings, periodWarnings, missingIncomeWarnings)
 				.flatMap(List::stream)
 				.toList();
 		}
@@ -264,7 +266,10 @@ public class FinancialAssistanceCalculationService {
 		// Read after the merge, not before: the duplicate only exists once the refreshed process rows sit alongside
 		// whatever the caseworker has added by hand.
 		final var duplicateWarnings = draftService.duplicateIncomeWarnings(input.errandId());
-		return new DraftRefresh(changes, expenseFeed.warnings(), lateTransferWarnings, duplicateWarnings, familyWarnings);
+		// The housing-cost change is frozen with the draft: it is about the calculation's boendekostnad, which the
+		// caseworker owns in Lifecare once the normberäkning is saved there.
+		final var housingWarnings = calculationFeeder.housingDeltaWarnings(municipalityId, input.errand(), previous);
+		return new DraftRefresh(changes, expenseFeed.warnings(), housingWarnings, lateTransferWarnings, duplicateWarnings, familyWarnings);
 	}
 
 	/**
@@ -272,7 +277,6 @@ public class FinancialAssistanceCalculationService {
 	 * successful run, including one where the draft is no longer refreshed.
 	 */
 	private RuleWarnings ruleWarnings(final String municipalityId, final PrepareInput input, final PreviousHousehold previous) {
-		final var housingWarnings = calculationFeeder.housingDeltaWarnings(municipalityId, input.errand(), previous);
 		// The verksamhet's återansökan regelverk, evaluated in the engine: the warnings that follow from the answers in
 		// the application, the income comparison against the previous normberäkning, and the children/household-count/norm
 		// comparisons against it.
@@ -289,7 +293,7 @@ public class FinancialAssistanceCalculationService {
 			input.dayCheckBasis());
 		// Verksamhetens "föregående månad = facit": an income SSBTEK reported last month and not this one.
 		final var missingIncomeWarnings = missingIncomeFeeder.missingIncomeWarnings(classifiedIncomes);
-		return new RuleWarnings(housingWarnings, questionWarnings, incomeWarnings, comparisonWarnings, periodWarnings, missingIncomeWarnings);
+		return new RuleWarnings(questionWarnings, incomeWarnings, comparisonWarnings, periodWarnings, missingIncomeWarnings);
 	}
 
 	/**
@@ -297,7 +301,7 @@ public class FinancialAssistanceCalculationService {
 	 * new warnings are created in.
 	 */
 	private static List<WarningService.WarningInput> allWarnings(final DraftRefresh refresh, final RuleWarnings rules) {
-		return Stream.of(refresh.expenseWarnings(), rules.housingWarnings(), rules.questionWarnings(), rules.incomeWarnings(),
+		return Stream.of(refresh.expenseWarnings(), refresh.housingWarnings(), rules.questionWarnings(), rules.incomeWarnings(),
 			rules.comparisonWarnings(), rules.periodWarnings(), rules.missingIncomeWarnings(), refresh.lateTransferWarnings(),
 			refresh.duplicateWarnings(), refresh.familyWarnings())
 			.flatMap(List::stream)
