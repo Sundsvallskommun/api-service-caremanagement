@@ -151,7 +151,6 @@ public class DecisionProposalService {
 			.withReason(reason.orElse(null))
 			.withReasonOptions(reasonOptions(reason, coApplicantReason))
 			.withCoApplicantReason(coApplicantReason.orElse(null))
-			.withPhraseText(outcome.map(value -> ProposalMapper.phraseText(value, ProposalMapper.childrenInCalculation(draft))).orElse(null))
 			.withPreviousDecision(previousDecision.map(ProposalMapper::toPreviousDecision).orElse(null))
 			.withWarnings(warnings);
 	}

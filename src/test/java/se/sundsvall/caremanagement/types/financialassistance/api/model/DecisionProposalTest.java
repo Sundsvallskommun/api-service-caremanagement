@@ -57,7 +57,6 @@ class DecisionProposalTest {
 			.withReason("Försörjningsstöd")
 			.withReasonOptions(List.of("Försörjningsstöd"))
 			.withCoApplicantReason("Sjukskriven m läkarintyg, otillräcklig sjukpenning")
-			.withPhraseText("Bifall månad utan barn")
 			.withPreviousDecision(PreviousDecision.create().withType("Bifall"))
 			.withWarnings(List.of(Warning.create().withType("EXPENSE_PARTIALLY_REJECTED")));
 
@@ -77,7 +76,6 @@ class DecisionProposalTest {
 		assertThat(result.getReason()).isEqualTo("Försörjningsstöd");
 		assertThat(result.getReasonOptions()).isEqualTo(List.of("Försörjningsstöd"));
 		assertThat(result.getCoApplicantReason()).isEqualTo("Sjukskriven m läkarintyg, otillräcklig sjukpenning");
-		assertThat(result.getPhraseText()).isEqualTo("Bifall månad utan barn");
 		assertThat(result.getPreviousDecision()).isEqualTo(PreviousDecision.create().withType("Bifall"));
 		assertThat(result.getWarnings()).isEqualTo(List.of(Warning.create().withType("EXPENSE_PARTIALLY_REJECTED")));
 	}

@@ -7162,10 +7162,9 @@ paths:
         \ amount are null and 'explanation' says why. Period = the calculation's period;\
         \ reason = the previous decision's orsak and coApplicantReason the co-applicant's\
         \ own orsak on that same decision (both picked from the one 'reasonOptions'\
-        \ catalogue); phraseText = 'Bifall månad med/utan barn' on an approved outcome.\
-        \ Reading also reconciles the DECISION-section warnings (previous decision\
-        \ was förskott på förmån; one per expense not approved in full) and returns\
-        \ them. 404 when the errand has no calculation draft."
+        \ catalogue). Reading also reconciles the DECISION-section warnings (previous\
+        \ decision was förskott på förmån; one per expense not approved in full) and\
+        \ returns them. 404 when the errand has no calculation draft."
       operationId: getDecisionProposal
       parameters:
       - name: municipalityId
@@ -12764,13 +12763,6 @@ components:
             \ is none. Picked from the same reasonOptions catalogue as the applicant's"
           examples:
           - "Sjukskriven m läkarintyg, otillräcklig sjukpenning"
-        phraseText:
-          type: string
-          description: "The proposed frastext: on BIFALL/DELAVSLAG, \"Bifall månad\
-            \ med barn\" when children are in the calculation, else \"Bifall månad\
-            \ utan barn\". Null otherwise"
-          examples:
-          - Bifall månad utan barn
         previousDecision:
           $ref: "#/components/schemas/PreviousDecision"
           description: "The applicant's most recent Lifecare decision, or null when\

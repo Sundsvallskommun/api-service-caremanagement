@@ -7,18 +7,15 @@ import java.util.stream.Stream;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PreviousDecision;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.costDisplayName;
-import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
-import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_VISITATION_CHILD;
 
 /**
  * The pure derivations behind the section proposals — the outcome rule, the estimated amount, the expense
- * partial-rejection check, the children check — and the projection of the Lifecare decision view onto the decision
+ * partial-rejection check — and the projection of the Lifecare decision view onto the decision
  * proposal.
  * No I/O; everything here is a function of its arguments.
  */
@@ -27,9 +24,6 @@ public final class ProposalMapper {
 	public static final String OUTCOME_BIFALL = "BIFALL";
 	public static final String OUTCOME_DELAVSLAG = "DELAVSLAG";
 	public static final String OUTCOME_AVSLAG = "AVSLAG";
-
-	public static final String PHRASE_APPROVED_WITH_CHILDREN = "Bifall månad med barn";
-	public static final String PHRASE_APPROVED_WITHOUT_CHILDREN = "Bifall månad utan barn";
 
 	private ProposalMapper() {}
 
@@ -58,17 +52,6 @@ public final class ProposalMapper {
 		return OUTCOME_DELAVSLAG;
 	}
 
-	/** The frastext for an approved outcome — null for anything but BIFALL/DELAVSLAG. */
-	public static String phraseText(final String outcome, final boolean childrenInCalculation) {
-		if (!OUTCOME_BIFALL.equals(outcome) && !OUTCOME_DELAVSLAG.equals(outcome)) {
-			return null;
-		}
-		if (childrenInCalculation) {
-			return PHRASE_APPROVED_WITH_CHILDREN;
-		}
-		return PHRASE_APPROVED_WITHOUT_CHILDREN;
-	}
-
 	/** The live expense rows (both buckets) whose approved (effective) amount is below the applied amount. */
 	public static List<NormExpenseRow> partiallyRejectedExpenses(final CalculationDraft draft) {
 		return Stream.concat(orEmpty(draft.getExpenses()).stream(), orEmpty(draft.getSpecialExpenses()).stream())
@@ -76,14 +59,6 @@ public final class ProposalMapper {
 			.filter(row -> row.getAppliedAmount() != null)
 			.filter(row -> orZero(row.getEffectiveAmount()).compareTo(row.getAppliedAmount()) < 0)
 			.toList();
-	}
-
-	/** Whether the calculation includes a child (barn or umgängesbarn) — a live, included person row with a child role. */
-	public static boolean childrenInCalculation(final CalculationDraft draft) {
-		return orEmpty(draft.getPersons()).stream()
-			.filter(row -> !row.isDeleted())
-			.filter(NormPersonRow::isIncluded)
-			.anyMatch(row -> ROLE_CHILD.equals(row.getRole()) || ROLE_VISITATION_CHILD.equals(row.getRole()));
 	}
 
 	/**

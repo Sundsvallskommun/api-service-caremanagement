@@ -3,12 +3,9 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,18 +33,6 @@ class ProposalMapperTest {
 		assertThat(ProposalMapper.outcome(BigDecimal.ONE, rejected)).isEqualTo("DELAVSLAG");
 	}
 
-	@ParameterizedTest
-	@CsvSource({
-		"BIFALL, true, Bifall månad med barn",
-		"BIFALL, false, Bifall månad utan barn",
-		"DELAVSLAG, true, Bifall månad med barn",
-		"AVSLAG, true,",
-		", false,"
-	})
-	void phraseTextOnlyOnApprovedOutcomes(final String outcome, final boolean children, final String expected) {
-		assertThat(ProposalMapper.phraseText(outcome, children)).isEqualTo(expected);
-	}
-
 	@Test
 	void partiallyRejectedExpensesSkipsDeletedFullyApprovedAndUnapplied() {
 		final var draft = CalculationDraft.create()
@@ -61,19 +46,6 @@ class ProposalMapperTest {
 
 		assertThat(ProposalMapper.partiallyRejectedExpenses(draft)).extracting(NormExpenseRow::getCostType).containsExactly("RENT", "DENTAL_CARE");
 		assertThat(ProposalMapper.partiallyRejectedExpenses(CalculationDraft.create())).isEmpty();
-	}
-
-	@Test
-	void childrenInCalculationNeedsAnIncludedLiveChildRow() {
-		assertThat(ProposalMapper.childrenInCalculation(CalculationDraft.create().withPersons(List.of(
-			NormPersonRow.create().withRole("APPLICANT").withIncluded(true))))).isFalse();
-		assertThat(ProposalMapper.childrenInCalculation(CalculationDraft.create().withPersons(List.of(
-			NormPersonRow.create().withRole("CHILD").withIncluded(false))))).isFalse();
-		assertThat(ProposalMapper.childrenInCalculation(CalculationDraft.create().withPersons(List.of(
-			NormPersonRow.create().withRole("CHILD").withIncluded(true).withDeleted(true))))).isFalse();
-		assertThat(ProposalMapper.childrenInCalculation(CalculationDraft.create().withPersons(List.of(
-			NormPersonRow.create().withRole("VISITATION_CHILD").withIncluded(true))))).isTrue();
-		assertThat(ProposalMapper.childrenInCalculation(CalculationDraft.create())).isFalse();
 	}
 
 	@Test

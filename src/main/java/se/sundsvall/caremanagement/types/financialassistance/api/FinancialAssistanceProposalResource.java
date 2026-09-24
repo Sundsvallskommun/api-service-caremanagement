@@ -54,7 +54,7 @@ class FinancialAssistanceProposalResource {
 			Lifecare calculation's norm) + expenseSum + specialExpenseSum − incomeSum from the draft; when no previous norm is known the \
 			outcome and amount are null and 'explanation' says why. Period = the calculation's period; reason = the previous decision's \
 			orsak and coApplicantReason the co-applicant's own orsak on that same decision (both picked from the one 'reasonOptions' \
-			catalogue); phraseText = 'Bifall månad med/utan barn' on an approved outcome. Reading also reconciles \
+			catalogue). Reading also reconciles \
 			the DECISION-section warnings (previous decision was förskott på förmån; one per expense not approved in full) and returns \
 			them. 404 when the errand has no calculation draft.""",
 		responses = @ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true))

@@ -19,7 +19,6 @@ import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.configuration.DecisionProposalProperties;
 import se.sundsvall.dept44.problem.Problem;
@@ -91,8 +90,8 @@ class DecisionProposalServiceTest {
 	}
 
 	@Test
-	void bifallWithPreviousReasonAndChildren() {
-		final var draft = draft().withPersons(List.of(NormPersonRow.create().withRole("CHILD").withIncluded(true)));
+	void bifallWithPreviousReason() {
+		final var draft = draft();
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft, Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
 		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(List.of(decision("Bifall", "Boendekostnad"), decision("Avslag", "Äldre")));
@@ -115,7 +114,6 @@ class DecisionProposalServiceTest {
 		assertThat(proposal.getReason()).isEqualTo("Boendekostnad");
 		assertThat(proposal.getReasonOptions()).containsExactlyElementsOf(withPreviousReason("Boendekostnad")); // outside the catalogue → appended
 		assertThat(proposal.getCoApplicantReason()).isNull(); // the decision had no co-applicant
-		assertThat(proposal.getPhraseText()).isEqualTo("Bifall månad med barn");
 		assertThat(proposal.getPreviousDecision().getType()).isEqualTo("Bifall");
 		assertThat(proposal.getWarnings()).isEmpty();
 	}
@@ -135,7 +133,6 @@ class DecisionProposalServiceTest {
 		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		assertThat(proposal.getOutcome()).isEqualTo("DELAVSLAG");
-		assertThat(proposal.getPhraseText()).isEqualTo("Bifall månad utan barn");
 		assertThat(proposal.getReason()).isEqualTo("Arbetslös, ingen ersättning/stöd");
 		assertThat(proposal.getReasonOptions()).containsExactlyElementsOf(DEFAULT_REASON_OPTIONS); // already in the catalogue → no duplicate
 		assertThat(proposal.getWarnings()).containsExactlyElementsOf(reconciled);
@@ -217,7 +214,6 @@ class DecisionProposalServiceTest {
 
 		assertThat(proposal.getEstimatedAmount()).isEqualByComparingTo("-950");
 		assertThat(proposal.getOutcome()).isEqualTo("AVSLAG");
-		assertThat(proposal.getPhraseText()).isNull();
 		assertThat(proposal.getReason()).isNull();
 		assertThat(proposal.getPreviousDecision()).isNull();
 	}

@@ -86,9 +86,6 @@ public class DecisionProposal {
 		examples = "Sjukskriven m läkarintyg, otillräcklig sjukpenning")
 	private String coApplicantReason;
 
-	@Schema(description = "The proposed frastext: on BIFALL/DELAVSLAG, \"Bifall månad med barn\" when children are in the calculation, else \"Bifall månad utan barn\". Null otherwise", examples = "Bifall månad utan barn")
-	private String phraseText;
-
 	@Schema(description = "The applicant's most recent Lifecare decision, or null when none was found (or Lifecare could not be read)", implementation = PreviousDecision.class)
 	private PreviousDecision previousDecision;
 
@@ -294,19 +291,6 @@ public class DecisionProposal {
 		return this;
 	}
 
-	public String getPhraseText() {
-		return phraseText;
-	}
-
-	public void setPhraseText(final String phraseText) {
-		this.phraseText = phraseText;
-	}
-
-	public DecisionProposal withPhraseText(final String phraseText) {
-		this.phraseText = phraseText;
-		return this;
-	}
-
 	public PreviousDecision getPreviousDecision() {
 		return previousDecision;
 	}
@@ -344,14 +328,14 @@ public class DecisionProposal {
 			&& Objects.equals(estimatedAmount, that.estimatedAmount) && Objects.equals(amountBasis, that.amountBasis) && Objects.equals(normSum, that.normSum) && Objects.equals(incomeSum, that.incomeSum)
 			&& Objects.equals(expenseSum, that.expenseSum) && Objects.equals(specialExpenseSum, that.specialExpenseSum)
 			&& Objects.equals(explanation, that.explanation) && Objects.equals(reason, that.reason) && Objects.equals(reasonOptions, that.reasonOptions)
-			&& Objects.equals(coApplicantReason, that.coApplicantReason) && Objects.equals(phraseText, that.phraseText)
+			&& Objects.equals(coApplicantReason, that.coApplicantReason)
 			&& Objects.equals(previousDecision, that.previousDecision) && Objects.equals(warnings, that.warnings);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(outcome, outcomeOptions, periodFrom, periodTo, concernedMonth, estimatedAmount, amountBasis, normSum, incomeSum, expenseSum, specialExpenseSum, explanation, reason, reasonOptions,
-			coApplicantReason, phraseText, previousDecision, warnings);
+			coApplicantReason, previousDecision, warnings);
 	}
 
 	@Override
@@ -372,7 +356,6 @@ public class DecisionProposal {
 			", reason='" + reason + '\'' +
 			", reasonOptions=" + reasonOptions +
 			", coApplicantReason='" + coApplicantReason + '\'' +
-			", phraseText='" + phraseText + '\'' +
 			", previousDecision=" + previousDecision +
 			", warnings=" + warnings +
 			'}';
