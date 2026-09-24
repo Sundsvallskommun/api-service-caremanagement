@@ -84,14 +84,15 @@ public class FinancialAssistanceCalculationService {
 	private final PeriodRuleFeeder periodRuleFeeder;
 	private final MissingIncomeFeeder missingIncomeFeeder;
 	private final LateTransferFeeder lateTransferFeeder;
+	private final UntransferableIncomeFeeder untransferableIncomeFeeder;
 	private final PaymentWarningService paymentWarningService;
 	private final LifecareServiceIdService lifecareServiceIdService;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
-		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder, final PaymentWarningService paymentWarningService,
-		final LifecareServiceIdService lifecareServiceIdService) {
+		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder, final UntransferableIncomeFeeder untransferableIncomeFeeder,
+		final PaymentWarningService paymentWarningService, final LifecareServiceIdService lifecareServiceIdService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
@@ -105,6 +106,7 @@ public class FinancialAssistanceCalculationService {
 		this.periodRuleFeeder = periodRuleFeeder;
 		this.missingIncomeFeeder = missingIncomeFeeder;
 		this.lateTransferFeeder = lateTransferFeeder;
+		this.untransferableIncomeFeeder = untransferableIncomeFeeder;
 		this.paymentWarningService = paymentWarningService;
 		this.lifecareServiceIdService = lifecareServiceIdService;
 	}
@@ -199,11 +201,11 @@ public class FinancialAssistanceCalculationService {
 
 	/**
 	 * What refreshing the draft produced: the per-row changes to reconcile, and the warnings the refresh raised — the
-	 * expense feed, the housing-cost change, the late comparison-period transfer, the duplicate incomes and the NORM-04
-	 * family. All of them are {@link WarningService#DRAFT_REFRESH_TYPES}.
+	 * expense feed, the housing-cost change, the late comparison-period transfer, the incomes no Lifecare type could take,
+	 * the duplicate incomes and the NORM-04 family. All of them are {@link WarningService#DRAFT_REFRESH_TYPES}.
 	 */
 	private record DraftRefresh(DraftChanges changes, List<WarningService.WarningInput> expenseWarnings, List<WarningService.WarningInput> housingWarnings,
-		List<WarningService.WarningInput> lateTransferWarnings,
+		List<WarningService.WarningInput> lateTransferWarnings, List<WarningService.WarningInput> untransferableWarnings,
 		List<WarningService.WarningInput> duplicateWarnings, List<WarningService.WarningInput> familyWarnings, boolean previousFamilyReadFailed) {
 
 		/** The warning types this refresh could not verify — a Lifecare read they depend on failed — and so must not close. */
@@ -300,13 +302,17 @@ public class FinancialAssistanceCalculationService {
 		// reading of the rule, so the warning cannot claim something the draft did not do.
 		final var lateTransferWarnings = lateTransferFeeder.lateTransferWarnings(
 			calculationService.lateTransferredComparisonIncomes(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
+		// An income the rules transfer but no Lifecare income type can take is missing from the rows above. Named here,
+		// from the transfer's own filter, so the draft never silently lacks an income the regelverk says to count.
+		final var untransferableWarnings = untransferableIncomeFeeder.untransferableIncomeWarnings(
+			calculationService.untransferableIncomes(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
 		// Read after the merge, not before: the duplicate only exists once the refreshed process rows sit alongside
 		// whatever the caseworker has added by hand.
 		final var duplicateWarnings = draftService.duplicateIncomeWarnings(input.errandId());
 		// The housing-cost change is frozen with the draft: it is about the calculation's boendekostnad, which the
 		// caseworker owns in Lifecare once the normberäkning is saved there.
 		final var housingWarnings = calculationFeeder.housingDeltaWarnings(municipalityId, input.errand(), previous);
-		return new DraftRefresh(changes, expenseFeed.warnings(), housingWarnings, lateTransferWarnings, duplicateWarnings, familyWarnings,
+		return new DraftRefresh(changes, expenseFeed.warnings(), housingWarnings, lateTransferWarnings, untransferableWarnings, duplicateWarnings, familyWarnings,
 			previousFamilyRead.failed());
 	}
 
@@ -356,7 +362,7 @@ public class FinancialAssistanceCalculationService {
 	private static List<WarningService.WarningInput> allWarnings(final DraftRefresh refresh, final RuleWarnings rules) {
 		return Stream.of(refresh.expenseWarnings(), refresh.housingWarnings(), rules.questionWarnings(), rules.incomeWarnings(),
 			rules.comparisonWarnings(), rules.periodWarnings(), rules.missingIncomeWarnings(), refresh.lateTransferWarnings(),
-			refresh.duplicateWarnings(), refresh.familyWarnings())
+			refresh.untransferableWarnings(), refresh.duplicateWarnings(), refresh.familyWarnings())
 			.flatMap(List::stream)
 			.toList();
 	}

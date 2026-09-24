@@ -106,6 +106,37 @@ class CalculationServiceTest {
 	}
 
 	@Test
+	void untransferableIncomesNamesWhatTheProposalHasNoTypeFor() {
+		final var barnbidrag = new ClassifiedIncome(
+			new SsbtekIncome("Allmänt barnbidrag", null, "Månad", new BigDecimal("1250"), LocalDate.of(2026, MAY, 20), ApplicantRole.APPLICANT),
+			"TA_MED", "Barnbidrag", false, "Ta med");
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			bostadsbidrag(), barnbidrag
+		});
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, MONTH)).thenReturn(List.of());
+
+		// proposal() offers only Bostadsbidrag, so the barnbidrag is exactly what incomeLines leaves out.
+		assertThat(service.untransferableIncomes(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]"))
+			.singleElement().satisfies(income -> assertThat(income.income().benefit()).isEqualTo("Allmänt barnbidrag"));
+	}
+
+	@Test
+	void untransferableIncomesSkipsWhatThePreviousMonthAlreadyTook() {
+		final var comparisonPeriod = new ClassifiedIncome(
+			new SsbtekIncome("Studiemedel", null, "Månad", new BigDecimal("3000"), LocalDate.of(2026, MAY, 15), ApplicantRole.APPLICANT),
+			"TA_MED", "Studiemedel", false, "Ta med", true);
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			comparisonPeriod
+		});
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, MONTH)).thenReturn(List.of("Studiemedel"));
+
+		// Not transferred this month at all, so it is not missing from the draft either.
+		assertThat(service.untransferableIncomes(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]")).isEmpty();
+	}
+
+	@Test
 	void lateTransferredComparisonIncomesIsEmptyWhenThePreviousMonthAlreadyTookThem() {
 		final var comparisonPeriod = new ClassifiedIncome(
 			new SsbtekIncome("Underhållsstöd", null, "Månad", new BigDecimal("1673"), LocalDate.of(2026, MAY, 15), ApplicantRole.APPLICANT),

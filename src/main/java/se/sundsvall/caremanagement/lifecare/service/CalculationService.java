@@ -90,6 +90,23 @@ public class CalculationService {
 	}
 
 	/**
+	 * The incomes {@link #incomeLines} was told to transfer and could not, because no income type in the applicant's
+	 * calculation proposal matches their category. Derived through the same two steps as {@code incomeLines} — drop what
+	 * the previous month already took, then resolve against the proposal — so the list names exactly the incomes the
+	 * draft is missing, no more.
+	 *
+	 * @param  classifiedIncomesJson the {@code classifiedIncomes} payload
+	 * @return                       the incomes left out of the draft, in engine order
+	 */
+	public List<ClassifiedIncome> untransferableIncomes(final String municipalityId, final String applicantPartyId, final YearMonth applicationMonth,
+		final String classifiedIncomesJson) {
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPartyId);
+		final var transferable = ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
+			parse(classifiedIncomesJson), previousIncomeTypes(municipalityId, applicantPartyId, applicationMonth));
+		return ClassifiedIncomeToFamilyCareMapper.untransferable(transferable, proposal);
+	}
+
+	/**
 	 * The comparison-period incomes this month's transfer picks up <em>because</em> the previous month's calculation
 	 * did not contain them — the “nödlösning” case {@link ClassifiedIncomeToFamilyCareMapper#withoutAlreadyTransferred}
 	 * describes, seen from the other side.

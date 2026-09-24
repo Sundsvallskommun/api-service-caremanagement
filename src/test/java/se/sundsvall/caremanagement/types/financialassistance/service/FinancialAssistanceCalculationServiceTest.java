@@ -23,13 +23,16 @@ import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
+import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
+import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.DayCheckBasis;
@@ -104,6 +107,9 @@ class FinancialAssistanceCalculationServiceTest {
 
 	@Mock
 	private LateTransferFeeder lateTransferFeederMock;
+
+	@Mock
+	private UntransferableIncomeFeeder untransferableIncomeFeederMock;
 
 	@Mock
 	private PaymentWarningService paymentWarningServiceMock;
@@ -266,6 +272,33 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(warningServiceMock).reconcileLifecareReadFailure(ERRAND_ID, "lifecare-read:previous-family", true);
 	}
 
+	@Test
+	void prepareWarnsForTheIncomesTheDraftCouldNotTake() {
+		// An income the rules transfer but no Lifecare type takes is absent from the draft; the warning is what tells the
+		// handläggare, and it is built from the transfer's own filter rather than a second reading of the rules.
+		final var month = YearMonth.of(2026, JUNE);
+		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM"));
+		final var untransferable = List.of(new ClassifiedIncome(
+			new SsbtekIncome("Studiemedel", null, null, BigDecimal.valueOf(2500), LocalDate.of(2026, 5, 25), ApplicantRole.APPLICANT),
+			"TA_MED", "Studiemedel", false, "Ta med"));
+		final var warning = new WarningService.WarningInput(WarningService.TYPE_INCOME_NOT_TRANSFERABLE, "studiemedel|APPLICANT", "text");
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
+		when(calculationServiceMock.completeness(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[]")).thenReturn(new Completeness(true, List.of()));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("AWAITING_DECISION"));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
+		noPreviousCalculation(month);
+		when(calculationServiceMock.untransferableIncomes(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[]")).thenReturn(untransferable);
+		when(untransferableIncomeFeederMock.untransferableIncomeWarnings(untransferable)).thenReturn(List.of(warning));
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, CalculationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]"));
+
+		final ArgumentCaptor<List<WarningService.WarningInput>> warnings = ArgumentCaptor.captor();
+		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID), any(), any(), any(), any(), warnings.capture(), eq(Set.of()));
+		assertThat(warnings.getValue()).contains(warning);
+	}
+
 	/** A first application: no previous normberäkning, so the norm comes from the application. */
 	private void noPreviousCalculation(final YearMonth month) {
 		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenReturn(PreviousHousehold.empty());
@@ -338,7 +371,7 @@ class FinancialAssistanceCalculationServiceTest {
 		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		// The draft is left alone: no refresh, no feed, no family copy, no late transfer, no duplicate read.
-		verifyNoInteractions(draftServiceMock, lateTransferFeederMock, lifecareServiceIdServiceMock);
+		verifyNoInteractions(draftServiceMock, lateTransferFeederMock, untransferableIncomeFeederMock, lifecareServiceIdServiceMock);
 		// A linked calculation is never proposed again.
 		verify(calculationServiceMock, never()).commitEffective(any(), any(), any(), any(), any(), any(), any());
 		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());

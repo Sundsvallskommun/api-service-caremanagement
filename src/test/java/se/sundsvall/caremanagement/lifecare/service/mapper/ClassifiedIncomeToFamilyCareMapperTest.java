@@ -5,7 +5,11 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalD
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
@@ -100,6 +104,82 @@ class ClassifiedIncomeToFamilyCareMapperTest {
 			proposal());
 
 		assertThat(lines).isEmpty();
+	}
+
+	/** The proposal as Lifecare names its types — the dropdown names, not the regelverk's categories. */
+	private static PersonBasedCalculationProposalDTO lifecareNamedProposal() {
+		return new PersonBasedCalculationProposalDTO()
+			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(40).name("Barnbidrag/Flerbarnstillägg"))
+			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(41).name("Dagersättning från FK"))
+			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(42).name("Pension/SA/Livränta/Omvårdnadsbidrag"))
+			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(43).name("A-kassa/Alfaersättning"));
+	}
+
+	@ParameterizedTest
+	@MethodSource("regelverkCategoryArguments")
+	void resolvesARegelverkCategoryToTheLifecareTypeItMeans(final String category, final int expectedTypeId) {
+		final var lines = ClassifiedIncomeToFamilyCareMapper.toIncomeLines(
+			List.of(classified("Förmån", category, "TA_MED", "1250", APPLICANT)), lifecareNamedProposal());
+
+		assertThat(lines).extracting(FamilyCareIncomeLine::typeId).containsExactly(expectedTypeId);
+	}
+
+	private static Stream<Arguments> regelverkCategoryArguments() {
+		return Stream.of(
+			Arguments.of("Barnbidrag", 40),
+			Arguments.of("Dagersättning", 41),
+			Arguments.of("PLV", 42),
+			Arguments.of(" a-kassa/ALFA ", 43));
+	}
+
+	@Test
+	void prefersTheCategorysOwnNameWhenLifecareOffersIt() {
+		// proposal() has a type called exactly "Dagersättning": the translation is a fallback, never an override.
+		final var lines = ClassifiedIncomeToFamilyCareMapper.toIncomeLines(
+			List.of(classified("Dagersättning", "Dagersättning", "TA_MED", "5000", APPLICANT)), proposal());
+
+		assertThat(lines).extracting(FamilyCareIncomeLine::typeId).containsExactly(30);
+	}
+
+	@Test
+	void dropsAComparisonPeriodIncomeTheLifecareNamedPreviousMonthAlreadyTransferred() {
+		// The previous calculation is read back from Lifecare, so it carries Lifecare's name for the type.
+		final var kept = ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
+			List.of(fromComparisonPeriod("Allmänt barnbidrag", "Barnbidrag", "1250")),
+			List.of("Barnbidrag/Flerbarnstillägg"));
+
+		assertThat(kept).isEmpty();
+	}
+
+	@Test
+	void untransferableNamesTheTransferableIncomesNoTypeMatches() {
+		final var untransferable = ClassifiedIncomeToFamilyCareMapper.untransferable(List.of(
+			classified("Allmänt barnbidrag", "Barnbidrag", "TA_MED", "1250", APPLICANT),
+			classified("Studiemedel", "Studiemedel", "TA_MED", "3000", CO_APPLICANT),
+			classified("Handikappersättning", "-", "EJ_TA_MED", "1450", CO_APPLICANT),
+			classified("Okänd", "-", "EJ_PA_LISTAN", "100", APPLICANT)),
+			lifecareNamedProposal());
+
+		// Only the income the rules say to transfer and nothing can take — the others are not the draft's to hold.
+		assertThat(untransferable).extracting(income -> income.income().benefit()).containsExactly("Studiemedel");
+	}
+
+	@Test
+	void untransferableIsEmptyForNoIncomesAndTreatsAMissingProposalAsNoTypes() {
+		assertThat(ClassifiedIncomeToFamilyCareMapper.untransferable(null, lifecareNamedProposal())).isEmpty();
+		assertThat(ClassifiedIncomeToFamilyCareMapper.untransferable(
+			List.of(classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED_KVITTNING", "1850", APPLICANT)), null))
+			.hasSize(1);
+	}
+
+	@Test
+	void missingPreviousIncomeTypesCountsATranslatedCategoryAsCovered() {
+		final var missing = ClassifiedIncomeToFamilyCareMapper.missingPreviousIncomeTypes(
+			List.of("Barnbidrag/Flerbarnstillägg", "A-kassa/Alfaersättning"),
+			List.of(classified("Allmänt barnbidrag", "Barnbidrag", "TA_MED", "1250", APPLICANT)),
+			lifecareNamedProposal());
+
+		assertThat(missing).containsExactly("A-kassa/Alfaersättning");
 	}
 
 	@Test

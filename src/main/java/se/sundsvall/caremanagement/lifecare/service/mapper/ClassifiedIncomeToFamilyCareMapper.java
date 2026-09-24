@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
@@ -34,6 +35,22 @@ import static java.util.stream.Collectors.toSet;
 public final class ClassifiedIncomeToFamilyCareMapper {
 
 	private static final String TRANSFER_ACTION_PREFIX = "TA_MED";
+
+	/**
+	 * The regelverk's Normberäkning column → the Lifecare income type it means, for the categories whose name differs.
+	 * <p>
+	 * {@code Decision_inkomstRalista} carries verksamhetens own labels from the regelverk ("PLV", "Barnbidrag"), while the
+	 * calculation proposal offers Lifecare's dropdown names ("Pension/SA/Livränta/Omvårdnadsbidrag",
+	 * "Barnbidrag/Flerbarnstillägg" — the same names {@code FinancialAssistanceTypes.INCOME_TYPES} transcribes). Matched
+	 * by name, every one of these found no type and the income was left out of the draft without a trace. Only
+	 * categories with exactly one Lifecare counterpart are listed; the rest (Studiemedel, Studiebidrag (gymn), Elstöd,
+	 * Barntillägg) are left for verksamheten to place and surface through {@link #untransferable} instead.
+	 */
+	private static final Map<String, String> LIFECARE_INCOME_TYPE_BY_CATEGORY = Map.of(
+		"plv", "Pension/SA/Livränta/Omvårdnadsbidrag",
+		"barnbidrag", "Barnbidrag/Flerbarnstillägg",
+		"dagersättning", "Dagersättning från FK",
+		"a-kassa/alfa", "A-kassa/Alfaersättning");
 
 	private ClassifiedIncomeToFamilyCareMapper() {}
 
@@ -64,7 +81,7 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 		return ofNullable(classified).orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
 			.filter(income -> !income.isFromComparisonPeriod()
-				|| !alreadyTransferred.contains(MapperUtil.normalize(income.calculation())))
+				|| lifecareTypeKey(income.calculation(), alreadyTransferred).isEmpty())
 			.toList();
 	}
 
@@ -138,9 +155,39 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 		return ofNullable(classified).orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
 			.filter(ClassifiedIncomeToFamilyCareMapper::isTransferable)
-			.map(income -> MapperUtil.normalize(income.calculation()))
-			.filter(typeIdByName::containsKey)
+			.map(income -> lifecareTypeKey(income.calculation(), typeIdByName.keySet()))
+			.flatMap(Optional::stream)
 			.collect(toSet());
+	}
+
+	/**
+	 * The incomes the rules say to transfer that {@link #toIncomeLines} cannot place, because their category matches no
+	 * income type in the proposal. They are exactly the ones {@code toIncomeLines} drops, so a caller can tell the
+	 * handläggare what the draft is missing — leaving an income out changes the amount granted.
+	 *
+	 * @param  classified the incomes classified by the operaton rules (maybe {@code null})
+	 * @param  proposal   the FamilyCare proposal whose {@code calculationIncomeTypes} supply the type names
+	 * @return            the transferable incomes with no matching income type, in engine order
+	 */
+	public static List<ClassifiedIncome> untransferable(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
+		final var typeIdByName = MapperUtil.indexIncomeTypeIds(proposal);
+		return ofNullable(classified).orElseGet(List::of).stream()
+			.filter(Objects::nonNull)
+			.filter(ClassifiedIncomeToFamilyCareMapper::isTransferable)
+			.filter(income -> lifecareTypeKey(income.calculation(), typeIdByName.keySet()).isEmpty())
+			.toList();
+	}
+
+	/**
+	 * The normalised Lifecare income-type name a regelverk category matches among {@code knownNames}: the category's own
+	 * name first, then its Lifecare counterpart from {@link #LIFECARE_INCOME_TYPE_BY_CATEGORY}. Trying the own name first
+	 * keeps every category that already matched matching, whatever Lifecare calls its types.
+	 */
+	static Optional<String> lifecareTypeKey(final String calculation, final Set<String> knownNames) {
+		final var category = MapperUtil.normalize(calculation);
+		return Stream.of(category, MapperUtil.normalize(LIFECARE_INCOME_TYPE_BY_CATEGORY.get(category)))
+			.filter(knownNames::contains)
+			.findFirst();
 	}
 
 	private static boolean isTransferable(final ClassifiedIncome classified) {
@@ -149,11 +196,9 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 	}
 
 	private static Resolved resolve(final ClassifiedIncome classified, final Map<String, Integer> typeIdByName) {
-		final var typeId = typeIdByName.get(MapperUtil.normalize(classified.calculation()));
-		if (typeId == null) {
-			return null;
-		}
-		return new Resolved(typeId, classified.income());
+		return lifecareTypeKey(classified.calculation(), typeIdByName.keySet())
+			.map(key -> new Resolved(typeIdByName.get(key), classified.income()))
+			.orElse(null);
 	}
 
 	private static BigDecimal sumByRole(final List<Resolved> group, final ApplicantRole role) {

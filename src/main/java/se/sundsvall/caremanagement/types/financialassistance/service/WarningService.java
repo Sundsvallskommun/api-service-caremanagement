@@ -89,6 +89,13 @@ public class WarningService {
 	 */
 	public static final String TYPE_INCOME_TRANSFERRED_LATE = "INCOME_TRANSFERRED_LATE";
 
+	/**
+	 * An income the regelverk says to transfer that the draft could not take, because no Lifecare income type matches
+	 * its category. Without it the income was simply absent from the normberäkning, which reads to the handläggare as
+	 * "the person has no such income".
+	 */
+	public static final String TYPE_INCOME_NOT_TRANSFERABLE = "INCOME_NOT_TRANSFERABLE";
+
 	/** The rakel-eb-periodkontroll tables: the table's own text says which branch fired, so one type per decision. */
 	public static final String TYPE_SSBTEK_DAY_CHECK = "SSBTEK_DAY_CHECK";
 	public static final String TYPE_PARENTAL_BENEFIT_PERIOD_CHECK = "PARENTAL_BENEFIT_PERIOD_CHECK";
@@ -195,14 +202,16 @@ public class WarningService {
 	/**
 	 * The warning types that describe careM's calculation draft — raised by refreshing it: the rows the refresh added or
 	 * saw disappear, the expense feed (reasonableness review + cap), the NORM-04 family copied from the previous
-	 * normberäkning, the late comparison-period transfer and the duplicate incomes read from the merged draft — plus the
-	 * housing-cost change, which is about the calculation's boendekostnad even though it compares the application with
-	 * the previous normberäkning. Once the caseworker has saved the normberäkning in Lifecare the draft is no longer
-	 * refreshed, so these stay as they last were: {@link #reconcileRuleWarnings} neither creates nor auto-closes them.
+	 * normberäkning, the late comparison-period transfer, the incomes no Lifecare type could take and the duplicate incomes
+	 * read from the merged draft — plus the housing-cost change, which is about the calculation's boendekostnad even
+	 * though it compares the application with the previous normberäkning. Once the caseworker has saved the normberäkning
+	 * in Lifecare the draft is no longer refreshed, so these stay as they last were: {@link #reconcileRuleWarnings}
+	 * neither creates nor auto-closes them.
 	 */
 	public static final Set<String> DRAFT_REFRESH_TYPES = Set.of(TYPE_NEW_INCOME, TYPE_NEW_EXPENSE, TYPE_NEW_PERSON, TYPE_INCOME_DROPPED,
-		TYPE_EXPENSE_REVIEW, TYPE_EXPENSE_CAPPED, TYPE_INCOME_DUPLICATED, TYPE_INCOME_TRANSFERRED_LATE, TYPE_FAMILY_DIFFERS_FROM_APPLICATION,
-		TYPE_FAMILY_DEVIATING_PERIOD, TYPE_COMMON_HOUSEHOLD_COST_CHECK, TYPE_PREVIOUS_NORM_NOT_AVAILABLE, TYPE_HOUSING_COST_CHANGE);
+		TYPE_EXPENSE_REVIEW, TYPE_EXPENSE_CAPPED, TYPE_INCOME_DUPLICATED, TYPE_INCOME_TRANSFERRED_LATE, TYPE_INCOME_NOT_TRANSFERABLE,
+		TYPE_FAMILY_DIFFERS_FROM_APPLICATION, TYPE_FAMILY_DEVIATING_PERIOD, TYPE_COMMON_HOUSEHOLD_COST_CHECK, TYPE_PREVIOUS_NORM_NOT_AVAILABLE,
+		TYPE_HOUSING_COST_CHANGE);
 
 	public static final String SECTION_CALCULATION = "CALCULATION";
 	public static final String SECTION_DECISION = "DECISION";
@@ -257,6 +266,7 @@ public class WarningService {
 		Map.entry(TYPE_LIFECARE_READ_FAILED, "Lifecare kunde inte läsas"),
 		Map.entry(TYPE_INCOME_MISSING_PREVIOUS_PERIOD, "Inkomst saknas mot föregående SSBTEK-period"),
 		Map.entry(TYPE_INCOME_TRANSFERRED_LATE, "Inkomst överförd i efterhand"),
+		Map.entry(TYPE_INCOME_NOT_TRANSFERABLE, "Inkomst kunde inte föras över"),
 		Map.entry(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "Familjen skiljer mot ansökan"),
 		Map.entry(TYPE_FAMILY_DEVIATING_PERIOD, "Kontrollera omfattning"),
 		Map.entry(TYPE_COMMON_HOUSEHOLD_COST_CHECK, "Kontrollera gemensamma hushållskostnader"),
