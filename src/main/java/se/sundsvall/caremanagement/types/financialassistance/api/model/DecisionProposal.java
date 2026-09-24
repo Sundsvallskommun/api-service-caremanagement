@@ -16,9 +16,10 @@ import se.sundsvall.caremanagement.errandtypes.api.model.DecisionOption;
  *
  * <p>
  * Outcome rule: {@code estimatedAmount <= 0} → AVSLAG; {@code > 0} and every expense fully approved → BIFALL;
- * {@code > 0} and any expense approved below its applied amount → DELAVSLAG. The estimate is
+ * {@code > 0} and any expense approved below its applied amount → DELAVSLAG. Once the normberäkning is saved in
+ * Lifecare, the amount is that calculation's underskott ({@code -balance}); before that it is estimated as
  * {@code normSum + expenseSum + specialExpenseSum - incomeSum}, where the norm comes from the applicant's most recent
- * Lifecare calculation before the application month (the draft carries no norm).
+ * Lifecare calculation before the application month (the draft carries no norm). {@code amountBasis} says which.
  * </p>
  */
 @Schema(description = "The decision proposal (beslutsförslag) — derived data, recomputed on every read.")
@@ -45,11 +46,19 @@ public class DecisionProposal {
 	private String concernedMonth;
 
 	@Schema(
-		description = "The estimated bistånd: normSum + expenseSum + specialExpenseSum − incomeSum, all from the calculation draft except the norm. The draft carries no norm sum, so it is taken from the applicant's most recent Lifecare calculation before the application month (previous household norm); the final amount is what Lifecare computes when the calculation is committed. Null when no previous norm is known (see explanation)",
+		description = "The bistånd the outcome is decided on; positive is an underskott, zero or negative an överskott. When the normberäkning is saved in Lifecare (lifecareCalculationId) this is its result as Lifecare computed it (-balance) — amountBasis LIFECARE_CALCULATION. Before that, or when the saved calculation cannot be read, it is estimated: normSum + expenseSum + specialExpenseSum − incomeSum, all from the calculation draft except the norm, which is taken from the applicant's most recent Lifecare calculation before the application month — amountBasis ESTIMATE. Null when no previous norm is known (see explanation)",
 		examples = "4250")
 	private BigDecimal estimatedAmount;
 
-	@Schema(description = "The norm sum the estimate is based on (the previous Lifecare calculation's norm). Null when unknown", examples = "6200")
+	@Schema(
+		description = "Where estimatedAmount (and thereby outcome) comes from: LIFECARE_CALCULATION = the normberäkning saved in Lifecare, ESTIMATE = the draft plus the previous calculation's norm. Null when there is no amount",
+		examples = "LIFECARE_CALCULATION",
+		allowableValues = {
+			"LIFECARE_CALCULATION", "ESTIMATE"
+		})
+	private String amountBasis;
+
+	@Schema(description = "The norm sum: the saved Lifecare calculation's norm (LIFECARE_CALCULATION), or the previous Lifecare calculation's norm the estimate is based on (ESTIMATE). Null when unknown", examples = "6200")
 	private BigDecimal normSum;
 
 	@Schema(description = "The draft's income sum (effective amounts)", examples = "3000")
@@ -165,6 +174,19 @@ public class DecisionProposal {
 
 	public DecisionProposal withEstimatedAmount(final BigDecimal estimatedAmount) {
 		this.estimatedAmount = estimatedAmount;
+		return this;
+	}
+
+	public String getAmountBasis() {
+		return amountBasis;
+	}
+
+	public void setAmountBasis(final String amountBasis) {
+		this.amountBasis = amountBasis;
+	}
+
+	public DecisionProposal withAmountBasis(final String amountBasis) {
+		this.amountBasis = amountBasis;
 		return this;
 	}
 
@@ -319,7 +341,7 @@ public class DecisionProposal {
 		final DecisionProposal that = (DecisionProposal) o;
 		return Objects.equals(outcome, that.outcome) && Objects.equals(outcomeOptions, that.outcomeOptions) && Objects.equals(periodFrom, that.periodFrom)
 			&& Objects.equals(periodTo, that.periodTo) && Objects.equals(concernedMonth, that.concernedMonth)
-			&& Objects.equals(estimatedAmount, that.estimatedAmount) && Objects.equals(normSum, that.normSum) && Objects.equals(incomeSum, that.incomeSum)
+			&& Objects.equals(estimatedAmount, that.estimatedAmount) && Objects.equals(amountBasis, that.amountBasis) && Objects.equals(normSum, that.normSum) && Objects.equals(incomeSum, that.incomeSum)
 			&& Objects.equals(expenseSum, that.expenseSum) && Objects.equals(specialExpenseSum, that.specialExpenseSum)
 			&& Objects.equals(explanation, that.explanation) && Objects.equals(reason, that.reason) && Objects.equals(reasonOptions, that.reasonOptions)
 			&& Objects.equals(coApplicantReason, that.coApplicantReason) && Objects.equals(phraseText, that.phraseText)
@@ -328,7 +350,7 @@ public class DecisionProposal {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(outcome, outcomeOptions, periodFrom, periodTo, concernedMonth, estimatedAmount, normSum, incomeSum, expenseSum, specialExpenseSum, explanation, reason, reasonOptions,
+		return Objects.hash(outcome, outcomeOptions, periodFrom, periodTo, concernedMonth, estimatedAmount, amountBasis, normSum, incomeSum, expenseSum, specialExpenseSum, explanation, reason, reasonOptions,
 			coApplicantReason, phraseText, previousDecision, warnings);
 	}
 
@@ -341,6 +363,7 @@ public class DecisionProposal {
 			", periodTo=" + periodTo +
 			", concernedMonth='" + concernedMonth + '\'' +
 			", estimatedAmount=" + estimatedAmount +
+			", amountBasis='" + amountBasis + '\'' +
 			", normSum=" + normSum +
 			", incomeSum=" + incomeSum +
 			", expenseSum=" + expenseSum +

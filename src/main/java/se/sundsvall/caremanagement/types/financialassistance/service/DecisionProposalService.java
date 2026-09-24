@@ -143,6 +143,7 @@ public class DecisionProposalService {
 			.withPeriodTo(draft.getCalculationToDate())
 			.withConcernedMonth(basis.applicationMonth().map(YearMonth::toString).orElse(null))
 			.withEstimatedAmount(basis.estimatedAmount().orElse(null))
+			.withAmountBasis(basis.amountBasis().orElse(null))
 			.withNormSum(basis.normSum().orElse(null))
 			.withIncomeSum(draft.getIncomeSum())
 			.withExpenseSum(draft.getExpenseSum())

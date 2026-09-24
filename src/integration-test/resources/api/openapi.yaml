@@ -12892,18 +12892,32 @@ components:
           - 2026-06
         estimatedAmount:
           type: number
-          description: "The estimated bistånd: normSum + expenseSum + specialExpenseSum\
-            \ − incomeSum, all from the calculation draft except the norm. The draft\
-            \ carries no norm sum, so it is taken from the applicant's most recent\
-            \ Lifecare calculation before the application month (previous household\
-            \ norm); the final amount is what Lifecare computes when the calculation\
-            \ is committed. Null when no previous norm is known (see explanation)"
+          description: "The bistånd the outcome is decided on; positive is an underskott,\
+            \ zero or negative an överskott. When the normberäkning is saved in Lifecare\
+            \ (lifecareCalculationId) this is its result as Lifecare computed it (-balance)\
+            \ — amountBasis LIFECARE_CALCULATION. Before that, or when the saved calculation\
+            \ cannot be read, it is estimated: normSum + expenseSum + specialExpenseSum\
+            \ − incomeSum, all from the calculation draft except the norm, which is\
+            \ taken from the applicant's most recent Lifecare calculation before the\
+            \ application month — amountBasis ESTIMATE. Null when no previous norm\
+            \ is known (see explanation)"
           examples:
           - 4250
+        amountBasis:
+          type: string
+          description: "Where estimatedAmount (and thereby outcome) comes from: LIFECARE_CALCULATION\
+            \ = the normberäkning saved in Lifecare, ESTIMATE = the draft plus the\
+            \ previous calculation's norm. Null when there is no amount"
+          enum:
+          - LIFECARE_CALCULATION
+          - ESTIMATE
+          examples:
+          - LIFECARE_CALCULATION
         normSum:
           type: number
-          description: The norm sum the estimate is based on (the previous Lifecare
-            calculation's norm). Null when unknown
+          description: "The norm sum: the saved Lifecare calculation's norm (LIFECARE_CALCULATION),\
+            \ or the previous Lifecare calculation's norm the estimate is based on\
+            \ (ESTIMATE). Null when unknown"
           examples:
           - 6200
         incomeSum:

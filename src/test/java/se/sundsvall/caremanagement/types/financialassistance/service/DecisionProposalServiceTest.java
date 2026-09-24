@@ -74,7 +74,8 @@ class DecisionProposalServiceTest {
 
 	private static ProposalBasisService.ProposalBasis basis(final CalculationDraft draft, final Optional<String> applicant, final Optional<BigDecimal> normSum) {
 		final var household = new HouseholdPartyService.Household(applicant, false, Optional.empty(), Optional.empty());
-		return new ProposalBasisService.ProposalBasis(draft, household, Optional.of(MONTH), normSum, normSum.map(norm -> norm.add(new BigDecimal("1050")).subtract(new BigDecimal("3000"))));
+		final var estimatedAmount = normSum.map(norm -> norm.add(new BigDecimal("1050")).subtract(new BigDecimal("3000")));
+		return new ProposalBasisService.ProposalBasis(draft, household, Optional.of(MONTH), normSum, estimatedAmount, estimatedAmount.map(amount -> ProposalBasisService.AMOUNT_BASIS_ESTIMATE));
 	}
 
 	private static DecisionView decision(final String type, final String reason) {
@@ -105,6 +106,7 @@ class DecisionProposalServiceTest {
 		assertThat(proposal.getPeriodTo()).isEqualTo(LocalDate.parse("2026-06-30"));
 		assertThat(proposal.getConcernedMonth()).isEqualTo("2026-06");
 		assertThat(proposal.getEstimatedAmount()).isEqualByComparingTo("4250");
+		assertThat(proposal.getAmountBasis()).isEqualTo(ProposalBasisService.AMOUNT_BASIS_ESTIMATE);
 		assertThat(proposal.getNormSum()).isEqualByComparingTo("6200");
 		assertThat(proposal.getIncomeSum()).isEqualByComparingTo("3000");
 		assertThat(proposal.getExpenseSum()).isEqualByComparingTo("800");
@@ -229,6 +231,7 @@ class DecisionProposalServiceTest {
 
 		assertThat(proposal.getOutcome()).isNull();
 		assertThat(proposal.getEstimatedAmount()).isNull();
+		assertThat(proposal.getAmountBasis()).isNull();
 		assertThat(proposal.getExplanation()).isEqualTo("Ingen norm kunde läsas från Lifecare – beloppet kunde inte beräknas.");
 		verifyNoInteractions(lifecareCaseHistoryServiceMock);
 	}

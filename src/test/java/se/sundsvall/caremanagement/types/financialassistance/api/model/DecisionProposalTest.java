@@ -48,6 +48,7 @@ class DecisionProposalTest {
 			.withPeriodTo(LocalDate.parse("2026-06-30"))
 			.withConcernedMonth("2026-06")
 			.withEstimatedAmount(BigDecimal.valueOf(4250))
+			.withAmountBasis("LIFECARE_CALCULATION")
 			.withNormSum(BigDecimal.valueOf(6200))
 			.withIncomeSum(BigDecimal.valueOf(3000))
 			.withExpenseSum(BigDecimal.valueOf(800))
@@ -67,6 +68,7 @@ class DecisionProposalTest {
 		assertThat(result.getPeriodTo()).isEqualTo(LocalDate.parse("2026-06-30"));
 		assertThat(result.getConcernedMonth()).isEqualTo("2026-06");
 		assertThat(result.getEstimatedAmount()).isEqualTo(BigDecimal.valueOf(4250));
+		assertThat(result.getAmountBasis()).isEqualTo("LIFECARE_CALCULATION");
 		assertThat(result.getNormSum()).isEqualTo(BigDecimal.valueOf(6200));
 		assertThat(result.getIncomeSum()).isEqualTo(BigDecimal.valueOf(3000));
 		assertThat(result.getExpenseSum()).isEqualTo(BigDecimal.valueOf(800));
