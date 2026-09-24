@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 
 import static java.time.Month.JUNE;
 import static java.time.Month.MARCH;
@@ -334,6 +335,58 @@ class LifecareCaseServiceTest {
 		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any())).thenReturn(null);
 
 		assertThat(service().previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE))).isEmpty();
+	}
+
+	@Test
+	void previousFamilyCarriesTheMembersTheirDeviationsAndTheCommonHouseholdCost() {
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.commonHouseholdCost(1234.0)
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID).name("NILSSON KARIN"))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD_PARTY_ID).name("NILSSON OLLE")
+				.deviationFromDate("2026-05-01T00:00:00").deviationToDate("2026-05-15"))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(" ")); // blank filtered out
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
+		when(integrationMock.respondsWithPartyId()).thenReturn(true);
+
+		final var family = service().previousFamily(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+
+		assertThat(family.complete()).isTrue();
+		assertThat(family.commonHouseholdCost()).isEqualByComparingTo("1234");
+		assertThat(family.members()).containsExactly(
+			new PreviousFamily.Member(APPLICANT_PARTY_ID, "NILSSON KARIN", null, null),
+			new PreviousFamily.Member(CHILD_PARTY_ID, "NILSSON OLLE", LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 15)));
+		assertThat(family.members().get(1).hasDeviation()).isTrue();
+		assertThat(family.members().getFirst().hasDeviation()).isFalse();
+	}
+
+	@Test
+	void previousFamilyIsIncompleteWhenAMemberDoesNotResolve() {
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT).deviationFromDate("not a date"))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("201801012380"));
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(APPLICANT_PARTY_ID));
+		when(citizenServiceMock.getPartyId(MUNICIPALITY_ID, "201801012380")).thenReturn(Optional.empty());
+
+		final var family = service().previousFamily(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+
+		assertThat(family.complete()).isFalse();
+		assertThat(family.commonHouseholdCost()).isNull();
+		assertThat(family.members()).extracting(PreviousFamily.Member::partyId).containsExactly(APPLICANT_PARTY_ID, null);
+		assertThat(family.members().getFirst().deviationFrom()).isNull(); // unreadable date
+	}
+
+	@Test
+	void previousFamilyIsEmptyWithoutAPreviousCalculation() {
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of()));
+
+		final var family = service().previousFamily(MUNICIPALITY_ID, APPLICANT, YearMonth.of(2026, JUNE));
+
+		assertThat(family.isEmpty()).isTrue();
+		assertThat(family).isEqualTo(PreviousFamily.empty());
 	}
 
 	@Test

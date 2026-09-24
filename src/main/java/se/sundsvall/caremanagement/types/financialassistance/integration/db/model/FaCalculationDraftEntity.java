@@ -41,6 +41,10 @@ public class FaCalculationDraftEntity {
 	@Column(name = "norm_id")
 	private Integer normId;
 
+	/** The caseworker picked the norm; the daily beredning then leaves {@code normId} alone. */
+	@Column(name = "norm_set_by_caseworker")
+	private Boolean normSetByCaseworker;
+
 	@ElementCollection
 	@CollectionTable(name = "errand_fa_calculation_draft_norm_type", joinColumns = @JoinColumn(name = "errand_id"))
 	@Column(name = "norm_type", length = 32)
@@ -176,6 +180,19 @@ public class FaCalculationDraftEntity {
 		return this;
 	}
 
+	public Boolean getNormSetByCaseworker() {
+		return normSetByCaseworker;
+	}
+
+	public void setNormSetByCaseworker(final Boolean normSetByCaseworker) {
+		this.normSetByCaseworker = normSetByCaseworker;
+	}
+
+	public FaCalculationDraftEntity withNormSetByCaseworker(final Boolean normSetByCaseworker) {
+		this.normSetByCaseworker = normSetByCaseworker;
+		return this;
+	}
+
 	public Boolean getHasCustomHouseholdSize() {
 		return hasCustomHouseholdSize;
 	}
@@ -234,7 +251,7 @@ public class FaCalculationDraftEntity {
 			return false;
 		final FaCalculationDraftEntity that = (FaCalculationDraftEntity) o;
 		return Objects.equals(errandId, that.errandId) && Objects.equals(applicationMonth, that.applicationMonth)
-			&& Objects.equals(normId, that.normId) && Objects.equals(normType, that.normType)
+			&& Objects.equals(normId, that.normId) && Objects.equals(normSetByCaseworker, that.normSetByCaseworker) && Objects.equals(normType, that.normType)
 			&& Objects.equals(calculationFromDate, that.calculationFromDate) && Objects.equals(calculationToDate, that.calculationToDate)
 			&& Objects.equals(calculationDate, that.calculationDate) && Objects.equals(hasCustomHouseholdSize, that.hasCustomHouseholdSize)
 			&& Objects.equals(householdSize, that.householdSize) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
@@ -242,7 +259,7 @@ public class FaCalculationDraftEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(errandId, applicationMonth, normId, normType, calculationFromDate, calculationToDate, calculationDate, hasCustomHouseholdSize, householdSize,
+		return Objects.hash(errandId, applicationMonth, normId, normSetByCaseworker, normType, calculationFromDate, calculationToDate, calculationDate, hasCustomHouseholdSize, householdSize,
 			created, updated);
 	}
 
@@ -252,6 +269,7 @@ public class FaCalculationDraftEntity {
 			"errandId='" + errandId + '\'' +
 			", applicationMonth='" + applicationMonth + '\'' +
 			", normId=" + normId +
+			", normSetByCaseworker=" + normSetByCaseworker +
 			", normType=" + normType +
 			", calculationFromDate=" + calculationFromDate +
 			", calculationToDate=" + calculationToDate +

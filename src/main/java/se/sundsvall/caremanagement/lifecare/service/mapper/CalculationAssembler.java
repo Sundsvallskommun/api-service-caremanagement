@@ -124,6 +124,29 @@ public final class CalculationAssembler {
 	}
 
 	/**
+	 * The first norm covering the application month whose name starts with one of {@code normNames} — a strict match,
+	 * empty when none does, unlike {@link #selectNormId(PersonBasedCalculationProposalDTO, YearMonth, List)}, which falls
+	 * back to the first covering norm. Strict because the name comes from the previous calculation, and falling through
+	 * to “the first norm that covers the month” on a miss is the coin toss that once picked Matnorm.
+	 */
+	public static Optional<Integer> matchingNormId(final PersonBasedCalculationProposalDTO proposal, final YearMonth applicationMonth,
+		final List<String> normNames) {
+		final var monthStart = applicationMonth.atDay(1);
+		final var wanted = ofNullable(normNames).orElseGet(List::of).stream()
+			.filter(StringUtils::hasText)
+			.toList();
+		if ((proposal == null) || wanted.isEmpty()) {
+			return Optional.empty();
+		}
+		return ofNullable(proposal.getNorms()).orElseGet(List::of).stream()
+			.filter(norm -> covers(norm, monthStart))
+			.filter(norm -> matchesAnyLabel(norm, wanted))
+			.map(PersonBasedCalculationNormDTO::getId)
+			.filter(Objects::nonNull)
+			.findFirst();
+	}
+
+	/**
 	 * The errand's insats, when the proposal offers it. An insats the proposal does not list is closed or belongs to
 	 * someone else; linking it would be refused, so the calculation is then left unlinked.
 	 */

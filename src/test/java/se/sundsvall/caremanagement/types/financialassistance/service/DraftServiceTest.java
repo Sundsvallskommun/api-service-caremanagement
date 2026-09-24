@@ -87,6 +87,35 @@ class DraftServiceTest {
 	}
 
 	@Test
+	void refreshLeavesANormTheCaseworkerPickedAlone() {
+		// The daily run used to put its own norm back every night, over whatever the caseworker had chosen in Draken.
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(9).withNormSetByCaseworker(true)));
+		when(sectionReconcilerMock.reconcilePersons(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileIncomes(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileExpenses(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+
+		service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(), List.of());
+
+		final var header = ArgumentCaptor.forClass(FaCalculationDraftEntity.class);
+		verify(headerRepositoryMock).save(header.capture());
+		assertThat(header.getValue().getNormId()).isEqualTo(9);
+	}
+
+	@Test
+	void refreshUpdatesANormTheProcessSet() {
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(4)));
+		when(sectionReconcilerMock.reconcilePersons(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileIncomes(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileExpenses(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+
+		service.refresh(ERRAND_ID, "2026-06", 1, List.of("NATIONAL_NORM"), List.of(), List.of(), List.of());
+
+		final var header = ArgumentCaptor.forClass(FaCalculationDraftEntity.class);
+		verify(headerRepositoryMock).save(header.capture());
+		assertThat(header.getValue().getNormId()).isEqualTo(1);
+	}
+
+	@Test
 	void refreshCopiesTheNormTypesInsteadOfSharingTheErrandsCollection() {
 		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.empty());
 		when(sectionReconcilerMock.reconcilePersons(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
@@ -320,6 +349,7 @@ class DraftServiceTest {
 			.withHasCustomHouseholdSize(true).withHouseholdSize(1));
 
 		assertThat(header.getNormId()).isEqualTo(9);
+		assertThat(header.getNormSetByCaseworker()).isTrue();
 		assertThat(header.getHasCustomHouseholdSize()).isTrue();
 		assertThat(header.getHouseholdSize()).isEqualTo(1);
 		assertThat(draft.getNormId()).isEqualTo(9);

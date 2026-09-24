@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -184,6 +185,20 @@ class CalculationServiceTest {
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(99).fromDate("2026-01-01").toDate("2026-12-31")));
 
 		assertThat(service.selectNormId(MUNICIPALITY_ID, APPLICANT, MONTH, List.of())).isEqualTo(99);
+	}
+
+	@Test
+	void selectNormIdPrefersThePreviousNormAndSaysSo() {
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal()
+			.addNormsItem(new PersonBasedCalculationNormDTO().id(4).name("Matnorm 2026").fromDate("2026-01-01").toDate("2026-12-31"))
+			.addNormsItem(new PersonBasedCalculationNormDTO().id(1).name("Riksnorm 2026").fromDate("2026-01-01").toDate("2026-12-31")));
+
+		assertThat(service.selectNormId(MUNICIPALITY_ID, APPLICANT, MONTH, List.of("Matnorm"), List.of("Riksnorm")))
+			.isEqualTo(new CalculationService.NormChoice(4, true));
+		// a previous norm the month does not offer: the application's is chosen, and the choice says it was not preferred
+		assertThat(service.selectNormId(MUNICIPALITY_ID, APPLICANT, MONTH, List.of("Specnorm"), List.of("Riksnorm")))
+			.isEqualTo(new CalculationService.NormChoice(1, false));
+		verify(lifecareFamilyCareIntegrationMock, times(2)).getCalculationProposal(MUNICIPALITY_ID, APPLICANT);
 	}
 
 	@Test

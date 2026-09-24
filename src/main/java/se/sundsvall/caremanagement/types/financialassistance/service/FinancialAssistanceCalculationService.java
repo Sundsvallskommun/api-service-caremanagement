@@ -25,6 +25,7 @@ import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
@@ -60,6 +61,8 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 public class FinancialAssistanceCalculationService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(FinancialAssistanceCalculationService.class);
+
+	static final String WARNING_PREVIOUS_NORM_NOT_AVAILABLE = "Normen i föregående normberäkning (%s) finns inte för ansökningsmånaden – normen är vald efter ansökan, kontrollera den";
 
 	/** Decisions recorded by the automated pipelines, written as the drakel system actor. */
 	private static final String RECOMMENDATION_TYPE = "RECOMMENDATION";
@@ -193,13 +196,21 @@ public class FinancialAssistanceCalculationService {
 		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
 		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, input.errandId(), input.errand(),
 			previousExpenseAmounts(municipalityId, input.applicant(), input.applicationMonth()), ageFromPnr(input.applicant()));
-		final var personRows = calculationFeeder.personRows(municipalityId, input.namespace(), input.errandId(), input.errand(),
-			previousPersonAmounts(municipalityId, input.applicant(), input.applicationMonth()));
-		final var normId = calculationService.selectNormId(municipalityId, input.applicant(), input.applicationMonth(), normNames(input.errand().getNormType()));
-		final var changes = draftService.refresh(input.errandId(), input.applicationMonthValue(), normId, input.errand().getNormType(),
-			personRows, incomeRows, expenseFeed.rows());
-
+		// NORM-04: norm, familj and gemensamma kostnader come from the previous normberäkning (regelverk återansökan);
+		// the application only fills in what FamilyCare's read model lacks, and the rest is flagged.
 		final var previous = previousHousehold(municipalityId, input.applicant(), input.applicationMonth());
+		final var previousFamily = previousFamily(municipalityId, input.applicant(), input.applicationMonth());
+		final var personRows = calculationFeeder.personRows(municipalityId, input.namespace(), input.errandId(), input.errand(),
+			previousPersonAmounts(municipalityId, input.applicant(), input.applicationMonth()), previousFamily);
+		final var norm = calculationService.selectNormId(municipalityId, input.applicant(), input.applicationMonth(), previousNormNames(previous.norm()),
+			normNames(input.errand().getNormType()));
+		final var changes = draftService.refresh(input.errandId(), input.applicationMonthValue(), norm.normId(), input.errand().getNormType(),
+			personRows, incomeRows, expenseFeed.rows());
+		final var familyWarnings = Stream.of(calculationFeeder.familyWarnings(input.errand(), previousFamily),
+			calculationFeeder.commonHouseholdCostWarnings(previousFamily, personRows), previousNormWarnings(previous.norm(), norm))
+			.flatMap(List::stream)
+			.toList();
+
 		final var housingWarnings = calculationFeeder.housingDeltaWarnings(municipalityId, input.errand(), previous);
 		// The verksamhet's återansökan regelverk, evaluated in the engine: the warnings that follow from the answers in
 		// the application, the income comparison against the previous normberäkning, and the children/household-count/norm
@@ -227,7 +238,7 @@ public class FinancialAssistanceCalculationService {
 		// whatever the caseworker has added by hand.
 		final var duplicateWarnings = draftService.duplicateIncomeWarnings(input.errandId());
 		return new DraftRefresh(changes, Stream.of(expenseFeed.warnings(), housingWarnings, questionWarnings, incomeWarnings,
-			comparisonWarnings, periodWarnings, missingIncomeWarnings, lateTransferWarnings, duplicateWarnings)
+			comparisonWarnings, periodWarnings, missingIncomeWarnings, lateTransferWarnings, duplicateWarnings, familyWarnings)
 			.flatMap(List::stream)
 			.toList());
 	}
@@ -267,6 +278,37 @@ public class FinancialAssistanceCalculationService {
 			LOG.warn("Could not read the previous calculation household — skipping the household drift check", e);
 			return PreviousHousehold.empty();
 		}
+	}
+
+	/** The previous calculation's family, best-effort — a failed Lifecare read leaves the household to the application. */
+	private PreviousFamily previousFamily(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
+		try {
+			return lifecareCaseService.previousFamily(municipalityId, applicant, applicationMonth);
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not read the previous calculation family — the household is taken from the application", e);
+			return PreviousFamily.empty();
+		}
+	}
+
+	/**
+	 * The previous calculation's norm as a name to match the month's norms on: FamilyCare names carry the year
+	 * (“Riksnorm 2025”) and the month's catalogue has the new one (“Riksnorm 2026”), so the year is dropped.
+	 */
+	static List<String> previousNormNames(final String previousNorm) {
+		return ofNullable(previousNorm)
+			.map(norm -> norm.strip().replaceFirst("\\s*\\d{4}$", "").strip())
+			.filter(StringUtils::hasText)
+			.map(List::of)
+			.orElseGet(List::of);
+	}
+
+	/** A previous norm the month's catalogue does not offer: the norm was chosen from the application instead. */
+	private static List<WarningService.WarningInput> previousNormWarnings(final String previousNorm, final CalculationService.NormChoice norm) {
+		if (!StringUtils.hasText(previousNorm) || norm.preferredMatched()) {
+			return List.of();
+		}
+		return List.of(new WarningService.WarningInput(WarningService.TYPE_PREVIOUS_NORM_NOT_AVAILABLE, "previous-norm",
+			WARNING_PREVIOUS_NORM_NOT_AVAILABLE.formatted(previousNorm.strip())));
 	}
 
 	/** The previous calculation's per-income-type amounts, best-effort — a failed Lifecare read degrades to none. */
@@ -369,7 +411,7 @@ public class FinancialAssistanceCalculationService {
 		final var expenses = calculationFeeder.applicationExpenseRows(errandId, errand).stream()
 			.map(CalculationDraftMapper::toEffectiveExpense).toList();
 		// No previous calculation on a new application, and toEffectivePerson does not carry the amount anyway.
-		final var persons = calculationFeeder.personRows(municipalityId, namespace, errandId, errand, Map.of()).stream()
+		final var persons = calculationFeeder.personRows(municipalityId, namespace, errandId, errand, Map.of(), PreviousFamily.empty()).stream()
 			.map(CalculationDraftMapper::toEffectivePerson).toList();
 
 		final var normId = calculationService.selectNormId(municipalityId, applicant, applicationMonth, normNames(errand.getNormType()));

@@ -93,6 +93,17 @@ public class WarningService {
 	public static final String TYPE_SSBTEK_DAY_CHECK = "SSBTEK_DAY_CHECK";
 	public static final String TYPE_PARENTAL_BENEFIT_PERIOD_CHECK = "PARENTAL_BENEFIT_PERIOD_CHECK";
 
+	/**
+	 * The family copied from the previous normberäkning (NORM-04): a member the application does not name, an application
+	 * member the previous calculation did not include, or a family that could not be copied; a member who was only in the
+	 * previous calculation for a deviating period; and gemensamma hushållskostnader paid for a different head count.
+	 */
+	public static final String TYPE_FAMILY_DIFFERS_FROM_APPLICATION = "FAMILY_DIFFERS_FROM_APPLICATION";
+	public static final String TYPE_FAMILY_DEVIATING_PERIOD = "FAMILY_DEVIATING_PERIOD";
+	public static final String TYPE_COMMON_HOUSEHOLD_COST_CHECK = "COMMON_HOUSEHOLD_COST_CHECK";
+	/** The previous normberäkning's norm could not be found among the norms for the application month. */
+	public static final String TYPE_PREVIOUS_NORM_NOT_AVAILABLE = "PREVIOUS_NORM_NOT_AVAILABLE";
+
 	// Section warnings — raised by the decision proposal (DECISION tab, recomputed on every read and on CALCULATION
 	// approval) and the payment warnings (PAYMENT tab, recomputed on DECISION approval). They are reconciled per owning
 	// section
@@ -194,7 +205,11 @@ public class WarningService {
 		Map.entry(TYPE_CO_APPLICANT_SPLIT_PAYMENT, "Medsökande – kontrollera delad utbetalning"),
 		Map.entry(TYPE_SSBTEK_READ_FAILED, "SSBTEK kunde inte läsas"),
 		Map.entry(TYPE_INCOME_MISSING_PREVIOUS_PERIOD, "Inkomst saknas mot föregående SSBTEK-period"),
-		Map.entry(TYPE_INCOME_TRANSFERRED_LATE, "Inkomst överförd i efterhand"));
+		Map.entry(TYPE_INCOME_TRANSFERRED_LATE, "Inkomst överförd i efterhand"),
+		Map.entry(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "Familjen skiljer mot ansökan"),
+		Map.entry(TYPE_FAMILY_DEVIATING_PERIOD, "Kontrollera omfattning"),
+		Map.entry(TYPE_COMMON_HOUSEHOLD_COST_CHECK, "Kontrollera gemensamma hushållskostnader"),
+		Map.entry(TYPE_PREVIOUS_NORM_NOT_AVAILABLE, "Föregående norm saknas för månaden"));
 
 	/** Warning status → Swedish display name. */
 	private static final Map<String, String> STATUS_DISPLAY_NAME = Map.ofEntries(

@@ -163,6 +163,27 @@ public class CalculationService {
 	}
 
 	/**
+	 * The norm chosen for a month, and whether it is the preferred one.
+	 *
+	 * @param normId           the chosen norm id, {@code null} when the proposal offers none
+	 * @param preferredMatched whether a preferred name matched a norm covering the month
+	 */
+	public record NormChoice(Integer normId, boolean preferredMatched) {}
+
+	/**
+	 * The norm id for the application month, preferring a norm named by {@code preferredNames} (matched strictly, see
+	 * {@link CalculationAssembler#matchingNormId}) and otherwise choosing from {@code fallbackNames} as
+	 * {@link #selectNormId(String, String, YearMonth, List)} does. One proposal read either way.
+	 */
+	public NormChoice selectNormId(final String municipalityId, final String applicantPersonId, final YearMonth applicationMonth,
+		final List<String> preferredNames, final List<String> fallbackNames) {
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPersonId);
+		return CalculationAssembler.matchingNormId(proposal, applicationMonth, preferredNames)
+			.map(normId -> new NormChoice(normId, true))
+			.orElseGet(() -> new NormChoice(CalculationAssembler.selectNormId(proposal, applicationMonth, fallbackNames).orElse(null), false));
+	}
+
+	/**
 	 * Create the calculation in Lifecare FamilyCare from the draft's effective rows — called on a decision. Folds the
 	 * effective incomes, expenses (resolving each cost type to a FamilyCare expense-type id, skipping the unresolvable)
 	 * and household persons into the FamilyCare body, overriding the proposal norm with the one chosen on the draft, and

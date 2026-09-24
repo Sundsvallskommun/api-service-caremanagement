@@ -5,8 +5,11 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -24,6 +27,8 @@ import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.DayCheckBasis;
@@ -246,9 +251,71 @@ class FinancialAssistanceCalculationServiceTest {
 			.hasMessage("Not Found: No financial-assistance errand for id errand-1");
 	}
 
+	@ParameterizedTest
+	@CsvSource(value = {
+		"Riksnorm 2025, Riksnorm",
+		"'  Matnorm 2026 ', Matnorm",
+		"Riksnorm, Riksnorm",
+		"'  ', NULL",
+		"NULL, NULL"
+	}, nullValues = "NULL")
+	void previousNormNamesDropTheYear(final String previousNorm, final String expected) {
+		final var names = FinancialAssistanceCalculationService.previousNormNames(previousNorm);
+
+		if (expected == null) {
+			assertThat(names).isEmpty();
+		} else {
+			assertThat(names).containsExactly(expected);
+		}
+	}
+
+	@Test
+	void prepareTakesTheNormFromThePreviousCalculationAndFlagsWhatCannotBeCopied() {
+		final var month = YearMonth.of(2026, JUNE);
+		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM"));
+		final var family = new PreviousFamily(List.of(new PreviousFamily.Member("p1", "NILSSON KARIN", null, null)), true, BigDecimal.valueOf(800));
+		final var personRows = List.of(FaNormPersonEntity.create().withPartyId("p1"));
+		final var familyWarning = new WarningService.WarningInput(WarningService.TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "not-in-previous:p2", "text");
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
+		when(calculationServiceMock.completeness(MUNICIPALITY_ID, "199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("AWAITING_DECISION"));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
+		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, "199001011234", month))
+			.thenReturn(new PreviousHousehold(Set.of("199001011234"), true, 1, null, null, "Specnorm 2025"));
+		when(lifecareCaseServiceMock.previousFamily(MUNICIPALITY_ID, "199001011234", month)).thenReturn(family);
+		when(calculationFeederMock.personRows(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(errand), any(), eq(family))).thenReturn(personRows);
+		when(calculationFeederMock.familyWarnings(errand, family)).thenReturn(List.of(familyWarning));
+		when(calculationFeederMock.commonHouseholdCostWarnings(family, personRows)).thenReturn(List.of());
+		// the previous norm is asked for first, by name without the year; the month no longer offers it
+		when(calculationServiceMock.selectNormId(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), eq(List.of("Specnorm")), any()))
+			.thenReturn(new CalculationService.NormChoice(1, false));
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, CalculationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]"));
+
+		verify(draftServiceMock).refresh(eq(ERRAND_ID), eq("2026-06"), eq(1), eq(List.of("NATIONAL_NORM")), eq(personRows), any(), any());
+		final ArgumentCaptor<List<WarningService.WarningInput>> warnings = ArgumentCaptor.captor();
+		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID), any(), any(), any(), any(), warnings.capture());
+		assertThat(warnings.getValue()).contains(familyWarning)
+			.anySatisfy(warning -> {
+				assertThat(warning.type()).isEqualTo(WarningService.TYPE_PREVIOUS_NORM_NOT_AVAILABLE);
+				assertThat(warning.message()).isEqualTo(
+					"Normen i föregående normberäkning (Specnorm 2025) finns inte för ansökningsmånaden – normen är vald efter ansökan, kontrollera den");
+			});
+	}
+
+	/** A first application: no previous normberäkning, so the norm comes from the application. */
+	private void noPreviousCalculation(final YearMonth month) {
+		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, "199001011234", month)).thenReturn(PreviousHousehold.empty());
+		when(lifecareCaseServiceMock.previousFamily(MUNICIPALITY_ID, "199001011234", month)).thenReturn(PreviousFamily.empty());
+		when(calculationServiceMock.selectNormId(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), eq(List.of()), any())).thenReturn(new CalculationService.NormChoice(7, false));
+	}
+
 	@Test
 	void prepareRecordsReviewRequiredRecommendationAndKompletteringWhenIncomplete() {
 		final var month = YearMonth.of(2026, JUNE);
+		noPreviousCalculation(month);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM"))));
 		when(calculationServiceMock.completeness(MUNICIPALITY_ID, "199001011234", month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
@@ -285,6 +352,7 @@ class FinancialAssistanceCalculationServiceTest {
 	@Test
 	void prepareRecordsOkRecommendationAndVantarWhenComplete() {
 		final var month = YearMonth.of(2026, JUNE);
+		noPreviousCalculation(month);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
 		when(calculationServiceMock.completeness(MUNICIPALITY_ID, "199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
@@ -322,6 +390,7 @@ class FinancialAssistanceCalculationServiceTest {
 	@Test
 	void prepareDoesNotDuplicateRecommendationOrRewriteUnchangedStatus() {
 		final var month = YearMonth.of(2026, JUNE);
+		noPreviousCalculation(month);
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
 		when(calculationServiceMock.completeness(MUNICIPALITY_ID, "199001011234", month, "[]")).thenReturn(new Completeness(true, List.of()));
@@ -355,7 +424,7 @@ class FinancialAssistanceCalculationServiceTest {
 			FaNormIncomeEntity.create().withTypeId(11).withApplicantProcessAmount(new BigDecimal("18500"))));
 		when(calculationFeederMock.applicationExpenseRows(eq(ERRAND_ID), any())).thenReturn(
 			List.of(FaNormExpenseEntity.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withProcessAmount(new BigDecimal("8000"))));
-		when(calculationFeederMock.personRows(any(), any(), eq(ERRAND_ID), any(), any())).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
+		when(calculationFeederMock.personRows(any(), any(), eq(ERRAND_ID), any(), any(), any())).thenReturn(List.of(FaNormPersonEntity.create().withPartyId("p1").withProcessDays(30)));
 		when(calculationServiceMock.selectNormId(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any())).thenReturn(7);
 		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), any(CalculationHeader.class), any(), any(), any())).thenReturn(5001);
 

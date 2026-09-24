@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -12,15 +13,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCost;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -28,6 +32,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_VISITATION_CHILD;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_COMMON_HOUSEHOLD_COST_CHECK;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_FAMILY_DEVIATING_PERIOD;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_FAMILY_DIFFERS_FROM_APPLICATION;
 
 @ExtendWith(MockitoExtension.class)
 class CalculationFeederTest {
@@ -304,7 +312,7 @@ class CalculationFeederTest {
 			.withPersons(List.of(applicant))
 			.withChildren(List.of(child, childNoDays));
 
-		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of("p-1", BigDecimal.valueOf(1431.00), "c-1", BigDecimal.valueOf(2100.00)));
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of("p-1", BigDecimal.valueOf(1431.00), "c-1", BigDecimal.valueOf(2100.00)), PreviousFamily.empty());
 
 		assertThat(rows).hasSize(3)
 			.allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
@@ -337,14 +345,14 @@ class CalculationFeederTest {
 			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")))
 			.withChildren(List.of(FaChild.create().withFirstName("Anna").withLastName("Svensson")));
 
-		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, null);
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, null, null);
 
 		assertThat(rows).hasSize(2).allMatch(row -> row.getAmount() == null);
 	}
 
 	@Test
 	void personRowsHandlesNullCollections() {
-		assertThat(feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceEntity.create(), Map.of())).isEmpty();
+		assertThat(feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceEntity.create(), Map.of(), PreviousFamily.empty())).isEmpty();
 	}
 
 	@Test
@@ -353,10 +361,115 @@ class CalculationFeederTest {
 			Stakeholder.create().withRole("APPLICANT").withFirstName("Karin").withLastName("Nilsson")));
 		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withPartyId("p-1")));
 
-		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of());
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of(), PreviousFamily.empty());
 
 		assertThat(rows).hasSize(1);
 		assertThat(rows.getFirst().getName()).isNull();
+	}
+
+	@Test
+	void personRowsCopyTheFamilyFromThePreviousCalculation() {
+		// NORM-04: the family is the previous calculation's. The application supplies what FamilyCare's read model lacks
+		// for the people it names - the role and a child's days in the home - and adds nobody.
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Stakeholder.create().withRole("APPLICANT").withFirstName("Karin").withLastName("Nilsson")));
+		final var errand = FinancialAssistanceEntity.create()
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1"), FaPerson.create().withRole("CO_APPLICANT").withPartyId("p-2")))
+			.withChildren(List.of(FaChild.create().withPartyId("c-1").withFirstName("Anna").withLastName("Svensson").withDaysInHome(15).withResidenceExtent("PART_TIME")));
+		final var family = new PreviousFamily(List.of(
+			new PreviousFamily.Member("p-1", "NILSSON KARIN", null, null),
+			new PreviousFamily.Member("c-1", "SVENSSON ANNA", null, null),
+			new PreviousFamily.Member("c-9", "NILSSON OLLE", null, null)), true, BigDecimal.valueOf(1200));
+
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of("c-9", BigDecimal.valueOf(900)), family);
+
+		assertThat(rows).extracting(FaNormPersonEntity::getPartyId, FaNormPersonEntity::getRole, FaNormPersonEntity::getName, FaNormPersonEntity::getProcessDays)
+			.containsExactly(
+				tuple("p-1", "APPLICANT", "Karin Nilsson", 30),
+				tuple("c-1", ROLE_VISITATION_CHILD, "Anna Svensson", 15),
+				// not in the application: kept, Lifecare's name, no role, the whole month
+				tuple("c-9", null, "NILSSON OLLE", 30));
+		assertThat(rows.get(2).getAmount()).isEqualByComparingTo("900");
+		assertThat(rows).allMatch(row -> ORIGIN_SYSTEM.equals(row.getOrigin()) && row.isIncluded());
+	}
+
+	@Test
+	void personRowsFallBackToTheApplicationWhenThePreviousFamilyIsIncomplete() {
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
+		final var family = new PreviousFamily(List.of(new PreviousFamily.Member(null, "OKÄND", null, null)), false, null);
+
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of(), family);
+
+		assertThat(rows).extracting(FaNormPersonEntity::getPartyId).containsExactly("p-1");
+	}
+
+	@Test
+	void familyWarningsFlagWhatCannotBeCopied() {
+		final var errand = FinancialAssistanceEntity.create()
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1"), FaPerson.create().withRole("CO_APPLICANT").withPartyId("p-2")))
+			.withChildren(List.of(FaChild.create().withFirstName("Bo").withLastName("Nilsson")));
+		final var family = new PreviousFamily(List.of(
+			new PreviousFamily.Member("p-1", "NILSSON KARIN", null, null),
+			new PreviousFamily.Member("c-9", "NILSSON OLLE", LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 15))), true, null);
+
+		final var warnings = feeder.familyWarnings(errand, family);
+
+		assertThat(warnings).extracting(WarningService.WarningInput::type, WarningService.WarningInput::sourceKey, WarningService.WarningInput::message)
+			.containsExactly(
+				tuple(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "not-in-application:c-9",
+					"NILSSON OLLE finns i föregående normberäkning men inte i ansökan – kontrollera om personen ska ingå i beräkningen"),
+				tuple(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "not-in-previous:p-2",
+					"Medsökande finns i ansökan men inte i föregående normberäkning – lägg till personen i beräkningen om den ska ingå"),
+				tuple(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "not-in-previous:Bo Nilsson",
+					"Bo Nilsson finns i ansökan men inte i föregående normberäkning – lägg till personen i beräkningen om den ska ingå"),
+				tuple(TYPE_FAMILY_DEVIATING_PERIOD, "deviation:c-9",
+					"NILSSON OLLE ingick i föregående normberäkning med avvikande period 2026-08-01–2026-08-15 – kontrollera omfattningen"));
+	}
+
+	@Test
+	void familyWarningsSayWhenTheFamilyCouldNotBeCopied() {
+		final var family = new PreviousFamily(List.of(new PreviousFamily.Member(null, "OKÄND", null, null)), false, null);
+
+		assertThat(feeder.familyWarnings(FinancialAssistanceEntity.create(), family)).singleElement()
+			.satisfies(warning -> assertThat(warning.sourceKey()).isEqualTo("family-not-copied"));
+	}
+
+	@Test
+	void familyWarningsAreSilentWithoutAPreviousCalculation() {
+		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
+
+		assertThat(feeder.familyWarnings(errand, PreviousFamily.empty())).isEmpty();
+		assertThat(feeder.familyWarnings(errand, null)).isEmpty();
+	}
+
+	@Test
+	void commonHouseholdCostWarningWhenTheHeadCountDiffers() {
+		final var family = new PreviousFamily(List.of(new PreviousFamily.Member("p-1", "A", null, null), new PreviousFamily.Member("c-1", "B", null, null)), true,
+			BigDecimal.valueOf(1234.4));
+		final var oneRow = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
+
+		assertThat(feeder.commonHouseholdCostWarnings(family, oneRow)).singleElement().satisfies(warning -> {
+			assertThat(warning.type()).isEqualTo(TYPE_COMMON_HOUSEHOLD_COST_CHECK);
+			assertThat(warning.message())
+				.isEqualTo("Föregående normberäkning hade gemensamma hushållskostnader på 1234 kronor för 2 personer, utkastet har 1 – kontrollera hushållsstorleken");
+		});
+	}
+
+	@Test
+	void commonHouseholdCostWarningIsSilentWhenNothingCanBeSeen() {
+		final var twoMembers = List.of(new PreviousFamily.Member("p-1", "A", null, null), new PreviousFamily.Member("c-1", "B", null, null));
+		final var twoRows = List.of(FaNormPersonEntity.create().withPartyId("p-1"), FaNormPersonEntity.create().withPartyId("c-1"));
+		final var oneRow = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
+
+		// the same head count
+		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, BigDecimal.TEN), twoRows)).isEmpty();
+		// no common costs to compare
+		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, null), oneRow)).isEmpty();
+		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, BigDecimal.ZERO), oneRow)).isEmpty();
+		// no previous calculation
+		assertThat(feeder.commonHouseholdCostWarnings(PreviousFamily.empty(), oneRow)).isEmpty();
+		assertThat(feeder.commonHouseholdCostWarnings(null, null)).isEmpty();
 	}
 
 	@Test
@@ -364,7 +477,7 @@ class CalculationFeederTest {
 		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(new IllegalStateException("boom"));
 		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
 
-		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of());
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of(), PreviousFamily.empty());
 
 		assertThat(rows).hasSize(1);
 		assertThat(rows.getFirst().getName()).isNull();

@@ -30,6 +30,7 @@ import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.IncomeTypeMapper;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 
 import static java.lang.Boolean.TRUE;
@@ -338,6 +339,34 @@ public class LifecareCaseService {
 	}
 
 	/**
+	 * The family on the person's most recent calculation strictly before {@code applicationMonth} — the members, with
+	 * party ids and any deviating period, and the calculation's common household cost — which the återansökan regelverk
+	 * copies into the new normberäkning. Empty when there is no prior calculation. Propagates the integration's
+	 * {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
+	 *
+	 * <p>
+	 * A member whose identity the citizen service cannot resolve is kept with a {@code null} party id and makes the
+	 * family incomplete, so the caller can tell a short list from a small household.
+	 * </p>
+	 *
+	 * @param  personId         the applicant's personal identity number
+	 * @param  applicationMonth the month being applied for; only calculations before it are considered
+	 * @return                  the previous family (empty when none)
+	 */
+	public PreviousFamily previousFamily(final String municipalityId, final String personId, final YearMonth applicationMonth) {
+		final var latest = latestCalculationBefore(municipalityId, personId, applicationMonth);
+		final var members = latest
+			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
+			.orElseGet(List::of).stream()
+			.filter(person -> hasText(person.getPersonId()))
+			.map(person -> new PreviousFamily.Member(toPartyId(municipalityId, person.getPersonId()), person.getName(),
+				toDate(person.getDeviationFromDate()), toDate(person.getDeviationToDate())))
+			.toList();
+		final var complete = members.stream().allMatch(member -> hasText(member.partyId()));
+		return new PreviousFamily(members, complete, toAmount(latest.map(PersonBasedCalculationDTO::getCommonHouseholdCost).orElse(null)));
+	}
+
+	/**
 	 * The norm amount per household member on the person's most recent calculation strictly before {@code
 	 * applicationMonth} — the Belopp column of Lifecare's Beräkning view, keyed by {@code partyId} because that is what
 	 * careM's own draft person rows are keyed by. Empty when there is no prior calculation. Propagates the integration's
@@ -477,6 +506,18 @@ public class LifecareCaseService {
 	/** The representative period of a decision — its {@code toDate} month, falling back to {@code fromDate}. */
 	private static YearMonth periodOf(final PersonBasedDecisionDTO decision) {
 		return toYearMonth(decision.getToDate()).or(() -> toYearMonth(decision.getFromDate())).orElse(null);
+	}
+
+	/** The leading {@code yyyy-MM-dd} of a FamilyCare date string, {@code null} when absent or unreadable. */
+	static LocalDate toDate(final String value) {
+		if (!hasText(value) || (value.trim().length() < 10)) {
+			return null;
+		}
+		try {
+			return LocalDate.parse(value.trim().substring(0, 10));
+		} catch (final DateTimeException e) {
+			return null;
+		}
 	}
 
 	/** Lenient year-month extraction from FamilyCare's date strings ("yyyy-MM-dd", "yyyy-MM", or an ISO datetime). */

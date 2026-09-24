@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,23 +16,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCost;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormExpenseEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.costDisplayName;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.roleDisplayName;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.RECIPIENT_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.RECIPIENT_CO_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_VISITATION_CHILD;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_COMMON_HOUSEHOLD_COST_CHECK;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_FAMILY_DEVIATING_PERIOD;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_FAMILY_DIFFERS_FROM_APPLICATION;
 
 /**
  * Builds the freshly computed process rows for the calculation sections from the errand: the income rows (one per
@@ -52,6 +60,14 @@ public class CalculationFeeder {
 	private static final String COST_TYPE_RENT = "RENT";
 	private static final String CHANGE_HOUSING_COST = "HOUSING_COST";
 	private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
+
+	static final String SOURCE_KEY_FAMILY_NOT_COPIED = "family-not-copied";
+	static final String SOURCE_KEY_COMMON_HOUSEHOLD_COST = "common-household-cost";
+	static final String WARNING_FAMILY_NOT_COPIED = "Familjen i föregående normberäkning kunde inte läsas helt – hushållet är taget från ansökan, kontrollera det mot Lifecare";
+	static final String WARNING_NOT_IN_APPLICATION = "%s finns i föregående normberäkning men inte i ansökan – kontrollera om personen ska ingå i beräkningen";
+	static final String WARNING_NOT_IN_PREVIOUS = "%s finns i ansökan men inte i föregående normberäkning – lägg till personen i beräkningen om den ska ingå";
+	static final String WARNING_DEVIATING_PERIOD = "%s ingick i föregående normberäkning med avvikande period %s–%s – kontrollera omfattningen";
+	static final String WARNING_COMMON_HOUSEHOLD_COST = "Föregående normberäkning hade gemensamma hushållskostnader på %s kronor för %d personer, utkastet har %d – kontrollera hushållsstorleken";
 
 	private final ExpenseRulesService expenseRulesService;
 	private final RenewalDeltaService renewalDeltaService;
@@ -247,15 +263,39 @@ public class CalculationFeeder {
 	 * than being given one that was never calculated.
 	 * </p>
 	 *
+	 * <p>
+	 * <strong>Who is in the household</strong> follows the återansökan regelverk: “Kopiera följande från föregående
+	 * normberäkning i Lifecare: Norm, Familj, Gemensamma kostnader”. With a previous calculation, the rows are its
+	 * members. What FamilyCare's read model does not carry comes from the application where the application knows the
+	 * person — the role, and a child's days in the home — and is otherwise left at its default (no role, the whole month)
+	 * and flagged by {@link #familyWarnings}; a member in the application but not in the previous calculation is flagged
+	 * there too, not added. Without a previous calculation (a first application), or when one of its members could not
+	 * be identified, the household is the application's, as before: a list short of a person it cannot name must not
+	 * silently become the calculation.
+	 * </p>
+	 *
 	 * @param previousAmounts the previous calculation's norm amount per party id, empty when there is no history
+	 * @param previousFamily  the previous calculation's family, empty when there is no history
 	 */
 	public List<FaNormPersonEntity> personRows(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceEntity errand,
-		final Map<String, BigDecimal> previousAmounts) {
+		final Map<String, BigDecimal> previousAmounts, final PreviousFamily previousFamily) {
 
-		final var rows = new ArrayList<FaNormPersonEntity>();
 		final var names = householdNames(municipalityId, namespace, errandId);
 		final var amounts = ofNullable(previousAmounts).orElseGet(Map::of);
+		final var family = ofNullable(previousFamily).orElseGet(PreviousFamily::empty);
+		if (family.isEmpty() || !family.complete()) {
+			return applicationRows(errandId, errand, names, amounts);
+		}
+		return family.members().stream()
+			.map(member -> familyRow(errandId, errand, names, amounts, member))
+			.toList();
+	}
 
+	/** The household as the application states it — the applicant, the co-applicant and the children. */
+	private static List<FaNormPersonEntity> applicationRows(final String errandId, final FinancialAssistanceEntity errand, final Map<String, String> names,
+		final Map<String, BigDecimal> amounts) {
+
+		final var rows = new ArrayList<FaNormPersonEntity>();
 		ofNullable(errand.getPersons()).orElseGet(List::of).forEach(person -> rows.add(FaNormPersonEntity.create()
 			.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
 			.withPartyId(person.getPartyId()).withRole(person.getRole()).withName(nameFor(names, person.getRole()))
@@ -268,6 +308,108 @@ public class CalculationFeeder {
 			.withAmount(amountFor(amounts, child.getPartyId()))));
 
 		return rows;
+	}
+
+	/**
+	 * One member of the previous calculation as a row. The role and days come from the application when it names the
+	 * same person; the name from the application too when it has one, else Lifecare's.
+	 */
+	private static FaNormPersonEntity familyRow(final String errandId, final FinancialAssistanceEntity errand, final Map<String, String> names,
+		final Map<String, BigDecimal> amounts, final PreviousFamily.Member member) {
+
+		final var row = FaNormPersonEntity.create()
+			.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
+			.withPartyId(member.partyId()).withName(member.name())
+			.withProcessDays(FULL_MONTH_DAYS).withIncluded(true).withAmount(amountFor(amounts, member.partyId()));
+
+		applicationPerson(errand, member.partyId()).ifPresent(person -> row
+			.withRole(person.getRole())
+			.withName(ofNullable(nameFor(names, person.getRole())).orElse(member.name())));
+		applicationChild(errand, member.partyId()).ifPresent(child -> row
+			.withRole(childRole(child.getResidenceExtent()))
+			.withName(Optional.of(childName(child.getFirstName(), child.getLastName())).filter(name -> hasText(name)).orElse(member.name()))
+			.withProcessDays(ofNullable(child.getDaysInHome()).orElse(FULL_MONTH_DAYS)));
+		return row;
+	}
+
+	/**
+	 * What the caseworker has to check by hand once the family is copied from the previous calculation: a member the
+	 * application does not name, a person the application names that the previous calculation did not include, a member
+	 * who was only in it for a deviating period — FamilyCare's read model has no day count to carry that over with — and
+	 * a family that could not be copied at all. Nothing when there is no previous calculation.
+	 */
+	public List<WarningService.WarningInput> familyWarnings(final FinancialAssistanceEntity errand, final PreviousFamily previousFamily) {
+		final var family = ofNullable(previousFamily).orElseGet(PreviousFamily::empty);
+		if (family.isEmpty()) {
+			return List.of();
+		}
+		if (!family.complete()) {
+			return List.of(new WarningService.WarningInput(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, SOURCE_KEY_FAMILY_NOT_COPIED, WARNING_FAMILY_NOT_COPIED));
+		}
+
+		final var warnings = new ArrayList<WarningService.WarningInput>();
+		family.members().stream()
+			.filter(member -> applicationPerson(errand, member.partyId()).isEmpty() && applicationChild(errand, member.partyId()).isEmpty())
+			.forEach(member -> warnings.add(new WarningService.WarningInput(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "not-in-application:" + member.partyId(),
+				WARNING_NOT_IN_APPLICATION.formatted(displayName(member.name())))));
+
+		final var previousIds = family.members().stream().map(PreviousFamily.Member::partyId).collect(Collectors.toSet());
+		ofNullable(errand.getPersons()).orElseGet(List::of).stream()
+			.filter(person -> !previousIds.contains(person.getPartyId()))
+			.forEach(person -> warnings.add(new WarningService.WarningInput(TYPE_FAMILY_DIFFERS_FROM_APPLICATION,
+				"not-in-previous:" + ofNullable(person.getPartyId()).orElse(person.getRole()),
+				WARNING_NOT_IN_PREVIOUS.formatted(ofNullable(roleDisplayName(person.getRole())).orElse("En hushållsmedlem")))));
+		ofNullable(errand.getChildren()).orElseGet(List::of).stream()
+			.filter(child -> !previousIds.contains(child.getPartyId()))
+			.forEach(child -> {
+				final var name = childName(child.getFirstName(), child.getLastName());
+				warnings.add(new WarningService.WarningInput(TYPE_FAMILY_DIFFERS_FROM_APPLICATION,
+					"not-in-previous:" + ofNullable(child.getPartyId()).filter(id -> hasText(id)).orElse(name),
+					WARNING_NOT_IN_PREVIOUS.formatted(displayName(name))));
+			});
+
+		family.members().stream()
+			.filter(PreviousFamily.Member::hasDeviation)
+			.forEach(member -> warnings.add(new WarningService.WarningInput(TYPE_FAMILY_DEVIATING_PERIOD, "deviation:" + member.partyId(),
+				WARNING_DEVIATING_PERIOD.formatted(displayName(member.name()), dateText(member.deviationFrom()), dateText(member.deviationTo())))));
+		return warnings;
+	}
+
+	/**
+	 * The gemensamma hushållskostnader cannot be copied: FamilyCare's read model gives the previous calculation's amount
+	 * but not whether a custom household size was set, nor which. What can be seen is a difference in head count — the
+	 * previous calculation paid common costs for one number of people and the draft has another — and then the caseworker
+	 * is asked to check the household size by hand.
+	 */
+	public List<WarningService.WarningInput> commonHouseholdCostWarnings(final PreviousFamily previousFamily, final List<FaNormPersonEntity> personRows) {
+		final var family = ofNullable(previousFamily).orElseGet(PreviousFamily::empty);
+		final var cost = family.commonHouseholdCost();
+		final var draftCount = ofNullable(personRows).orElseGet(List::of).size();
+		if (family.isEmpty() || (cost == null) || (cost.signum() <= 0) || (family.members().size() == draftCount)) {
+			return List.of();
+		}
+		return List.of(new WarningService.WarningInput(TYPE_COMMON_HOUSEHOLD_COST_CHECK, SOURCE_KEY_COMMON_HOUSEHOLD_COST,
+			WARNING_COMMON_HOUSEHOLD_COST.formatted(cost.setScale(0, RoundingMode.HALF_UP).toPlainString(), family.members().size(), draftCount)));
+	}
+
+	private static Optional<FaPerson> applicationPerson(final FinancialAssistanceEntity errand, final String partyId) {
+		return ofNullable(errand.getPersons()).orElseGet(List::of).stream()
+			.filter(person -> hasText(partyId) && partyId.equals(person.getPartyId()))
+			.findFirst();
+	}
+
+	private static Optional<FaChild> applicationChild(final FinancialAssistanceEntity errand, final String partyId) {
+		return ofNullable(errand.getChildren()).orElseGet(List::of).stream()
+			.filter(child -> hasText(partyId) && partyId.equals(child.getPartyId()))
+			.findFirst();
+	}
+
+	private static String displayName(final String name) {
+		return Optional.ofNullable(name).filter(text -> hasText(text)).orElse("En hushållsmedlem");
+	}
+
+	private static String dateText(final LocalDate date) {
+		return ofNullable(date).map(LocalDate::toString).orElse("");
 	}
 
 	/** The previous calculation's amount for a party id, tolerating a member the application left without one. */

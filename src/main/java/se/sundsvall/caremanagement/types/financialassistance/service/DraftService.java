@@ -134,7 +134,10 @@ public class DraftService {
 			header.setCalculationFromDate(parsed.atDay(1));
 			header.setCalculationToDate(parsed.atEndOfMonth());
 		});
-		ofNullable(normId).ifPresent(header::setNormId);
+		// A norm the caseworker picked stands: the daily run would otherwise put the process's choice back every night.
+		if (!Boolean.TRUE.equals(header.getNormSetByCaseworker())) {
+			ofNullable(normId).ifPresent(header::setNormId);
+		}
 		// Copy: the norm types come straight off the managed errand entity, and handing its own collection instance to a
 		// second entity makes Hibernate fail the flush with "Found shared references to a collection".
 		ofNullable(normType).filter(list -> !list.isEmpty()).ifPresent(list -> header.setNormType(new ArrayList<>(list)));
@@ -147,7 +150,7 @@ public class DraftService {
 	public CalculationDraft patchHeader(final String errandId, final NormHeaderInput input) {
 		final var header = calculationDraftRepository.findById(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND));
-		ofNullable(input.getNormId()).ifPresent(header::setNormId);
+		ofNullable(input.getNormId()).ifPresent(normId -> header.withNormId(normId).setNormSetByCaseworker(true));
 		ofNullable(input.getNormType()).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
 		ofNullable(input.getCalculationFromDate()).ifPresent(header::setCalculationFromDate);
 		ofNullable(input.getCalculationToDate()).ifPresent(header::setCalculationToDate);

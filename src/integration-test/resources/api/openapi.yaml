@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:56337
+- url: http://localhost:56352
   description: Generated server url
 security:
 - sentBy: []
@@ -8734,10 +8734,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -11162,6 +11162,10 @@ components:
           - SSBTEK_READ_FAILED
           - INCOME_MISSING_PREVIOUS_PERIOD
           - INCOME_TRANSFERRED_LATE
+          - FAMILY_DIFFERS_FROM_APPLICATION
+          - FAMILY_DEVIATING_PERIOD
+          - COMMON_HOUSEHOLD_COST_CHECK
+          - PREVIOUS_NORM_NOT_AVAILABLE
           examples:
           - EXPENSE_CAPPED
         typeDisplayName:
