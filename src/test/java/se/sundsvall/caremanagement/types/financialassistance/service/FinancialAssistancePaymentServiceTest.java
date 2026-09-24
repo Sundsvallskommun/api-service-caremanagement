@@ -38,6 +38,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
@@ -174,6 +175,46 @@ class FinancialAssistancePaymentServiceTest {
 		assertThat(response.getOverdue()).isFalse();
 	}
 
+	@Test
+	void linkedPaymentsArePaidOnlyWhenEveryLinkedIdIsReportedPaid() {
+		linkedErrand(LocalDate.of(2026, 9, 21), "101", "102", "103");
+		when(paymentStatusServiceMock.paidPaymentDates(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(Map.of("102", "2026-09-22"));
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isFalse();
+		assertThat(response.getDetail()).isEqualTo("2 av 3 kopplade utbetalningar är inte utbetalda i Lifecare ännu");
+		// The linked ids are the whole truth: no insats lookup, no search for other payments, nothing re-linked.
+		verify(paymentStatusServiceMock, never()).registeredPayments(any(), any(), any(), any());
+		verifyNoInteractions(lifecareServiceIdServiceMock);
+		verify(financialAssistanceRepositoryMock, never()).save(any());
+	}
+
+	@Test
+	void linkedPaymentsWinOverOlderPaymentRowsOnTheSameErrand() {
+		linkedErrand(LocalDate.of(2026, 9, 21), "101");
+		when(paymentStatusServiceMock.paidPaymentDates(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(Map.of("101", "2026-09-22"));
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isTrue();
+		// An errand that carries lifecarePaymentIds never reads its older rows, even if it has some.
+		verify(paymentServiceMock, never()).list(any(), any(), any());
+	}
+
+	@Test
+	void linkedPaymentsPropagateALifecareIntegratorFailureInsteadOfAnswering() {
+		linkedErrand(LocalDate.of(2026, 9, 17), "101");
+		when(paymentStatusServiceMock.paidPaymentDates(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "Error fetching payments in Lifecare FamilyCare"));
+		final var request = errandRequest();
+
+		// A failed read is not "not paid yet": the call fails, so the process retries instead of counting towards overdue.
+		assertThatThrownBy(() -> service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, request))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+		verify(financialAssistanceRepositoryMock, never()).save(any());
+	}
+
 	/**
 	 * An errand Draken did not link payments to, decided on the given day, whose insats in Lifecare is 7700 — the ids
 	 * the Lifecare payments on it carry are not referenced by another errand unless a test says so.
@@ -258,6 +299,69 @@ class FinancialAssistancePaymentServiceTest {
 		assertThat(response.getDeadline()).isEqualTo("2026-09-22");
 		assertThat(response.getOverdue()).isTrue();
 		verify(financialAssistanceRepositoryMock, never()).save(any());
+	}
+
+	@Test
+	void paymentsOnTheInsatsWithoutAConcernedMonthAreNotTheErrands() {
+		unlinkedErrand(LocalDate.of(2026, 9, 21));
+		when(paymentStatusServiceMock.registeredPayments(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(List.of(
+			new LifecarePayment("101", 7700, null, "2026-06-25"),
+			new LifecarePayment("102", 7700, " ", "2026-06-25"),
+			new LifecarePayment("103", null, "2026-06", "2026-06-25")));
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isFalse();
+		assertThat(response.getDetail()).isEqualTo("Ingen utbetalning för 2026-06 hittas på ärendets insats i Lifecare ännu");
+		verify(financialAssistanceRepositoryMock, never()).save(any());
+	}
+
+	@Test
+	void paymentsOnTheInsatsAreReadUpToTheEndOfAnApplicationMonthLaterThanTheWindow() {
+		final var entity = unlinkedErrand(LocalDate.of(2026, 9, 21));
+		final var request = errandRequest().withApplicationMonth("2026-12");
+		when(paymentStatusServiceMock.registeredPayments(MUNICIPALITY_ID, PERSONAL_NUMBER, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 31)))
+			.thenReturn(List.of(new LifecarePayment("101", 7700, "2026-12", "2026-11-25")));
+		when(financialAssistanceRepositoryMock.findLifecarePaymentIdsLinkedElsewhere(Set.of("101"), ERRAND_ID)).thenReturn(List.of());
+		when(paymentServiceMock.lifecareIdsOnOtherErrands(Set.of("101"), ERRAND_ID)).thenReturn(List.of());
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, request);
+
+		assertThat(response.getEffectuated()).isTrue();
+		assertThat(entity.getLifecarePaymentIds()).containsExactly("101");
+	}
+
+	@Test
+	void paymentsOnTheInsatsPropagateALifecareIntegratorFailureAndLinkNothing() {
+		final var entity = unlinkedErrand(LocalDate.of(2026, 9, 17));
+		when(paymentStatusServiceMock.registeredPayments(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "Error fetching payments in Lifecare FamilyCare"));
+		final var request = errandRequest();
+
+		assertThatThrownBy(() -> service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, request))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+		verify(financialAssistanceRepositoryMock, never()).save(any());
+		assertThat(entity.getLifecarePaymentIds()).isNullOrEmpty();
+	}
+
+	@Test
+	void onlyPaymentRowsMirroredFromLifecareFallBackToTheInsats() {
+		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+		// Neither a mirrored row nor a draft is a decided payment.
+		when(paymentServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Payment.create().withSource("LIFECARE").withStatus("REGISTERED").withLifecareId("999"),
+			decided("DRAFT", null, null)));
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Decision.create().withDecisionType("PAYMENT").withDecisionDate(LocalDate.of(2026, 9, 21))));
+		when(lifecareServiceIdServiceMock.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(7700);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
+		when(paymentStatusServiceMock.registeredPayments(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(List.of());
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getDetail()).isEqualTo("Ingen utbetalning för 2026-06 hittas på ärendets insats i Lifecare ännu");
+		verify(paymentStatusServiceMock, never()).paidPaymentDates(any(), any(), any(), any());
 	}
 
 	@Test
@@ -403,6 +507,35 @@ class FinancialAssistancePaymentServiceTest {
 
 		assertThat(response.getEffectuated()).isTrue();
 		assertThat(response.getPaymentDate()).isEqualTo("2026-07-03");
+	}
+
+	@Test
+	void olderPaymentRowsAreVerifiedByTheirOwnIdsAndNeverFallBackToTheInsats() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
+		when(paymentServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(decided("REGISTERED", "101", LocalDate.of(2026, 6, 10))));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
+		when(paymentStatusServiceMock.paidPaymentDates(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenReturn(Map.of());
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isFalse();
+		assertThat(response.getDetail()).isEqualTo("1 av 1 registrerade utbetalningar hittas inte som utbetalda i Lifecare");
+		// An older errand is verified the way it was decided: no insats search and no linking of other payments.
+		verifyNoInteractions(lifecareServiceIdServiceMock, decisionServiceMock);
+		verify(paymentStatusServiceMock, never()).registeredPayments(any(), any(), any(), any());
+		verify(financialAssistanceRepositoryMock, never()).save(any());
+	}
+
+	@Test
+	void olderPaymentRowsPropagateALifecareIntegratorFailureInsteadOfAnswering() {
+		when(paymentServiceMock.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(decided("REGISTERED", "101", LocalDate.of(2026, 6, 10))));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
+		when(paymentStatusServiceMock.paidPaymentDates(eq(MUNICIPALITY_ID), eq(PERSONAL_NUMBER), any(), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "Error fetching payments in Lifecare FamilyCare"));
+		final var request = errandRequest();
+
+		assertThatThrownBy(() -> service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, request))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
 	}
 
 	@Test
