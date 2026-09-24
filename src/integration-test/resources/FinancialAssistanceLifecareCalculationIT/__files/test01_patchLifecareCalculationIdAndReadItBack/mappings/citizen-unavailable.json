@@ -1,0 +1,17 @@
+{
+	"request": {
+		"method": "GET",
+		"urlPath": "/api-citizen/2281/aaaaaaaa-0000-4000-8000-000000000001/personnumber"
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/problem+json"
+		},
+		"jsonBody": {
+			"title": "Service Unavailable",
+			"status": 503,
+			"detail": "citizen register restarting"
+		},
+		"status": 503
+	}
+}

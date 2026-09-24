@@ -1,0 +1,5 @@
+{
+	"title": "Conflict",
+	"status": 409,
+	"detail": "a BIFALL decision requires the normberäkning to be saved in Lifecare first - save it and set lifecareCalculationId on errand '77777777-7777-7777-7777-777777777777' (PATCH .../financial-assistance/{errandId}/data) before finalizing"
+}
