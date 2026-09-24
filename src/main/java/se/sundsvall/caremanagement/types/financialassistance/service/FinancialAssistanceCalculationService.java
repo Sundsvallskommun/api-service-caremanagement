@@ -254,7 +254,7 @@ public class FinancialAssistanceCalculationService {
 		final var changes = draftService.refresh(input.errandId(), input.applicationMonthValue(), norm.normId(), input.errand().getNormType(),
 			personRows, incomeRows, expenseFeed.rows());
 		final var familyWarnings = Stream.of(calculationFeeder.familyWarnings(input.errand(), previousFamily),
-			calculationFeeder.commonHouseholdCostWarnings(previousFamily, personRows), previousNormWarnings(previous.norm(), norm))
+			calculationFeeder.commonHouseholdCostWarnings(previousFamily, input.errand()), previousNormWarnings(previous.norm(), norm))
 			.flatMap(List::stream)
 			.toList();
 

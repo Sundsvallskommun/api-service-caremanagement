@@ -67,7 +67,7 @@ public class CalculationFeeder {
 	static final String WARNING_NOT_IN_APPLICATION = "%s finns i föregående normberäkning men inte i ansökan – kontrollera om personen ska ingå i beräkningen";
 	static final String WARNING_NOT_IN_PREVIOUS = "%s finns i ansökan men inte i föregående normberäkning – lägg till personen i beräkningen om den ska ingå";
 	static final String WARNING_DEVIATING_PERIOD = "%s ingick i föregående normberäkning med avvikande period %s–%s – kontrollera omfattningen";
-	static final String WARNING_COMMON_HOUSEHOLD_COST = "Föregående normberäkning hade gemensamma hushållskostnader på %s kronor för %d personer, utkastet har %d – kontrollera hushållsstorleken";
+	static final String WARNING_COMMON_HOUSEHOLD_COST = "Föregående normberäkning hade gemensamma hushållskostnader på %s kronor för %d personer, ansökan har %d – kontrollera hushållsstorleken";
 
 	private final ExpenseRulesService expenseRulesService;
 	private final RenewalDeltaService renewalDeltaService;
@@ -362,18 +362,33 @@ public class CalculationFeeder {
 	/**
 	 * The gemensamma hushållskostnader cannot be copied: FamilyCare's read model gives the previous calculation's amount
 	 * but not whether a custom household size was set, nor which. What can be seen is a difference in head count — the
-	 * previous calculation paid common costs for one number of people and the draft has another — and then the caseworker
-	 * is asked to check the household size by hand.
+	 * previous calculation paid common costs for one number of people and the application's household has another — and
+	 * then the caseworker is asked to check the household size by hand.
+	 *
+	 * <p>
+	 * The comparison is against the application, not the draft's person rows: with a complete previous family the rows
+	 * <em>are</em> the previous members ({@link #personRows}), so comparing against them could never differ.
+	 * </p>
 	 */
-	public List<WarningService.WarningInput> commonHouseholdCostWarnings(final PreviousFamily previousFamily, final List<FaNormPersonEntity> personRows) {
+	public List<WarningService.WarningInput> commonHouseholdCostWarnings(final PreviousFamily previousFamily, final FinancialAssistanceEntity errand) {
 		final var family = ofNullable(previousFamily).orElseGet(PreviousFamily::empty);
 		final var cost = family.commonHouseholdCost();
-		final var draftCount = ofNullable(personRows).orElseGet(List::of).size();
-		if (family.isEmpty() || (cost == null) || (cost.signum() <= 0) || (family.members().size() == draftCount)) {
+		final var applicationCount = applicationHouseholdSize(errand);
+		if (family.isEmpty() || (cost == null) || (cost.signum() <= 0) || (family.members().size() == applicationCount)) {
 			return List.of();
 		}
 		return List.of(new WarningService.WarningInput(TYPE_COMMON_HOUSEHOLD_COST_CHECK, SOURCE_KEY_COMMON_HOUSEHOLD_COST,
-			WARNING_COMMON_HOUSEHOLD_COST.formatted(cost.setScale(0, RoundingMode.HALF_UP).toPlainString(), family.members().size(), draftCount)));
+			WARNING_COMMON_HOUSEHOLD_COST.formatted(cost.setScale(0, RoundingMode.HALF_UP).toPlainString(), family.members().size(), applicationCount)));
+	}
+
+	/**
+	 * The application's household head count — the applicant, the co-applicant and the children, as
+	 * {@link #applicationRows} builds them.
+	 */
+	private static int applicationHouseholdSize(final FinancialAssistanceEntity errand) {
+		return ofNullable(errand)
+			.map(entity -> ofNullable(entity.getPersons()).orElseGet(List::of).size() + ofNullable(entity.getChildren()).orElseGet(List::of).size())
+			.orElse(0);
 	}
 
 	private static Optional<FaPerson> applicationPerson(final FinancialAssistanceEntity errand, final String partyId) {

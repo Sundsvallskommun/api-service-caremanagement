@@ -421,31 +421,51 @@ class CalculationFeederTest {
 	}
 
 	@Test
-	void commonHouseholdCostWarningWhenTheHeadCountDiffers() {
+	void commonHouseholdCostWarningWhenTheApplicationHouseholdDiffersFromTheCompletePreviousFamily() {
+		// The reachable production path: a complete previous family, so the person rows ARE its two members — yet the
+		// application names only the applicant. The warning compares against the application, not the rows.
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
 		final var family = new PreviousFamily(List.of(new PreviousFamily.Member("p-1", "A", null, null), new PreviousFamily.Member("c-1", "B", null, null)), true,
 			BigDecimal.valueOf(1234.4));
-		final var oneRow = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of(), family);
+		assertThat(rows).extracting(FaNormPersonEntity::getPartyId).containsExactly("p-1", "c-1");
 
-		assertThat(feeder.commonHouseholdCostWarnings(family, oneRow)).singleElement().satisfies(warning -> {
+		assertThat(feeder.commonHouseholdCostWarnings(family, errand)).singleElement().satisfies(warning -> {
 			assertThat(warning.type()).isEqualTo(TYPE_COMMON_HOUSEHOLD_COST_CHECK);
+			assertThat(warning.sourceKey()).isEqualTo("common-household-cost");
 			assertThat(warning.message())
-				.isEqualTo("Föregående normberäkning hade gemensamma hushållskostnader på 1234 kronor för 2 personer, utkastet har 1 – kontrollera hushållsstorleken");
+				.isEqualTo("Föregående normberäkning hade gemensamma hushållskostnader på 1234 kronor för 2 personer, ansökan har 1 – kontrollera hushållsstorleken");
 		});
+	}
+
+	@Test
+	void commonHouseholdCostWarningCountsTheApplicationsChildren() {
+		final var errand = FinancialAssistanceEntity.create()
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")))
+			.withChildren(List.of(FaChild.create().withPartyId("c-1"), FaChild.create().withPartyId("c-2")));
+		final var family = new PreviousFamily(List.of(new PreviousFamily.Member("p-1", "A", null, null), new PreviousFamily.Member("c-1", "B", null, null)), true,
+			BigDecimal.valueOf(500));
+
+		assertThat(feeder.commonHouseholdCostWarnings(family, errand)).singleElement()
+			.satisfies(warning -> assertThat(warning.message()).contains("för 2 personer, ansökan har 3"));
 	}
 
 	@Test
 	void commonHouseholdCostWarningIsSilentWhenNothingCanBeSeen() {
 		final var twoMembers = List.of(new PreviousFamily.Member("p-1", "A", null, null), new PreviousFamily.Member("c-1", "B", null, null));
-		final var twoRows = List.of(FaNormPersonEntity.create().withPartyId("p-1"), FaNormPersonEntity.create().withPartyId("c-1"));
-		final var oneRow = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
+		final var sameHousehold = FinancialAssistanceEntity.create()
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")))
+			.withChildren(List.of(FaChild.create().withPartyId("c-1")));
+		final var smallerHousehold = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
 
 		// the same head count
-		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, BigDecimal.TEN), twoRows)).isEmpty();
+		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, BigDecimal.TEN), sameHousehold)).isEmpty();
 		// no common costs to compare
-		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, null), oneRow)).isEmpty();
-		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, BigDecimal.ZERO), oneRow)).isEmpty();
+		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, null), smallerHousehold)).isEmpty();
+		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, BigDecimal.ZERO), smallerHousehold)).isEmpty();
 		// no previous calculation
-		assertThat(feeder.commonHouseholdCostWarnings(PreviousFamily.empty(), oneRow)).isEmpty();
+		assertThat(feeder.commonHouseholdCostWarnings(PreviousFamily.empty(), smallerHousehold)).isEmpty();
 		assertThat(feeder.commonHouseholdCostWarnings(null, null)).isEmpty();
 	}
 

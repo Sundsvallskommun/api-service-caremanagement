@@ -202,7 +202,7 @@ class FinancialAssistanceCalculationServiceTest {
 		when(lifecareCaseServiceMock.previousFamily(MUNICIPALITY_ID, "199001011234", month)).thenReturn(family);
 		when(calculationFeederMock.personRows(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(errand), any(), eq(family))).thenReturn(personRows);
 		when(calculationFeederMock.familyWarnings(errand, family)).thenReturn(List.of(familyWarning));
-		when(calculationFeederMock.commonHouseholdCostWarnings(family, personRows)).thenReturn(List.of());
+		when(calculationFeederMock.commonHouseholdCostWarnings(family, errand)).thenReturn(List.of());
 		// the previous norm is asked for first, by name without the year; the month no longer offers it
 		when(calculationServiceMock.selectNormId(eq(MUNICIPALITY_ID), eq("199001011234"), eq(month), eq(List.of("Specnorm")), any()))
 			.thenReturn(new CalculationService.NormChoice(1, false));
