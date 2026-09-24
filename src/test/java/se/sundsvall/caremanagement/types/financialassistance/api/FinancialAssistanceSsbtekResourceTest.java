@@ -29,8 +29,9 @@ class FinancialAssistanceSsbtekResourceTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
-	private static final String PARTY_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/ssbtek";
+	private static final String ERRAND_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/ssbtek";
+	private static final Map<String, String> PATH_VARIABLES = Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID);
 
 	@MockitoBean
 	private FinancialAssistanceSsbtekService ssbtekServiceMock;
@@ -40,14 +41,15 @@ class FinancialAssistanceSsbtekResourceTest {
 
 	@Test
 	void getBasis() {
-		when(ssbtekServiceMock.getBasis(eq(MUNICIPALITY_ID), eq(PARTY_ID), isNull(), isNull()))
+		when(ssbtekServiceMock.getBasis(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("APPLICANT"), isNull(), isNull()))
 			.thenReturn(SsbtekBasis.create()
 				.withFrom(LocalDate.of(2026, JANUARY, 1))
 				.withTo(LocalDate.of(2026, MARCH, 31))
 				.withAgencies(Map.of("fk", Map.of("formansinformation", Map.of()))));
 
 		final var result = webTestClient.get()
-			.uri(uri -> uri.path(PATH).queryParam("partyId", PARTY_ID).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH).build(PATH_VARIABLES))
+			.header("X-Sent-By", "joe01doe; type=adAccount")
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(SsbtekBasis.class)
@@ -58,19 +60,20 @@ class FinancialAssistanceSsbtekResourceTest {
 		assertThat(result.getFrom()).isEqualTo(LocalDate.of(2026, JANUARY, 1));
 		assertThat(result.getTo()).isEqualTo(LocalDate.of(2026, MARCH, 31));
 		assertThat(result.getAgencies()).containsOnlyKeys("fk");
-		verify(ssbtekServiceMock).getBasis(eq(MUNICIPALITY_ID), eq(PARTY_ID), isNull(), isNull());
+		verify(ssbtekServiceMock).getBasis(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("APPLICANT"), isNull(), isNull());
 	}
 
 	@Test
-	void getBasisWithExplicitPeriod() {
-		when(ssbtekServiceMock.getBasis(MUNICIPALITY_ID, PARTY_ID, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31)))
+	void getBasisForTheCoApplicantWithExplicitPeriod() {
+		when(ssbtekServiceMock.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CO_APPLICANT", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31)))
 			.thenReturn(SsbtekBasis.create().withAgencies(Map.of()));
 
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH).queryParam("partyId", PARTY_ID).queryParam("from", "2026-01-01").queryParam("to", "2026-03-31").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH).queryParam("person", "CO_APPLICANT").queryParam("from", "2026-01-01").queryParam("to", "2026-03-31").build(PATH_VARIABLES))
+			.header("X-Sent-By", "joe01doe; type=adAccount")
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(ssbtekServiceMock).getBasis(MUNICIPALITY_ID, PARTY_ID, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31));
+		verify(ssbtekServiceMock).getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CO_APPLICANT", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31));
 	}
 }

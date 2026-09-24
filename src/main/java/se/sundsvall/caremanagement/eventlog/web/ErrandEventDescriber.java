@@ -84,6 +84,9 @@ final class ErrandEventDescriber {
 		}),
 		Map.entry("draft", new String[] {
 			"utkastberäkning", "utkastberäkning"
+		}),
+		Map.entry("ssbtek", new String[] {
+			"SSBTEK-underlag", "SSBTEK-underlag"
 		}));
 
 	private ErrandEventDescriber() {}

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SsbtekBasis;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceSsbtekService;
+import se.sundsvall.dept44.common.validators.annotation.OneOf;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
@@ -48,28 +49,34 @@ class FinancialAssistanceSsbtekResource {
 		this.service = service;
 	}
 
-	@GetMapping(path = "/financial-assistance/ssbtek", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Read the applicant's SSBTEK basis",
+	@GetMapping(path = "/financial-assistance/{errandId}/ssbtek", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Read the SSBTEK basis of an errand's applicant or co-applicant",
 		description = """
-			The applicant's SSBTEK basis, fetched live via api-service-financial-aid and forwarded verbatim — the answer \
-			per responding agency (af, csn, fk, skv, so, tns, miv), so a caseworker can see what the composite service \
-			actually said rather than only the classified result. The applicant is identified by partyId (resolved to a \
-			personnummer via the citizen service); no personnummer is accepted or returned at this edge, and nothing is \
-			stored. The period is resolved in whole months and echoed on the response: it defaults to the three SSBTEK \
-			rule periods (jämförelseperiod M−2 through ansökningsperiod M), the same window the process asks for. \
-			Agency payload shapes are heterogeneous and follow the SSBTEK contract, so they are not modelled here.""",
+			The SSBTEK basis of the errand's applicant (or, with person=CO_APPLICANT, co-applicant), fetched live via \
+			api-service-financial-aid and forwarded verbatim — the answer per responding agency (af, csn, fk, skv, so, \
+			tns, miv), so a caseworker can see what the composite service actually said rather than only the classified \
+			result. The person is resolved from the errand, never taken from the caller, and the read is recorded in the \
+			errand's access log like every other errand-scoped request. No personnummer is accepted or returned at this \
+			edge, and nothing is stored. The period is resolved in whole months and echoed on the response: it defaults \
+			to the three SSBTEK rule periods (jämförelseperiod M−2 through ansökningsperiod M), the same window the process \
+			asks for. Agency payload shapes are heterogeneous and follow the SSBTEK contract, so they are not modelled here.""",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
+			@ApiResponse(responseCode = "404",
+				description = "Not Found — no such errand, no household member in that role, or an unknown citizen",
+				content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
 	ResponseEntity<SsbtekBasis> getBasis(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@Parameter(description = "The applicant's partyId (personId GUID)") @ValidUuid @RequestParam final String partyId,
+		@ValidUuid @PathVariable final String errandId,
+		@Parameter(description = "Whose basis: the errand's APPLICANT (default) or CO_APPLICANT") @OneOf({
+			"APPLICANT", "CO_APPLICANT"
+		}) @RequestParam(required = false, defaultValue = "APPLICANT") final String person,
 		@Parameter(description = "Inclusive start of the period (ISO date). Defaults to the first day of month M−2.") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
 		@Parameter(description = "Inclusive end of the period (ISO date). Defaults to the last day of the current month.") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to) {
 
-		return ok(service.getBasis(municipalityId, partyId, from, to));
+		return ok(service.getBasis(municipalityId, namespace, errandId, person, from, to));
 	}
 }

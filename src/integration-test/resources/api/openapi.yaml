@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:63021
+- url: http://localhost:52505
   description: Generated server url
 security:
 - sentBy: []
@@ -7316,6 +7316,98 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/ssbtek:
+    get:
+      tags:
+      - Financial Assistance · SSBTEK
+      summary: Read the SSBTEK basis of an errand's applicant or co-applicant
+      description: "The SSBTEK basis of the errand's applicant (or, with person=CO_APPLICANT,\
+        \ co-applicant), fetched live via api-service-financial-aid and forwarded\
+        \ verbatim — the answer per responding agency (af, csn, fk, skv, so, tns,\
+        \ miv), so a caseworker can see what the composite service actually said rather\
+        \ than only the classified result. The person is resolved from the errand,\
+        \ never taken from the caller, and the read is recorded in the errand's access\
+        \ log like every other errand-scoped request. No personnummer is accepted\
+        \ or returned at this edge, and nothing is stored. The period is resolved\
+        \ in whole months and echoed on the response: it defaults to the three SSBTEK\
+        \ rule periods (jämförelseperiod M−2 through ansökningsperiod M), the same\
+        \ window the process asks for. Agency payload shapes are heterogeneous and\
+        \ follow the SSBTEK contract, so they are not modelled here."
+      operationId: getBasis
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: person
+        in: query
+        description: "Whose basis: the errand's APPLICANT (default) or CO_APPLICANT"
+        required: false
+        schema:
+          type: string
+          default: APPLICANT
+      - name: from
+        in: query
+        description: Inclusive start of the period (ISO date). Defaults to the first
+          day of month M−2.
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        description: Inclusive end of the period (ISO date). Defaults to the last
+          day of the current month.
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SsbtekBasis"
+        "404":
+          description: "Not Found — no such errand, no household member in that role,\
+            \ or an unknown citizen"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/sections/approvals:
     get:
       tags:
@@ -7845,89 +7937,6 @@ paths:
                 $ref: "#/components/schemas/CalculationDraft"
         "404":
           description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/ssbtek:
-    get:
-      tags:
-      - Financial Assistance · SSBTEK
-      summary: Read the applicant's SSBTEK basis
-      description: "The applicant's SSBTEK basis, fetched live via api-service-financial-aid\
-        \ and forwarded verbatim — the answer per responding agency (af, csn, fk,\
-        \ skv, so, tns, miv), so a caseworker can see what the composite service actually\
-        \ said rather than only the classified result. The applicant is identified\
-        \ by partyId (resolved to a personnummer via the citizen service); no personnummer\
-        \ is accepted or returned at this edge, and nothing is stored. The period\
-        \ is resolved in whole months and echoed on the response: it defaults to the\
-        \ three SSBTEK rule periods (jämförelseperiod M−2 through ansökningsperiod\
-        \ M), the same window the process asks for. Agency payload shapes are heterogeneous\
-        \ and follow the SSBTEK contract, so they are not modelled here."
-      operationId: getBasis
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: partyId
-        in: query
-        description: The applicant's partyId (personId GUID)
-        required: true
-        schema:
-          type: string
-      - name: from
-        in: query
-        description: Inclusive start of the period (ISO date). Defaults to the first
-          day of month M−2.
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: to
-        in: query
-        description: Inclusive end of the period (ISO date). Defaults to the last
-          day of the current month.
-        required: false
-        schema:
-          type: string
-          format: date
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SsbtekBasis"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "502":
-          description: Bad Gateway
           content:
             application/problem+json:
               schema:
@@ -8734,10 +8743,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -13639,6 +13648,31 @@ components:
           description: Number of active warnings — closed ones are not counted
           examples:
           - 3
+    SsbtekBasis:
+      type: object
+      description: "A person's SSBTEK basis for a period, as the composite service\
+        \ answered it."
+      properties:
+        from:
+          type: string
+          format: date
+          description: Inclusive start of the period the basis covers
+          examples:
+          - 2026-07-01
+        to:
+          type: string
+          format: date
+          description: Inclusive end of the period the basis covers
+          examples:
+          - 2026-09-30
+        agencies:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: {}
+          description: "The answer per responding agency (af, csn, fk, skv, so, tns,\
+            \ miv), forwarded verbatim from SSBTEK. Shapes differ per agency and are\
+            \ not modelled; an agency that did not answer may be absent or empty."
     RpaContext:
       type: object
       description: The errand number and the household's personal numbers. Fetched
@@ -14124,31 +14158,6 @@ components:
           description: The decision date (raw Lifecare string)
           examples:
           - 2026-04-28
-    SsbtekBasis:
-      type: object
-      description: "A person's SSBTEK basis for a period, as the composite service\
-        \ answered it."
-      properties:
-        from:
-          type: string
-          format: date
-          description: Inclusive start of the period the basis covers
-          examples:
-          - 2026-07-01
-        to:
-          type: string
-          format: date
-          description: Inclusive end of the period the basis covers
-          examples:
-          - 2026-09-30
-        agencies:
-          type: object
-          additionalProperties:
-            type: object
-            additionalProperties: {}
-          description: "The answer per responding agency (af, csn, fk, skv, so, tns,\
-            \ miv), forwarded verbatim from SSBTEK. Shapes differ per agency and are\
-            \ not modelled; an agency that did not answer may be absent or empty."
     PrefilledChild:
       type: object
       description: "A child pre-filled from Lifecare for a financial assistance renewal.\

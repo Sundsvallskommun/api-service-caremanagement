@@ -45,6 +45,8 @@ class ErrandEventDescriberTest {
 	void calculationHeaderAndDraftAndData() {
 		assertThat(ErrandEventDescriber.describe("PATCH", List.of("calculation", "draft", "header"), false)).isEqualTo("Uppdaterade beräkningshuvud");
 		assertThat(ErrandEventDescriber.describe("GET", List.of("calculation", "draft"), false)).isEqualTo("Visade utkastberäkning");
+		// GUI-01: the manual SSBTEK read, logged on the errand
+		assertThat(ErrandEventDescriber.describe("GET", List.of("ssbtek"), false)).isEqualTo("Visade SSBTEK-underlag");
 		assertThat(ErrandEventDescriber.describe("GET", List.of("data"), false)).isEqualTo("Visade ärendeuppgifter");
 	}
 

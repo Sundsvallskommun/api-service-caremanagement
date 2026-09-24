@@ -27,8 +27,8 @@ class FinancialAssistanceSsbtekResourceFailureTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "my-namespace";
-	private static final String PARTY_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/ssbtek";
+	private static final String ERRAND_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/ssbtek";
 
 	@Autowired
 	private WebTestClient webTestClient;
@@ -46,14 +46,15 @@ class FinancialAssistanceSsbtekResourceFailureTest {
 	}
 
 	@Test
-	void getBasisInvalidPartyId() {
+	void getBasisInvalidErrandId() {
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH).queryParam("partyId", "not-a-uuid").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
+			.header("X-Sent-By", "joe01doe; type=adAccount")
 			.exchange()
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
-				tuple("getBasis.partyId", "not a valid UUID")));
+				tuple("getBasis.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(ssbtekServiceMock);
 	}
@@ -61,7 +62,8 @@ class FinancialAssistanceSsbtekResourceFailureTest {
 	@Test
 	void getBasisInvalidMunicipalityId() {
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH).queryParam("partyId", PARTY_ID).build(Map.of("municipalityId", "invalid", "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", "invalid", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header("X-Sent-By", "joe01doe; type=adAccount")
 			.exchange()
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
@@ -72,11 +74,15 @@ class FinancialAssistanceSsbtekResourceFailureTest {
 	}
 
 	@Test
-	void getBasisMissingPartyId() {
+	void getBasisUnknownPerson() {
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH).queryParam("person", "CHILD").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header("X-Sent-By", "joe01doe; type=adAccount")
 			.exchange()
-			.expectStatus().isBadRequest();
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("getBasis.person", "must be one of: [APPLICANT, CO_APPLICANT]")));
 
 		verifyNoInteractions(ssbtekServiceMock);
 	}

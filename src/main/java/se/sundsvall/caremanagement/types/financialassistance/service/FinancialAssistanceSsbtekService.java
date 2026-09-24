@@ -2,12 +2,17 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
+import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.financialaid.integration.FinancialAidIntegration;
+import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SsbtekBasis;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
@@ -16,9 +21,12 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /**
- * The applicant's SSBTEK basis, read live so a caseworker can see what the composite service actually answered.
- * caremanagement only forwards: the applicant is identified by partyId (resolved to a personnummer via the citizen
- * service), the call goes to api-service-financial-aid, and the per-agency answer is returned unmodified.
+ * An errand's household member's SSBTEK basis, read live so a caseworker can see what the composite service actually
+ * answered (GUI-01, manual SSBTEK check). caremanagement only forwards: the person is the errand's applicant or
+ * co-applicant — resolved from the errand the way the beredning resolves them, never taken from the caller — their
+ * personnummer comes from the citizen service, the call goes to api-service-financial-aid, and the per-agency answer is
+ * returned unmodified. Scoping the read to an errand is what puts it in the errand's access log: the path carries the
+ * errand id, so {@code ErrandEventInterceptor} records who read whose SSBTEK data and when.
  *
  * <p>
  * Nothing is stored. The basis is income data for a named person, so it is held only for the length of the request —
@@ -37,16 +45,24 @@ public class FinancialAssistanceSsbtekService {
 	 */
 	private static final int RULE_PERIOD_LOOKBACK_MONTHS = 2;
 
+	private final ErrandService errandService;
+	private final StakeholderService stakeholderService;
+	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final CitizenService citizenService;
 	private final FinancialAidIntegration financialAidIntegration;
 
-	FinancialAssistanceSsbtekService(final CitizenService citizenService, final FinancialAidIntegration financialAidIntegration) {
+	FinancialAssistanceSsbtekService(final ErrandService errandService, final StakeholderService stakeholderService,
+		final FinancialAssistanceRepository financialAssistanceRepository, final CitizenService citizenService, final FinancialAidIntegration financialAidIntegration) {
+		this.errandService = errandService;
+		this.stakeholderService = stakeholderService;
+		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.citizenService = citizenService;
 		this.financialAidIntegration = financialAidIntegration;
 	}
 
 	/**
-	 * Fetch the applicant's SSBTEK basis for a period.
+	 * Fetch the SSBTEK basis of an errand's applicant or co-applicant for a period. Scoped: {@code 404} when the errand is
+	 * missing in this namespace/municipality, when it has no member in the asked-for role, or when the citizen is unknown.
 	 *
 	 * <p>
 	 * The window is resolved whole-months so it always lines up with the rule periods: with neither bound given it runs
@@ -56,12 +72,17 @@ public class FinancialAssistanceSsbtekService {
 	 * </p>
 	 *
 	 * @param  municipalityId the id of the municipality
-	 * @param  partyId        the applicant's partyId (personId GUID)
+	 * @param  namespace      the errand's namespace
+	 * @param  errandId       the errand whose household member is read
+	 * @param  role           {@code APPLICANT} or {@code CO_APPLICANT}
 	 * @param  from           inclusive start of the period, or {@code null} to derive it
 	 * @param  to             inclusive end of the period, or {@code null} to derive it
 	 * @return                the per-agency basis plus the resolved period
 	 */
-	public SsbtekBasis getBasis(final String municipalityId, final String partyId, final LocalDate from, final LocalDate to) {
+	public SsbtekBasis getBasis(final String municipalityId, final String namespace, final String errandId, final String role, final LocalDate from,
+		final LocalDate to) {
+		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
+		final var partyId = householdPartyId(municipalityId, namespace, errandId, role);
 		final var applicant = personalNumber(municipalityId, partyId);
 		final var fromDate = resolveFrom(from, to);
 		final var toDate = resolveTo(from, to);
@@ -98,6 +119,15 @@ public class FinancialAssistanceSsbtekService {
 	private Map<String, Map<String, Object>> basisFor(final String municipalityId, final String applicant, final LocalDate fromDate, final LocalDate toDate) {
 		return ofNullable(financialAidIntegration.getFinancialAidBasis(municipalityId, applicant, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
 			.orElseGet(Map::of);
+	}
+
+	/** The partyId of the errand's member in {@code role}, or 404 when the household has none. */
+	private String householdPartyId(final String municipalityId, final String namespace, final String errandId, final String role) {
+		final var persons = financialAssistanceRepository.findByErrandId(errandId)
+			.map(FinancialAssistanceEntity::getPersons)
+			.orElseGet(List::of);
+		return RpaContextService.resolvePartyId(stakeholderService.readAll(municipalityId, namespace, errandId), persons, role)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "Errand %s has no household member with role %s".formatted(errandId, role)));
 	}
 
 	/** Resolve a partyId to the personnummer SSBTEK needs, or 404 when the citizen is unknown. */
