@@ -78,7 +78,7 @@ class DecisionServiceTest {
 		assertThat(notifications).allSatisfy(req -> {
 			assertThat(req.type()).isEqualTo("CREATE");
 			assertThat(req.subType()).isEqualTo("DECISION");
-			assertThat(req.description()).contains("PAYMENT").contains("APPROVED");
+			assertThat(req.description()).isEqualTo("Utbetalningsbeslut: beviljat");
 		});
 	}
 

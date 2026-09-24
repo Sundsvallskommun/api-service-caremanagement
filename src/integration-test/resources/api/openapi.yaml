@@ -10345,7 +10345,7 @@ components:
           type: string
           description: Short human-readable description
           examples:
-          - New errand assigned to you
+          - Nytt ärende har tilldelats dig
         content:
           type: string
           description: Optional longer content / body

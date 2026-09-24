@@ -102,7 +102,7 @@ public class ErrandService implements ErrandAccessGuard {
 			saved.getReporterUserId(), saved.getAssignedUserId(), timestamp));
 
 		publishAssignmentNotification(municipalityId, namespace, saved.getId(), saved.getAssignedUserId(), saved.getReporterUserId(),
-			"CREATE", "New errand assigned to you");
+			"CREATE", "Nytt ärende har tilldelats dig");
 		return saved.getId();
 	}
 
@@ -182,7 +182,7 @@ public class ErrandService implements ErrandAccessGuard {
 				previousAssignee, newAssignee, changedBy, timestamp));
 
 			publishAssignmentNotification(municipalityId, namespace, entity.getId(), newAssignee, entity.getReporterUserId(),
-				"UPDATE", "Errand reassigned to you");
+				"UPDATE", "Ärendet har tilldelats dig");
 		}
 	}
 

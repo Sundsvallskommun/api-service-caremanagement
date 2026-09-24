@@ -132,7 +132,7 @@ public class DecisionService {
 		if (recipients.isEmpty()) {
 			return;
 		}
-		final var description = "Decision recorded: %s = %s".formatted(decision.getDecisionType(), decision.getValue());
+		final var description = DecisionNotificationText.describe(decision.getDecisionType(), decision.getValue());
 		recipients.forEach(ownerId -> publisher.publishEvent(new NotificationRequest(
 			municipalityId, namespace, errand.getId(), ownerId, decision.getCreatedBy(), "CREATE", "DECISION", description)));
 	}

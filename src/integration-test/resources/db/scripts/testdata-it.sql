@@ -45,8 +45,8 @@ INSERT INTO attachment (id, attachment_data_id, errand_id, file_name, mime_type,
 
 -- Notifications (seeded for read/list/patch/delete cases)
 INSERT INTO notification (id, errand_id, municipality_id, namespace, owner_id, created_by, type, sub_type, description, content, acknowledged, expires, created, modified) VALUES
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', '11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'assignee1', 'reporter1', 'CREATE', 'ERRAND',   'New errand assigned to you', NULL, 0, '2099-01-01 00:00:00.000000', '2025-01-02 09:00:00.000000', NULL),
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeef', '11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'assignee1', 'operaton',  'CREATE', 'DECISION', 'Decision recorded: PAYMENT = APPROVED', NULL, 0, '2099-01-01 00:00:00.000000', '2025-01-02 09:05:00.000000', NULL);
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', '11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'assignee1', 'reporter1', 'CREATE', 'ERRAND',   'Nytt ärende har tilldelats dig', NULL, 0, '2099-01-01 00:00:00.000000', '2025-01-02 09:00:00.000000', NULL),
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeef', '11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'assignee1', 'operaton',  'CREATE', 'DECISION', 'Utbetalningsbeslut: beviljat', NULL, 0, '2099-01-01 00:00:00.000000', '2025-01-02 09:05:00.000000', NULL);
 
 -- Co-caseworker on errand 1111... (assignee1's medhandläggare), seeded so NotificationIT/CoCaseworkerIT can prove
 -- notification visibility widens to a co-caseworker without duplicating the notification row (backlog/svar-

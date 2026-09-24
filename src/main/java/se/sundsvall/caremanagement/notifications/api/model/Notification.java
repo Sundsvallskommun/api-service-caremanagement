@@ -61,7 +61,7 @@ public class Notification {
 	@Schema(description = "Swedish display name for the notification sub-type", examples = "Ärende", accessMode = READ_ONLY)
 	private String subTypeDisplayName;
 
-	@Schema(description = "Short human-readable description", examples = "New errand assigned to you")
+	@Schema(description = "Short human-readable description", examples = "Nytt ärende har tilldelats dig")
 	@NotBlank(groups = OnCreate.class)
 	@Size(max = 512, groups = {
 		OnCreate.class, OnUpdate.class

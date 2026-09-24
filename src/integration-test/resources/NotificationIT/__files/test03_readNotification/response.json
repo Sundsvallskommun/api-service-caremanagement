@@ -5,7 +5,7 @@
 	"createdBy": "reporter1",
 	"type": "CREATE",
 	"subType": "ERRAND",
-	"description": "New errand assigned to you",
+	"description": "Nytt ärende har tilldelats dig",
 	"acknowledged": false,
 	"handled": false,
 	"expires": "${json-unit.any-string}",
