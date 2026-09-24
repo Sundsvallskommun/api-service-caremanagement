@@ -61,20 +61,4 @@ class HouseholdIdentifiersResource {
 
 		return ok(service.get(municipalityId, namespace, errandId));
 	}
-
-	/** The name from the retired RPA integration, served until the process worker has moved to household-identifiers. */
-	@GetMapping(path = "/rpa-context", produces = APPLICATION_JSON_VALUE)
-	@Operation(deprecated = true,
-		summary = "Read the errand number and the household's personal numbers (old path)",
-		description = "DEPRECATED - the old name of GET .../household-identifiers, kept only until the process worker calls the new path.",
-		responses = {
-			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true)
-		})
-	ResponseEntity<HouseholdIdentifiers> getRpaContext(
-		@ValidMunicipalityId @PathVariable final String municipalityId,
-		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@ValidUuid @PathVariable final String errandId) {
-
-		return ok(service.get(municipalityId, namespace, errandId));
-	}
 }

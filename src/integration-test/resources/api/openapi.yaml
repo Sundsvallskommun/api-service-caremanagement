@@ -6872,59 +6872,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/rpa-context:
-    get:
-      tags:
-      - Financial Assistance · Household identifiers
-      summary: Read the errand number and the household's personal numbers (old path)
-      description: "DEPRECATED - the old name of GET .../household-identifiers, kept\
-        \ only until the process worker calls the new path."
-      operationId: getRpaContext
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HouseholdIdentifiers"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-      deprecated: true
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payees/{payeeId}:
     get:
       tags:
@@ -12408,6 +12355,16 @@ components:
           description: "The answer per responding agency (af, csn, fk, skv, so, tns,\
             \ miv), forwarded verbatim from SSBTEK. Shapes differ per agency and are\
             \ not modelled; an agency that did not answer may be absent or empty."
+    MonitoringCount:
+      type: object
+      description: The number of monitorings on the errand
+      properties:
+        count:
+          type: integer
+          format: int64
+          description: Number of monitorings on the errand
+          examples:
+          - 2
     HouseholdIdentifiers:
       type: object
       description: The errand number and the household's personal numbers. Fetched
@@ -12433,16 +12390,6 @@ components:
             or it could not be resolved
           examples:
           - 19850505T002
-    MonitoringCount:
-      type: object
-      description: The number of monitorings on the errand
-      properties:
-        count:
-          type: integer
-          format: int64
-          description: Number of monitorings on the errand
-          examples:
-          - 2
     FormSnapshot:
       type: object
       description: Self-describing snapshot of the form as it was rendered and answered.

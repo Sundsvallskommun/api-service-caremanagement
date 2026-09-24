@@ -29,7 +29,6 @@ class HouseholdIdentifiersResourceTest {
 	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = randomUUID().toString();
 	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/household-identifiers";
-	private static final String OLD_PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/rpa-context";
 
 	@MockitoBean
 	private HouseholdIdentifiersService serviceMock;
@@ -53,22 +52,6 @@ class HouseholdIdentifiersResourceTest {
 
 		assertThat(response).isEqualTo(new HouseholdIdentifiers("EB-2026-000123", "19800101T001", null));
 		verify(serviceMock).get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-	}
-
-	@Test
-	void theOldPathServesTheSameUntilTheWorkerHasMoved() {
-		when(serviceMock.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
-			.thenReturn(new HouseholdIdentifiers("EB-2026-000123", "19800101T001", "19850505T002"));
-
-		final var response = webTestClient.get()
-			.uri(uri -> uri.path(OLD_PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
-			.exchange()
-			.expectStatus().isOk()
-			.expectBody(HouseholdIdentifiers.class)
-			.returnResult()
-			.getResponseBody();
-
-		assertThat(response).isEqualTo(new HouseholdIdentifiers("EB-2026-000123", "19800101T001", "19850505T002"));
 	}
 
 	@Test
