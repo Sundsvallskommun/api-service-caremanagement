@@ -17,6 +17,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeR
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Payee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SectionApproval;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
@@ -46,8 +47,13 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * <li>records one {@code Payment} row per decided utbetalning, which Draken's BFF registers directly in Lifecare and
  * acknowledges through {@code .../payments/{paymentId}/lifecare-result};</li>
  * <li>correlates {@code PaymentDecisionReceived} to the waiting process, which then sets the status and polls the
- * payment. The normberäkning is already in Lifecare — Draken saves it before the decision.</li>
+ * payment.</li>
  * </ol>
+ *
+ * <p>
+ * A granting decision (BIFALL/DELAVSLAG) requires the normberäkning to be in Lifecare already: Draken saves it there
+ * and sets {@code lifecareCalculationId} on the errand ({@code PATCH .../data}) before the decision, and finalize
+ * refuses a granting decision on an errand that does not carry it. An avslag pays nothing and needs no calculation.
  *
  * <p>
  * Step 4 is best-effort and reported in the response rather than failing the call: the decision is recorded either
@@ -67,6 +73,7 @@ public class FinancialAssistanceFinalizeService {
 	private static final String ERROR_WRONG_STATUS = "errand must be in status %s to be finalized, but is in status '%s'";
 	private static final String ERROR_SECTIONS_NOT_APPROVED = "all sections must be approved before the errand can be finalized - not approved: %s";
 	private static final String ERROR_ALREADY_FINALIZED = "errand '%s' already carries a %s decision - it has been finalized";
+	private static final String ERROR_NO_LIFECARE_CALCULATION = "a %s decision requires the normberäkning to be saved in Lifecare first - save it and set lifecareCalculationId on errand '%s' (PATCH .../financial-assistance/{errandId}/data) before finalizing";
 
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
@@ -91,7 +98,8 @@ public class FinancialAssistanceFinalizeService {
 	/**
 	 * Finalize the errand — see the class description for the steps. Scoped: {@code 404} when the errand is missing in
 	 * this namespace/municipality; {@code 400} without an identified caller; {@code 409} when the errand is not
-	 * {@code AWAITING_DECISION}, when a section is not approved, or when a {@code PAYMENT} decision already exists.
+	 * {@code AWAITING_DECISION}, when a section is not approved, when a {@code PAYMENT} decision already exists, or when a
+	 * granting outcome is decided on an errand without {@code lifecareCalculationId}.
 	 *
 	 * @param  decidedBy the authenticated caseworker (X-Sent-By) — becomes the decision's {@code createdBy}
 	 * @return           the receipt: decision id, payment ids, whether the process was resumed, the channels
@@ -104,6 +112,7 @@ public class FinancialAssistanceFinalizeService {
 		requireNotFinalized(municipalityId, namespace, errandId);
 		final var entity = financialAssistanceRepository.findByErrandId(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERROR_NO_TYPED_ERRAND.formatted(errandId)));
+		requireLifecareCalculation(entity, errandId, request.getDecision().getOutcome());
 
 		// 1. The audit fields first (communication channels, household-size flag), so they are on the errand before the
 		// process is resumed in step 4.
@@ -178,6 +187,17 @@ public class FinancialAssistanceFinalizeService {
 			.anyMatch(decision -> DECISION_TYPE_PAYMENT.equals(decision.getDecisionType()));
 		if (alreadyDecided) {
 			throw Problem.valueOf(CONFLICT, ERROR_ALREADY_FINALIZED.formatted(errandId, DECISION_TYPE_PAYMENT));
+		}
+	}
+
+	/**
+	 * A granting outcome (BIFALL/DELAVSLAG) is paid against the normberäkning in Lifecare, so the errand must carry the
+	 * {@code lifecareCalculationId} Draken sets after saving it. Without the guard the process would run
+	 * GRANTED&rarr;PAID&rarr;CLOSED with no calculation behind the payment. An avslag pays nothing and is let through.
+	 */
+	private static void requireLifecareCalculation(final FinancialAssistanceEntity entity, final String errandId, final String outcome) {
+		if (outcomeCarriesAmount(outcome) && entity.getLifecareCalculationId() == null) {
+			throw Problem.valueOf(CONFLICT, ERROR_NO_LIFECARE_CALCULATION.formatted(outcome, errandId));
 		}
 	}
 

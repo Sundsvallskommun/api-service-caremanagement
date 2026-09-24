@@ -58,6 +58,7 @@ class FinancialAssistanceFinalizeServiceTest {
 	private static final String ERRAND_ID = "errand-1";
 	private static final String DECIDED_BY = "jane02doe";
 	private static final String DECISION_ID = "decision-1";
+	private static final Integer LIFECARE_CALCULATION_ID = 4711;
 
 	@Mock
 	private ErrandService errandServiceMock;
@@ -124,12 +125,19 @@ class FinancialAssistanceFinalizeServiceTest {
 			.withDecision(SectionApproval.create().withSection("DECISION").withApproved(decision));
 	}
 
-	/** Errand in AWAITING_DECISION, all sections approved, nothing decided yet, typed row present. */
+	/**
+	 * Errand in AWAITING_DECISION, all sections approved, nothing decided yet, typed row present and the normberäkning
+	 * saved in Lifecare.
+	 */
 	private void readyErrand() {
+		readyErrand(LIFECARE_CALCULATION_ID);
+	}
+
+	private void readyErrand(final Integer lifecareCalculationId) {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
 		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals(true, true, true));
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Decision.create().withDecisionType("RECOMMENDATION").withValue("OK")));
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withLifecareCalculationId(lifecareCalculationId)));
 		when(decisionServiceMock.create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Decision.class))).thenReturn(DECISION_ID);
 		// The payment rows finalize creates; their ids are returned on the receipt.
 		final var ids = new java.util.concurrent.atomic.AtomicInteger();
@@ -189,7 +197,8 @@ class FinancialAssistanceFinalizeServiceTest {
 
 	@Test
 	void rejectingFinalizeRecordsZeroAmountSkipsPaymentsAndCorrelatesRejected() {
-		readyErrand();
+		// An avslag pays nothing, so it needs no normberäkning in Lifecare.
+		readyErrand(null);
 
 		final var response = service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, rejectingRequest(), DECIDED_BY);
 
@@ -301,6 +310,42 @@ class FinancialAssistanceFinalizeServiceTest {
 
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 		verifyNoInteractions(repositoryMock, processServiceMock);
+	}
+
+	@Test
+	void grantingDecisionWithoutLifecareCalculationYields409() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
+		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals(true, true, true));
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
+		final var request = grantingRequest();
+
+		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: a BIFALL decision requires the normberäkning to be saved in Lifecare first - save it and set lifecareCalculationId on errand 'errand-1' (PATCH .../financial-assistance/{errandId}/data) before finalizing");
+
+		verify(repositoryMock, never()).save(any());
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+		verifyNoInteractions(paymentServiceMock, payeeServiceMock, processServiceMock);
+	}
+
+	@Test
+	void partialGrantWithoutLifecareCalculationYields409() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
+		when(sectionApprovalServiceMock.approvals(ERRAND_ID)).thenReturn(approvals(true, true, true));
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)));
+		final var request = grantingRequest();
+		request.getDecision().setOutcome("DELAVSLAG");
+
+		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessageContaining("a DELAVSLAG decision requires the normberäkning to be saved in Lifecare first");
+
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+		verifyNoInteractions(paymentServiceMock, processServiceMock);
 	}
 
 	@Test

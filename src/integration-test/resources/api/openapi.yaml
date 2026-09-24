@@ -3473,15 +3473,17 @@ paths:
         \ errand, stores the chosen communication channels and household-size flag,\
         \ creates one PENDING_REGISTRATION payment per decided payment, and correlates\
         \ PaymentDecisionReceived to the process (paymentDecision APPROVED for BIFALL/DELAVSLAG,\
-        \ REJECTED otherwise) — which sets GRANTED/REJECTED and polls the payment\
-        \ (the normberäkning is already in Lifecare, saved from Draken before the\
-        \ decision). Does not send anything to the applicant: the response echoes\
-        \ the communication channels for the frontend to act on. Requires the errand\
-        \ in AWAITING_DECISION with all three sections approved and an identified\
-        \ caller (X-Sent-By); a second finalize is rejected with 409. Process failures\
-        \ and payees not yet in Lifecare are reported in the response, not as errors.\
-        \ The Lifecare writes (decision, payments, bevakningar, journal, documents)\
-        \ are Draken's BFF's, reported back through the lifecare-result endpoints."
+        \ REJECTED otherwise) — which sets GRANTED/REJECTED and polls the payment.\
+        \ A BIFALL/DELAVSLAG requires the normberäkning to be saved in Lifecare first:\
+        \ Draken saves it and sets lifecareCalculationId on the errand (PATCH .../financial-assistance/{errandId}/data)\
+        \ before the decision, otherwise 409; an AVSLAG does not. Does not send anything\
+        \ to the applicant: the response echoes the communication channels for the\
+        \ frontend to act on. Requires the errand in AWAITING_DECISION with all three\
+        \ sections approved and an identified caller (X-Sent-By); a second finalize\
+        \ is rejected with 409. Process failures and payees not yet in Lifecare are\
+        \ reported in the response, not as errors. The Lifecare writes (decision,\
+        \ payments, bevakningar, journal, documents) are Draken's BFF's, reported\
+        \ back through the lifecare-result endpoints."
       operationId: finalize
       parameters:
       - name: municipalityId
@@ -3514,8 +3516,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/FinalizeResponse"
         "409":
-          description: "Conflict - wrong status, sections not approved or already\
-            \ finalized"
+          description: "Conflict - wrong status, sections not approved, already finalized,\
+            \ or a granting decision without lifecareCalculationId"
           content:
             application/problem+json:
               schema:
