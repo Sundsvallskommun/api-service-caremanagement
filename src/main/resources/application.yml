@@ -214,6 +214,7 @@ lifecare:
     from-who: ${LIFECARE_ACTUALISATION_FROM_WHO:Den enskilde}
     reason: ${LIFECARE_ACTUALISATION_REASON:Ekonomiskt bistånd}
     organisation: ${LIFECARE_ACTUALISATION_ORGANISATION:Ekonomiskt bistånd}
+    new-application-type: ${LIFECARE_ACTUALISATION_NEW_APPLICATION_TYPE:EK Nyansökan Digital Ekonomiskt bistånd}
 #========================================
 # Financial assistance settings
 #========================================

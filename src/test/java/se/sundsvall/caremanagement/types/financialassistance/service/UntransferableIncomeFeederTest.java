@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
@@ -28,7 +29,7 @@ class UntransferableIncomeFeederTest {
 	void warnsForEachIncomeWithTheCategoryItCouldNotPlace() {
 		final var warnings = feeder.untransferableIncomeWarnings(List.of(
 			classified("Studiemedel", ApplicantRole.APPLICANT),
-			classified("Elstöd", ApplicantRole.CO_APPLICANT)));
+			classified("Elstöd", ApplicantRole.CO_APPLICANT)), Map.of());
 
 		assertThat(warnings).extracting(WarningService.WarningInput::type, WarningService.WarningInput::sourceKey, WarningService.WarningInput::message)
 			.containsExactly(
@@ -40,7 +41,7 @@ class UntransferableIncomeFeederTest {
 	void collapsesSeveralPaymentsOfTheSameBenefitToTheSamePerson() {
 		final var warnings = feeder.untransferableIncomeWarnings(List.of(
 			classified("Studiemedel", ApplicantRole.APPLICANT),
-			classified(" studiemedel", ApplicantRole.APPLICANT)));
+			classified(" studiemedel", ApplicantRole.APPLICANT)), Map.of());
 
 		assertThat(warnings).singleElement().satisfies(warning -> {
 			assertThat(warning.sourceKey()).isEqualTo("studiemedel|APPLICANT");
@@ -53,7 +54,7 @@ class UntransferableIncomeFeederTest {
 		// The draft has a column per person, so the applicant's and the co-applicant's income are two things to add by hand.
 		final var warnings = feeder.untransferableIncomeWarnings(List.of(
 			classified("Studiemedel", ApplicantRole.APPLICANT),
-			classified("Studiemedel", ApplicantRole.CO_APPLICANT)));
+			classified("Studiemedel", ApplicantRole.CO_APPLICANT)), Map.of());
 
 		assertThat(warnings).extracting(WarningService.WarningInput::sourceKey)
 			.containsExactly("studiemedel|APPLICANT", "studiemedel|CO_APPLICANT");
@@ -61,7 +62,7 @@ class UntransferableIncomeFeederTest {
 
 	@Test
 	void keysAnIncomeWithoutRoleOnTheBenefitAlone() {
-		final var warnings = feeder.untransferableIncomeWarnings(List.of(classified("Studiemedel", null)));
+		final var warnings = feeder.untransferableIncomeWarnings(List.of(classified("Studiemedel", null)), Map.of());
 
 		assertThat(warnings).extracting(WarningService.WarningInput::sourceKey, WarningService.WarningInput::message)
 			.containsExactly(tuple("studiemedel", APPLICANT_MESSAGE));
@@ -74,14 +75,36 @@ class UntransferableIncomeFeederTest {
 		final var warnings = feeder.untransferableIncomeWarnings(Arrays.asList(
 			null,
 			new ClassifiedIncome(null, "TA_MED", "Studiemedel", false, "Ta med"),
-			new ClassifiedIncome(withoutBenefit, "TA_MED", "Studiemedel", false, "Ta med")));
+			new ClassifiedIncome(withoutBenefit, "TA_MED", "Studiemedel", false, "Ta med")), Map.of());
 
 		assertThat(warnings).isEmpty();
 	}
 
 	@Test
 	void noIncomesYieldNoWarnings() {
-		assertThat(feeder.untransferableIncomeWarnings(null)).isEmpty();
-		assertThat(feeder.untransferableIncomeWarnings(List.of())).isEmpty();
+		assertThat(feeder.untransferableIncomeWarnings(null, Map.of())).isEmpty();
+		assertThat(feeder.untransferableIncomeWarnings(List.of(), Map.of())).isEmpty();
+	}
+
+	@Test
+	void namesAHouseholdChildAndKeepsTwoChildrenApart() {
+		final var warnings = feeder.untransferableIncomeWarnings(List.of(
+			childIncome("Studiehjälp", "child-1"),
+			childIncome("Studiehjälp", "child-2"),
+			childIncome("Studiehjälp", "child-3")), Map.of("child-1", "Kalle", "child-2", ""));
+
+		assertThat(warnings).extracting(WarningService.WarningInput::sourceKey, WarningService.WarningInput::message)
+			.containsExactly(
+				tuple("studiehjälp|CHILD|child-1",
+					"Studiehjälp (barn: Kalle) i SSBTEK ska tas med i normberäkningen men saknar inkomsttyp i Lifecare (Studiehjälp) och har inte förts över – för in den för hand"),
+				tuple("studiehjälp|CHILD|child-2",
+					"Studiehjälp (barn) i SSBTEK ska tas med i normberäkningen men saknar inkomsttyp i Lifecare (Studiehjälp) och har inte förts över – för in den för hand"),
+				tuple("studiehjälp|CHILD|child-3",
+					"Studiehjälp (barn) i SSBTEK ska tas med i normberäkningen men saknar inkomsttyp i Lifecare (Studiehjälp) och har inte förts över – för in den för hand"));
+	}
+
+	private static ClassifiedIncome childIncome(final String benefit, final String partyId) {
+		final var income = new SsbtekIncome(benefit, null, null, new BigDecimal("900"), LocalDate.parse("2026-09-20"), null, null, null, ApplicantRole.CHILD, partyId);
+		return new ClassifiedIncome(income, "TA_MED", benefit, false, "Ta med");
 	}
 }

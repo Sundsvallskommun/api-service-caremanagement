@@ -25,7 +25,8 @@ class ActualisationAssemblerTest {
 
 	/** The names verksamheten gave for an EB återansökan. */
 	private static final ActualisationProperties NAMES = new ActualisationProperties(
-		"Ek Återansökan Digital Ekonomiskt bistånd", "Den enskilde", "Ekonomiskt bistånd", "Ekonomiskt bistånd");
+		"Ek Återansökan Digital Ekonomiskt bistånd", "Den enskilde", "Ekonomiskt bistånd", "Ekonomiskt bistånd",
+		"EK Nyansökan Digital Ekonomiskt bistånd");
 
 	@Test
 	void assemblesPersonAndDateWithoutProposal() {

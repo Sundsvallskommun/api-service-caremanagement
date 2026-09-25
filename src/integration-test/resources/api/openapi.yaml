@@ -4902,6 +4902,75 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/ssbtek-changes/applied:
+    post:
+      tags:
+      - Financial Assistance · Calculation
+      summary: Acknowledge SSBTEK changes written into the normberäkning in Lifecare
+      description: "Draken's BFF reports the incomes it wrote into the linked normberä\
+        kning (amount null = taken out). careM records them as what the system last\
+        \ wrote, so the next SSBTEK change to the same income is again recognised\
+        \ as untouched by a caseworker, and brings the SSBTEK_CALCULATION_DIFF warnings\
+        \ up to date (best-effort). 409 when calculationId is not the errand's lifecareCalculationId."
+      operationId: applied
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppliedSsbtekChanges"
+        required: true
+      responses:
+        "204":
+          description: Successful Operation
+        "409":
+          description: Conflict - not the linked calculation
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/draft/persons:
     post:
       tags:
@@ -7055,7 +7124,10 @@ paths:
       summary: Update financial assistance data
       description: "PATCH semantics: non-null fields replace the stored values, null\
         \ fields are left untouched. Server-owned fields (applicationType, lastDailyRunAt,\
-        \ timestamps) are never written from client data."
+        \ timestamps) are never written from client data. lifecareCalculationId is\
+        \ write-once: sending the linked id again is a no-op, sending another one\
+        \ is refused with 409 (the daily prepare or an earlier save has already linked\
+        \ a normberäkning — read the errand again instead of creating another calculation)."
       operationId: updateData
       parameters:
       - name: municipalityId
@@ -7085,6 +7157,12 @@ paths:
           description: Successful operation
         "404":
           description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: Conflict - another normberäkning is already linked
           content:
             application/problem+json:
               schema:
@@ -10118,6 +10196,70 @@ paths:
                 $ref: "#/components/schemas/Problem"
         "500":
           description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/calculation/ssbtek-changes:
+    get:
+      tags:
+      - Financial Assistance · Calculation
+      summary: Read where the normberäkning in Lifecare no longer matches SSBTEK
+      description: "Compares the latest SSBTEK amounts the daily prepare recorded\
+        \ with the errand's linked normberäkning, read live from Lifecare. Each change\
+        \ says whether Draken may write it without asking (AUTO: the calculation still\
+        \ holds what the system last wrote there) or must show it to the caseworker\
+        \ (CONFIRM, with a reason). Nothing is written, in Lifecare or in careM. 404\
+        \ when no normberäkning is linked (lifecareCalculationId), after finalize,\
+        \ or when the calculation is not found in the calculation period; 502 when\
+        \ Lifecare cannot be read."
+      operationId: getChanges
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SsbtekChanges"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
           content:
             application/problem+json:
               schema:
@@ -13382,6 +13524,7 @@ components:
           - PREVIOUS_NORM_NOT_AVAILABLE
           - RECOVERY_CLAIM
           - LIFECARE_READ_FAILED
+          - SSBTEK_CALCULATION_DIFF
           examples:
           - EXPENSE_CAPPED
         typeDisplayName:
@@ -14390,6 +14533,54 @@ components:
           type: string
           description: "What went wrong, when something did"
       readOnly: true
+    AppliedSsbtekChange:
+      type: object
+      description: One income Draken's BFF wrote into the Lifecare calculation from
+        SSBTEK
+      properties:
+        role:
+          type: string
+          description: Whose income
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          examples:
+          - APPLICANT
+        incomeType:
+          type: string
+          description: "The Lifecare income type name, as the change named it"
+          examples:
+          - Lön
+          minLength: 1
+        amount:
+          type: number
+          description: The amount now in the calculation; null when the income was
+            removed from it
+          examples:
+          - 12400.0
+      required:
+      - incomeType
+      - role
+    AppliedSsbtekChanges:
+      type: object
+      description: What Draken's BFF wrote into the Lifecare calculation from SSBTEK
+      properties:
+        calculationId:
+          type: integer
+          format: int32
+          description: The Lifecare calculation written to — must be the errand's
+            lifecareCalculationId
+          examples:
+          - 48213
+        applied:
+          type: array
+          description: The incomes written
+          items:
+            $ref: "#/components/schemas/AppliedSsbtekChange"
+          minItems: 1
+      required:
+      - applied
+      - calculationId
     NormPersonInput:
       type: object
       description: What a caseworker sends to add or patch a person row (identity
@@ -17298,6 +17489,29 @@ components:
             or it could not be resolved
           examples:
           - 19850505T002
+        children:
+          type: array
+          description: The household children named on the application that have
+            a partyId; empty when there are none
+          items:
+            $ref: "#/components/schemas/HouseholdChild"
+    HouseholdChild:
+      type: object
+      description: "A household child named on the application: the partyId the\
+        \ beredning tags the child's SSBTEK incomes with, and the personal number\
+        \ SSBTEK is read with."
+      properties:
+        partyId:
+          type: string
+          description: "The child's partyId, as on the errand's children"
+          examples:
+          - 5b1e7c3a-9d2f-4e8b-a6c4-1f0d2e3c4b5a
+        personId:
+          type: string
+          description: The child's personal number (12 characters, may contain letters);
+            null when it could not be resolved
+          examples:
+          - 20100101T003
     FormSnapshot:
       type: object
       description: Self-describing snapshot of the form as it was rendered and answered.
@@ -17721,6 +17935,119 @@ components:
           description: The decision date (raw Lifecare string)
           examples:
           - 2026-04-28
+    SsbtekChange:
+      type: object
+      description: One income on which the latest SSBTEK answer and the normberäkning
+        saved in Lifecare disagree
+      properties:
+        kind:
+          type: string
+          description: ADD = SSBTEK reports an income the calculation lacks; CHANGE
+            = the calculation has the income at another amount; GONE = an income the
+            system wrote to the calculation is no longer reported by SSBTEK
+          enum:
+          - ADD
+          - CHANGE
+          - GONE
+          examples:
+          - CHANGE
+        mode:
+          type: string
+          description: "AUTO = the calculation still holds what the system last wrote\
+            \ there (no caseworker has touched the income), so the SSBTEK amount may\
+            \ be written without asking; CONFIRM = show it to the caseworker and write\
+            \ only on their say-so"
+          enum:
+          - AUTO
+          - CONFIRM
+          examples:
+          - AUTO
+        reason:
+          type: string
+          description: "Why the change needs confirming; null for AUTO. FINAL = the\
+            \ calculation is final and takes no change; NO_BASELINE = careM has no\
+            \ record of what the system wrote to this calculation; EDITED = a caseworker\
+            \ has changed the amount; REMOVED = the income was taken out of the calculation\
+            \ (or never put in) on purpose; MULTIPLE_ROWS = the type has several rows;\
+            \ GONE_FROM_SSBTEK = SSBTEK no longer reports it, which does not prove\
+            \ it has stopped"
+          enum:
+          - FINAL
+          - NO_BASELINE
+          - EDITED
+          - REMOVED
+          - MULTIPLE_ROWS
+          - GONE_FROM_SSBTEK
+          examples:
+          - EDITED
+        role:
+          type: string
+          description: "Whose income: the applicant (Lifecare's S column) or the co-applicant\
+            \ (M)"
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          examples:
+          - APPLICANT
+        incomeTypeId:
+          type: integer
+          format: int32
+          description: "The Lifecare income type id, when careM knows it (always for\
+            \ ADD)"
+          examples:
+          - 12
+        incomeType:
+          type: string
+          description: The Lifecare income type name — what the calculation row is
+            matched on
+          examples:
+          - Lön
+        ssbtekAmount:
+          type: number
+          description: The amount SSBTEK gives; null for GONE
+          examples:
+          - 12400.0
+        lifecareAmount:
+          type: number
+          description: The amount in the calculation (all rows of the type summed);
+            null for ADD
+          examples:
+          - 11900.0
+    SsbtekChanges:
+      type: object
+      description: Where the normberäkning saved in Lifecare no longer matches the
+        latest SSBTEK answer
+      properties:
+        calculationId:
+          type: integer
+          format: int32
+          description: The Lifecare calculation compared (the errand's lifecareCalculationId)
+          examples:
+          - 48213
+        isFinal:
+          type: boolean
+          description: Whether the calculation is saved as final in Lifecare; if so
+            nothing may be written and every change is CONFIRM
+          examples:
+          - false
+        comparedAt:
+          type: string
+          format: date-time
+          description: When the calculation was read from Lifecare for this comparison
+          examples:
+          - 2026-09-25T09:30:00+02:00
+        ssbtekReadAt:
+          type: string
+          format: date-time
+          description: When SSBTEK was last read for the errand; null when it has
+            not been read since the calculation was linked
+          examples:
+          - 2026-09-25T03:00:00+02:00
+        changes:
+          type: array
+          description: "The disagreements, empty when the calculation matches SSBTEK"
+          items:
+            $ref: "#/components/schemas/SsbtekChange"
     PrefilledChild:
       type: object
       description: "A child pre-filled from Lifecare for a financial assistance renewal.\

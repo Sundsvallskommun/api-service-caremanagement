@@ -6,5 +6,10 @@ package se.sundsvall.caremanagement.lifecare.service.model;
  */
 public enum ApplicantRole {
 	APPLICANT,
-	CO_APPLICANT
+	CO_APPLICANT,
+	/**
+	 * A household child. The Lifecare normberäkning has income columns for the applicant and co-applicant only, so a
+	 * child's income is transferred on the applicant's column; {@link SsbtekIncome#partyId()} names the child.
+	 */
+	CHILD
 }

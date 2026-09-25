@@ -18,8 +18,10 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Financial
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_RECEIVED;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.applicationTypeForSlug;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toEntity;
@@ -145,13 +147,32 @@ public class FinancialAssistanceErrandService {
 	/**
 	 * Applies the non-null fields of {@code data} onto the errand's stored application data (PATCH semantics — null
 	 * fields leave the existing values untouched). The server-owned fields ({@code applicationType},
-	 * {@code lastDailyRunAt}, timestamps) are never written from client data.
+	 * {@code lastDailyRunAt}, timestamps) are never written from client data. {@code lifecareCalculationId} is
+	 * write-once, see {@link #requireLinkableCalculation}.
 	 */
 	public void updateData(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceData data) {
 		// Scope check — throws 404 when the errand is missing in this namespace/municipality.
 		errandService.readErrand(municipalityId, namespace, errandId);
-		final var entity = financialAssistanceRepository.findByErrandId(errandId)
-			.orElseGet(() -> FinancialAssistanceEntity.create().withErrandId(errandId));
+		final var existing = financialAssistanceRepository.findByErrandId(errandId);
+		existing.ifPresent(entity -> requireLinkableCalculation(errandId, entity, data.getLifecareCalculationId()));
+		final var entity = existing.orElseGet(() -> FinancialAssistanceEntity.create().withErrandId(errandId));
 		financialAssistanceRepository.save(updateEntity(entity, data));
+	}
+
+	/**
+	 * A normberäkning is linked once. The daily prepare and Draken's BFF can both create one in Lifecare, and the loser's
+	 * calculation must not silently replace the winner's link — the errand would then point at a calculation nobody
+	 * else knows was swapped in. Linking goes through the same conditional update the prepare step uses, so a link that
+	 * lands between this read and this write is caught too. The same id again is a no-op, so retries stay safe.
+	 */
+	private void requireLinkableCalculation(final String errandId, final FinancialAssistanceEntity entity, final Integer calculationId) {
+		if ((calculationId == null) || calculationId.equals(entity.getLifecareCalculationId())) {
+			return;
+		}
+		if ((entity.getLifecareCalculationId() == null) && (financialAssistanceRepository.linkLifecareCalculationIfAbsent(errandId, calculationId) == 1)) {
+			entity.setLifecareCalculationId(calculationId);
+			return;
+		}
+		throw Problem.valueOf(CONFLICT, "Errand %s already has another normberäkning linked; read the errand again instead of creating another calculation".formatted(errandId));
 	}
 }

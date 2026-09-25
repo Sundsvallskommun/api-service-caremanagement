@@ -95,6 +95,21 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 	 * @return            one income line per (type id, recipient), amounts summed within the pair
 	 */
 	public static List<FamilyCareIncomeLine> toIncomeLines(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
+		return toIncomeLines(classified, proposal, Map.of());
+	}
+
+	/**
+	 * As {@link #toIncomeLines(List, PersonBasedCalculationProposalDTO)}, with a household child's income folded into the
+	 * applicant's column — the Lifecare normberäkning has no income column per child — and the child named in the
+	 * line's note, so the handläggare can still see whose income it is.
+	 *
+	 * @param  classified the incomes classified by the operaton rules (maybe {@code null})
+	 * @param  proposal   the FamilyCare proposal whose {@code calculationIncomeTypes} supply the type ids and names
+	 * @param  childNames the household children's first names by partyId, for the note
+	 * @return            one income line per (type id, recipient), amounts summed within the pair
+	 */
+	public static List<FamilyCareIncomeLine> toIncomeLines(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal,
+		final Map<String, String> childNames) {
 		final var typeIdByName = MapperUtil.indexIncomeTypeIds(proposal);
 		final var nameById = indexIncomeTypeNamesById(proposal);
 
@@ -106,17 +121,25 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 			// A classified income with no role can't be folded per-recipient — drop it (consistent with the
 			// calculation-incomes path, which sums per role) rather than NPE on role().name() in the grouping key.
 			.filter(resolved -> resolved.income().role() != null)
-			.collect(groupingBy(resolved -> resolved.typeId() + "|" + resolved.income().role().name(), LinkedHashMap::new, toList()))
+			.collect(groupingBy(resolved -> resolved.typeId() + "|" + column(resolved.income()).name(), LinkedHashMap::new, toList()))
 			.values().stream()
-			.map(group -> toLine(group, nameById))
+			.map(group -> toLine(group, nameById, ofNullable(childNames).orElseGet(Map::of)))
 			.toList();
 	}
 
-	private static FamilyCareIncomeLine toLine(final List<Resolved> group, final Map<Integer, String> nameById) {
+	private static FamilyCareIncomeLine toLine(final List<Resolved> group, final Map<Integer, String> nameById, final Map<String, String> childNames) {
 		final var typeId = group.getFirst().typeId();
-		final var role = group.getFirst().income().role();
-		return new FamilyCareIncomeLine(typeId, nameById.get(typeId), role.name(),
-			sumByRole(group, role), MapperUtil.toOffsetDateTime(latestDateByRole(group, role)), noteFor(group));
+		final var column = column(group.getFirst().income());
+		return new FamilyCareIncomeLine(typeId, nameById.get(typeId), column.name(),
+			sumByColumn(group, column), MapperUtil.toOffsetDateTime(latestDateByColumn(group, column)), noteFor(group, childNames));
+	}
+
+	/** The income column an income is transferred on: its own role, except a child's, which goes on the applicant's. */
+	static ApplicantRole column(final SsbtekIncome income) {
+		if (income.role() == ApplicantRole.CHILD) {
+			return ApplicantRole.APPLICANT;
+		}
+		return income.role();
 	}
 
 	private static Map<Integer, String> indexIncomeTypeNamesById(final PersonBasedCalculationProposalDTO proposal) {
@@ -201,30 +224,30 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 			.orElse(null);
 	}
 
-	private static BigDecimal sumByRole(final List<Resolved> group, final ApplicantRole role) {
+	private static BigDecimal sumByColumn(final List<Resolved> group, final ApplicantRole column) {
 		return group.stream()
 			.map(Resolved::income)
-			.filter(income -> income.role() == role)
+			.filter(income -> column(income) == column)
 			.map(SsbtekIncome::netAmount)
 			.filter(Objects::nonNull)
 			.reduce(BigDecimal::add)
 			.orElse(null);
 	}
 
-	private static LocalDate latestDateByRole(final List<Resolved> group, final ApplicantRole role) {
+	private static LocalDate latestDateByColumn(final List<Resolved> group, final ApplicantRole column) {
 		return group.stream()
 			.map(Resolved::income)
-			.filter(income -> income.role() == role)
+			.filter(income -> column(income) == column)
 			.map(SsbtekIncome::period)
 			.filter(Objects::nonNull)
 			.max(Comparator.naturalOrder())
 			.orElse(null);
 	}
 
-	private static String noteFor(final List<Resolved> group) {
+	private static String noteFor(final List<Resolved> group, final Map<String, String> childNames) {
 		return "SSBTEK: " + group.stream()
 			.map(Resolved::income)
-			.map(ClassifiedIncomeToFamilyCareMapper::describe)
+			.map(income -> describe(income) + income.childSuffix(childNames))
 			.distinct()
 			.collect(joining("; "));
 	}

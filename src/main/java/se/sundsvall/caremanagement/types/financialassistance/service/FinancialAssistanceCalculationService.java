@@ -87,12 +87,13 @@ public class FinancialAssistanceCalculationService {
 	private final UntransferableIncomeFeeder untransferableIncomeFeeder;
 	private final PaymentWarningService paymentWarningService;
 	private final LifecareServiceIdService lifecareServiceIdService;
+	private final CalculationSyncService calculationSyncService;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
 		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder, final UntransferableIncomeFeeder untransferableIncomeFeeder,
-		final PaymentWarningService paymentWarningService, final LifecareServiceIdService lifecareServiceIdService) {
+		final PaymentWarningService paymentWarningService, final LifecareServiceIdService lifecareServiceIdService, final CalculationSyncService calculationSyncService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
@@ -109,6 +110,7 @@ public class FinancialAssistanceCalculationService {
 		this.untransferableIncomeFeeder = untransferableIncomeFeeder;
 		this.paymentWarningService = paymentWarningService;
 		this.lifecareServiceIdService = lifecareServiceIdService;
+		this.calculationSyncService = calculationSyncService;
 	}
 
 	/**
@@ -136,6 +138,12 @@ public class FinancialAssistanceCalculationService {
 	 * completeness verdict, the SSBTEK income warnings and the draft-independent rule warnings, the one-time
 	 * {@code RECOMMENDATION} decision (on careM's basis — agreed with Draken), the completeness status, the read-failure
 	 * warning, the medsökande payment warning and the daily-run stamp.
+	 *
+	 * <p>
+	 * <strong>SSBTEK keeps reaching the saved normberäkning</strong> ({@link #syncWithLifecare}): each run after the link
+	 * records this run's SSBTEK amounts and compares them with the calculation in Lifecare, raising a
+	 * {@code SSBTEK_CALCULATION_DIFF} warning per disagreement. Draken's BFF writes the changes into the calculation —
+	 * FamilyCare cannot change one — see {@link CalculationSyncService}.
 	 */
 	public CalculationResponse prepareCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
 		if (TRUE.equals(request.getSsbtekError())) {
@@ -150,7 +158,10 @@ public class FinancialAssistanceCalculationService {
 		recordRecommendationOnce(municipalityId, namespace, input.errandId(), response);
 		refresh.ifPresentOrElse(
 			draft -> reconcileWithDraft(input, response, draft, rules),
-			() -> reconcileKeepingDraft(input, response, rules));
+			() -> {
+				reconcileKeepingDraft(input, response, rules);
+				syncWithLifecare(municipalityId, input);
+			});
 		if (refresh.isPresent() && response.isInformationComplete()) {
 			proposeInLifecare(municipalityId, input);
 		}
@@ -280,7 +291,7 @@ public class FinancialAssistanceCalculationService {
 	 * {@link #reconcileWithDraft}.
 	 */
 	private DraftRefresh refreshDraft(final String municipalityId, final PrepareInput input, final PreviousHousehold previous) {
-		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
+		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes(), HouseholdPartyService.childNames(input.errand())));
 		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, input.errandId(), input.errand(),
 			previousExpenseAmounts(municipalityId, input.applicant(), input.applicationMonth()), input.applicantAge());
 		// NORM-04: norm, familj and gemensamma kostnader come from the previous normberäkning (regelverk återansökan);
@@ -305,7 +316,8 @@ public class FinancialAssistanceCalculationService {
 		// An income the rules transfer but no Lifecare income type can take is missing from the rows above. Named here,
 		// from the transfer's own filter, so the draft never silently lacks an income the regelverk says to count.
 		final var untransferableWarnings = untransferableIncomeFeeder.untransferableIncomeWarnings(
-			calculationService.untransferableIncomes(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
+			calculationService.untransferableIncomes(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()),
+			HouseholdPartyService.childNames(input.errand()));
 		// Read after the merge, not before: the duplicate only exists once the refreshed process rows sit alongside
 		// whatever the caseworker has added by hand.
 		final var duplicateWarnings = draftService.duplicateIncomeWarnings(input.errandId());
@@ -419,6 +431,8 @@ public class FinancialAssistanceCalculationService {
 		if (financialAssistanceRepository.linkLifecareCalculationIfAbsent(input.errandId(), calculationId) == 1) {
 			// Keep the loaded entity in step with the row, so nothing later in this run treats the errand as unlinked.
 			input.errand().setLifecareCalculationId(calculationId);
+			// What was just posted is what the system wrote: the baseline later SSBTEK changes are measured against.
+			calculationSyncService.seedFromProposal(input.errandId(), draftService.allIncomes(input.errandId()));
 			LOG.info("Created the normberäkning proposal {} in Lifecare for errand {}", calculationId, sanitizeForLogging(input.errandId()));
 			return;
 		}
@@ -439,6 +453,32 @@ public class FinancialAssistanceCalculationService {
 			header.getCalculationDate(), header.getHasCustomHouseholdSize(), header.getHouseholdSize(),
 			lifecareServiceIdService.currentOrResolve(municipalityId, input.namespace(), errandId));
 		return calculationService.commitEffective(municipalityId, input.applicant(), input.applicationMonth(), calculationHeader, incomes, expenses, persons);
+	}
+
+	/**
+	 * Record this run's SSBTEK amounts against the normberäkning saved in Lifecare and compare the two. The income rows
+	 * are computed exactly as the draft refresh computes them, but are not merged into the frozen draft. Best-effort: a
+	 * Lifecare read failing here must not fail the rest of the run, so it is logged and the warnings are left as they
+	 * were.
+	 */
+	private void syncWithLifecare(final String municipalityId, final PrepareInput input) {
+		final var header = draftService.header(input.errandId());
+		if (header.isEmpty()) {
+			// The sync rows hang off the draft; without one (a BFF-created calculation on an errand never prepared) there
+			// is no period to read the calculation in and nothing to record against.
+			return;
+		}
+		try {
+			final var incomeRows = calculationFeeder.incomeRows(input.errandId(),
+				calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes(), HouseholdPartyService.childNames(input.errand())));
+			calculationSyncService.recordSsbtek(input.errandId(), incomeRows);
+			final var from = ofNullable(header.get().getCalculationFromDate()).orElseGet(() -> input.applicationMonth().atDay(1));
+			final var to = ofNullable(header.get().getCalculationToDate()).orElseGet(() -> input.applicationMonth().atEndOfMonth());
+			calculationSyncService.reconcileWarnings(municipalityId, input.errandId(), input.applicant(), input.errand().getLifecareCalculationId(), from, to);
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not compare SSBTEK with the normberäkning in Lifecare for errand {} ({}) — the next run tries again",
+				sanitizeForLogging(input.errandId()), e.getClass().getSimpleName());
+		}
 	}
 
 	/** Stamp the errand with this daily-loop run so Draken can show "last checked" and ops can spot stale loops. */

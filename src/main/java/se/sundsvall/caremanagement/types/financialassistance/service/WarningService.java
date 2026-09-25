@@ -136,6 +136,13 @@ public class WarningService {
 	 */
 	public static final String TYPE_LIFECARE_READ_FAILED = "LIFECARE_READ_FAILED";
 
+	/**
+	 * The normberäkning saved in Lifecare disagrees with the latest SSBTEK answer on one income — see
+	 * {@link CalculationSyncService}. Reconciled on its own (only when the calculation could be read), so the daily
+	 * calculation reconcile neither creates nor auto-closes it.
+	 */
+	public static final String TYPE_SSBTEK_CALCULATION_DIFF = "SSBTEK_CALCULATION_DIFF";
+
 	/** Source keys of {@link #TYPE_LIFECARE_READ_FAILED} — one per Lifecare read whose dependent warnings it guards. */
 	public static final String SOURCE_KEY_LIFECARE_RECOVERY_CLAIMS = "lifecare-read:recovery-claims";
 	public static final String SOURCE_KEY_LIFECARE_PREVIOUS_DECISION = "lifecare-read:previous-decision";
@@ -193,6 +200,8 @@ public class WarningService {
 	 * closes its own row, and no other reconcile creates or auto-closes one.
 	 */
 	public static final Set<String> LIFECARE_READ_FAILURE_TYPES = Set.of(TYPE_LIFECARE_READ_FAILED);
+	/** The SSBTEK-vs-Lifecare-calculation warnings, reconciled by {@link CalculationSyncService}. */
+	public static final Set<String> CALCULATION_SYNC_TYPES = Set.of(TYPE_SSBTEK_CALCULATION_DIFF);
 	/** The warning types that depend on the previous Lifecare decision read. */
 	public static final Set<String> PREVIOUS_DECISION_TYPES = Set.of(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT);
 	/** The warning types that depend on the återkrav read. */
@@ -271,7 +280,8 @@ public class WarningService {
 		Map.entry(TYPE_FAMILY_DEVIATING_PERIOD, "Kontrollera omfattning"),
 		Map.entry(TYPE_COMMON_HOUSEHOLD_COST_CHECK, "Kontrollera gemensamma hushållskostnader"),
 		Map.entry(TYPE_PREVIOUS_NORM_NOT_AVAILABLE, "Föregående norm saknas för månaden"),
-		Map.entry(TYPE_RECOVERY_CLAIM, "Återkrav i Lifecare"));
+		Map.entry(TYPE_RECOVERY_CLAIM, "Återkrav i Lifecare"),
+		Map.entry(TYPE_SSBTEK_CALCULATION_DIFF, "SSBTEK skiljer sig från normberäkningen"));
 
 	/** Warning status → Swedish display name. */
 	private static final Map<String, String> STATUS_DISPLAY_NAME = Map.ofEntries(
@@ -441,12 +451,13 @@ public class WarningService {
 	}
 
 	/**
-	 * Types reconciled by something other than the daily calculation reconcile — the two section proposals and the
-	 * SSBTEK and Lifecare read failures. The calculation reconcile must neither create nor auto-close these.
+	 * Types reconciled by something other than the daily calculation reconcile — the two section proposals, the
+	 * SSBTEK and Lifecare read failures and the SSBTEK-vs-calculation comparison. The calculation reconcile must neither
+	 * create nor auto-close these.
 	 */
 	private static boolean isSeparatelyReconciled(final String type) {
 		return DECISION_PROPOSAL_TYPES.contains(type) || PAYMENT_PROPOSAL_TYPES.contains(type) || SSBTEK_READ_FAILURE_TYPES.contains(type)
-			|| LIFECARE_READ_FAILURE_TYPES.contains(type);
+			|| LIFECARE_READ_FAILURE_TYPES.contains(type) || CALCULATION_SYNC_TYPES.contains(type);
 	}
 
 	/**

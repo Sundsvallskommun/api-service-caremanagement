@@ -5,6 +5,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalD
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -19,6 +20,7 @@ import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.APPLICANT;
+import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CHILD;
 import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;
 
 class ClassifiedIncomeToFamilyCareMapperTest {
@@ -197,5 +199,32 @@ class ClassifiedIncomeToFamilyCareMapperTest {
 			proposal());
 
 		assertThat(lines).extracting(FamilyCareIncomeLine::typeId).containsExactly(20);
+	}
+
+	@Test
+	void foldsAHouseholdChildsIncomeIntoTheApplicantsColumnAndNamesTheChild() {
+		final var child = new SsbtekIncome("Bostadsbidrag", "Barnpension", null, new BigDecimal("300"), LocalDate.parse("2026-09-25"), null, null, null, CHILD, "child-1");
+		final var unnamedChild = new SsbtekIncome("Bostadsbidrag", null, null, new BigDecimal("100"), LocalDate.parse("2026-09-10"), null, null, null, CHILD, "child-2");
+
+		final var lines = ClassifiedIncomeToFamilyCareMapper.toIncomeLines(List.of(
+			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED", "1850", APPLICANT),
+			new ClassifiedIncome(child, "TA_MED", "Bostadsbidrag", false, "Ta med"),
+			new ClassifiedIncome(unnamedChild, "TA_MED", "Bostadsbidrag", false, "Ta med")),
+			proposal(), Map.of("child-1", "Kalle"));
+
+		assertThat(lines).singleElement().satisfies(line -> {
+			assertThat(line.recipient()).isEqualTo("APPLICANT");
+			assertThat(line.amount()).isEqualByComparingTo("2250");
+			assertThat(line.date().toLocalDate()).isEqualTo(LocalDate.parse("2026-09-25"));
+			assertThat(line.note()).isEqualTo("SSBTEK: Bostadsbidrag / Månad; Bostadsbidrag / Barnpension (barn: Kalle); Bostadsbidrag (barn)");
+		});
+	}
+
+	@Test
+	void childSuffixIsEmptyForAnAdult() {
+		final var adult = new SsbtekIncome("Lön", null, null, BigDecimal.ONE, null, CO_APPLICANT);
+
+		assertThat(adult.childSuffix(Map.of())).isEmpty();
+		assertThat(ClassifiedIncomeToFamilyCareMapper.column(adult)).isEqualTo(CO_APPLICANT);
 	}
 }

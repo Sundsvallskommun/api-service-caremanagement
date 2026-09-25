@@ -12,7 +12,9 @@ import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.HouseholdChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -123,5 +125,25 @@ class HouseholdIdentifiersServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 		verifyNoInteractions(repositoryMock, citizenServiceMock);
+	}
+
+	@Test
+	void listsTheChildrenWithAPartyIdAndTheirPersonalNumbers() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Errand.create().withId(ERRAND_ID).withErrandNumber(ERRAND_NUMBER));
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("party-1")))
+			.withChildren(List.of(
+				FaChild.create().withPartyId("child-1"),
+				FaChild.create().withPartyId("child-2"),
+				FaChild.create().withFirstName("Utan id")))));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "party-1")).thenReturn(Optional.of("19800101T001"));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "child-1")).thenReturn(Optional.of("20100101T003"));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, "child-2")).thenReturn(Optional.empty());
+
+		final var context = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(context.children()).containsExactly(new HouseholdChild("child-1", "20100101T003"), new HouseholdChild("child-2", null));
 	}
 }

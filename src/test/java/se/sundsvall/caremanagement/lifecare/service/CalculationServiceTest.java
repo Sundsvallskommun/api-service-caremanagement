@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -79,7 +80,7 @@ class CalculationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
 		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, MONTH)).thenReturn(List.of());
 
-		final var lines = service.incomeLines(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]");
+		final var lines = service.incomeLines(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]", Map.of());
 
 		assertThat(lines).singleElement().satisfies(line -> {
 			assertThat(line.typeId()).isEqualTo(20);
@@ -160,7 +161,7 @@ class CalculationServiceTest {
 			.thenThrow(new IllegalStateException("Lifecare unavailable"));
 
 		// an income counted twice surfaces as a duplicate warning; one silently withheld surfaces as nothing
-		assertThat(service.incomeLines(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]")).hasSize(1);
+		assertThat(service.incomeLines(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]", Map.of())).hasSize(1);
 	}
 
 	@Test

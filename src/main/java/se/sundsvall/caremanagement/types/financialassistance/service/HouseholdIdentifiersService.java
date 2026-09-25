@@ -3,15 +3,19 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.HouseholdChild;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.HouseholdIdentifiers;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
+import static java.util.Optional.ofNullable;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.ROLE_CO_APPLICANT;
 
@@ -46,14 +50,27 @@ public class HouseholdIdentifiersService {
 		final var errand = errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 
 		final var stakeholders = stakeholderService.readAll(municipalityId, namespace, errandId);
-		final var persons = financialAssistanceRepository.findByErrandId(errandId)
-			.map(FinancialAssistanceEntity::getPersons)
-			.orElse(List.of());
+		final var errandData = financialAssistanceRepository.findByErrandId(errandId);
+		final var persons = errandData.map(FinancialAssistanceEntity::getPersons).orElse(List.of());
 
 		return new HouseholdIdentifiers(
 			errand.getErrandNumber(),
 			resolvePersonalNumber(municipalityId, stakeholders, persons, ROLE_APPLICANT),
-			resolvePersonalNumber(municipalityId, stakeholders, persons, ROLE_CO_APPLICANT));
+			resolvePersonalNumber(municipalityId, stakeholders, persons, ROLE_CO_APPLICANT),
+			children(municipalityId, errandData.map(FinancialAssistanceEntity::getChildren).orElse(List.of())));
+	}
+
+	/**
+	 * The children named on the application that have a partyId, each with its personal number ({@code null} when it
+	 * cannot be resolved). A child without a partyId has no identity to read SSBTEK with and is left out.
+	 */
+	private List<HouseholdChild> children(final String municipalityId, final List<FaChild> children) {
+		return ofNullable(children).orElseGet(List::of).stream()
+			.map(FaChild::getPartyId)
+			.filter(StringUtils::hasText)
+			.distinct()
+			.map(partyId -> new HouseholdChild(partyId, citizenService.getPersonalNumber(municipalityId, partyId).orElse(null)))
+			.toList();
 	}
 
 	/** The personal number for the household member with the given role, or {@code null} when absent or unresolvable. */

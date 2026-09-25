@@ -4,6 +4,7 @@ import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBas
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInfoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInvestigationTypeDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceTypeDTO;
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
@@ -41,7 +42,8 @@ class ActualisationServiceTest {
 
 	/** The real record, not a mock: it is configuration, and the assembler reads every field off it. */
 	private final ActualisationProperties names = new ActualisationProperties(
-		"Ek Återansökan Digital Ekonomiskt bistånd", "Den enskilde", "Ekonomiskt bistånd", "Ekonomiskt bistånd");
+		"Ek Återansökan Digital Ekonomiskt bistånd", "Den enskilde", "Ekonomiskt bistånd", "Ekonomiskt bistånd",
+		"EK Nyansökan Digital Ekonomiskt bistånd");
 
 	private ActualisationService service;
 
@@ -60,9 +62,32 @@ class ActualisationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
 		when(lifecareFamilyCareIntegrationMock.createActualisation(eq(MUNICIPALITY_ID), any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
-		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE);
+		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE, false);
 
 		assertThat(result.serviceId()).isEqualTo(7700);
+	}
+
+	@Test
+	void createForNewApplicationUsesTheNyansokanTypeAndLinksNoInsats() {
+		// The shape of Lifecare's catalogue: the återansökan type links the EB insats, the nyansökan type an
+		// ekonomiutredning. A nyansökan filed under the återansökan type is refused with 403 "Aktualisering".
+		final var proposal = new PersonBasedAktualiseringProposalDTO()
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(28).name("EK Nyansökan Digital Ekonomiskt bistånd")
+				.addInvestigationTypesItem(new PersonBasedAktualiseringsInvestigationTypeDTO().id(21)))
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(29).name("EK Återansökan Digital Ekonomiskt bistånd")
+				.addServiceTypesItem(new PersonBasedAktualiseringsServiceTypeDTO().id(27)))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(7700).type(27));
+		when(caseworkerResolverMock.resolve(MUNICIPALITY_ID, APPLICANT, DATE)).thenReturn(Optional.empty());
+		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
+		when(lifecareFamilyCareIntegrationMock.createActualisation(eq(MUNICIPALITY_ID), any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
+
+		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE, true);
+
+		final var bodyCaptor = ArgumentCaptor.forClass(PostAktualiseringsBodyRequest.class);
+		verify(lifecareFamilyCareIntegrationMock).createActualisation(eq(MUNICIPALITY_ID), bodyCaptor.capture());
+		assertThat(bodyCaptor.getValue().getType()).isEqualTo(28);
+		assertThat(bodyCaptor.getValue().getServiceId()).isNull();
+		assertThat(result.serviceId()).isNull();
 	}
 
 	@Test
@@ -93,7 +118,7 @@ class ActualisationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
 		when(lifecareFamilyCareIntegrationMock.createActualisation(eq(MUNICIPALITY_ID), any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
-		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE);
+		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE, false);
 
 		assertThat(result.actualisationId()).isEqualTo(5012);
 		assertThat(result.assignedUserId()).isEqualTo("anna01ker");
@@ -115,7 +140,7 @@ class ActualisationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
 		when(lifecareFamilyCareIntegrationMock.createActualisation(eq(MUNICIPALITY_ID), any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
-		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE);
+		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE, false);
 
 		assertThat(result.actualisationId()).isEqualTo(5012);
 		assertThat(result.assignedUserId()).isNull();
@@ -134,7 +159,7 @@ class ActualisationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
 		when(lifecareFamilyCareIntegrationMock.createActualisation(eq(MUNICIPALITY_ID), any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
 
-		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE);
+		final var result = service.createActualisation(MUNICIPALITY_ID, APPLICANT, DATE, false);
 
 		assertThat(result.actualisationId()).isEqualTo(5012);
 		assertThat(result.assignedUserId()).isNull();
