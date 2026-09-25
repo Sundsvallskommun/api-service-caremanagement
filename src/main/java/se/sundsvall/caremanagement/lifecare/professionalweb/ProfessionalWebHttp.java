@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.security.Truststore;
@@ -66,6 +67,8 @@ public class ProfessionalWebHttp {
 	private final HttpClient client;
 	private final Duration readTimeout;
 
+	// Two constructors, so Spring has to be told which one it injects; the other is for tests.
+	@Autowired
 	public ProfessionalWebHttp(final ProfessionalWebProperties properties, final Truststore truststore) {
 		this(HttpClient.newBuilder()
 			.followRedirects(HttpClient.Redirect.NEVER)
