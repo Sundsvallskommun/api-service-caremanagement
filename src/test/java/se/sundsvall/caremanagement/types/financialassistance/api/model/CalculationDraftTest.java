@@ -25,6 +25,7 @@ class CalculationDraftTest {
 	@BeforeAll
 	static void setup() {
 		BeanMatchers.registerValueGenerator(() -> now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+		BeanMatchers.registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(10000)), LocalDate.class);
 		BeanMatchers.registerValueGenerator(() -> List.of(NormIncomeRow.create().withTypeName("type-" + new Random().nextInt())), List.class);
 	}
 
