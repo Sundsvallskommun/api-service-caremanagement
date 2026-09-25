@@ -6911,9 +6911,11 @@ paths:
     get:
       tags:
       - Financial Assistance · SSBTEK
-      summary: Read the SSBTEK basis of an errand's applicant or co-applicant
+      summary: "Read the SSBTEK basis of an errand's applicant, co-applicant or\
+        \ child"
       description: "The SSBTEK basis of the errand's applicant (or, with person=CO_APPLICANT,\
-        \ co-applicant), fetched live via api-service-financial-aid and forwarded\
+        \ co-applicant; with person=CHILD and childPartyId, one of the household\
+        \ children named on the application), fetched live via api-service-financial-aid and forwarded\
         \ verbatim — the answer per responding agency (af, csn, fk, skv, so, tns,\
         \ miv), so a caseworker can see what the composite service actually said rather\
         \ than only the classified result. The person is resolved from the errand,\
@@ -6944,11 +6946,19 @@ paths:
           type: string
       - name: person
         in: query
-        description: "Whose basis: the errand's APPLICANT (default) or CO_APPLICANT"
+        description: "Whose basis: the errand's APPLICANT (default), CO_APPLICANT\
+          \ or a CHILD (then childPartyId is required)"
         required: false
         schema:
           type: string
           default: APPLICANT
+      - name: childPartyId
+        in: query
+        description: "The partyId of the household child to read. Required with\
+          \ person=CHILD, rejected otherwise."
+        required: false
+        schema:
+          type: string
       - name: from
         in: query
         description: Inclusive start of the period (ISO date). Defaults to the first
@@ -6974,7 +6984,7 @@ paths:
                 $ref: "#/components/schemas/SsbtekBasis"
         "404":
           description: "Not Found — no such errand, no household member in that role,\
-            \ or an unknown citizen"
+            \ no such child in the household, or an unknown citizen"
           content:
             application/problem+json:
               schema:

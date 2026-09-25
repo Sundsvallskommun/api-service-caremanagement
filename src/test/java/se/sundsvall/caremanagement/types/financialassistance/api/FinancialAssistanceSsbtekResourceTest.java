@@ -41,7 +41,7 @@ class FinancialAssistanceSsbtekResourceTest {
 
 	@Test
 	void getBasis() {
-		when(ssbtekServiceMock.getBasis(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("APPLICANT"), isNull(), isNull()))
+		when(ssbtekServiceMock.getBasis(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("APPLICANT"), isNull(), isNull(), isNull()))
 			.thenReturn(SsbtekBasis.create()
 				.withFrom(LocalDate.of(2026, JANUARY, 1))
 				.withTo(LocalDate.of(2026, MARCH, 31))
@@ -60,12 +60,12 @@ class FinancialAssistanceSsbtekResourceTest {
 		assertThat(result.getFrom()).isEqualTo(LocalDate.of(2026, JANUARY, 1));
 		assertThat(result.getTo()).isEqualTo(LocalDate.of(2026, MARCH, 31));
 		assertThat(result.getAgencies()).containsOnlyKeys("fk");
-		verify(ssbtekServiceMock).getBasis(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("APPLICANT"), isNull(), isNull());
+		verify(ssbtekServiceMock).getBasis(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("APPLICANT"), isNull(), isNull(), isNull());
 	}
 
 	@Test
 	void getBasisForTheCoApplicantWithExplicitPeriod() {
-		when(ssbtekServiceMock.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CO_APPLICANT", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31)))
+		when(ssbtekServiceMock.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CO_APPLICANT", null, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31)))
 			.thenReturn(SsbtekBasis.create().withAgencies(Map.of()));
 
 		webTestClient.get()
@@ -74,6 +74,21 @@ class FinancialAssistanceSsbtekResourceTest {
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(ssbtekServiceMock).getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CO_APPLICANT", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31));
+		verify(ssbtekServiceMock).getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CO_APPLICANT", null, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31));
+	}
+
+	@Test
+	void getBasisForAHouseholdChild() {
+		final var childPartyId = "5b1e7c3a-9d2f-4e8b-a6c4-1f0d2e3c4b5a";
+		when(ssbtekServiceMock.getBasis(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CHILD"), eq(childPartyId), isNull(), isNull()))
+			.thenReturn(SsbtekBasis.create().withAgencies(Map.of()));
+
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH).queryParam("person", "CHILD").queryParam("childPartyId", childPartyId).build(PATH_VARIABLES))
+			.header("X-Sent-By", "joe01doe; type=adAccount")
+			.exchange()
+			.expectStatus().isOk();
+
+		verify(ssbtekServiceMock).getBasis(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq("CHILD"), eq(childPartyId), isNull(), isNull());
 	}
 }

@@ -12,6 +12,7 @@ import se.sundsvall.caremanagement.financialaid.integration.FinancialAidIntegrat
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.SsbtekBasis;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -22,11 +23,12 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /**
  * An errand's household member's SSBTEK basis, read live so a caseworker can see what the composite service actually
- * answered (GUI-01, manual SSBTEK check). caremanagement only forwards: the person is the errand's applicant or
- * co-applicant — resolved from the errand the way the beredning resolves them, never taken from the caller — their
- * personnummer comes from the citizen service, the call goes to api-service-financial-aid, and the per-agency answer is
- * returned unmodified. Scoping the read to an errand is what puts it in the errand's access log: the path carries the
- * errand id, so {@code ErrandEventInterceptor} records who read whose SSBTEK data and when.
+ * answered (GUI-01, manual SSBTEK check). caremanagement only forwards: the person is the errand's applicant,
+ * co-applicant or one of the household children on the application — resolved from the errand the way the beredning
+ * resolves them, never taken from the caller (a child's partyId is only accepted when the errand names that child) —
+ * their personnummer comes from the citizen service, the call goes to api-service-financial-aid, and the per-agency
+ * answer is returned unmodified. Scoping the read to an errand is what puts it in the errand's access log: the path
+ * carries the errand id, so {@code ErrandEventInterceptor} records who read whose SSBTEK data and when.
  *
  * <p>
  * Nothing is stored. The basis is income data for a named person, so it is held only for the length of the request —
@@ -45,6 +47,8 @@ public class FinancialAssistanceSsbtekService {
 	 */
 	private static final int RULE_PERIOD_LOOKBACK_MONTHS = 2;
 
+	private static final String ROLE_CHILD = "CHILD";
+
 	private final ErrandService errandService;
 	private final StakeholderService stakeholderService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
@@ -61,8 +65,10 @@ public class FinancialAssistanceSsbtekService {
 	}
 
 	/**
-	 * Fetch the SSBTEK basis of an errand's applicant or co-applicant for a period. Scoped: {@code 404} when the errand is
-	 * missing in this namespace/municipality, when it has no member in the asked-for role, or when the citizen is unknown.
+	 * Fetch the SSBTEK basis of an errand's applicant, co-applicant or household child for a period. Scoped: {@code 404}
+	 * when the errand is missing in this namespace/municipality, when it has no member in the asked-for role, when the
+	 * asked-for child is not one of the errand's household children, or when the citizen is unknown. A child is named by
+	 * {@code childPartyId}, which is required with role {@code CHILD} and rejected ({@code 400}) with any other role.
 	 *
 	 * <p>
 	 * The window is resolved whole-months so it always lines up with the rule periods: with neither bound given it runs
@@ -74,15 +80,17 @@ public class FinancialAssistanceSsbtekService {
 	 * @param  municipalityId the id of the municipality
 	 * @param  namespace      the errand's namespace
 	 * @param  errandId       the errand whose household member is read
-	 * @param  role           {@code APPLICANT} or {@code CO_APPLICANT}
+	 * @param  role           {@code APPLICANT}, {@code CO_APPLICANT} or {@code CHILD}
+	 * @param  childPartyId   the household child to read when {@code role} is {@code CHILD}, otherwise {@code null}
 	 * @param  from           inclusive start of the period, or {@code null} to derive it
 	 * @param  to             inclusive end of the period, or {@code null} to derive it
 	 * @return                the per-agency basis plus the resolved period
 	 */
-	public SsbtekBasis getBasis(final String municipalityId, final String namespace, final String errandId, final String role, final LocalDate from,
-		final LocalDate to) {
+	public SsbtekBasis getBasis(final String municipalityId, final String namespace, final String errandId, final String role, final String childPartyId,
+		final LocalDate from, final LocalDate to) {
+		validateChildSelection(role, childPartyId);
 		errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
-		final var partyId = householdPartyId(municipalityId, namespace, errandId, role);
+		final var partyId = resolvePartyId(municipalityId, namespace, errandId, role, childPartyId);
 		final var applicant = personalNumber(municipalityId, partyId);
 		final var fromDate = resolveFrom(from, to);
 		final var toDate = resolveTo(from, to);
@@ -119,6 +127,36 @@ public class FinancialAssistanceSsbtekService {
 	private Map<String, Map<String, Object>> basisFor(final String municipalityId, final String applicant, final LocalDate fromDate, final LocalDate toDate) {
 		return ofNullable(financialAidIntegration.getFinancialAidBasis(municipalityId, applicant, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
 			.orElseGet(Map::of);
+	}
+
+	/** A child is named by partyId and only a child is: the pairing is checked before anything is read. */
+	private static void validateChildSelection(final String role, final String childPartyId) {
+		final var isChild = ROLE_CHILD.equals(role);
+		if (isChild && childPartyId == null) {
+			throw Problem.valueOf(BAD_REQUEST, "'childPartyId' is required when person is CHILD");
+		}
+		if (!isChild && childPartyId != null) {
+			throw Problem.valueOf(BAD_REQUEST, "'childPartyId' is only allowed when person is CHILD");
+		}
+	}
+
+	private String resolvePartyId(final String municipalityId, final String namespace, final String errandId, final String role, final String childPartyId) {
+		if (ROLE_CHILD.equals(role)) {
+			return householdChildPartyId(errandId, childPartyId);
+		}
+		return householdPartyId(municipalityId, namespace, errandId, role);
+	}
+
+	/** The child's partyId when the errand's application names that child, or 404 — never a caller-chosen person. */
+	private String householdChildPartyId(final String errandId, final String childPartyId) {
+		return financialAssistanceRepository.findByErrandId(errandId)
+			.map(FinancialAssistanceEntity::getChildren)
+			.orElseGet(List::of)
+			.stream()
+			.map(FaChild::getPartyId)
+			.filter(childPartyId::equals)
+			.findFirst()
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "Errand %s has no household child with partyId %s".formatted(errandId, childPartyId)));
 	}
 
 	/** The partyId of the errand's member in {@code role}, or 404 when the household has none. */

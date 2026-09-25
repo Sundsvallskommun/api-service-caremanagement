@@ -76,13 +76,28 @@ class FinancialAssistanceSsbtekResourceFailureTest {
 	@Test
 	void getBasisUnknownPerson() {
 		webTestClient.get()
-			.uri(uri -> uri.path(PATH).queryParam("person", "CHILD").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.uri(uri -> uri.path(PATH).queryParam("person", "SIBLING").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
 			.header("X-Sent-By", "joe01doe; type=adAccount")
 			.exchange()
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
-				tuple("getBasis.person", "must be one of: [APPLICANT, CO_APPLICANT]")));
+				tuple("getBasis.person", "must be one of: [APPLICANT, CO_APPLICANT, CHILD]")));
+
+		verifyNoInteractions(ssbtekServiceMock);
+	}
+
+	@Test
+	void getBasisInvalidChildPartyId() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH).queryParam("person", "CHILD").queryParam("childPartyId", "not-a-uuid")
+				.build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header("X-Sent-By", "joe01doe; type=adAccount")
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("getBasis.childPartyId", "not a valid UUID")));
 
 		verifyNoInteractions(ssbtekServiceMock);
 	}

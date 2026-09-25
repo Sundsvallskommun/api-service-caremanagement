@@ -50,9 +50,10 @@ class FinancialAssistanceSsbtekResource {
 	}
 
 	@GetMapping(path = "/financial-assistance/{errandId}/ssbtek", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Read the SSBTEK basis of an errand's applicant or co-applicant",
+	@Operation(summary = "Read the SSBTEK basis of an errand's applicant, co-applicant or child",
 		description = """
-			The SSBTEK basis of the errand's applicant (or, with person=CO_APPLICANT, co-applicant), fetched live via \
+			The SSBTEK basis of the errand's applicant (or, with person=CO_APPLICANT, co-applicant; with person=CHILD and \
+			childPartyId, one of the household children named on the application), fetched live via \
 			api-service-financial-aid and forwarded verbatim — the answer per responding agency (af, csn, fk, skv, so, \
 			tns, miv), so a caseworker can see what the composite service actually said rather than only the classified \
 			result. The person is resolved from the errand, never taken from the caller, and the read is recorded in the \
@@ -63,7 +64,7 @@ class FinancialAssistanceSsbtekResource {
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404",
-				description = "Not Found — no such errand, no household member in that role, or an unknown citizen",
+				description = "Not Found — no such errand, no household member in that role, no such child in the household, or an unknown citizen",
 				content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
 			@ApiResponse(responseCode = "502", description = "Bad Gateway", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
@@ -71,12 +72,13 @@ class FinancialAssistanceSsbtekResource {
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId,
-		@Parameter(description = "Whose basis: the errand's APPLICANT (default) or CO_APPLICANT") @OneOf({
-			"APPLICANT", "CO_APPLICANT"
+		@Parameter(description = "Whose basis: the errand's APPLICANT (default), CO_APPLICANT or a CHILD (then childPartyId is required)") @OneOf({
+			"APPLICANT", "CO_APPLICANT", "CHILD"
 		}) @RequestParam(required = false, defaultValue = "APPLICANT") final String person,
+		@Parameter(description = "The partyId of the household child to read. Required with person=CHILD, rejected otherwise.") @ValidUuid(nullable = true) @RequestParam(required = false) final String childPartyId,
 		@Parameter(description = "Inclusive start of the period (ISO date). Defaults to the first day of month M−2.") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
 		@Parameter(description = "Inclusive end of the period (ISO date). Defaults to the last day of the current month.") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to) {
 
-		return ok(service.getBasis(municipalityId, namespace, errandId, person, from, to));
+		return ok(service.getBasis(municipalityId, namespace, errandId, person, childPartyId, from, to));
 	}
 }

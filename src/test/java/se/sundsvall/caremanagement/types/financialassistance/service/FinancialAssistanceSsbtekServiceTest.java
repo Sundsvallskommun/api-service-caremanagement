@@ -17,6 +17,7 @@ import se.sundsvall.caremanagement.financialaid.integration.FinancialAidIntegrat
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.problem.Problem;
@@ -46,6 +47,7 @@ class FinancialAssistanceSsbtekServiceTest {
 	private static final String NAMESPACE = "FINANCIAL_ASSISTANCE";
 	private static final String ERRAND_ID = "8d6a1d52-6f8c-4a64-9a55-0b8e9f7b2c11";
 	private static final String CO_APPLICANT_PARTY_ID = "0c9f2a8e-3d41-4b7a-9c2e-5f6a7b8c9d01";
+	private static final String CHILD_PARTY_ID = "5b1e7c3a-9d2f-4e8b-a6c4-1f0d2e3c4b5a";
 
 	@Mock
 	private ErrandService errandServiceMock;
@@ -80,17 +82,71 @@ class FinancialAssistanceSsbtekServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CO_APPLICANT_PARTY_ID)).thenReturn(Optional.of("199202021234"));
 		when(financialAidIntegrationMock.getFinancialAidBasis(MUNICIPALITY_ID, "199202021234", "2026-01-01", "2026-03-31")).thenReturn(Map.of());
 
-		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CO_APPLICANT", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31));
+		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CO_APPLICANT", null, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31));
 
 		assertThat(result.getAgencies()).isEmpty();
 		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
+	void getBasisReadsAHouseholdChildNamedOnTheApplication() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()
+			.withChildren(List.of(FaChild.create().withPartyId("11111111-2222-3333-4444-555555555555"), FaChild.create().withPartyId(CHILD_PARTY_ID)))));
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CHILD_PARTY_ID)).thenReturn(Optional.of("201001011234"));
+		when(financialAidIntegrationMock.getFinancialAidBasis(MUNICIPALITY_ID, "201001011234", "2026-01-01", "2026-03-31")).thenReturn(Map.of());
+
+		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CHILD", CHILD_PARTY_ID, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31));
+
+		assertThat(result.getAgencies()).isEmpty();
+		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verifyNoInteractions(stakeholderServiceMock);
+	}
+
+	@Test
+	void getBasisIs404ForAChildNotInTheHousehold() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()
+			.withChildren(List.of(FaChild.create().withPartyId("11111111-2222-3333-4444-555555555555")))));
+
+		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CHILD", CHILD_PARTY_ID, null, null))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessageContaining("has no household child with partyId " + CHILD_PARTY_ID);
+		verifyNoInteractions(citizenServiceMock, financialAidIntegrationMock);
+	}
+
+	@Test
+	void getBasisIs404ForAChildWhenTheErrandHasNoChildren() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create()));
+
+		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CHILD", CHILD_PARTY_ID, null, null))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+		verifyNoInteractions(citizenServiceMock, financialAidIntegrationMock);
+	}
+
+	@Test
+	void getBasisRequiresAChildPartyIdForAChild() {
+		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CHILD", null, null, null))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessageContaining("'childPartyId' is required when person is CHILD");
+		verifyNoInteractions(errandServiceMock, financialAssistanceRepositoryMock, citizenServiceMock, financialAidIntegrationMock);
+	}
+
+	@Test
+	void getBasisRejectsAChildPartyIdForAnAdult() {
+		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", CHILD_PARTY_ID, null, null))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessageContaining("'childPartyId' is only allowed when person is CHILD");
+		verifyNoInteractions(errandServiceMock, financialAssistanceRepositoryMock, citizenServiceMock, financialAidIntegrationMock);
+	}
+
+	@Test
 	void getBasisIs404WithoutAMemberInTheRole() {
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CO_APPLICANT", null, null))
+		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "CO_APPLICANT", null, null, null))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
 			.hasMessageContaining("has no household member with role CO_APPLICANT");
@@ -101,7 +157,7 @@ class FinancialAssistanceSsbtekServiceTest {
 	void getBasisIs404ForAnErrandOutsideTheNamespace() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(Problem.valueOf(NOT_FOUND, "No errand"));
 
-		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, null))
+		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, null, null))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 		verifyNoInteractions(stakeholderServiceMock, citizenServiceMock, financialAidIntegrationMock);
@@ -113,7 +169,7 @@ class FinancialAssistanceSsbtekServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
 		when(financialAidIntegrationMock.getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, "2026-01-01", "2026-03-31")).thenReturn(agencies);
 
-		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31));
+		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, MARCH, 31));
 
 		assertThat(result.getFrom()).isEqualTo(LocalDate.of(2026, JANUARY, 1));
 		assertThat(result.getTo()).isEqualTo(LocalDate.of(2026, MARCH, 31));
@@ -126,7 +182,7 @@ class FinancialAssistanceSsbtekServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
 		when(financialAidIntegrationMock.getFinancialAidBasis(any(), any(), any(), any())).thenReturn(Map.of());
 
-		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, null);
+		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, null, null);
 
 		final var expectedFrom = YearMonth.now().minusMonths(2).atDay(1);
 		final var expectedTo = YearMonth.now().atEndOfMonth();
@@ -140,7 +196,7 @@ class FinancialAssistanceSsbtekServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
 		when(financialAidIntegrationMock.getFinancialAidBasis(any(), any(), any(), any())).thenReturn(Map.of());
 
-		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", LocalDate.of(2026, APRIL, 10), null);
+		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, LocalDate.of(2026, APRIL, 10), null);
 
 		assertThat(result.getFrom()).isEqualTo(LocalDate.of(2026, APRIL, 10));
 		assertThat(result.getTo()).isEqualTo(LocalDate.of(2026, JUNE, 30));
@@ -151,7 +207,7 @@ class FinancialAssistanceSsbtekServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
 		when(financialAidIntegrationMock.getFinancialAidBasis(any(), any(), any(), any())).thenReturn(Map.of());
 
-		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, LocalDate.of(2026, JUNE, 15));
+		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, null, LocalDate.of(2026, JUNE, 15));
 
 		assertThat(result.getFrom()).isEqualTo(LocalDate.of(2026, APRIL, 1));
 		assertThat(result.getTo()).isEqualTo(LocalDate.of(2026, JUNE, 15));
@@ -162,7 +218,7 @@ class FinancialAssistanceSsbtekServiceTest {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
 		when(financialAidIntegrationMock.getFinancialAidBasis(any(), any(), any(), any())).thenReturn(null);
 
-		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, null);
+		final var result = service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, null, null);
 
 		assertThat(result.getAgencies()).isNotNull().isEmpty();
 	}
@@ -171,7 +227,7 @@ class FinancialAssistanceSsbtekServiceTest {
 	void getBasisThrowsNotFoundForUnknownParty() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, null))
+		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, null, null))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
@@ -182,7 +238,7 @@ class FinancialAssistanceSsbtekServiceTest {
 	void getBasisRejectsAnInvertedPeriodBeforeCallingSsbtek() {
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
 
-		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", LocalDate.of(2026, JUNE, 1), LocalDate.of(2026, JANUARY, 1)))
+		assertThatThrownBy(() -> service.getBasis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, "APPLICANT", null, LocalDate.of(2026, JUNE, 1), LocalDate.of(2026, JANUARY, 1)))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 
