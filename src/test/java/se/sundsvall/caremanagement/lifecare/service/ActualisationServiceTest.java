@@ -4,6 +4,7 @@ import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBas
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInfoDTO;
+import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInvestigationDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsInvestigationTypeDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServiceTypeDTO;
@@ -76,7 +77,9 @@ class ActualisationServiceTest {
 				.addInvestigationTypesItem(new PersonBasedAktualiseringsInvestigationTypeDTO().id(21)))
 			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO().id(29).name("EK Återansökan Digital Ekonomiskt bistånd")
 				.addServiceTypesItem(new PersonBasedAktualiseringsServiceTypeDTO().id(27)))
-			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(7700).type(27));
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(7700).type(27))
+			// An ekonomiutredning the proposal offers without saying it is closed - a nyansökan must not take it.
+			.addInvestigationsItem(new PersonBasedAktualiseringsInvestigationDTO().id(54).type(21));
 		when(caseworkerResolverMock.resolve(MUNICIPALITY_ID, APPLICANT, DATE)).thenReturn(Optional.empty());
 		when(lifecareFamilyCareIntegrationMock.getActualisationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
 		when(lifecareFamilyCareIntegrationMock.createActualisation(eq(MUNICIPALITY_ID), any(PostAktualiseringsBodyRequest.class))).thenReturn(5012);
@@ -87,6 +90,7 @@ class ActualisationServiceTest {
 		verify(lifecareFamilyCareIntegrationMock).createActualisation(eq(MUNICIPALITY_ID), bodyCaptor.capture());
 		assertThat(bodyCaptor.getValue().getType()).isEqualTo(28);
 		assertThat(bodyCaptor.getValue().getServiceId()).isNull();
+		assertThat(bodyCaptor.getValue().getInvestigationId()).isNull();
 		assertThat(result.serviceId()).isNull();
 	}
 
