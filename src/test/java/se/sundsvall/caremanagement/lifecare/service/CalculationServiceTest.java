@@ -235,6 +235,22 @@ class CalculationServiceTest {
 	}
 
 	@Test
+	void commitEffectiveCutsANoteToWhatLifecareAccepts() {
+		// FamilyCare refuses the whole calculation (400) when a row's note is longer than 80 characters.
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
+		when(lifecareFamilyCareIntegrationMock.createCalculation(eq(MUNICIPALITY_ID), any(PostCalculationBodyRequest.class))).thenReturn(5000);
+		final var longNote = "Ansökan: Annan inkomst (lån, spelvinst, försörjning av tillgång, gåva, kontanter)";
+		final var incomes = List.of(new EffectiveIncome(20, "Bostadsbidrag", BigDecimal.valueOf(250.0), null, null, null, longNote));
+
+		service.commitEffective(MUNICIPALITY_ID, APPLICANT, MONTH, new CalculationHeader(7, null, null, null, null, null, null), incomes, List.of(), List.of());
+
+		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
+		verify(lifecareFamilyCareIntegrationMock).createCalculation(eq(MUNICIPALITY_ID), captor.capture());
+		assertThat(captor.getValue().getCalculationIncomes()).singleElement()
+			.satisfies(income -> assertThat(income.getNote()).hasSize(80).isEqualTo(longNote.substring(0, 80)));
+	}
+
+	@Test
 	void commitEffectiveResolvesACaseworkerIncomeWithoutTypeIdByItsName() {
 		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal()
 			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(11).name("Lön efter skatt")));

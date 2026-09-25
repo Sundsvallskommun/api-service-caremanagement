@@ -14158,7 +14158,9 @@ components:
           - 12
         note:
           type: string
-          description: Free-text note
+          maxLength: 80
+          minLength: 0
+          description: Free-text note; Lifecare takes at most 80 characters
     LifecareJobStimulusPeriodRequest:
       type: object
       description: A new jobbstimulans period for the sökande

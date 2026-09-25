@@ -55,6 +55,7 @@ final class CalculationDraftFill {
 	private static final String APPLIED_AMOUNT = "appliedAmount";
 	private static final String APPROVED_AMOUNT = "approvedAmount";
 	private static final String NOTE = "note";
+	private static final int LIFECARE_NOTE_MAX_LENGTH = 80;
 	private static final String TEXT = "text";
 
 	private CalculationDraftFill() {}
@@ -250,11 +251,19 @@ final class CalculationDraftFill {
 				if (notes.isEmpty()) {
 					existing.putNull(NOTE);
 				} else {
-					existing.put(NOTE, String.join("; ", notes));
+					existing.put(NOTE, toLifecareNote(String.join("; ", notes)));
 				}
 			}, () -> rows.add(newExpenseRow(type.get(), applied, approved, note)));
 		}
 		return rows;
+	}
+
+	/** A note as Lifecare can take it: FamilyCare refuses the whole calculation when a row's note exceeds 80 characters. */
+	private static String toLifecareNote(final String note) {
+		if ((note == null) || (note.length() <= LIFECARE_NOTE_MAX_LENGTH)) {
+			return note;
+		}
+		return note.substring(0, LIFECARE_NOTE_MAX_LENGTH);
 	}
 
 	private static ObjectNode newExpenseRow(final ObjectNode type, final double applied, final double approved, final String note) {
@@ -263,7 +272,7 @@ final class CalculationDraftFill {
 		row.set("expenseType", type.path(TEXT).deepCopy());
 		row.set(APPLIED_AMOUNT, numberNode(applied));
 		row.set(APPROVED_AMOUNT, numberNode(approved));
-		row.put(NOTE, note);
+		row.put(NOTE, toLifecareNote(note));
 		row.put("changeable", true);
 		row.put("markForCopy", false);
 		row.put("showMarkForCopy", false);

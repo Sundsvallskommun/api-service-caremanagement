@@ -233,7 +233,7 @@ public class CalculationService {
 			.applicantAmountDate(income.applicantAmountDate())
 			.coApplicantAmount(toWireAmount(income.coApplicantAmount()))
 			.coApplicantAmountDate(income.coApplicantAmountDate())
-			.note(income.note());
+			.note(MapperUtil.toLifecareNote(income.note()));
 	}
 
 	/**
@@ -249,13 +249,13 @@ public class CalculationService {
 
 	private static PersonBasedCalculationExpensePostDTO toExpenseDto(final EffectiveExpense expense, final PersonBasedCalculationProposalDTO proposal) {
 		return ExpenseTypeMapper.resolveExpenseTypeId(expense.costType(), proposal, expense.bucket())
-			.map(id -> new PersonBasedCalculationExpensePostDTO().id(id).amount(toWireAmount(expense.appliedAmount())).approvedAmount(toWireAmount(expense.approvedAmount())).note(expense.note()))
+			.map(id -> new PersonBasedCalculationExpensePostDTO().id(id).amount(toWireAmount(expense.appliedAmount())).approvedAmount(toWireAmount(expense.approvedAmount())).note(MapperUtil.toLifecareNote(expense.note())))
 			.orElse(null);
 	}
 
 	private static PersonBasedCalculationSpecialExpensePostDTO toSpecialExpenseDto(final EffectiveExpense expense, final PersonBasedCalculationProposalDTO proposal) {
 		return ExpenseTypeMapper.resolveExpenseTypeId(expense.costType(), proposal, expense.bucket())
-			.map(id -> new PersonBasedCalculationSpecialExpensePostDTO().id(id).amount(toWireAmount(expense.appliedAmount())).approvedAmount(toWireAmount(expense.approvedAmount())).note(expense.note()))
+			.map(id -> new PersonBasedCalculationSpecialExpensePostDTO().id(id).amount(toWireAmount(expense.appliedAmount())).approvedAmount(toWireAmount(expense.approvedAmount())).note(MapperUtil.toLifecareNote(expense.note())))
 			.orElse(null);
 	}
 

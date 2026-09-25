@@ -97,7 +97,8 @@ public class NormberakningRowInput {
 	@Schema(description = "Person: the Lifecare norm row the member is put on (Lifecare only)", examples = "12")
 	private Integer normRowId;
 
-	@Schema(description = "Free-text note")
+	@Schema(description = "Free-text note; Lifecare takes at most 80 characters", maxLength = 80)
+	@Size(max = 80)
 	private String note;
 
 	public static NormberakningRowInput create() {

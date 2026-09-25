@@ -114,13 +114,14 @@ class FinancialAssistanceLifecareCalculationResourceFailureTest {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH + "/normberakning/expenses").build(variables(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)))
 			.contentType(APPLICATION_JSON)
-			.bodyValue(NormberakningRowInput.create().withBucket("OTHER").withApplicantAmountDate("igår"))
+			.bodyValue(NormberakningRowInput.create().withBucket("OTHER").withApplicantAmountDate("igår").withNote("x".repeat(81)))
 			.exchange()
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
 				tuple("bucket", "must be one of: [EXPENSE, SPECIAL_EXPENSE]"),
-				tuple("applicantAmountDate", "must match \"^\\d{4}-\\d{2}-\\d{2}.*$\"")));
+				tuple("applicantAmountDate", "must match \"^\\d{4}-\\d{2}-\\d{2}.*$\""),
+				tuple("note", "size must be between 0 and 80")));
 	}
 
 	@Test

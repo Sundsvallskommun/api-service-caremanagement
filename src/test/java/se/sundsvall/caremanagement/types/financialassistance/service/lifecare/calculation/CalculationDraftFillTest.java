@@ -95,6 +95,20 @@ class CalculationDraftFillTest {
 	}
 
 	@Test
+	void cutsExpenseNotesToWhatLifecareAccepts() {
+		// FamilyCare refuses the whole calculation when a row's note is longer than 80 characters - also a joined one.
+		final var draft = draft().withSpecialExpenses(List.of()).withExpenses(List.of(
+			NormExpenseRow.create().withCostTypeDisplayName("Boendekostnad").withEffectiveAmount(BigDecimal.valueOf(100)).withNote("a".repeat(50)),
+			NormExpenseRow.create().withCostTypeDisplayName("Boendekostnad").withEffectiveAmount(BigDecimal.valueOf(10)).withSpecification("b".repeat(50)),
+			NormExpenseRow.create().withCostTypeDisplayName("A-kasseavgift").withEffectiveAmount(BigDecimal.ONE).withNote("c".repeat(90))));
+
+		final var calculation = fill(draft, APPLICANT_NUMBER);
+
+		assertThat(objects(calculation, "calculationExpenses")).extracting(row -> row.path("note").stringValue(null))
+			.contains(("a".repeat(50) + "; " + "b".repeat(50)).substring(0, 80), "c".repeat(80));
+	}
+
+	@Test
 	void addsUpExpensesOfTheSameTypeJoiningTheirNotes() {
 		final var draft = draft().withSpecialExpenses(List.of()).withExpenses(List.of(
 			NormExpenseRow.create().withCostTypeDisplayName("Boendekostnad").withEffectiveAmount(BigDecimal.valueOf(100)).withNote("hyra"),
