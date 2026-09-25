@@ -258,6 +258,8 @@ class CalculationSyncServiceTest {
 			assertThat(row.getSsbtekReadAt()).isNotNull();
 		});
 		assertThat(row(saved, "lön").getSystemWrittenAmount()).isEqualByComparingTo("11900");
+		// The baseline is what SSBTEK said, whether or not the caseworker's figure went into the proposal.
+		assertThat(saved).extracting(row -> row.getSsbtekBaselineAmount().toPlainString()).containsExactlyInAnyOrder("11900.00", "1850.00", "1250.00");
 		assertThat(row(saved, "bostadsbidrag").getSystemWrittenAmount()).isNull();
 		assertThat(row(saved, "bostadsbidrag").getSsbtekAmount()).isEqualByComparingTo("1850");
 		assertThat(row(saved, "barnbidrag").getSystemWrittenAmount()).isNull();
@@ -273,6 +275,7 @@ class CalculationSyncServiceTest {
 
 		assertThat(savedRows()).singleElement().satisfies(row -> {
 			assertThat(row.getSsbtekAmount()).isEqualByComparingTo("11900");
+			assertThat(row.getSsbtekBaselineAmount()).isEqualByComparingTo("11900");
 			assertThat(row.getSystemWrittenAmount()).isNull();
 		});
 	}
@@ -294,6 +297,9 @@ class CalculationSyncServiceTest {
 			.containsExactlyInAnyOrder(tuple("lön", ROLE_APPLICANT), tuple("bostadsbidrag", ROLE_CO_APPLICANT), tuple("barnbidrag", ROLE_APPLICANT));
 		assertThat(row(saved, "lön").getSsbtekAmount()).isEqualByComparingTo("12400");
 		assertThat(row(saved, "lön").getSystemWrittenAmount()).isEqualByComparingTo("11900");
+		// A reading never moves the baseline; a new income has none.
+		assertThat(row(saved, "lön").getSsbtekBaselineAmount()).isEqualByComparingTo("11900");
+		assertThat(row(saved, "bostadsbidrag").getSsbtekBaselineAmount()).isNull();
 		assertThat(row(saved, "bostadsbidrag").getIncomeTypeId()).isEqualTo(21);
 		assertThat(row(saved, "bostadsbidrag").getSystemWrittenAt()).isNull();
 		// No longer reported: the amount is cleared, and the read time says SSBTEK was asked.
@@ -329,8 +335,48 @@ class CalculationSyncServiceTest {
 		assertThat(captor.getValue()).singleElement().satisfies(warning -> {
 			assertThat(warning.type()).isEqualTo(WarningService.TYPE_SSBTEK_CALCULATION_DIFF);
 			assertThat(warning.sourceKey()).isEqualTo("ssbtek-sync:APPLICANT:lön:12400");
-			assertThat(warning.message()).isEqualTo("SSBTEK har ändrats: Lön (sökande) är 12400 kr, normberäkningen i Lifecare har 11900 kr");
+			assertThat(warning.message()).isEqualTo("SSBTEK har ändrats: Lön (sökande) från 11900 kr till 12400 kr");
 		});
+	}
+
+	@Test
+	void reconcileWarningsIgnoresTheCaseworkersOwnEdits() {
+		// SSBTEK still says what the system wrote; the caseworker changed one income, removed another and replaced a
+		// third they had already changed in the proposal. None of it is news from SSBTEK.
+		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, FROM, TO))
+			.thenReturn(List.of(calculation(false, income("Lön", "11000", null), income("Bostadsbidrag", "2000", null))));
+		when(syncRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			sync("lön", ROLE_APPLICANT, "11900", "11900"),
+			sync("barnbidrag", ROLE_APPLICANT, "1250", "1250"),
+			sync("bostadsbidrag", ROLE_APPLICANT, "1850", null).withSsbtekBaselineAmount(new BigDecimal("1850"))));
+
+		service.reconcileWarnings(MUNICIPALITY_ID, ERRAND_ID, APPLICANT_PARTY_ID, CALCULATION_ID, FROM, TO);
+
+		verify(warningServiceMock).reconcileByTypes(ERRAND_ID, Set.of(WarningService.TYPE_SSBTEK_CALCULATION_DIFF), List.of());
+	}
+
+	@Test
+	void warningsFollowSsbtekNotTheCalculation() {
+		final var calculation = calculation(false, income("Lön", "11000", null), income("Barnbidrag", "1250", null));
+		final var rows = List.of(
+			// SSBTEK moved after the caseworker edited: a warning, stating only SSBTEK's amounts.
+			sync("lön", ROLE_APPLICANT, "12400", "11900"),
+			// New in SSBTEK, never written by the system.
+			sync("bostadsbidrag", ROLE_CO_APPLICANT, "1850", null).withSystemWrittenAt(null).withSsbtekBaselineAmount(null),
+			// SSBTEK stopped reporting an income the system wrote.
+			sync("barnbidrag", ROLE_APPLICANT, null, "1250"));
+
+		assertThat(CalculationSyncService.warnings(rows, calculation)).extracting(WarningService.WarningInput::message).containsExactly(
+			"SSBTEK rapporterar inte längre Barnbidrag (sökande), tidigare 1250 kr",
+			"Ny inkomst i SSBTEK: Bostadsbidrag (medsökande) 1850 kr",
+			"SSBTEK har ändrats: Lön (sökande) från 11900 kr till 12400 kr");
+	}
+
+	@Test
+	void warningsSkipAnSsbtekChangeTheCalculationAlreadyHas() {
+		final var rows = List.of(sync("lön", ROLE_APPLICANT, "12400", "11900"));
+
+		assertThat(CalculationSyncService.warnings(rows, calculation(false, income("Lön", "12400", null)))).isEmpty();
 	}
 
 	@Test
@@ -353,12 +399,17 @@ class CalculationSyncServiceTest {
 
 	@Test
 	void warningTexts() {
-		final var add = CalculationSyncService.toWarning(new SsbtekChange("ADD", "AUTO", null, ROLE_CO_APPLICANT, 21, "Bostadsbidrag", new BigDecimal("1850.00"), null));
-		final var gone = CalculationSyncService.toWarning(new SsbtekChange("GONE", "CONFIRM", "GONE_FROM_SSBTEK", ROLE_APPLICANT, 22, "Barnbidrag", null, new BigDecimal("1250.00")));
+		final var add = CalculationSyncService.toWarning(new SsbtekChange("ADD", "AUTO", null, ROLE_CO_APPLICANT, 21, "Bostadsbidrag", new BigDecimal("1850.00"), null), null);
+		// Removed by the caseworker, and SSBTEK has since moved: a change, not a new income.
+		final var removedThenChanged = CalculationSyncService.toWarning(
+			new SsbtekChange("ADD", "CONFIRM", "REMOVED", ROLE_APPLICANT, 20, "Lön", new BigDecimal("12400.00"), null), new BigDecimal("11900.00"));
+		final var gone = CalculationSyncService.toWarning(
+			new SsbtekChange("GONE", "CONFIRM", "GONE_FROM_SSBTEK", ROLE_APPLICANT, 22, "Barnbidrag", null, new BigDecimal("1300.00")), new BigDecimal("1250.00"));
 
-		assertThat(add.message()).isEqualTo("Ny inkomst i SSBTEK som saknas i normberäkningen i Lifecare: Bostadsbidrag (medsökande) 1850 kr");
+		assertThat(add.message()).isEqualTo("Ny inkomst i SSBTEK: Bostadsbidrag (medsökande) 1850 kr");
 		assertThat(add.sourceKey()).isEqualTo("ssbtek-sync:CO_APPLICANT:bostadsbidrag:1850");
-		assertThat(gone.message()).isEqualTo("Barnbidrag (sökande) finns i normberäkningen i Lifecare (1250 kr) men rapporteras inte längre i SSBTEK");
+		assertThat(removedThenChanged.message()).isEqualTo("SSBTEK har ändrats: Lön (sökande) från 11900 kr till 12400 kr");
+		assertThat(gone.message()).isEqualTo("SSBTEK rapporterar inte längre Barnbidrag (sökande), tidigare 1250 kr");
 		assertThat(gone.sourceKey()).isEqualTo("ssbtek-sync:APPLICANT:barnbidrag:-");
 	}
 
@@ -459,6 +510,9 @@ class CalculationSyncServiceTest {
 		final var saved = savedRows();
 		assertThat(row(saved, "lön").getSystemWrittenAmount()).isEqualByComparingTo("12400");
 		assertThat(row(saved, "lön").getSystemWrittenAt()).isAfter(WRITTEN);
+		// Aligned with what SSBTEK says now: the next warning needs a new SSBTEK amount.
+		assertThat(row(saved, "lön").getSsbtekBaselineAmount()).isEqualByComparingTo("12400");
+		assertThat(row(saved, "barnbidrag").getSsbtekBaselineAmount()).isNull();
 		// Taken out: written, with no amount.
 		assertThat(row(saved, "barnbidrag").getSystemWrittenAmount()).isNull();
 		assertThat(row(saved, "barnbidrag").getSystemWrittenAt()).isAfter(WRITTEN);
@@ -494,6 +548,7 @@ class CalculationSyncServiceTest {
 
 	/**
 	 * A sync row; {@code written} null means the system wrote the income with no amount (it chose not to, or took it out).
+	 * The SSBTEK baseline is what the system wrote — override it with {@code withSsbtekBaselineAmount} where it matters.
 	 */
 	private static FaCalculationSyncEntity sync(final String typeKey, final String role, final String ssbtek, final String written) {
 		return FaCalculationSyncEntity.create()
@@ -502,6 +557,7 @@ class CalculationSyncServiceTest {
 			.withIncomeTypeName(Character.toUpperCase(typeKey.charAt(0)) + typeKey.substring(1))
 			.withRole(role)
 			.withSsbtekAmount(amount(ssbtek))
+			.withSsbtekBaselineAmount(amount(written))
 			.withSsbtekReadAt(WRITTEN.plusDays(1))
 			.withSystemWrittenAmount(amount(written))
 			.withSystemWrittenAt(WRITTEN);

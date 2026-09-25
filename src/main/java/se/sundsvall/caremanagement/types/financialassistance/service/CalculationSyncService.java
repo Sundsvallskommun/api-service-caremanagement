@@ -47,7 +47,7 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * <ul>
  * <li>the daily prepare {@link #recordSsbtek records} the latest SSBTEK amount per income, compares it with the
  * calculation read from Lifecare and raises one {@link WarningService#TYPE_SSBTEK_CALCULATION_DIFF} warning per
- * disagreement;</li>
+ * disagreement that SSBTEK caused — see {@link #warnings};</li>
  * <li>Draken's BFF {@link #changes reads} the disagreements, writes the {@code AUTO} ones into the calculation (and the
  * {@code CONFIRM} ones the caseworker accepts), and {@link #applied acknowledges} what it wrote.</li>
  * </ul>
@@ -144,6 +144,7 @@ public class CalculationSyncService {
 		if (existing != null) {
 			// Two draft rows of one type: the calculation sums them, and neither amount alone is what the system wrote.
 			existing.setSsbtekAmount(sum(existing.getSsbtekAmount(), process));
+			existing.setSsbtekBaselineAmount(sum(existing.getSsbtekBaselineAmount(), process));
 			existing.setSystemWrittenAmount(null);
 			return;
 		}
@@ -161,6 +162,7 @@ public class CalculationSyncService {
 			.withIncomeTypeName(income.getTypeName())
 			.withRole(role)
 			.withSsbtekAmount(process)
+			.withSsbtekBaselineAmount(process)
 			.withSsbtekReadAt(now)
 			.withSystemWrittenAmount(written)
 			.withSystemWrittenAt(now));
@@ -237,8 +239,7 @@ public class CalculationSyncService {
 				sanitizeForLogging(errandId), fromDate, toDate);
 			return;
 		}
-		final var changes = compare(syncRepository.findByErrandId(errandId), calculation.get());
-		warningService.reconcileByTypes(errandId, OWNED_WARNING_TYPES, changes.stream().map(CalculationSyncService::toWarning).toList());
+		warningService.reconcileByTypes(errandId, OWNED_WARNING_TYPES, warnings(syncRepository.findByErrandId(errandId), calculation.get()));
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -284,7 +285,8 @@ public class CalculationSyncService {
 			final var typeKey = normalize(change.incomeType());
 			final var row = rows.computeIfAbsent(key(typeKey, change.role()), ignored -> FaCalculationSyncEntity.create()
 				.withErrandId(errandId).withIncomeTypeKey(typeKey).withIncomeTypeName(change.incomeType()).withRole(change.role()));
-			row.withSystemWrittenAmount(nonZero(change.amount())).withSystemWrittenAt(now);
+			// The calculation now holds what the BFF wrote, in view of what SSBTEK says now: that is the new baseline.
+			row.withSystemWrittenAmount(nonZero(change.amount())).withSystemWrittenAt(now).withSsbtekBaselineAmount(row.getSsbtekAmount());
 		});
 		syncRepository.saveAll(rows.values());
 		reconcileWarnings(municipalityId, errandId, context.applicantPartyId(), context.calculationId(), context.fromDate(), context.toDate());
@@ -425,19 +427,42 @@ public class CalculationSyncService {
 	// ------------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * One warning per disagreement. The SSBTEK amount is part of the key, so a warning the caseworker has dealt with
-	 * stays dealt with until SSBTEK gives a new amount — and closes itself once the calculation matches.
+	 * The warnings: one per disagreement with the calculation that SSBTEK caused, i.e. on an income whose SSBTEK amount
+	 * has moved since the calculation was last aligned with it. While SSBTEK still says what it said then, a calculation
+	 * that differs is the caseworker's own edit — theirs to make, and no news to them. (The {@link #changes} read still
+	 * lists every disagreement, for the BFF to propose.)
 	 */
-	static WarningService.WarningInput toWarning(final SsbtekChange change) {
+	static List<WarningService.WarningInput> warnings(final List<FaCalculationSyncEntity> rows, final CalculationView calculation) {
+		final var moved = rows.stream().filter(CalculationSyncService::ssbtekMoved).toList();
+		final var baselines = new HashMap<String, BigDecimal>();
+		moved.forEach(row -> baselines.put(key(row.getIncomeTypeKey(), row.getRole()), nonZero(row.getSsbtekBaselineAmount())));
+		return compare(moved, calculation).stream()
+			.map(change -> toWarning(change, baselines.get(key(normalize(change.incomeType()), change.role()))))
+			.toList();
+	}
+
+	private static boolean ssbtekMoved(final FaCalculationSyncEntity row) {
+		return !Objects.equals(nonZero(row.getSsbtekAmount()), nonZero(row.getSsbtekBaselineAmount()));
+	}
+
+	/**
+	 * One warning per SSBTEK change. The text says only what SSBTEK said before and now — never the calculation's amount,
+	 * which the caseworker may change at any time and the warning would then misstate until the next run. The SSBTEK
+	 * amount is part of the key, so a warning the caseworker has dealt with stays dealt with until SSBTEK gives a new
+	 * amount — and closes itself once the calculation matches.
+	 *
+	 * @param baseline the SSBTEK amount the calculation was aligned with; null when SSBTEK had not reported the income
+	 */
+	static WarningService.WarningInput toWarning(final SsbtekChange change, final BigDecimal baseline) {
 		final var sourceKey = String.join(":", "ssbtek-sync", change.role(), normalize(change.incomeType()), plain(change.ssbtekAmount()));
 		final var subject = change.incomeType() + " (" + roleLabel(change.role()) + ")";
 		final String message;
-		if (KIND_ADD.equals(change.kind())) {
-			message = "Ny inkomst i SSBTEK som saknas i normberäkningen i Lifecare: " + subject + " " + kronor(change.ssbtekAmount());
-		} else if (KIND_CHANGE.equals(change.kind())) {
-			message = "SSBTEK har ändrats: " + subject + " är " + kronor(change.ssbtekAmount()) + ", normberäkningen i Lifecare har " + kronor(change.lifecareAmount());
+		if (change.ssbtekAmount() == null) {
+			message = "SSBTEK rapporterar inte längre " + subject + ", tidigare " + kronor(baseline);
+		} else if (baseline == null) {
+			message = "Ny inkomst i SSBTEK: " + subject + " " + kronor(change.ssbtekAmount());
 		} else {
-			message = subject + " finns i normberäkningen i Lifecare (" + kronor(change.lifecareAmount()) + ") men rapporteras inte längre i SSBTEK";
+			message = "SSBTEK har ändrats: " + subject + " från " + kronor(baseline) + " till " + kronor(change.ssbtekAmount());
 		}
 		return new WarningService.WarningInput(WarningService.TYPE_SSBTEK_CALCULATION_DIFF, sourceKey, message);
 	}

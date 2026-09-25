@@ -45,6 +45,7 @@ class FaCalculationSyncEntityTest {
 			.withIncomeTypeName("Lön")
 			.withRole("APPLICANT")
 			.withSsbtekAmount(new BigDecimal("12400"))
+			.withSsbtekBaselineAmount(new BigDecimal("11900"))
 			.withSsbtekReadAt(timestamp)
 			.withSystemWrittenAmount(new BigDecimal("11900"))
 			.withSystemWrittenAt(timestamp)
@@ -59,6 +60,7 @@ class FaCalculationSyncEntityTest {
 		assertThat(entity.getIncomeTypeName()).isEqualTo("Lön");
 		assertThat(entity.getRole()).isEqualTo("APPLICANT");
 		assertThat(entity.getSsbtekAmount()).isEqualByComparingTo("12400");
+		assertThat(entity.getSsbtekBaselineAmount()).isEqualByComparingTo("11900");
 		assertThat(entity.getSsbtekReadAt()).isEqualTo(timestamp);
 		assertThat(entity.getSystemWrittenAmount()).isEqualByComparingTo("11900");
 		assertThat(entity.getSystemWrittenAt()).isEqualTo(timestamp);

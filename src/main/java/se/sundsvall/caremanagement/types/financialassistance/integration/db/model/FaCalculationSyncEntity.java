@@ -60,6 +60,14 @@ public class FaCalculationSyncEntity {
 	@Column(name = "ssbtek_amount", precision = 12, scale = 2)
 	private BigDecimal ssbtekAmount;
 
+	/**
+	 * The SSBTEK amount the calculation was last aligned with — what SSBTEK said when the system wrote the income. Null
+	 * for an income the system never wrote. A warning is raised only when SSBTEK moves away from it; a calculation
+	 * differing from SSBTEK while SSBTEK still says this is the caseworker's doing.
+	 */
+	@Column(name = "ssbtek_baseline_amount", precision = 12, scale = 2)
+	private BigDecimal ssbtekBaselineAmount;
+
 	@Column(name = "ssbtek_read_at")
 	@TimeZoneStorage(NORMALIZE)
 	private OffsetDateTime ssbtekReadAt;
@@ -187,6 +195,19 @@ public class FaCalculationSyncEntity {
 		return this;
 	}
 
+	public BigDecimal getSsbtekBaselineAmount() {
+		return ssbtekBaselineAmount;
+	}
+
+	public void setSsbtekBaselineAmount(final BigDecimal ssbtekBaselineAmount) {
+		this.ssbtekBaselineAmount = ssbtekBaselineAmount;
+	}
+
+	public FaCalculationSyncEntity withSsbtekBaselineAmount(final BigDecimal ssbtekBaselineAmount) {
+		this.ssbtekBaselineAmount = ssbtekBaselineAmount;
+		return this;
+	}
+
 	public OffsetDateTime getSsbtekReadAt() {
 		return ssbtekReadAt;
 	}
@@ -259,15 +280,16 @@ public class FaCalculationSyncEntity {
 		final FaCalculationSyncEntity that = (FaCalculationSyncEntity) o;
 		return Objects.equals(id, that.id) && Objects.equals(errandId, that.errandId) && Objects.equals(incomeTypeKey, that.incomeTypeKey)
 			&& Objects.equals(incomeTypeId, that.incomeTypeId) && Objects.equals(incomeTypeName, that.incomeTypeName) && Objects.equals(role, that.role)
-			&& Objects.equals(ssbtekAmount, that.ssbtekAmount) && Objects.equals(ssbtekReadAt, that.ssbtekReadAt)
+			&& Objects.equals(ssbtekAmount, that.ssbtekAmount) && Objects.equals(ssbtekBaselineAmount, that.ssbtekBaselineAmount)
+			&& Objects.equals(ssbtekReadAt, that.ssbtekReadAt)
 			&& Objects.equals(systemWrittenAmount, that.systemWrittenAmount) && Objects.equals(systemWrittenAt, that.systemWrittenAt)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, incomeTypeKey, incomeTypeId, incomeTypeName, role, ssbtekAmount, ssbtekReadAt, systemWrittenAmount, systemWrittenAt,
-			created, updated);
+		return Objects.hash(id, errandId, incomeTypeKey, incomeTypeId, incomeTypeName, role, ssbtekAmount, ssbtekBaselineAmount, ssbtekReadAt, systemWrittenAmount,
+			systemWrittenAt, created, updated);
 	}
 
 	@Override
@@ -280,6 +302,7 @@ public class FaCalculationSyncEntity {
 			", incomeTypeName='" + incomeTypeName + '\'' +
 			", role='" + role + '\'' +
 			", ssbtekAmount=" + ssbtekAmount +
+			", ssbtekBaselineAmount=" + ssbtekBaselineAmount +
 			", ssbtekReadAt=" + ssbtekReadAt +
 			", systemWrittenAmount=" + systemWrittenAmount +
 			", systemWrittenAt=" + systemWrittenAt +
