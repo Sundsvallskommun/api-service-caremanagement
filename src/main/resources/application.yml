@@ -100,6 +100,23 @@ integration:
     url: ${INTEGRATION_LIFECARE_INTEGRATOR_URL:http://localhost/lifecare-integrator}
     connect-timeout: 5
     read-timeout: 90
+  # Lifecare ProfessionalWeb — the internal api2 surface Lifecare's own web client uses (normberäkning editing, decisions,
+  # payments, payees, reminders, journal notes, documents, job stimulus). Reached with a signed-in session of an
+  # integration account (SAML via MobilityGuard), not an API key. url is the Lifecare host without a module path; leave it
+  # unset and every ProfessionalWeb call answers 502 instead of the application failing to start. username/password are
+  # secrets: environment only. Only reachable from a network that resolves the internal Lifecare host.
+  lifecare-professionalweb:
+    url: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_URL:}
+    domain: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_DOMAIN:}
+    federation-profile: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_FEDERATION_PROFILE:}
+    username: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_USERNAME:}
+    password: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_PASSWORD:}
+    # Test environments only: the decision maker to put on every decision while the caseworkers are not yet in
+    # Lifecare's list of decision makers. Unset means the signed-in caseworker (X-Sent-By).
+    test-decision-maker: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_TEST_DECISION_MAKER:}
+    session-ttl: 20m
+    connect-timeout: 5
+    read-timeout: 30
   # financial-aid (SSBTEK proxy). OAuth2 client-credentials via the financial-aid Spring security registration above.
   financial-aid:
     url: ${INTEGRATION_FINANCIAL_AID_URL}
