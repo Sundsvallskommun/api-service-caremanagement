@@ -31,6 +31,7 @@ import se.sundsvall.dept44.problem.Problem;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_NEW;
 
 /**
  * The Lifecare actualisation (case intake) surface — create a new actualisation for the application month, list the
@@ -102,7 +103,7 @@ public class FinancialAssistanceActualisationService {
 	public ActualisationResponse createActualisation(final String municipalityId, final String namespace, final ActualisationRequest request) {
 		final var applicant = request.getApplicant();
 		final var intakeDate = intakeDate(request);
-		final var result = actualisationService.createActualisation(municipalityId, applicant, intakeDate);
+		final var result = actualisationService.createActualisation(municipalityId, applicant, intakeDate, isNewApplication(request));
 
 		ofNullable(request.getErrandId()).filter(StringUtils::hasText)
 			.ifPresent(errandId -> recordActualisation(municipalityId, namespace, errandId, result));
@@ -140,6 +141,19 @@ public class FinancialAssistanceActualisationService {
 			.map(FinancialAssistanceEntity::getCreated)
 			.map(OffsetDateTime::toLocalDate)
 			.orElse(applicationMonthStart);
+	}
+
+	/**
+	 * Whether the errand is a nyansökan, which Lifecare actualises with its own type. A standalone call without an
+	 * {@code errandId} keeps the återansökan type it has always had.
+	 */
+	private boolean isNewApplication(final ActualisationRequest request) {
+		return ofNullable(request.getErrandId())
+			.filter(StringUtils::hasText)
+			.flatMap(financialAssistanceRepository::findByErrandId)
+			.map(FinancialAssistanceEntity::getApplicationType)
+			.filter(APPLICATION_TYPE_NEW::equals)
+			.isPresent();
 	}
 
 	/**

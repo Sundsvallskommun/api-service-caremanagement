@@ -50,15 +50,19 @@ public class ActualisationService {
 	 *
 	 * @param  applicantPartyId the applicant's partyId (the FamilyCare actualisation owner)
 	 * @param  date             the intake date
+	 * @param  newApplication   {@code true} for a nyansökan, which takes the nyansökan actualisation type
 	 * @return                  the created actualisation id and the errand assignee ({@code null} when no caseworker was
 	 *                          found)
 	 */
-	public ActualisationResult createActualisation(final String municipalityId, final String applicantPartyId, final LocalDate date) {
+	public ActualisationResult createActualisation(final String municipalityId, final String applicantPartyId, final LocalDate date,
+		final boolean newApplication) {
+
 		final var caseworker = resolveCaseworker(municipalityId, applicantPartyId, date);
 
+		final var names = namesFor(newApplication);
 		final var proposal = lifecareFamilyCareIntegration.getActualisationProposal(municipalityId, applicantPartyId);
 		final var selection = ActualisationAssembler.assemble(applicantPartyId, proposal, date,
-			caseworker.map(ResolvedCaseworker::caseworkerId).orElse(null), actualisationProperties);
+			caseworker.map(ResolvedCaseworker::caseworkerId).orElse(null), names);
 		// A name that is not in the catalogue falls back to the first offered value, which is the guess the
 		// configuration exists to remove - so it must never pass silently.
 		if (!selection.misses().isEmpty()) {
@@ -68,6 +72,14 @@ public class ActualisationService {
 		final var actualisationId = lifecareFamilyCareIntegration.createActualisation(municipalityId, selection.body());
 
 		return new ActualisationResult(actualisationId, caseworker.map(ResolvedCaseworker::assignedUserId).orElse(null), selection.body().getServiceId());
+	}
+
+	/** The configured catalogue names, with the nyansökan actualisation type for a new application. */
+	private ActualisationProperties namesFor(final boolean newApplication) {
+		if (newApplication) {
+			return actualisationProperties.forNewApplication();
+		}
+		return actualisationProperties;
 	}
 
 	/**

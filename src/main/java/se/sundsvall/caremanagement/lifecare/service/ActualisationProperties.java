@@ -24,10 +24,19 @@ import org.springframework.validation.annotation.Validated;
  * {@code CaseworkerResolver}, which sets the applicant's previous caseworker, and that question is unanswered.
  * </p>
  *
- * @param type         the actualisation type, e.g. {@code Ek Återansökan Digital Ekonomiskt bistånd}
- * @param fromWho      who the actualisation came from, e.g. {@code Den enskilde}
- * @param reason       the actualisation reason, e.g. {@code Ekonomiskt bistånd}
- * @param organisation the owning organisation, e.g. {@code Ekonomiskt bistånd}
+ * <p>
+ * A nyansökan takes its own type. The återansökan type links the intake to the person's open EB insats
+ * ({@code ServiceTypes} 27/28), which a first-time applicant does not have; FamilyCare refuses that combination with
+ * {@code 403 "Aktualisering"}. The nyansökan type links an ekonomiutredning instead.
+ * </p>
+ *
+ * @param type               the actualisation type for an återansökan or tilläggsansökan, e.g.
+ *                           {@code Ek Återansökan Digital Ekonomiskt bistånd}
+ * @param fromWho            who the actualisation came from, e.g. {@code Den enskilde}
+ * @param reason             the actualisation reason, e.g. {@code Ekonomiskt bistånd}
+ * @param organisation       the owning organisation, e.g. {@code Ekonomiskt bistånd}
+ * @param newApplicationType the actualisation type for a nyansökan, e.g.
+ *                           {@code EK Nyansökan Digital Ekonomiskt bistånd}
  */
 @Validated
 @ConfigurationProperties(prefix = "lifecare.actualisation")
@@ -39,5 +48,12 @@ public record ActualisationProperties(
 
 	@NotBlank @DefaultValue("Ekonomiskt bistånd") String reason,
 
-	@NotBlank @DefaultValue("Ekonomiskt bistånd") String organisation) {
+	@NotBlank @DefaultValue("Ekonomiskt bistånd") String organisation,
+
+	@NotBlank @DefaultValue("EK Nyansökan Digital Ekonomiskt bistånd") String newApplicationType) {
+
+	/** The same names with the nyansökan type in place of the återansökan one. */
+	public ActualisationProperties forNewApplication() {
+		return new ActualisationProperties(newApplicationType, fromWho, reason, organisation, newApplicationType);
+	}
 }
