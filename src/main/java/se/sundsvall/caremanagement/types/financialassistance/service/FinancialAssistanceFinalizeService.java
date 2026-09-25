@@ -9,10 +9,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.core.service.ErrandService;
+import se.sundsvall.caremanagement.decisions.api.model.DecisionLifecareResult;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeResponse;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionRegistration;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaCalculationDraftRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
@@ -35,13 +37,17 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.mapp
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
- * "Besluta och utbetala" — the caseworker's decision step on a financial assistance (återansökan) errand. Once the
+ * Besluta och utbetala — the caseworker's decision step on a financial assistance (återansökan) errand. Once the
  * errand waits for a decision and the Lifecare artefacts the decision rests on are linked to it, one call does, in
  * order:
  *
  * <ol>
  * <li>records the finalize choices on the errand (communication channels, household-size flag);</li>
- * <li>records the decision as a {@code PAYMENT} {@code Decision} row — the audit trail;</li>
+ * <li>records the decision as a {@code PAYMENT} {@code Decision} row — the audit trail — and receipts it against the
+ * errand's beslut in Lifecare ({@code lifecareDecisionId}): the row is marked {@code SYNCED} with Lifecare's id, as a
+ * {@code WRITTEN} report to {@code .../decisions/{decisionId}/lifecare-result} would. The beslut is already in Lifecare
+ * (Draken saves it there before finalizing), so this is only the link between the two, made in the same transaction.
+ * A client that still posts that report afterwards changes nothing: re-posting WRITTEN is idempotent;</li>
  * <li>correlates {@code PaymentDecisionReceived} to the waiting process, which then sets the status and, for a bifall,
  * checks the linked Lifecare payments until they are paid out;</li>
  * <li>purges careM's normberäkning draft when the errand is linked to a normberäkning saved in Lifecare
@@ -77,6 +83,9 @@ public class FinancialAssistanceFinalizeService {
 
 	private static final String ERROR_NO_TYPED_ERRAND = "No financial-assistance errand for id %s";
 	private static final String ERROR_NO_DECIDER = "a decision can only be recorded by an identified user - the X-Sent-By header is required";
+	private static final String ERROR_NO_DECISION = "the finalize request carries no decision";
+	private static final String LIFECARE_RESULT_WRITTEN = "WRITTEN";
+	private static final String REGISTRATION_REGISTERED = "REGISTERED";
 	private static final String ERROR_WRONG_STATUS = "errand must be in status %s to be finalized, but is in status '%s'";
 	private static final String ERROR_ALREADY_FINALIZED = "errand '%s' already carries a %s decision - it has been finalized";
 	private static final String ERROR_NO_LIFECARE_DECISION = "a decision requires the beslut to be saved in Lifecare first - save it and set lifecareDecisionId on errand '%s' (PATCH .../financial-assistance/{errandId}/data) before finalizing";
@@ -110,6 +119,7 @@ public class FinancialAssistanceFinalizeService {
 	public FinalizeResponse finalize(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request, final String decidedBy) {
 		final var errand = errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		requireDecider(decidedBy);
+		requireDecision(request);
 		requireStatus(errand.getStatus());
 		requireNotFinalized(municipalityId, namespace, errandId);
 		final var entity = financialAssistanceRepository.findByErrandId(errandId)
@@ -121,9 +131,12 @@ public class FinancialAssistanceFinalizeService {
 		// process is resumed in step 3.
 		financialAssistanceRepository.save(updateEntity(entity, request));
 
-		// 2. The decision row.
+		// 2. The decision row, receipted against the beslut already in Lifecare.
 		final var decisionId = decisionService.create(municipalityId, namespace, errandId,
 			toPaymentDecision(request, decidedBy, LocalDate.now(ZoneId.systemDefault())));
+		final var lifecareId = String.valueOf(entity.getLifecareDecisionId());
+		decisionService.recordLifecareResult(municipalityId, namespace, errandId, decisionId,
+			DecisionLifecareResult.create().withOutcome(LIFECARE_RESULT_WRITTEN).withLifecareId(lifecareId));
 
 		// 3. Resume the process.
 		final var correlated = correlatePaymentDecision(municipalityId, namespace, errandId, outcome);
@@ -137,7 +150,8 @@ public class FinancialAssistanceFinalizeService {
 		return FinalizeResponse.create()
 			.withDecisionId(decisionId)
 			.withProcessMessageCorrelated(correlated)
-			.withCommunication(request.getCommunication());
+			.withCommunication(request.getCommunication())
+			.withLifecareDecision(new LifecareDecisionRegistration(decisionId, REGISTRATION_REGISTERED, lifecareId, null));
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -148,6 +162,15 @@ public class FinancialAssistanceFinalizeService {
 	private static void requireDecider(final String decidedBy) {
 		if (!hasText(decidedBy)) {
 			throw Problem.valueOf(BAD_REQUEST, ERROR_NO_DECIDER);
+		}
+	}
+
+	/**
+	 * A request without a decision is completed from Lifecare before it gets here; one that is not has nothing to record.
+	 */
+	private static void requireDecision(final FinalizeRequest request) {
+		if (request == null || request.getDecision() == null) {
+			throw Problem.valueOf(BAD_REQUEST, ERROR_NO_DECISION);
 		}
 	}
 

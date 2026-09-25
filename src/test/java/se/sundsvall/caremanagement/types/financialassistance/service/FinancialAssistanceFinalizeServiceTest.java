@@ -19,11 +19,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
+import se.sundsvall.caremanagement.decisions.api.model.DecisionLifecareResult;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionRegistration;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaCalculationDraftRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
@@ -152,11 +154,15 @@ class FinancialAssistanceFinalizeServiceTest {
 		assertThat(response.getDecisionId()).isEqualTo(DECISION_ID);
 		assertThat(response.getProcessMessageCorrelated()).isTrue();
 		assertThat(response.getCommunication()).isEqualTo(request.getCommunication());
+		assertThat(response.getLifecareDecision()).isEqualTo(new LifecareDecisionRegistration(DECISION_ID, "REGISTERED", "815", null));
 
-		// 1. The audit fields land on the entity before the decision is recorded, 2. the decision, 3. the process
+		// 1. The audit fields land on the entity before the decision is recorded, 2. the decision and its receipt against
+		// the Lifecare beslut, 3. the process
 		final var inOrder = inOrder(repositoryMock, decisionServiceMock, processServiceMock);
 		inOrder.verify(repositoryMock).save(entityCaptor.capture());
 		inOrder.verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
+		inOrder.verify(decisionServiceMock).recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID,
+			DecisionLifecareResult.create().withOutcome("WRITTEN").withLifecareId("815"));
 		inOrder.verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), variablesCaptor.capture());
 
 		assertThat(entityCaptor.getValue())
@@ -261,6 +267,19 @@ class FinancialAssistanceFinalizeServiceTest {
 		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verifyNoInteractions(decisionServiceMock, repositoryMock, processServiceMock);
+	}
+
+	@Test
+	void aRequestWithoutDecisionYields400() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
+		final var request = FinalizeRequest.create().withCommunication(CommunicationChannels.create());
+
+		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessageContaining("no decision");
 
 		verifyNoInteractions(decisionServiceMock, repositoryMock, processServiceMock);
 	}

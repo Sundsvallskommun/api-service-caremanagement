@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeResponse;
-import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceFinalizeService;
+import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareFinalizeService;
 import se.sundsvall.dept44.common.validators.annotation.ValidMunicipalityId;
 import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
@@ -45,19 +45,41 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 })
 class FinancialAssistanceFinalizeResource {
 
-	private final FinancialAssistanceFinalizeService finalizeService;
+	private final LifecareFinalizeService finalizeService;
 
-	FinancialAssistanceFinalizeResource(final FinancialAssistanceFinalizeService finalizeService) {
+	FinancialAssistanceFinalizeResource(final LifecareFinalizeService finalizeService) {
 		this.finalizeService = finalizeService;
 	}
 
 	@PostMapping(path = "/financial-assistance/{errandId}/finalize", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Besluta och utbetala — finalize the errand (caseworker)",
-		description = "Records the caseworker's decision as a PAYMENT decision on the errand, stores the chosen communication channels and household-size flag, and correlates PaymentDecisionReceived to the process (paymentDecision APPROVED for BIFALL/DELAVSLAG, REJECTED otherwise) — which sets GRANTED/REJECTED and, for a bifall, reads the payments from Lifecare until they are paid out. Creates no payments: Draken registers them directly in Lifecare. Every outcome requires the beslut to be saved in Lifecare and linked as lifecareDecisionId; a BIFALL/DELAVSLAG also requires the normberäkning saved in Lifecare and linked as lifecareCalculationId (both through PATCH .../financial-assistance/{errandId}/data), otherwise 409. An AVSLAG linked to Lifecare payments (lifecarePaymentIds) is refused with 409. A decision on a normberäkning linked as lifecareCalculationId purges careM's calculation draft: the decided calculation is Lifecare's, and the draft read answers 404 from then on. Does not send anything to the applicant: the response echoes the communication channels for the frontend to act on. Requires the errand in AWAITING_DECISION and an identified caller (X-Sent-By); a second finalize is rejected with 409. A process that could not be reached is reported in the response, not as an error.",
+		description = """
+			Records the caseworker's decision as a PAYMENT decision on the errand, stores the chosen communication channels and \
+			household-size flag, and correlates PaymentDecisionReceived to the process (paymentDecision APPROVED for \
+			BIFALL/DELAVSLAG, REJECTED otherwise) — which sets GRANTED/REJECTED and, for a bifall, reads the payments from \
+			Lifecare until they are paid out. Leave out decision to have careM read the beslut the errand is linked to in \
+			Lifecare (lifecareDecisionId) and record that: its outcome from the beslutstyp's category, orsak, period, amount \
+			and beslutsmeddelande; 400 when no beslut is saved or its beslutstyp cannot be finalized, 422 when the beslut breaks \
+			the decision's rules. The recorded decision is receipted against the Lifecare beslut in the same call (marked \
+			SYNCED with lifecareId, reported as lifecareDecision), so posting .../lifecare-result afterwards is no longer \
+			needed (and harmless). Creates no payments: Draken registers them directly in Lifecare. Every outcome requires \
+			the beslut to be saved in Lifecare and linked as lifecareDecisionId; a BIFALL/DELAVSLAG also requires the \
+			normberäkning saved in Lifecare and linked as lifecareCalculationId, otherwise 409. An AVSLAG linked to Lifecare \
+			payments (lifecarePaymentIds) is refused with 409. A decision on a normberäkning linked as lifecareCalculationId \
+			purges careM's calculation draft: the decided calculation is Lifecare's, and the draft read answers 404 from then \
+			on. Does not send anything to the applicant: the response echoes the communication channels for the frontend to \
+			act on. Requires the errand in AWAITING_DECISION and an identified caller (X-Sent-By); a second finalize is \
+			rejected with 409. A process that could not be reached is reported in the response, not as an error.""",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "409",
 				description = "Conflict - wrong status, already finalized, no lifecareDecisionId, a granting decision without lifecareCalculationId, or an avslag linked to Lifecare payments",
+				content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
+			@ApiResponse(responseCode = "422",
+				description = "Unprocessable - the beslut read from Lifecare breaks the decision's rules",
+				content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
+			@ApiResponse(responseCode = "502",
+				description = "Bad Gateway - Lifecare could not be read",
 				content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
 	ResponseEntity<FinalizeResponse> finalize(

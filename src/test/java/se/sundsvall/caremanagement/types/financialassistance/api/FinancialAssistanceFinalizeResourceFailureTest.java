@@ -15,7 +15,7 @@ import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
-import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceFinalizeService;
+import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareFinalizeService;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 import se.sundsvall.dept44.problem.violations.Violation;
@@ -47,7 +47,7 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 	private WebTestClient webTestClient;
 
 	@MockitoBean
-	private FinancialAssistanceFinalizeService finalizeServiceMock;
+	private LifecareFinalizeService finalizeServiceMock;
 
 	private static FinalizeRequest validRequest() {
 		return FinalizeRequest.create()
@@ -97,9 +97,9 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 	}
 
 	@Test
-	void missingDecisionAndCommunication() {
+	void missingCommunication() {
+		// The decision may be left out - careM then reads it from Lifecare - but the channels may not.
 		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, FinalizeRequest.create()),
-			tuple("decision", "must not be null"),
 			tuple("communication", "must not be null"));
 		verifyNoInteractions(finalizeServiceMock);
 	}
