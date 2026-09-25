@@ -49,7 +49,7 @@ class ProfessionalWebClientTest {
 		final var properties = properties("user", "sec ret&1", Duration.ofMinutes(20));
 		final var http = new ProfessionalWebHttp(HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build(), Duration.ofSeconds(5));
 		session = new ProfessionalWebSession(properties, new ProfessionalWebSignIn(properties, http), http);
-		client = new ProfessionalWebClient(properties, session, http);
+		client = new ProfessionalWebClient(new DirectProfessionalWebTransport(properties, session, http));
 
 		stubSignIn();
 	}
@@ -160,7 +160,7 @@ class ProfessionalWebClientTest {
 	void unconfigured() {
 		final var properties = new ProfessionalWebProperties(null, null, "a", "saml", null, null, null, Duration.ofMinutes(1), 1, 1, "d", "c", null);
 		final var http = new ProfessionalWebHttp(HttpClient.newHttpClient(), Duration.ofSeconds(1));
-		final var unconfigured = new ProfessionalWebClient(properties, new ProfessionalWebSession(properties, new ProfessionalWebSignIn(properties, http), http), http);
+		final var unconfigured = new ProfessionalWebClient(new DirectProfessionalWebTransport(properties, new ProfessionalWebSession(properties, new ProfessionalWebSignIn(properties, http), http), http));
 
 		assertThatThrownBy(() -> unconfigured.get("api2/x", Map.of())).hasMessageContaining("not configured");
 	}

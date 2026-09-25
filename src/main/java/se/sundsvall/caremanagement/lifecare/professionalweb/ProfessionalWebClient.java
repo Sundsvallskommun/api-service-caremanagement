@@ -1,12 +1,8 @@
 package se.sundsvall.caremanagement.lifecare.professionalweb;
 
-import java.net.URI;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -28,10 +24,10 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
  * </p>
  *
  * <p>
- * Session escalation, as Lifecare's own client does it: when an answer says a session is needed, first bootstrap the
- * module and ask again, then sign in afresh and ask again, then give up with 502. Retrying a write is safe here,
- * because a session refusal comes before Lifecare acts on the request. A success is never retried, and nothing else
- * is retried at all.
+ * How the call reaches Lifecare, session escalation included, is the {@link ProfessionalWebTransport}'s business:
+ * directly
+ * from inside the municipal network, or through api-service-lifecare-integrator from outside it. Nothing is retried
+ * here.
  * </p>
  *
  * <p>
@@ -51,15 +47,11 @@ public class ProfessionalWebClient {
 	private static final String DELETE = "DELETE";
 	private static final byte[] PDF_SIGNATURE = "%PDF".getBytes(StandardCharsets.US_ASCII);
 
-	private final ProfessionalWebProperties properties;
-	private final ProfessionalWebSession session;
-	private final ProfessionalWebHttp http;
+	private final ProfessionalWebTransport transport;
 	private final JsonMapper json = JsonMapper.builder().build();
 
-	public ProfessionalWebClient(final ProfessionalWebProperties properties, final ProfessionalWebSession session, final ProfessionalWebHttp http) {
-		this.properties = properties;
-		this.session = session;
-		this.http = http;
+	public ProfessionalWebClient(final ProfessionalWebTransport transport) {
+		this.transport = transport;
 	}
 
 	/**
@@ -112,65 +104,16 @@ public class ProfessionalWebClient {
 	}
 
 	private ProfessionalWebResponse exchange(final String method, final String path, final Map<String, String> params, final Object body) {
-		var response = send(method, path, params, body);
-
-		if (ProfessionalWebHttp.needsSession(response)) {
-			// First escalation: the module wants an artifact of its own. The ordinary case for a session that has not spoken
-			// to this module yet.
-			LOG.warn("Lifecare wants a session for {} ({}) - bootstrapping it", MODULE, response.describe());
-			session.bootstrapModule(MODULE);
-			response = send(method, path, params, body);
+		byte[] bytes = null;
+		if (!GET.equals(method)) {
+			bytes = serialise(body);
 		}
-		if (ProfessionalWebHttp.needsSession(response)) {
-			// Second escalation: the session itself is gone. Lifecare sessions time out on idle.
-			LOG.warn("Lifecare still refuses {} ({}) - signing in again", path, response.describe());
-			session.reset();
-			response = send(method, path, params, body);
-		}
-		if (ProfessionalWebHttp.needsSession(response)) {
-			throw Problem.valueOf(BAD_GATEWAY, "Lifecare would not accept a freshly established session (" + response.describe() + ")");
-		}
+		final var response = transport.exchange(method, path, params, bytes);
 		if (!response.isSuccess()) {
 			LOG.info("Lifecare refused {} {} ({})", method, path, response.describe());
 			throw ProfessionalWebErrors.toProblem(response);
 		}
 		return response;
-	}
-
-	private ProfessionalWebResponse send(final String method, final String path, final Map<String, String> params, final Object body) {
-		final var headers = new LinkedHashMap<String, String>();
-		headers.putAll(ProfessionalWebHttp.BROWSER_HEADERS);
-		headers.putAll(ProfessionalWebHttp.AJAX_HEADERS);
-		// Lifecare's own client sends these on every api2 call, and ASP.NET applications of this vintage are prone to
-		// checking them.
-		headers.put("Origin", origin());
-		headers.put("Referer", properties.baseUrl() + "/WE.Flow.Html/");
-		byte[] bytes = null;
-		if (!GET.equals(method)) {
-			headers.put("Content-Type", "application/json; charset=UTF-8");
-			bytes = serialise(body);
-		}
-		headers.putAll(session.prepare());
-
-		final var response = http.send(method, uri(path, params), headers, bytes);
-		session.absorb(response);
-		return response;
-	}
-
-	private URI uri(final String path, final Map<String, String> params) {
-		final var base = properties.baseUrl() + "/" + MODULE + "/" + path.replaceAll("^/+", "");
-		if (params == null || params.isEmpty()) {
-			return URI.create(base);
-		}
-		final var query = params.entrySet().stream()
-			.map(entry -> encode(entry.getKey()) + "=" + encode(entry.getValue()))
-			.collect(Collectors.joining("&"));
-		return URI.create(base + "?" + query);
-	}
-
-	private String origin() {
-		final var uri = URI.create(properties.baseUrl());
-		return uri.getScheme() + "://" + uri.getRawAuthority();
 	}
 
 	private byte[] serialise(final Object body) {
@@ -189,13 +132,6 @@ public class ProfessionalWebClient {
 		} catch (final JacksonException _) {
 			throw Problem.valueOf(BAD_GATEWAY, "Lifecare answered with something that is not JSON (" + response.describe() + ")");
 		}
-	}
-
-	private static String encode(final String value) {
-		if (value == null) {
-			return "";
-		}
-		return URLEncoder.encode(value, StandardCharsets.UTF_8);
 	}
 
 	private static boolean startsWith(final byte[] body, final byte[] prefix) {

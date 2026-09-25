@@ -106,6 +106,10 @@ integration:
   # unset and every ProfessionalWeb call answers 502 instead of the application failing to start. username/password are
   # secrets: environment only. Only reachable from a network that resolves the internal Lifecare host.
   lifecare-professionalweb:
+    # direct: careM signs in and talks to Lifecare itself (inside the municipal network only). integrator: through
+    # api-service-lifecare-integrator's POST /{municipalityId}/professional-web/exchange, using the lifecare-integrator
+    # url and OAuth2 registration above; the integrator then holds the account and the url/credentials below are unused.
+    provider: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_PROVIDER:direct}
     url: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_URL:}
     domain: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_DOMAIN:}
     federation-profile: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_FEDERATION_PROFILE:}

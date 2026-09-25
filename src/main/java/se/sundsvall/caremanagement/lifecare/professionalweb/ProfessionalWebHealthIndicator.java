@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.lifecare.professionalweb;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
  * </p>
  */
 @Component("lifecareProfessionalWeb")
+@ConditionalOnProperty(name = ProfessionalWebTransport.PROVIDER_PROPERTY, havingValue = "direct", matchIfMissing = true)
 class ProfessionalWebHealthIndicator implements HealthIndicator {
 
 	private final ProfessionalWebProperties properties;
