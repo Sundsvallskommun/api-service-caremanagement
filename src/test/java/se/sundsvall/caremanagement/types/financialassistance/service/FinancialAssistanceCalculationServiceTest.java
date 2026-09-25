@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -294,7 +295,7 @@ class FinancialAssistanceCalculationServiceTest {
 		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
 		noPreviousCalculation(month);
 		when(calculationServiceMock.untransferableIncomes(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[]")).thenReturn(untransferable);
-		when(untransferableIncomeFeederMock.untransferableIncomeWarnings(untransferable)).thenReturn(List.of(warning));
+		when(untransferableIncomeFeederMock.untransferableIncomeWarnings(untransferable, Map.of())).thenReturn(List.of(warning));
 
 		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]"));
@@ -386,7 +387,7 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(calculationFeederMock, never()).incomeRows(any(), any());
 		verify(calculationFeederMock, never()).expenseFeed(any(), any(), any(), any(), any());
 		verify(calculationFeederMock, never()).personRows(any(), any(), any(), any(), any(), any());
-		verify(calculationServiceMock, never()).incomeLines(any(), any(), any(), any());
+		verify(calculationServiceMock, never()).incomeLines(any(), any(), any(), any(), any());
 		verify(calculationServiceMock, never()).selectNormId(any(), any(), any(), any(), any());
 		verify(lifecareCaseServiceMock, never()).previousFamily(any(), any(), any());
 		// The housing-cost change is frozen with the draft: it concerns the calculation's boendekostnad.
@@ -440,7 +441,7 @@ class FinancialAssistanceCalculationServiceTest {
 		linkedRun(month);
 		final var lines = List.of(new FamilyCareIncomeLine(20, "Lön", "APPLICANT", new BigDecimal("12400"), null, null));
 		final var rows = List.of(FaNormIncomeEntity.create().withTypeId(20).withTypeName("Lön").withApplicantProcessAmount(new BigDecimal("12400")));
-		when(calculationServiceMock.incomeLines(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[json]")).thenReturn(lines);
+		when(calculationServiceMock.incomeLines(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[json]", Map.of())).thenReturn(lines);
 		when(calculationFeederMock.incomeRows(ERRAND_ID, lines)).thenReturn(rows);
 
 		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, linkedRequest());
@@ -456,7 +457,7 @@ class FinancialAssistanceCalculationServiceTest {
 	void prepareWithACalculationSavedInLifecareCompletesWhenTheSsbtekSyncFails() {
 		final var month = YearMonth.of(2026, JUNE);
 		final var errand = linkedRun(month);
-		when(calculationServiceMock.incomeLines(any(), any(), any(), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare said no"));
+		when(calculationServiceMock.incomeLines(any(), any(), any(), any(), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare said no"));
 
 		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, linkedRequest());
 

@@ -291,7 +291,7 @@ public class FinancialAssistanceCalculationService {
 	 * {@link #reconcileWithDraft}.
 	 */
 	private DraftRefresh refreshDraft(final String municipalityId, final PrepareInput input, final PreviousHousehold previous) {
-		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
+		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes(), HouseholdPartyService.childNames(input.errand())));
 		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, input.errandId(), input.errand(),
 			previousExpenseAmounts(municipalityId, input.applicant(), input.applicationMonth()), input.applicantAge());
 		// NORM-04: norm, familj and gemensamma kostnader come from the previous normberäkning (regelverk återansökan);
@@ -316,7 +316,8 @@ public class FinancialAssistanceCalculationService {
 		// An income the rules transfer but no Lifecare income type can take is missing from the rows above. Named here,
 		// from the transfer's own filter, so the draft never silently lacks an income the regelverk says to count.
 		final var untransferableWarnings = untransferableIncomeFeeder.untransferableIncomeWarnings(
-			calculationService.untransferableIncomes(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
+			calculationService.untransferableIncomes(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()),
+			HouseholdPartyService.childNames(input.errand()));
 		// Read after the merge, not before: the duplicate only exists once the refreshed process rows sit alongside
 		// whatever the caseworker has added by hand.
 		final var duplicateWarnings = draftService.duplicateIncomeWarnings(input.errandId());
@@ -469,7 +470,7 @@ public class FinancialAssistanceCalculationService {
 		}
 		try {
 			final var incomeRows = calculationFeeder.incomeRows(input.errandId(),
-				calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
+				calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes(), HouseholdPartyService.childNames(input.errand())));
 			calculationSyncService.recordSsbtek(input.errandId(), incomeRows);
 			final var from = ofNullable(header.get().getCalculationFromDate()).orElseGet(() -> input.applicationMonth().atDay(1));
 			final var to = ofNullable(header.get().getCalculationToDate()).orElseGet(() -> input.applicationMonth().atEndOfMonth());

@@ -1,13 +1,16 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
@@ -62,6 +65,20 @@ public class HouseholdPartyService {
 			.findFirst();
 
 		return new Household(applicantPartyId, coApplicantPresent, applicantPerson, applicantName);
+	}
+
+	/**
+	 * The household children's first names by partyId, for naming a child's SSBTEK income on the applicant's column and in
+	 * warnings. A child without a partyId cannot have an SSBTEK income and is left out; a child without a first name maps
+	 * to an empty name, which the callers render as just "barn".
+	 */
+	static Map<String, String> childNames(final FinancialAssistanceEntity errand) {
+		return ofNullable(errand)
+			.map(FinancialAssistanceEntity::getChildren)
+			.orElseGet(List::of)
+			.stream()
+			.filter(child -> hasText(child.getPartyId()))
+			.collect(Collectors.toMap(FaChild::getPartyId, child -> ofNullable(child.getFirstName()).orElse(""), (first, duplicate) -> first));
 	}
 
 	/**

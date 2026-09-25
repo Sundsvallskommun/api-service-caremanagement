@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
@@ -98,5 +100,18 @@ class HouseholdPartyServiceTest {
 			FaPerson.create().withRole("APPLICANT").withPartyId("party-a")))));
 
 		assertThat(service.coApplicantPresent(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isFalse();
+	}
+
+	@Test
+	void childNamesByPartyIdSkipChildrenWithoutPartyId() {
+		final var errand = FinancialAssistanceEntity.create().withChildren(List.of(
+			FaChild.create().withPartyId("child-1").withFirstName("Kalle"),
+			FaChild.create().withPartyId("child-2"),
+			FaChild.create().withFirstName("Utan id"),
+			FaChild.create().withPartyId("child-1").withFirstName("Dubblett")));
+
+		assertThat(HouseholdPartyService.childNames(errand)).containsExactlyInAnyOrderEntriesOf(Map.of("child-1", "Kalle", "child-2", ""));
+		assertThat(HouseholdPartyService.childNames(null)).isEmpty();
+		assertThat(HouseholdPartyService.childNames(FinancialAssistanceEntity.create())).isEmpty();
 	}
 }

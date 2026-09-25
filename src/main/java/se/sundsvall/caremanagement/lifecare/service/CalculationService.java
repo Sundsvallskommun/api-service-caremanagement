@@ -80,13 +80,15 @@ public class CalculationService {
 	/**
 	 * The process-derived income lines for the draft — one per (FamilyCare income type, recipient) — from the
 	 * operaton-classified incomes resolved against the applicant's calculation proposal. Comparison-period incomes the
-	 * previous month already transferred are dropped first. Writes nothing to Lifecare.
+	 * previous month already transferred are dropped first. A household child's income goes on the applicant's column
+	 * and is named in the line's note from {@code childNames} (partyId to first name). Writes nothing to Lifecare.
 	 */
-	public List<FamilyCareIncomeLine> incomeLines(final String municipalityId, final String applicantPartyId, final YearMonth applicationMonth, final String classifiedIncomesJson) {
+	public List<FamilyCareIncomeLine> incomeLines(final String municipalityId, final String applicantPartyId, final YearMonth applicationMonth, final String classifiedIncomesJson,
+		final Map<String, String> childNames) {
 		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPartyId);
 		final var transferable = ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
 			parse(classifiedIncomesJson), previousIncomeTypes(municipalityId, applicantPartyId, applicationMonth));
-		return ClassifiedIncomeToFamilyCareMapper.toIncomeLines(transferable, proposal);
+		return ClassifiedIncomeToFamilyCareMapper.toIncomeLines(transferable, proposal, childNames);
 	}
 
 	/**

@@ -3,10 +3,12 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toMap;
@@ -38,9 +40,10 @@ public class UntransferableIncomeFeeder {
 	 * The warnings for the incomes the draft could not take.
 	 *
 	 * @param  untransferable the transferable incomes no Lifecare income type matched
+	 * @param  childNames     the household children's first names by partyId, to name a child's income
 	 * @return                the warnings, folded into the daily prepare's reconcile set
 	 */
-	public List<WarningService.WarningInput> untransferableIncomeWarnings(final List<ClassifiedIncome> untransferable) {
+	public List<WarningService.WarningInput> untransferableIncomeWarnings(final List<ClassifiedIncome> untransferable, final Map<String, String> childNames) {
 		return ofNullable(untransferable).orElseGet(List::of).stream()
 			.filter(Objects::nonNull)
 			.filter(classified -> classified.income() != null)
@@ -48,23 +51,26 @@ public class UntransferableIncomeFeeder {
 			// Several payments of the same benefit to the same person are one fact for the handläggare.
 			.collect(toMap(UntransferableIncomeFeeder::sourceKey, classified -> classified, (first, duplicate) -> first, LinkedHashMap::new))
 			.entrySet().stream()
-			.map(entry -> new WarningService.WarningInput(WarningService.TYPE_INCOME_NOT_TRANSFERABLE, entry.getKey(), message(entry.getValue())))
+			.map(entry -> new WarningService.WarningInput(WarningService.TYPE_INCOME_NOT_TRANSFERABLE, entry.getKey(), message(entry.getValue(), childNames)))
 			.toList();
 	}
 
-	private static String message(final ClassifiedIncome classified) {
-		return MESSAGE_TEMPLATE.formatted(classified.income().benefit(), personSuffix(classified.income().role()), classified.calculation());
+	private static String message(final ClassifiedIncome classified, final Map<String, String> childNames) {
+		return MESSAGE_TEMPLATE.formatted(classified.income().benefit(), personSuffix(classified.income(), childNames), classified.calculation());
 	}
 
+	/** Keyed per person: a child's income also carries the child's partyId, so two children's warnings stay apart. */
 	private static String sourceKey(final ClassifiedIncome classified) {
-		return normalize(classified.income().benefit()) + ofNullable(classified.income().role()).map(role -> "|" + role.name()).orElse("");
+		final var income = classified.income();
+		final var child = ofNullable(income.partyId()).filter(partyId -> income.role() == ApplicantRole.CHILD).map(partyId -> "|" + partyId).orElse("");
+		return normalize(income.benefit()) + ofNullable(income.role()).map(role -> "|" + role.name()).orElse("") + child;
 	}
 
-	private static String personSuffix(final ApplicantRole role) {
-		if (role == ApplicantRole.CO_APPLICANT) {
+	private static String personSuffix(final SsbtekIncome income, final Map<String, String> childNames) {
+		if (income.role() == ApplicantRole.CO_APPLICANT) {
 			return CO_APPLICANT_SUFFIX;
 		}
-		return "";
+		return income.childSuffix(childNames);
 	}
 
 	private static String normalize(final String value) {

@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,7 @@ class HouseholdIdentifiersResourceTest {
 	@Test
 	void getHouseholdIdentifiers() {
 		when(serviceMock.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
-			.thenReturn(new HouseholdIdentifiers("EB-2026-000123", "19800101T001", null));
+			.thenReturn(new HouseholdIdentifiers("EB-2026-000123", "19800101T001", null, List.of()));
 
 		final var response = webTestClient.get()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -50,7 +51,7 @@ class HouseholdIdentifiersResourceTest {
 			.returnResult()
 			.getResponseBody();
 
-		assertThat(response).isEqualTo(new HouseholdIdentifiers("EB-2026-000123", "19800101T001", null));
+		assertThat(response).isEqualTo(new HouseholdIdentifiers("EB-2026-000123", "19800101T001", null, List.of()));
 		verify(serviceMock).get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 

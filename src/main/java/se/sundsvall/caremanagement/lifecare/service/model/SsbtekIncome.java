@@ -3,6 +3,8 @@ package se.sundsvall.caremanagement.lifecare.service.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * A single normalised income read out of SSBTEK, expressed in SSBTEK's own terms (benefit / sub-benefit / amountType)
@@ -29,7 +31,10 @@ import java.time.LocalDate;
  *                   number: the SO contract types {@code Ersattningsdagar} as {@code xs:decimal} and FK sends partial
  *                   parental-benefit days, so half and quarter days are native to both. Reading it as an int truncated
  *                   4.5 days to 4 and 0.5 days to none.
- * @param role       whether this income belongs to the applicant or the co-applicant
+ * @param role       whether this income belongs to the applicant, the co-applicant or a household child
+ * @param partyId    the household child's partyId when {@code role} is {@code CHILD}, otherwise {@code null}. A child
+ *                   has no income column of its own in the Lifecare normberäkning, so the id is what lets the
+ *                   handläggare see whose income was folded into the applicant's
  */
 public record SsbtekIncome(
 	@JsonProperty("forman") String benefit,
@@ -40,11 +45,36 @@ public record SsbtekIncome(
 	@JsonProperty("periodFran") LocalDate periodFrom,
 	@JsonProperty("periodTill") LocalDate periodTo,
 	@JsonProperty("dagar") BigDecimal days,
-	ApplicantRole role) {
+	ApplicantRole role,
+	String partyId) {
+
+	/** An adult's income, which needs no partyId — the role alone says whose it is. */
+	public SsbtekIncome(final String benefit, final String subBenefit, final String amountType, final BigDecimal netAmount, final LocalDate period,
+		final LocalDate periodFrom, final LocalDate periodTo, final BigDecimal days, final ApplicantRole role) {
+		this(benefit, subBenefit, amountType, netAmount, period, periodFrom, periodTo, days, role, null);
+	}
+
+	/**
+	 * " (barn: Name)" for a household child's income, " (barn)" when the child's name is not known, else nothing — so a
+	 * child's income reads the same in the income row's note and in the warnings.
+	 *
+	 * @param  childNames the household children's first names by partyId
+	 * @return            the suffix to append to the income's description
+	 */
+	public String childSuffix(final Map<String, String> childNames) {
+		if (role != ApplicantRole.CHILD) {
+			return "";
+		}
+		return Optional.ofNullable(partyId)
+			.map(Optional.ofNullable(childNames).orElseGet(Map::of)::get)
+			.filter(name -> !name.isBlank())
+			.map(name -> " (barn: " + name + ")")
+			.orElse(" (barn)");
+	}
 
 	/** The payment-date-only shape, for tests and callers with no period or day information. */
 	public SsbtekIncome(final String benefit, final String subBenefit, final String amountType,
 		final BigDecimal netAmount, final LocalDate period, final ApplicantRole role) {
-		this(benefit, subBenefit, amountType, netAmount, period, null, null, null, role);
+		this(benefit, subBenefit, amountType, netAmount, period, null, null, null, role, null);
 	}
 }
