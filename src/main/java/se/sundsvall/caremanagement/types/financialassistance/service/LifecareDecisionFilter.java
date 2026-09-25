@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -35,11 +36,22 @@ public class LifecareDecisionFilter {
 	}
 
 	/**
-	 * Whether the decision can be the previous decision the decision proposal builds on: an EB decision that covers a
-	 * period. That leaves out the EB utredningsbeslut (”Beslut om ekonomiskt bistånd under nuvarande förhållande”),
-	 * which is made under the EB service but carries no period, orsak or amount.
+	 * Whether the decision can be the previous decision the decision proposal builds on: a decision in the errand's own
+	 * EB insats that covers a period. That leaves out the EB utredningsbeslut (”Beslut om ekonomiskt bistånd under
+	 * nuvarande förhållande”), which is made in the insats but carries no period, orsak or amount.
+	 *
+	 * <p>
+	 * A decision's {@code ServiceId} is the insats it was made in — one per person, {@code 2} only for the first test
+	 * person in Lifecare test, which is how the configured ids passed for a catalogue id — so the errand's own
+	 * {@code lifecareServiceId} decides when the errand has one, and the configured ids only when it has none yet.
+	 * </p>
 	 */
-	public boolean isPreviousDecisionCandidate(final DecisionView decision) {
-		return isFinancialAssistance(decision) && hasText(decision.fromDate());
+	public boolean isPreviousDecisionCandidate(final DecisionView decision, final Optional<Integer> errandServiceId) {
+		if (!hasText(decision.fromDate())) {
+			return false;
+		}
+		return errandServiceId
+			.map(serviceId -> serviceId.equals(decision.serviceId()))
+			.orElseGet(() -> isFinancialAssistance(decision));
 	}
 }

@@ -252,7 +252,7 @@ class CalculationServiceTest {
 		final var expenses = List.of(
 			new EffectiveExpense("RENT", "EXPENSE", BigDecimal.valueOf(9000.0), BigDecimal.valueOf(8000.0), null), // resolves to FamilyCare id 42
 			new EffectiveExpense("UNMAPPED_NONSENSE", "EXPENSE", BigDecimal.valueOf(100.0), BigDecimal.valueOf(100.0), null)); // skipped (no FamilyCare id)
-		final var persons = List.of(new EffectivePerson("p1", 30, null, null));
+		final var persons = List.of(new EffectivePerson("p1", 30, null, null), new EffectivePerson("p2", 12, null, null));
 
 		final var calculationId = service.commitEffective(MUNICIPALITY_ID, APPLICANT, MONTH, new CalculationHeader(7, null, null, null, null, null, null), incomes, expenses, persons);
 
@@ -269,34 +269,52 @@ class CalculationServiceTest {
 		});
 		// The household row carries careM's partyId by design — the direct route resolves it to a personal identity
 		// number in LifecareFamilyCareIntegration.createCalculation, the integrator route wants it unchanged.
-		assertThat(body.getCalculationPersons()).singleElement().satisfies(person -> {
-			assertThat(person.getPersonId()).isEqualTo("p1");
-			// careM's full month is 30; June 2026 spans 2026-06-01–2026-06-30, which FamilyCare counts as 29.
-			assertThat(person.getNumberOfDays()).isEqualTo(29);
-		});
+		assertThat(body.getCalculationPersons())
+			.extracting(person -> person.getPersonId(), person -> person.getNumberOfDays())
+			.containsExactly(tuple("p1", null), tuple("p2", 12));
+		// No household size on the draft: not custom, as many as the persons posted — left unset, Lifecare stores 0 and
+		// computes no gemensamma kostnader.
+		assertThat(body.getHasCustomHouseholdSize()).isFalse();
+		assertThat(body.getHouseholdSize()).isEqualTo(2);
+	}
+
+	@Test
+	void commitEffectiveKeepsTheDraftsCustomHouseholdSize() {
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
+		when(lifecareFamilyCareIntegrationMock.createCalculation(eq(MUNICIPALITY_ID), any(PostCalculationBodyRequest.class))).thenReturn(5001);
+		final var persons = List.of(new EffectivePerson("p1", 30, null, null));
+
+		service.commitEffective(MUNICIPALITY_ID, APPLICANT, MONTH, new CalculationHeader(7, null, null, null, true, 3, null), List.of(), List.of(), persons);
+
+		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
+		verify(lifecareFamilyCareIntegrationMock).createCalculation(eq(MUNICIPALITY_ID), captor.capture());
+		assertThat(captor.getValue().getHasCustomHouseholdSize()).isTrue();
+		assertThat(captor.getValue().getHouseholdSize()).isEqualTo(3);
 	}
 
 	/**
-	 * FamilyCare refuses a NumberOfDays above the difference between the period's first and last day — 30 over a
-	 * 30-day month is <em>Invalid NumberOfDays for calculationperson</em>. careM counts a full month as 30 whatever
-	 * its length, so the value is capped at the FamilyCare edge rather than changed in the draft the caseworker reads.
+	 * FamilyCare prorates the norm by any NumberOfDays it gets, and refuses one above the difference between the
+	 * period's first and last day. careM counts a full month as 30 whatever its length, so a full month goes without
+	 * days — as Lifecare's own web app sends it — and a part month is capped at the FamilyCare edge.
 	 */
 	@Test
-	void capsHouseholdDaysAtWhatTheCalculationPeriodAllows() {
+	void sendsNoDaysForAFullMonthAndCapsAPartMonth() {
 		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
 		when(lifecareFamilyCareIntegrationMock.createCalculation(eq(MUNICIPALITY_ID), any(PostCalculationBodyRequest.class))).thenReturn(6000);
 
-		final var july = YearMonth.of(2026, 7); // 31 days: 2026-07-01–2026-07-31 is 30
+		final var february = YearMonth.of(2026, 2); // 2026-02-01–2026-02-28 is 27
 		final var persons = List.of(
 			new EffectivePerson("full", 30, null, null),
-			new EffectivePerson("partial", 12, null, null));
+			new EffectivePerson("partial", 12, null, null),
+			new EffectivePerson("capped", 29, null, null),
+			new EffectivePerson("unknown", null, null, null));
 
-		service.commitEffective(MUNICIPALITY_ID, APPLICANT, july, new CalculationHeader(7, null, null, null, null, null, null), List.of(), List.of(), persons);
+		service.commitEffective(MUNICIPALITY_ID, APPLICANT, february, new CalculationHeader(7, null, null, null, null, null, null), List.of(), List.of(), persons);
 
 		final ArgumentCaptor<PostCalculationBodyRequest> captor = ArgumentCaptor.forClass(PostCalculationBodyRequest.class);
 		verify(lifecareFamilyCareIntegrationMock).createCalculation(eq(MUNICIPALITY_ID), captor.capture());
 		assertThat(captor.getValue().getCalculationPersons())
 			.extracting(person -> person.getPersonId(), person -> person.getNumberOfDays())
-			.containsExactly(tuple("full", 30), tuple("partial", 12));
+			.containsExactly(tuple("full", null), tuple("partial", 12), tuple("capped", 27), tuple("unknown", null));
 	}
 }

@@ -43,6 +43,9 @@ public class ProposalBasisService {
 	/** The amount is estimated from the draft and the previous Lifecare calculation's norm. */
 	public static final String AMOUNT_BASIS_ESTIMATE = "ESTIMATE";
 
+	/** How many months either side of the calculation period the saved-calculation lookup reaches. */
+	static final int SAVED_CALCULATION_WINDOW_MONTHS = 2;
+
 	/** Swedish explanation surfaced on the proposal when no amount could be estimated. */
 	public static final String EXPLANATION_NO_NORM = "Ingen norm kunde läsas från Lifecare – beloppet kunde inte beräknas.";
 
@@ -68,7 +71,9 @@ public class ProposalBasisService {
 	 * What a proposal is computed from. {@code applicationMonth} is empty when the draft header carries none;
 	 * {@code estimatedAmount} is the bistånd (positive = underskott), empty when it is unknown; {@code amountBasis} says
 	 * where it came from ({@link #AMOUNT_BASIS_LIFECARE_CALCULATION} or {@link #AMOUNT_BASIS_ESTIMATE}), empty with it;
-	 * {@code normSum} is the saved calculation's norm, or the previous calculation's norm for an estimate.
+	 * {@code normSum} is the saved calculation's norm, or the previous calculation's norm for an estimate — always as the
+	 * positive cost it is, though FamilyCare's calculation listing carries it negated; {@code lifecareServiceId} is the
+	 * errand's own EB insats in Lifecare, empty when the errand has none yet.
 	 */
 	public record ProposalBasis(
 		CalculationDraft draft,
@@ -76,7 +81,8 @@ public class ProposalBasisService {
 		Optional<YearMonth> applicationMonth,
 		Optional<BigDecimal> normSum,
 		Optional<BigDecimal> estimatedAmount,
-		Optional<String> amountBasis) {
+		Optional<String> amountBasis,
+		Optional<Integer> lifecareServiceId) {
 	}
 
 	/**
@@ -89,24 +95,27 @@ public class ProposalBasisService {
 		final var draft = draftService.get(errandId); // 404 when no draft
 		final var household = householdPartyService.household(municipalityId, namespace, errandId);
 		final var applicationMonth = ofNullable(draft.getApplicationMonth()).filter(month -> hasText(month)).map(YearMonth::parse);
+		final var lifecareServiceId = financialAssistanceRepository.findByErrandId(errandId).map(FinancialAssistanceEntity::getLifecareServiceId);
 		final var savedCalculation = household.applicantPartyId()
 			.flatMap(applicant -> applicationMonth.flatMap(month -> savedCalculation(municipalityId, errandId, applicant, draft, month)));
 		if (savedCalculation.isPresent()) {
 			final var calculation = savedCalculation.get();
-			return new ProposalBasis(draft, household, applicationMonth, ofNullable(calculation.normSum()), Optional.of(calculation.balance().negate()),
-				Optional.of(AMOUNT_BASIS_LIFECARE_CALCULATION));
+			return new ProposalBasis(draft, household, applicationMonth, ofNullable(calculation.normSum()).map(BigDecimal::abs), Optional.of(calculation.balance().negate()),
+				Optional.of(AMOUNT_BASIS_LIFECARE_CALCULATION), lifecareServiceId);
 		}
 		final var normSum = household.applicantPartyId()
 			.flatMap(applicant -> applicationMonth.flatMap(month -> previousNormSum(municipalityId, applicant, month)));
 		final var estimatedAmount = normSum.map(norm -> ProposalMapper.estimatedAmount(draft, norm));
-		return new ProposalBasis(draft, household, applicationMonth, normSum, estimatedAmount, estimatedAmount.map(amount -> AMOUNT_BASIS_ESTIMATE));
+		return new ProposalBasis(draft, household, applicationMonth, normSum, estimatedAmount, estimatedAmount.map(amount -> AMOUNT_BASIS_ESTIMATE), lifecareServiceId);
 	}
 
 	/**
 	 * The normberäkning saved in Lifecare for this errand, best-effort: empty when none is linked yet, when Lifecare
-	 * cannot be read, or when the linked calculation is not found in the calculation period — the proposal then falls
-	 * back to the estimate. Looked up among the applicant's calculations for the draft's calculation period (the
-	 * application month when the draft has none), since the listing is the read the Lifecare route offers.
+	 * cannot be read, or when the linked calculation is not found — the proposal then falls back to the estimate. Looked
+	 * up by id among the applicant's calculations, since the listing is the read the Lifecare route offers. FamilyCare
+	 * filters that listing on the calculation <em>date</em>, not the period: a proposal for October created on 25
+	 * September is dated in September, and a calculation saved after its month is dated then — so the window reaches
+	 * {@value #SAVED_CALCULATION_WINDOW_MONTHS} months either side of the period.
 	 */
 	private Optional<CalculationView> savedCalculation(final String municipalityId, final String errandId, final String applicant,
 		final CalculationDraft draft, final YearMonth applicationMonth) {
@@ -114,8 +123,10 @@ public class ProposalBasisService {
 		if (calculationId.isEmpty()) {
 			return Optional.empty();
 		}
-		final var from = ofNullable(draft.getCalculationFromDate()).orElseGet(() -> applicationMonth.atDay(1));
-		final var to = ofNullable(draft.getCalculationToDate()).orElseGet(applicationMonth::atEndOfMonth);
+		final var periodFrom = ofNullable(draft.getCalculationFromDate()).orElseGet(() -> applicationMonth.atDay(1));
+		final var periodTo = ofNullable(draft.getCalculationToDate()).orElseGet(applicationMonth::atEndOfMonth);
+		final var from = periodFrom.minusMonths(SAVED_CALCULATION_WINDOW_MONTHS);
+		final var to = periodTo.plusMonths(SAVED_CALCULATION_WINDOW_MONTHS);
 		try {
 			final var match = lifecareCaseHistoryService.listCalculations(municipalityId, applicant, from, to).stream()
 				.filter(calculation -> Objects.equals(calculation.id(), calculationId.get()))
@@ -131,10 +142,13 @@ public class ProposalBasisService {
 		}
 	}
 
-	/** The previous calculation's norm sum, best-effort — a failed Lifecare read degrades to "unknown". */
+	/**
+	 * The previous calculation's norm sum as a positive cost, best-effort — a failed Lifecare read degrades to "unknown".
+	 * FamilyCare carries it negated, and added as it came it turned every estimate into an avslag.
+	 */
 	private Optional<BigDecimal> previousNormSum(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
 		try {
-			return ofNullable(lifecareCaseService.previousHousehold(municipalityId, applicant, applicationMonth).normSum());
+			return ofNullable(lifecareCaseService.previousHousehold(municipalityId, applicant, applicationMonth).normSum()).map(BigDecimal::abs);
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous calculation household — the proposal amount is left unknown", e);
 			return Optional.empty();

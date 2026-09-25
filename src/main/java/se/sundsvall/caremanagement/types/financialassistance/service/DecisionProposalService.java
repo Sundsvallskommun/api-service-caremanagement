@@ -120,7 +120,7 @@ public class DecisionProposalService {
 		final var basis = proposalBasisService.basis(municipalityId, namespace, errandId);
 		final var draft = basis.draft();
 		final var previousDecisionRead = basis.household().applicantPartyId()
-			.flatMap(applicant -> basis.applicationMonth().map(month -> previousDecision(municipalityId, applicant, month)))
+			.flatMap(applicant -> basis.applicationMonth().map(month -> previousDecision(municipalityId, applicant, month, basis.lifecareServiceId())))
 			.orElseGet(() -> LifecareRead.succeeded(Optional.<DecisionView>empty()));
 		final var previousDecision = previousDecisionRead.value();
 		final var partiallyRejected = ProposalMapper.partiallyRejectedExpenses(draft);
@@ -270,15 +270,16 @@ public class DecisionProposalService {
 
 	/**
 	 * The applicant's most recent ekonomiskt bistånd decision within the lookback window ending at the application month
-	 * — Lifecare lists every IFO decision on the person newest-first, so the first one that is an EB decision covering a
-	 * period (see {@link LifecareDecisionFilter#isPreviousDecisionCandidate}). Best-effort: a failed read degrades to
-	 * "no previous decision" and is reported as failed.
+	 * — Lifecare lists every IFO decision on the person newest-first, so the first one in the errand's EB insats that
+	 * covers a period (see {@link LifecareDecisionFilter#isPreviousDecisionCandidate}). Best-effort: a failed read
+	 * degrades to "no previous decision" and is reported as failed.
 	 */
-	private LifecareRead<Optional<DecisionView>> previousDecision(final String municipalityId, final String applicant, final YearMonth applicationMonth) {
+	private LifecareRead<Optional<DecisionView>> previousDecision(final String municipalityId, final String applicant, final YearMonth applicationMonth,
+		final Optional<Integer> errandServiceId) {
 		try {
 			return LifecareRead.succeeded(lifecareCaseHistoryService.listDecisions(municipalityId, applicant, applicationMonth.minusMonths(PREVIOUS_DECISION_LOOKBACK_MONTHS).atDay(1), applicationMonth.atEndOfMonth())
 				.stream()
-				.filter(lifecareDecisionFilter::isPreviousDecisionCandidate)
+				.filter(decision -> lifecareDecisionFilter.isPreviousDecisionCandidate(decision, errandServiceId))
 				.findFirst());
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the previous Lifecare decision — the decision proposal is computed without it", e);

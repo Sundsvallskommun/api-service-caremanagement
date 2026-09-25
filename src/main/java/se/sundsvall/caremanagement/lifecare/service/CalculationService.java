@@ -51,6 +51,8 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.toW
 public class CalculationService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(CalculationService.class);
+	/** A full month in careM's draft — the day count the caseworker reads, whatever the month's length. */
+	static final int FULL_MONTH_DAYS = 30;
 	private static final String UNKNOWN_INCOME_TYPE = "Income row '%s' has no Lifecare income type id and its name matches none of Lifecare's income types";
 
 	private final LifecareFamilyCare lifecareFamilyCareIntegration;
@@ -277,13 +279,14 @@ public class CalculationService {
 	}
 
 	/**
-	 * A household member's days, never above what the period allows. careM counts a full month as 30 whatever its
-	 * length, which is right for the caseworker reading the draft and wrong on the wire for every month that is not
-	 * 31 days long — so the conversion happens here, at the FamilyCare edge, and the draft keeps the number a human
-	 * recognises.
+	 * A household member's days on the wire: none for a full month, else the days, never above what the period allows.
+	 * careM counts a full month as {@value #FULL_MONTH_DAYS} whatever its length, which is right for the caseworker
+	 * reading the draft. FamilyCare takes any day count as a part month and prorates the person's norm by it — 30 days
+	 * of October turned Ensamstående 3 940 into 3 896 (2026-09-25) — so a full month is sent the way Lifecare's own web
+	 * app sends it, without days.
 	 */
 	private static Integer cappedDays(final Integer days, final long periodDays) {
-		if (days == null) {
+		if (days == null || days >= FULL_MONTH_DAYS) {
 			return null;
 		}
 		return (int) Math.min(days.longValue(), periodDays);

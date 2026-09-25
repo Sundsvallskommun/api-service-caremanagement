@@ -75,10 +75,11 @@ class ProposalBasisServiceTest {
 
 	@Test
 	void basisWithNormEstimatesTheAmount() {
+		// FamilyCare carries the norm negated; the estimate adds it as the cost it is, or every underskott reads as avslag.
 		final var draft = CalculationDraft.create().withApplicationMonth("2026-06").withIncomeSum(new BigDecimal("3000")).withExpenseSum(new BigDecimal("800")).withSpecialExpenseSum(new BigDecimal("250"));
 		when(draftServiceMock.get(ERRAND_ID)).thenReturn(draft);
 		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(Optional.of(APPLICANT)));
-		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.parse("2026-06"))).thenReturn(new PreviousHousehold(Set.of(), true, 1, new BigDecimal("6200"), null, "Riksnorm"));
+		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.parse("2026-06"))).thenReturn(new PreviousHousehold(Set.of(), true, 1, new BigDecimal("-6200"), null, "Riksnorm"));
 
 		final var basis = service.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -88,22 +89,26 @@ class ProposalBasisServiceTest {
 		assertThat(basis.normSum()).contains(new BigDecimal("6200"));
 		assertThat(basis.estimatedAmount()).contains(new BigDecimal("4250"));
 		assertThat(basis.amountBasis()).contains(ProposalBasisService.AMOUNT_BASIS_ESTIMATE);
-		verify(lifecareCaseHistoryServiceMock, never()).listCalculations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-06-01"), LocalDate.parse("2026-06-30"));
+		assertThat(basis.lifecareServiceId()).isEmpty();
+		verify(lifecareCaseHistoryServiceMock, never()).listCalculations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-04-01"), LocalDate.parse("2026-08-30"));
 	}
 
 	@Test
 	void savedLifecareCalculationDecidesTheAmount() {
-		// Lifecare's result differs from the draft estimate (4250) — jobbstimulans, say. Lifecare's wins.
+		// Lifecare's result differs from the draft estimate (4250) — jobbstimulans, say. Lifecare's wins. The listing is
+		// filtered on the calculation date, so the window reaches two months either side of the period.
 		when(draftServiceMock.get(ERRAND_ID)).thenReturn(estimableDraft());
 		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(Optional.of(APPLICANT)));
-		linkCalculation(42);
-		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-06-01"), LocalDate.parse("2026-06-30")))
-			.thenReturn(List.of(calculation(41, new BigDecimal("6000"), new BigDecimal("-100")), calculation(42, new BigDecimal("6300"), new BigDecimal("-2820"))));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID))
+			.thenReturn(Optional.of(FinancialAssistanceEntity.create().withLifecareCalculationId(42).withLifecareServiceId(25)));
+		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-04-01"), LocalDate.parse("2026-08-30")))
+			.thenReturn(List.of(calculation(41, new BigDecimal("-6000"), new BigDecimal("-100")), calculation(42, new BigDecimal("-6300"), new BigDecimal("-2820"))));
 
 		final var basis = service.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		assertThat(basis.estimatedAmount()).contains(new BigDecimal("2820"));
 		assertThat(basis.normSum()).contains(new BigDecimal("6300"));
+		assertThat(basis.lifecareServiceId()).contains(25);
 		assertThat(basis.amountBasis()).contains(ProposalBasisService.AMOUNT_BASIS_LIFECARE_CALCULATION);
 		verifyNoInteractions(lifecareCaseServiceMock);
 	}
@@ -113,7 +118,7 @@ class ProposalBasisServiceTest {
 		when(draftServiceMock.get(ERRAND_ID)).thenReturn(estimableDraft().withCalculationFromDate(LocalDate.parse("2026-06-15")).withCalculationToDate(LocalDate.parse("2026-06-30")));
 		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(Optional.of(APPLICANT)));
 		linkCalculation(42);
-		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-06-15"), LocalDate.parse("2026-06-30")))
+		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-04-15"), LocalDate.parse("2026-08-30")))
 			.thenReturn(List.of(calculation(42, new BigDecimal("6300"), new BigDecimal("500"))));
 
 		final var basis = service.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
@@ -127,7 +132,7 @@ class ProposalBasisServiceTest {
 		when(draftServiceMock.get(ERRAND_ID)).thenReturn(estimableDraft());
 		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(Optional.of(APPLICANT)));
 		linkCalculation(42);
-		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-06-01"), LocalDate.parse("2026-06-30")))
+		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-04-01"), LocalDate.parse("2026-08-30")))
 			.thenReturn(List.of(calculation(41, new BigDecimal("6000"), new BigDecimal("-100")), calculation(42, new BigDecimal("6300"), null)));
 		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.parse("2026-06"))).thenReturn(new PreviousHousehold(Set.of(), true, 1, new BigDecimal("6200"), null, "Riksnorm"));
 
@@ -142,7 +147,7 @@ class ProposalBasisServiceTest {
 		when(draftServiceMock.get(ERRAND_ID)).thenReturn(estimableDraft());
 		when(householdPartyServiceMock.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(household(Optional.of(APPLICANT)));
 		linkCalculation(42);
-		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-06-01"), LocalDate.parse("2026-06-30")))
+		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-04-01"), LocalDate.parse("2026-08-30")))
 			.thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
 		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT, YearMonth.parse("2026-06"))).thenReturn(new PreviousHousehold(Set.of(), true, 1, new BigDecimal("6200"), null, "Riksnorm"));
 
@@ -183,6 +188,6 @@ class ProposalBasisServiceTest {
 
 		assertThat(basis.applicationMonth()).isEmpty();
 		assertThat(basis.normSum()).isEmpty();
-		verifyNoInteractions(lifecareCaseServiceMock, lifecareCaseHistoryServiceMock, financialAssistanceRepositoryMock);
+		verifyNoInteractions(lifecareCaseServiceMock, lifecareCaseHistoryServiceMock);
 	}
 }

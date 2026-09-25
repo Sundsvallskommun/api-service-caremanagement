@@ -72,9 +72,15 @@ class DecisionProposalServiceTest {
 	}
 
 	private static ProposalBasisService.ProposalBasis basis(final CalculationDraft draft, final Optional<String> applicant, final Optional<BigDecimal> normSum) {
+		return basis(draft, applicant, normSum, Optional.empty());
+	}
+
+	private static ProposalBasisService.ProposalBasis basis(final CalculationDraft draft, final Optional<String> applicant, final Optional<BigDecimal> normSum,
+		final Optional<Integer> lifecareServiceId) {
 		final var household = new HouseholdPartyService.Household(applicant, false, Optional.empty(), Optional.empty());
 		final var estimatedAmount = normSum.map(norm -> norm.add(new BigDecimal("1050")).subtract(new BigDecimal("3000")));
-		return new ProposalBasisService.ProposalBasis(draft, household, Optional.of(MONTH), normSum, estimatedAmount, estimatedAmount.map(amount -> ProposalBasisService.AMOUNT_BASIS_ESTIMATE));
+		return new ProposalBasisService.ProposalBasis(draft, household, Optional.of(MONTH), normSum, estimatedAmount, estimatedAmount.map(amount -> ProposalBasisService.AMOUNT_BASIS_ESTIMATE),
+			lifecareServiceId);
 	}
 
 	private static DecisionView decision(final String type, final String reason) {
@@ -116,6 +122,22 @@ class DecisionProposalServiceTest {
 		assertThat(proposal.getCoApplicantReason()).isNull(); // the decision had no co-applicant
 		assertThat(proposal.getPreviousDecision().getType()).isEqualTo("Bifall");
 		assertThat(proposal.getWarnings()).isEmpty();
+	}
+
+	@Test
+	void previousDecisionIsTakenFromTheErrandsOwnInsats() {
+		// A decision's ServiceId is the person's insats — 25 here, not the configured 2 — so the errand's own decides.
+		final var ownInsats = new DecisionView(3, "2026-05-28", "Bifall", "2026-06-01", "2026-06-30", "Arbetslös, ingen ersättning/stöd", "Anna", "IFO", 25,
+			new BigDecimal("5000"), null, null, List.of());
+		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("6200")), Optional.of(25)));
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
+			.thenReturn(List.of(otherDecision("Vux-beslut", 2, "2026-06-01"), ownInsats));
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of(), List.of())).thenReturn(List.of());
+
+		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(proposal.getPreviousDecision().getType()).isEqualTo("Bifall");
+		assertThat(proposal.getReason()).isEqualTo("Arbetslös, ingen ersättning/stöd");
 	}
 
 	@Test

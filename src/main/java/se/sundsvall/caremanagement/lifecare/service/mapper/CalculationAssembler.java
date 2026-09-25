@@ -31,8 +31,10 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.nor
  * are all of the person's open insatser and utredningar across socialtjänsten, so "the first" can be a Vux utredning
  * or a BoU insats, and FamilyCare refuses a calculation carrying both. The insats comes from the draft header instead
  * (the errand's own EB insats), and only when the proposal offers it. The calculation
- * spans the application month. Expenses are left to the caseworker and household size to FamilyCare (left unset →
- * FamilyCare derives it from the proposal's household). These selections are intentionally simple and isolated here so
+ * spans the application month. Expenses are left to the caseworker. The household size is always sent: left unset,
+ * FamilyCare stores 0 and computes no gemensamma kostnader (seen on 2026-09-25), so a draft without its own size sends
+ * the number of persons posted, as Lifecare's own web app does. These selections are intentionally simple and isolated
+ * here so
  * they are easy to refine once real FamilyCare proposals are available.
  */
 public final class CalculationAssembler {
@@ -98,7 +100,25 @@ public final class CalculationAssembler {
 			applyHeader(body, h);
 			offeredServiceId(proposal, h.serviceId()).ifPresent(body::serviceId);
 		});
+		applyHouseholdSize(body);
 		return body;
+	}
+
+	/**
+	 * The household size unless the draft header set a custom one: not custom, and as many as the persons posted. A body
+	 * without persons is left as it is.
+	 */
+	private static void applyHouseholdSize(final PostCalculationBodyRequest body) {
+		final var members = ofNullable(body.getCalculationPersons()).map(List::size).orElse(0);
+		if (members == 0) {
+			return;
+		}
+		if (body.getHasCustomHouseholdSize() == null) {
+			body.hasCustomHouseholdSize(false);
+		}
+		if (body.getHouseholdSize() == null || !Boolean.TRUE.equals(body.getHasCustomHouseholdSize())) {
+			body.householdSize(members);
+		}
 	}
 
 	/**

@@ -68,7 +68,7 @@ class DecisionProposalLifecareReadFailureTest {
 		final var household = new HouseholdPartyService.Household(Optional.of(APPLICANT), false, Optional.empty(), Optional.empty());
 		final var draft = CalculationDraft.create().withApplicationMonth("2026-06").withIncomeSum(BigDecimal.ZERO);
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(new ProposalBasisService.ProposalBasis(draft, household,
-			Optional.of(YearMonth.parse("2026-06")), Optional.of(new BigDecimal("6200")), Optional.of(new BigDecimal("6200")), Optional.of(ProposalBasisService.AMOUNT_BASIS_ESTIMATE)));
+			Optional.of(YearMonth.parse("2026-06")), Optional.of(new BigDecimal("6200")), Optional.of(new BigDecimal("6200")), Optional.of(ProposalBasisService.AMOUNT_BASIS_ESTIMATE), Optional.empty()));
 		service = new DecisionProposalService(proposalBasisServiceMock, lifecareCaseHistoryServiceMock, new WarningService(warningRepositoryMock),
 			new LifecareDecisionFilter(Set.of(2)), new DecisionProposalProperties(36));
 	}
