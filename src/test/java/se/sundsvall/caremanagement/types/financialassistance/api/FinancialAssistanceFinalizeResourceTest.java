@@ -15,7 +15,8 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Communica
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeResponse;
-import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceFinalizeService;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionRegistration;
+import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareFinalizeService;
 import se.sundsvall.dept44.support.Identifier;
 
 import static java.util.UUID.randomUUID;
@@ -41,7 +42,7 @@ class FinancialAssistanceFinalizeResourceTest {
 	private WebTestClient webTestClient;
 
 	@MockitoBean
-	private FinancialAssistanceFinalizeService finalizeServiceMock;
+	private LifecareFinalizeService finalizeServiceMock;
 
 	private static FinalizeRequest validRequest() {
 		return FinalizeRequest.create()
@@ -118,5 +119,30 @@ class FinancialAssistanceFinalizeResourceTest {
 			.expectStatus().isOk();
 
 		verify(finalizeServiceMock).finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, expected, "jane02doe");
+	}
+
+	@Test
+	void finalizeWithoutADecisionLeavesItToBeReadFromLifecare() {
+		final var request = FinalizeRequest.create()
+			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false));
+		final var expected = FinalizeResponse.create()
+			.withDecisionId("decision-1")
+			.withProcessMessageCorrelated(true)
+			.withLifecareDecision(new LifecareDecisionRegistration("decision-1", "REGISTERED", "98", null));
+		when(finalizeServiceMock.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe")).thenReturn(expected);
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "jane02doe; type=adAccount")
+			.contentType(APPLICATION_JSON)
+			.bodyValue(request)
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(FinalizeResponse.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isEqualTo(expected);
+		verify(finalizeServiceMock).finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe");
 	}
 }

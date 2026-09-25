@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionRegistration;
 
 import static io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
 
@@ -23,6 +24,11 @@ public class FinalizeResponse {
 
 	@Schema(description = "The communication channels chosen — the frontend sends the decision through these")
 	private CommunicationChannels communication;
+
+	@Schema(description = """
+		How the recorded decision was tied to the errand's beslut in Lifecare (lifecareDecisionId). careM receipts it itself, \
+		so a client no longer has to post .../decisions/{decisionId}/lifecare-result after finalizing.""")
+	private LifecareDecisionRegistration lifecareDecision;
 
 	public static FinalizeResponse create() {
 		return new FinalizeResponse();
@@ -67,18 +73,31 @@ public class FinalizeResponse {
 		return this;
 	}
 
+	public LifecareDecisionRegistration getLifecareDecision() {
+		return lifecareDecision;
+	}
+
+	public void setLifecareDecision(final LifecareDecisionRegistration lifecareDecision) {
+		this.lifecareDecision = lifecareDecision;
+	}
+
+	public FinalizeResponse withLifecareDecision(final LifecareDecisionRegistration lifecareDecision) {
+		this.lifecareDecision = lifecareDecision;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FinalizeResponse that = (FinalizeResponse) o;
 		return Objects.equals(decisionId, that.decisionId) && Objects.equals(processMessageCorrelated, that.processMessageCorrelated)
-			&& Objects.equals(communication, that.communication);
+			&& Objects.equals(communication, that.communication) && Objects.equals(lifecareDecision, that.lifecareDecision);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(decisionId, processMessageCorrelated, communication);
+		return Objects.hash(decisionId, processMessageCorrelated, communication, lifecareDecision);
 	}
 
 	@Override
@@ -87,6 +106,7 @@ public class FinalizeResponse {
 			"decisionId='" + decisionId + '\'' +
 			", processMessageCorrelated=" + processMessageCorrelated +
 			", communication=" + communication +
+			", lifecareDecision=" + lifecareDecision +
 			'}';
 	}
 }
