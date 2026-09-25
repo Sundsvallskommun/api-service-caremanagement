@@ -14892,9 +14892,10 @@ components:
           readOnly: true
         origin:
           type: string
-          description: "Who created the row: the process or a caseworker"
+          description: "Who created the row: the process from SSBTEK (SYSTEM), the process from the application's declared incomes (APPLICATION) or a caseworker"
           enum:
           - SYSTEM
+          - APPLICATION
           - CASEWORKER
           readOnly: true
         position:
@@ -17097,10 +17098,10 @@ components:
           - 0
         origin:
           type: string
-          description: "Who created the row: the process or a caseworker (always CASEWORKER\
-            \ in Lifecare)"
+          description: "Who created the row: the process from SSBTEK (SYSTEM), the process from the application's declared incomes (APPLICATION) or a caseworker (always CASEWORKER in Lifecare)"
           enum:
           - SYSTEM
+          - APPLICATION
           - CASEWORKER
           readOnly: true
         typeId:

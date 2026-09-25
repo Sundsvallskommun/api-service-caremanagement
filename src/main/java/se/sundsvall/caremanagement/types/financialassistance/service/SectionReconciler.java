@@ -9,6 +9,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ObjIntConsumer;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormExpenseRepository;
@@ -21,6 +22,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import static java.util.Optional.ofNullable;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.costDisplayName;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.roleDisplayName;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_APPLICATION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 
 /**
@@ -37,6 +39,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
  * <li>an existing system row no longer in the fresh set is kept and reported as dropped (the caller raises a "no longer
  * reported" warning) — never auto-deleted;</li>
  * <li>caseworker-added rows are never matched, refreshed or dropped by the process.</li>
+ * <li>the application's declared incomes ({@code origin = APPLICATION}) are process rows of their own, matched only
+ * against each other.</li>
  * </ul>
  *
  * The three public methods are concrete per section (identity key, process-column copy and label all spelled out next
@@ -57,19 +61,29 @@ class SectionReconciler {
 
 	Diff reconcilePersons(final String errandId, final List<FaNormPersonEntity> fresh) {
 		final var saver = positioningSaver(personRepository.nextPositionForErrand(errandId), FaNormPersonEntity::getPosition, FaNormPersonEntity::setPosition, personRepository::save);
-		return merge(personRepository.findByErrandId(errandId), nullSafe(fresh),
+		return merge(ORIGIN_SYSTEM, personRepository.findByErrandId(errandId), nullSafe(fresh),
 			SectionReconciler::personKey, FaNormPersonEntity::getOrigin, SectionReconciler::copyPersonProcess, SectionReconciler::personLabel, saver);
 	}
 
+	/**
+	 * The SSBTEK rows and the application's declared incomes are reconciled apart, each against its own origin, so an
+	 * application income never refreshes, or is reported as, an SSBTEK income of the same type. Only the SSBTEK side is
+	 * reported: the NEW_INCOME / INCOME_DROPPED warnings are about what SSBTEK reports, and the application's incomes are
+	 * already in front of the handläggare on the application itself.
+	 */
 	Diff reconcileIncomes(final String errandId, final List<FaNormIncomeEntity> fresh) {
 		final var saver = positioningSaver(incomeRepository.nextPositionForErrand(errandId), FaNormIncomeEntity::getPosition, FaNormIncomeEntity::setPosition, incomeRepository::save);
-		return merge(incomeRepository.findByErrandId(errandId), nullSafe(fresh),
+		final var existing = incomeRepository.findByErrandId(errandId);
+		final var byApplication = nullSafe(fresh).stream().collect(Collectors.partitioningBy(row -> ORIGIN_APPLICATION.equals(row.getOrigin())));
+		merge(ORIGIN_APPLICATION, existing, byApplication.get(true),
+			SectionReconciler::incomeKey, FaNormIncomeEntity::getOrigin, SectionReconciler::copyIncomeProcess, SectionReconciler::incomeLabel, saver);
+		return merge(ORIGIN_SYSTEM, existing, byApplication.get(false),
 			SectionReconciler::incomeKey, FaNormIncomeEntity::getOrigin, SectionReconciler::copyIncomeProcess, SectionReconciler::incomeLabel, saver);
 	}
 
 	Diff reconcileExpenses(final String errandId, final List<FaNormExpenseEntity> fresh) {
 		final var saver = positioningSaver(expenseRepository.nextPositionForErrand(errandId), FaNormExpenseEntity::getPosition, FaNormExpenseEntity::setPosition, expenseRepository::save);
-		return merge(expenseRepository.findByErrandId(errandId), nullSafe(fresh),
+		return merge(ORIGIN_SYSTEM, expenseRepository.findByErrandId(errandId), nullSafe(fresh),
 			SectionReconciler::expenseKey, FaNormExpenseEntity::getOrigin, SectionReconciler::copyExpenseProcess, SectionReconciler::expenseLabel, saver);
 	}
 
@@ -80,6 +94,7 @@ class SectionReconciler {
 	// ------------------------------------------------------------------------------------------------------------------
 
 	private static <E> Diff merge(
+		final String processOrigin,
 		final List<E> existing,
 		final List<E> fresh,
 		final Function<E, String> keyOf,
@@ -90,7 +105,7 @@ class SectionReconciler {
 
 		final var systemByKey = new LinkedHashMap<String, E>();
 		for (final var row : existing) {
-			if (ORIGIN_SYSTEM.equals(originOf.apply(row))) {
+			if (processOrigin.equals(originOf.apply(row))) {
 				systemByKey.putIfAbsent(keyOf.apply(row), row);
 			}
 		}

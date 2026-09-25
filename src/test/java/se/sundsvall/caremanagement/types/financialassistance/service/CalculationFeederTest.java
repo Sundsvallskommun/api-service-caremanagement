@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,6 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
@@ -19,6 +21,7 @@ import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCost;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
@@ -55,6 +58,33 @@ class CalculationFeederTest {
 
 	@InjectMocks
 	private CalculationFeeder feeder;
+
+	@Test
+	void applicationIncomeRowsAreStampedAsTheApplications() {
+		final var lines = List.of(new FamilyCareIncomeLine(30, "Swish/Insättningar/Överföringar", "APPLICANT", new BigDecimal("599"), null, "Ansökan: Swish/kontoinsättningar"));
+
+		final var rows = feeder.applicationIncomeRows(ERRAND_ID, lines);
+
+		assertThat(rows).singleElement().satisfies(row -> {
+			assertThat(row.getOrigin()).isEqualTo("APPLICATION");
+			assertThat(row.getTypeId()).isEqualTo(30);
+			assertThat(row.getApplicantProcessAmount()).isEqualByComparingTo("599");
+			assertThat(row.getNote()).isEqualTo("Ansökan: Swish/kontoinsättningar");
+		});
+	}
+
+	@Test
+	void applicationIncomesReadsTheDeclaredIncomesWithTheirLabels() {
+		final var errand = FinancialAssistanceEntity.create().withIncomes(Arrays.asList(
+			FaIncome.create().withIncomeType("SWISH_DEPOSITS").withAmount(new BigDecimal("599")).withIncomeDate(LocalDate.of(2026, 9, 24)),
+			null,
+			FaIncome.create().withIncomeType("SALARY").withRecipient("CO_APPLICANT").withAmount(new BigDecimal("6788"))));
+
+		assertThat(feeder.applicationIncomes(errand)).containsExactly(
+			new ApplicationIncome("SWISH_DEPOSITS", null, new BigDecimal("599"), LocalDate.of(2026, 9, 24), "Swish/kontoinsättningar"),
+			new ApplicationIncome("SALARY", "CO_APPLICANT", new BigDecimal("6788"), null, "Lön"));
+		assertThat(feeder.applicationIncomes(FinancialAssistanceEntity.create())).isEmpty();
+	}
 
 	@Test
 	void incomeRowsMapsEachLine() {

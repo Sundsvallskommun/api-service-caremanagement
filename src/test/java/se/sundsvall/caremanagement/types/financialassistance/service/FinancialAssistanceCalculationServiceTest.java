@@ -25,6 +25,8 @@ import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.CalculationService;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncomeLines;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
@@ -231,6 +233,7 @@ class FinancialAssistanceCalculationServiceTest {
 		when(calculationFeederMock.familyWarnings(errand, family)).thenReturn(List.of(familyWarning));
 		when(calculationFeederMock.commonHouseholdCostWarnings(family, errand)).thenReturn(List.of());
 		// the previous norm is asked for first, by name without the year; the month no longer offers it
+		when(calculationServiceMock.applicationIncomeLines(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any())).thenReturn(new ApplicationIncomeLines(List.of(), List.of()));
 		when(calculationServiceMock.selectNormId(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), eq(month), eq(List.of("Specnorm")), any()))
 			.thenReturn(new CalculationService.NormChoice(1, false));
 
@@ -263,6 +266,7 @@ class FinancialAssistanceCalculationServiceTest {
 		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
 		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenReturn(PreviousHousehold.empty());
 		when(lifecareCaseServiceMock.previousFamily(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare down"));
+		when(calculationServiceMock.applicationIncomeLines(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any())).thenReturn(new ApplicationIncomeLines(List.of(), List.of()));
 		when(calculationServiceMock.selectNormId(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), eq(month), eq(List.of()), any())).thenReturn(new CalculationService.NormChoice(7, false));
 
 		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, CalculationRequest.create()
@@ -305,11 +309,49 @@ class FinancialAssistanceCalculationServiceTest {
 		assertThat(warnings.getValue()).contains(warning);
 	}
 
+	@Test
+	void prepareFeedsTheApplicationsDeclaredIncomesIntoTheDraftAsRowsOfTheirOwn() {
+		// Swish, lön and the rest SSBTEK never reports come from the application: they go into the draft next to the
+		// SSBTEK rows, and one no Lifecare type takes is warned about rather than left out without a trace.
+		final var month = YearMonth.of(2026, JUNE);
+		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM"));
+		final var declared = List.of(new ApplicationIncome("SWISH_DEPOSITS", null, BigDecimal.valueOf(599), LocalDate.of(2026, 5, 24), "Swish/kontoinsättningar"));
+		final var ssbtekLines = List.of(new FamilyCareIncomeLine(2, "Bostadsbidrag", "APPLICANT", BigDecimal.valueOf(4500), null, "SSBTEK: Bostadsbidrag"));
+		final var applicationLines = List.of(new FamilyCareIncomeLine(30, "Swish/Insättningar/Överföringar", "APPLICANT", BigDecimal.valueOf(599), null, "Ansökan: Swish/kontoinsättningar"));
+		final var notTaken = new ApplicationIncome("RENT_SHARE_FROM_CHILD", null, BigDecimal.TEN, null, "Hyresdel från barn");
+		final var ssbtekRow = FaNormIncomeEntity.create().withTypeId(2).withOrigin("SYSTEM");
+		final var applicationRow = FaNormIncomeEntity.create().withTypeId(30).withOrigin("APPLICATION");
+		final var warning = new WarningService.WarningInput(WarningService.TYPE_INCOME_NOT_TRANSFERABLE, "application|rent_share_from_child|applicant", "text");
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
+		when(calculationServiceMock.completeness(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[]")).thenReturn(new Completeness(true, List.of()));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("AWAITING_DECISION"));
+		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
+		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenReturn(PreviousHousehold.empty());
+		when(lifecareCaseServiceMock.previousFamily(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenReturn(PreviousFamily.empty());
+		when(calculationServiceMock.selectNormId(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), eq(month), eq(List.of()), any())).thenReturn(new CalculationService.NormChoice(7, false));
+		when(calculationServiceMock.incomeLines(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[]", Map.of())).thenReturn(ssbtekLines);
+		when(calculationFeederMock.incomeRows(ERRAND_ID, ssbtekLines)).thenReturn(List.of(ssbtekRow));
+		when(calculationFeederMock.applicationIncomes(errand)).thenReturn(declared);
+		when(calculationServiceMock.applicationIncomeLines(MUNICIPALITY_ID, APPLICANT_PARTY_ID, declared)).thenReturn(new ApplicationIncomeLines(applicationLines, List.of(notTaken)));
+		when(calculationFeederMock.applicationIncomeRows(ERRAND_ID, applicationLines)).thenReturn(List.of(applicationRow));
+		when(untransferableIncomeFeederMock.untransferableApplicationIncomeWarnings(List.of(notTaken))).thenReturn(List.of(warning));
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, CalculationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[]"));
+
+		verify(draftServiceMock).refresh(eq(ERRAND_ID), eq("2026-06"), eq(7), any(), any(), eq(List.of(ssbtekRow, applicationRow)), any());
+		final ArgumentCaptor<List<WarningService.WarningInput>> warnings = ArgumentCaptor.captor();
+		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID), any(), any(), any(), any(), warnings.capture(), eq(Set.of()));
+		assertThat(warnings.getValue()).contains(warning);
+	}
+
 	/** A first application: no previous normberäkning, so the norm comes from the application. */
 	private void noPreviousCalculation(final YearMonth month) {
 		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenReturn(PreviousHousehold.empty());
 		when(lifecareCaseServiceMock.previousFamily(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenReturn(PreviousFamily.empty());
 		when(calculationServiceMock.selectNormId(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), eq(month), eq(List.of()), any())).thenReturn(new CalculationService.NormChoice(7, false));
+		when(calculationServiceMock.applicationIncomeLines(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any())).thenReturn(new ApplicationIncomeLines(List.of(), List.of()));
 	}
 
 	@Test

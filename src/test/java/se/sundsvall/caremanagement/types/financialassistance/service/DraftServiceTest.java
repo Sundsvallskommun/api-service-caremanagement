@@ -34,6 +34,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_APPLICATION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
@@ -170,6 +171,28 @@ class DraftServiceTest {
 			assertThat(warning.sourceKey()).isEqualTo("income-duplicate:20");
 			assertThat(warning.message()).contains("Bostadsbidrag").contains("räknas två gånger");
 		});
+	}
+
+	@Test
+	void duplicateIncomeNamesTheApplicationWhenTheProcessRowCameFromIt() {
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_APPLICATION).withTypeId(25).withTypeName("Swish/Insättningar/Överföringar"),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeId(25).withTypeName("Swish/Insättningar/Överföringar")));
+
+		assertThat(service.duplicateIncomeWarnings(ERRAND_ID)).singleElement()
+			.satisfies(warning -> assertThat(warning.message())
+				.isEqualTo("Möjlig dubbelföring: Swish/Insättningar/Överföringar finns både från ansökan och tillagd av handläggare "
+					+ "— kontrollera att inkomsten inte räknas två gånger"));
+	}
+
+	@Test
+	void duplicateIncomeIsSilentBetweenSsbtekAndTheApplication() {
+		// an SSBTEK income and a declared one of the same type are two incomes, summed in the calculation - not a duplicate
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(4).withTypeName("Underhållsstöd"),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_APPLICATION).withTypeId(4).withTypeName("Underhållsstöd")));
+
+		assertThat(service.duplicateIncomeWarnings(ERRAND_ID)).isEmpty();
 	}
 
 	@Test

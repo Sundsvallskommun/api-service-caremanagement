@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 
@@ -34,7 +35,10 @@ public class UntransferableIncomeFeeder {
 
 	static final String MESSAGE_TEMPLATE = "%s%s i SSBTEK ska tas med i normberäkningen men saknar inkomsttyp i Lifecare (%s) och har inte förts över – för in den för hand";
 
+	static final String APPLICATION_MESSAGE_TEMPLATE = "%s%s i ansökan saknar inkomsttyp i Lifecare och har inte förts över till normberäkningen – för in den för hand";
+
 	private static final String CO_APPLICANT_SUFFIX = " (medsökande)";
+	private static final String RECIPIENT_CO_APPLICANT = "CO_APPLICANT";
 
 	/**
 	 * The warnings for the incomes the draft could not take.
@@ -64,6 +68,35 @@ public class UntransferableIncomeFeeder {
 		final var income = classified.income();
 		final var child = ofNullable(income.partyId()).filter(partyId -> income.role() == ApplicantRole.CHILD).map(partyId -> "|" + partyId).orElse("");
 		return normalize(income.benefit()) + ofNullable(income.role()).map(role -> "|" + role.name()).orElse("") + child;
+	}
+
+	/**
+	 * The warnings for the incomes declared in the application that the draft could not take — one per income type and
+	 * person, keyed apart from the SSBTEK ones so the two never close each other.
+	 *
+	 * @param  untransferable the declared incomes no Lifecare income type matched
+	 * @return                the warnings, folded into the daily prepare's reconcile set
+	 */
+	public List<WarningService.WarningInput> untransferableApplicationIncomeWarnings(final List<ApplicationIncome> untransferable) {
+		return ofNullable(untransferable).orElseGet(List::of).stream()
+			.filter(Objects::nonNull)
+			.collect(toMap(UntransferableIncomeFeeder::applicationSourceKey, income -> income, (first, duplicate) -> first, LinkedHashMap::new))
+			.entrySet().stream()
+			.map(entry -> new WarningService.WarningInput(WarningService.TYPE_INCOME_NOT_TRANSFERABLE, entry.getKey(), applicationMessage(entry.getValue())))
+			.toList();
+	}
+
+	private static String applicationSourceKey(final ApplicationIncome income) {
+		return "application|" + normalize(income.incomeType()) + "|" + applicationRecipient(income);
+	}
+
+	private static String applicationMessage(final ApplicationIncome income) {
+		final var suffix = ofNullable(income.recipient()).filter(RECIPIENT_CO_APPLICANT::equals).map(_ -> CO_APPLICANT_SUFFIX).orElse("");
+		return APPLICATION_MESSAGE_TEMPLATE.formatted(ofNullable(income.label()).orElse(income.incomeType()), suffix);
+	}
+
+	private static String applicationRecipient(final ApplicationIncome income) {
+		return ofNullable(income.recipient()).filter(RECIPIENT_CO_APPLICANT::equals).orElse("APPLICANT").toLowerCase(Locale.ROOT);
 	}
 
 	private static String personSuffix(final SsbtekIncome income, final Map<String, String> childNames) {

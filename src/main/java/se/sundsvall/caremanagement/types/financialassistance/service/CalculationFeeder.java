@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
@@ -30,8 +31,10 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.util.StringUtils.hasText;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.applicationIncomeDisplayName;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.costDisplayName;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.roleDisplayName;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_APPLICATION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.RECIPIENT_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.RECIPIENT_CO_APPLICANT;
@@ -47,7 +50,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Warn
  * rows from the application's costs — each given a process amount + bucket by the {@link ExpenseRulesService} — and
  * the person rows from the household (visitation child = part-time children). Also compares the housing cost against
  * the
- * previous calculation in Lifecare to produce a drift warning. Every row is stamped {@code origin = SYSTEM}; the {@link
+ * previous calculation in Lifecare to produce a drift warning. Every row is stamped {@code origin = SYSTEM}, except the
+ * incomes declared in the application, which are stamped {@code origin = APPLICATION}; the {@link
  * DraftService} merge then refreshes only the process columns.
  */
 @Service
@@ -91,6 +95,28 @@ public class CalculationFeeder {
 	 * recipient group supplies the non-amount fields (date, type name, note).
 	 */
 	public List<FaNormIncomeEntity> incomeRows(final String errandId, final List<FamilyCareIncomeLine> lines) {
+		return incomeRows(errandId, lines, ORIGIN_SYSTEM);
+	}
+
+	/**
+	 * The fresh income rows for the incomes the applicant declared in the application, one per FamilyCare income type —
+	 * as {@link #incomeRows(String, List)}, but stamped {@code origin = APPLICATION}. They are kept apart from the SSBTEK
+	 * rows (never summed into them) so the SSBTEK comparison and its warnings only ever see what SSBTEK reported.
+	 */
+	public List<FaNormIncomeEntity> applicationIncomeRows(final String errandId, final List<FamilyCareIncomeLine> lines) {
+		return incomeRows(errandId, lines, ORIGIN_APPLICATION);
+	}
+
+	/** The incomes declared in the application, as the calculation draft reads them. */
+	public List<ApplicationIncome> applicationIncomes(final FinancialAssistanceEntity errand) {
+		return ofNullable(errand.getIncomes()).orElseGet(List::of).stream()
+			.filter(Objects::nonNull)
+			.map(income -> new ApplicationIncome(income.getIncomeType(), income.getRecipient(), income.getAmount(), income.getIncomeDate(),
+				applicationIncomeDisplayName(income.getIncomeType())))
+			.toList();
+	}
+
+	private List<FaNormIncomeEntity> incomeRows(final String errandId, final List<FamilyCareIncomeLine> lines, final String origin) {
 		final var byType = ofNullable(lines).orElseGet(List::of).stream()
 			.filter(line -> line.typeId() != null)
 			.collect(Collectors.groupingBy(FamilyCareIncomeLine::typeId, LinkedHashMap::new, Collectors.toList()));
@@ -101,7 +127,7 @@ public class CalculationFeeder {
 			final var coApplicant = recipientLines(group, RECIPIENT_CO_APPLICANT);
 			final var any = group.getFirst();
 			return FaNormIncomeEntity.create()
-				.withErrandId(errandId).withOrigin(ORIGIN_SYSTEM)
+				.withErrandId(errandId).withOrigin(origin)
 				.withTypeId(entry.getKey()).withTypeName(any.typeName())
 				.withApplicantProcessAmount(sumAmounts(applicant))
 				.withApplicantAmountDate(firstDate(applicant))

@@ -248,7 +248,10 @@ class CalculationSyncServiceTest {
 			FaNormIncomeEntity.create().withTypeId(22).withTypeName("Barnbidrag").withApplicantProcessAmount(new BigDecimal("1250")).withDeleted(true),
 			// Nothing on either side, and a row without a type name, are not recorded.
 			FaNormIncomeEntity.create().withTypeId(23).withTypeName("Studiemedel"),
-			FaNormIncomeEntity.create().withTypeId(24).withApplicantProcessAmount(new BigDecimal("100")));
+			FaNormIncomeEntity.create().withTypeId(24).withApplicantProcessAmount(new BigDecimal("100")),
+			// Declared in the application, not reported by SSBTEK: no SSBTEK baseline.
+			FaNormIncomeEntity.create().withOrigin("APPLICATION").withTypeId(25).withTypeName("Swish/Insättningar/Överföringar")
+				.withApplicantProcessAmount(new BigDecimal("599")));
 
 		service.seedFromProposal(ERRAND_ID, draft);
 

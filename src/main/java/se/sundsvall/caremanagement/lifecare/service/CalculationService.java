@@ -16,10 +16,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
+import se.sundsvall.caremanagement.lifecare.service.mapper.ApplicationIncomeToFamilyCareMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.CalculationAssembler;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ClassifiedIncomeToFamilyCareMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncomeLines;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationSections;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
@@ -91,6 +94,16 @@ public class CalculationService {
 		final var transferable = ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
 			parse(classifiedIncomesJson), previousIncomeTypes(municipalityId, applicantPartyId, applicationMonth));
 		return ClassifiedIncomeToFamilyCareMapper.toIncomeLines(transferable, proposal, childNames);
+	}
+
+	/**
+	 * The income lines for the incomes the applicant declared in the application — Swish, lön, tjänstepension and the
+	 * rest SSBTEK never reports — resolved against the applicant's calculation proposal, plus the declared incomes no
+	 * income type in it could take. Writes nothing to Lifecare.
+	 */
+	public ApplicationIncomeLines applicationIncomeLines(final String municipalityId, final String applicantPartyId, final List<ApplicationIncome> incomes) {
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPartyId);
+		return ApplicationIncomeToFamilyCareMapper.toIncomeLines(incomes, proposal);
 	}
 
 	/**

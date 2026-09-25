@@ -40,6 +40,7 @@ public final class FinancialAssistanceLabels {
 	/** Row provenance → label ({@code CalculationConstants.ORIGIN_*}). */
 	private static final Map<String, String> ORIGIN_DISPLAY_NAME = Map.of(
 		"SYSTEM", "Automatiskt",
+		"APPLICATION", "Ansökan",
 		"CASEWORKER", "Handläggare");
 
 	private static final Map<String, TypeOption> COST_OPTION = byCode(FinancialAssistanceTypes.COST_TYPES);
@@ -79,6 +80,19 @@ public final class FinancialAssistanceLabels {
 	/** The income type's label, with the same fallback chain as {@link #costDisplayName}. */
 	public static String incomeDisplayName(final String incomeType) {
 		return displayName(INCOME_OPTION, incomeType);
+	}
+
+	/**
+	 * The income type as the applicant chose it on the application — the Mina-sidor label, falling back to the Lifecare
+	 * one and finally to the code itself.
+	 */
+	public static String applicationIncomeDisplayName(final String incomeType) {
+		if (!hasText(incomeType)) {
+			return null;
+		}
+		return ofNullable(INCOME_OPTION.get(incomeType))
+			.flatMap(option -> ofNullable(option.getExternalDisplayName()).filter(label -> hasText(label)).or(() -> firstLabel(option)))
+			.orElse(incomeType);
 	}
 
 	private static String displayName(final Map<String, TypeOption> options, final String code) {

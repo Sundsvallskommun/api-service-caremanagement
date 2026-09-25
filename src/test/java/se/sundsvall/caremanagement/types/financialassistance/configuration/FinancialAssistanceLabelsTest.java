@@ -65,6 +65,15 @@ class FinancialAssistanceLabelsTest {
 	}
 
 	@Test
+	void theApplicationsIncomeLabelIsTheOneTheApplicantChose() {
+		assertThat(FinancialAssistanceLabels.applicationIncomeDisplayName("SWISH_DEPOSITS")).isEqualTo("Swish/kontoinsättningar");
+		assertThat(FinancialAssistanceLabels.applicationIncomeDisplayName("HOUSING_ALLOWANCE")).isEqualTo("Bostadsbidrag");
+		assertThat(FinancialAssistanceLabels.applicationIncomeDisplayName("NO_SUCH_INCOME")).isEqualTo("NO_SUCH_INCOME");
+		assertThat(FinancialAssistanceLabels.applicationIncomeDisplayName(" ")).isNull();
+		assertThat(FinancialAssistanceLabels.applicationIncomeDisplayName(null)).isNull();
+	}
+
+	@Test
 	void aTypeWithOnlyACitizenLabelFallsBackToIt() {
 		assertThat(FinancialAssistanceLabels.incomeDisplayName("FINANCIAL_AID_OTHER_MUNICIPALITY")).isEqualTo("Ekonomiskt bistånd från annan kommun");
 	}

@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
@@ -70,6 +71,23 @@ class CalculationServiceTest {
 		return new PersonBasedCalculationProposalDTO()
 			.addServicesItem(new PersonBasedCalculationServiceDTO().id(5))
 			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(20).name("Bostadsbidrag"));
+	}
+
+	@Test
+	void applicationIncomeLinesResolvesTheDeclaredIncomesAgainstTheProposal() {
+		final var proposal = proposal().addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(30).name("Swish/Insättningar/Överföringar"));
+		final var swish = new ApplicationIncome("SWISH_DEPOSITS", null, new BigDecimal("599"), null, "Swish/kontoinsättningar");
+		final var salary = new ApplicationIncome("SALARY", null, new BigDecimal("6788"), null, "Lön");
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal);
+
+		final var result = service.applicationIncomeLines(MUNICIPALITY_ID, APPLICANT, List.of(swish, salary));
+
+		assertThat(result.lines()).singleElement().satisfies(line -> {
+			assertThat(line.typeId()).isEqualTo(30);
+			assertThat(line.amount()).isEqualByComparingTo("599");
+			assertThat(line.note()).isEqualTo("Ansökan: Swish/kontoinsättningar");
+		});
+		assertThat(result.untransferable()).containsExactly(salary);
 	}
 
 	@Test

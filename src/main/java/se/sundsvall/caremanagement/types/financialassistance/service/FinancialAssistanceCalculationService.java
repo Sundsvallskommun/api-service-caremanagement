@@ -292,7 +292,11 @@ public class FinancialAssistanceCalculationService {
 	 * {@link #reconcileWithDraft}.
 	 */
 	private DraftRefresh refreshDraft(final String municipalityId, final PrepareInput input, final PreviousHousehold previous) {
-		final var incomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes(), HouseholdPartyService.childNames(input.errand())));
+		final var ssbtekIncomeRows = calculationFeeder.incomeRows(input.errandId(), calculationService.incomeLines(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes(), HouseholdPartyService.childNames(input.errand())));
+		// What the applicant declared — Swish, lön, tjänstepension and the rest SSBTEK never reports — goes into the draft
+		// too, as rows of its own; the regelverk's e-ansökan table places each of them on a normberäkning income type.
+		final var applicationIncomes = calculationService.applicationIncomeLines(municipalityId, input.applicant(), calculationFeeder.applicationIncomes(input.errand()));
+		final var incomeRows = Stream.concat(ssbtekIncomeRows.stream(), calculationFeeder.applicationIncomeRows(input.errandId(), applicationIncomes.lines()).stream()).toList();
 		final var expenseFeed = calculationFeeder.expenseFeed(municipalityId, input.errandId(), input.errand(),
 			previousExpenseAmounts(municipalityId, input.applicant(), input.applicationMonth()), input.applicantAge());
 		// NORM-04: norm, familj and gemensamma kostnader come from the previous normberäkning (regelverk återansökan);
@@ -316,9 +320,12 @@ public class FinancialAssistanceCalculationService {
 			calculationService.lateTransferredComparisonIncomes(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()));
 		// An income the rules transfer but no Lifecare income type can take is missing from the rows above. Named here,
 		// from the transfer's own filter, so the draft never silently lacks an income the regelverk says to count.
-		final var untransferableWarnings = untransferableIncomeFeeder.untransferableIncomeWarnings(
-			calculationService.untransferableIncomes(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()),
-			HouseholdPartyService.childNames(input.errand()));
+		final var untransferableWarnings = Stream.concat(
+			untransferableIncomeFeeder.untransferableIncomeWarnings(
+				calculationService.untransferableIncomes(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes()),
+				HouseholdPartyService.childNames(input.errand())).stream(),
+			untransferableIncomeFeeder.untransferableApplicationIncomeWarnings(applicationIncomes.untransferable()).stream())
+			.toList();
 		// Read after the merge, not before: the duplicate only exists once the refreshed process rows sit alongside
 		// whatever the caseworker has added by hand.
 		final var duplicateWarnings = draftService.duplicateIncomeWarnings(input.errandId());

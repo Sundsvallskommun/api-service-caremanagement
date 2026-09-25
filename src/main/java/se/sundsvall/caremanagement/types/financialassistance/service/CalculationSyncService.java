@@ -37,6 +37,7 @@ import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_APPLICATION;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
@@ -115,7 +116,8 @@ public class CalculationSyncService {
 	 * Record what the prepare step posted to Lifecare as the proposal: the SSBTEK amount of every draft income, and — as
 	 * what the system wrote — the process amount of every side a caseworker left alone. A side the caseworker changed,
 	 * and a row the caseworker soft-deleted, is recorded as written with no amount: the calculation's value there is the
-	 * caseworker's, so a later SSBTEK change to it is theirs to confirm.
+	 * caseworker's, so a later SSBTEK change to it is theirs to confirm. The incomes declared in the application
+	 * ({@code origin = APPLICATION}) are left out: SSBTEK never reported them, so they are no SSBTEK baseline.
 	 *
 	 * @param draftIncomes every income row of the draft, soft-deleted ones included
 	 */
@@ -124,6 +126,7 @@ public class CalculationSyncService {
 		final var now = now();
 		final var rows = new LinkedHashMap<String, FaCalculationSyncEntity>();
 		ofNullable(draftIncomes).orElseGet(List::of).stream()
+			.filter(income -> !ORIGIN_APPLICATION.equals(income.getOrigin()))
 			.filter(income -> StringUtils.hasText(income.getTypeName()))
 			.forEach(income -> {
 				seedSide(rows, errandId, income, ROLE_APPLICANT, income.getApplicantProcessAmount(), income.getApplicantCaseworkerAmount(), now);

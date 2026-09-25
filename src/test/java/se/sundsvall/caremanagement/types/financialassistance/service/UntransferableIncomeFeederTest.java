@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 
@@ -19,6 +20,23 @@ class UntransferableIncomeFeederTest {
 	private static final String CO_APPLICANT_MESSAGE = "Elstöd (medsökande) i SSBTEK ska tas med i normberäkningen men saknar inkomsttyp i Lifecare (Elstöd) och har inte förts över – för in den för hand";
 
 	private final UntransferableIncomeFeeder feeder = new UntransferableIncomeFeeder();
+
+	@Test
+	void applicationIncomeWarningsNameTheDeclaredTypeOncePerPerson() {
+		final var warnings = feeder.untransferableApplicationIncomeWarnings(Arrays.asList(
+			new ApplicationIncome("OCCUPATIONAL_PENSION_INSURANCE", null, BigDecimal.TEN, null, "Tjänstepension/försäkringar"),
+			new ApplicationIncome("OCCUPATIONAL_PENSION_INSURANCE", "APPLICANT", BigDecimal.ONE, null, "Tjänstepension/försäkringar"),
+			new ApplicationIncome("SALARY", "CO_APPLICANT", BigDecimal.TEN, null, null),
+			null));
+
+		assertThat(warnings).extracting(WarningService.WarningInput::type, WarningService.WarningInput::sourceKey, WarningService.WarningInput::message)
+			.containsExactly(
+				tuple(WarningService.TYPE_INCOME_NOT_TRANSFERABLE, "application|occupational_pension_insurance|applicant",
+					"Tjänstepension/försäkringar i ansökan saknar inkomsttyp i Lifecare och har inte förts över till normberäkningen – för in den för hand"),
+				tuple(WarningService.TYPE_INCOME_NOT_TRANSFERABLE, "application|salary|co_applicant",
+					"SALARY (medsökande) i ansökan saknar inkomsttyp i Lifecare och har inte förts över till normberäkningen – för in den för hand"));
+		assertThat(feeder.untransferableApplicationIncomeWarnings(null)).isEmpty();
+	}
 
 	private static ClassifiedIncome classified(final String benefit, final ApplicantRole role) {
 		final var income = new SsbtekIncome(benefit, null, null, new BigDecimal("2500"), LocalDate.parse("2026-09-20"), role);

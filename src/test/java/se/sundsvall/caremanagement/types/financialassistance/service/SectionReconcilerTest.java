@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_APPLICATION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
@@ -54,6 +55,31 @@ class SectionReconcilerTest {
 		assertThat(diff.added()).containsExactly("Bostadsbidrag");
 		assertThat(diff.dropped()).isEmpty();
 		verify(incomeRepositoryMock).save(fresh);
+	}
+
+	@Test
+	void applicationRowsAreReconciledApartFromTheSsbtekRowsAndNeverReported() {
+		// Same Lifecare type from SSBTEK and from the application: two rows, each refreshed from its own feed, and the
+		// declared income is neither "new in SSBTEK" nor "no longer in SSBTEK".
+		final var existingSsbtek = systemRow(4, "Underhållsstöd", "1250");
+		final var existingApplication = applicationRow(4, "Underhållsstöd", "500");
+		final var droppedApplication = applicationRow(40, "Övriga inkomster", "100");
+		final var freshSsbtek = systemRow(4, "Underhållsstöd", "1300");
+		final var freshApplication = applicationRow(4, "Underhållsstöd", "600");
+		final var newApplication = applicationRow(30, "Swish/Insättningar/Överföringar", "599");
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existingSsbtek, existingApplication, droppedApplication)));
+
+		final var diff = sectionReconciler.reconcileIncomes(ERRAND_ID, List.of(freshSsbtek, freshApplication, newApplication));
+
+		assertThat(diff.added()).isEmpty();
+		assertThat(diff.dropped()).isEmpty();
+		assertThat(existingSsbtek.getApplicantProcessAmount()).isEqualByComparingTo("1300");
+		assertThat(existingApplication.getApplicantProcessAmount()).isEqualByComparingTo("600");
+		verify(incomeRepositoryMock).save(existingSsbtek);
+		verify(incomeRepositoryMock).save(existingApplication);
+		verify(incomeRepositoryMock).save(newApplication);
+		verify(incomeRepositoryMock, never()).save(freshSsbtek);
+		verify(incomeRepositoryMock, never()).save(freshApplication);
 	}
 
 	@Test
@@ -214,6 +240,10 @@ class SectionReconcilerTest {
 		assertThat(diff.added()).isEmpty();
 		assertThat(diff.dropped()).containsExactly("Bostadsbidrag");
 		verify(incomeRepositoryMock, never()).save(existing);
+	}
+
+	private static FaNormIncomeEntity applicationRow(final Integer typeId, final String typeName, final String processAmount) {
+		return systemRow(typeId, typeName, processAmount).withOrigin(ORIGIN_APPLICATION);
 	}
 
 	private static FaNormIncomeEntity systemRow(final Integer typeId, final String typeName, final String processAmount) {

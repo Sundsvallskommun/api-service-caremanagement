@@ -18,8 +18,8 @@ public class NormberakningIncomeRow {
 	@Schema(description = "Stable 0-based position of the row within its section", examples = "0")
 	private Integer position;
 
-	@Schema(description = "Who created the row: the process or a caseworker (always CASEWORKER in Lifecare)", allowableValues = {
-		"SYSTEM", "CASEWORKER"
+	@Schema(description = "Who created the row: the process from SSBTEK (SYSTEM), the process from the application's declared incomes (APPLICATION) or a caseworker (always CASEWORKER in Lifecare)", allowableValues = {
+		"SYSTEM", "APPLICATION", "CASEWORKER"
 	}, accessMode = READ_ONLY)
 	private String origin;
 

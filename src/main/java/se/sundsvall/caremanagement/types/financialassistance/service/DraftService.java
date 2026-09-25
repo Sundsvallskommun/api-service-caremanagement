@@ -34,6 +34,7 @@ import se.sundsvall.dept44.problem.Problem;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_APPLICATION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 
@@ -126,16 +127,27 @@ public class DraftService {
 				final var label = ofNullable(rows.getFirst().getTypeName()).filter(StringUtils::hasText).orElse("Inkomst");
 				return new WarningService.WarningInput(WarningService.TYPE_INCOME_DUPLICATED,
 					"income-duplicate:" + rows.getFirst().getTypeId(),
-					DUPLICATE_MESSAGE_PREFIX + label + DUPLICATE_MESSAGE_INFIX + " från SSBTEK och tillagd av handläggare "
+					DUPLICATE_MESSAGE_PREFIX + label + DUPLICATE_MESSAGE_INFIX + processSource(rows) + " och tillagd av handläggare "
 						+ "— kontrollera att inkomsten inte räknas två gånger");
 			})
 			.toList();
 	}
 
-	/** True when the same income type is present both from the process feed and from a caseworker edit. */
+	/**
+	 * True when the same income type is present both from a process feed (SSBTEK, or the application's declared incomes)
+	 * and from a caseworker edit.
+	 */
 	private static boolean hasBothOrigins(final List<FaNormIncomeEntity> rows) {
 		final var origins = rows.stream().map(FaNormIncomeEntity::getOrigin).collect(Collectors.toSet());
-		return origins.contains(ORIGIN_SYSTEM) && origins.contains(ORIGIN_CASEWORKER);
+		return (origins.contains(ORIGIN_SYSTEM) || origins.contains(ORIGIN_APPLICATION)) && origins.contains(ORIGIN_CASEWORKER);
+	}
+
+	/** Where the process row of a duplicated type came from, as the warning names it. */
+	private static String processSource(final List<FaNormIncomeEntity> rows) {
+		if (rows.stream().anyMatch(row -> ORIGIN_SYSTEM.equals(row.getOrigin()))) {
+			return " från SSBTEK";
+		}
+		return " från ansökan";
 	}
 
 	private void upsertHeader(final String errandId, final String applicationMonth, final Integer normId, final List<String> normType) {
