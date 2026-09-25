@@ -127,10 +127,15 @@ class FinancialAssistanceErrandResource {
 
 	@PatchMapping(path = "/financial-assistance/{errandId}/data", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Update financial assistance data",
-		description = "PATCH semantics: non-null fields replace the stored values, null fields are left untouched. Server-owned fields (applicationType, lastDailyRunAt, timestamps) are never written from client data.",
+		description = "PATCH semantics: non-null fields replace the stored values, null fields are left untouched. Server-owned fields (applicationType, lastDailyRunAt, timestamps) are never written from client data. lifecareCalculationId is write-once: sending the linked id again is a no-op, sending another one is refused with 409 (the daily prepare or an earlier save has already linked a normberäkning — read the errand again instead of creating another calculation).",
 		responses = {
 			@ApiResponse(responseCode = "204", description = "Successful operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
+			@ApiResponse(responseCode = "409",
+				description = "Conflict - another normberäkning is already linked",
+				content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE,
+					schema = @Schema(
+						implementation = Problem.class)))
 		})
 	ResponseEntity<Void> updateData(
 		@ValidMunicipalityId @PathVariable final String municipalityId,

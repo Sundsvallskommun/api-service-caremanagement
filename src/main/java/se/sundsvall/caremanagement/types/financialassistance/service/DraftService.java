@@ -271,6 +271,12 @@ public class DraftService {
 		return calculationDraftRepository.findById(errandId);
 	}
 
+	/** Every income row, soft-deleted ones included — what a caseworker withheld matters to the SSBTEK sync baseline. */
+	@Transactional(readOnly = true)
+	public List<FaNormIncomeEntity> allIncomes(final String errandId) {
+		return incomeRepository.findByErrandId(errandId);
+	}
+
 	@Transactional(readOnly = true)
 	public List<FaNormIncomeEntity> liveIncomes(final String errandId) {
 		return incomeRepository.findByErrandId(errandId).stream().filter(row -> !row.isDeleted()).toList();

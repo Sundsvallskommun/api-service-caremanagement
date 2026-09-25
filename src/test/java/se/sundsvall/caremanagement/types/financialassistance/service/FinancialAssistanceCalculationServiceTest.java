@@ -30,6 +30,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.Completeness;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
+import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
@@ -56,6 +57,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -116,6 +118,9 @@ class FinancialAssistanceCalculationServiceTest {
 
 	@Mock
 	private LifecareServiceIdService lifecareServiceIdServiceMock;
+
+	@Mock
+	private CalculationSyncService calculationSyncServiceMock;
 
 	@InjectMocks
 	private FinancialAssistanceCalculationService service;
@@ -370,8 +375,11 @@ class FinancialAssistanceCalculationServiceTest {
 
 		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
 
-		// The draft is left alone: no refresh, no feed, no family copy, no late transfer, no duplicate read.
-		verifyNoInteractions(draftServiceMock, lateTransferFeederMock, untransferableIncomeFeederMock, lifecareServiceIdServiceMock);
+		// The draft is left alone: no refresh, no feed, no family copy, no late transfer, no duplicate read. Only its header
+		// is read, for the SSBTEK sync — and without one (as here) there is nothing to sync against.
+		verify(draftServiceMock).header(ERRAND_ID);
+		verifyNoMoreInteractions(draftServiceMock);
+		verifyNoInteractions(lateTransferFeederMock, untransferableIncomeFeederMock, lifecareServiceIdServiceMock, calculationSyncServiceMock);
 		// A linked calculation is never proposed again.
 		verify(calculationServiceMock, never()).commitEffective(any(), any(), any(), any(), any(), any(), any());
 		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
@@ -407,6 +415,55 @@ class FinancialAssistanceCalculationServiceTest {
 		// A frozen draft does not freeze the medsökande payment warning: it concerns the household, not the draft.
 		verify(paymentWarningServiceMock).reconcile(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		assertThat(errand.getLastDailyRunAt()).isCloseTo(OffsetDateTime.now(), within(10, SECONDS));
+		verify(repositoryMock).save(errand);
+	}
+
+	/** An errand whose normberäkning is saved in Lifecare (4242), with a draft header covering June 2026. */
+	private FinancialAssistanceEntity linkedRun(final YearMonth month) {
+		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM")).withLifecareCalculationId(4242);
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(errand));
+		when(lifecareCaseServiceMock.previousHousehold(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenReturn(PreviousHousehold.empty());
+		when(calculationServiceMock.completeness(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[json]")).thenReturn(new Completeness(true, List.of()));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("AWAITING_DECISION"));
+		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID)));
+		return errand;
+	}
+
+	private static CalculationRequest linkedRequest() {
+		return CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[json]");
+	}
+
+	@Test
+	void prepareWithACalculationSavedInLifecareComparesSsbtekWithIt() {
+		final var month = YearMonth.of(2026, JUNE);
+		linkedRun(month);
+		final var lines = List.of(new FamilyCareIncomeLine(20, "Lön", "APPLICANT", new BigDecimal("12400"), null, null));
+		final var rows = List.of(FaNormIncomeEntity.create().withTypeId(20).withTypeName("Lön").withApplicantProcessAmount(new BigDecimal("12400")));
+		when(calculationServiceMock.incomeLines(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[json]")).thenReturn(lines);
+		when(calculationFeederMock.incomeRows(ERRAND_ID, lines)).thenReturn(rows);
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, linkedRequest());
+
+		// This run's SSBTEK amounts are recorded — not merged into the frozen draft — and compared with the saved
+		// calculation over the draft's period, which falls back to the application month when the header has none.
+		verify(calculationSyncServiceMock).recordSsbtek(ERRAND_ID, rows);
+		verify(calculationSyncServiceMock).reconcileWarnings(MUNICIPALITY_ID, ERRAND_ID, APPLICANT_PARTY_ID, 4242, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30));
+		verify(draftServiceMock, never()).refresh(any(), any(), any(), any(), any(), any(), any());
+	}
+
+	@Test
+	void prepareWithACalculationSavedInLifecareCompletesWhenTheSsbtekSyncFails() {
+		final var month = YearMonth.of(2026, JUNE);
+		final var errand = linkedRun(month);
+		when(calculationServiceMock.incomeLines(any(), any(), any(), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare said no"));
+
+		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, linkedRequest());
+
+		// Best-effort: the comparison is skipped and the rest of the run completes as usual.
+		verifyNoInteractions(calculationSyncServiceMock);
+		assertThat(response.isInformationComplete()).isTrue();
+		verify(paymentWarningServiceMock).reconcile(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(repositoryMock).save(errand);
 	}
 
@@ -482,6 +539,8 @@ class FinancialAssistanceCalculationServiceTest {
 	void prepareCreatesTheProposalInLifecareOnceTheBasisIsComplete() {
 		final var month = YearMonth.of(2026, JUNE);
 		final var errand = completeRunWithDraft(month);
+		final var allIncomes = List.of(FaNormIncomeEntity.create().withTypeId(20), FaNormIncomeEntity.create().withTypeId(21).withDeleted(true));
+		when(draftServiceMock.allIncomes(ERRAND_ID)).thenReturn(allIncomes);
 		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), eq(month), any(), any(), any(), any())).thenReturn(777);
 		when(repositoryMock.linkLifecareCalculationIfAbsent(ERRAND_ID, 777)).thenReturn(1);
 
@@ -503,6 +562,8 @@ class FinancialAssistanceCalculationServiceTest {
 
 		// Linked on the errand, and the loaded entity carries the id so the run stamp cannot write the old value back.
 		verify(repositoryMock).linkLifecareCalculationIfAbsent(ERRAND_ID, 777);
+		// What was posted becomes the baseline later SSBTEK changes are measured against — deleted rows included.
+		verify(calculationSyncServiceMock).seedFromProposal(ERRAND_ID, allIncomes);
 		assertThat(errand.getLifecareCalculationId()).isEqualTo(777);
 		verify(repositoryMock).save(errand);
 	}
@@ -536,6 +597,8 @@ class FinancialAssistanceCalculationServiceTest {
 
 		// The BFF's link stands: the loaded entity is not given this run's id, so the stamp never overwrites it.
 		assertThat(errand.getLifecareCalculationId()).isNull();
+		// Nor is a calculation this run does not own taken as the baseline.
+		verifyNoInteractions(calculationSyncServiceMock);
 		verify(repositoryMock).save(errand);
 	}
 
