@@ -31,6 +31,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.IncomeTypeTotal;
 import se.sundsvall.dept44.problem.Problem;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -104,6 +105,23 @@ public class CalculationService {
 	public ApplicationIncomeLines applicationIncomeLines(final String municipalityId, final String applicantPartyId, final List<ApplicationIncome> incomes) {
 		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPartyId);
 		return ApplicationIncomeToFamilyCareMapper.toIncomeLines(incomes, proposal);
+	}
+
+	/**
+	 * This month's transferred SSBTEK amount per FamilyCare income type, the household together — the current side of
+	 * the income comparison against the previous normberäkning. Derived through the same two steps as
+	 * {@link #incomeLines} (drop what the previous month already took, then resolve against the proposal), so a type's
+	 * total is exactly what the draft's lines for that type add up to. Writes nothing to Lifecare.
+	 *
+	 * @param  classifiedIncomesJson the {@code classifiedIncomes} payload
+	 * @return                       one total per income type, with the SSBTEK benefits that fed it
+	 */
+	public List<IncomeTypeTotal> incomeTypeTotals(final String municipalityId, final String applicantPartyId, final YearMonth applicationMonth,
+		final String classifiedIncomesJson) {
+		final var proposal = lifecareFamilyCareIntegration.getCalculationProposal(municipalityId, applicantPartyId);
+		final var transferable = ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
+			parse(classifiedIncomesJson), previousIncomeTypes(municipalityId, applicantPartyId, applicationMonth));
+		return ClassifiedIncomeToFamilyCareMapper.toIncomeTypeTotals(transferable, proposal);
 	}
 
 	/**

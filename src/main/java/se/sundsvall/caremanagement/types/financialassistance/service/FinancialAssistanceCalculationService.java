@@ -41,6 +41,7 @@ import se.sundsvall.dept44.problem.Problem;
 
 import static java.lang.Boolean.TRUE;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toSet;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_AWAITING_DECISION;
@@ -82,7 +83,7 @@ public class FinancialAssistanceCalculationService {
 	private final CalculationFeeder calculationFeeder;
 	private final ApplicationRuleFeeder applicationRuleFeeder;
 	private final PeriodRuleFeeder periodRuleFeeder;
-	private final MissingIncomeFeeder missingIncomeFeeder;
+	private final IncomeChangeFeeder incomeChangeFeeder;
 	private final LateTransferFeeder lateTransferFeeder;
 	private final UntransferableIncomeFeeder untransferableIncomeFeeder;
 	private final PaymentWarningService paymentWarningService;
@@ -92,7 +93,7 @@ public class FinancialAssistanceCalculationService {
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
-		final MissingIncomeFeeder missingIncomeFeeder, final LateTransferFeeder lateTransferFeeder, final UntransferableIncomeFeeder untransferableIncomeFeeder,
+		final IncomeChangeFeeder incomeChangeFeeder, final LateTransferFeeder lateTransferFeeder, final UntransferableIncomeFeeder untransferableIncomeFeeder,
 		final PaymentWarningService paymentWarningService, final LifecareServiceIdService lifecareServiceIdService, final CalculationSyncService calculationSyncService) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
@@ -105,7 +106,7 @@ public class FinancialAssistanceCalculationService {
 		this.calculationFeeder = calculationFeeder;
 		this.applicationRuleFeeder = applicationRuleFeeder;
 		this.periodRuleFeeder = periodRuleFeeder;
-		this.missingIncomeFeeder = missingIncomeFeeder;
+		this.incomeChangeFeeder = incomeChangeFeeder;
 		this.lateTransferFeeder = lateTransferFeeder;
 		this.untransferableIncomeFeeder = untransferableIncomeFeeder;
 		this.paymentWarningService = paymentWarningService;
@@ -154,13 +155,18 @@ public class FinancialAssistanceCalculationService {
 		final var previous = previousHousehold(municipalityId, input.applicant(), input.applicationMonth());
 		final var refresh = refreshDraftUnlessSavedInLifecare(municipalityId, input, previous);
 		final var rules = ruleWarnings(municipalityId, input, previous);
-		final var response = completeness(municipalityId, request, input);
+		final var incomeChanges = incomeChanges(municipalityId, input);
+		final var response = completeness(municipalityId, request, input, incomeChanges);
 
-		recordRecommendationOnce(municipalityId, namespace, input.errandId(), response);
+		// An income change we could not check must not be written into the once-only recommendation as "no change"; the
+		// next run that can read the previous normberäkning records it instead.
+		if (!incomeChanges.unverified()) {
+			recordRecommendationOnce(municipalityId, namespace, input.errandId(), response);
+		}
 		refresh.ifPresentOrElse(
-			draft -> reconcileWithDraft(input, response, draft, rules),
+			draft -> reconcileWithDraft(input, response, draft, rules, incomeChanges),
 			() -> {
-				reconcileKeepingDraft(input, response, rules);
+				reconcileKeepingDraft(input, response, rules, incomeChanges);
 				syncWithLifecare(municipalityId, input);
 			});
 		if (refresh.isPresent()) {
@@ -237,17 +243,36 @@ public class FinancialAssistanceCalculationService {
 
 	/**
 	 * The warnings that do not depend on careM's draft — the återansökan application rules, the
-	 * income/household comparisons against the previous normberäkning, the SSBTEK period check and the missing-income
-	 * check. Evaluated on every successful run, whether or not the draft is refreshed.
+	 * income/household comparisons against the previous normberäkning and the SSBTEK period check. Evaluated on every
+	 * successful run, whether or not the draft is refreshed.
 	 */
 	private record RuleWarnings(List<WarningService.WarningInput> questionWarnings,
-		List<WarningService.WarningInput> incomeWarnings, List<WarningService.WarningInput> comparisonWarnings, List<WarningService.WarningInput> periodWarnings,
-		List<WarningService.WarningInput> missingIncomeWarnings) {
+		List<WarningService.WarningInput> incomeWarnings, List<WarningService.WarningInput> comparisonWarnings, List<WarningService.WarningInput> periodWarnings) {
 
 		List<WarningService.WarningInput> all() {
-			return Stream.of(questionWarnings, incomeWarnings, comparisonWarnings, periodWarnings, missingIncomeWarnings)
+			return Stream.of(questionWarnings, incomeWarnings, comparisonWarnings, periodWarnings)
 				.flatMap(List::stream)
 				.toList();
+		}
+	}
+
+	/**
+	 * The {@code INCOME_CHANGE} texts of this run — this month's transfer per income type against the previous
+	 * normberäkning — and whether they could not be worked out because a Lifecare read failed. An unverified run has no
+	 * texts, and its {@code INCOME_CHANGE} warnings are left exactly as the last successful run left them.
+	 */
+	private record IncomeChanges(List<String> warnings, boolean unverified) {
+
+		static IncomeChanges unverifiedRun() {
+			return new IncomeChanges(List.of(), true);
+		}
+
+		/** The warning types this run could not verify, and so must not close. */
+		Set<String> unverifiedTypes() {
+			if (unverified) {
+				return Set.of(WarningService.TYPE_INCOME_CHANGE);
+			}
+			return Set.of();
 		}
 	}
 
@@ -370,9 +395,27 @@ public class FinancialAssistanceCalculationService {
 		// before the application month - the SSBTEK kontrollperiod.
 		final var periodWarnings = periodRuleFeeder.periodWarnings(municipalityId, input.applicationMonth().minusMonths(1), classifiedIncomes,
 			input.dayCheckBasis());
-		// Verksamhetens "föregående månad = facit": an income SSBTEK reported last month and not this one.
-		final var missingIncomeWarnings = missingIncomeFeeder.missingIncomeWarnings(classifiedIncomes);
-		return new RuleWarnings(questionWarnings, incomeWarnings, comparisonWarnings, periodWarnings, missingIncomeWarnings);
+		return new RuleWarnings(questionWarnings, incomeWarnings, comparisonWarnings, periodWarnings);
+	}
+
+	/**
+	 * The income-change comparison (verksamhetens G4: the previous month is the previous normberäkning): this month's
+	 * transfer per income type against the previous normberäkning's, see {@link IncomeChangeFeeder}. The engine's own
+	 * period-over-period list in the request is not used. No previous normberäkning (a nyansökan) means nothing to compare
+	 * and no warnings; a Lifecare read that fails means the comparison is unverified, which is not the same thing — the
+	 * warnings from the last successful run are then left alone rather than auto-closed.
+	 */
+	private IncomeChanges incomeChanges(final String municipalityId, final PrepareInput input) {
+		try {
+			final var previous = lifecareCaseService.previousCalculationIncomeTypeAmounts(municipalityId, input.applicant(), input.applicationMonth());
+			final var current = calculationService.incomeTypeTotals(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes());
+			return new IncomeChanges(incomeChangeFeeder.incomeChangeWarnings(municipalityId, current, previous), false);
+		} catch (final RuntimeException e) {
+			// The exception type only: Lifecare's error detail may echo income data.
+			LOG.warn("Could not compare the incomes with the previous normberäkning for errand {} ({}) — the income-change warnings are left as they were",
+				sanitizeForLogging(input.errandId()), e.getClass().getSimpleName());
+			return IncomeChanges.unverifiedRun();
+		}
 	}
 
 	/**
@@ -381,18 +424,21 @@ public class FinancialAssistanceCalculationService {
 	 */
 	private static List<WarningService.WarningInput> allWarnings(final DraftRefresh refresh, final RuleWarnings rules) {
 		return Stream.of(refresh.expenseWarnings(), refresh.housingWarnings(), rules.questionWarnings(), rules.incomeWarnings(),
-			rules.comparisonWarnings(), rules.periodWarnings(), rules.missingIncomeWarnings(), refresh.lateTransferWarnings(),
+			rules.comparisonWarnings(), rules.periodWarnings(), refresh.lateTransferWarnings(),
 			refresh.untransferableWarnings(), refresh.duplicateWarnings(), refresh.familyWarnings())
 			.flatMap(List::stream)
 			.toList();
 	}
 
-	/** The verdict the process asked for: does this month cover every income type the previous calculation had? */
-	private CalculationResponse completeness(final String municipalityId, final CalculationRequest request, final PrepareInput input) {
+	/**
+	 * The verdict the process asked for: does this month cover every income type the previous calculation had? The
+	 * change warnings are careM's own ({@link #incomeChanges}); the request's {@code changeWarnings} are ignored.
+	 */
+	private CalculationResponse completeness(final String municipalityId, final CalculationRequest request, final PrepareInput input, final IncomeChanges incomeChanges) {
 		final var completeness = calculationService.completeness(municipalityId, input.applicant(), input.applicationMonth(), input.classifiedIncomes());
 		return CalculationResponse.create()
 			.withUnhandledIncomes(ofNullable(request.getUnhandledIncomes()).orElseGet(List::of))
-			.withChangeWarnings(ofNullable(request.getChangeWarnings()).orElseGet(List::of))
+			.withChangeWarnings(incomeChanges.warnings())
 			.withInformationComplete(completeness.informationComplete())
 			.withMissingIncomeTypes(completeness.missingIncomeTypes());
 	}
@@ -401,9 +447,13 @@ public class FinancialAssistanceCalculationService {
 	 * Reconcile every calculation warning of a run that refreshed the draft — except those a failed Lifecare read left
 	 * unverified — and raise or close the previous-family read-failure warning.
 	 */
-	private void reconcileWithDraft(final PrepareInput input, final CalculationResponse response, final DraftRefresh refresh, final RuleWarnings rules) {
+	private void reconcileWithDraft(final PrepareInput input, final CalculationResponse response, final DraftRefresh refresh, final RuleWarnings rules,
+		final IncomeChanges incomeChanges) {
+		final var unverified = Stream.of(refresh.unverifiedTypes(), incomeChanges.unverifiedTypes())
+			.flatMap(Set::stream)
+			.collect(toSet());
 		warningService.reconcileCalculationWarnings(input.errandId(), response.getUnhandledIncomes(), response.getChangeWarnings(),
-			response.getMissingIncomeTypes(), refresh.changes(), allWarnings(refresh, rules), refresh.unverifiedTypes());
+			response.getMissingIncomeTypes(), refresh.changes(), allWarnings(refresh, rules), unverified);
 		warningService.reconcileLifecareReadFailure(input.errandId(), WarningService.SOURCE_KEY_LIFECARE_PREVIOUS_FAMILY, refresh.previousFamilyReadFailed());
 	}
 
@@ -411,9 +461,9 @@ public class FinancialAssistanceCalculationService {
 	 * Reconcile the warnings of a run that did not refresh the draft (the normberäkning is saved in Lifecare): only the
 	 * SSBTEK income warnings and the rule warnings — the draft warnings stay as they last were.
 	 */
-	private void reconcileKeepingDraft(final PrepareInput input, final CalculationResponse response, final RuleWarnings rules) {
+	private void reconcileKeepingDraft(final PrepareInput input, final CalculationResponse response, final RuleWarnings rules, final IncomeChanges incomeChanges) {
 		warningService.reconcileRuleWarnings(input.errandId(), response.getUnhandledIncomes(), response.getChangeWarnings(),
-			response.getMissingIncomeTypes(), rules.all());
+			response.getMissingIncomeTypes(), rules.all(), incomeChanges.unverifiedTypes());
 	}
 
 	/**
@@ -610,8 +660,9 @@ public class FinancialAssistanceCalculationService {
 	/**
 	 * Surface the calculation's income warnings on the errand as a single {@code Decision(RECOMMENDATION)} — written
 	 * once (the daily loop re-runs prepare, but the recommendation is not duplicated). The value is {@code
-	 * REVIEW_REQUIRED} when there is anything to review (unhandled or significantly changed incomes, or still-missing
-	 * SSBTEK data) and {@code OK} otherwise; the description lists the warnings in plain language. It is written on
+	 * REVIEW_REQUIRED} when there is anything to review (unhandled incomes, incomes changed or new since the previous
+	 * normberäkning, or still-missing SSBTEK data) and {@code OK} otherwise; the description lists the warnings in plain
+	 * language. It is written on
 	 * careM's SSBTEK basis whether or not the caseworker has saved the normberäkning in Lifecare yet, so it is explicitly
 	 * preliminary.
 	 */
@@ -624,7 +675,8 @@ public class FinancialAssistanceCalculationService {
 
 		final var warnings = Stream.of(
 			response.getUnhandledIncomes().stream().map("Ej överförd inkomst: "::concat),
-			response.getChangeWarnings().stream().map("Ändrad inkomst: "::concat),
+			// The change texts name the type and say themselves whether it is new or changed.
+			response.getChangeWarnings().stream(),
 			response.getMissingIncomeTypes().stream().map("Saknas fortfarande i SSBTEK: "::concat))
 			.flatMap(stream -> stream)
 			.toList();

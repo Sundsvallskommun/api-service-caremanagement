@@ -41,7 +41,11 @@ public class CalculationRequest {
 	@Schema(description = "The unhandled-income warnings from the operaton rules, recorded on the errand recommendation")
 	private List<String> unhandledIncomes;
 
-	@Schema(description = "The period-over-period change warnings from the operaton rules, recorded on the errand recommendation")
+	/**
+	 * Not read since 2026-09-25: careM compares the incomes with the previous normberäkning itself (verksamhetens G4).
+	 * Kept so the engine, which still sends it, is not refused.
+	 */
+	@Schema(description = "Ignored. The period-over-period change warnings the operaton rules still send; caremanagement compares against the previous normberäkning itself")
 	private List<String> changeWarnings;
 
 	@Schema(

@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ClassifiedIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.IncomeTypeTotal;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 
 import static java.util.Optional.ofNullable;
@@ -147,6 +148,51 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 		final var column = column(group.getFirst().income());
 		return new FamilyCareIncomeLine(typeId, nameById.get(typeId), column.name(),
 			sumByColumn(group, column), MapperUtil.toOffsetDateTime(latestDateByColumn(group, column)), noteFor(group, childNames));
+	}
+
+	/**
+	 * The household's total per FamilyCare income type — what {@link #toIncomeLines} puts on each type, with the
+	 * applicant's and the co-applicant's columns added together. Resolved exactly as {@code toIncomeLines} resolves
+	 * (transferable only, matched to the proposal's types, an income without a role skipped), so the totals are the
+	 * lines' own amounts and cannot describe a different transfer. A missing net amount counts as nothing.
+	 *
+	 * @param  classified the incomes to transfer (maybe {@code null}), already filtered against the previous month
+	 * @param  proposal   the FamilyCare proposal whose {@code calculationIncomeTypes} supply the type ids and names
+	 * @return            one total per income type, in the order the types were first met, with the SSBTEK benefits that
+	 *                    fed it
+	 */
+	public static List<IncomeTypeTotal> toIncomeTypeTotals(final List<ClassifiedIncome> classified, final PersonBasedCalculationProposalDTO proposal) {
+		final var typeIdByName = MapperUtil.indexIncomeTypeIds(proposal);
+		final var nameById = indexIncomeTypeNamesById(proposal);
+
+		return ofNullable(classified).orElseGet(List::of).stream()
+			.filter(Objects::nonNull)
+			.filter(ClassifiedIncomeToFamilyCareMapper::isTransferable)
+			.map(income -> resolve(income, typeIdByName))
+			.filter(Objects::nonNull)
+			.filter(resolved -> resolved.income().role() != null)
+			.collect(groupingBy(Resolved::typeId, LinkedHashMap::new, toList()))
+			.entrySet().stream()
+			.map(entry -> new IncomeTypeTotal(nameById.get(entry.getKey()), totalOf(entry.getValue()), benefitsOf(entry.getValue())))
+			.toList();
+	}
+
+	private static BigDecimal totalOf(final List<Resolved> group) {
+		return group.stream()
+			.map(Resolved::income)
+			.map(SsbtekIncome::netAmount)
+			.filter(Objects::nonNull)
+			.reduce(BigDecimal.ZERO, BigDecimal::add);
+	}
+
+	private static List<String> benefitsOf(final List<Resolved> group) {
+		return group.stream()
+			.map(Resolved::income)
+			.map(SsbtekIncome::benefit)
+			.filter(benefit -> (benefit != null) && !benefit.isBlank())
+			.distinct()
+			.sorted()
+			.toList();
 	}
 
 	/** The income column an income is transferred on: its own role, except a child's, which goes on the applicant's. */

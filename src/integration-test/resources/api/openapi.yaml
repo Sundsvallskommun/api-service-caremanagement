@@ -15445,8 +15445,9 @@ components:
             type: string
         changeWarnings:
           type: array
-          description: "The period-over-period change warnings from the operaton rules,\
-            \ recorded on the errand recommendation"
+          description: "Ignored. The period-over-period change warnings the operaton\
+            \ rules still send; caremanagement compares against the previous normberäkning\
+            \ itself"
           items:
             type: string
         ssbtekError:
@@ -15534,10 +15535,10 @@ components:
             type: string
         changeWarnings:
           type: array
-          description: Benefits whose net income changed beyond the threshold between
-            the periods
+          description: "Income types whose amount this month differs from the previous\
+            \ normberäkning beyond the threshold, or that are new since it"
           examples:
-          - - "Bostadsbidrag: -23% (comparison 2400 -> control 1850)"
+          - - "Bostadsbidrag: 1250 kr i föregående normberäkning → 1300 kr nu"
           items:
             type: string
         informationComplete:

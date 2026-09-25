@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,6 +35,7 @@ import se.sundsvall.caremanagement.lifecare.service.model.EffectiveExpense;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectiveIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.EffectivePerson;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.IncomeTypeTotal;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
@@ -108,7 +110,7 @@ class FinancialAssistanceCalculationServiceTest {
 	private PeriodRuleFeeder periodRuleFeederMock;
 
 	@Mock
-	private MissingIncomeFeeder missingIncomeFeederMock;
+	private IncomeChangeFeeder incomeChangeFeederMock;
 
 	@Mock
 	private LateTransferFeeder lateTransferFeederMock;
@@ -178,8 +180,8 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, true);
 		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any(), any());
-		verify(warningServiceMock, never()).reconcileRuleWarnings(any(), any(), any(), any(), any());
-		verifyNoInteractions(draftServiceMock, calculationFeederMock, decisionServiceMock, paymentWarningServiceMock);
+		verify(warningServiceMock, never()).reconcileRuleWarnings(any(), any(), any(), any(), any(), any());
+		verifyNoInteractions(draftServiceMock, calculationFeederMock, decisionServiceMock, paymentWarningServiceMock, incomeChangeFeederMock);
 		assertThat(response.isInformationComplete()).isFalse();
 		assertThat(errand.getLastDailyRunAt()).isNotNull();
 	}
@@ -363,6 +365,7 @@ class FinancialAssistanceCalculationServiceTest {
 		when(calculationServiceMock.completeness(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("UNDER_REVIEW"));
 		when(calculationFeederMock.expenseFeed(eq(MUNICIPALITY_ID), eq(ERRAND_ID), any(), any(), any())).thenReturn(new CalculationFeeder.ExpenseFeed(List.of(), List.of()));
+		incomeChange(month, "[json]");
 
 		final var request = CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[json]")
@@ -371,6 +374,8 @@ class FinancialAssistanceCalculationServiceTest {
 		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		assertThat(response.getCalculationId()).isNull();
+		// careM's own comparison against the previous normberäkning; the engine's period-over-period list is ignored.
+		assertThat(response.getChangeWarnings()).containsExactly(INCOME_CHANGE_TEXT);
 		assertThat(response.isInformationComplete()).isFalse();
 		assertThat(response.getMissingIncomeTypes()).containsExactly("Dagersättning");
 
@@ -382,16 +387,18 @@ class FinancialAssistanceCalculationServiceTest {
 		assertThat(decision.getCreatedBy()).isEqualTo("drakel");
 		assertThat(decision.getDescription())
 			.contains("Ej överförd inkomst: Bostadstillägg (NOT_ON_WHITELIST)")
-			.contains("Saknas fortfarande i SSBTEK: Dagersättning");
+			.contains(INCOME_CHANGE_TEXT)
+			.contains("Saknas fortfarande i SSBTEK: Dagersättning")
+			.doesNotContain("-23%");
 
 		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
 		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("SUPPLEMENT_REQUESTED");
 		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID),
-			eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")), eq(List.of("Dagersättning")), any(), any(), eq(Set.of()));
+			eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of(INCOME_CHANGE_TEXT)), eq(List.of("Dagersättning")), any(), any(), eq(Set.of()));
 		// No lifecareCalculationId yet: the draft is refreshed, so the full calculation reconcile runs.
 		verify(draftServiceMock).refresh(eq(ERRAND_ID), eq("2026-06"), eq(7), eq(List.of("NATIONAL_NORM")), any(), any(), any());
-		verify(warningServiceMock, never()).reconcileRuleWarnings(any(), any(), any(), any(), any());
+		verify(warningServiceMock, never()).reconcileRuleWarnings(any(), any(), any(), any(), any(), any());
 		// No draft header in this run, so there is nothing to propose; the incomplete-basis proposal has its own test.
 		verify(calculationServiceMock, never()).commitEffective(any(), any(), any(), any(), any(), any(), any());
 		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
@@ -428,6 +435,7 @@ class FinancialAssistanceCalculationServiceTest {
 		when(applicationRuleFeederMock.applicationQuestionWarnings(MUNICIPALITY_ID, ERRAND_ID, errand)).thenReturn(List.of(questionWarning));
 		when(calculationServiceMock.completeness(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("UNDER_REVIEW"));
+		incomeChange(month, "[json]");
 
 		final var request = CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[json]")
@@ -455,12 +463,11 @@ class FinancialAssistanceCalculationServiceTest {
 		// Only the SSBTEK income warnings and the draft-independent rule warnings are reconciled.
 		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any(), any());
 		final ArgumentCaptor<List<WarningService.WarningInput>> rules = ArgumentCaptor.captor();
-		verify(warningServiceMock).reconcileRuleWarnings(eq(ERRAND_ID), eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of("Bostadsbidrag: -23%")),
-			eq(List.of("Dagersättning")), rules.capture());
+		verify(warningServiceMock).reconcileRuleWarnings(eq(ERRAND_ID), eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of(INCOME_CHANGE_TEXT)),
+			eq(List.of("Dagersättning")), rules.capture(), eq(Set.of()));
 		assertThat(rules.getValue()).containsExactly(questionWarning);
 		verify(applicationRuleFeederMock).previousCalculationWarnings(MUNICIPALITY_ID, errand, previous);
 		verify(periodRuleFeederMock).periodWarnings(eq(MUNICIPALITY_ID), eq(YearMonth.of(2026, 5)), any(), any());
-		verify(missingIncomeFeederMock).missingIncomeWarnings(any());
 
 		// Completeness, the one-time recommendation, the status, the read-failure close and the run stamp are unchanged.
 		assertThat(response.isInformationComplete()).isFalse();
@@ -476,6 +483,80 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(paymentWarningServiceMock).reconcile(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		assertThat(errand.getLastDailyRunAt()).isCloseTo(OffsetDateTime.now(), within(10, SECONDS));
 		verify(repositoryMock).save(errand);
+	}
+
+	private static final String INCOME_CHANGE_TEXT = "Bostadsbidrag: 1000 kr i föregående normberäkning → 1250 kr nu";
+
+	/** This month's transfer against the previous normberäkning yields one INCOME_CHANGE text. */
+	private void incomeChange(final YearMonth month, final String classifiedIncomes) {
+		final Optional<Map<String, BigDecimal>> previousAmounts = Optional.of(Map.of("bostadsbidrag", new BigDecimal("1000")));
+		final var totals = List.of(new IncomeTypeTotal("Bostadsbidrag", new BigDecimal("1250"), List.of("Bostadsbidrag")));
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypeAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenReturn(previousAmounts);
+		when(calculationServiceMock.incomeTypeTotals(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, classifiedIncomes)).thenReturn(totals);
+		when(incomeChangeFeederMock.incomeChangeWarnings(MUNICIPALITY_ID, totals, previousAmounts)).thenReturn(List.of(INCOME_CHANGE_TEXT));
+	}
+
+	@Test
+	void prepareWithAFailedPreviousCalculationReadLeavesTheIncomeChangesUnverified() {
+		// A failed read is not "no previous normberäkning": the INCOME_CHANGE warnings from the last successful run must
+		// not be auto-closed, and the once-only recommendation must not be written as if nothing had changed.
+		final var month = YearMonth.of(2026, JUNE);
+		completeRun(month);
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypeAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare down"));
+
+		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest()
+			.withChangeWarnings(List.of("Bostadsbidrag: -23%")));
+
+		assertThat(response.getChangeWarnings()).isEmpty();
+		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID), any(), eq(List.of()), any(), any(), any(), eq(Set.of(WarningService.TYPE_INCOME_CHANGE)));
+		verifyNoInteractions(incomeChangeFeederMock);
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+		// The rest of the run carries on.
+		verify(paymentWarningServiceMock).reconcile(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	@Test
+	void prepareWithAFailedPreviousCalculationReadAndAFailedFamilyReadLeavesBothUnverified() {
+		final var month = YearMonth.of(2026, JUNE);
+		completeRun(month);
+		when(lifecareCaseServiceMock.previousFamily(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare down"));
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypeAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare down"));
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest());
+
+		final ArgumentCaptor<Set<String>> unverified = ArgumentCaptor.captor();
+		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID), any(), any(), any(), any(), any(), unverified.capture());
+		assertThat(unverified.getValue()).containsExactlyInAnyOrderElementsOf(
+			Stream.concat(WarningService.PREVIOUS_FAMILY_TYPES.stream(), Stream.of(WarningService.TYPE_INCOME_CHANGE)).toList());
+	}
+
+	@Test
+	void prepareWithACalculationSavedInLifecareAndAFailedPreviousCalculationReadLeavesTheIncomeChangesUnverified() {
+		final var month = YearMonth.of(2026, JUNE);
+		linkedRun(month);
+		when(calculationServiceMock.incomeTypeTotals(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[json]")).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare down"));
+
+		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, linkedRequest());
+
+		assertThat(response.getChangeWarnings()).isEmpty();
+		verify(warningServiceMock).reconcileRuleWarnings(eq(ERRAND_ID), any(), eq(List.of()), any(), any(), eq(Set.of(WarningService.TYPE_INCOME_CHANGE)));
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+	}
+
+	@Test
+	void prepareWithoutAPreviousCalculationComparesNothing() {
+		// A nyansökan: the feeder is handed the empty previous side and has nothing to compare with.
+		final var month = YearMonth.of(2026, JUNE);
+		completeRun(month);
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypeAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month)).thenReturn(Optional.empty());
+
+		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest()
+			.withChangeWarnings(List.of("Bostadsbidrag: -23%")));
+
+		verify(incomeChangeFeederMock).incomeChangeWarnings(MUNICIPALITY_ID, List.of(), Optional.empty());
+		assertThat(response.getChangeWarnings()).isEmpty();
+		verify(warningServiceMock).reconcileCalculationWarnings(eq(ERRAND_ID), any(), eq(List.of()), any(), any(), any(), eq(Set.of()));
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any());
 	}
 
 	/** An errand whose normberäkning is saved in Lifecare (4242), with a draft header covering June 2026. */

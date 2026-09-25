@@ -30,9 +30,9 @@ import static java.util.stream.Collectors.toMap;
  * </p>
  *
  * <p>
- * Distinct from {@link MissingIncomeFeeder}, which fires for <em>every</em> comparison-period income (“SSBTEK
- * reported it last month and not now”). The two overlap by design and say different things: the agencies stopped
- * reporting it, versus it was never taken into a calculation and now it has been.
+ * Distinct from {@link IncomeChangeFeeder}, which can name the same income type as new since the previous
+ * normberäkning. The two overlap by design and say different things: this one that money moved into the calculation
+ * from the comparison period, that one that the type's amount differs from what was counted last time.
  * </p>
  *
  * <p>

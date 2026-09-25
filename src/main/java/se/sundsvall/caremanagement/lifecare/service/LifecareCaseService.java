@@ -30,6 +30,7 @@ import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
 import se.sundsvall.caremanagement.lifecare.service.mapper.IncomeTypeMapper;
+import se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 
@@ -254,6 +255,31 @@ public class LifecareCaseService {
 			.forEach(income -> IncomeTypeMapper.incomeTypeForFamilyCareName(income.getType())
 				.ifPresent(incomeType -> amounts.merge(incomeType, incomeAmount(income), BigDecimal::add)));
 		return amounts;
+	}
+
+	/**
+	 * The summed amount per FamilyCare income type on the person's most recent calculation strictly before
+	 * {@code applicationMonth} — the baseline this month's SSBTEK amounts are compared with (verksamhetens G4: the
+	 * previous month is the previous normberäkning). Keyed by the normalised FamilyCare type name
+	 * ({@link MapperUtil#normalize}), each row contributing {@code amountApplicant + amountCoApplicant} (a missing side
+	 * counting as zero); rows without a type name are skipped. Unlike {@link #previousCalculationIncomeAmounts}, every
+	 * income type is kept, and "no previous calculation" is told apart from "a previous calculation without incomes".
+	 * Propagates the integration's {@code BAD_GATEWAY} problem on failure; the caller decides what a failed read means.
+	 *
+	 * @param  partyId          the applicant's partyId
+	 * @param  applicationMonth the month being applied for; only calculations before it are considered
+	 * @return                  empty when there is no previous calculation at all, otherwise its amounts by normalised
+	 *                          type name (possibly an empty map)
+	 */
+	public Optional<Map<String, BigDecimal>> previousCalculationIncomeTypeAmounts(final String municipalityId, final String partyId, final YearMonth applicationMonth) {
+		return latestCalculationBefore(municipalityId, partyId, applicationMonth)
+			.map(calculation -> {
+				final var amounts = new HashMap<String, BigDecimal>();
+				ofNullable(calculation.getCalculationIncomesDTOs()).orElseGet(List::of).stream()
+					.filter(income -> hasText(income.getType()))
+					.forEach(income -> amounts.merge(MapperUtil.normalize(income.getType()), incomeAmount(income), BigDecimal::add));
+				return amounts;
+			});
 	}
 
 	/** An income row's amount across both sides — applicant + co-applicant, a missing side counting as zero. */

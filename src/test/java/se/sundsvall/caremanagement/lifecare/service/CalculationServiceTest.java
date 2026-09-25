@@ -109,6 +109,30 @@ class CalculationServiceTest {
 	}
 
 	@Test
+	void incomeTypeTotalsSumTheHouseholdPerTypeAfterDroppingWhatThePreviousMonthTook() {
+		final var coApplicant = new ClassifiedIncome(
+			new SsbtekIncome("Bostadsbidrag", null, "Månad", new BigDecimal("400"), LocalDate.of(2026, MAY, 15), ApplicantRole.CO_APPLICANT),
+			"TA_MED", "Bostadsbidrag", false, "Ta med");
+		final var alreadyTaken = new ClassifiedIncome(
+			new SsbtekIncome("Bostadsbidrag", null, "Månad", new BigDecimal("999"), LocalDate.of(2026, 4, 15), ApplicantRole.APPLICANT),
+			"TA_MED", "Bostadsbidrag", false, "Ta med", true);
+		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
+			bostadsbidrag(), coApplicant, alreadyTaken
+		});
+		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
+		when(lifecareCaseServiceMock.previousCalculationIncomeTypes(MUNICIPALITY_ID, APPLICANT, MONTH)).thenReturn(List.of("Bostadsbidrag"));
+
+		final var totals = service.incomeTypeTotals(MUNICIPALITY_ID, APPLICANT, MONTH, "[json]");
+
+		// Applicant and co-applicant together; the comparison-period income the previous month already took is not counted.
+		assertThat(totals).singleElement().satisfies(total -> {
+			assertThat(total.typeName()).isEqualTo("Bostadsbidrag");
+			assertThat(total.amount()).isEqualByComparingTo("2250");
+			assertThat(total.benefits()).containsExactly("Bostadsbidrag");
+		});
+	}
+
+	@Test
 	void lateTransferredComparisonIncomesReportsWhatTheTransferPickedUp() {
 		final var comparisonPeriod = new ClassifiedIncome(
 			new SsbtekIncome("Underhållsstöd", null, "Månad", new BigDecimal("1673"), LocalDate.of(2026, MAY, 15), ApplicantRole.APPLICANT),

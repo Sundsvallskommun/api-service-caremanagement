@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -552,6 +553,41 @@ class LifecareCaseServiceTest {
 		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(null);
 
 		assertThat(service().previousCalculationIncomeAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE))).isEmpty();
+	}
+
+	@Test
+	void previousCalculationIncomeTypeAmountsSumsBothSidesPerNormalisedTypeName() {
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Bostadsbidrag").amountApplicant(1000.0).amountCoApplicant(250.0))
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type(" bostadsbidrag ").amountApplicant(100.0)) // same type -> merged
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type("Barnbidrag/Flerbarnstillägg").amountCoApplicant(1250.0)) // applicant side null -> 0
+			.addCalculationIncomesDTOsItem(new CommonCalculationIncomeDTO().type(" ").amountApplicant(77.0)); // no type -> skipped
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
+
+		final var amounts = service().previousCalculationIncomeTypeAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
+
+		assertThat(amounts).hasValueSatisfying(map -> {
+			assertThat(map).containsOnlyKeys("bostadsbidrag", "barnbidrag/flerbarnstillägg");
+			assertThat(map.get("bostadsbidrag")).isEqualByComparingTo("1350");
+			assertThat(map.get("barnbidrag/flerbarnstillägg")).isEqualByComparingTo("1250");
+		});
+	}
+
+	@Test
+	void previousCalculationIncomeTypeAmountsIsAnEmptyMapForAPreviousCalculationWithoutIncomes() {
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(new PersonBasedCalculationDTO().toDate("2026-05-31"))));
+
+		assertThat(service().previousCalculationIncomeTypeAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE))).hasValue(Map.of());
+	}
+
+	@Test
+	void previousCalculationIncomeTypeAmountsIsEmptyWhenThereIsNoPreviousCalculation() {
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(new PersonBasedCalculationDTO().toDate("2026-06-30"))));
+
+		assertThat(service().previousCalculationIncomeTypeAmounts(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE))).isEmpty();
 	}
 
 	@Test

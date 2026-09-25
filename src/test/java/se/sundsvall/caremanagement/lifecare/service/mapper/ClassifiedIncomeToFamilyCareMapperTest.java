@@ -42,6 +42,34 @@ class ClassifiedIncomeToFamilyCareMapperTest {
 	}
 
 	@Test
+	void incomeTypeTotalsSumTheWholeHouseholdPerTypeAndNameTheBenefits() {
+		final var totals = ClassifiedIncomeToFamilyCareMapper.toIncomeTypeTotals(List.of(
+			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED", "1000", APPLICANT),
+			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED", "250", CO_APPLICANT),
+			classified("Dagersättning", "Dagersättning", "TA_MED", "300", CHILD),
+			classified("Aktivitetsstöd", "Dagersättning", "TA_MED", "200", APPLICANT),
+			classified("Bostadstillägg", "Bostadsbidrag", "EJ_TA_MED", "999", APPLICANT), // not transferred
+			classified("Studiemedel", "Studiemedel", "TA_MED", "3000", APPLICANT), // no type in the proposal
+			classified("Bostadsbidrag", "Bostadsbidrag", "TA_MED", "50", null)), // no role
+			proposal());
+
+		assertThat(totals).extracting(total -> total.typeName(), total -> total.amount().toPlainString(), total -> total.benefits())
+			.containsExactly(
+				tuple("Bostadsbidrag", "1250", List.of("Bostadsbidrag")),
+				tuple("Dagersättning", "500", List.of("Aktivitetsstöd", "Dagersättning")));
+	}
+
+	@Test
+	void incomeTypeTotalsCountAMissingAmountAsNothing() {
+		final var noAmount = new ClassifiedIncome(new SsbtekIncome("Bostadsbidrag", null, "Månad", null, LocalDate.of(2026, MAY, 15), APPLICANT),
+			"TA_MED", "Bostadsbidrag", false, "note");
+
+		assertThat(ClassifiedIncomeToFamilyCareMapper.toIncomeTypeTotals(List.of(noAmount), proposal()))
+			.singleElement().satisfies(total -> assertThat(total.amount()).isEqualByComparingTo("0"));
+		assertThat(ClassifiedIncomeToFamilyCareMapper.toIncomeTypeTotals(null, proposal())).isEmpty();
+	}
+
+	@Test
 	void dropsAComparisonPeriodIncomeThePreviousMonthAlreadyTransferred() {
 		final var kept = ClassifiedIncomeToFamilyCareMapper.withoutAlreadyTransferred(
 			List.of(fromComparisonPeriod("Underhållsstöd", "Underhållsstöd", "1673")),

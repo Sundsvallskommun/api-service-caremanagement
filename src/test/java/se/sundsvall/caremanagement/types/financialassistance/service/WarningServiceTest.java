@@ -296,6 +296,56 @@ class WarningServiceTest {
 	}
 
 	@Test
+	void reconcileRuleWarningsLeavesTheUnverifiedTypesAsTheyWere() {
+		final var incomeChange = warning("INCOME_CHANGE", "Bostadsbidrag", "OPEN"); // the previous normberäkning could not be read → stays
+		final var missing = warning("MISSING_SSBTEK", "Dagersättning", "OPEN"); // verified and gone → auto-close
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(incomeChange, missing));
+
+		service.reconcileRuleWarnings(ERRAND_ID, List.of(), List.of(), List.of(), List.of(), Set.of(WarningService.TYPE_INCOME_CHANGE));
+
+		assertThat(incomeChange.getStatus()).isEqualTo("OPEN");
+		assertThat(missing.getStatus()).isEqualTo("CLOSED");
+		verify(repositoryMock).save(missing);
+		verify(repositoryMock, never()).save(incomeChange);
+	}
+
+	@Test
+	void reconcileRuleWarningsRejectsAChangeTextOfAnUnverifiedType() {
+		final var changes = List.of("Bostadsbidrag: 1000 kr i föregående normberäkning → 1250 kr nu");
+		final var unverified = Set.of(WarningService.TYPE_INCOME_CHANGE);
+
+		assertThatThrownBy(() -> service.reconcileRuleWarnings(ERRAND_ID, List.of(), changes, List.of(), List.of(), unverified))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("warning type INCOME_CHANGE is unverified on this run");
+		verify(repositoryMock, never()).save(any());
+	}
+
+	@Test
+	void bothCalculationReconcilesCloseTheRetiredPreviousPeriodWarning() {
+		// INCOME_MISSING_PREVIOUS_PERIOD is no longer raised; the rows already stored must not be left open forever.
+		final var withDraft = warning(WarningService.TYPE_INCOME_MISSING_PREVIOUS_PERIOD, "bostadsbidrag", "OPEN");
+		final var keepingDraft = warning(WarningService.TYPE_INCOME_MISSING_PREVIOUS_PERIOD, "underhållsstöd", "ACKNOWLEDGED");
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(withDraft)).thenReturn(List.of(keepingDraft));
+
+		service.reconcileCalculationWarnings(ERRAND_ID, List.of(), List.of(), List.of(), null, List.of());
+		service.reconcileRuleWarnings(ERRAND_ID, List.of(), List.of(), List.of(), List.of());
+
+		assertThat(withDraft.getStatus()).isEqualTo("CLOSED");
+		assertThat(keepingDraft.getStatus()).isEqualTo("CLOSED");
+	}
+
+	@Test
+	void incomeChangeTextsAreKeyedOnTheIncomeType() {
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+
+		service.reconcileRuleWarnings(ERRAND_ID, List.of(), List.of("Bostadsbidrag: ny inkomst sedan föregående normberäkning, 1250 kr – kontrollera summan"),
+			List.of(), List.of());
+
+		assertThat(inserted()).extracting(FaWarningEntity::getType, FaWarningEntity::getSourceKey)
+			.containsExactly(tuple("INCOME_CHANGE", "Bostadsbidrag"));
+	}
+
+	@Test
 	void reconcileRuleWarningsToleratesNullRuleWarnings() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
 

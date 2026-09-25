@@ -39,6 +39,10 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 public class WarningService {
 
 	public static final String TYPE_UNHANDLED_INCOME = "UNHANDLED_INCOME";
+	/**
+	 * An income type whose amount this month differs from the previous normberäkning, or that is new since it — see
+	 * {@link IncomeChangeFeeder}. Computed by careM, keyed on the income type.
+	 */
 	public static final String TYPE_INCOME_CHANGE = "INCOME_CHANGE";
 	public static final String TYPE_MISSING_SSBTEK = "MISSING_SSBTEK";
 	public static final String TYPE_NEW_INCOME = "NEW_INCOME";
@@ -70,10 +74,10 @@ public class WarningService {
 	public static final String TYPE_NORM_MISMATCH_PREVIOUS_CALCULATION = "NORM_MISMATCH_PREVIOUS_CALCULATION";
 
 	/**
-	 * An income SSBTEK reported in the comparison period and not in the control period — verksamhetens “föregående
-	 * månad = facit”. Distinct from {@link #TYPE_INCOME_MISSING_VS_PREVIOUS_CALCULATION}, which compares against the
-	 * previous normberäkning in Lifecare (what a caseworker transferred) rather than against the previous SSBTEK
-	 * answer (what the agencies reported).
+	 * An income SSBTEK reported in the comparison period and not in the control period. <strong>No longer
+	 * raised</strong> (2026-09-25): verksamheten decided (G4) that the previous month is the previous normberäkning, and
+	 * against that {@link #TYPE_MISSING_SSBTEK} already says what is missing. Kept because stored warnings carry it; both
+	 * calculation reconciles own the type, so an open one auto-closes on the next successful run.
 	 */
 	public static final String TYPE_INCOME_MISSING_PREVIOUS_PERIOD = "INCOME_MISSING_PREVIOUS_PERIOD";
 
@@ -85,10 +89,9 @@ public class WarningService {
 	 * The only rule in the regelverk that both changes the normberäkning and warns about it, which is exactly why it
 	 * warns: the money moves whether or not anyone looks, so the handläggare has to be told it moved.
 	 * <p>
-	 * Distinct from {@link #TYPE_INCOME_MISSING_PREVIOUS_PERIOD}, which fires for every comparison-period income
-	 * (SSBTEK reported it last month, not this month). This one fires for the subset of those that were also absent
-	 * from last month's calculation — the two overlap, and say different things: “the agencies stopped reporting it”
-	 * versus “it was never taken, and now it has been”.
+	 * Distinct from {@link #TYPE_MISSING_SSBTEK}, which names a type the previous normberäkning had and this month's
+	 * SSBTEK answer lacks. This one names an income the previous normberäkning lacked and this month's transfer has
+	 * taken.
 	 */
 	public static final String TYPE_INCOME_TRANSFERRED_LATE = "INCOME_TRANSFERRED_LATE";
 
@@ -354,7 +357,19 @@ public class WarningService {
 	@Transactional
 	public void reconcileRuleWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final List<WarningInput> ruleWarnings) {
+		reconcileRuleWarnings(errandId, unhandled, changes, missing, ruleWarnings, Set.of());
+	}
 
+	/**
+	 * {@link #reconcileRuleWarnings(String, List, List, List, List)}, leaving the {@code unverifiedTypes} exactly as they
+	 * were: a Lifecare read those warnings depend on failed on this run, so their absence proves nothing and must not
+	 * auto-close them. No input — rule warning or SSBTEK income warning — may carry one of them.
+	 */
+	@Transactional
+	public void reconcileRuleWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
+		final List<String> missing, final List<WarningInput> ruleWarnings, final Set<String> unverifiedTypes) {
+
+		final var unverified = ofNullable(unverifiedTypes).orElseGet(Set::of);
 		final var rules = ofNullable(ruleWarnings).orElseGet(List::of);
 		rules.stream()
 			.filter(input -> DRAFT_REFRESH_TYPES.contains(input.type()))
@@ -365,7 +380,13 @@ public class WarningService {
 
 		final var inputs = ssbtekIncomeWarnings(unhandled, changes, missing);
 		inputs.addAll(rules);
-		reconcile(errandId, inputs, type -> !isSeparatelyReconciled(type) && !DRAFT_REFRESH_TYPES.contains(type));
+		inputs.stream()
+			.filter(input -> unverified.contains(input.type()))
+			.findFirst()
+			.ifPresent(input -> {
+				throw new IllegalArgumentException("warning type " + input.type() + " is unverified on this run");
+			});
+		reconcile(errandId, inputs, type -> !isSeparatelyReconciled(type) && !DRAFT_REFRESH_TYPES.contains(type) && !unverified.contains(type));
 	}
 
 	/**
@@ -382,7 +403,10 @@ public class WarningService {
 			.forEach(entity -> warningRepository.save(entity.withStatus(STATUS_CLOSED).withAutoResolved(true)));
 	}
 
-	/** The rules income warnings the process sent: unhandled, significantly changed and still-missing incomes. */
+	/**
+	 * The SSBTEK income warnings: unhandled incomes (from the process), incomes changed or new since the previous
+	 * normberäkning ({@link IncomeChangeFeeder}) and income types still missing from SSBTEK.
+	 */
 	private static List<WarningInput> ssbtekIncomeWarnings(final List<String> unhandled, final List<String> changes, final List<String> missing) {
 		final List<WarningInput> inputs = new ArrayList<>();
 		ofList(unhandled).forEach(text -> inputs.add(new WarningInput(TYPE_UNHANDLED_INCOME, sourceKey(text), text)));
@@ -594,7 +618,7 @@ public class WarningService {
 	}
 
 	/** A stable dedup/grouping key for the income a warning concerns — the benefit/type before any “ (…” or “: …”. */
-	private static String sourceKey(final String text) {
+	static String sourceKey(final String text) {
 		if (text == null) {
 			return "";
 		}
