@@ -68,6 +68,25 @@ public final class ActualisationAssembler {
 	public static Selection assemble(final String applicantPartyId, final PersonBasedAktualiseringProposalDTO proposalDTO, final LocalDate date,
 		final String caseworkerId, final ActualisationProperties names) {
 
+		return assemble(applicantPartyId, proposalDTO, date, caseworkerId, names, true);
+	}
+
+	/**
+	 * Build the FamilyCare actualisation body, optionally without linking any of the person's existing cases.
+	 *
+	 * <p>
+	 * A nyansökan opens a new ekonomiutredning, so it is never linked to a service or investigation the person already
+	 * has. The proposal cannot tell an open investigation from a closed one (it carries no status or end date), and a
+	 * nyansökan linked to a closed one is created but refuses every attachment with "Det går ej att ändra avslutad
+	 * utredning".
+	 *
+	 * @param linkExistingCases {@code false} to leave {@code ServiceId} and {@code InvestigationId} unset
+	 * @see                     #assemble(String, PersonBasedAktualiseringProposalDTO, LocalDate, String,
+	 *                          ActualisationProperties)
+	 */
+	public static Selection assemble(final String applicantPartyId, final PersonBasedAktualiseringProposalDTO proposalDTO, final LocalDate date,
+		final String caseworkerId, final ActualisationProperties names, final boolean linkExistingCases) {
+
 		final var body = new PostAktualiseringsBodyRequest()
 			.personId(applicantPartyId)
 			.date(startOfDay(date));
@@ -93,10 +112,12 @@ public final class ActualisationAssembler {
 				// socialtjänsten - a vuxenutredning and a BoU-avgift sit in the same list as the EB ones. Only the
 				// ones whose type the chosen actualisation type accepts may be linked, and a type that accepts none
 				// (as EK Återansökan does for investigations) gets no link at all.
-				linkedId(proposal.getServices(), PersonBasedAktualiseringsServiceDTO::getType, PersonBasedAktualiseringsServiceDTO::getId,
-					type.getServiceTypes(), PersonBasedAktualiseringsServiceTypeDTO::getId).ifPresent(body::serviceId);
-				linkedId(proposal.getInvestigations(), PersonBasedAktualiseringsInvestigationDTO::getType, PersonBasedAktualiseringsInvestigationDTO::getId,
-					type.getInvestigationTypes(), PersonBasedAktualiseringsInvestigationTypeDTO::getId).ifPresent(body::investigationId);
+				if (linkExistingCases) {
+					linkedId(proposal.getServices(), PersonBasedAktualiseringsServiceDTO::getType, PersonBasedAktualiseringsServiceDTO::getId,
+						type.getServiceTypes(), PersonBasedAktualiseringsServiceTypeDTO::getId).ifPresent(body::serviceId);
+					linkedId(proposal.getInvestigations(), PersonBasedAktualiseringsInvestigationDTO::getType, PersonBasedAktualiseringsInvestigationDTO::getId,
+						type.getInvestigationTypes(), PersonBasedAktualiseringsInvestigationTypeDTO::getId).ifPresent(body::investigationId);
+				}
 			});
 			organization(proposal, names, misses).ifPresent(org -> {
 				body.organisationId(org.getId());

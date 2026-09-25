@@ -62,7 +62,7 @@ public class ActualisationService {
 		final var names = namesFor(newApplication);
 		final var proposal = lifecareFamilyCareIntegration.getActualisationProposal(municipalityId, applicantPartyId);
 		final var selection = ActualisationAssembler.assemble(applicantPartyId, proposal, date,
-			caseworker.map(ResolvedCaseworker::caseworkerId).orElse(null), names);
+			caseworker.map(ResolvedCaseworker::caseworkerId).orElse(null), names, !newApplication);
 		// A name that is not in the catalogue falls back to the first offered value, which is the guess the
 		// configuration exists to remove - so it must never pass silently.
 		if (!selection.misses().isEmpty()) {
