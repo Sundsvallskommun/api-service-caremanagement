@@ -121,11 +121,12 @@ public class FinancialAssistanceCalculationService {
 	 * ({@code SUPPLEMENT_REQUESTED} while incomplete, {@code AWAITING_DECISION} when complete).
 	 *
 	 * <p>
-	 * <strong>The first run that finds the information complete creates the normberäkning proposal in Lifecare</strong>
-	 * ({@link #proposeInLifecare}) — verksamheten wants the caseworker to meet the proposal in Lifecare, not as a careM
-	 * draft. Waiting for completeness is deliberate: the proposal is created once and never refreshed (FamilyCare can
-	 * create a calculation but not update one), so creating it on an incomplete SSBTEK basis would freeze the gap into it.
-	 * Until then the draft keeps refreshing daily as before.
+	 * <strong>The first run creates the normberäkning proposal in Lifecare</strong> ({@link #proposeInLifecare}) —
+	 * verksamheten wants the caseworker to meet the proposal in Lifecare, not as a careM draft, and the regelverk
+	 * creates the normberäkning before SSBTEK is read. It is created even when the SSBTEK basis is still incomplete:
+	 * what SSBTEK reports later reaches the saved calculation through {@link #syncWithLifecare}, and what is still
+	 * missing stays a {@code MISSING_SSBTEK} warning. (Until 2026-09-25 the proposal waited for completeness, and an
+	 * income type SSBTEK never reports — Swish — kept it from ever being created.)
 	 *
 	 * <p>
 	 * <strong>Once the errand carries a {@code lifecareCalculationId}, the Lifecare normberäkning is the truth</strong>,
@@ -162,7 +163,7 @@ public class FinancialAssistanceCalculationService {
 				reconcileKeepingDraft(input, response, rules);
 				syncWithLifecare(municipalityId, input);
 			});
-		if (refresh.isPresent() && response.isInformationComplete()) {
+		if (refresh.isPresent()) {
 			proposeInLifecare(municipalityId, input);
 		}
 		// This run read SSBTEK, so any read-failure warning from an earlier run has served its purpose and closes itself.
@@ -620,7 +621,7 @@ public class FinancialAssistanceCalculationService {
 			response.getMissingIncomeTypes().stream().map("Saknas fortfarande i SSBTEK: "::concat))
 			.flatMap(stream -> stream)
 			.toList();
-		final var header = "Inkomstunderlag förberett (preliminärt – förslaget på normberäkning skapas i Lifecare när underlaget är komplett). ";
+		final var header = "Inkomstunderlag förberett (preliminärt – förslaget på normberäkning skapas i Lifecare och uppdateras med det SSBTEK rapporterar senare). ";
 		final String description;
 		if (warnings.isEmpty()) {
 			description = header + "Inga varningar – inkomsterna kunde överföras utan anmärkning.";

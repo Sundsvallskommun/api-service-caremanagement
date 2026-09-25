@@ -75,17 +75,25 @@ public class DraftService {
 	 * Refresh the draft from the freshly computed process rows. Upserts the header (application month, selected norm and
 	 * the calculation date window derived from the month) and reconciles each section, returning what changed so the
 	 * caller can raise warnings.
+	 * <p>
+	 * The first refresh builds the draft and reports no changes: "added" is measured against the previous run's draft,
+	 * and with no previous draft every row would read as new — which the caseworker takes to mean new since the previous
+	 * normberäkning.
 	 */
 	@Transactional
 	public DraftChanges refresh(final String errandId, final String applicationMonth, final Integer normId, final List<String> normType,
 		final List<FaNormPersonEntity> freshPersons, final List<FaNormIncomeEntity> freshIncomes, final List<FaNormExpenseEntity> freshExpenses) {
 
+		final var firstBuild = !calculationDraftRepository.existsById(errandId);
 		upsertHeader(errandId, applicationMonth, normId, normType);
 
 		final var persons = sectionReconciler.reconcilePersons(errandId, freshPersons);
 		final var incomes = sectionReconciler.reconcileIncomes(errandId, freshIncomes);
 		final var expenses = sectionReconciler.reconcileExpenses(errandId, freshExpenses);
 
+		if (firstBuild) {
+			return new DraftChanges(List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+		}
 		return new DraftChanges(incomes.added(), incomes.dropped(), expenses.added(), expenses.dropped(), persons.added(), persons.dropped());
 	}
 

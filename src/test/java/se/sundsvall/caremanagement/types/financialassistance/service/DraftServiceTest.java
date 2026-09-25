@@ -60,6 +60,7 @@ class DraftServiceTest {
 
 	@Test
 	void refreshUpsertsHeaderThenDelegatesEachSectionAndAssemblesChanges() {
+		when(headerRepositoryMock.existsById(ERRAND_ID)).thenReturn(true);
 		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.empty());
 
 		final var freshPersons = List.of(FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD));
@@ -84,6 +85,28 @@ class DraftServiceTest {
 		verify(headerRepositoryMock).save(header.capture());
 		assertThat(header.getValue().getNormId()).isEqualTo(7);
 		assertThat(header.getValue().getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
+	}
+
+	@Test
+	void firstRefreshBuildsTheDraftButReportsNoChanges() {
+		// With no previous draft every row would read as new - "Ny utgift: Boendekostnad" for a rent the previous
+		// normberäkning already carried.
+		when(headerRepositoryMock.existsById(ERRAND_ID)).thenReturn(false);
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.empty());
+		final var freshExpenses = List.of(FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("RENT"));
+		when(sectionReconcilerMock.reconcilePersons(any(), any())).thenReturn(new SectionReconciler.Diff(List.of("Sökande"), List.of()));
+		when(sectionReconcilerMock.reconcileIncomes(any(), any())).thenReturn(new SectionReconciler.Diff(List.of("Bostadsbidrag"), List.of()));
+		when(sectionReconcilerMock.reconcileExpenses(ERRAND_ID, freshExpenses)).thenReturn(new SectionReconciler.Diff(List.of("Boendekostnad"), List.of()));
+
+		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(), freshExpenses);
+
+		verify(sectionReconcilerMock).reconcileExpenses(ERRAND_ID, freshExpenses);
+		assertThat(changes.addedIncomes()).isEmpty();
+		assertThat(changes.addedExpenses()).isEmpty();
+		assertThat(changes.addedPersons()).isEmpty();
+		assertThat(changes.droppedIncomes()).isEmpty();
+		assertThat(changes.droppedExpenses()).isEmpty();
+		assertThat(changes.droppedPersons()).isEmpty();
 	}
 
 	@Test

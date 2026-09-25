@@ -350,9 +350,26 @@ class FinancialAssistanceCalculationServiceTest {
 		// No lifecareCalculationId yet: the draft is refreshed, so the full calculation reconcile runs.
 		verify(draftServiceMock).refresh(eq(ERRAND_ID), eq("2026-06"), eq(7), eq(List.of("NATIONAL_NORM")), any(), any(), any());
 		verify(warningServiceMock, never()).reconcileRuleWarnings(any(), any(), any(), any(), any());
-		// An incomplete basis is never frozen into a Lifecare proposal: the draft keeps refreshing until it is complete.
+		// No draft header in this run, so there is nothing to propose; the incomplete-basis proposal has its own test.
 		verify(calculationServiceMock, never()).commitEffective(any(), any(), any(), any(), any(), any(), any());
 		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
+	}
+
+	@Test
+	void prepareCreatesTheProposalEvenWhenTheBasisIsIncomplete() {
+		// Swish is never reported by SSBTEK, so waiting for a complete basis meant the proposal was never created. What
+		// SSBTEK reports later reaches the saved calculation through the sync; what is missing stays a warning.
+		final var month = YearMonth.of(2026, JUNE);
+		final var errand = completeRunWithDraft(month);
+		when(calculationServiceMock.completeness(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[]")).thenReturn(new Completeness(false, List.of("Swish")));
+		when(calculationServiceMock.commitEffective(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), eq(month), any(), any(), any(), any())).thenReturn(779);
+		when(repositoryMock.linkLifecareCalculationIfAbsent(ERRAND_ID, 779)).thenReturn(1);
+
+		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest());
+
+		assertThat(response.isInformationComplete()).isFalse();
+		verify(repositoryMock).linkLifecareCalculationIfAbsent(ERRAND_ID, 779);
+		assertThat(errand.getLifecareCalculationId()).isEqualTo(779);
 	}
 
 	@Test
@@ -537,7 +554,7 @@ class FinancialAssistanceCalculationServiceTest {
 	}
 
 	@Test
-	void prepareCreatesTheProposalInLifecareOnceTheBasisIsComplete() {
+	void prepareCreatesTheProposalInLifecareOnTheFirstRun() {
 		final var month = YearMonth.of(2026, JUNE);
 		final var errand = completeRunWithDraft(month);
 		final var allIncomes = List.of(FaNormIncomeEntity.create().withTypeId(20), FaNormIncomeEntity.create().withTypeId(21).withDeleted(true));
