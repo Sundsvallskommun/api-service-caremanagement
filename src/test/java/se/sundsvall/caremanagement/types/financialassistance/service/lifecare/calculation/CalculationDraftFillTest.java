@@ -21,7 +21,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.catalogues;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.draft;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.personsOf;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.objects;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
 
 class CalculationDraftFillTest {
 
@@ -126,7 +126,7 @@ class CalculationDraftFillTest {
 		final var applicant = (ObjectNode) saved.path("calculationPersons").get(0);
 		final var child = (ObjectNode) saved.path("calculationPersons").get(1);
 		applicant.put("included", true);
-		saved.set("calculationPersons", LifecareJson.array(List.of(applicant)));
+		saved.set("calculationPersons", CalculationJson.array(List.of(applicant)));
 		final var draft = draft();
 		draft.getPersons().forEach(person -> person.setIncluded(true));
 

@@ -14,9 +14,9 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.json;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.personsOf;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.tree;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.householdSizeOf;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.withPlacedPersons;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.objects;
 
 class CalculationBodyBuilderTest {
 

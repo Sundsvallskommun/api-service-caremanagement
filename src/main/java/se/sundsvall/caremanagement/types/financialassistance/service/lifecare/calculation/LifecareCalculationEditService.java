@@ -13,6 +13,12 @@ import tools.jackson.databind.node.ObjectNode;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.PERSONS;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.array;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.numberNode;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.same;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.setOrRemove;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.truthy;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.AMOUNT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.INCLUDED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.NORM;
@@ -27,12 +33,6 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationRowChanges.needsRecount;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationRowChanges.sharedCostShare;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationRowChanges.withEnteredIncomes;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.array;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.numberNode;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.objects;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.same;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.setOrRemove;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.truthy;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toLifecareDraftView;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toNormOptions;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toTypeOptions;
@@ -150,7 +150,7 @@ class LifecareCalculationEditService {
 	 * @return                the beräkning
 	 */
 	ObjectNode placeAndMark(final ObjectNode calculation, final JsonNode jobStimulus, final boolean keepPlacements) {
-		final var body = LifecareJson.NODES.objectNode();
+		final var body = CalculationJson.NODES.objectNode();
 		body.set(START_DATE, calculation.path(START_DATE).deepCopy());
 		body.set(END_DATE, calculation.path(END_DATE).deepCopy());
 		body.set(NORM_ID, calculation.path(NORM_ID).deepCopy());

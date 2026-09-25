@@ -8,17 +8,17 @@ import tools.jackson.databind.node.ObjectNode;
 
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.INCOMES;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.PERSONS;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.find;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.integer;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.integerOrNull;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.isTrue;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.number;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.numberNode;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.objects;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.same;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.setOrRemove;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.text;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.truthy;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.find;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.integer;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.integerOrNull;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.isTrue;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.number;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.numberNode;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.same;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.setOrRemove;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.text;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.truthy;
 
 /**
  * How the members sit on the norm and what that makes of the amounts: placement on normintervall, jobbstimulans on the
@@ -136,7 +136,7 @@ final class CalculationPlacement {
 
 	/** The type in a Lifecare catalogue (an array of {id, text, ...}) with the id. */
 	static Optional<ObjectNode> typeOf(final JsonNode types, final JsonNode id) {
-		return LifecareJson.elements(types).stream().filter(candidate -> same(candidate.path("id"), id)).findFirst();
+		return CalculationJson.elements(types).stream().filter(candidate -> same(candidate.path("id"), id)).findFirst();
 	}
 
 	/** The members included. */

@@ -23,15 +23,15 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.PERSONS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.applyDraft;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.integerOrNull;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.text;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.householdSizeOf;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.withJobStimulusIncomes;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareCalculationEditService.READ_CALCULATION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareCalculationEditService.READ_UNDERLAG;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareCalculationEditService.TARGET;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareCalculationEditService.asObject;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.integerOrNull;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.objects;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.text;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toLifecareCalculationView;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toPreviousCalculation;
 
@@ -162,7 +162,7 @@ public class ErrandLifecareCalculationService {
 		recorder.read(errand, TARGET, "Läste insatsens normberäkningar i Lifecare");
 
 		final var own = errand.calculation()
-			.flatMap(ownId -> LifecareJson.elements(listed).stream().filter(item -> LifecareJson.hasNumber(item, "calculationId", ownId)).findFirst())
+			.flatMap(ownId -> CalculationJson.elements(listed).stream().filter(item -> CalculationJson.hasNumber(item, "calculationId", ownId)).findFirst())
 			.map(item -> text(item, "startDate"));
 		final var periodStart = own.or(() -> draftReader.periodStart(errand)).orElse(null);
 

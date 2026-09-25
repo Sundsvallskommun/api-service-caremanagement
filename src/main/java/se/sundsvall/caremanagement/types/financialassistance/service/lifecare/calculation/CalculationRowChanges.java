@@ -19,6 +19,21 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.PERSONS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.SPECIAL_EXPENSES;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.BUCKET_SPECIAL_EXPENSE;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.NODES;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.array;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.elements;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.find;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.idOf;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.integer;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.integerOrNull;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.notZero;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.number;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.numberNode;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.orNull;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.same;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.text;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.truthy;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.AMOUNT_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.DEVIATION_DAYS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.GROSS_AMOUNT_APPLICANT;
@@ -36,21 +51,6 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.normRow;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.normRowName;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.typeOf;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.NODES;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.array;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.elements;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.find;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.idOf;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.integer;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.integerOrNull;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.notZero;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.number;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.numberNode;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.objects;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.orNull;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.same;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.text;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareJson.truthy;
 
 /**
  * The caseworker's changes to a beräkning saved in Lifecare, made on the tree read for edit. Lifecare has no process
@@ -118,7 +118,7 @@ final class CalculationRowChanges {
 	 * the caseworker entered and jobbstimulans is not taken off twice.
 	 */
 	static ObjectNode withEnteredIncomes(final ObjectNode calculation, final JsonNode types) {
-		objects(calculation, INCOMES).forEach(row -> LifecareJson.setOrRemove(row, AMOUNT_APPLICANT, enteredApplicantAmount(row, types).deepCopy()));
+		objects(calculation, INCOMES).forEach(row -> CalculationJson.setOrRemove(row, AMOUNT_APPLICANT, enteredApplicantAmount(row, types).deepCopy()));
 		return calculation;
 	}
 
@@ -364,9 +364,9 @@ final class CalculationRowChanges {
 		if (input.getNormType() != null || input.getCalculationFromDate() != null || input.getCalculationToDate() != null) {
 			throw Problem.valueOf(UNPROCESSABLE_CONTENT, "Perioden ändras i Lifecare. Från Drakel går normen och hushållsstorleken att ändra.");
 		}
-		if (input.getNormId() != null && !LifecareJson.hasNumber(calculation, NORM_ID, input.getNormId())) {
+		if (input.getNormId() != null && !CalculationJson.hasNumber(calculation, NORM_ID, input.getNormId())) {
 			final var norm = elements(forEdit.path("norms")).stream()
-				.filter(candidate -> LifecareJson.hasNumber(candidate, NORM_ID, input.getNormId()))
+				.filter(candidate -> CalculationJson.hasNumber(candidate, NORM_ID, input.getNormId()))
 				.findFirst()
 				.orElseThrow(() -> Problem.valueOf(UNPROCESSABLE_CONTENT, "Normen finns inte i Lifecare. Ladda om fliken."));
 			calculation.set(NORM_ID, norm.path(NORM_ID).deepCopy());
@@ -408,7 +408,7 @@ final class CalculationRowChanges {
 		if (size == 0) {
 			return Optional.empty();
 		}
-		return find(calculation.path(NORM), "shared", row -> LifecareJson.hasNumber(row, "noOfMembers", size))
+		return find(calculation.path(NORM), "shared", row -> CalculationJson.hasNumber(row, "noOfMembers", size))
 			.map(normShared -> new SharedCost(normShared, size, members));
 	}
 

@@ -16,11 +16,11 @@ import tools.jackson.databind.node.ObjectNode;
  * counts as nothing, a number is compared by value whatever its JSON spelling, and an integral amount is written
  * without decimals.
  */
-final class LifecareJson {
+final class CalculationJson {
 
 	static final JsonNodeFactory NODES = JsonNodeFactory.instance;
 
-	private LifecareJson() {}
+	private CalculationJson() {}
 
 	/** The number in the field, 0 when there is none. */
 	static double number(final JsonNode node, final String field) {

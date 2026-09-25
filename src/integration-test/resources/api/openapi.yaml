@@ -7,7 +7,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "1.0"
 servers:
-- url: http://localhost:53757
+- url: http://localhost:54924
   description: Generated server url
 security:
 - sentBy: []
@@ -32,6 +32,14 @@ tags:
     \ BFF directly in Lifecare before the decision; the errand only carries the references\
     \ (lifecareCalculationId, lifecareDecisionId, lifecarePaymentIds). The decision\
     \ is sent to the applicant by the frontend."
+- name: Financial Assistance · Lifecare
+  description: "The applicant's case in Lifecare. The history reads (calculations,\
+    \ decisions, documents keyed by partyId, period defaulting to the last 24 months)\
+    \ go through the FamilyCare API. The errand-scoped routes under /{errandId}/lifecare\
+    \ read and write Lifecare ProfessionalWeb on the caseworker's behalf: normberä\
+    kning, beslut, utbetalningar, betalningsmottagare, bevakningar, journal, dokument\
+    \ and jobbstimulans. careM derives every Lifecare key from the errand, logs each\
+    \ access on the errand and links what it creates back onto it."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
 - name: Financial Assistance · Monitorings
@@ -108,11 +116,6 @@ tags:
     \ one of the three application-type slugs (financial-assistance-new / -renewal\
     \ / -supplementary); read and replace the typed data via the shared financial-assistance\
     \ path."
-- name: Financial Assistance · Lifecare history
-  description: "Read the applicant's case history straight from Lifecare — the calculations,\
-    \ decisions and documents — plus a single document's PDF content. Keyed by partyId\
-    \ (resolved to a personnummer via the citizen service); the period defaults to\
-    \ the last 24 months. caremanagement only forwards the reads."
 - name: Documents
   description: Formal case documents attached to an errand
 - name: Errands
@@ -385,6 +388,608 @@ paths:
                 $ref: "#/components/schemas/Problem"
         "500":
           description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/reminders/{reminderId}:
+    put:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Change a bevakning on the errand's insats
+      description: "Changes the date, text, priority or status of a bevakning (also\
+        \ how it is marked done). A changed date may not be in the past; an unchanged\
+        \ one may. 404 when Lifecare does not list the bevakning on this errand's\
+        \ insats."
+      operationId: updateReminder
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: reminderId
+        in: path
+        description: The Lifecare reminder id
+        required: true
+        schema:
+          type: integer
+          format: int32
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LifecareReminderRequest"
+        required: true
+      responses:
+        "204":
+          description: Successful Operation
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: Conflict - the errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Remove a bevakning from the errand's insats
+      description: Removes a bevakning in Lifecare. 404 when Lifecare does not list
+        the bevakning on this errand's insats.
+      operationId: removeReminder
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: reminderId
+        in: path
+        description: The Lifecare reminder id
+        required: true
+        schema:
+          type: integer
+          format: int32
+          exclusiveMinimum: 0
+      responses:
+        "204":
+          description: Successful Operation
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: Conflict - the errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/documents/journal-notes/{id}:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Read a journalanteckning with its body
+      description: One of the applicant's journalanteckningar with its body and whether
+        it may still be edited. 404 when the record is not in the applicant's Lifecare
+        record.
+      operationId: readJournalNote
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: id
+        in: path
+        description: The Lifecare record id
+        required: true
+        schema:
+          type: integer
+          format: int32
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareRecordContent"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Save an edit to a journalanteckning
+      description: "Saves the body, date, time and optionally skrivskydd onto Lifecare's\
+        \ own record. 404 when the record is not in the applicant's Lifecare record;\
+        \ 409 when it is finalised or locked in Lifecare."
+      operationId: updateJournalNote
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: id
+        in: path
+        description: The Lifecare record id
+        required: true
+        schema:
+          type: integer
+          format: int32
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLifecareRecordRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareRecordContent"
+        "409":
+          description: Conflict - the record is finalised in Lifecare
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Lifecare refused the edit
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/documents/documents/{id}:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Read a document with its body
+      description: One of the applicant's documents with its body and whether it may
+        still be edited. 404 when the record is not in the applicant's Lifecare record.
+      operationId: readDocument
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: id
+        in: path
+        description: The Lifecare record id
+        required: true
+        schema:
+          type: integer
+          format: int32
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareRecordContent"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Save an edit to a document
+      description: "Saves the body, date, time and optionally skrivskydd onto Lifecare's\
+        \ own record. 404 when the record is not in the applicant's Lifecare record;\
+        \ 409 when it is finalised or locked in Lifecare."
+      operationId: updateDocument
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: id
+        in: path
+        description: The Lifecare record id
+        required: true
+        schema:
+          type: integer
+          format: int32
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLifecareRecordRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareRecordContent"
+        "409":
+          description: Conflict - the record is finalised in Lifecare
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Lifecare refused the edit
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/decision:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Read the errand's beslut as it stands in Lifecare
+      description: "The beslut the errand is linked to in Lifecare (lifecareDecisionId),\
+        \ read from Lifecare. 204 while no beslut has been saved. The read is logged\
+        \ in the errand's Lifecare access log."
+      operationId: readDecision
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+        example: FINANCIAL_ASSISTANCE
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareDecisionView"
+        "204":
+          description: No beslut saved in Lifecare yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareDecisionView"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway - Lifecare could not be reached or answered with
+            an error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: "Save the errand's beslut in Lifecare - created the first time, changed\
+        \ after that"
+      description: "Writes the beslut to Lifecare: Decision/Create the first time,\
+        \ after which the errand is linked to it (lifecareDecisionId) in the same\
+        \ call, and Decision/Update of that same beslut every time after. The beslutsfattare\
+        \ is the caller (X-Sent-By), who must be one of Lifecare's beslutsfattare\
+        \ for the insats. Refused with 422, worded for the caseworker, when the beslutstyp\
+        \ is not active on the insats or cannot be registered from careM, the household\
+        \ has a medsökande, the caller is not a beslutsfattare, a period the beslutstyp\
+        \ requires is missing, the beslut is locked in Lifecare, or an existing beslut\
+        \ would change beslutstyp; Lifecare's own refusals are 422 with Lifecare's\
+        \ message. 502 when Lifecare did not answer the create (check Lifecare before\
+        \ saving again) or when the beslut was created but could not be linked to\
+        \ the errand (do not save again). Answers with the beslut as it stands in\
+        \ Lifecare after the save."
+      operationId: saveDecision
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+        example: FINANCIAL_ASSISTANCE
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LifecareDecisionSaveRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareDecisionView"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: Conflict - the errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Unprocessable - the beslut cannot be saved as it stands
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway - Lifecare could not be reached or answered with
+            an error
           content:
             application/problem+json:
               schema:
@@ -3225,6 +3830,977 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/reminders:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: List the bevakningar on the errand's insats
+      description: "The bevakningar on the errand's Lifecare insats (and on the beslut\
+        \ and aktualiseringar under it), read live from Lifecare, soonest first. The\
+        \ personnummer on the Lifecare rows is left out. The read is logged in the\
+        \ errand's access log."
+      operationId: listReminders
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareReminder"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: Conflict - the errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Add a bevakning on the errand's insats
+      description: "Creates a manual bevakning on the errand's Lifecare insats, for\
+        \ the applicant, bevakad av the insats's caseworker. The date may not be in\
+        \ the past (Swedish time). Not idempotent. 400 when Lifecare offers no manual\
+        \ insats bevakning, the insats has no caseworker, or the priority or status\
+        \ is not one of Lifecare's."
+      operationId: createReminder
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LifecareReminderRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: Conflict - the errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/payments:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: "The utbetalningar registered on the errand's insats, read from Lifecare"
+      description: "Lifecare's latest utbetalningar on the insats, newest payment\
+        \ date first. The read is logged on the errand."
+      operationId: readPayments
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareRegisteredPayment"
+        "409":
+          description: The errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Register an utbetalning on the errand's insats in Lifecare
+      description: "Registers the utbetalning with Lifecare's Payment/Create and links\
+        \ it to the errand. Refused with the reason (422) when it cannot be made safely:\
+        \ no amount, a betalsätt or month Lifecare does not offer, no ändamål among\
+        \ several konteringsrader, other than one saldo, a saldo that does not cover\
+        \ the amount, a blocking maximum amount, a payee Lifecare does not have, or\
+        \ no hushåll on the payment date. 409 when an identical standing utbetalning\
+        \ (amount, month, date and account) is already registered. 502 when Lifecare\
+        \ did not answer: whether it paid is then unknown, so the caseworker checks\
+        \ Lifecare before trying again. Never retried."
+      operationId: registerPayment
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LifecarePaymentRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecarePaymentCreated"
+        "409":
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Unprocessable Content
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/payees:
+    post:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Add a betalningsmottagare in Lifecare
+      description: "Adds a betalningsmottagare for the person the errand's insats\
+        \ belongs to. An active payee with the same betalsätt, account and clearing\
+        \ is returned instead of being created a second time. 400 when the betalsä\
+        tt is not in use on the insats."
+      operationId: createPayee_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LifecarePayeeRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecarePayee"
+        "409":
+          description: The errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/normberakning/{section}:
+    post:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Add a caseworker row to a normberäkning section
+      description: In careM's draft any section. In Lifecare an income (a type already
+        on the beräkning is refused) or an utgift / levnadskostnad i övrigt by Lifecare
+        code; persons are added in Lifecare itself (422).
+      operationId: addNormberakningRow
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: section
+        in: path
+        description: The section
+        required: true
+        schema:
+          type: string
+          enum:
+          - persons
+          - incomes
+          - expenses
+          pattern: ^(persons|incomes|expenses)$
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormberakningRowInput"
+        required: true
+      responses:
+        "204":
+          description: Successful Operation
+        "422":
+          description: Unprocessable Content
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/normberakning/{section}/{rowId}/restore:
+    post:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Restore a soft-deleted row of careM's draft
+      description: "careM's draft only: a beräkning in Lifecare has no soft delete\
+        \ (422)."
+      operationId: restoreNormberakningRow
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: section
+        in: path
+        description: The section
+        required: true
+        schema:
+          type: string
+          enum:
+          - persons
+          - incomes
+          - expenses
+          pattern: ^(persons|incomes|expenses)$
+      - name: rowId
+        in: path
+        description: The row
+        required: true
+        schema:
+          type: string
+          pattern: "^[A-Za-z0-9-]{1,64}$"
+      responses:
+        "204":
+          description: Successful Operation
+        "422":
+          description: Unprocessable Content
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/job-stimulus-periods:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: "The jobbstimulans periods on the errand's insats, read from Lifecare"
+      description: "The sökandes and the medsökandes periods, each marked with whose\
+        \ it is. Periods marked for removal are left out. The read is logged on the\
+        \ errand."
+      operationId: readJobStimulusPeriods
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareJobStimulusPeriod"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: The errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Add a jobbstimulans period for the sökande on the errand's insats in
+        Lifecare
+      description: "Lifecare's save replaces every period the person has, so the current\
+        \ set is sent back whole with the new one. The end defaults to Lifecare's\
+        \ two-year rule. Refused (422) for a household with a medsökande. Answers\
+        \ with every period after the save."
+      operationId: addJobStimulusPeriod
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LifecareJobStimulusPeriodRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareJobStimulusPeriod"
+        "422":
+          description: Unprocessable Content
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: The errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/documents/journal-notes:
+    post:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Write a new journalanteckning on the errand's insats
+      description: "Writes a journalanteckning on the errand's Lifecare insats, filling\
+        \ in Lifecare's own proposal. The rubrik defaults to the note type's name,\
+        \ skrivskydd to the note type's default. 400 when the note type is not an\
+        \ active one in Lifecare."
+      operationId: createJournalNote
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLifecareJournalNoteRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareRecord"
+        "409":
+          description: Conflict - the errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Lifecare refused the note
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/documents/documents:
+    post:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Write a new document on the errand's insats
+      description: "Writes a document on the errand's Lifecare insats, filling in\
+        \ Lifecare's own proposal. The rubrik defaults to the document type's name,\
+        \ skrivskydd to the type's default; the date is only taken when the type allows\
+        \ it. 400 when the document type is not a writable one in Lifecare."
+      operationId: createDocument_1
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLifecareDocumentRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          headers:
+            Location:
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareRecord"
+        "409":
+          description: Conflict - the errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Lifecare refused the document
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/calculation:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Read the errand's normberäkning as it stands in Lifecare
+      description: Lifecare's own beräkning linked to the errand (lifecareCalculationId)
+        with Lifecare's summering. 204 while none is saved in Lifecare. The read is
+        logged in the errand's access log.
+      operationId: readCalculation
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareCalculationView"
+        "204":
+          description: No beräkning saved in Lifecare yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareCalculationView"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Save the errand's normberäkning in Lifecare
+      description: "The first save creates the beräkning in Lifecare from careM's\
+        \ draft (Calculation/Create) and links it to the errand; after that it saves\
+        \ Lifecare's own beräkning (Calculation/Update). finalize saves it as slutlig,\
+        \ after which Lifecare allows no change. 422 when the draft cannot be sent\
+        \ as it stands (no period, an included co-applicant, no one included, a type\
+        \ Lifecare does not know) or when Lifecare refuses. A create Lifecare did\
+        \ not answer is never retried: 502 then tells the caseworker to check Lifecare\
+        \ before saving again."
+      operationId: saveCalculation
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LifecareCalculationSaveRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareCalculationView"
+        "409":
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Unprocessable Content
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/finalize:
     post:
       tags:
@@ -3235,10 +4811,17 @@ paths:
         \ and correlates PaymentDecisionReceived to the process (paymentDecision APPROVED\
         \ for BIFALL/DELAVSLAG, REJECTED otherwise) — which sets GRANTED/REJECTED\
         \ and, for a bifall, reads the payments from Lifecare until they are paid\
-        \ out. Creates no payments: Draken registers them directly in Lifecare. Every\
-        \ outcome requires the beslut to be saved in Lifecare and linked as lifecareDecisionId;\
-        \ a BIFALL/DELAVSLAG also requires the normberäkning saved in Lifecare and\
-        \ linked as lifecareCalculationId (both through PATCH .../financial-assistance/{errandId}/data),\
+        \ out. Leave out decision to have careM read the beslut the errand is linked\
+        \ to in Lifecare (lifecareDecisionId) and record that: its outcome from the\
+        \ beslutstyp's category, orsak, period, amount and beslutsmeddelande; 400\
+        \ when no beslut is saved or its beslutstyp cannot be finalized, 422 when\
+        \ the beslut breaks the decision's rules. The recorded decision is receipted\
+        \ against the Lifecare beslut in the same call (marked SYNCED with lifecareId,\
+        \ reported as lifecareDecision), so posting .../lifecare-result afterwards\
+        \ is no longer needed (and harmless). Creates no payments: Draken registers\
+        \ them directly in Lifecare. Every outcome requires the beslut to be saved\
+        \ in Lifecare and linked as lifecareDecisionId; a BIFALL/DELAVSLAG also requires\
+        \ the normberäkning saved in Lifecare and linked as lifecareCalculationId,\
         \ otherwise 409. An AVSLAG linked to Lifecare payments (lifecarePaymentIds)\
         \ is refused with 409. A decision on a normberäkning linked as lifecareCalculationId\
         \ purges careM's calculation draft: the decided calculation is Lifecare's,\
@@ -3282,6 +4865,19 @@ paths:
           description: "Conflict - wrong status, already finalized, no lifecareDecisionId,\
             \ a granting decision without lifecareCalculationId, or an avslag linked\
             \ to Lifecare payments"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Unprocessable - the beslut read from Lifecare breaks the decision's
+            rules
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway - Lifecare could not be read
           content:
             application/problem+json:
               schema:
@@ -5222,6 +6818,236 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/normberakning/{section}/{rowId}:
+    delete:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Remove a normberäkning row
+      description: A soft delete in careM's draft; in Lifecare the row's amounts go
+        to 0 and Lifecare drops it. Members are not removed from a beräkning in Lifecare
+        (422).
+      operationId: deleteNormberakningRow
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: section
+        in: path
+        description: The section
+        required: true
+        schema:
+          type: string
+          enum:
+          - persons
+          - incomes
+          - expenses
+          pattern: ^(persons|incomes|expenses)$
+      - name: rowId
+        in: path
+        description: The row
+        required: true
+        schema:
+          type: string
+          pattern: "^[A-Za-z0-9-]{1,64}$"
+      responses:
+        "204":
+          description: Successful Operation
+        "422":
+          description: Unprocessable Content
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    patch:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Set the caseworker's values on a normberäkning row
+      description: "rowId is careM's row id in the draft, and in Lifecare the income\
+        \ code, the expense id (E-3, S-7, E-3-2) or the member's personKey. A member's\
+        \ days and normintervall make Lifecare count its amount again."
+      operationId: updateNormberakningRow
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: section
+        in: path
+        description: The section
+        required: true
+        schema:
+          type: string
+          enum:
+          - persons
+          - incomes
+          - expenses
+          pattern: ^(persons|incomes|expenses)$
+      - name: rowId
+        in: path
+        description: The row
+        required: true
+        schema:
+          type: string
+          pattern: "^[A-Za-z0-9-]{1,64}$"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormberakningRowInput"
+        required: true
+      responses:
+        "204":
+          description: Successful Operation
+        "422":
+          description: Unprocessable Content
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/normberakning/header:
+    patch:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Change the normberäkning header
+      description: "In careM's draft: norm, dates and household size. In Lifecare:\
+        \ the norm and the household size (Annan hushållsstorlek, saved for the household's\
+        \ coming beräkningar); the period is Lifecare's and is refused with 422."
+      operationId: updateNormberakningHeader
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NormHeaderInput"
+        required: true
+      responses:
+        "204":
+          description: Successful Operation
+        "422":
+          description: Unprocessable Content
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/data:
     patch:
       tags:
@@ -6483,7 +8309,7 @@ paths:
       tags:
       - Errand decisions
       summary: Read decision
-      operationId: readDecision
+      operationId: readDecision_1
       parameters:
       - name: municipalityId
         in: path
@@ -6911,21 +8737,20 @@ paths:
     get:
       tags:
       - Financial Assistance · SSBTEK
-      summary: "Read the SSBTEK basis of an errand's applicant, co-applicant or\
-        \ child"
+      summary: "Read the SSBTEK basis of an errand's applicant, co-applicant or child"
       description: "The SSBTEK basis of the errand's applicant (or, with person=CO_APPLICANT,\
-        \ co-applicant; with person=CHILD and childPartyId, one of the household\
-        \ children named on the application), fetched live via api-service-financial-aid and forwarded\
-        \ verbatim — the answer per responding agency (af, csn, fk, skv, so, tns,\
-        \ miv), so a caseworker can see what the composite service actually said rather\
-        \ than only the classified result. The person is resolved from the errand,\
-        \ never taken from the caller, and the read is recorded in the errand's access\
-        \ log like every other errand-scoped request. No personnummer is accepted\
-        \ or returned at this edge, and nothing is stored. The period is resolved\
-        \ in whole months and echoed on the response: it defaults to the three SSBTEK\
-        \ rule periods (jämförelseperiod M−2 through ansökningsperiod M), the same\
-        \ window the process asks for. Agency payload shapes are heterogeneous and\
-        \ follow the SSBTEK contract, so they are not modelled here."
+        \ co-applicant; with person=CHILD and childPartyId, one of the household children\
+        \ named on the application), fetched live via api-service-financial-aid and\
+        \ forwarded verbatim — the answer per responding agency (af, csn, fk, skv,\
+        \ so, tns, miv), so a caseworker can see what the composite service actually\
+        \ said rather than only the classified result. The person is resolved from\
+        \ the errand, never taken from the caller, and the read is recorded in the\
+        \ errand's access log like every other errand-scoped request. No personnummer\
+        \ is accepted or returned at this edge, and nothing is stored. The period\
+        \ is resolved in whole months and echoed on the response: it defaults to the\
+        \ three SSBTEK rule periods (jämförelseperiod M−2 through ansökningsperiod\
+        \ M), the same window the process asks for. Agency payload shapes are heterogeneous\
+        \ and follow the SSBTEK contract, so they are not modelled here."
       operationId: getBasis
       parameters:
       - name: municipalityId
@@ -6954,8 +8779,8 @@ paths:
           default: APPLICANT
       - name: childPartyId
         in: query
-        description: "The partyId of the household child to read. Required with\
-          \ person=CHILD, rejected otherwise."
+        description: "The partyId of the household child to read. Required with person=CHILD,\
+          \ rejected otherwise."
         required: false
         schema:
           type: string
@@ -7167,6 +8992,960 @@ paths:
                 $ref: "#/components/schemas/Problem"
         "500":
           description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/section-status:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Read which of the errand's sections Lifecare has as done
+      description: "The checks on the Normberäkning, Beslut and Utbetalning tabs,\
+        \ from their state in Lifecare: the linked beräkning is slutlig (ListCalculations\
+        \ of the insats), a beslut is saved (lifecareDecisionId is set), and an utbetalning\
+        \ that is not makulerad concerns the errand's month (GetLatestPayments of\
+        \ the insats). Each check is read on its own: one Lifecare read failing leaves\
+        \ that check false, not the others."
+      operationId: readSectionStatus
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+        example: FINANCIAL_ASSISTANCE
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareSectionStatus"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/reminders/options:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: The priorities and statuses a bevakning can have
+      description: "Lifecare's own priority and status lists for a bevakning on the\
+        \ errand's insats, and the ones Lifecare proposes for a new one."
+      operationId: readReminderOptions
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareReminderOptions"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: Conflict - the errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/payment-status:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: "Whether the utbetalning for the errand's application month has been\
+        \ registered, read from Lifecare"
+      description: "Looks for a standing (not makulerad) utbetalning on the errand's\
+        \ insats concerning the errand's application month. Never fails on Lifecare:\
+        \ unavailable is true when the errand has no application month or insats,\
+        \ or Lifecare could not be read."
+      operationId: readPaymentStatus
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecarePaymentStatus"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/payment-options:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: "The betalsätt, betalningsmottagare, ändamål, saldon and months an\
+        \ utbetalning on the errand's insats can use, read from Lifecare"
+      description: "Everything the utbetalning form needs, read from Lifecare's underlag\
+        \ for a new utbetalning on the errand's insats, plus a proposal to start from\
+        \ (Lifecare's date and first open month, what is left on the saldon, and the\
+        \ payee the latest standing utbetalning went to). The read is logged on the\
+        \ errand."
+      operationId: readPaymentOptions
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecarePaymentOptions"
+        "409":
+          description: The errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/normberakning:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Read the Normberäkning tab's rows
+      description: "careM's draft (source CAREM, persons with their personnummer)\
+        \ until the beräkning is saved in Lifecare, and Lifecare's beräkning (source\
+        \ LIFECARE) after that. 404 when neither exists."
+      operationId: readNormberakning
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormberakningDraft"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/normberakning/types:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: "Read the norms, income and cost types a new row can have"
+      description: "Lifecare's own catalogues once the beräkning is saved there; careM's\
+        \ catalogue before, with Lifecare's norms for the insats (best-effort)."
+      operationId: readNormberakningTypes
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormberakningTypes"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/normberakning/previous:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Read the beräkning preceding the errand's own period from Lifecare
+      description: "Picked from the insats's beräkningar in Lifecare: the latest period\
+        \ before the errand's own (its saved beräkning's, or the draft's), a slutlig\
+        \ one first. Read-only; members go without personnummer. 204 when there is\
+        \ none."
+      operationId: readPreviousCalculation
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormberakningPreviousCalculation"
+        "204":
+          description: No previous beräkning
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NormberakningPreviousCalculation"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/journal-note-bodies:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: The bodies of the applicant's journalanteckningar
+      description: "Each journalanteckning's body, read in view mode, so the list\
+        \ can show its text without opening it. A body Lifecare will not hand over\
+        \ is returned without content rather than failing the rest."
+      operationId: listJournalNoteBodies
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareRecordBody"
+        "409":
+          description: Conflict - the applicant's personnummer could not be resolved
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/documents:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: List the applicant's journalanteckningar and documents in Lifecare
+      description: "The applicant's Lifecare record, split into journalanteckningar\
+        \ and documents, read live from Lifecare. Lifecare's list is person-wide,\
+        \ so it spans all of the applicant's akter, not only this errand. The applicant\
+        \ is resolved from the errand. The read is logged in the errand's access log."
+      operationId: listRecords
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecareRecords"
+        "409":
+          description: Conflict - the applicant's personnummer could not be resolved
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/documents/journal-note-types:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: The note types a new journalanteckning can have
+      description: "The active note types Lifecare offers for a new journalanteckning\
+        \ on the errand's insats, in Lifecare's order."
+      operationId: listJournalNoteTypes
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareNoteType"
+        "409":
+          description: Conflict - the errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/documents/document-types:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: The document types a new document can have
+      description: "The active document types Lifecare offers for a new document on\
+        \ the errand's insats, in Lifecare's order. Blanketter are left out: they\
+        \ are filled in field by field in Lifecare's own editor."
+      operationId: listDocumentTypes
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareDocumentType"
+        "409":
+          description: Conflict - the errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/document-bodies:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: The bodies of the applicant's documents
+      description: "Each written document's body (blanketter and PDF files have none),\
+        \ read in view mode. A body Lifecare will not hand over is returned without\
+        \ content rather than failing the rest."
+      operationId: listDocumentBodies
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareRecordBody"
+        "409":
+          description: Conflict - the applicant's personnummer could not be resolved
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/decision/types:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: List the beslutstyper the errand's insats offers in Lifecare
+      description: "The active beslutstyper of the errand's insats, read from Lifecare's\
+        \ underlag for a new beslut, each with careM's outcome (BIFALL or AVSLAG;\
+        \ absent for a beslutstyp that cannot be registered from careM)."
+      operationId: readDecisionTypes
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+        example: FINANCIAL_ASSISTANCE
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareDecisionType"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: Conflict - the errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway - Lifecare could not be reached or answered with
+            an error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/decision/pdf:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Read the errand's beslut as Lifecare prints it (PDF)
+      description: "The beslut the errand is linked to, rendered by Lifecare's own\
+        \ decision print template - for the preview and for what is sent to the applicant.\
+        \ 404 while no beslut is saved in Lifecare. The read is logged in the errand's\
+        \ Lifecare access log."
+      operationId: readDecisionPdf
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+        example: FINANCIAL_ASSISTANCE
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway - Lifecare could not be reached or answered with
+            an error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/calculation/pdf:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Read the errand's normberäkning as Lifecare prints it (PDF)
+      description: Lifecare's print of the linked beräkning (RenderPdf/PrintContainer).
+        404 while none is saved in Lifecare. The read is logged.
+      operationId: readCalculationPdf
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
           content:
             application/problem+json:
               schema:
@@ -7499,10 +10278,73 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/lifecare/decision-types/{decisionCode}/reasons:
+    get:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: List the orsaker a beslut of a Lifecare beslutstyp can carry
+      description: "Lifecare's orsak catalogue for the beslutstyp, flattened to its\
+        \ choosable orsaker, each with the heading it sits under. The catalogue belongs\
+        \ to the beslutstyp, not to an applicant, so it is not errand-scoped and not\
+        \ logged in an access log."
+      operationId: readDecisionReasons
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 2281
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+        example: FINANCIAL_ASSISTANCE
+      - name: decisionCode
+        in: path
+        description: Lifecare's beslutstyp code
+        required: true
+        schema:
+          type: integer
+          format: int32
+          exclusiveMinimum: 0
+        example: 153
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareDecisionReason"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway - Lifecare could not be reached or answered with
+            an error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/documents:
     get:
       tags:
-      - Financial Assistance · Lifecare history
+      - Financial Assistance · Lifecare
       summary: List the applicant's Lifecare documents (metadata)
       description: "The applicant's Lifecare documents over the period — metadata\
         \ only (id, title, date, type, owner). Fetch a single document's content via\
@@ -7581,7 +10423,7 @@ paths:
   /{municipalityId}/{namespace}/errands/financial-assistance/documents/{documentId}/content:
     get:
       tags:
-      - Financial Assistance · Lifecare history
+      - Financial Assistance · Lifecare
       summary: Read a Lifecare document's content (PDF)
       description: "Streams a single Lifecare document's content (the generated PDF)\
         \ straight from Lifecare. caremanagement only forwards the bytes. The document\
@@ -7662,7 +10504,7 @@ paths:
   /{municipalityId}/{namespace}/errands/financial-assistance/decisions:
     get:
       tags:
-      - Financial Assistance · Lifecare history
+      - Financial Assistance · Lifecare
       summary: List the applicant's Lifecare decisions
       description: The applicant's Lifecare decisions over the period — the decision
         header plus the persons each concerned — served straight from Lifecare. The
@@ -7741,7 +10583,7 @@ paths:
   /{municipalityId}/{namespace}/errands/financial-assistance/calculations:
     get:
       tags:
-      - Financial Assistance · Lifecare history
+      - Financial Assistance · Lifecare
       summary: List the applicant's Lifecare calculations
       description: "The applicant's Lifecare calculations over the period — the full\
         \ breakdown (header sums plus income, expense, special-expense and household-member\
@@ -8340,6 +11182,249 @@ components:
           format: date-time
           description: When the monitoring was last updated
           readOnly: true
+    LifecareReminderRequest:
+      type: object
+      description: "A bevakning as the caseworker fills it in, new or changed. It\
+        \ is always bevakad av the insats's caseworker in Lifecare."
+      properties:
+        reminderDate:
+          type: string
+          description: "Bevakningsdatum, YYYY-MM-DD. Not before today (Swedish time);\
+            \ on a change only checked when the date changes."
+          examples:
+          - 2026-09-30
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+        text:
+          type: string
+          description: The bevakning text
+          examples:
+          - Kontrollera hyran
+          maxLength: 4000
+          minLength: 0
+        priority:
+          type: integer
+          format: int32
+          description: "Lifecare's priority code, from the options endpoint"
+          examples:
+          - 2
+        status:
+          type: integer
+          format: int32
+          description: "Lifecare's status code, from the options endpoint"
+          examples:
+          - 3
+      required:
+      - priority
+      - reminderDate
+      - status
+      - text
+    UpdateLifecareRecordRequest:
+      type: object
+      description: The edits a caseworker makes to a Lifecare journalanteckning or
+        document. Everything else on the Lifecare record is kept as Lifecare has it.
+      properties:
+        content:
+          type: string
+          description: The record body as HTML
+          examples:
+          - <p>Hej</p>
+          maxLength: 1048576
+          minLength: 0
+        occurenceDate:
+          type: string
+          description: "Documented date, YYYY-MM-DD"
+          examples:
+          - 2026-09-23
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+        time:
+          type: string
+          description: "Documented time, HH:mm"
+          examples:
+          - 09:02
+          pattern: "^\\d{2}:\\d{2}$"
+        protected:
+          type: boolean
+          description: Write-protects the record with this save; Lifecare then allows
+            no further change
+          examples:
+          - false
+      required:
+      - content
+    LifecareRecordContent:
+      type: object
+      description: "A Lifecare record with its body, as shown when a record is opened."
+      properties:
+        id:
+          type: string
+          description: The Lifecare record id
+          examples:
+          - "135"
+        category:
+          type: string
+          description: Which group the record belongs to
+          enum:
+          - JOURNAL_NOTE
+          - DOCUMENT
+          examples:
+          - JOURNAL_NOTE
+        title:
+          type: string
+          description: The rubrik
+          examples:
+          - Journalanteckning
+        content:
+          type: string
+          description: The body as HTML
+          examples:
+          - <p>Hej</p>
+        occurenceDate:
+          type: string
+          description: "Documented date, YYYY-MM-DD"
+          examples:
+          - 2026-09-23
+        time:
+          type: string
+          description: "Documented time, HH:mm (empty when the record has none)"
+          examples:
+          - 09:02
+        editable:
+          type: boolean
+          description: Whether the record may still be edited in Lifecare
+          examples:
+          - true
+    LifecareDecisionSaveRequest:
+      type: object
+      description: "A beslut as the caseworker saves it on the Beslut tab - written\
+        \ straight to Lifecare, created the first time and changed after that."
+      properties:
+        decisionCode:
+          type: integer
+          format: int32
+          description: "Lifecare's beslutstyp code, from the beslutstyper the insats\
+            \ offers"
+          examples:
+          - 153
+        date:
+          type: string
+          format: date
+          description: The beslutsdatum; Lifecare's proposal (today) when left out
+          examples:
+          - 2026-09-23
+        periodFrom:
+          type: string
+          format: date
+          description: Start of the period the beslut covers
+          examples:
+          - 2026-09-01
+        periodTo:
+          type: string
+          format: date
+          description: End of the period the beslut covers
+          examples:
+          - 2026-09-30
+        amount:
+          type: number
+          description: The amount; 0 when left out
+          examples:
+          - 3000
+        reasonCode:
+          type: integer
+          format: int32
+          description: "Lifecare's code for the applicant's orsak, from the orsaker\
+            \ of the beslutstyp"
+          examples:
+          - 19
+        decisionMessage:
+          type: string
+          description: The beslutsmeddelande as HTML
+          examples:
+          - <p>Beslut</p>
+          maxLength: 1048576
+          minLength: 0
+        writeProtect:
+          type: boolean
+          description: "Spara och skrivskydda beslut: saves the beslut write-protected\
+            \ in Lifecare (its meddelande locked), after which it can no longer be\
+            \ changed from careM."
+          examples:
+          - false
+      required:
+      - decisionCode
+    LifecareDecisionView:
+      type: object
+      description: The errand's beslut as it stands in Lifecare - what the Beslut
+        tab shows and what finalize records.
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Lifecare's decisionId
+          examples:
+          - 98
+        decisionCode:
+          type: integer
+          format: int32
+          description: Lifecare's beslutstyp code
+          examples:
+          - 153
+        outcome:
+          type: string
+          description: "careM's outcome for the beslutstyp, BIFALL or AVSLAG; absent\
+            \ for a beslutstyp that cannot be registered from careM"
+          enum:
+          - BIFALL
+          - AVSLAG
+          examples:
+          - BIFALL
+        date:
+          type: string
+          description: "The beslutsdatum, yyyy-MM-dd; empty when Lifecare has none"
+          examples:
+          - 2026-09-23
+        periodFrom:
+          type: string
+          description: "Start of the period the beslut covers, yyyy-MM-dd"
+          examples:
+          - 2026-09-01
+        periodTo:
+          type: string
+          description: "End of the period the beslut covers, yyyy-MM-dd"
+          examples:
+          - 2026-09-30
+        amount:
+          type: number
+          description: "The amount, 0 when none"
+          examples:
+          - 3000
+        reasonCode:
+          type: integer
+          format: int32
+          description: Lifecare's code for the orsak; absent when the beslut has none
+          examples:
+          - 19
+        reason:
+          type: string
+          description: The orsak as Lifecare words it
+          examples:
+          - "Arbetar deltid ofrivilligt, otillräcklig inkomst"
+        message:
+          type: string
+          description: The beslutsmeddelande as HTML
+          examples:
+          - <p>Beslut</p>
+        locked:
+          type: boolean
+          description: Lifecare has locked the beslutsmeddelande; the beslut can no
+            longer be changed from careM
+          examples:
+          - false
+        decisionMaker:
+          type: string
+          description: "The beslutsfattare, by name when Lifecare gives one, otherwise\
+            \ by signature"
+          examples:
+          - Test Handläggare
+      readOnly: true
     UserSettings:
       type: object
       description: Settings for one user (AD account). A user who has never saved
@@ -10511,6 +13596,626 @@ components:
           minLength: 0
       required:
       - outcome
+    LifecarePaymentRequest:
+      type: object
+      description: An utbetalning to register on the errand's insats in Lifecare
+      properties:
+        paymentDate:
+          type: string
+          description: Utbetalningsdatum; Lifecare's proposed date when left out
+          examples:
+          - 2026-09-21
+        amount:
+          type: number
+          description: The amount; must be above 0
+          examples:
+          - 3000
+        applicationMonth:
+          type: string
+          description: "The month the utbetalning concerns, yyyy-MM"
+          examples:
+          - 2026-09
+        paymentMethod:
+          type: string
+          description: "The betalsätt's name, matched against Lifecare's betalsätt\
+            \ on the insats"
+          examples:
+          - Bankgiro via Plusgiro
+        payeeName:
+          type: string
+          description: The payee's name
+          examples:
+          - Kontoinnehavare A
+        payeeAddress:
+          type: string
+          description: The payee's street address
+          examples:
+          - Storgatan 1
+        payeeCareOf:
+          type: string
+          description: The payee's c/o address
+          examples:
+          - ""
+        payeeZipCode:
+          type: string
+          description: The payee's postal code
+          examples:
+          - "85230"
+        payeeCity:
+          type: string
+          description: The payee's postal town
+          examples:
+          - Sundsvall
+        clearingNumber:
+          type: string
+          description: Clearing number
+          examples:
+          - "6000"
+        accountNumber:
+          type: string
+          description: Account number; left out for the registered-address payee
+          examples:
+          - "11111111"
+        accountingCode:
+          type: string
+          description: "Kontering: the ändamål (Lifecare purpose) among the insats's\
+            \ konteringsrader"
+          examples:
+          - "1"
+        localPaymentNumber:
+          type: string
+          description: Lokalbetalningsnummer
+          examples:
+          - ""
+        invoiceNumber:
+          type: string
+          description: Invoice number (Lifecare billingNumber)
+          examples:
+          - "123"
+        usesOcr:
+          type: boolean
+          description: Whether the invoice number is an OCR number
+          examples:
+          - false
+        messageLines:
+          type: array
+          description: "Message rows, at most seven are sent"
+          items:
+            type: string
+    LifecarePaymentCreated:
+      type: object
+      description: An utbetalning registered in Lifecare (not the same as paid out)
+      properties:
+        lifecareId:
+          type: string
+          description: Lifecare's id for the new utbetalning
+          examples:
+          - "4"
+        linkedToErrand:
+          type: boolean
+          description: Whether the utbetalning was linked to the errand (lifecarePaymentIds).
+            False means it is registered in Lifecare but the errand does not point
+            at it; it must not be registered again
+          examples:
+          - true
+    LifecarePayeeRequest:
+      type: object
+      description: A new betalningsmottagare to add in Lifecare
+      properties:
+        name:
+          type: string
+          description: The account holder
+          examples:
+          - Kontoinnehavare B
+          maxLength: 255
+          minLength: 0
+        payeeName:
+          type: string
+          description: The label in Lifecare's list; the account holder's name when
+            left out
+          examples:
+          - Konto B
+          maxLength: 255
+          minLength: 0
+        paymentMethod:
+          type: integer
+          format: int32
+          description: Lifecare's betalsätt code
+          examples:
+          - 14
+        clearing:
+          type: string
+          description: Clearing number
+          examples:
+          - "6000"
+          maxLength: 16
+          minLength: 0
+        accountNumber:
+          type: string
+          description: "Account, bankgiro or plusgiro number"
+          examples:
+          - "22222222"
+          maxLength: 64
+          minLength: 0
+      required:
+      - name
+      - paymentMethod
+    LifecarePayee:
+      type: object
+      description: "A betalningsmottagare in Lifecare, with the account and address\
+        \ an utbetalning to it copies"
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Lifecare's payee id
+          examples:
+          - 2
+        label:
+          type: string
+          description: The label the payee has in Lifecare's list
+          examples:
+          - Konto A
+        name:
+          type: string
+          description: The account holder
+          examples:
+          - Kontoinnehavare A
+        paymentMethodCode:
+          type: integer
+          format: int32
+          description: Lifecare's betalsätt code
+          examples:
+          - 14
+        paymentMethod:
+          type: string
+          description: "The betalsätt's name, as the utbetalning stores it"
+          examples:
+          - Bankgiro via Plusgiro
+        clearing:
+          type: string
+          description: Clearing number; empty when the betalsätt has none
+          examples:
+          - "6000"
+        accountNumber:
+          type: string
+          description: "Account, bankgiro or plusgiro number; empty for the registered-address\
+            \ entry"
+          examples:
+          - 1111-1111
+        streetAddress:
+          type: string
+          description: Street address
+          examples:
+          - Storgatan 1
+        careOfAddress:
+          type: string
+          description: c/o address
+          examples:
+          - ""
+        postalCode:
+          type: string
+          description: Postal code
+          examples:
+          - "85230"
+        postalAddress:
+          type: string
+          description: Postal town
+          examples:
+          - Sundsvall
+        toRegisteredAddress:
+          type: boolean
+          description: "Lifecare's Adress entry: pays to the client's registered address\
+            \ rather than an account"
+          examples:
+          - false
+    NormberakningRowInput:
+      type: object
+      description: A normberäkning row as a caseworker adds or changes it.
+      properties:
+        typeId:
+          type: integer
+          format: int32
+          description: "Income: the income type id"
+          examples:
+          - 19
+        typeName:
+          type: string
+          description: "Income: the income type name"
+          examples:
+          - Aktivitetsstöd
+          maxLength: 255
+          minLength: 0
+        applicantCaseworkerAmount:
+          type: number
+          description: "Income: the applicant amount"
+          examples:
+          - 5000
+        applicantAmountDate:
+          type: string
+          description: "Income: the date the applicant amount is attributed to (ISO\
+            \ date or date-time)"
+          examples:
+          - 2026-09-02T00:00:00+02:00
+          pattern: "^\\d{4}-\\d{2}-\\d{2}.*$"
+        coapplicantCaseworkerAmount:
+          type: number
+          description: "Income: the co-applicant amount"
+          examples:
+          - 0
+        coapplicantAmountDate:
+          type: string
+          description: "Income: the date the co-applicant amount is attributed to\
+            \ (ISO date or date-time)"
+          examples:
+          - 2026-09-02T00:00:00+02:00
+          pattern: "^\\d{4}-\\d{2}-\\d{2}.*$"
+        costType:
+          type: string
+          description: "Expense: the cost type; careM's code in the draft, Lifecare's\
+            \ expense code once in Lifecare"
+          examples:
+          - "3"
+          maxLength: 64
+          minLength: 0
+        bucket:
+          type: string
+          description: "Expense: the bucket"
+          enum:
+          - EXPENSE
+          - SPECIAL_EXPENSE
+          examples:
+          - EXPENSE
+        otherSubType:
+          type: string
+          description: "Expense: the other sub-type (careM draft only)"
+          maxLength: 32
+          minLength: 0
+        specification:
+          type: string
+          description: "Expense: the specification (careM draft only)"
+        caseworkerAmount:
+          type: number
+          description: "Expense: the approved amount"
+          examples:
+          - 4500
+        appliedAmount:
+          type: number
+          description: "Expense: the amount applied for"
+          examples:
+          - 5000
+        partyId:
+          type: string
+          description: "Person: the party id (careM draft only)"
+          maxLength: 36
+          minLength: 0
+        role:
+          type: string
+          description: "Person: the role (careM draft only)"
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          - CHILD
+          - VISITATION_CHILD
+        name:
+          type: string
+          description: "Person: the name (careM draft only)"
+          maxLength: 255
+          minLength: 0
+        caseworkerDays:
+          type: integer
+          format: int32
+          description: "Person: the days in the household; none means the whole period"
+          examples:
+          - 10
+        included:
+          type: boolean
+          description: "Person: whether the member is included (careM draft only)"
+        deviationFromDate:
+          type: string
+          description: "Person: the start of the deviation, ISO date (careM draft\
+            \ only)"
+          examples:
+          - 2026-09-01
+          pattern: "^\\d{4}-\\d{2}-\\d{2}.*$"
+        deviationToDate:
+          type: string
+          description: "Person: the end of the deviation, ISO date (careM draft only)"
+          examples:
+          - 2026-09-30
+          pattern: "^\\d{4}-\\d{2}-\\d{2}.*$"
+        normInterval:
+          type: string
+          description: "Person: the norm interval (careM draft only)"
+          maxLength: 64
+          minLength: 0
+        normRowId:
+          type: integer
+          format: int32
+          description: "Person: the Lifecare norm row the member is put on (Lifecare\
+            \ only)"
+          examples:
+          - 12
+        note:
+          type: string
+          description: Free-text note
+    LifecareJobStimulusPeriodRequest:
+      type: object
+      description: A new jobbstimulans period for the sökande
+      properties:
+        fromDate:
+          type: string
+          description: "Period start, yyyy-MM-dd"
+          examples:
+          - 2028-01-15
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+        toDate:
+          type: string
+          description: "Period end, yyyy-MM-dd; left out, Lifecare's two-year rule\
+            \ sets it"
+          examples:
+          - 2030-01-14
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+      required:
+      - fromDate
+    LifecareJobStimulusPeriod:
+      type: object
+      description: "A jobbstimulans period on the errand's insats, as Lifecare holds\
+        \ it"
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Lifecare's jobStimulusId
+          examples:
+          - 101
+        role:
+          type: string
+          description: Whose period it is
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          examples:
+          - APPLICANT
+        fromDate:
+          type: string
+          description: Period start (yyyy-MM-dd)
+          examples:
+          - 2026-01-01
+        toDate:
+          type: string
+          description: Period end (yyyy-MM-dd); absent for an open-ended period
+          examples:
+          - 2027-12-31
+    CreateLifecareJournalNoteRequest:
+      type: object
+      description: "A new journalanteckning, written straight to the errand's insats\
+        \ in Lifecare."
+      properties:
+        content:
+          type: string
+          description: The note body as HTML
+          examples:
+          - <p>Hej</p>
+          maxLength: 1048576
+          minLength: 0
+        noteTypeCode:
+          type: integer
+          format: int32
+          description: "Lifecare's noteTypeCode, from the journal-note-types endpoint"
+          examples:
+          - 1
+        title:
+          type: string
+          description: The rubrik; the note type's name when left out
+          examples:
+          - Telefonsamtal
+          maxLength: 255
+          minLength: 0
+        occurenceTime:
+          type: string
+          description: "Documented time, HH:mm; Lifecare stamps the time of saving\
+            \ when left out"
+          examples:
+          - 11:50
+          pattern: "^\\d{2}:\\d{2}$"
+        occurenceDate:
+          type: string
+          description: "Documented date, YYYY-MM-DD; Lifecare's proposal (today) when\
+            \ left out"
+          examples:
+          - 2026-09-23
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+        protected:
+          type: boolean
+          description: "Saved skrivskyddad, after which it can no longer be changed.\
+            \ The note type's own default when left out."
+          examples:
+          - false
+      required:
+      - content
+      - noteTypeCode
+    LifecareRecord:
+      type: object
+      description: "A Lifecare journalanteckning or document row, cleaned up for the\
+        \ UI."
+      properties:
+        id:
+          type: string
+          description: The Lifecare record id
+          examples:
+          - "138"
+        category:
+          type: string
+          description: Which group the record is shown under
+          enum:
+          - JOURNAL_NOTE
+          - DOCUMENT
+          examples:
+          - JOURNAL_NOTE
+        title:
+          type: string
+          description: The rubrik
+          examples:
+          - Journalanteckning
+        dateTime:
+          type: string
+          description: "Documented date and time, date and time joined (YYYY-MM-DDTHH:mm,\
+            \ or just the date)"
+          examples:
+          - 2026-09-23T12:11
+        type:
+          type: string
+          description: Lifecare's type label
+          examples:
+          - Journalanteckning
+        ownerTypeText:
+          type: string
+          description: The akt or utredning the row sits under
+          examples:
+          - EK Ekonomiskt bistånd
+        responsibleCaseworker:
+          type: string
+          description: "The responsible caseworker, when Lifecare names one"
+          examples:
+          - RPA_031DEV
+        modifiedBy:
+          type: string
+          description: "Who last changed it and when, as Lifecare presents it"
+          examples:
+          - RPA_031DEV 2026-09-23
+        locked:
+          type: boolean
+          description: Whether Lifecare has locked the record
+          examples:
+          - false
+        protected:
+          type: boolean
+          description: Whether the record is skrivskyddad (finalised) in Lifecare
+          examples:
+          - false
+    CreateLifecareDocumentRequest:
+      type: object
+      description: "A new document, written straight to the errand's insats in Lifecare."
+      properties:
+        content:
+          type: string
+          description: The document body as HTML
+          examples:
+          - <p>Hej</p>
+          maxLength: 1048576
+          minLength: 0
+        documentTypeCode:
+          type: integer
+          format: int32
+          description: "Lifecare's documentTypeCode, from the document-types endpoint"
+          examples:
+          - 1
+        title:
+          type: string
+          description: The rubrik; the document type's name when left out
+          examples:
+          - Beslut om bistånd
+          maxLength: 255
+          minLength: 0
+        occurenceDate:
+          type: string
+          description: "Documented date, YYYY-MM-DD; Lifecare's proposal (today) when\
+            \ left out or when the type fixes it"
+          examples:
+          - 2026-09-23
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+        protected:
+          type: boolean
+          description: "Saved skrivskyddad, after which it can no longer be changed.\
+            \ The document type's own default when left out."
+          examples:
+          - false
+      required:
+      - content
+      - documentTypeCode
+    LifecareCalculationSaveRequest:
+      type: object
+      description: How the errand's normberäkning is saved in Lifecare.
+      properties:
+        finalize:
+          type: boolean
+          description: "Save it as slutlig: Lifecare then allows no further change"
+          examples:
+          - false
+    LifecareCalculationSummary:
+      type: object
+      description: Lifecare's summering of a beräkning.
+      properties:
+        income:
+          type: number
+          description: The incomes
+        jobStimulus:
+          type: number
+          description: "Jobbstimulans gross: the income it is counted on"
+        jobStimulusDeduction:
+          type: number
+          description: The part of the income jobbstimulans leaves out
+        norm:
+          type: number
+          description: The norm
+        familyCost:
+          type: number
+          description: The norm part for the members
+        commonHouseholdCost:
+          type: number
+          description: The norm part for the gemensamma kostnader
+        expenses:
+          type: number
+          description: The utgifter
+        sum:
+          type: number
+          description: Incomes minus norm minus utgifter
+        specialExpenses:
+          type: number
+          description: The levnadskostnader i övrigt
+        result:
+          type: number
+          description: The överskott (positive) or underskott (negative)
+    LifecareCalculationView:
+      type: object
+      description: The errand's beräkning as it stands in Lifecare.
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Lifecare's calculation id
+          examples:
+          - 31
+        normName:
+          type: string
+          description: The norm
+          examples:
+          - Riksnorm 2026
+        date:
+          type: string
+          description: The calculation date
+          examples:
+          - 2026-09-24
+        startDate:
+          type: string
+          description: The start of the period
+          examples:
+          - 2026-09-01
+        endDate:
+          type: string
+          description: The end of the period
+          examples:
+          - 2026-09-30
+        finalized:
+          type: boolean
+          description: Saved as slutlig in Lifecare; it can no longer be changed then
+        updated:
+          type: string
+          description: When Lifecare last saved it
+        summary:
+          $ref: "#/components/schemas/LifecareCalculationSummary"
+          description: "Lifecare's summering, absent before Lifecare has counted it"
     CommunicationChannels:
       type: object
       description: The channels chosen for communicating the calculation and decision
@@ -10604,11 +14309,15 @@ components:
       description: "Finalize a financial assistance errand: record the decision and\
         \ resume the process. Carries no payments - Draken registers them directly\
         \ in Lifecare, and the process reads them from there. A payments field from\
-        \ an older client is ignored."
+        \ an older client is ignored. Leave out decision to have careM read the beslut\
+        \ saved in Lifecare."
       properties:
         decision:
           $ref: "#/components/schemas/FinalizeDecision"
-          description: The decision
+          description: "The decision. Optional: when left out, careM reads the beslut\
+            \ the errand is linked to in Lifecare (lifecareDecisionId) and records\
+            \ that - its outcome from the beslutstyp, orsak, period, amount (0 for\
+            \ an avslag) and beslutsmeddelande."
         communication:
           $ref: "#/components/schemas/CommunicationChannels"
           description: The channels chosen for sending the calculation and decision
@@ -10622,7 +14331,6 @@ components:
           - false
       required:
       - communication
-      - decision
     FinalizeResponse:
       type: object
       description: "The receipt of a finalize — decision id, process correlation and\
@@ -10646,6 +14354,41 @@ components:
           $ref: "#/components/schemas/CommunicationChannels"
           description: The communication channels chosen — the frontend sends the
             decision through these
+        lifecareDecision:
+          $ref: "#/components/schemas/LifecareDecisionRegistration"
+          description: "How the recorded decision was tied to the errand's beslut\
+            \ in Lifecare (lifecareDecisionId). careM receipts it itself, so a client\
+            \ no longer has to post .../decisions/{decisionId}/lifecare-result after\
+            \ finalizing."
+          readOnly: true
+      readOnly: true
+    LifecareDecisionRegistration:
+      type: object
+      description: How the finalized decision was tied to its beslut in Lifecare.
+      properties:
+        decisionId:
+          type: string
+          description: The PAYMENT decision careM recorded
+          examples:
+          - cb20c51f-fcf3-42c0-b613-de563634a8ec
+        outcome:
+          type: string
+          description: "REGISTERED: the beslut is in Lifecare and the decision is\
+            \ marked SYNCED with its id"
+          enum:
+          - REGISTERED
+          - FAILED
+          - NOT_SENT
+          examples:
+          - REGISTERED
+        lifecareId:
+          type: string
+          description: Lifecare's decisionId
+          examples:
+          - "98"
+        detail:
+          type: string
+          description: "What went wrong, when something did"
       readOnly: true
     NormPersonInput:
       type: object
@@ -12533,6 +16276,1003 @@ components:
           description: Number of monitorings on the errand
           examples:
           - 2
+    LifecareSectionStatus:
+      type: object
+      description: "Which of the errand's sections Lifecare has as done - the checks\
+        \ on the Normberäkning, Beslut and Utbetalning tabs."
+      properties:
+        calculationFinalized:
+          type: boolean
+          description: The errand's beräkning is saved as slutlig in Lifecare
+          examples:
+          - true
+        decisionSaved:
+          type: boolean
+          description: The errand's beslut is saved in Lifecare
+          examples:
+          - true
+        paymentRegistered:
+          type: boolean
+          description: An utbetalning for the errand's month is registered in Lifecare
+          examples:
+          - false
+      readOnly: true
+    LifecareReminder:
+      type: object
+      description: "A bevakning on the errand's insats in Lifecare, as the sidebar\
+        \ shows it. The personnummer on the Lifecare row is left out."
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: The Lifecare reminder id
+          examples:
+          - 40
+        date:
+          type: string
+          description: "Bevakningsdatum, YYYY-MM-DD"
+          examples:
+          - 2026-09-30
+        status:
+          type: string
+          description: The status text
+          examples:
+          - Ej påbörjad
+        statusCode:
+          type: integer
+          format: int32
+          description: Lifecare's status code
+          examples:
+          - 3
+        priority:
+          type: string
+          description: The priority text
+          examples:
+          - Normal
+        priorityCode:
+          type: integer
+          format: int32
+          description: Lifecare's priority code
+          examples:
+          - 2
+        type:
+          type: string
+          description: The kind of bevakning
+          examples:
+          - Manuell bevakning insats
+        objectType:
+          type: string
+          description: What the bevakning hangs on
+          examples:
+          - IFO.Insats
+        text:
+          type: string
+          description: The bevakning text
+          examples:
+          - Kontrollera hyran
+        caseworker:
+          type: string
+          description: "The caseworker it is bevakad av, by name (the id when Lifecare\
+            \ gives no name)"
+          examples:
+          - Test Handläggare
+        caseworkerId:
+          type: string
+          description: The caseworker's Lifecare id
+          examples:
+          - TEST
+    LifecareReminderChoice:
+      type: object
+      description: A coded choice in the bevakning form.
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Lifecare's code
+          examples:
+          - 2
+        text:
+          type: string
+          description: The text Lifecare gives the code
+          examples:
+          - Normal
+    LifecareReminderOptions:
+      type: object
+      description: "The priorities and statuses a bevakning can have, as Lifecare\
+        \ lists them, and what Lifecare proposes for a new one."
+      properties:
+        priorities:
+          type: array
+          description: The active priorities
+          items:
+            $ref: "#/components/schemas/LifecareReminderChoice"
+        statuses:
+          type: array
+          description: The active statuses
+          items:
+            $ref: "#/components/schemas/LifecareReminderChoice"
+        defaultPriority:
+          type: integer
+          format: int32
+          description: The priority Lifecare proposes for a new bevakning
+          examples:
+          - 2
+        defaultStatus:
+          type: integer
+          format: int32
+          description: The status Lifecare proposes for a new bevakning
+          examples:
+          - 3
+    LifecareRegisteredPayment:
+      type: object
+      description: An utbetalning registered on the insats in Lifecare
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Lifecare's paymentId
+          examples:
+          - 4
+        payDate:
+          type: string
+          description: The payment date
+          examples:
+          - 2026-09-21
+        concernedMonth:
+          type: string
+          description: "Avser månad, yyyy-MM"
+          examples:
+          - 2026-09
+        amount:
+          type: number
+          description: The amount
+          examples:
+          - 3000
+        paymentMethod:
+          type: string
+          description: The betalsätt's name
+          examples:
+          - Bankgiro via Plusgiro
+        recipient:
+          type: string
+          description: Who it goes to
+          examples:
+          - Kontoinnehavare A
+        status:
+          type: string
+          description: Lifecare's own status
+          examples:
+          - Utbetald
+        cancelled:
+          type: boolean
+          description: Makulerad in Lifecare
+          examples:
+          - false
+    LifecarePaymentStatus:
+      type: object
+      description: Whether the Lifecare utbetalning for the errand's application month
+        has been registered
+      properties:
+        applicationMonth:
+          type: string
+          description: The application month (yyyy-MM) the status concerns
+          examples:
+          - 2026-09
+        effectuated:
+          type: boolean
+          description: True when a standing Lifecare utbetalning concerning the application
+            month is registered
+          examples:
+          - true
+        paymentDate:
+          type: string
+          description: "The date of that utbetalning (Lifecare PayDate), when effectuated"
+          examples:
+          - 2026-09-21
+        amount:
+          type: number
+          description: "The amount of that utbetalning, when effectuated"
+          examples:
+          - 3000
+        status:
+          type: string
+          description: "Lifecare's own status for that utbetalning, when effectuated"
+          examples:
+          - Utbetald
+        unavailable:
+          type: boolean
+          description: "True when the status could not be determined (no application\
+            \ month, no insats, or Lifecare unavailable)"
+          examples:
+          - false
+    LifecarePaymentBalance:
+      type: object
+      description: "A saldo on the insats: what the beslut granted, what is already\
+        \ booked and what is left"
+      properties:
+        name:
+          type: string
+          description: The saldo's name
+          examples:
+          - Ek. Bistånd
+        approvedAmount:
+          type: number
+          description: What the beslut granted
+          examples:
+          - 4000
+        bookedAmount:
+          type: number
+          description: What is already booked
+          examples:
+          - 1000
+        balanceAmount:
+          type: number
+          description: What is left to pay out
+          examples:
+          - 3000
+    LifecarePaymentConcernMonth:
+      type: object
+      description: "A month an utbetalning on the insats may concern, as Lifecare\
+        \ offers it"
+      properties:
+        month:
+          type: string
+          description: "The month, yyyy-MM"
+          examples:
+          - 2026-09
+        label:
+          type: string
+          description: Lifecare's own wording
+          examples:
+          - September 2026
+    LifecarePaymentMethod:
+      type: object
+      description: "A betalsätt the insats offers, as Lifecare lists it"
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Lifecare's betalsätt code
+          examples:
+          - 14
+        name:
+          type: string
+          description: The betalsätt's name
+          examples:
+          - Bankgiro via Plusgiro
+        localNumberEnabled:
+          type: boolean
+          description: Whether Lokalbetalningsnummer is open for this betalsätt
+          examples:
+          - false
+        localNumberMandatory:
+          type: boolean
+          description: Whether Lokalbetalningsnummer must be filled in for this betalsätt
+          examples:
+          - false
+    LifecarePaymentOptions:
+      type: object
+      description: "The betalsätt, betalningsmottagare, ändamål, saldon and months\
+        \ an utbetalning on the insats can use, read from Lifecare"
+      properties:
+        paymentMethods:
+          type: array
+          description: The betalsätt in use on the insats
+          items:
+            $ref: "#/components/schemas/LifecarePaymentMethod"
+        payees:
+          type: array
+          description: The active betalningsmottagare
+          items:
+            $ref: "#/components/schemas/LifecarePayee"
+        postings:
+          type: array
+          description: The insats's konteringsrader
+          items:
+            $ref: "#/components/schemas/LifecarePaymentPosting"
+        balances:
+          type: array
+          description: "The insats's saldon: what is left to pay out, as Lifecare\
+            \ counts it"
+          items:
+            $ref: "#/components/schemas/LifecarePaymentBalance"
+        concernMonths:
+          type: array
+          description: The months an utbetalning may concern
+          items:
+            $ref: "#/components/schemas/LifecarePaymentConcernMonth"
+        proposal:
+          $ref: "#/components/schemas/LifecarePaymentProposal"
+          description: What the utbetalning form starts from
+    LifecarePaymentPosting:
+      type: object
+      description: "A konteringsrad on the insats: an ändamål an utbetalning can be\
+        \ booked on"
+      properties:
+        purpose:
+          type: integer
+          format: int32
+          description: "Lifecare's ändamål code, which the utbetalning keeps as its\
+            \ kontering"
+          examples:
+          - 1
+        text:
+          type: string
+          description: The ändamål's text
+          examples:
+          - Försörjningsstöd exklusive tillfälligt boende
+    LifecarePaymentProposal:
+      type: object
+      description: "What the utbetalning form starts from: Lifecare's own figures,\
+        \ all changeable"
+      properties:
+        paymentDate:
+          type: string
+          description: Lifecare's proposed utbetalningsdatum
+          examples:
+          - 2026-09-23
+        concernedMonth:
+          type: string
+          description: "The first month Lifecare lets an utbetalning concern, yyyy-MM"
+          examples:
+          - 2026-09
+        amount:
+          type: number
+          description: What is left on the insats's saldon; absent when nothing is
+            left
+          examples:
+          - 3000
+        payeeId:
+          type: integer
+          format: int32
+          description: "The payee the latest standing utbetalning on the insats went\
+            \ to, when it is still an active payee"
+          examples:
+          - 2
+    NormberakningDraft:
+      type: object
+      description: "The normberäkning, careM's draft or the beräkning saved in Lifecare."
+      properties:
+        errandId:
+          type: string
+          description: The errand id (careM draft only)
+        applicationMonth:
+          type: string
+          description: The application month (yyyy-MM)
+          examples:
+          - 2026-09
+        normId:
+          type: integer
+          format: int32
+          description: The selected norm id
+          examples:
+          - 1
+        normType:
+          type: array
+          items:
+            type: string
+            description: The selected norm types (careM draft only)
+        normTypeDisplayNames:
+          type: array
+          items:
+            type: string
+            description: "The labels of the selected norm types, or the Lifecare norm\
+              \ name"
+        calculationFromDate:
+          type: string
+          description: The start date of the calculation period (ISO date)
+          examples:
+          - 2026-09-01
+        calculationToDate:
+          type: string
+          description: The end date of the calculation period (ISO date)
+          examples:
+          - 2026-09-30
+        calculationDate:
+          type: string
+          description: The date the calculation is performed (ISO date)
+          examples:
+          - 2026-09-24
+        hasCustomHouseholdSize:
+          type: boolean
+          description: Whether the household has an own size (Annan hushållsstorlek)
+        householdSize:
+          type: integer
+          format: int32
+          description: The household size
+          examples:
+          - 3
+        persons:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningPersonRow"
+            description: The household members
+        incomes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningIncomeRow"
+            description: The incomes
+        expenses:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningExpenseRow"
+            description: The utgifter
+        specialExpenses:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningExpenseRow"
+            description: The levnadskostnader i övrigt
+        incomeSum:
+          type: number
+          description: The sum of the incomes
+        expenseSum:
+          type: number
+          description: The sum of the utgifter
+        specialExpenseSum:
+          type: number
+          description: The sum of the levnadskostnader i övrigt
+        created:
+          type: string
+          description: When the draft was created (careM draft only)
+        updated:
+          type: string
+          description: When the draft or the Lifecare beräkning was last saved
+        source:
+          type: string
+          description: "Where the rows come from: careM's draft, or the beräkning\
+            \ saved in Lifecare (every change is then made there)"
+          enum:
+          - CAREM
+          - LIFECARE
+        finalized:
+          type: boolean
+          description: Whether Lifecare holds the beräkning as slutlig (Lifecare only)
+        amountForHouseholdSize:
+          type: number
+          description: "The gemensamma kostnader of a household of the household size,\
+            \ before the members share is taken (Lifecare only)"
+        commonHouseholdCost:
+          type: number
+          description: The members share of the gemensamma kostnader (Lifecare only)
+        familyMembers:
+          type: integer
+          format: int32
+          description: How many members the beräkning includes (Lifecare only)
+        applicantJobStimulus:
+          type: boolean
+          description: Whether the applicant has jobbstimulans in the period (Lifecare
+            only)
+        normRows:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningNormRow"
+            description: The norm rows a member can be placed on (Lifecare only)
+    NormberakningExpenseRow:
+      type: object
+      description: An expense row of the normberäkning.
+      properties:
+        id:
+          type: string
+          description: "The row id: careM's row id, or the Lifecare bucket and code\
+            \ (E-3, S-7, E-3-2 for a repeated code)"
+        position:
+          type: integer
+          format: int32
+          description: Stable 0-based position of the row within its section
+          examples:
+          - 0
+        origin:
+          type: string
+          description: "Who created the row: the process or a caseworker (always CASEWORKER\
+            \ in Lifecare)"
+          enum:
+          - SYSTEM
+          - CASEWORKER
+          readOnly: true
+        bucket:
+          type: string
+          description: Which Lifecare bucket the expense posts to
+          enum:
+          - EXPENSE
+          - SPECIAL_EXPENSE
+        costType:
+          type: string
+          description: "The cost type: careM's code, or Lifecare's expense code"
+        costTypeDisplayName:
+          type: string
+          description: The Lifecare label of the cost type
+          examples:
+          - Boendekostnad
+        otherSubType:
+          type: string
+          description: The other sub-type (careM draft only)
+        specification:
+          type: string
+          description: The cost specification (careM draft only)
+        appliedAmount:
+          type: number
+          description: The amount applied for (ansökt)
+        processAmount:
+          type: number
+          description: The amount the rules allowed (careM draft only)
+        caseworkerAmount:
+          type: number
+          description: The amount a caseworker decided
+        effectiveAmount:
+          type: number
+          description: The amount actually used
+        deleted:
+          type: boolean
+          description: Whether the row is soft-deleted (careM draft only)
+        note:
+          type: string
+          description: Free-text note
+    NormberakningIncomeRow:
+      type: object
+      description: An income row of the normberäkning.
+      properties:
+        id:
+          type: string
+          description: "The row id: careM's row id, or Lifecare's income code"
+        position:
+          type: integer
+          format: int32
+          description: Stable 0-based position of the row within its section
+          examples:
+          - 0
+        origin:
+          type: string
+          description: "Who created the row: the process or a caseworker (always CASEWORKER\
+            \ in Lifecare)"
+          enum:
+          - SYSTEM
+          - CASEWORKER
+          readOnly: true
+        typeId:
+          type: integer
+          format: int32
+          description: The income type id
+          examples:
+          - 19
+        typeName:
+          type: string
+          description: The income type name
+          examples:
+          - Aktivitetsstöd
+        applicantProcessAmount:
+          type: number
+          description: The amount the process decided for the applicant (careM draft
+            only)
+        applicantCaseworkerAmount:
+          type: number
+          description: The amount a caseworker decided for the applicant; the gross
+            when jobbstimulans applies
+        applicantEffectiveAmount:
+          type: number
+          description: The amount actually used for the applicant
+        applicantAmountDate:
+          type: string
+          description: The date the applicant amount is attributed to
+        applicantJobStimulus:
+          type: boolean
+          description: Whether jobbstimulans applies to the applicant side of this
+            income (Lifecare only)
+        applicantCountedAmount:
+          type: number
+          description: The applicant amount Lifecare counts once jobbstimulans is
+            taken off (Lifecare only)
+        coapplicantProcessAmount:
+          type: number
+          description: The amount the process decided for the co-applicant (careM
+            draft only)
+        coapplicantCaseworkerAmount:
+          type: number
+          description: The amount a caseworker decided for the co-applicant
+        coapplicantEffectiveAmount:
+          type: number
+          description: The amount actually used for the co-applicant
+        coapplicantAmountDate:
+          type: string
+          description: The date the co-applicant amount is attributed to
+        deleted:
+          type: boolean
+          description: Whether the row is soft-deleted (careM draft only)
+        note:
+          type: string
+          description: Free-text note
+    NormberakningNormRow:
+      type: object
+      description: A normintervall of the norm.
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: The Lifecare norm row id
+          examples:
+          - 2
+        name:
+          type: string
+          description: The name and monthly amount
+          examples:
+          - Ensamstående 3940.00
+    NormberakningPersonRow:
+      type: object
+      description: A household member row of the normberäkning.
+      properties:
+        id:
+          type: string
+          description: "The row id: careM's row id, or Lifecare's personKey (new-N\
+            \ for a member not saved yet)"
+        position:
+          type: integer
+          format: int32
+          description: Stable 0-based position of the row within its section
+          examples:
+          - 0
+        origin:
+          type: string
+          description: "Who created the row: the process or a caseworker (always CASEWORKER\
+            \ in Lifecare)"
+          enum:
+          - SYSTEM
+          - CASEWORKER
+          readOnly: true
+        partyId:
+          type: string
+          description: The party id of the household member (careM draft only)
+        personalNumber:
+          type: string
+          description: "The personnummer of the household member; best-effort, can\
+            \ be absent"
+        role:
+          type: string
+          description: The role of the household member
+          enum:
+          - APPLICANT
+          - CO_APPLICANT
+          - CHILD
+          - VISITATION_CHILD
+        roleDisplayName:
+          type: string
+          description: Swedish display name for the role (careM draft only)
+          examples:
+          - Medsökande
+        name:
+          type: string
+          description: The name of the household member
+        processDays:
+          type: integer
+          format: int32
+          description: The number of days in the home the process derived (careM draft
+            only)
+          examples:
+          - 30
+        caseworkerDays:
+          type: integer
+          format: int32
+          description: The number of days a caseworker decided
+          examples:
+          - 15
+        effectiveDays:
+          type: integer
+          format: int32
+          description: The number of days actually used
+          examples:
+          - 15
+        included:
+          type: boolean
+          description: Whether the household member is included in the norm
+        deviationFromDate:
+          type: string
+          description: The start date of the member's deviation from the household
+            (ISO date)
+          examples:
+          - 2026-09-05
+        deviationToDate:
+          type: string
+          description: The end date of the member's deviation from the household (ISO
+            date)
+          examples:
+          - 2026-09-30
+        normInterval:
+          type: string
+          description: The normintervall the member is placed on
+          examples:
+          - Ensamstående
+        normRowId:
+          type: integer
+          format: int32
+          description: The Lifecare norm row the member is placed on (Lifecare only)
+          examples:
+          - 2
+        amount:
+          type: number
+          description: The member's own share of the norm (the Belopp column)
+          examples:
+          - 3940
+        deleted:
+          type: boolean
+          description: Whether the row is soft-deleted (careM draft only)
+        note:
+          type: string
+          description: Free-text note
+    NormberakningTypeOption:
+      type: object
+      description: "A selectable norm, income or cost type."
+      properties:
+        code:
+          type: string
+          description: "The code: a Lifecare id once the beräkning is in Lifecare,\
+            \ careM's code before"
+          examples:
+          - "3"
+        displayName:
+          type: string
+          description: The label
+          examples:
+          - Boendekostnad
+    NormberakningTypes:
+      type: object
+      description: The type catalogues of the normberäkning.
+      properties:
+        norms:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningTypeOption"
+            description: Lifecare's norms for the insats; the code is the normId
+        incomeTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningTypeOption"
+            description: The income types
+        costTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningTypeOption"
+            description: The utgift types
+        livingCostTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningTypeOption"
+            description: The levnadskostnad i övrigt types
+    NormberakningPreviousCalculation:
+      type: object
+      description: "The beräkning preceding the errand's own period, read from Lifecare."
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Lifecare's calculation id
+          examples:
+          - 1
+        norm:
+          type: string
+          description: The norm
+          examples:
+          - Riksnorm 2026
+        fromDate:
+          type: string
+          description: The start of the period
+          examples:
+          - 2026-01-01
+        toDate:
+          type: string
+          description: The end of the period
+          examples:
+          - 2026-06-30
+        incomeSum:
+          type: number
+          description: The sum of the incomes
+        expenseSum:
+          type: number
+          description: The sum of the utgifter
+        specialExpenseSum:
+          type: number
+          description: The sum of the levnadskostnader i övrigt
+        normSum:
+          type: number
+          description: The sum of the norm
+        commonHouseholdCost:
+          type: number
+          description: The gemensamma kostnader
+        familyCost:
+          type: number
+          description: The norm part for the members
+        balance:
+          type: number
+          description: "The result, an underskott negative"
+        totalSum:
+          type: number
+          description: The total sum
+        isFinal:
+          type: boolean
+          description: Whether the beräkning is slutlig
+        persons:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningPreviousPerson"
+            description: The members included
+        incomes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningPreviousIncome"
+            description: The incomes
+        expenses:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningPreviousExpense"
+            description: The utgifter
+        specialExpenses:
+          type: array
+          items:
+            $ref: "#/components/schemas/NormberakningPreviousExpense"
+            description: The levnadskostnader i övrigt
+    NormberakningPreviousExpense:
+      type: object
+      description: An expense row of a previous Lifecare beräkning.
+      properties:
+        type:
+          type: string
+          description: The expense type
+          examples:
+          - Boendekostnad
+        appliedAmount:
+          type: number
+          description: The applied amount
+        approvedAmount:
+          type: number
+          description: The approved amount
+    NormberakningPreviousIncome:
+      type: object
+      description: An income row of a previous Lifecare beräkning.
+      properties:
+        type:
+          type: string
+          description: The income type
+          examples:
+          - Aktivitetsstöd
+        amountApplicant:
+          type: number
+          description: The applicant amount
+        applicantSearchDate:
+          type: string
+          description: The date the applicant amount was looked up
+        amountCoApplicant:
+          type: number
+          description: The co-applicant amount
+        coApplicantSearchDate:
+          type: string
+          description: The date the co-applicant amount was looked up
+    NormberakningPreviousPerson:
+      type: object
+      description: A household member of a previous Lifecare beräkning.
+      properties:
+        name:
+          type: string
+          description: The name
+        amount:
+          type: number
+          description: The member's share of the norm
+        deviationFromDate:
+          type: string
+          description: The start of the deviation
+        deviationToDate:
+          type: string
+          description: The end of the deviation
+    LifecareRecordBody:
+      type: object
+      description: "A record's body, shown in the list without opening the record."
+      properties:
+        id:
+          type: string
+          description: The Lifecare record id
+          examples:
+          - "135"
+        content:
+          type: string
+          description: The body as HTML; left out when Lifecare would not hand it
+            over
+          examples:
+          - <p>Hej</p>
+    LifecareRecords:
+      type: object
+      description: "The applicant's Lifecare records, split into the two groups the\
+        \ tab shows."
+      properties:
+        journalNotes:
+          type: array
+          description: "The journalanteckningar, in Lifecare's order"
+          items:
+            $ref: "#/components/schemas/LifecareRecord"
+        documents:
+          type: array
+          description: "The documents, in Lifecare's order"
+          items:
+            $ref: "#/components/schemas/LifecareRecord"
+    LifecareNoteType:
+      type: object
+      description: A note type a caseworker can pick for a new journalanteckning.
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Lifecare's noteTypeCode
+          examples:
+          - 1
+        name:
+          type: string
+          description: The note type's name
+          examples:
+          - Journalanteckning
+        protectedByDefault:
+          type: boolean
+          description: Whether a new note of this type is saved skrivskyddad unless
+            the caseworker says otherwise
+          examples:
+          - false
+    LifecareDocumentType:
+      type: object
+      description: A document type a caseworker can pick for a new document.
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Lifecare's documentTypeCode
+          examples:
+          - 1
+        name:
+          type: string
+          description: The document type's name
+          examples:
+          - EK Brev
+        canChangeOccurenceDate:
+          type: boolean
+          description: Whether the documented date may differ from the one Lifecare
+            proposes (today)
+          examples:
+          - true
+        protectedByDefault:
+          type: boolean
+          description: Whether a new document of this type is saved skrivskyddad unless
+            the caseworker says otherwise
+          examples:
+          - false
+    LifecareDecisionType:
+      type: object
+      description: "A beslutstyp the errand's insats offers in Lifecare, as the Beslut\
+        \ tab lists it."
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Lifecare's beslutstyp code
+          examples:
+          - 153
+        name:
+          type: string
+          description: The beslutstyp's name
+          examples:
+          - "Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall"
+        outcome:
+          type: string
+          description: "careM's outcome for the type, BIFALL or AVSLAG; absent for\
+            \ a type that cannot be registered from careM yet"
+          enum:
+          - BIFALL
+          - AVSLAG
+          examples:
+          - BIFALL
+        requiresFromDate:
+          type: boolean
+          description: Whether a beslut of the type requires a from date
+          examples:
+          - true
+        requiresToDate:
+          type: boolean
+          description: Whether a beslut of the type requires a to date
+          examples:
+          - true
+      readOnly: true
     HouseholdIdentifiers:
       type: object
       description: The errand number and the household's personal numbers. Fetched
@@ -13080,6 +17820,28 @@ components:
             \ form renders — that list is maintained in the frontend."
           examples:
           - true
+    LifecareDecisionReason:
+      type: object
+      description: "An orsak a beslut of the beslutstyp can carry, as Lifecare words\
+        \ it, under the heading it sits in."
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Lifecare's reasonCode
+          examples:
+          - 19
+        name:
+          type: string
+          description: The orsak as Lifecare words it
+          examples:
+          - "Arbetar deltid ofrivilligt, otillräcklig inkomst"
+        header:
+          type: string
+          description: The heading the orsak sits under
+          examples:
+          - "Arbetar deltid, ofrivilligt"
+      readOnly: true
     LifecareDocument:
       type: object
       description: "A Lifecare document, metadata only."
