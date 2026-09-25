@@ -185,6 +185,19 @@ class ClassifiedIncomeToFamilyCareMapperTest {
 	}
 
 	@Test
+	void missingPreviousIncomeTypesNeverExpectsApplicantReportedIncomesFromSsbtek() {
+		// Swish, lön and övriga inkomster come from the application, never from SSBTEK - expecting them kept the errand
+		// incomplete with a warning no SSBTEK answer could close. Underhållsstöd is SSBTEK-reported and still required.
+		final var missing = ClassifiedIncomeToFamilyCareMapper.missingPreviousIncomeTypes(
+			List.of("Swish/Insättningar/Överföringar", " lön efter skatt ", "Övriga inkomster",
+				"Överskjutande inkomst från föregående månad", "Underhållsstöd"),
+			List.of(),
+			lifecareNamedProposal());
+
+		assertThat(missing).containsExactly("Underhållsstöd");
+	}
+
+	@Test
 	void nullClassifiedYieldsEmpty() {
 		assertThat(ClassifiedIncomeToFamilyCareMapper.toIncomeLines(null, proposal())).isEmpty();
 	}

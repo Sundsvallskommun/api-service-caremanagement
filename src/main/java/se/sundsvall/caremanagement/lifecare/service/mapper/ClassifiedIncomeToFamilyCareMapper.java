@@ -52,6 +52,21 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 		"dagersättning", "Dagersättning från FK",
 		"a-kassa/alfa", "A-kassa/Alfaersättning");
 
+	/**
+	 * The Lifecare income types SSBTEK never reports, so the completeness check cannot expect them back from it: the
+	 * applicant's own incomes (lön, Swish, övriga inkomster — carried forward from the application, not from an agency)
+	 * and the handläggare's carry-over row. Requiring them kept every återansökan whose previous normberäkning had one
+	 * of them "incomplete" forever, with a "Saknas fortfarande i SSBTEK" warning no SSBTEK answer could close.
+	 * Underhållsstöd and PLV are deliberately absent: the application posts to them too, but SSBTEK does report them.
+	 */
+	private static final Set<String> NOT_REPORTED_BY_SSBTEK = Stream.of(
+		"Lön efter skatt",
+		"Swish/Insättningar/Överföringar",
+		"Övriga inkomster",
+		"Överskjutande inkomst från föregående månad")
+		.map(MapperUtil::normalize)
+		.collect(toSet());
+
 	private ClassifiedIncomeToFamilyCareMapper() {}
 
 	/**
@@ -155,6 +170,7 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 	 * financial assistance "all last month's calculation values present" completeness check. Matching is on the normalised
 	 * type name, the same key {@link #toIncomeLines} resolves on, so the two months compare like-for-like. An empty
 	 * result means every previous income type has a transferable income this month (i.e. the information is complete).
+	 * Types SSBTEK never reports ({@link #NOT_REPORTED_BY_SSBTEK}, e.g. Swish and lön) are not expected back from it.
 	 *
 	 * @param  previousTypeNames the income-type names on the previous calculation (FamilyCare {@code getType()})
 	 * @param  classified        this month's classified incomes
@@ -168,6 +184,7 @@ public final class ClassifiedIncomeToFamilyCareMapper {
 		return ofNullable(previousTypeNames).orElseGet(List::of).stream()
 			.filter(name -> (name != null) && !name.isBlank())
 			.distinct()
+			.filter(name -> !NOT_REPORTED_BY_SSBTEK.contains(MapperUtil.normalize(name)))
 			.filter(name -> !covered.contains(MapperUtil.normalize(name)))
 			.toList();
 	}
