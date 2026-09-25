@@ -253,3 +253,9 @@ financial-assistance:
     # back stays owed across many applications, so this reaches further than the previous-decision lookup; FamilyCare's
     # decision read has no balance, so a claim since repaid or forgiven is shown too and the caseworker checks it.
     recovery-claim-lookback-months: ${FINANCIAL_ASSISTANCE_RECOVERY_CLAIM_LOOKBACK_MONTHS:36}
+
+# The ProfessionalWeb exchange through lifecare-integrator carries whatever the caseworker wrote and Lifecare's answers,
+# personnummer included. Keep it out of dept44's request/response payload logging entirely.
+logbook:
+  excluded:
+    paths: /**/professional-web/**
