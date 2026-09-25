@@ -16,6 +16,8 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationExpenseView;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationView;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
@@ -25,6 +27,7 @@ import se.sundsvall.dept44.problem.Problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
@@ -80,7 +83,7 @@ class DecisionProposalServiceTest {
 		final var household = new HouseholdPartyService.Household(applicant, false, Optional.empty(), Optional.empty());
 		final var estimatedAmount = normSum.map(norm -> norm.add(new BigDecimal("1050")).subtract(new BigDecimal("3000")));
 		return new ProposalBasisService.ProposalBasis(draft, household, Optional.of(MONTH), normSum, estimatedAmount, estimatedAmount.map(amount -> ProposalBasisService.AMOUNT_BASIS_ESTIMATE),
-			lifecareServiceId);
+			lifecareServiceId, Optional.empty());
 	}
 
 	private static DecisionView decision(final String type, final String reason) {
@@ -164,6 +167,36 @@ class DecisionProposalServiceTest {
 			tuple("PREVIOUS_DECISION_ADVANCE_ON_BENEFIT", "previous-decision", "Föregående beslut i Lifecare var förskott på förmån – kontrollera vilket beslut som ska fattas"),
 			tuple("EXPENSE_PARTIALLY_REJECTED", "RENT", "Ansökt belopp för Boendekostnad är 9000 kronor, 1000 kronor har inte godkänts – delavslag"),
 			tuple("EXPENSE_PARTIALLY_REJECTED", "OTHER:Busskort", "Ansökt belopp för Övriga utgifter (Busskort) är 500 kronor, 500 kronor har inte godkänts – delavslag"));
+	}
+
+	@Test
+	void theSavedLifecareCalculationDecidesOnceThereIsOne() {
+		// The draft still has the rent cut to 8 000; the caseworker has since approved it in full in Lifecare and cut the
+		// dental care instead. The warnings, the outcome and the sums follow Lifecare, not the frozen draft.
+		final var draft = draft().withExpenses(List.of(
+			NormExpenseRow.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withEffectiveAmount(new BigDecimal("8000"))));
+		final var saved = new CalculationView(31, "Riksnorm 2026", "2026-06-01", "2026-06-30", new BigDecimal("-3500"), new BigDecimal("-9000"), new BigDecimal("-1500"),
+			new BigDecimal("-6200"), null, null, new BigDecimal("-13200"), null, false, List.of(), List.of(),
+			List.of(new CalculationExpenseView("Boendekostnad", new BigDecimal("9000"), new BigDecimal("9000"))),
+			List.of(new CalculationExpenseView("Tandvård", new BigDecimal("2000"), new BigDecimal("1500"))));
+		final var household = new HouseholdPartyService.Household(Optional.of(APPLICANT), false, Optional.empty(), Optional.empty());
+		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(new ProposalBasisService.ProposalBasis(draft, household, Optional.of(MONTH),
+			Optional.of(new BigDecimal("6200")), Optional.of(new BigDecimal("13200")), Optional.of(ProposalBasisService.AMOUNT_BASIS_LIFECARE_CALCULATION), Optional.empty(),
+			Optional.of(saved)));
+		when(lifecareCaseHistoryServiceMock.listDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of());
+		final var captor = ArgumentCaptor.forClass(List.class);
+		when(warningServiceMock.reconcileByTypes(eq(ERRAND_ID), eq(DECISION_PROPOSAL_TYPES), eq(Set.of()), captor.capture())).thenReturn(List.of());
+
+		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(proposal.getOutcome()).isEqualTo("DELAVSLAG");
+		assertThat(proposal.getIncomeSum()).isEqualByComparingTo("3500");
+		assertThat(proposal.getExpenseSum()).isEqualByComparingTo("9000");
+		assertThat(proposal.getSpecialExpenseSum()).isEqualByComparingTo("1500");
+		@SuppressWarnings("unchecked")
+		final List<WarningService.WarningInput> inputs = captor.getValue();
+		assertThat(inputs).extracting(WarningService.WarningInput::sourceKey, WarningService.WarningInput::message).containsExactly(
+			tuple("DENTAL_CARE", "Ansökt belopp för Tandvård är 2000 kronor, 500 kronor har inte godkänts – delavslag"));
 	}
 
 	@Test

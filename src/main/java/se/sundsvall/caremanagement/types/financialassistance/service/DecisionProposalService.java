@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -14,9 +15,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationView;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.DecisionProposal;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.configuration.DecisionProposalProperties;
 import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceSchema;
@@ -123,7 +124,9 @@ public class DecisionProposalService {
 			.flatMap(applicant -> basis.applicationMonth().map(month -> previousDecision(municipalityId, applicant, month, basis.lifecareServiceId())))
 			.orElseGet(() -> LifecareRead.succeeded(Optional.<DecisionView>empty()));
 		final var previousDecision = previousDecisionRead.value();
-		final var partiallyRejected = ProposalMapper.partiallyRejectedExpenses(draft);
+		// Once the normberäkning is saved in Lifecare, the caseworker's approvals are there and the draft is frozen.
+		final var saved = basis.savedCalculation();
+		final var partiallyRejected = saved.map(ProposalMapper::partiallyRejectedExpenses).orElseGet(() -> ProposalMapper.partiallyRejectedExpenses(draft));
 		final var outcome = basis.estimatedAmount().map(amount -> ProposalMapper.outcome(amount, partiallyRejected));
 		final var reason = previousDecision.map(DecisionView::reason).filter(text -> hasText(text));
 		final var coApplicantReason = previousDecision.map(DecisionView::reasonCoApplicant).filter(text -> hasText(text));
@@ -144,9 +147,9 @@ public class DecisionProposalService {
 			.withEstimatedAmount(basis.estimatedAmount().orElse(null))
 			.withAmountBasis(basis.amountBasis().orElse(null))
 			.withNormSum(basis.normSum().orElse(null))
-			.withIncomeSum(draft.getIncomeSum())
-			.withExpenseSum(draft.getExpenseSum())
-			.withSpecialExpenseSum(draft.getSpecialExpenseSum())
+			.withIncomeSum(saved.map(CalculationView::incomeSum).map(BigDecimal::abs).orElseGet(draft::getIncomeSum))
+			.withExpenseSum(saved.map(CalculationView::expenseSum).map(BigDecimal::abs).orElseGet(draft::getExpenseSum))
+			.withSpecialExpenseSum(saved.map(CalculationView::specialExpenseSum).map(BigDecimal::abs).orElseGet(draft::getSpecialExpenseSum))
 			.withExplanation(explanation(basis))
 			.withReason(reason.orElse(null))
 			.withReasonOptions(reasonOptions(reason, coApplicantReason))
@@ -212,14 +215,13 @@ public class DecisionProposalService {
 		return List.copyOf(options);
 	}
 
-	private static List<WarningService.WarningInput> warningInputs(final Optional<DecisionView> previousDecision, final List<NormExpenseRow> partiallyRejected,
+	private static List<WarningService.WarningInput> warningInputs(final Optional<DecisionView> previousDecision, final List<ProposalMapper.PartialRejection> partiallyRejected,
 		final List<DecisionView> recoveryClaims) {
 		final var inputs = new ArrayList<WarningService.WarningInput>();
 		previousDecision.filter(ProposalMapper::isAdvanceOnBenefit)
 			.ifPresent(_ -> inputs.add(new WarningService.WarningInput(TYPE_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT, "previous-decision", WARNING_PREVIOUS_DECISION_ADVANCE_ON_BENEFIT)));
-		partiallyRejected.forEach(row -> inputs.add(new WarningService.WarningInput(TYPE_EXPENSE_PARTIALLY_REJECTED, ProposalMapper.expenseSourceKey(row),
-			WARNING_EXPENSE_PARTIALLY_REJECTED.formatted(ProposalMapper.expenseLabel(row), ProposalMapper.plain(row.getAppliedAmount()),
-				ProposalMapper.plain(row.getAppliedAmount().subtract(orZero(row)))))));
+		partiallyRejected.forEach(rejection -> inputs.add(new WarningService.WarningInput(TYPE_EXPENSE_PARTIALLY_REJECTED, rejection.sourceKey(),
+			WARNING_EXPENSE_PARTIALLY_REJECTED.formatted(rejection.label(), ProposalMapper.plain(rejection.appliedAmount()), ProposalMapper.plain(rejection.rejectedAmount())))));
 		recoveryClaims.forEach(claim -> inputs.add(new WarningService.WarningInput(TYPE_RECOVERY_CLAIM, "recovery-claim:" + claim.id(),
 			WARNING_RECOVERY_CLAIM.formatted(claim.type(), datePart(claim.date()), recoveryPeriod(claim)))));
 		return inputs;
@@ -262,10 +264,6 @@ public class DecisionProposalService {
 			LOG.warn("Could not read the applicant's återkrav in Lifecare — the decision proposal is computed without them", e);
 			return LifecareRead.failed(List.of());
 		}
-	}
-
-	private static java.math.BigDecimal orZero(final NormExpenseRow row) {
-		return Optional.ofNullable(row.getEffectiveAmount()).orElse(java.math.BigDecimal.ZERO);
 	}
 
 	/**

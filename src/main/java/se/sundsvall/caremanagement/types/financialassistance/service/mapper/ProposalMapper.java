@@ -1,13 +1,17 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.Stream;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationView;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.PreviousDecision;
+import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceTypes;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.util.StringUtils.hasText;
@@ -28,6 +32,12 @@ public final class ProposalMapper {
 	private ProposalMapper() {}
 
 	/**
+	 * An expense approved below what was applied for: its warning key, its label, the applied amount and the part not
+	 * approved.
+	 */
+	public record PartialRejection(String sourceKey, String label, BigDecimal appliedAmount, BigDecimal rejectedAmount) {}
+
+	/**
 	 * The estimated bistånd: {@code normSum + expenseSum + specialExpenseSum - incomeSum}. The draft sums are the
 	 * effective (approved) amounts; a missing sum counts as zero.
 	 */
@@ -42,7 +52,7 @@ public final class ProposalMapper {
 	 * The outcome rule: {@code amount <= 0} → AVSLAG; {@code amount > 0} and every expense fully approved → BIFALL;
 	 * {@code amount > 0} and any expense approved below its applied amount → DELAVSLAG.
 	 */
-	public static String outcome(final BigDecimal estimatedAmount, final List<NormExpenseRow> partiallyRejected) {
+	public static String outcome(final BigDecimal estimatedAmount, final List<PartialRejection> partiallyRejected) {
 		if (estimatedAmount.signum() <= 0) {
 			return OUTCOME_AVSLAG;
 		}
@@ -52,13 +62,53 @@ public final class ProposalMapper {
 		return OUTCOME_DELAVSLAG;
 	}
 
-	/** The live expense rows (both buckets) whose approved (effective) amount is below the applied amount. */
-	public static List<NormExpenseRow> partiallyRejectedExpenses(final CalculationDraft draft) {
+	/**
+	 * The live expense rows of careM's draft (both buckets) whose approved (effective) amount is below the applied amount.
+	 */
+	public static List<PartialRejection> partiallyRejectedExpenses(final CalculationDraft draft) {
 		return Stream.concat(orEmpty(draft.getExpenses()).stream(), orEmpty(draft.getSpecialExpenses()).stream())
 			.filter(row -> !row.isDeleted())
 			.filter(row -> row.getAppliedAmount() != null)
 			.filter(row -> orZero(row.getEffectiveAmount()).compareTo(row.getAppliedAmount()) < 0)
+			.map(row -> new PartialRejection(expenseSourceKey(row), expenseLabel(row), row.getAppliedAmount(), row.getAppliedAmount().subtract(orZero(row.getEffectiveAmount()))))
 			.toList();
+	}
+
+	/**
+	 * The expenses of the normberäkning saved in Lifecare (both buckets) approved below what was applied for — what the
+	 * caseworker decided there, which careM's draft no longer follows once the calculation is saved. Rows of one type
+	 * are summed, since the Lifecare listing carries no sub type to tell them apart. The amounts are compared as the
+	 * magnitudes they are, whatever sign FamilyCare's listing gives them. The key is the cost type code when the
+	 * Lifecare name is one of careM's own, so a warning raised from the draft carries over.
+	 */
+	public static List<PartialRejection> partiallyRejectedExpenses(final CalculationView calculation) {
+		final var applied = new LinkedHashMap<String, BigDecimal>();
+		final var approved = new LinkedHashMap<String, BigDecimal>();
+		final var names = new LinkedHashMap<String, String>();
+		Stream.concat(orEmpty(calculation.expenses()).stream(), orEmpty(calculation.specialExpenses()).stream())
+			.filter(Objects::nonNull)
+			.filter(row -> hasText(row.type()) && (row.appliedAmount() != null))
+			.forEach(row -> {
+				final var type = row.type().trim();
+				final var key = type.toLowerCase(Locale.ROOT);
+				names.putIfAbsent(key, type);
+				applied.merge(key, row.appliedAmount().abs(), BigDecimal::add);
+				approved.merge(key, orZero(row.approvedAmount()).abs(), BigDecimal::add);
+			});
+		return names.entrySet().stream()
+			.filter(entry -> approved.get(entry.getKey()).compareTo(applied.get(entry.getKey())) < 0)
+			.map(entry -> new PartialRejection(lifecareExpenseSourceKey(entry.getValue()), entry.getValue(), applied.get(entry.getKey()),
+				applied.get(entry.getKey()).subtract(approved.get(entry.getKey()))))
+			.toList();
+	}
+
+	/** The cost type code whose Lifecare name this is, or the name itself, prefixed, when careM has no such type. */
+	static String lifecareExpenseSourceKey(final String lifecareType) {
+		return FinancialAssistanceTypes.COST_TYPES.stream()
+			.filter(option -> hasText(option.getCode()) && lifecareType.equalsIgnoreCase(costDisplayName(option.getCode())))
+			.map(option -> option.getCode())
+			.findFirst()
+			.orElseGet(() -> "lifecare:" + lifecareType.toLowerCase(Locale.ROOT));
 	}
 
 	/**

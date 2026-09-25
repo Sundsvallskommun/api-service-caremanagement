@@ -3,11 +3,14 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationExpenseView;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationView;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class ProposalMapperTest {
 
@@ -25,7 +28,7 @@ class ProposalMapperTest {
 
 	@Test
 	void outcomeRule() {
-		final var rejected = List.of(expense("RENT", "9000", "8000"));
+		final var rejected = List.of(new ProposalMapper.PartialRejection("RENT", "Boendekostnad", new BigDecimal("9000"), new BigDecimal("1000")));
 
 		assertThat(ProposalMapper.outcome(BigDecimal.ZERO, List.of())).isEqualTo("AVSLAG");
 		assertThat(ProposalMapper.outcome(new BigDecimal("-1"), rejected)).isEqualTo("AVSLAG"); // amount wins over expenses
@@ -44,8 +47,36 @@ class ProposalMapperTest {
 			.withSpecialExpenses(List.of(
 				NormExpenseRow.create().withCostType("DENTAL_CARE").withAppliedAmount(new BigDecimal("2000")))); // no effective → 0 approved
 
-		assertThat(ProposalMapper.partiallyRejectedExpenses(draft)).extracting(NormExpenseRow::getCostType).containsExactly("RENT", "DENTAL_CARE");
+		assertThat(ProposalMapper.partiallyRejectedExpenses(draft))
+			.extracting(ProposalMapper.PartialRejection::sourceKey, rejection -> rejection.rejectedAmount().toPlainString())
+			.containsExactly(tuple("RENT", "1000"), tuple("DENTAL_CARE", "2000"));
 		assertThat(ProposalMapper.partiallyRejectedExpenses(CalculationDraft.create())).isEmpty();
+	}
+
+	@Test
+	void partiallyRejectedExpensesOfTheSavedCalculation() {
+		final var calculation = new CalculationView(31, null, null, null, null, null, null, null, null, null, null, null, false, List.of(), List.of(),
+			List.of(
+				// Approved in full by the caseworker in Lifecare, whatever the draft said.
+				new CalculationExpenseView("Boendekostnad", new BigDecimal("9000"), new BigDecimal("9000")),
+				// Two rows of one type are summed; the sign FamilyCare gives the amounts does not matter.
+				new CalculationExpenseView("Hemförsäkring", new BigDecimal("-200"), new BigDecimal("-200")),
+				new CalculationExpenseView("hemförsäkring ", new BigDecimal("150"), null),
+				new CalculationExpenseView("Resor", null, BigDecimal.TEN)),
+			List.of(new CalculationExpenseView("Tandvård", new BigDecimal("2000"), new BigDecimal("1500"))));
+
+		assertThat(ProposalMapper.partiallyRejectedExpenses(calculation))
+			.extracting(ProposalMapper.PartialRejection::label, rejection -> rejection.appliedAmount().toPlainString(), rejection -> rejection.rejectedAmount().toPlainString())
+			.containsExactly(tuple("Hemförsäkring", "350", "150"), tuple("Tandvård", "2000", "500"));
+		assertThat(ProposalMapper.partiallyRejectedExpenses(new CalculationView(31, null, null, null, null, null, null, null, null, null, null, null, false,
+			List.of(), List.of(), null, null))).isEmpty();
+	}
+
+	@Test
+	void lifecareExpenseSourceKeyReusesTheCostTypeCode() {
+		assertThat(ProposalMapper.lifecareExpenseSourceKey("Boendekostnad")).isEqualTo("RENT");
+		assertThat(ProposalMapper.lifecareExpenseSourceKey("boendekostnad")).isEqualTo("RENT");
+		assertThat(ProposalMapper.lifecareExpenseSourceKey("Något Lifecare-eget")).isEqualTo("lifecare:något lifecare-eget");
 	}
 
 	@Test

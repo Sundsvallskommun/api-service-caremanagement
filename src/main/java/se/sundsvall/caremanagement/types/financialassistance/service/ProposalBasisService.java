@@ -73,7 +73,9 @@ public class ProposalBasisService {
 	 * where it came from ({@link #AMOUNT_BASIS_LIFECARE_CALCULATION} or {@link #AMOUNT_BASIS_ESTIMATE}), empty with it;
 	 * {@code normSum} is the saved calculation's norm, or the previous calculation's norm for an estimate — always as the
 	 * positive cost it is, though FamilyCare's calculation listing carries it negated; {@code lifecareServiceId} is the
-	 * errand's own EB insats in Lifecare, empty when the errand has none yet.
+	 * errand's own EB insats in Lifecare, empty when the errand has none yet; {@code savedCalculation} is the normberäkning
+	 * saved in Lifecare as read now, empty when none is linked or it could not be read — once it is there, it is what the
+	 * caseworker decided, and careM's draft is frozen.
 	 */
 	public record ProposalBasis(
 		CalculationDraft draft,
@@ -82,7 +84,8 @@ public class ProposalBasisService {
 		Optional<BigDecimal> normSum,
 		Optional<BigDecimal> estimatedAmount,
 		Optional<String> amountBasis,
-		Optional<Integer> lifecareServiceId) {
+		Optional<Integer> lifecareServiceId,
+		Optional<CalculationView> savedCalculation) {
 	}
 
 	/**
@@ -101,12 +104,13 @@ public class ProposalBasisService {
 		if (savedCalculation.isPresent()) {
 			final var calculation = savedCalculation.get();
 			return new ProposalBasis(draft, household, applicationMonth, ofNullable(calculation.normSum()).map(BigDecimal::abs), Optional.of(calculation.balance().negate()),
-				Optional.of(AMOUNT_BASIS_LIFECARE_CALCULATION), lifecareServiceId);
+				Optional.of(AMOUNT_BASIS_LIFECARE_CALCULATION), lifecareServiceId, savedCalculation);
 		}
 		final var normSum = household.applicantPartyId()
 			.flatMap(applicant -> applicationMonth.flatMap(month -> previousNormSum(municipalityId, applicant, month)));
 		final var estimatedAmount = normSum.map(norm -> ProposalMapper.estimatedAmount(draft, norm));
-		return new ProposalBasis(draft, household, applicationMonth, normSum, estimatedAmount, estimatedAmount.map(amount -> AMOUNT_BASIS_ESTIMATE), lifecareServiceId);
+		return new ProposalBasis(draft, household, applicationMonth, normSum, estimatedAmount, estimatedAmount.map(amount -> AMOUNT_BASIS_ESTIMATE), lifecareServiceId,
+			Optional.empty());
 	}
 
 	/**

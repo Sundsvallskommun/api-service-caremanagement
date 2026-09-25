@@ -89,6 +89,7 @@ class ProposalBasisServiceTest {
 		assertThat(basis.normSum()).contains(new BigDecimal("6200"));
 		assertThat(basis.estimatedAmount()).contains(new BigDecimal("4250"));
 		assertThat(basis.amountBasis()).contains(ProposalBasisService.AMOUNT_BASIS_ESTIMATE);
+		assertThat(basis.savedCalculation()).isEmpty();
 		assertThat(basis.lifecareServiceId()).isEmpty();
 		verify(lifecareCaseHistoryServiceMock, never()).listCalculations(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2026-04-01"), LocalDate.parse("2026-08-30"));
 	}
@@ -110,6 +111,7 @@ class ProposalBasisServiceTest {
 		assertThat(basis.normSum()).contains(new BigDecimal("6300"));
 		assertThat(basis.lifecareServiceId()).contains(25);
 		assertThat(basis.amountBasis()).contains(ProposalBasisService.AMOUNT_BASIS_LIFECARE_CALCULATION);
+		assertThat(basis.savedCalculation()).hasValueSatisfying(calculation -> assertThat(calculation.id()).isEqualTo(42));
 		verifyNoInteractions(lifecareCaseServiceMock);
 	}
 
