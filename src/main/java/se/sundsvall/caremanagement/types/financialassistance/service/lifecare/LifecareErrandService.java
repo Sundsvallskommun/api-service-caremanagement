@@ -81,6 +81,18 @@ public class LifecareErrandService {
 	}
 
 	/**
+	 * The applicant's partyId, which the person-based Lifecare FC reads are keyed on.
+	 *
+	 * @param  errand the errand
+	 * @return        the partyId
+	 */
+	public String applicantPartyId(final LifecareErrand errand) {
+		return householdPartyService.household(errand.municipalityId(), errand.namespace(), errand.errandId()).applicantPartyId()
+			.filter(StringUtils::hasText)
+			.orElseThrow(() -> Problem.valueOf(CONFLICT, "The errand has no applicant"));
+	}
+
+	/**
 	 * Whether the household has a medsökande. Lifecare writes for such households are not built yet and are refused.
 	 *
 	 * @param  errand the errand

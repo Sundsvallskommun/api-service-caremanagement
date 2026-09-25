@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
+import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
+import se.sundsvall.caremanagement.lifecare.service.model.DocumentView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.CreateLifecareDocumentRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.CreateLifecareJournalNoteRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDocumentType;
@@ -32,6 +35,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.activeNoteTypes;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.applyRecordEdit;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.containsRecord;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.findRecord;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.isEditable;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.textRecordIds;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.toDocumentBody;
@@ -74,6 +78,8 @@ public class LifecareRecordService {
 	static final String UNKNOWN_NOTE_TYPE = "Anteckningstypen finns inte i Lifecare";
 	static final String UNKNOWN_DOCUMENT_TYPE = "Dokumenttypen finns inte i Lifecare";
 	static final String UNEXPECTED_ANSWER = "Lifecare answered %s without the expected object";
+	static final String NO_PDF = "Lifecare has no PDF for the document";
+	static final String AMBIGUOUS_PDF = "Lifecare has several documents with the same title and date, so the PDF cannot be picked safely";
 
 	private static final Logger LOG = LoggerFactory.getLogger(LifecareRecordService.class);
 
@@ -90,11 +96,14 @@ public class LifecareRecordService {
 	private final ProfessionalWebClient client;
 	private final LifecareErrandService errandService;
 	private final LifecareAccessRecorder recorder;
+	private final LifecareCaseHistoryService caseHistoryService;
 
-	LifecareRecordService(final ProfessionalWebClient client, final LifecareErrandService errandService, final LifecareAccessRecorder recorder) {
+	LifecareRecordService(final ProfessionalWebClient client, final LifecareErrandService errandService, final LifecareAccessRecorder recorder,
+		final LifecareCaseHistoryService caseHistoryService) {
 		this.client = client;
 		this.errandService = errandService;
 		this.recorder = recorder;
+		this.caseHistoryService = caseHistoryService;
 	}
 
 	/**
@@ -142,6 +151,48 @@ public class LifecareRecordService {
 
 	public LifecareRecordContent readDocument(final String municipalityId, final String namespace, final String errandId, final int id) {
 		return read(municipalityId, namespace, errandId, id, DOC);
+	}
+
+	/**
+	 * One of the applicant's documents as a PDF file, for sending it on as a bilaga.
+	 *
+	 * <p>
+	 * The document must be in the applicant's ProfessionalWeb list under Dokument. Its file is read from Lifecare's FC API,
+	 * whose documents carry their own ids, so the FC document is picked by the row's title and date: none yields 404,
+	 * several 409 rather than a guess. FC holds a file only for PDF-backed documents; for the others Lifecare answers 404.
+	 * </p>
+	 *
+	 * @param  municipalityId the municipality
+	 * @param  namespace      the namespace
+	 * @param  errandId       the errand
+	 * @param  id             the ProfessionalWeb record id
+	 * @return                the PDF bytes
+	 */
+	public byte[] readDocumentPdf(final String municipalityId, final String namespace, final String errandId, final int id) {
+		final var errand = errandService.load(municipalityId, namespace, errandId);
+		final var row = findRecord(readList(errand), id, DOCUMENT)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NOT_THE_CLIENTS));
+		final var title = text(row.path("title"));
+		final var date = text(row.path("date"));
+		if (title == null || date == null) {
+			throw Problem.valueOf(NOT_FOUND, NO_PDF);
+		}
+		final var day = LocalDate.parse(date.substring(0, Math.min(date.length(), 10)));
+		final var matches = caseHistoryService.listDocuments(municipalityId, errandService.applicantPartyId(errand), day, day).stream()
+			.filter(document -> title.equals(document.title()))
+			.filter(document -> document.date() != null && document.date().startsWith(day.toString()))
+			.map(DocumentView::id)
+			.distinct()
+			.toList();
+		if (matches.isEmpty()) {
+			throw Problem.valueOf(NOT_FOUND, NO_PDF);
+		}
+		if (matches.size() > 1) {
+			throw Problem.valueOf(CONFLICT, AMBIGUOUS_PDF);
+		}
+		final var pdf = caseHistoryService.documentContent(municipalityId, matches.getFirst());
+		recorder.read(errand, DOCUMENT, "Hämtade ett dokument som PDF ur Lifecare", String.valueOf(id));
+		return pdf;
 	}
 
 	public LifecareRecordContent updateJournalNote(final String municipalityId, final String namespace, final String errandId, final int id,

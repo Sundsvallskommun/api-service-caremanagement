@@ -35,7 +35,8 @@ class LifecareRecordTest {
 			.withResponsibleCaseworker("RPA_031DEV")
 			.withModifiedBy("RPA_031DEV 2026-09-23")
 			.withLocked(true)
-			.withWriteProtected(true);
+			.withWriteProtected(true)
+			.withDocumentKind("JournalNote");
 
 		assertThat(result).hasNoNullFieldsOrProperties();
 		assertThat(result.getId()).isEqualTo("138");
@@ -48,6 +49,7 @@ class LifecareRecordTest {
 		assertThat(result.getModifiedBy()).isEqualTo("RPA_031DEV 2026-09-23");
 		assertThat(result.getLocked()).isEqualTo(true);
 		assertThat(result.getWriteProtected()).isEqualTo(true);
+		assertThat(result.getDocumentKind()).isEqualTo("JournalNote");
 	}
 
 	@Test

@@ -93,8 +93,10 @@ class LifecareRecordMapperTest {
 			.withResponsibleCaseworker("RPA_031DEV")
 			.withModifiedBy("RPA_031DEV 2026-09-22")
 			.withLocked(false)
-			.withWriteProtected(true));
+			.withWriteProtected(true)
+			.withDocumentKind("JournalNote"));
 		assertThat(LifecareRecordMapper.toRecord(models.path(1), DOCUMENT)).satisfies(record -> {
+			assertThat(record.getDocumentKind()).isEqualTo("Pdf");
 			assertThat(record.getDateTime()).isEqualTo("2026-09-21");
 			assertThat(record.getModifiedBy()).isEqualTo("2026-09-21");
 			assertThat(record.getResponsibleCaseworker()).isNull();
@@ -118,6 +120,17 @@ class LifecareRecordMapperTest {
 		assertThat(LifecareRecordMapper.containsRecord(list, 6)).isTrue();
 		assertThat(LifecareRecordMapper.containsRecord(list, 99)).isFalse();
 		assertThat(LifecareRecordMapper.containsRecord(MissingNode.getInstance(), 3)).isFalse();
+	}
+
+	@Test
+	void findRecord() {
+		final var list = json(LIST);
+
+		assertThat(LifecareRecordMapper.findRecord(list, 2, DOCUMENT)).hasValueSatisfying(row -> assertThat(row.path("id").asInt()).isEqualTo(2));
+		assertThat(LifecareRecordMapper.findRecord(list, 1, DOCUMENT)).isEmpty();
+		assertThat(LifecareRecordMapper.findRecord(list, 4, DOCUMENT)).isEmpty();
+		assertThat(LifecareRecordMapper.findRecord(list, 99, DOCUMENT)).isEmpty();
+		assertThat(LifecareRecordMapper.findRecord(MissingNode.getInstance(), 2, DOCUMENT)).isEmpty();
 	}
 
 	@ParameterizedTest

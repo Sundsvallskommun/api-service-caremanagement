@@ -40,6 +40,9 @@ public class LifecareRecord {
 	@JsonProperty("protected")
 	private Boolean writeProtected;
 
+	@Schema(description = "What kind of record Lifecare says it is: Regular (a written document), Form (a blankett), Pdf (a stored file, e.g. an inkommen handling) or JournalNote", examples = "Pdf")
+	private String documentKind;
+
 	public static LifecareRecord create() {
 		return new LifecareRecord();
 	}
@@ -174,6 +177,19 @@ public class LifecareRecord {
 		return this;
 	}
 
+	public String getDocumentKind() {
+		return documentKind;
+	}
+
+	public void setDocumentKind(final String documentKind) {
+		this.documentKind = documentKind;
+	}
+
+	public LifecareRecord withDocumentKind(final String documentKind) {
+		this.documentKind = documentKind;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass()) {
@@ -181,17 +197,18 @@ public class LifecareRecord {
 		}
 		final LifecareRecord that = (LifecareRecord) o;
 		return Objects.equals(id, that.id) && Objects.equals(category, that.category) && Objects.equals(title, that.title) && Objects.equals(dateTime, that.dateTime) && Objects.equals(type, that.type) && Objects.equals(ownerTypeText, that.ownerTypeText)
-			&& Objects.equals(responsibleCaseworker, that.responsibleCaseworker) && Objects.equals(modifiedBy, that.modifiedBy) && Objects.equals(locked, that.locked) && Objects.equals(writeProtected, that.writeProtected);
+			&& Objects.equals(responsibleCaseworker, that.responsibleCaseworker) && Objects.equals(modifiedBy, that.modifiedBy) && Objects.equals(locked, that.locked) && Objects.equals(writeProtected, that.writeProtected)
+			&& Objects.equals(documentKind, that.documentKind);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, category, title, dateTime, type, ownerTypeText, responsibleCaseworker, modifiedBy, locked, writeProtected);
+		return Objects.hash(id, category, title, dateTime, type, ownerTypeText, responsibleCaseworker, modifiedBy, locked, writeProtected, documentKind);
 	}
 
 	@Override
 	public String toString() {
 		return "LifecareRecord{" + "id='" + id + '\'' + ", category='" + category + '\'' + ", title='" + title + '\'' + ", dateTime='" + dateTime + '\'' + ", type='" + type + '\'' + ", ownerTypeText='" + ownerTypeText + '\'' + ", responsibleCaseworker='"
-			+ responsibleCaseworker + '\'' + ", modifiedBy='" + modifiedBy + '\'' + ", locked=" + locked + ", writeProtected=" + writeProtected + '}';
+			+ responsibleCaseworker + '\'' + ", modifiedBy='" + modifiedBy + '\'' + ", locked=" + locked + ", writeProtected=" + writeProtected + ", documentKind='" + documentKind + '\'' + '}';
 	}
 }

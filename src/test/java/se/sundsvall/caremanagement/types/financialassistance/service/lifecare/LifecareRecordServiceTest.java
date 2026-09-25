@@ -1,5 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
+import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
+import se.sundsvall.caremanagement.lifecare.service.model.DocumentView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.CreateLifecareDocumentRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.CreateLifecareJournalNoteRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDocumentType;
@@ -89,6 +93,8 @@ class LifecareRecordServiceTest {
 	private LifecareErrandService errandService;
 	@Mock
 	private LifecareAccessRecorder recorder;
+	@Mock
+	private LifecareCaseHistoryService caseHistoryService;
 
 	@InjectMocks
 	private LifecareRecordService service;
@@ -333,6 +339,67 @@ class LifecareRecordServiceTest {
 
 		assertRefused(() -> service.createDocument(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
 			CreateLifecareDocumentRequest.create().withContent("x").withDocumentTypeCode(15)), BAD_REQUEST, LifecareRecordService.UNKNOWN_DOCUMENT_TYPE);
+	}
+
+	@Test
+	void readDocumentPdf() {
+		final var pdf = "%PDF-1.7".getBytes();
+		givenClientList();
+		givenFcDocuments(fcDocument("fc-1", "Fil", "2026-09-23T00:00:00"), fcDocument("fc-2", "Annat", "2026-09-23T00:00:00"));
+		when(caseHistoryService.documentContent(MUNICIPALITY_ID, "fc-1")).thenReturn(pdf);
+
+		assertThat(service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 4)).isEqualTo(pdf);
+		verify(recorder).read(ERRAND, "DOCUMENT", "Hämtade ett dokument som PDF ur Lifecare", "4");
+	}
+
+	@Test
+	void readDocumentPdfRefusesARecordNotUnderDokument() {
+		givenClientList();
+
+		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 1), NOT_FOUND, LifecareRecordService.NOT_THE_CLIENTS);
+		verifyNoInteractions(caseHistoryService, recorder);
+	}
+
+	@Test
+	void readDocumentPdfWhenLifecareHasNoMatchingDocument() {
+		givenClientList();
+		givenFcDocuments(fcDocument("fc-1", "Fil", "2026-09-22T00:00:00"));
+
+		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 4), NOT_FOUND, LifecareRecordService.NO_PDF);
+		verify(caseHistoryService, never()).documentContent(anyString(), anyString());
+		verifyNoInteractions(recorder);
+	}
+
+	@Test
+	void readDocumentPdfRefusesToGuessBetweenTwins() {
+		givenClientList();
+		givenFcDocuments(fcDocument("fc-1", "Fil", "2026-09-23T00:00:00"), fcDocument("fc-2", "Fil", "2026-09-23T08:00:00"));
+
+		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 4), CONFLICT, LifecareRecordService.AMBIGUOUS_PDF);
+		verify(caseHistoryService, never()).documentContent(anyString(), anyString());
+		verifyNoInteractions(recorder);
+	}
+
+	@Test
+	void readDocumentPdfOnARowWithoutDate() {
+		givenErrand();
+		when(errandService.applicantPersonalNumber(ERRAND)).thenReturn(PERSONAL_NUMBER);
+		when(client.get(PATH_LIST, BY_CLIENT)).thenReturn(json("""
+			{ "documentModels": [ { "id": 7, "title": "Fil", "documentType_Name": "Pdf", "typeCode": 1 } ] }
+			"""));
+
+		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 7), NOT_FOUND, LifecareRecordService.NO_PDF);
+		verifyNoInteractions(caseHistoryService, recorder);
+	}
+
+	private void givenFcDocuments(final DocumentView... documents) {
+		final var day = LocalDate.of(2026, 9, 23);
+		when(errandService.applicantPartyId(ERRAND)).thenReturn("party-1");
+		when(caseHistoryService.listDocuments(MUNICIPALITY_ID, "party-1", day, day)).thenReturn(List.of(documents));
+	}
+
+	private static DocumentView fcDocument(final String id, final String title, final String date) {
+		return new DocumentView(id, title, date, "Inkommande handling", "owner", "person");
 	}
 
 	private static void assertRefused(final ThrowingCallable call, final HttpStatus status, final String detail) {

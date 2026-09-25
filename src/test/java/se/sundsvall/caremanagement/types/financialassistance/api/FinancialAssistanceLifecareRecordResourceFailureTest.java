@@ -23,6 +23,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PDF;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -139,6 +141,21 @@ class FinancialAssistanceLifecareRecordResourceFailureTest {
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
 				tuple("readDocument.id", "must be greater than 0")));
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void readDocumentPdfWithInvalidErrandId() {
+		webTestClient.get()
+			.uri(builder -> builder.path(PATH + "/documents/documents/{id}/pdf").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE,
+				"errandId", "not-a-uuid", "id", 138)))
+			.accept(APPLICATION_PDF, APPLICATION_PROBLEM_JSON)
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("readDocumentPdf.errandId", "not a valid UUID")));
 
 		verifyNoInteractions(serviceMock);
 	}

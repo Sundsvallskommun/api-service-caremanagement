@@ -37,8 +37,10 @@ import se.sundsvall.dept44.common.validators.annotation.ValidUuid;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
 
+import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.HttpHeaders.LOCATION;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
 import static org.springframework.http.ResponseEntity.created;
 import static org.springframework.http.ResponseEntity.ok;
@@ -223,6 +225,22 @@ class FinancialAssistanceLifecareRecordResource {
 		@Parameter(description = "The Lifecare record id") @Positive @PathVariable final Integer id) {
 
 		return ok(service.readDocument(municipalityId, namespace, errandId, id));
+	}
+
+	@GetMapping(path = "/documents/documents/{id}/pdf", produces = APPLICATION_PDF_VALUE)
+	@Operation(summary = "Read a document as a PDF file",
+		description = "One of the applicant's documents as the PDF file Lifecare holds for it, for sending it on as a bilaga. The file is read from Lifecare's FC API, matched on the document's title and date. 404 when the record is not in the applicant's Lifecare record or Lifecare holds no PDF for it (only PDF-backed documents have one); 409 when several Lifecare documents share its title and date. The read is logged.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", content = @Content(mediaType = APPLICATION_PDF_VALUE, schema = @Schema(type = "string", format = "binary"))),
+			@ApiResponse(responseCode = "409", description = "Conflict - the document cannot be told apart from another in Lifecare", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<byte[]> readDocumentPdf(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@ValidUuid @PathVariable final String errandId,
+		@Parameter(description = "The Lifecare record id") @Positive @PathVariable final Integer id) {
+
+		return ok().header(CONTENT_TYPE, APPLICATION_PDF_VALUE).body(service.readDocumentPdf(municipalityId, namespace, errandId, id));
 	}
 
 	@PutMapping(path = "/documents/documents/{id}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)

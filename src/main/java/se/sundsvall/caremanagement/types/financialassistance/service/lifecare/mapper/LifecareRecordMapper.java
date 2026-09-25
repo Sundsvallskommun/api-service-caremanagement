@@ -89,6 +89,21 @@ public final class LifecareRecordMapper {
 	}
 
 	/**
+	 * One row of Lifecare's list for the client, when it is in the given group.
+	 *
+	 * @param  list     the GetDocumentsListForClient answer
+	 * @param  recordId the record id
+	 * @param  category JOURNAL_NOTE or DOCUMENT
+	 * @return          the row, empty when the list holds no such row in that group
+	 */
+	public static Optional<JsonNode> findRecord(final JsonNode list, final int recordId, final String category) {
+		return list.path("documentModels").valueStream()
+			.filter(model -> Integer.valueOf(recordId).equals(integer(model.path("id"))))
+			.filter(model -> categoryOf(model).filter(category::equals).isPresent())
+			.findFirst();
+	}
+
+	/**
 	 * The ids of the rows in one group that carry a written body worth showing.
 	 *
 	 * @param  list     the GetDocumentsListForClient answer
@@ -132,7 +147,8 @@ public final class LifecareRecordMapper {
 			.withResponsibleCaseworker(text(model.path("responsibleCaseworker")))
 			.withModifiedBy(modifiedBy)
 			.withLocked(model.path("locked").asBoolean(false))
-			.withWriteProtected(model.path("protected").asBoolean(false));
+			.withWriteProtected(model.path("protected").asBoolean(false))
+			.withDocumentKind(text(model.path("documentType_Name")));
 	}
 
 	/**

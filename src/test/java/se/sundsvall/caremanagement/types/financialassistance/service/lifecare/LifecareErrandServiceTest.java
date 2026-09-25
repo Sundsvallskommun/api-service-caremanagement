@@ -100,6 +100,22 @@ class LifecareErrandServiceTest {
 	}
 
 	@Test
+	void applicantPartyId() {
+		when(householdPartyService.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(new HouseholdPartyService.Household(Optional.of("party"), false, Optional.empty(), Optional.empty()));
+
+		assertThat(service.applicantPartyId(ERRAND)).isEqualTo("party");
+	}
+
+	@Test
+	void applicantPartyIdMissing() {
+		when(householdPartyService.household(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(new HouseholdPartyService.Household(Optional.empty(), false, Optional.empty(), Optional.empty()));
+
+		assertThatThrownBy(() -> service.applicantPartyId(ERRAND)).hasMessageContaining("no applicant");
+	}
+
+	@Test
 	void coApplicantPresent() {
 		when(householdPartyService.coApplicantPresent(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
 

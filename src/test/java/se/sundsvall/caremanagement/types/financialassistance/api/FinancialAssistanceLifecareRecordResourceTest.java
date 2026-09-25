@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PDF;
 
 @SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -190,6 +191,25 @@ class FinancialAssistanceLifecareRecordResourceTest {
 			.expectBody().jsonPath("$.id").isEqualTo("138");
 
 		verify(serviceMock).readDocument(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 138);
+	}
+
+	@Test
+	void readDocumentPdf() {
+		final var pdf = "%PDF-1.7".getBytes();
+		when(serviceMock.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 138)).thenReturn(pdf);
+
+		final var body = webTestClient.get()
+			.uri(builder -> builder.path(PATH + "/documents/documents/{id}/pdf").build(RECORD_URI_VARIABLES))
+			.accept(APPLICATION_PDF)
+			.exchange()
+			.expectStatus().isOk()
+			.expectHeader().contentType(APPLICATION_PDF)
+			.expectBody(byte[].class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(body).isEqualTo(pdf);
+		verify(serviceMock).readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 138);
 	}
 
 	@Test
