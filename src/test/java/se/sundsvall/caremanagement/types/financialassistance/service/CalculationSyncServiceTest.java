@@ -54,6 +54,9 @@ class CalculationSyncServiceTest {
 	private static final Integer CALCULATION_ID = 4242;
 	private static final LocalDate FROM = LocalDate.of(2026, 9, 1);
 	private static final LocalDate TO = LocalDate.of(2026, 9, 30);
+	// FamilyCare lists calculations by calculation date, so the linked one is looked for two months either side.
+	private static final LocalDate WINDOW_FROM = LocalDate.of(2026, 7, 1);
+	private static final LocalDate WINDOW_TO = LocalDate.of(2026, 11, 30);
 	private static final OffsetDateTime WRITTEN = OffsetDateTime.parse("2026-09-01T03:00:00+02:00");
 
 	@Mock
@@ -324,7 +327,7 @@ class CalculationSyncServiceTest {
 
 	@Test
 	void reconcileWarningsRaisesOneWarningPerChange() {
-		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, FROM, TO))
+		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, WINDOW_FROM, WINDOW_TO))
 			.thenReturn(List.of(calculation(false, income("Lön", "11900", null))));
 		when(syncRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(sync("lön", ROLE_APPLICANT, "12400", "11900")));
 
@@ -337,13 +340,14 @@ class CalculationSyncServiceTest {
 			assertThat(warning.sourceKey()).isEqualTo("ssbtek-sync:APPLICANT:lön:12400");
 			assertThat(warning.message()).isEqualTo("SSBTEK har ändrats: Lön (sökande) från 11900 kr till 12400 kr");
 		});
+		verify(warningServiceMock).closeResolvedDraftWarnings(eq(ERRAND_ID), any());
 	}
 
 	@Test
 	void reconcileWarningsIgnoresTheCaseworkersOwnEdits() {
 		// SSBTEK still says what the system wrote; the caseworker changed one income, removed another and replaced a
 		// third they had already changed in the proposal. None of it is news from SSBTEK.
-		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, FROM, TO))
+		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, WINDOW_FROM, WINDOW_TO))
 			.thenReturn(List.of(calculation(false, income("Lön", "11000", null), income("Bostadsbidrag", "2000", null))));
 		when(syncRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
 			sync("lön", ROLE_APPLICANT, "11900", "11900"),
@@ -390,7 +394,7 @@ class CalculationSyncServiceTest {
 
 	@Test
 	void reconcileWarningsLeavesTheWarningsAloneWhenTheCalculationIsNotFound() {
-		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, FROM, TO)).thenReturn(List.of(calculation(9999, false)));
+		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, WINDOW_FROM, WINDOW_TO)).thenReturn(List.of(calculation(9999, false)));
 
 		service.reconcileWarnings(MUNICIPALITY_ID, ERRAND_ID, APPLICANT_PARTY_ID, CALCULATION_ID, FROM, TO);
 
@@ -422,7 +426,7 @@ class CalculationSyncServiceTest {
 		linked();
 		final var lon = sync("lön", ROLE_APPLICANT, "12400", "11900");
 		when(syncRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(lon));
-		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, FROM, TO))
+		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, WINDOW_FROM, WINDOW_TO))
 			.thenReturn(List.of(calculation(false, income("Lön", "11900", null))));
 
 		final var result = service.changes(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
@@ -450,7 +454,7 @@ class CalculationSyncServiceTest {
 	@Test
 	void changesIs404WhenTheCalculationIsNotFound() {
 		linked();
-		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, FROM, TO)).thenReturn(List.of());
+		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, WINDOW_FROM, WINDOW_TO)).thenReturn(List.of());
 
 		assertThatThrownBy(() -> service.changes(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.isInstanceOf(Problem.class)
@@ -499,7 +503,7 @@ class CalculationSyncServiceTest {
 		final var lon = sync("lön", ROLE_APPLICANT, "12400", "11900");
 		final var barnbidrag = sync("barnbidrag", ROLE_APPLICANT, null, "1250");
 		when(syncRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(lon, barnbidrag));
-		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, FROM, TO))
+		when(lifecareCaseHistoryServiceMock.listCalculations(MUNICIPALITY_ID, APPLICANT_PARTY_ID, WINDOW_FROM, WINDOW_TO))
 			.thenReturn(List.of(calculation(false, income("Lön", "12400", null))));
 
 		service.applied(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new AppliedSsbtekChanges(CALCULATION_ID, List.of(

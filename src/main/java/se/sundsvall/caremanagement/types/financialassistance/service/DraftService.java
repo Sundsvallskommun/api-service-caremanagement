@@ -57,6 +57,10 @@ public class DraftService {
 	private final FaNormPersonRepository personRepository;
 	private final SectionReconciler sectionReconciler;
 
+	/** How a duplicate-income warning names its type — read back by {@link SavedCalculationWarnings}. */
+	static final String DUPLICATE_MESSAGE_PREFIX = "Möjlig dubbelföring: ";
+	static final String DUPLICATE_MESSAGE_INFIX = " finns både";
+
 	DraftService(final FaCalculationDraftRepository calculationDraftRepository, final FaNormIncomeRepository incomeRepository,
 		final FaNormExpenseRepository expenseRepository, final FaNormPersonRepository personRepository, final SectionReconciler sectionReconciler) {
 		this.calculationDraftRepository = calculationDraftRepository;
@@ -122,7 +126,7 @@ public class DraftService {
 				final var label = ofNullable(rows.getFirst().getTypeName()).filter(StringUtils::hasText).orElse("Inkomst");
 				return new WarningService.WarningInput(WarningService.TYPE_INCOME_DUPLICATED,
 					"income-duplicate:" + rows.getFirst().getTypeId(),
-					"Möjlig dubbelföring: " + label + " finns både från SSBTEK och tillagd av handläggare "
+					DUPLICATE_MESSAGE_PREFIX + label + DUPLICATE_MESSAGE_INFIX + " från SSBTEK och tillagd av handläggare "
 						+ "— kontrollera att inkomsten inte räknas två gånger");
 			})
 			.toList();

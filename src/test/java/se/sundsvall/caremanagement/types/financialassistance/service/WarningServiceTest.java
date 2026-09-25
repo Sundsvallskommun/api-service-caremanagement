@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,6 +17,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationIncomeView;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaWarningRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaWarningEntity;
@@ -537,5 +540,26 @@ class WarningServiceTest {
 		assertThrows(IllegalArgumentException.class,
 			() -> service.reconcileCalculationWarnings(ERRAND_ID, List.of(), List.of(), List.of(), null, inputs, unverified));
 		verify(repositoryMock, never()).save(any());
+	}
+
+	@Test
+	void closeResolvedDraftWarningsClosesOnlyWhatTheSavedCalculationSettles() {
+		final var added = warning(WarningService.TYPE_NEW_INCOME, "Barnbidrag", WarningService.STATUS_OPEN);
+		final var acknowledged = warning(WarningService.TYPE_NEW_INCOME, "Bostadsbidrag", WarningService.STATUS_ACKNOWLEDGED);
+		final var stillMissing = warning(WarningService.TYPE_NEW_INCOME, "Underhållsstöd", WarningService.STATUS_OPEN);
+		// Not a draft warning: the SSBTEK rules own it, whatever the calculation holds.
+		final var ssbtek = warning(WarningService.TYPE_INCOME_CHANGE, "Barnbidrag", WarningService.STATUS_OPEN);
+		final var closed = warning(WarningService.TYPE_INCOME_DROPPED, "Lön", WarningService.STATUS_CLOSED);
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(added, acknowledged, stillMissing, ssbtek, closed));
+		final var calculation = new CalculationView(31, null, null, null, null, null, null, null, null, null, null, null, false, List.of(),
+			List.of(new CalculationIncomeView("Barnbidrag", new BigDecimal("1250"), null, null, null), new CalculationIncomeView("Bostadsbidrag", null, null, BigDecimal.TEN, null)),
+			List.of(), List.of());
+
+		service.closeResolvedDraftWarnings(ERRAND_ID, calculation);
+
+		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
+		verify(repositoryMock, times(2)).save(captor.capture());
+		assertThat(captor.getAllValues()).extracting(FaWarningEntity::getSourceKey, FaWarningEntity::getStatus, FaWarningEntity::isAutoResolved)
+			.containsExactly(tuple("Barnbidrag", "CLOSED", true), tuple("Bostadsbidrag", "CLOSED", true));
 	}
 }

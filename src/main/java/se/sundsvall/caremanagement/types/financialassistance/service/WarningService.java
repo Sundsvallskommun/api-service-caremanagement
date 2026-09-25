@@ -12,6 +12,7 @@ import java.util.function.Predicate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import se.sundsvall.caremanagement.lifecare.service.model.CalculationView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Warning;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaWarningRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaWarningEntity;
@@ -216,8 +217,8 @@ public class WarningService {
 	 * normberäkning, the late comparison-period transfer, the incomes no Lifecare type could take and the duplicate incomes
 	 * read from the merged draft — plus the housing-cost change, which is about the calculation's boendekostnad even
 	 * though it compares the application with the previous normberäkning. Once the caseworker has saved the normberäkning
-	 * in Lifecare the draft is no longer refreshed, so these stay as they last were: {@link #reconcileRuleWarnings}
-	 * neither creates nor auto-closes them.
+	 * in Lifecare the draft is no longer refreshed, so {@link #reconcileRuleWarnings} neither creates nor auto-closes
+	 * them; {@link #closeResolvedDraftWarnings} closes the ones the caseworker has since dealt with in that calculation.
 	 */
 	public static final Set<String> DRAFT_REFRESH_TYPES = Set.of(TYPE_NEW_INCOME, TYPE_NEW_EXPENSE, TYPE_NEW_PERSON, TYPE_INCOME_DROPPED,
 		TYPE_EXPENSE_REVIEW, TYPE_INCOME_DUPLICATED, TYPE_INCOME_TRANSFERRED_LATE, TYPE_INCOME_NOT_TRANSFERABLE,
@@ -365,6 +366,20 @@ public class WarningService {
 		final var inputs = ssbtekIncomeWarnings(unhandled, changes, missing);
 		inputs.addAll(rules);
 		reconcile(errandId, inputs, type -> !isSeparatelyReconciled(type) && !DRAFT_REFRESH_TYPES.contains(type));
+	}
+
+	/**
+	 * Close the frozen draft warnings the caseworker has since dealt with in the normberäkning saved in Lifecare — see
+	 * {@link SavedCalculationWarnings}. Only open or acknowledged {@link #DRAFT_REFRESH_TYPES} are looked at; a closed
+	 * warning is never re-opened, and nothing is raised.
+	 */
+	@Transactional
+	public void closeResolvedDraftWarnings(final String errandId, final CalculationView calculation) {
+		warningRepository.findByErrandId(errandId).stream()
+			.filter(entity -> DRAFT_REFRESH_TYPES.contains(entity.getType()))
+			.filter(entity -> !STATUS_CLOSED.equals(entity.getStatus()))
+			.filter(entity -> SavedCalculationWarnings.resolved(entity, calculation))
+			.forEach(entity -> warningRepository.save(entity.withStatus(STATUS_CLOSED).withAutoResolved(true)));
 	}
 
 	/** The rules income warnings the process sent: unhandled, significantly changed and still-missing incomes. */

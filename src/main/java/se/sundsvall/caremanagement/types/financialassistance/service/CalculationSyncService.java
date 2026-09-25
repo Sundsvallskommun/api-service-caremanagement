@@ -240,6 +240,8 @@ public class CalculationSyncService {
 			return;
 		}
 		warningService.reconcileByTypes(errandId, OWNED_WARNING_TYPES, warnings(syncRepository.findByErrandId(errandId), calculation.get()));
+		// The draft is frozen now; the caseworker deals with what its warnings named in the calculation itself.
+		warningService.closeResolvedDraftWarnings(errandId, calculation.get());
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -306,9 +308,17 @@ public class CalculationSyncService {
 		return new SyncContext(calculationId, applicant, header.getCalculationFromDate(), header.getCalculationToDate());
 	}
 
+	/**
+	 * The linked calculation, looked up by id among the applicant's. FamilyCare filters that listing on the calculation
+	 * <em>date</em>, not the period — the October proposal the prepare step creates on 25 September is dated in
+	 * September — so the lookup reaches {@link ProposalBasisService#SAVED_CALCULATION_WINDOW_MONTHS} months either side of
+	 * the period, as the decision proposal's does.
+	 */
 	private Optional<CalculationView> findCalculation(final String municipalityId, final String applicantPartyId, final Integer calculationId,
 		final LocalDate fromDate, final LocalDate toDate) {
-		return lifecareCaseHistoryService.listCalculations(municipalityId, applicantPartyId, fromDate, toDate).stream()
+		final var from = fromDate.minusMonths(ProposalBasisService.SAVED_CALCULATION_WINDOW_MONTHS);
+		final var to = toDate.plusMonths(ProposalBasisService.SAVED_CALCULATION_WINDOW_MONTHS);
+		return lifecareCaseHistoryService.listCalculations(municipalityId, applicantPartyId, from, to).stream()
 			.filter(calculation -> Objects.equals(calculation.id(), calculationId))
 			.findFirst();
 	}
