@@ -13491,7 +13491,6 @@ components:
           - HOUSEHOLD_CHANGE
           - HOUSING_COST_CHANGE
           - EXPENSE_REVIEW
-          - EXPENSE_CAPPED
           - INCOME_DUPLICATED
           - CHILD_NOT_FULL_TIME
           - CHILDREN_RESIDENCE_CHANGED
@@ -13526,7 +13525,7 @@ components:
           - LIFECARE_READ_FAILED
           - SSBTEK_CALCULATION_DIFF
           examples:
-          - EXPENSE_CAPPED
+          - EXPENSE_REVIEW
         typeDisplayName:
           type: string
           description: Swedish display name for the warning type

@@ -18,9 +18,9 @@ public class Warning {
 	@Schema(description = "The warning id", examples = "f47ac10b-58cc-4372-a567-0e02b2c3d479", accessMode = Schema.AccessMode.READ_ONLY)
 	private String id;
 
-	@Schema(description = "The warning type (machine code; use typeDisplayName for the label)", examples = "EXPENSE_CAPPED", allowableValues = {
+	@Schema(description = "The warning type (machine code; use typeDisplayName for the label)", examples = "EXPENSE_REVIEW", allowableValues = {
 		"UNHANDLED_INCOME", "INCOME_CHANGE", "MISSING_SSBTEK", "NEW_INCOME", "NEW_EXPENSE", "NEW_PERSON",
-		"INCOME_DROPPED", "HOUSEHOLD_CHANGE", "HOUSING_COST_CHANGE", "EXPENSE_REVIEW", "EXPENSE_CAPPED",
+		"INCOME_DROPPED", "HOUSEHOLD_CHANGE", "HOUSING_COST_CHANGE", "EXPENSE_REVIEW",
 		"INCOME_DUPLICATED", "CHILD_NOT_FULL_TIME", "CHILDREN_RESIDENCE_CHANGED", "HOUSING_SITUATION_CHANGED",
 		"SALARY_JOB_STIMULUS", "PENDING_BENEFIT", "NEW_ASSETS", "PLANNING_REVIEW", "PAYMENT_METHOD_CHANGED",
 		"ATTACHMENTS_PRESENT", "STAY_OUTSIDE_MUNICIPALITY", "APPLICATION_REVIEW",

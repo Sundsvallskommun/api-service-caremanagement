@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -17,10 +18,12 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
 import se.sundsvall.dept44.problem.Problem;
 
+import static java.time.ZoneOffset.UTC;
 import static java.util.Comparator.comparing;
 import static java.util.Comparator.naturalOrder;
 import static java.util.Comparator.nullsLast;
 import static java.util.Optional.ofNullable;
+import static java.util.UUID.randomUUID;
 import static java.util.stream.Collectors.toSet;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -44,7 +47,6 @@ public class WarningService {
 	public static final String TYPE_HOUSEHOLD_CHANGE = "HOUSEHOLD_CHANGE";
 	public static final String TYPE_HOUSING_COST_CHANGE = "HOUSING_COST_CHANGE";
 	public static final String TYPE_EXPENSE_REVIEW = "EXPENSE_REVIEW";
-	public static final String TYPE_EXPENSE_CAPPED = "EXPENSE_CAPPED";
 	public static final String TYPE_INCOME_DUPLICATED = "INCOME_DUPLICATED";
 
 	// Återansökan rule warnings — the varningskod values the rakel-eb-ateransokan DMN tables emit (see
@@ -218,7 +220,7 @@ public class WarningService {
 	 * neither creates nor auto-closes them.
 	 */
 	public static final Set<String> DRAFT_REFRESH_TYPES = Set.of(TYPE_NEW_INCOME, TYPE_NEW_EXPENSE, TYPE_NEW_PERSON, TYPE_INCOME_DROPPED,
-		TYPE_EXPENSE_REVIEW, TYPE_EXPENSE_CAPPED, TYPE_INCOME_DUPLICATED, TYPE_INCOME_TRANSFERRED_LATE, TYPE_INCOME_NOT_TRANSFERABLE,
+		TYPE_EXPENSE_REVIEW, TYPE_INCOME_DUPLICATED, TYPE_INCOME_TRANSFERRED_LATE, TYPE_INCOME_NOT_TRANSFERABLE,
 		TYPE_FAMILY_DIFFERS_FROM_APPLICATION, TYPE_FAMILY_DEVIATING_PERIOD, TYPE_COMMON_HOUSEHOLD_COST_CHECK, TYPE_PREVIOUS_NORM_NOT_AVAILABLE,
 		TYPE_HOUSING_COST_CHANGE);
 
@@ -248,7 +250,6 @@ public class WarningService {
 		Map.entry(TYPE_HOUSEHOLD_CHANGE, "Förändrat hushåll"),
 		Map.entry(TYPE_HOUSING_COST_CHANGE, "Förändrad boendekostnad"),
 		Map.entry(TYPE_EXPENSE_REVIEW, "Manuell skälighetsbedömning"),
-		Map.entry(TYPE_EXPENSE_CAPPED, "Kapad kostnad"),
 		Map.entry(TYPE_INCOME_DUPLICATED, "Möjlig dubbelförd inkomst"),
 		Map.entry(TYPE_CHILD_NOT_FULL_TIME, "Barn bor inte heltid"),
 		Map.entry(TYPE_CHILDREN_RESIDENCE_CHANGED, "Barns boende ändrat"),
@@ -509,13 +510,8 @@ public class WarningService {
 				.filter(entity -> key(entity.getType(), entity.getSourceKey()).equals(key(input.type(), input.sourceKey())))
 				.findFirst();
 			if (match.isEmpty()) {
-				warningRepository.save(FaWarningEntity.create()
-					.withErrandId(errandId)
-					.withType(input.type())
-					.withSourceKey(input.sourceKey())
-					.withMessage(input.message())
-					.withStatus(STATUS_OPEN)
-					.withAutoResolved(false));
+				// INSERT IGNORE: a concurrent reconcile of the same errand may already have raised it.
+				warningRepository.insertIgnore(randomUUID().toString(), errandId, input.type(), input.sourceKey(), input.message(), STATUS_OPEN, utcNow());
 			} else if (!STATUS_CLOSED.equals(match.get().getStatus())) { // never re-open a closed warning
 				warningRepository.save(match.get().withMessage(input.message()));
 			}
@@ -548,13 +544,19 @@ public class WarningService {
 	 */
 	@Transactional
 	public Warning create(final String errandId, final String type, final String sourceKey, final String message) {
-		return toWarning(warningRepository.save(FaWarningEntity.create()
-			.withErrandId(errandId)
-			.withType(type)
-			.withSourceKey(ofNullable(sourceKey).filter(StringUtils::hasText).orElseGet(() -> sourceKey(message)))
-			.withMessage(message)
-			.withStatus(STATUS_OPEN)
-			.withAutoResolved(false)));
+		final var resolvedSourceKey = ofNullable(sourceKey).filter(StringUtils::hasText).orElseGet(() -> sourceKey(message));
+		// (errandId, type, sourceKey) is unique: posting a warning that already exists returns the existing one.
+		return warningRepository.findByErrandId(errandId).stream()
+			.filter(entity -> key(entity.getType(), entity.getSourceKey()).equals(key(type, resolvedSourceKey)))
+			.findFirst()
+			.map(WarningService::toWarning)
+			.orElseGet(() -> toWarning(warningRepository.save(FaWarningEntity.create()
+				.withErrandId(errandId)
+				.withType(type)
+				.withSourceKey(resolvedSourceKey)
+				.withMessage(message)
+				.withStatus(STATUS_OPEN)
+				.withAutoResolved(false))));
 	}
 
 	/**
@@ -582,6 +584,13 @@ public class WarningService {
 			return "";
 		}
 		return text.split("[(:]", 2)[0].trim();
+	}
+
+	/**
+	 * Now as a UTC {@link LocalDateTime}, matching the entity's {@code NORMALIZE} timezone storage on the native insert.
+	 */
+	private static LocalDateTime utcNow() {
+		return OffsetDateTime.now(ZoneId.systemDefault()).withOffsetSameInstant(UTC).toLocalDateTime();
 	}
 
 	private static String key(final String type, final String sourceKey) {

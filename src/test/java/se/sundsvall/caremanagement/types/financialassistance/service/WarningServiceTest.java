@@ -27,6 +27,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -44,6 +46,16 @@ class WarningServiceTest {
 
 	@InjectMocks
 	private WarningService service;
+
+	/** The warnings the reconcile raised, rebuilt from its {@code insertIgnore} calls in call order. */
+	private List<FaWarningEntity> inserted() {
+		return mockingDetails(repositoryMock).getInvocations().stream()
+			.filter(invocation -> "insertIgnore".equals(invocation.getMethod().getName()))
+			.map(invocation -> FaWarningEntity.create().withId(invocation.getArgument(0)).withErrandId(invocation.getArgument(1))
+				.withType(invocation.getArgument(2)).withSourceKey(invocation.getArgument(3)).withMessage(invocation.getArgument(4))
+				.withStatus(invocation.getArgument(5)))
+			.toList();
+	}
 
 	private static FaWarningEntity warning(final String type, final String sourceKey, final String status) {
 		return FaWarningEntity.create().withId("w-" + sourceKey).withErrandId(ERRAND_ID)
@@ -153,7 +165,7 @@ class WarningServiceTest {
 			.map(WarningServiceTest::readConstant)
 			.toList();
 
-		assertThat(types).hasSize(44);
+		assertThat(types).hasSize(43);
 		assertThat(types).allSatisfy(type -> {
 			assertThat(displayNames).as("display name for %s", type).containsKey(type);
 			assertThat(displayNames.get(type)).as("display name for %s", type).isNotBlank();
@@ -178,17 +190,15 @@ class WarningServiceTest {
 			List.of(
 				new WarningService.WarningInput(WarningService.TYPE_HOUSEHOLD_CHANGE, "household-size", "Antal hushållsmedlemmar ändrat"),
 				new WarningService.WarningInput(WarningService.TYPE_HOUSING_COST_CHANGE, "housing-cost", "Housing cost changed +32%"),
-				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, "OTHER", "OTHER: skälighet bedöms manuellt"),
-				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, "RENT", "Capped cost: RENT")));
+				new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, "OTHER", "OTHER: skälighet bedöms manuellt")));
 
-		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
-		// 3 income/change/missing + NEW_INCOME + NEW_EXPENSE + NEW_PERSON + INCOME_DROPPED (draft) + 4 section warnings
-		// (HOUSEHOLD_CHANGE + HOUSING_COST_CHANGE + EXPENSE_REVIEW + EXPENSE_CAPPED) = 11
-		verify(repositoryMock, times(11)).save(captor.capture());
-		assertThat(captor.getAllValues()).extracting(FaWarningEntity::getType)
+		// 3 income/change/missing + NEW_INCOME + NEW_EXPENSE + NEW_PERSON + INCOME_DROPPED (draft) + 3 section warnings
+		// (HOUSEHOLD_CHANGE + HOUSING_COST_CHANGE + EXPENSE_REVIEW) = 10, all new
+		assertThat(inserted()).extracting(FaWarningEntity::getType)
 			.containsExactlyInAnyOrder("UNHANDLED_INCOME", "INCOME_CHANGE", "MISSING_SSBTEK",
 				"NEW_INCOME", "NEW_EXPENSE", "NEW_PERSON", "INCOME_DROPPED",
-				"HOUSEHOLD_CHANGE", "HOUSING_COST_CHANGE", "EXPENSE_REVIEW", "EXPENSE_CAPPED");
+				"HOUSEHOLD_CHANGE", "HOUSING_COST_CHANGE", "EXPENSE_REVIEW");
+		verify(repositoryMock, never()).save(any());
 	}
 
 	@Test
@@ -197,7 +207,7 @@ class WarningServiceTest {
 
 		service.reconcileCalculationWarnings(ERRAND_ID, List.of("X (Y)"), List.of(), List.of(), null, null);
 
-		verify(repositoryMock).save(any()); // only the single unhandled-income warning
+		assertThat(inserted()).extracting(FaWarningEntity::getType).containsExactly("UNHANDLED_INCOME"); // the single unhandled-income warning
 	}
 
 	@Test
@@ -256,13 +266,16 @@ class WarningServiceTest {
 		service.reconcileRuleWarnings(ERRAND_ID, List.of("Bostadstillägg (NOT_ON_WHITELIST)"), List.of(), List.of(),
 			List.of(new WarningService.WarningInput("STAY_OUTSIDE_MUNICIPALITY", "stay", "Vistelse")));
 
-		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
-		verify(repositoryMock, times(4)).save(captor.capture()); // two inserts + two auto-closes
-		assertThat(captor.getAllValues())
+		assertThat(inserted())
 			.extracting(FaWarningEntity::getType, FaWarningEntity::getStatus)
 			.containsExactlyInAnyOrder(
 				tuple("UNHANDLED_INCOME", "OPEN"),
-				tuple("STAY_OUTSIDE_MUNICIPALITY", "OPEN"),
+				tuple("STAY_OUTSIDE_MUNICIPALITY", "OPEN"));
+		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
+		verify(repositoryMock, times(2)).save(captor.capture()); // the two auto-closes
+		assertThat(captor.getAllValues())
+			.extracting(FaWarningEntity::getType, FaWarningEntity::getStatus)
+			.containsExactlyInAnyOrder(
 				tuple("PENDING_BENEFIT", "CLOSED"),
 				tuple("MISSING_SSBTEK", "CLOSED"));
 		assertThat(draftWarnings).allSatisfy(draftWarning -> assertThat(draftWarning.getStatus()).isEqualTo("OPEN"));
@@ -271,11 +284,11 @@ class WarningServiceTest {
 
 	@Test
 	void reconcileRuleWarningsRefusesADraftWarning() {
-		final var draftWarning = List.of(new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, "RENT", "Kapad"));
+		final var draftWarning = List.of(new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, "RENT", "Granska"));
 
 		assertThatThrownBy(() -> service.reconcileRuleWarnings(ERRAND_ID, List.of(), List.of(), List.of(), draftWarning))
 			.isInstanceOf(IllegalArgumentException.class)
-			.hasMessage("warning type EXPENSE_CAPPED belongs to the draft refresh");
+			.hasMessage("warning type EXPENSE_REVIEW belongs to the draft refresh");
 		verify(repositoryMock, never()).save(any());
 	}
 
@@ -285,9 +298,7 @@ class WarningServiceTest {
 
 		service.reconcileRuleWarnings(ERRAND_ID, null, null, List.of("Dagersättning"), null);
 
-		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
-		verify(repositoryMock).save(captor.capture());
-		assertThat(captor.getValue().getType()).isEqualTo("MISSING_SSBTEK");
+		assertThat(inserted()).extracting(FaWarningEntity::getType).containsExactly("MISSING_SSBTEK");
 	}
 
 	@Test
@@ -316,17 +327,35 @@ class WarningServiceTest {
 	}
 
 	@Test
+	void createSavesANewWarningOpen() {
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(warning("NEW_INCOME", "other", "OPEN")));
+		when(repositoryMock.save(any(FaWarningEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var created = service.create(ERRAND_ID, "NEW_INCOME", "Bostadsbidrag", "Ny inkomst");
+
+		assertThat(created).returns("NEW_INCOME", Warning::getType).returns("Bostadsbidrag", Warning::getSourceKey).returns("OPEN", Warning::getStatus);
+		verify(repositoryMock).save(any(FaWarningEntity.class));
+	}
+
+	@Test
+	void createReturnsTheExistingWarningForTheSameKey() {
+		final var existing = warning("NEW_INCOME", "Bostadsbidrag", "ACKNOWLEDGED");
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(existing));
+
+		final var created = service.create(ERRAND_ID, "NEW_INCOME", "Bostadsbidrag", "Ny inkomst");
+
+		assertThat(created).returns(existing.getId(), Warning::getId).returns("ACKNOWLEDGED", Warning::getStatus);
+		verify(repositoryMock, never()).save(any());
+	}
+
+	@Test
 	void reconcileByTypesCreatesNewWarningsOpen() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(repositoryMock.save(any(FaWarningEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		service.reconcileByTypes(ERRAND_ID, Set.of("CO_APPLICANT_SPLIT_PAYMENT"), List.of(new WarningService.WarningInput("CO_APPLICANT_SPLIT_PAYMENT", "co-applicant", "text")));
 
-		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
-		verify(repositoryMock).save(captor.capture());
-		assertThat(captor.getValue().getType()).isEqualTo("CO_APPLICANT_SPLIT_PAYMENT");
-		assertThat(captor.getValue().getStatus()).isEqualTo("OPEN");
-		assertThat(captor.getValue().getMessage()).isEqualTo("text");
+		verify(repositoryMock).insertIgnore(any(), eq(ERRAND_ID), eq("CO_APPLICANT_SPLIT_PAYMENT"), eq("co-applicant"), eq("text"), eq("OPEN"), any());
+		verify(repositoryMock, never()).save(any());
 	}
 
 	@Test
@@ -341,17 +370,16 @@ class WarningServiceTest {
 	@Test
 	void reconcileSsbtekReadFailureRaisesOneWarningPerErrand() {
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
-		when(repositoryMock.save(any(FaWarningEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		service.reconcileSsbtekReadFailure(ERRAND_ID, true);
 
-		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
-		verify(repositoryMock).save(captor.capture());
-		assertThat(captor.getValue().getType()).isEqualTo("SSBTEK_READ_FAILED");
-		assertThat(captor.getValue().getSourceKey()).isEqualTo("SSBTEK");
-		assertThat(captor.getValue().getStatus()).isEqualTo("OPEN");
+		assertThat(inserted()).hasSize(1);
+		final var raised = inserted().getFirst();
+		assertThat(raised.getType()).isEqualTo("SSBTEK_READ_FAILED");
+		assertThat(raised.getSourceKey()).isEqualTo("SSBTEK");
+		assertThat(raised.getStatus()).isEqualTo("OPEN");
 		// The text carries the time of the attempt, so it is matched on its two fixed halves rather than verbatim.
-		assertThat(captor.getValue().getMessage())
+		assertThat(raised.getMessage())
 			.startsWith(WarningService.MESSAGE_SSBTEK_READ_FAILED_PREFIX)
 			.endsWith(WarningService.MESSAGE_SSBTEK_READ_FAILED_SUFFIX)
 			.matches("^\\QFel att läsa SSBTEK \\E\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2},.*");
@@ -423,13 +451,11 @@ class WarningServiceTest {
 	void reconcileLifecareReadFailureRaisesOneWarningPerRead() {
 		final var otherRead = warning("LIFECARE_READ_FAILED", "lifecare-read:previous-decision", "OPEN");
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(otherRead));
-		when(repositoryMock.save(any(FaWarningEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		service.reconcileLifecareReadFailure(ERRAND_ID, "lifecare-read:recovery-claims", true);
 
-		final var captor = ArgumentCaptor.forClass(FaWarningEntity.class);
-		verify(repositoryMock).save(captor.capture());
-		assertThat(captor.getValue())
+		verify(repositoryMock, never()).save(any());
+		assertThat(inserted()).singleElement()
 			.returns("LIFECARE_READ_FAILED", FaWarningEntity::getType)
 			.returns("lifecare-read:recovery-claims", FaWarningEntity::getSourceKey)
 			.returns("OPEN", FaWarningEntity::getStatus)

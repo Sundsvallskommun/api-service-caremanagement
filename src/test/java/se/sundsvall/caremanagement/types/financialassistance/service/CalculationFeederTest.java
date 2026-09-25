@@ -141,11 +141,8 @@ class CalculationFeederTest {
 		assertThat(row.getProcessAmount()).isEqualByComparingTo(new BigDecimal("8500"));
 		assertThat(row.getBucket()).isEqualTo("SPECIAL_EXPENSE");
 
-		// 8500 < 9000 → a cap warning, no review flag
-		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_CAPPED);
-		final var warning = feed.warnings().getFirst();
-		assertThat(warning.sourceKey()).isEqualTo("RENT");
-		assertThat(warning.message()).contains("Kapad kostnad: Boendekostnad").contains("9000").contains("8500");
+		// 8500 < 9000 without a review flag → no warning: the rule's text and the decision tab's delavslag cover a cap
+		assertThat(feed.warnings()).isEmpty();
 	}
 
 	@Test
@@ -166,7 +163,7 @@ class CalculationFeederTest {
 	}
 
 	@Test
-	void expenseFeedFlaggedAndCappedRaisesBothWarnings() {
+	void expenseFeedFlaggedAndCappedRaisesOnlyTheReviewWarning() {
 		final var cost = FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000"));
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
 
@@ -176,7 +173,7 @@ class CalculationFeederTest {
 		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type)
-			.containsExactly(WarningService.TYPE_EXPENSE_REVIEW, WarningService.TYPE_EXPENSE_CAPPED);
+			.containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
 	}
 
 	@Test

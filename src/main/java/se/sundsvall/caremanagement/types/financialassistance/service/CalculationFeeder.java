@@ -140,9 +140,10 @@ public class CalculationFeeder {
 
 	/**
 	 * The fresh expense process rows — one per applied cost, the process amount + bucket coming from the rules — plus
-	 * the expense warnings the rules raised: a manual reasonableness assessment ({@code EXPENSE_REVIEW}) for a flagged
-	 * cost, and a cap ({@code EXPENSE_CAPPED}) when the process amount lands below what the citizen applied for. The
-	 * decision is evaluated once per cost; the verdict feeds both the row and its warnings.
+	 * the expense warning the rules raised: a manual reasonableness assessment ({@code EXPENSE_REVIEW}) for a flagged
+	 * cost. A process amount below what the citizen applied for raises no warning of its own: the rule's text already
+	 * names the amounts, and the decision tab raises the delavslag. The decision is evaluated once per cost; the verdict
+	 * feeds both the row and its warning.
 	 */
 	public ExpenseFeed expenseFeed(final String municipalityId, final String errandId, final FinancialAssistanceEntity errand,
 		final Map<String, BigDecimal> previousAmounts, final Integer applicantAge) {
@@ -179,7 +180,7 @@ public class CalculationFeeder {
 		return persons + children;
 	}
 
-	/** The warnings a single cost's verdict raises — a manual review flag and/or a cap below the applied amount. */
+	/** The warnings a single cost's verdict raises — a manual review flag when the rules flagged the cost. */
 	private static List<WarningService.WarningInput> expenseWarnings(final FaCost cost, final ExpenseRulesService.ExpenseVerdict verdict) {
 		final var warnings = new ArrayList<WarningService.WarningInput>();
 		final var sourceKey = expenseSourceKey(cost);
@@ -189,15 +190,7 @@ public class CalculationFeeder {
 			final var reason = ofNullable(verdict.rule()).filter(text -> !text.isBlank()).orElse("Utgiften kräver en manuell skälighetsbedömning");
 			warnings.add(new WarningService.WarningInput(WarningService.TYPE_EXPENSE_REVIEW, sourceKey, label + ": " + reason));
 		}
-		if (isCapped(cost.getAppliedAmount(), verdict.processAmount())) {
-			warnings.add(new WarningService.WarningInput(WarningService.TYPE_EXPENSE_CAPPED, sourceKey,
-				"Kapad kostnad: " + label + " – ansökt " + plain(cost.getAppliedAmount()) + " kr, beviljat " + plain(verdict.processAmount()) + " kr"));
-		}
 		return warnings;
-	}
-
-	private static boolean isCapped(final BigDecimal applied, final BigDecimal process) {
-		return (applied != null) && (process != null) && (process.compareTo(applied) < 0);
 	}
 
 	/** Stable dedup key for the cost a warning concerns — cost type, plus the other sub-type when present. */

@@ -23,6 +23,7 @@ import se.sundsvall.dept44.problem.Problem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 
@@ -65,6 +66,16 @@ class DecisionProposalLifecareReadFailureTest {
 			}
 			return entity;
 		});
+		// The in-memory store keeps (type, sourceKey) unique per errand, as the table does.
+		doAnswer(invocation -> {
+			final String type = invocation.getArgument(2);
+			final String sourceKey = invocation.getArgument(3);
+			if (store.stream().noneMatch(stored -> type.equals(stored.getType()) && sourceKey.equals(stored.getSourceKey()))) {
+				store.add(FaWarningEntity.create().withId(invocation.getArgument(0)).withErrandId(invocation.getArgument(1))
+					.withType(type).withSourceKey(sourceKey).withMessage(invocation.getArgument(4)).withStatus(invocation.getArgument(5)));
+			}
+			return null;
+		}).when(warningRepositoryMock).insertIgnore(any(), any(), any(), any(), any(), any(), any());
 		final var household = new HouseholdPartyService.Household(Optional.of(APPLICANT), false, Optional.empty(), Optional.empty());
 		final var draft = CalculationDraft.create().withApplicationMonth("2026-06").withIncomeSum(BigDecimal.ZERO);
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(new ProposalBasisService.ProposalBasis(draft, household,
