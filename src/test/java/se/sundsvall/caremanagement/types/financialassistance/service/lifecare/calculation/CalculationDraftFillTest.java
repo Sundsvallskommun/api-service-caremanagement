@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
@@ -78,6 +79,40 @@ class CalculationDraftFillTest {
 		assertThat(objects(calculation, "calculationIncomes"))
 			.extracting(row -> row.path("incomeCode").intValue(), row -> row.path("amountApplicant").doubleValue())
 			.containsExactly(tuple(1, 5000.0));
+	}
+
+	@Test
+	void carriesTheDraftsNotesAndDatesOntoLifecaresIncomeRows() {
+		// Lifecare shows where an amount came from and when it was paid, as the draft did; one type's rows share a row.
+		final var draft = draft().withIncomes(List.of(
+			NormIncomeRow.create().withTypeName("Lön efter skatt").withApplicantEffectiveAmount(BigDecimal.valueOf(5000))
+				.withApplicantAmountDate(OffsetDateTime.parse("2026-08-25T00:00:00Z")).withNote("SSBTEK: Lön"),
+			NormIncomeRow.create().withTypeId(27).withApplicantEffectiveAmount(BigDecimal.valueOf(599))
+				.withApplicantAmountDate(OffsetDateTime.parse("2026-09-24T00:00:00Z")).withNote("Ansökan: Swish/kontoinsättningar"),
+			NormIncomeRow.create().withTypeId(27).withApplicantEffectiveAmount(BigDecimal.valueOf(100))
+				.withApplicantAmountDate(OffsetDateTime.parse("2026-09-02T00:00:00+02:00")).withNote("Ansökan: Swish/kontoinsättningar")
+				.withCoapplicantEffectiveAmount(BigDecimal.valueOf(40)).withCoapplicantAmountDate(OffsetDateTime.parse("2026-09-10T00:00:00Z")),
+			NormIncomeRow.create().withTypeId(27).withApplicantEffectiveAmount(BigDecimal.TEN).withNote("Handläggarens tillägg"),
+			NormIncomeRow.create().withTypeId(27).withApplicantAmountDate(OffsetDateTime.parse("2026-12-24T00:00:00Z"))));
+
+		final var calculation = fill(draft, APPLICANT_NUMBER);
+
+		assertThat(objects(calculation, "calculationIncomes"))
+			.extracting(row -> row.path("incomeCode").intValue(), row -> row.path("applicantNote").stringValue(null), row -> row.path("applicantSearchDate").stringValue(),
+				row -> row.path("coApplicantSearchDate").stringValue())
+			.containsExactly(
+				tuple(1, "SSBTEK: Lön", "2026-08-25", ""),
+				tuple(27, "Ansökan: Swish/kontoinsättningar; Handläggarens tillägg", "2026-09-24", "2026-09-10"));
+	}
+
+	@Test
+	void anIncomeWithoutNoteOrDateLeavesThemEmpty() {
+		final var draft = draft().withIncomes(List.of(NormIncomeRow.create().withTypeId(27).withApplicantEffectiveAmount(BigDecimal.ONE).withNote(" ")));
+
+		final var row = objects(fill(draft, APPLICANT_NUMBER), "calculationIncomes").get(1);
+
+		assertThat(row.path("applicantNote").isNull()).isTrue();
+		assertThat(row.path("applicantSearchDate").stringValue()).isEmpty();
 	}
 
 	@Test

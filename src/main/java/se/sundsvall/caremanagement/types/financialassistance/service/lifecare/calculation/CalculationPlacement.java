@@ -35,6 +35,8 @@ final class CalculationPlacement {
 	static final String DEVIATION_DAYS = "deviationDays";
 	static final String AMOUNT_APPLICANT = "amountApplicant";
 	static final String GROSS_AMOUNT_APPLICANT = "grossAmountApplicant";
+	static final String GROSS_AMOUNT_CO_APPLICANT = "grossAmountCoApplicant";
+	static final String AMOUNT_CO_APPLICANT = "amountCoApplicant";
 	static final String INCOME_CODE = "incomeCode";
 	static final String HOUSEHOLD_SIZE = "householdSize";
 	static final String HAS_CUSTOM_HOUSEHOLD_SIZE = "hasCustomHouseholdSize";
@@ -110,12 +112,19 @@ final class CalculationPlacement {
 	}
 
 	/**
-	 * Counts jobbstimulans on the applicant's incomes the way the web app sends it: on an income type jobbstimulans
-	 * applies to, the entered amount is the gross and the counted amount what is left once the type's percent is taken
-	 * off (Lön efter skatt 5 000 at 25 % goes as 5 000 gross and 3 750 counted). Only when Lifecare has marked the
-	 * applicant as having jobbstimulans in the period.
+	 * Counts jobbstimulans on the incomes the way the web app sends it. Every income goes with its gross equal to its
+	 * amount, for the applicant and the co-applicant alike: Lifecare takes gross minus amount as the jobbstimulans
+	 * deduction, so a row left at gross 0 (as careM's first save made them until 2026-09-25) shows the whole income as a
+	 * deduction in Lifecare's summering. Then, on an income type jobbstimulans applies to, the entered amount is the
+	 * gross and the counted amount what is left once the type's percent is taken off (Lön efter skatt 5 000 at 25 % goes
+	 * as 5 000 gross and 3 750 counted) - only when Lifecare has marked the applicant as having jobbstimulans in the
+	 * period.
 	 */
 	static ObjectNode withJobStimulusIncomes(final ObjectNode calculation, final JsonNode types) {
+		objects(calculation, INCOMES).forEach(row -> {
+			row.set(GROSS_AMOUNT_APPLICANT, grossOf(row, AMOUNT_APPLICANT));
+			row.set(GROSS_AMOUNT_CO_APPLICANT, grossOf(row, AMOUNT_CO_APPLICANT));
+		});
 		if (!isTrue(calculation, "hasApplicantJobStimuli")) {
 			return calculation;
 		}
@@ -132,6 +141,15 @@ final class CalculationPlacement {
 			row.set(GROSS_AMOUNT_APPLICANT, gross);
 		});
 		return calculation;
+	}
+
+	/** A side's amount as its gross; a side without an amount has gross 0. */
+	private static JsonNode grossOf(final ObjectNode row, final String amountField) {
+		final var amount = row.path(amountField);
+		if (amount.isNumber()) {
+			return amount.deepCopy();
+		}
+		return numberNode(0);
 	}
 
 	/** The type in a Lifecare catalogue (an array of {id, text, ...}) with the id. */

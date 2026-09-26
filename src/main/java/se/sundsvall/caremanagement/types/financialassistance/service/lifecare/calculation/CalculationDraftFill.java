@@ -1,11 +1,17 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
@@ -55,6 +61,9 @@ final class CalculationDraftFill {
 	private static final String APPLIED_AMOUNT = "appliedAmount";
 	private static final String APPROVED_AMOUNT = "approvedAmount";
 	private static final String NOTE = "note";
+	private static final String APPLICANT_NOTE = "applicantNote";
+	private static final String APPLICANT_SEARCH_DATE = "applicantSearchDate";
+	private static final String CO_APPLICANT_SEARCH_DATE = "coApplicantSearchDate";
 	private static final int LIFECARE_NOTE_MAX_LENGTH = 80;
 	private static final String TEXT = "text";
 
@@ -165,6 +174,7 @@ final class CalculationDraftFill {
 		final JsonNode calculationId, final List<String> unknown) {
 		// Every row starts from nothing, so a row the draft no longer has goes to 0, and Lifecare drops it.
 		final var rows = new ArrayList<ObjectNode>();
+		final var provenance = new IdentityHashMap<ObjectNode, List<NormIncomeRow>>();
 		base.forEach(row -> {
 			final var copy = row.deepCopy();
 			copy.put(AMOUNT_APPLICANT, 0);
@@ -184,12 +194,47 @@ final class CalculationDraftFill {
 				continue;
 			}
 			final var code = type.get().path("id");
-			rows.stream().filter(row -> same(row.path("incomeCode"), code)).findFirst().ifPresentOrElse(existing -> {
-				existing.set(AMOUNT_APPLICANT, numberNode(number(existing, AMOUNT_APPLICANT) + applicant));
-				existing.set(AMOUNT_CO_APPLICANT, numberNode(number(existing, AMOUNT_CO_APPLICANT) + coApplicant));
-			}, () -> rows.add(newIncomeRow(calculationId, type.get(), applicant, coApplicant)));
+			final var row = rows.stream().filter(candidate -> same(candidate.path("incomeCode"), code)).findFirst().orElseGet(() -> {
+				final var created = newIncomeRow(calculationId, type.get(), 0, 0);
+				rows.add(created);
+				return created;
+			});
+			row.set(AMOUNT_APPLICANT, numberNode(number(row, AMOUNT_APPLICANT) + applicant));
+			row.set(AMOUNT_CO_APPLICANT, numberNode(number(row, AMOUNT_CO_APPLICANT) + coApplicant));
+			provenance.computeIfAbsent(row, _ -> new ArrayList<>()).add(income);
 		}
+		provenance.forEach(CalculationDraftFill::applyProvenance);
 		return rows;
+	}
+
+	/**
+	 * What the draft knew about where a Lifecare income row's amount came from — its note ("SSBTEK: …", "Ansökan: …",
+	 * the handläggare's own) and the date each side's amount is attributed to — carried onto the row, so the beräkning in
+	 * Lifecare shows the same as the draft did. Several draft rows of one type share a row: their notes are joined and
+	 * the latest date wins.
+	 */
+	private static void applyProvenance(final ObjectNode row, final List<NormIncomeRow> incomes) {
+		final var notes = incomes.stream().map(NormIncomeRow::getNote).filter(StringUtils::hasText).distinct().toList();
+		if (notes.isEmpty()) {
+			row.putNull(APPLICANT_NOTE);
+		} else {
+			row.put(APPLICANT_NOTE, toLifecareNote(String.join("; ", notes)));
+		}
+		row.put(APPLICANT_SEARCH_DATE, latestDay(incomes, NormIncomeRow::getApplicantEffectiveAmount, NormIncomeRow::getApplicantAmountDate));
+		row.put(CO_APPLICANT_SEARCH_DATE, latestDay(incomes, NormIncomeRow::getCoapplicantEffectiveAmount, NormIncomeRow::getCoapplicantAmountDate));
+	}
+
+	/** The latest date among the rows with an amount on that side, as Lifecare's day ({@code yyyy-MM-dd}); "" when none. */
+	private static String latestDay(final List<NormIncomeRow> incomes, final Function<NormIncomeRow, BigDecimal> amountOf,
+		final Function<NormIncomeRow, OffsetDateTime> dateOf) {
+		return incomes.stream()
+			.filter(income -> amount(amountOf.apply(income)) != 0)
+			.map(dateOf)
+			.filter(Objects::nonNull)
+			.map(OffsetDateTime::toLocalDate)
+			.max(Comparator.naturalOrder())
+			.map(LocalDate::toString)
+			.orElse("");
 	}
 
 	private static Optional<ObjectNode> incomeType(final JsonNode types, final NormIncomeRow income) {
@@ -208,10 +253,10 @@ final class CalculationDraftFill {
 		row.put("serialNumber", 0);
 		row.set("incomeType", type.path(TEXT).deepCopy());
 		row.set(AMOUNT_APPLICANT, numberNode(applicant));
-		row.put("applicantSearchDate", "");
-		row.putNull("applicantNote");
+		row.put(APPLICANT_SEARCH_DATE, "");
+		row.putNull(APPLICANT_NOTE);
 		row.set(AMOUNT_CO_APPLICANT, numberNode(coApplicant));
-		row.put("coApplicantSearchDate", "");
+		row.put(CO_APPLICANT_SEARCH_DATE, "");
 		row.put("grossAmountApplicant", 0);
 		row.put("grossAmountCoApplicant", 0);
 		row.set("incomeCode", type.path("id").deepCopy());

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.HouseholdSize;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.json;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.tree;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
@@ -37,8 +38,10 @@ class CalculationPlacementTest {
 		assertThat(rows.get(0).path("amountApplicant").intValue()).isEqualTo(3750);
 		assertThat(rows.get(0).path("amountApplicant").isInt()).isTrue();
 		assertThat(rows.get(0).path("grossAmountApplicant").intValue()).isEqualTo(5000);
-		assertThat(rows.get(1).has("grossAmountApplicant")).isFalse();
+		assertThat(rows.get(0).path("grossAmountCoApplicant").intValue()).isZero();
+		assertThat(rows.get(1).path("grossAmountApplicant").intValue()).isZero();
 		assertThat(rows.get(2).path("amountApplicant").intValue()).isEqualTo(800);
+		assertThat(rows.get(2).path("grossAmountApplicant").intValue()).isEqualTo(800);
 		assertThat(rows.get(3).path("amountApplicant").intValue()).isEqualTo(800);
 		assertThat(rows.get(4).path("amountApplicant").doubleValue()).isEqualTo(249.75);
 	}
@@ -49,6 +52,21 @@ class CalculationPlacementTest {
 			{"hasApplicantJobStimuli":false,"calculationIncomes":[{"incomeCode":1,"amountApplicant":5000}]}""");
 
 		assertThat(objects(withJobStimulusIncomes(calculation, tree(TYPES)), "calculationIncomes").getFirst().path("amountApplicant").intValue()).isEqualTo(5000);
+	}
+
+	@Test
+	void sendsEveryIncomeWithItsAmountAsGross() {
+		// Lifecare takes gross minus amount as the jobbstimulans deduction: a row left at gross 0 turns the whole income
+		// into a deduction in its summering (EB-26090046, 2026-09-25).
+		final var calculation = json("""
+			{"hasApplicantJobStimuli":false,"calculationIncomes":[
+			  {"incomeCode":19,"amountApplicant":9800,"grossAmountApplicant":0,"amountCoApplicant":1200,"grossAmountCoApplicant":0},
+			  {"incomeCode":1,"amountApplicant":1000,"grossAmountApplicant":0}]}""");
+
+		final var rows = objects(withJobStimulusIncomes(calculation, tree(TYPES)), "calculationIncomes");
+
+		assertThat(rows).extracting(row -> row.path("grossAmountApplicant").intValue(), row -> row.path("grossAmountCoApplicant").intValue())
+			.containsExactly(tuple(9800, 1200), tuple(1000, 0));
 	}
 
 	@Test
