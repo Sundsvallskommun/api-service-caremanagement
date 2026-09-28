@@ -401,7 +401,7 @@ class LifecareRecordServiceTest {
 
 		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 8), NOT_FOUND, LifecareRecordService.NO_PDF);
 		verify(client, never()).getPdf(anyString(), anyMap());
-		verify(caseHistoryService).listDocuments(eq(MUNICIPALITY_ID), any(), eq(LocalDate.of(2026, 9, 23)), eq(LocalDate.of(2026, 9, 23)));
+		verify(caseHistoryService).listDocuments(eq(MUNICIPALITY_ID), any(), eq(LocalDate.of(2026, Month.SEPTEMBER, 23)), eq(LocalDate.of(2026, Month.SEPTEMBER, 23)));
 	}
 
 	@Test
