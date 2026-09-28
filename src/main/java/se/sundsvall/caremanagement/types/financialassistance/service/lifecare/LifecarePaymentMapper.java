@@ -45,7 +45,7 @@ final class LifecarePaymentMapper {
 	 * @param  registered Lifecare's GetLatestPayments answer
 	 * @return            the options
 	 */
-	static LifecarePaymentOptions toPaymentOptions(final JsonNode underlag, final JsonNode registered) {
+	static LifecarePaymentOptions toPaymentOptions(final JsonNode underlag, final JsonNode registered, final String applicationMonth) {
 		final var methods = array(underlag, "paymentMethods");
 		return new LifecarePaymentOptions(
 			methods.stream().filter(method -> flag(method, "inUse")).map(LifecarePaymentMapper::toPaymentMethod).toList(),
@@ -55,7 +55,7 @@ final class LifecarePaymentMapper {
 			array(underlag, "paymentConcernMonths").stream()
 				.map(month -> new LifecarePaymentConcernMonth(toMonth(text(month, "concernMonth")), text(month, "displayMonth")))
 				.toList(),
-			toPaymentProposal(underlag, registered));
+			toPaymentProposal(underlag, registered, applicationMonth));
 	}
 
 	/**
@@ -113,24 +113,36 @@ final class LifecarePaymentMapper {
 	}
 
 	/**
-	 * The status for the application month: effectuated when a standing utbetalning on the insats concerns the month.
+	 * The status for the application month: effectuated when a standing utbetalning linked to the errand exists, or
+	 * otherwise when a standing utbetalning on the insats concerns the month. A linked
+	 * utbetalning is the errand's own statement of which payment is its, so it counts whatever month Lifecare files it
+	 * under - the same rule the process's effectuation check applies.
 	 *
 	 * @param  registered       Lifecare's GetLatestPayments answer
 	 * @param  applicationMonth the month, yyyy-MM
+	 * @param  linkedPaymentIds the Lifecare payment ids linked to the errand, never null
 	 * @return                  the status
 	 */
-	static LifecarePaymentStatus toPaymentStatus(final JsonNode registered, final String applicationMonth) {
+	static LifecarePaymentStatus toPaymentStatus(final JsonNode registered, final String applicationMonth, final List<String> linkedPaymentIds) {
 		final var month = applicationMonth.replaceFirst("-", "");
-		return latestStanding(elements(registered).stream().filter(payment -> month.equals(text(payment, "concernedMonth"))).toList())
+		final var linked = elements(registered).stream()
+			.filter(payment -> linkedPaymentIds.contains(Objects.toString(integer(payment, "paymentId"), "")))
+			.toList();
+		final var ofMonth = elements(registered).stream()
+			.filter(payment -> month.equals(text(payment, "concernedMonth")))
+			.toList();
+		return latestStanding(linked).or(() -> latestStanding(ofMonth))
 			.map(payment -> new LifecarePaymentStatus(applicationMonth, true, text(payment, "payDate"), decimal(payment, "amount"), text(payment, "statusText"), false))
 			.orElseGet(() -> new LifecarePaymentStatus(applicationMonth, false, null, null, null, false));
 	}
 
 	/**
-	 * The form's starting point, out of Lifecare alone: its proposed date, its first open month, what is left on the
-	 * saldon, and the payee the insats was last paid to.
+	 * The form's starting point: Lifecare's proposed date, the errand's application month when Lifecare offers it (else
+	 * Lifecare's first open month), what is left on the saldon, and the payee the insats was last paid to.
+	 *
+	 * @param applicationMonth the errand's month, yyyy-MM; null when the errand has none
 	 */
-	static LifecarePaymentProposal toPaymentProposal(final JsonNode underlag, final JsonNode registered) {
+	static LifecarePaymentProposal toPaymentProposal(final JsonNode underlag, final JsonNode registered, final String applicationMonth) {
 		final var remaining = array(underlag, "balances").stream()
 			.map(balance -> decimal(balance, "balanceAmount"))
 			.filter(Objects::nonNull)
@@ -151,9 +163,16 @@ final class LifecarePaymentMapper {
 		if (payDate != null && payDate.isString()) {
 			paymentDate = payDate.asString();
 		}
-		final var concernedMonth = array(underlag, "paymentConcernMonths").stream()
-			.findFirst()
+		// The errand's own month when Lifecare takes payments for it. Lifecare lists its open months oldest first, so
+		// the first one is usually the month before the one applied for - a payment filed there is not found as the
+		// errand's (EB-26090047).
+		final var offered = array(underlag, "paymentConcernMonths").stream()
 			.map(month -> toMonth(text(month, "concernMonth")))
+			.toList();
+		final var concernedMonth = offered.stream()
+			.filter(month -> month.equals(applicationMonth))
+			.findFirst()
+			.or(() -> offered.stream().findFirst())
 			.orElse(null);
 		BigDecimal amount = null;
 		if (remaining.signum() > 0) {
