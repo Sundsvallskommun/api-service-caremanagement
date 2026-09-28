@@ -32,6 +32,7 @@ import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_NEW;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * The Lifecare actualisation (case intake) surface — create a new actualisation for the application month, list the
@@ -202,7 +203,7 @@ public class FinancialAssistanceActualisationService {
 		try {
 			final var documents = attachmentService.readApplicationArchiveDocuments(errandId);
 			if (documents.isEmpty()) {
-				LOG.info("No application documents to archive for errand {}", errandId);
+				LOG.info("No application documents to archive for errand {}", sanitizeForLogging(errandId));
 				return NOTHING_TO_ARCHIVE_MESSAGE;
 			}
 
@@ -214,7 +215,7 @@ public class FinancialAssistanceActualisationService {
 			LOG.info("Archived {} application document(s) of errand {} to Lifecare actualisation {}", archived.size(), errandNumber, actualisationId);
 			return ARCHIVED_MESSAGE.formatted(String.join(", ", archived));
 		} catch (final Exception e) {
-			LOG.error("Failed to archive the application of errand {} to Lifecare actualisation {}: {}", errandId, actualisationId, e.getMessage(), e);
+			LOG.error("Failed to archive the application of errand {} to Lifecare actualisation {}: {}", sanitizeForLogging(errandId), actualisationId, e.getMessage(), e);
 			return ARCHIVE_FAILED_MESSAGE.formatted(e.getMessage());
 		}
 	}
@@ -228,8 +229,17 @@ public class FinancialAssistanceActualisationService {
 	 */
 	private String upload(final String municipalityId, final Integer actualisationId, final String errandNumber, final SourceFile document) {
 		final var merged = COMBINED_PDF_FILE_NAME.equals(document.fileName());
-		final var fileName = (merged ? ATTACHMENTS_ARCHIVE_FILE_NAME : APPLICATION_ARCHIVE_FILE_NAME).formatted(errandNumber);
-		final var title = (merged ? ATTACHMENTS_ARCHIVE_TITLE : APPLICATION_ARCHIVE_TITLE).formatted(errandNumber);
+		final String fileNameTemplate;
+		final String titleTemplate;
+		if (merged) {
+			fileNameTemplate = ATTACHMENTS_ARCHIVE_FILE_NAME;
+			titleTemplate = ATTACHMENTS_ARCHIVE_TITLE;
+		} else {
+			fileNameTemplate = APPLICATION_ARCHIVE_FILE_NAME;
+			titleTemplate = APPLICATION_ARCHIVE_TITLE;
+		}
+		final var fileName = fileNameTemplate.formatted(errandNumber);
+		final var title = titleTemplate.formatted(errandNumber);
 
 		actualisationService.uploadAttachment(municipalityId, actualisationId, fileName, document.content(),
 			DEFAULT_ARCHIVE_DOCUMENT_TYPE, DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE, title, DEFAULT_ARCHIVE_SENDER_NAME);

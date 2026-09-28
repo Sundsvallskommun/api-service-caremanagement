@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,16 +19,19 @@ public class CalculationResponse {
 	@Schema(description = "The id of the calculation created in Lifecare FamilyCare", examples = "4711")
 	private Integer calculationId;
 
-	@Schema(description = "SSBTEK incomes that could not be auto-transferred and must be reviewed", examples = "[\"Bostadstillägg (NOT_ON_WHITELIST)\"]")
+	@ArraySchema(schema = @Schema(implementation = String.class),
+		arraySchema = @Schema(description = "SSBTEK incomes that could not be auto-transferred and must be reviewed", examples = "[\"Bostadstillägg (NOT_ON_WHITELIST)\"]"))
 	private List<String> unhandledIncomes = new ArrayList<>();
 
-	@Schema(description = "Income types whose amount this month differs from the previous normberäkning beyond the threshold, or that are new since it", examples = "[\"Bostadsbidrag: 1250 kr i föregående normberäkning → 1300 kr nu\"]")
+	@ArraySchema(schema = @Schema(implementation = String.class),
+		arraySchema = @Schema(description = "Income types whose amount this month differs from the previous normberäkning beyond the threshold, or that are new since it", examples = "[\"Bostadsbidrag: 1250 kr i föregående normberäkning → 1300 kr nu\"]"))
 	private List<String> changeWarnings = new ArrayList<>();
 
 	@Schema(description = "Whether this month's calculation covers every income type the previous month's did — false means SSBTEK data is still missing and the process should poll again", examples = "true")
 	private boolean informationComplete = true;
 
-	@Schema(description = "Previous-month income types not yet present this month (the SSBTEK data still being awaited)", examples = "[\"Bostadsbidrag\"]")
+	@ArraySchema(schema = @Schema(implementation = String.class),
+		arraySchema = @Schema(description = "Previous-month income types not yet present this month (the SSBTEK data still being awaited)", examples = "[\"Bostadsbidrag\"]"))
 	private List<String> missingIncomeTypes = new ArrayList<>();
 
 	public static CalculationResponse create() {

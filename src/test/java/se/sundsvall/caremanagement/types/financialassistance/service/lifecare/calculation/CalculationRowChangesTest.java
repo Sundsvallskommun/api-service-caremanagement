@@ -162,6 +162,18 @@ class CalculationRowChangesTest {
 	}
 
 	@Test
+	void changingOnlyTheNoteOnAnExpenseDoesNotZeroTheApprovedAmount() {
+		final var saved = calculation(INCOME, EXPENSE.formatted(5000, 5000));
+
+		final var changed = changeExpense(saved, "E-3", NormberakningRowInput.create().withNote("bara en kommentar"));
+
+		final var row = objects(changed, "calculationExpenses").getFirst();
+		assertThat(row.path("approvedAmount").intValue()).isEqualTo(5000);
+		assertThat(row.path("appliedAmount").intValue()).isEqualTo(5000);
+		assertThat(row.path("note").stringValue()).isEqualTo("bara en kommentar");
+	}
+
+	@Test
 	void setsAMembersDaysAndNormintervallLeavingIngårFrånTillAsLifecareHasThem() {
 		final var changed = changePerson(calculation(), "2", NormberakningRowInput.create().withCaseworkerDays(10).withNormRowId(12));
 

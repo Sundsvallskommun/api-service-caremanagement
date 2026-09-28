@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +9,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
@@ -71,19 +69,11 @@ public class LifecareReminderService {
 	static final String NOT_ON_INSATS = "Bevakningen finns inte på insatsen i Lifecare";
 	static final String UNEXPECTED_ANSWER = "Lifecare answered %s without the expected object";
 
-	private static final ZoneId SWEDISH_TIME = ZoneId.of("Europe/Stockholm");
-
 	private final ProfessionalWebClient client;
 	private final LifecareErrandService errandService;
 	private final LifecareAccessRecorder recorder;
 	private final StakeholderService stakeholderService;
 	private final Clock clock;
-
-	@Autowired
-	LifecareReminderService(final ProfessionalWebClient client, final LifecareErrandService errandService, final LifecareAccessRecorder recorder,
-		final StakeholderService stakeholderService) {
-		this(client, errandService, recorder, stakeholderService, Clock.system(SWEDISH_TIME));
-	}
 
 	LifecareReminderService(final ProfessionalWebClient client, final LifecareErrandService errandService, final LifecareAccessRecorder recorder,
 		final StakeholderService stakeholderService, final Clock clock) {

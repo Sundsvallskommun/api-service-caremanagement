@@ -133,26 +133,20 @@ class LifecareErrandServiceTest {
 	}
 
 	@Test
-	void linkPaymentKeepsTheExistingOnes() {
-		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
-		entity.setLifecarePaymentIds(List.of("p1"));
-		when(financialAssistanceRepository.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
-
+	void linkPaymentInsertsTheIdAtomicallyInsteadOfReadModifyWrite() {
 		service.linkPayment(ERRAND, "p2");
 
-		verify(financialAssistanceErrandService).updateData(any(), any(), any(), dataCaptor.capture());
-		assertThat(dataCaptor.getValue().getLifecarePaymentIds()).containsExactly("p1", "p2");
+		verify(financialAssistanceRepository).linkPaymentIfAbsent(ERRAND_ID, "p2");
+		verify(financialAssistanceErrandService, never()).updateData(any(), any(), any(), any());
 	}
 
 	@Test
-	void linkPaymentAlreadyLinked() {
-		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
-		entity.setLifecarePaymentIds(List.of("p1"));
-		when(financialAssistanceRepository.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
-
+	void linkPaymentAlreadyLinkedIsANoOp() {
+		// The underlying insert is INSERT IGNORE against the (errand_id, lifecare_payment_id) primary key, so a payment
+		// already linked is silently a no-op — nothing here needs to read the existing list first.
 		service.linkPayment(ERRAND, "p1");
 
-		verify(financialAssistanceErrandService, never()).updateData(any(), any(), any(), any());
+		verify(financialAssistanceRepository).linkPaymentIfAbsent(ERRAND_ID, "p1");
 	}
 
 	@Test

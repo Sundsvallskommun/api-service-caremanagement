@@ -47,7 +47,7 @@ class CoCaseworkerServiceTest {
 	@Test
 	void addSavesEntityAndReturnsId() {
 		when(repositoryMock.existsByNamespaceAndMunicipalityIdAndErrandIdAndUserId(NAMESPACE, MUNICIPALITY_ID, ERRAND_ID, USER_ID)).thenReturn(false);
-		when(repositoryMock.save(any(CoCaseworkerEntity.class))).thenReturn(CoCaseworkerEntity.create().withId(CO_CASEWORKER_ID));
+		when(repositoryMock.saveAndFlush(any(CoCaseworkerEntity.class))).thenReturn(CoCaseworkerEntity.create().withId(CO_CASEWORKER_ID));
 
 		final var id = service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new AddCoCaseworker(USER_ID));
 
@@ -55,7 +55,7 @@ class CoCaseworkerServiceTest {
 		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		final ArgumentCaptor<CoCaseworkerEntity> captor = ArgumentCaptor.forClass(CoCaseworkerEntity.class);
-		verify(repositoryMock).save(captor.capture());
+		verify(repositoryMock).saveAndFlush(captor.capture());
 		assertThat(captor.getValue().getErrandId()).isEqualTo(ERRAND_ID);
 		assertThat(captor.getValue().getMunicipalityId()).isEqualTo(MUNICIPALITY_ID);
 		assertThat(captor.getValue().getNamespace()).isEqualTo(NAMESPACE);
@@ -72,7 +72,7 @@ class CoCaseworkerServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
-		verify(repositoryMock, never()).save(any());
+		verify(repositoryMock, never()).saveAndFlush(any());
 	}
 
 	@Test
@@ -84,7 +84,21 @@ class CoCaseworkerServiceTest {
 			.hasFieldOrPropertyWithValue("status", CONFLICT)
 			.hasMessage("Conflict: User 'jane01doe' is already a co-caseworker on errand 'errand-1'");
 
-		verify(repositoryMock, never()).save(any());
+		verify(repositoryMock, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void addRacingConcurrentAddConflicts() {
+		// Two concurrent adds of the same user can both pass the exists-check; the unique constraint then rejects the
+		// loser's insert with a DataIntegrityViolationException, which must surface as the same CONFLICT the check gives.
+		when(repositoryMock.existsByNamespaceAndMunicipalityIdAndErrandIdAndUserId(NAMESPACE, MUNICIPALITY_ID, ERRAND_ID, USER_ID)).thenReturn(false);
+		when(repositoryMock.saveAndFlush(any(CoCaseworkerEntity.class)))
+			.thenThrow(new org.springframework.dao.DataIntegrityViolationException("uc_co_caseworker_errand_id_user_id"));
+
+		assertThatThrownBy(() -> service.add(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new AddCoCaseworker(USER_ID)))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: User 'jane01doe' is already a co-caseworker on errand 'errand-1'");
 	}
 
 	@Test

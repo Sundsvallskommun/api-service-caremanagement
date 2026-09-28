@@ -1,10 +1,12 @@
 package se.sundsvall.caremanagement.types.financialassistance.integration.db;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +17,15 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 public interface FinancialAssistanceRepository extends JpaRepository<FinancialAssistanceEntity, String> {
 
 	Optional<FinancialAssistanceEntity> findByErrandId(String errandId);
+
+	/**
+	 * Same lookup as {@link #findByErrandId(String)}, but with a pessimistic write lock on the errand's row. Used by
+	 * finalize() to make its "not already finalized" check-then-act atomic: two concurrent finalize calls for the same
+	 * errand must not both pass the check before either commits.
+	 */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select fa from FinancialAssistanceEntity fa where fa.errandId = :errandId")
+	Optional<FinancialAssistanceEntity> findByErrandIdForUpdate(@Param("errandId") String errandId);
 
 	/**
 	 * Errand ids of every financial-assistance application where the given party appears in any role (applicant or
@@ -53,4 +64,15 @@ public interface FinancialAssistanceRepository extends JpaRepository<FinancialAs
 		where fa.errandId = :errandId and fa.lifecareCalculationId is null
 		""")
 	int linkLifecareCalculationIfAbsent(@Param("errandId") String errandId, @Param("lifecareCalculationId") Integer lifecareCalculationId);
+
+	/**
+	 * Adds one Lifecare payment id to the errand's linked payments, atomically. {@code errand_fa_lifecare_payment} is
+	 * keyed on {@code (errand_id, lifecare_payment_id)}, so {@code INSERT IGNORE} is a no-op — not an error — when the id
+	 * is already linked. Deliberately not a read-modify-write of the whole {@code lifecarePaymentIds} list: two
+	 * registrations for the same errand racing each other must not have one overwrite the other's link.
+	 */
+	@Modifying
+	@Transactional
+	@Query(value = "insert ignore into errand_fa_lifecare_payment (errand_id, lifecare_payment_id) values (:errandId, :paymentId)", nativeQuery = true)
+	void linkPaymentIfAbsent(@Param("errandId") String errandId, @Param("paymentId") String paymentId);
 }

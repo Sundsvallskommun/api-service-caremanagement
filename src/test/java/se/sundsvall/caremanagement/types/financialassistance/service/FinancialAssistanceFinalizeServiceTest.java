@@ -123,7 +123,7 @@ class FinancialAssistanceFinalizeServiceTest {
 	private void awaitingDecision(final FinancialAssistanceEntity entity) {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Decision.create().withDecisionType("RECOMMENDATION").withValue("OK")));
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.ofNullable(entity));
+		when(repositoryMock.findByErrandIdForUpdate(ERRAND_ID)).thenReturn(Optional.ofNullable(entity));
 	}
 
 	/** As {@link #awaitingDecision}, and the decision row is created. */
@@ -141,6 +141,20 @@ class FinancialAssistanceFinalizeServiceTest {
 		verify(repositoryMock, never()).save(any());
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 		verifyNoInteractions(processServiceMock, calculationDraftRepositoryMock);
+	}
+
+	@Test
+	void finalizeLocksTheErrandsRowBeforeCheckingItIsNotAlreadyFinalized() {
+		readyErrand(grantable());
+
+		service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
+
+		// The row must be locked (findByErrandIdForUpdate, not the plain findByErrandId) before the "already finalized"
+		// check runs, so two concurrent finalize calls for the same errand cannot both pass it.
+		final var inOrder = inOrder(repositoryMock, decisionServiceMock);
+		inOrder.verify(repositoryMock).findByErrandIdForUpdate(ERRAND_ID);
+		inOrder.verify(decisionServiceMock).readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(repositoryMock, never()).findByErrandId(ERRAND_ID);
 	}
 
 	@Test
@@ -313,6 +327,7 @@ class FinancialAssistanceFinalizeServiceTest {
 	@Test
 	void alreadyFinalizedYields409() {
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
+		when(repositoryMock.findByErrandIdForUpdate(ERRAND_ID)).thenReturn(Optional.of(grantable()));
 		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(Decision.create().withDecisionType("PAYMENT").withValue("BIFALL")));
 		final var request = grantingRequest();
 
@@ -321,8 +336,10 @@ class FinancialAssistanceFinalizeServiceTest {
 			.hasFieldOrPropertyWithValue("status", CONFLICT)
 			.hasMessageContaining("already carries a PAYMENT decision");
 
+		// The row is locked (findByErrandIdForUpdate) to make this check atomic, but nothing is ever written.
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
-		verifyNoInteractions(repositoryMock, processServiceMock);
+		verify(repositoryMock, never()).save(any());
+		verifyNoInteractions(processServiceMock);
 	}
 
 	@ParameterizedTest
@@ -463,7 +480,10 @@ class FinancialAssistanceFinalizeServiceTest {
 
 	@Test
 	void missingTypedErrandYields404() {
-		awaitingDecision(null);
+		// The row lookup (and its lock) now happens before requireNotFinalized, so the 404 fires without ever reading
+		// the errand's decisions — decisionServiceMock is deliberately left unstubbed.
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
+		when(repositoryMock.findByErrandIdForUpdate(ERRAND_ID)).thenReturn(Optional.empty());
 		final var request = grantingRequest();
 
 		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))

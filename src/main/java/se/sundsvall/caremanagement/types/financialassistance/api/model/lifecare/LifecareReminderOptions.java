@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -7,10 +8,10 @@ import java.util.Objects;
 @Schema(description = "The priorities and statuses a bevakning can have, as Lifecare lists them, and what Lifecare proposes for a new one.")
 public class LifecareReminderOptions {
 
-	@Schema(description = "The active priorities")
+	@ArraySchema(schema = @Schema(implementation = LifecareReminderChoice.class), arraySchema = @Schema(description = "The active priorities"))
 	private List<LifecareReminderChoice> priorities;
 
-	@Schema(description = "The active statuses")
+	@ArraySchema(schema = @Schema(implementation = LifecareReminderChoice.class), arraySchema = @Schema(description = "The active statuses"))
 	private List<LifecareReminderChoice> statuses;
 
 	@Schema(description = "The priority Lifecare proposes for a new bevakning", examples = "2")

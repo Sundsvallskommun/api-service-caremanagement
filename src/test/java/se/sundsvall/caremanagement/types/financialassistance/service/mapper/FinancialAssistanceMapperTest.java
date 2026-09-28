@@ -186,53 +186,19 @@ class FinancialAssistanceMapperTest {
 			.withCreated(CREATED)
 			.withModified(MODIFIED);
 
+		// Everything toEntity(fullData(), ...) would produce, except the server-owned fields — those come from the
+		// pre-existing entity above, not from the client data, however fullData()'s own applicationType (NEW) is
+		// deliberately ignored.
+		final var expected = FinancialAssistanceMapper.toEntity(fullData(), "errand-1")
+			.withApplicationType("RENEWAL")
+			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withCreated(CREATED)
+			.withModified(MODIFIED);
+
 		final var result = FinancialAssistanceMapper.updateEntity(entity, fullData());
 
 		assertThat(result).isSameAs(entity);
-		// server-owned fields untouched (fullData carries applicationType NEW — must be ignored)
-		assertThat(result.getErrandId()).isEqualTo("errand-1");
-		assertThat(result.getApplicationType()).isEqualTo("RENEWAL");
-		assertThat(result.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
-		assertThat(result.getCreated()).isEqualTo(CREATED);
-		assertThat(result.getModified()).isEqualTo(MODIFIED);
-		// client fields replaced; the finalize-owned fields are not client data and stay untouched (null here)
-		assertThat(result).hasNoNullFieldsOrPropertiesExcept("householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter",
-			"lifecareServiceId");
-		assertThat(result.getMaritalStatus()).isEqualTo("SINGLE");
-		assertThat(result.getPeriodMonth()).isEqualTo(6);
-		assertThat(result.getPeriodYear()).isEqualTo(2026);
-		assertThat(result.getPeriodChoice()).isEqualTo("CURRENT_MONTH");
-		assertThat(result.getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
-		assertThat(result.getOtherBenefitDescription()).isEqualTo("Establishment benefit");
-		assertThat(result.getLivelihoodDescription()).isEqualTo("Söker arbete");
-		assertThat(result.getHasChildrenUnder21()).isTrue();
-		assertThat(result.getChildrenResidenceChanged()).isFalse();
-		assertThat(result.getChildrenResidenceChangeDescription()).isEqualTo("Bor växelvis");
-		assertThat(result.getHousingForm()).isEqualTo("RENTAL");
-		assertThat(result.getHousingPersonCount()).isEqualTo(3);
-		assertThat(result.getHousingRoomsPlusKitchen()).isEqualTo(3);
-		assertThat(result.getHousingDescription()).isEqualTo("Trerumslägenhet");
-		assertThat(result.getHousingChanged()).isFalse();
-		assertThat(result.getHousingChangeDescription()).isEqualTo("Flyttade i maj");
-		assertThat(result.getHasIncomes()).isTrue();
-		assertThat(result.getHasPendingBenefits()).isTrue();
-		assertThat(result.getHasAssets()).isTrue();
-		assertThat(result.getStaysInMunicipality()).isTrue();
-		assertThat(result.getStayDescription()).isEqualTo("Lives at the registered address");
-		assertThat(result.getAttestation()).isTrue();
-		assertThat(result.getAttestedAt()).isEqualTo(ATTESTED_AT);
-		assertThat(result.getLifecareDecisionId()).isEqualTo(4711);
-		assertThat(result.getLifecareCalculationId()).isEqualTo(4242);
-		assertThat(result.getLifecarePaymentIds()).containsExactly("90210", "90211");
-		assertThat(result.getChildren()).hasSize(1);
-		assertThat(result.getCosts()).hasSize(1);
-		assertThat(result.getIncomes()).hasSize(1);
-		assertThat(result.getPendingBenefits()).hasSize(1);
-		assertThat(result.getAssets()).hasSize(1);
-		assertThat(result.getPersons()).hasSize(1);
-		assertThat(result.getPlannings()).hasSize(1);
-		assertThat(result.getPlannedActivities()).hasSize(1);
-		assertThat(result.getJobApplications()).hasSize(1);
+		assertThat(result).usingRecursiveComparison().isEqualTo(expected);
 	}
 
 	@Test

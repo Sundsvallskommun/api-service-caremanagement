@@ -47,8 +47,8 @@ class ProfessionalWebClientTest {
 		wireMock.start();
 
 		final var properties = properties("user", "sec ret&1", Duration.ofMinutes(20));
-		final var http = new ProfessionalWebHttp(HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build(), Duration.ofSeconds(5));
-		session = new ProfessionalWebSession(properties, new ProfessionalWebSignIn(properties, http), http);
+		final var http = new ProfessionalWebHttp(HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build(), properties);
+		session = new ProfessionalWebSession(properties, new ProfessionalWebSignIn(properties, http), http, Clock.systemUTC());
 		client = new ProfessionalWebClient(new DirectProfessionalWebTransport(properties, session, http));
 
 		stubSignIn();
@@ -159,8 +159,8 @@ class ProfessionalWebClientTest {
 	@Test
 	void unconfigured() {
 		final var properties = new ProfessionalWebProperties(null, null, "a", "saml", null, null, null, Duration.ofMinutes(1), 1, 1, "d", "c", null);
-		final var http = new ProfessionalWebHttp(HttpClient.newHttpClient(), Duration.ofSeconds(1));
-		final var unconfigured = new ProfessionalWebClient(new DirectProfessionalWebTransport(properties, new ProfessionalWebSession(properties, new ProfessionalWebSignIn(properties, http), http), http));
+		final var http = new ProfessionalWebHttp(HttpClient.newHttpClient(), properties);
+		final var unconfigured = new ProfessionalWebClient(new DirectProfessionalWebTransport(properties, new ProfessionalWebSession(properties, new ProfessionalWebSignIn(properties, http), http, Clock.systemUTC()), http));
 
 		assertThatThrownBy(() -> unconfigured.get("api2/x", Map.of())).hasMessageContaining("not configured");
 	}
@@ -168,7 +168,7 @@ class ProfessionalWebClientTest {
 	@Test
 	void sessionPastItsTtlIsReplaced() {
 		final var properties = properties("user", "pw", Duration.ofMinutes(20));
-		final var http = new ProfessionalWebHttp(HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build(), Duration.ofSeconds(5));
+		final var http = new ProfessionalWebHttp(HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build(), properties);
 		final var clock = new MutableClock(Instant.parse("2026-09-25T08:00:00Z"));
 		final var timedSession = new ProfessionalWebSession(properties, new ProfessionalWebSignIn(properties, http), http, clock);
 
@@ -211,7 +211,7 @@ class ProfessionalWebClientTest {
 	@Test
 	void noAccount() {
 		final var properties = properties(null, null, Duration.ofMinutes(20));
-		final var http = new ProfessionalWebHttp(HttpClient.newHttpClient(), Duration.ofSeconds(1));
+		final var http = new ProfessionalWebHttp(HttpClient.newHttpClient(), properties);
 		final var signIn = new ProfessionalWebSignIn(properties, http);
 
 		assertThatThrownBy(() -> signIn.signIn(new ProfessionalWebCookies())).hasMessageContaining("No Lifecare account configured");

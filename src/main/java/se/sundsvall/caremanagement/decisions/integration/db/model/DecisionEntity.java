@@ -321,8 +321,8 @@ public class DecisionEntity {
 	@Override
 	public String toString() {
 		return "DecisionEntity{id='" + id + "', errandId='" + errandId + "', decisionType='" + decisionType
-			+ "', value='" + value + "', coApplicantReason='" + coApplicantReason + "', amount=" + amount + ", decisionDate=" + decisionDate
+			+ "', value='" + value + "', amount=" + amount + ", decisionDate=" + decisionDate
 			+ ", periodFrom=" + periodFrom + ", periodTo=" + periodTo + ", createdBy='" + createdBy + "', lifecareStatus='" + lifecareStatus
-			+ "', lifecareId='" + lifecareId + "', lifecareDetail='" + lifecareDetail + "', created=" + created + '}';
+			+ "', lifecareId='" + lifecareId + "', created=" + created + '}';
 	}
 }

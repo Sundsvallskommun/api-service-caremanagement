@@ -45,7 +45,7 @@ class SearchHitsCollector implements ResponseBodyAdvice<Object> {
 
 	@Override
 	public boolean supports(final MethodParameter returnType, final Class<? extends org.springframework.http.converter.HttpMessageConverter<?>> converterType) {
-		return true;
+		return FindErrandsResponse.class.isAssignableFrom(returnType.getParameterType());
 	}
 
 	@Override

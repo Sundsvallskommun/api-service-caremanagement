@@ -8,7 +8,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import se.sundsvall.dept44.problem.Problem;
 
@@ -47,14 +46,8 @@ public class ProfessionalWebSession {
 	private final ProfessionalWebCookies cookies = new ProfessionalWebCookies();
 	private final Set<String> bootstrappedModules = ConcurrentHashMap.newKeySet();
 	private final Object signInLock = new Object();
-	private final Object bootstrapLock = new Object();
 
 	private volatile Instant establishedAt;
-
-	@Autowired
-	public ProfessionalWebSession(final ProfessionalWebProperties properties, final ProfessionalWebSignIn signIn, final ProfessionalWebHttp http) {
-		this(properties, signIn, http, Clock.systemUTC());
-	}
 
 	ProfessionalWebSession(final ProfessionalWebProperties properties, final ProfessionalWebSignIn signIn, final ProfessionalWebHttp http, final Clock clock) {
 		this.properties = properties;
@@ -75,10 +68,6 @@ public class ProfessionalWebSession {
 			throw Problem.valueOf(BAD_GATEWAY, "Lifecare ProfessionalWeb is not configured (integration.lifecare-professionalweb.url is unset)");
 		}
 		seedConfiguration();
-		if (isExpired()) {
-			LOG.info("Lifecare session has passed its TTL - signing in again");
-			reset();
-		}
 		authenticate();
 
 		final var headers = new LinkedHashMap<String, String>();
@@ -94,7 +83,7 @@ public class ProfessionalWebSession {
 	 * @param module the Lifecare module
 	 */
 	public void bootstrapModule(final String module) {
-		synchronized (bootstrapLock) {
+		synchronized (signInLock) {
 			if (bootstrappedModules.contains(module)) {
 				return;
 			}
@@ -161,18 +150,22 @@ public class ProfessionalWebSession {
 	}
 
 	private void authenticate() {
-		if (isEstablished()) {
+		if (isEstablished() && !isExpired()) {
 			return;
 		}
 		synchronized (signInLock) {
-			// Whoever held the lock before us may already have signed in.
-			if (isEstablished()) {
+			// Whoever held the lock before us may already have signed in (or renewed a session someone else found expired).
+			if (isEstablished() && !isExpired()) {
 				return;
 			}
+			if (isExpired()) {
+				LOG.info("Lifecare session has passed its TTL - signing in again");
+			}
 			LOG.info("Establishing a Lifecare session as the integration account");
-			// Start from nothing: a failed attempt may have left half a flow's cookies behind.
+			// Start from nothing: a failed attempt (or an expired session) may have left half a flow's cookies behind.
 			cookies.clear();
 			bootstrappedModules.clear();
+			establishedAt = null;
 			seedConfiguration();
 			signIn.signIn(cookies);
 			establishedAt = clock.instant();

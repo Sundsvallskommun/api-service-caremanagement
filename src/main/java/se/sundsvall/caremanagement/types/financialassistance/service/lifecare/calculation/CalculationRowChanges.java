@@ -253,7 +253,9 @@ final class CalculationRowChanges {
 		if (input.getAppliedAmount() != null) {
 			row.set(APPLIED_AMOUNT, numberNode(input.getAppliedAmount()));
 		}
-		row.set(APPROVED_AMOUNT, amountNode(input.getCaseworkerAmount()));
+		if (input.getCaseworkerAmount() != null) {
+			row.set(APPROVED_AMOUNT, amountNode(input.getCaseworkerAmount()));
+		}
 		row.put(NOTE, input.getNote());
 		return calculation;
 	}

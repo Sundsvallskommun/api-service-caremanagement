@@ -9,7 +9,6 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.core.service.ErrandService;
@@ -64,13 +63,6 @@ public class FinancialAssistancePaymentService {
 	private final DecisionService decisionService;
 	private final LifecareServiceIdService lifecareServiceIdService;
 	private final Clock clock;
-
-	@Autowired
-	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final DecisionService decisionService,
-		final LifecareServiceIdService lifecareServiceIdService) {
-		this(paymentStatusService, errandService, financialAssistanceRepository, decisionService, lifecareServiceIdService,
-			Clock.system(SWEDISH_TIME));
-	}
 
 	FinancialAssistancePaymentService(final PaymentStatusService paymentStatusService, final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final DecisionService decisionService,
 		final LifecareServiceIdService lifecareServiceIdService, final Clock clock) {

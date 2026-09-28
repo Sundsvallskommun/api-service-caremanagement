@@ -85,4 +85,27 @@ public record ProfessionalWebProperties(
 		}
 		return url.replaceAll("/+$", "");
 	}
+
+	/**
+	 * Redacts {@code username} and {@code password}: both are secrets and must never end up in a log line via
+	 * {@code LOG.debug("config: {}", properties)}, an actuator {@code /configprops} dump, or any other implicit
+	 * {@code toString()}.
+	 */
+	@Override
+	public String toString() {
+		return "ProfessionalWebProperties{url=" + url + ", domain=" + domain + ", actor=" + actor + ", idpMethod=" + idpMethod
+			+ ", federationProfile=" + federationProfile + ", username=" + redacted(username)
+			+ ", password=" + redacted(password) + ", sessionTtl=" + sessionTtl
+			+ ", connectTimeout=" + connectTimeout + ", readTimeout=" + readTimeout
+			+ ", decisionPrintTemplateId=" + decisionPrintTemplateId + ", calculationPrintTemplateId=" + calculationPrintTemplateId
+			+ ", testDecisionMaker=" + testDecisionMaker + "}";
+	}
+
+	/** {@code null} stays {@code null} (unset, worth knowing); anything else is a secret and is never printed. */
+	private static String redacted(final String secret) {
+		if (secret == null) {
+			return null;
+		}
+		return "***";
+	}
 }

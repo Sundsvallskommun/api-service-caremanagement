@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.cocaseworkers.service;
 
 import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +46,14 @@ public class CoCaseworkerService {
 			.withUserId(request.userId())
 			.withCreated(now(systemDefault()).truncatedTo(MILLIS));
 
-		return coCaseworkerRepository.save(entity).getId();
+		try {
+			return coCaseworkerRepository.saveAndFlush(entity).getId();
+		} catch (final DataIntegrityViolationException e) {
+			// The exists-check above raced a concurrent add of the same user on this errand and lost; the unique
+			// constraint (uc_co_caseworker_errand_id_user_id) is the actual guarantee, this check-then-act was only best
+			// effort. Report the same CONFLICT the check would have given.
+			throw Problem.valueOf(CONFLICT, ALREADY_ADDED_MESSAGE.formatted(request.userId(), errandId));
+		}
 	}
 
 	@Transactional(readOnly = true)

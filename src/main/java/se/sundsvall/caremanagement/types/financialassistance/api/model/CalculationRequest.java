@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -38,14 +39,16 @@ public class CalculationRequest {
 	@Schema(description = "The incomes classified by the operaton rules (the evaluate-income-rules worker output), as JSON. When present, caremanagement maps these to FamilyCare income rows instead of fetching SSBTEK and evaluating the raw list itself.")
 	private String classifiedIncomes;
 
-	@Schema(description = "The unhandled-income warnings from the operaton rules, recorded on the errand recommendation")
+	@ArraySchema(schema = @Schema(implementation = String.class),
+		arraySchema = @Schema(description = "The unhandled-income warnings from the operaton rules, recorded on the errand recommendation"))
 	private List<String> unhandledIncomes;
 
 	/**
 	 * Not read since 2026-09-25: careM compares the incomes with the previous normberäkning itself (verksamhetens G4).
 	 * Kept so the engine, which still sends it, is not refused.
 	 */
-	@Schema(description = "Ignored. The period-over-period change warnings the operaton rules still send; caremanagement compares against the previous normberäkning itself")
+	@ArraySchema(schema = @Schema(implementation = String.class),
+		arraySchema = @Schema(description = "Ignored. The period-over-period change warnings the operaton rules still send; caremanagement compares against the previous normberäkning itself"))
 	private List<String> changeWarnings;
 
 	@Schema(

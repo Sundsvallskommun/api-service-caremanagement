@@ -35,7 +35,7 @@ class DecisionEntityTest {
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
 			hasValidBeanEquals(),
-			hasValidBeanToStringExcluding("description", "decisionMessage")));
+			hasValidBeanToStringExcluding("description", "decisionMessage", "coApplicantReason", "lifecareDetail")));
 	}
 
 	@Test

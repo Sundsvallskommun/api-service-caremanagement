@@ -185,7 +185,7 @@ final class CalculationJson {
 	}
 
 	/** A string field that JSON's empty string or null leaves unset. */
-	static String dateOrNull(final JsonNode node, final String field) {
+	static String textOrNull(final JsonNode node, final String field) {
 		final var value = text(node, field);
 		if (value == null || value.isEmpty()) {
 			return null;

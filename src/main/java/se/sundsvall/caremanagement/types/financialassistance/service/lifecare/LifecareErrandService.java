@@ -1,6 +1,5 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
-import java.util.ArrayList;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -127,20 +126,17 @@ public class LifecareErrandService {
 	/**
 	 * Adds a Lifecare payment to the ones linked to the errand, keeping the ones already there.
 	 *
+	 * <p>
+	 * An atomic insert, not a read-modify-write of the whole list: two registrations for the same errand racing each
+	 * other (e.g. two quick payment calls, or a payment call racing the daily job) must not have one overwrite the
+	 * other's link.
+	 * </p>
+	 *
 	 * @param errand    the errand
 	 * @param paymentId the Lifecare payment
 	 */
 	public void linkPayment(final LifecareErrand errand, final String paymentId) {
-		final var current = financialAssistanceRepository.findByErrandId(errand.errandId())
-			.map(FinancialAssistanceEntity::getLifecarePaymentIds)
-			.map(ArrayList::new)
-			.orElseGet(ArrayList::new);
-		if (current.contains(paymentId)) {
-			return;
-		}
-		current.add(paymentId);
-		financialAssistanceErrandService.updateData(errand.municipalityId(), errand.namespace(), errand.errandId(),
-			FinancialAssistanceData.create().withLifecarePaymentIds(current));
+		financialAssistanceRepository.linkPaymentIfAbsent(errand.errandId(), paymentId);
 	}
 
 	/**

@@ -121,6 +121,9 @@ public class LifecareCaseService {
 	 * Returns {@code null} when no actualisation carried a readable status — the vocabulary is not fully confirmed
 	 * against production data, so "unknown" is reported as such rather than guessed at.
 	 */
+	// java:S2447 — this is a deliberate tri-state Boolean (true/false/unknown), not a boxing mistake; defaulting the
+	// "unknown" case to false would misreport an unconfirmed status vocabulary as "case closed".
+	@SuppressWarnings("java:S2447")
 	private Boolean hasOpenCase(final List<PersonBasedAktualiseringDTO> actualisations) {
 		final var statuses = actualisations.stream()
 			.map(PersonBasedAktualiseringDTO::getStatus)

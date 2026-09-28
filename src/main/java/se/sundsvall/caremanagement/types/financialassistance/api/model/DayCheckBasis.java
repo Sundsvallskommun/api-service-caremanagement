@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -20,9 +21,10 @@ import java.util.Objects;
 	the day check is then not made at all.""")
 public class DayCheckBasis {
 
-	@Schema(description = """
-		Arbetsförmedlingen's economic-decision periods (af BeslutInfo.EkonomiskaBeslut.Beslut). An empty list means AF \
-		answered and reports no decision; null means AF was not read or could not answer.""")
+	@ArraySchema(schema = @Schema(implementation = EconomicDecisionPeriod.class),
+		arraySchema = @Schema(description = """
+			Arbetsförmedlingen's economic-decision periods (af BeslutInfo.EkonomiskaBeslut.Beslut). An empty list means AF \
+			answered and reports no decision; null means AF was not read or could not answer."""))
 	private List<EconomicDecisionPeriod> economicDecisionPeriods;
 
 	@Schema(description = """

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -41,8 +42,24 @@ class SearchHitsCollectorTest {
 	}
 
 	@Test
-	void supportsEveryBodySoTheAdviceIsConsultedAtAll() {
-		assertThat(collector.supports(null, null)).isTrue();
+	void supportsOnlyASearchResponseBody() throws NoSuchMethodException {
+		final var findErrandsReturnType = new MethodParameter(ReturnTypes.class.getDeclaredMethod("findErrands"), -1);
+		final var otherReturnType = new MethodParameter(ReturnTypes.class.getDeclaredMethod("readErrand"), -1);
+
+		assertThat(collector.supports(findErrandsReturnType, null)).isTrue();
+		assertThat(collector.supports(otherReturnType, null)).isFalse();
+	}
+
+	/** Stand-ins for a controller method's return type, so {@code supports()} can be exercised without a real resource. */
+	@SuppressWarnings("unused")
+	private static final class ReturnTypes {
+		static FindErrandsResponse findErrands() {
+			return null;
+		}
+
+		static Errand readErrand() {
+			return null;
+		}
 	}
 
 	@Test

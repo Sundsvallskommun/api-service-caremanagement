@@ -159,7 +159,7 @@ public final class ProposalMapper {
 	 */
 	public static boolean isAdvanceOnBenefit(final DecisionView decision) {
 		return ofNullable(decision.type())
-			.filter(type -> type.toLowerCase().contains("förskott"))
+			.filter(type -> type.toLowerCase(Locale.ROOT).contains("förskott"))
 			.isPresent();
 	}
 

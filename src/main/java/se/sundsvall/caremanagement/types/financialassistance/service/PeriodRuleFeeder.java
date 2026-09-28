@@ -86,7 +86,7 @@ public class PeriodRuleFeeder {
 	public List<WarningService.WarningInput> periodWarnings(final String municipalityId, final YearMonth controlMonth,
 		final List<ClassifiedIncome> classified, final DayCheckBasis basis) {
 
-		final var control = periodIncomes(ofNullable(classified).orElseGet(List::of), false);
+		final var control = periodIncomes(ofNullable(classified).orElseGet(List::of));
 		final var gate = gate(controlMonth, basis);
 		final var payments = control.stream().filter(PeriodRuleFeeder::isDayBenefit).toList();
 
@@ -150,9 +150,13 @@ public class PeriodRuleFeeder {
 	// Selection and arithmetic
 	// ------------------------------------------------------------------------------------------------------------
 
-	private static List<SsbtekIncome> periodIncomes(final List<ClassifiedIncome> classified, final boolean fromComparisonPeriod) {
+	/**
+	 * The kontrollperiod's incomes. Comparison-period incomes are never read here — verksamheten's 2026-09-25 decision
+	 * (see {@link IncomeChangeFeeder}'s javadoc) retired that branch, so this only ever selects the control period.
+	 */
+	private static List<SsbtekIncome> periodIncomes(final List<ClassifiedIncome> classified) {
 		return classified.stream()
-			.filter(income -> income.isFromComparisonPeriod() == fromComparisonPeriod)
+			.filter(income -> !income.isFromComparisonPeriod())
 			.map(ClassifiedIncome::income)
 			.filter(Objects::nonNull)
 			.toList();

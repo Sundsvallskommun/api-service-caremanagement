@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Objects;
@@ -7,10 +8,10 @@ import java.util.Objects;
 @Schema(description = "The applicant's Lifecare records, split into the two groups the tab shows.")
 public class LifecareRecords {
 
-	@Schema(description = "The journalanteckningar, in Lifecare's order")
+	@ArraySchema(schema = @Schema(implementation = LifecareRecord.class), arraySchema = @Schema(description = "The journalanteckningar, in Lifecare's order"))
 	private List<LifecareRecord> journalNotes;
 
-	@Schema(description = "The documents, in Lifecare's order")
+	@ArraySchema(schema = @Schema(implementation = LifecareRecord.class), arraySchema = @Schema(description = "The documents, in Lifecare's order"))
 	private List<LifecareRecord> documents;
 
 	public static LifecareRecords create() {

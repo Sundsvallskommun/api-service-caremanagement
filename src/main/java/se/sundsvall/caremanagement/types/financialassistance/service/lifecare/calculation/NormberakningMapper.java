@@ -45,7 +45,6 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.PERSONS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.SPECIAL_EXPENSES;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.BUCKET_SPECIAL_EXPENSE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.dateOrNull;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.decimal;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.elements;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.idOf;
@@ -55,6 +54,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.text;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.textOrEmpty;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.textOrNull;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.truthy;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.INCLUDED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.INCOME_CODE;
@@ -202,9 +202,9 @@ final class NormberakningMapper {
 			.withApplicationMonth(applicationMonth)
 			.withNormId(integerOrNull(calculation, "normId"))
 			.withNormTypeDisplayNames(normTypeDisplayNames)
-			.withCalculationFromDate(dateOrNull(calculation, "startDate"))
-			.withCalculationToDate(dateOrNull(calculation, "endDate"))
-			.withCalculationDate(dateOrNull(calculation, "date"))
+			.withCalculationFromDate(textOrNull(calculation, "startDate"))
+			.withCalculationToDate(textOrNull(calculation, "endDate"))
+			.withCalculationDate(textOrNull(calculation, "date"))
 			.withHasCustomHouseholdSize(truthy(calculation, "hasCustomHouseholdSize"))
 			.withHouseholdSize(integerOrNull(calculation, "householdSize"))
 			.withPersons(IntStream.range(0, persons.size()).mapToObj(index -> toLifecarePersonRow(persons.get(index), index, periodStart)).toList())
@@ -221,7 +221,7 @@ final class NormberakningMapper {
 			.withIncomeSum(decimal(calculation, "sumInk").orElse(null))
 			.withExpenseSum(decimal(calculation, "sumUtg").orElse(null))
 			.withSpecialExpenseSum(decimal(calculation, "sumSpec").orElse(null))
-			.withUpdated(dateOrNull(calculation, "updateTimestamp"))
+			.withUpdated(textOrNull(calculation, "updateTimestamp"))
 			.withSource(SOURCE_LIFECARE)
 			.withFinalized(truthy(calculation, "isFinalized"));
 	}
@@ -241,8 +241,8 @@ final class NormberakningMapper {
 			.withName(text(person, "name"))
 			.withIncluded(truthy(person, INCLUDED))
 			.withAmount(decimal(person, "amount").orElse(null))
-			.withDeviationFromDate(dateOrNull(person, "deviationFromDate"))
-			.withDeviationToDate(dateOrNull(person, "deviationToDate"))
+			.withDeviationFromDate(textOrNull(person, "deviationFromDate"))
+			.withDeviationToDate(textOrNull(person, "deviationToDate"))
 			.withEffectiveDays(days)
 			.withCaseworkerDays(days)
 			.withNormRowId(normRowId)
@@ -299,11 +299,11 @@ final class NormberakningMapper {
 			.withTypeName(text(row, "incomeType"))
 			.withApplicantCaseworkerAmount(applicant)
 			.withApplicantEffectiveAmount(applicant)
-			.withApplicantAmountDate(dateOrNull(row, "applicantSearchDate"))
+			.withApplicantAmountDate(textOrNull(row, "applicantSearchDate"))
 			.withCoapplicantCaseworkerAmount(decimal(row, "amountCoApplicant").orElse(null))
 			.withCoapplicantEffectiveAmount(decimal(row, "amountCoApplicant").orElse(null))
-			.withCoapplicantAmountDate(dateOrNull(row, "coApplicantSearchDate"))
-			.withNote(dateOrNull(row, "applicantNote"));
+			.withCoapplicantAmountDate(textOrNull(row, "coApplicantSearchDate"))
+			.withNote(textOrNull(row, "applicantNote"));
 		if (jobStimulusApplies) {
 			view.withApplicantJobStimulus(true).withApplicantCountedAmount(decimal(row, "amountApplicant").orElse(null));
 		}
@@ -326,7 +326,7 @@ final class NormberakningMapper {
 				.withAppliedAmount(decimal(row, "appliedAmount").orElse(null))
 				.withCaseworkerAmount(decimal(row, "approvedAmount").orElse(null))
 				.withEffectiveAmount(decimal(row, "approvedAmount").orElse(null))
-				.withNote(dateOrNull(row, "note"));
+				.withNote(textOrNull(row, "note"));
 		}).toList();
 	}
 

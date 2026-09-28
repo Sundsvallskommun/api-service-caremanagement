@@ -121,9 +121,11 @@ public class FinancialAssistanceFinalizeService {
 		requireDecider(decidedBy);
 		requireDecision(request);
 		requireStatus(errand.getStatus());
-		requireNotFinalized(municipalityId, namespace, errandId);
-		final var entity = financialAssistanceRepository.findByErrandId(errandId)
+		// Locks the errand's row for the rest of this transaction, so a concurrent finalize() blocks here rather than
+		// racing requireNotFinalized() below.
+		final var entity = financialAssistanceRepository.findByErrandIdForUpdate(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERROR_NO_TYPED_ERRAND.formatted(errandId)));
+		requireNotFinalized(municipalityId, namespace, errandId);
 		final var outcome = request.getDecision().getOutcome();
 		requireLifecareReferences(entity, errandId, outcome);
 

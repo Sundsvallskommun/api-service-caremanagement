@@ -253,9 +253,9 @@ public class FaPayeeEntity {
 
 	@Override
 	public String toString() {
-		return "FaPayeeEntity{id='" + id + "', errandId='" + errandId + "', name='" + name + "', paymentMethod='" + paymentMethod
-			+ "', clearing='" + clearing + "', accountNumber='" + accountNumber + "', lifecareStatus='" + lifecareStatus
-			+ "', lifecarePayeeId='" + lifecarePayeeId + "', lifecareDetail='" + lifecareDetail + "', created=" + created
+		return "FaPayeeEntity{id='" + id + "', errandId='" + errandId + "', paymentMethod='" + paymentMethod
+			+ "', lifecareStatus='" + lifecareStatus
+			+ "', lifecarePayeeId='" + lifecarePayeeId + "', created=" + created
 			+ ", modified=" + modified + "}";
 	}
 }

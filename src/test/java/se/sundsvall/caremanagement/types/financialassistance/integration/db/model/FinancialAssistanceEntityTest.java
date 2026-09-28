@@ -106,8 +106,8 @@ class FinancialAssistanceEntityTest {
 			.withCreated(CREATED)
 			.withModified(MODIFIED);
 
-		assertThat(entity).hasNoNullFieldsOrProperties();
 		assertThat(entity)
+			.hasNoNullFieldsOrProperties()
 			.returns("errand-1", FinancialAssistanceEntity::getErrandId)
 			.returns("NEW", FinancialAssistanceEntity::getApplicationType)
 			.returns("SINGLE", FinancialAssistanceEntity::getMaritalStatus)

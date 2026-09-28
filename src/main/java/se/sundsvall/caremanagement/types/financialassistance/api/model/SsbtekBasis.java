@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * One person's SSBTEK basis as the composite service answered it, plus the period the answer covers.
@@ -102,6 +103,7 @@ public class SsbtekBasis {
 	 */
 	@Override
 	public String toString() {
-		return "SsbtekBasis{from=" + from + ", to=" + to + ", agencies=" + Objects.toString(agencies == null ? null : agencies.keySet()) + "}";
+		final var agencyNames = Optional.ofNullable(agencies).map(Map::keySet).orElse(null);
+		return "SsbtekBasis{from=" + from + ", to=" + to + ", agencies=" + Objects.toString(agencyNames) + "}";
 	}
 }
