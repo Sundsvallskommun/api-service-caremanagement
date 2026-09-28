@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.math.BigDecimal;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -95,6 +96,16 @@ class ErrandLifecarePaymentServiceTest {
 
 		assertThat(status).isEqualTo(new LifecarePaymentStatus("2026-09", true, "2026-09-21", new BigDecimal("1.0"), null, false));
 		verify(accessRecorder).read(ERRAND, "PAYMENTS", "Läste utbetalningar i Lifecare");
+	}
+
+	@Test
+	void paymentStatusCountsTheLinkedUtbetalningFiledUnderAnotherMonth() {
+		final var october = new LifecareErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 1, null, null, List.of("4"), 2026, 10);
+		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(october);
+		when(paymentApi.readLatestPayments(1)).thenReturn(json(REGISTERED));
+
+		assertThat(service.paymentStatus(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.isEqualTo(new LifecarePaymentStatus("2026-10", true, "2026-09-21", new BigDecimal("1.0"), null, false));
 	}
 
 	@Test

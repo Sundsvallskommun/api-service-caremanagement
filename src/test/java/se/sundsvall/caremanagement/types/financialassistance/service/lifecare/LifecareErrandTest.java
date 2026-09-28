@@ -31,4 +31,13 @@ class LifecareErrandTest {
 		assertThatThrownBy(errand::requireServiceId).isInstanceOfSatisfying(ThrowableProblem.class,
 			problem -> assertThat(problem.getStatus().value()).isEqualTo(409));
 	}
+
+	@Test
+	void applicationMonth() {
+		assertThat(new LifecareErrand("2281", "NS", "e", 1, null, null, null, 2026, 9).applicationMonth()).contains("2026-09");
+		assertThat(new LifecareErrand("2281", "NS", "e", 1, null, null, null, 2026, null).applicationMonth()).isEmpty();
+		assertThat(new LifecareErrand("2281", "NS", "e", 1, null, null, null, null, 9).applicationMonth()).isEmpty();
+		assertThat(new LifecareErrand("2281", "NS", "e", 1, null, null, null, 0, 9).applicationMonth()).isEmpty();
+		assertThat(new LifecareErrand("2281", "NS", "e", 1, null, null, null, 2026, 0).applicationMonth()).isEmpty();
+	}
 }

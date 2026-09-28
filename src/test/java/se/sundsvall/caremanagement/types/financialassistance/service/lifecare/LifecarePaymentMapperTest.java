@@ -11,6 +11,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentProposal;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentStatus;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareRegisteredPayment;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,7 +38,7 @@ class LifecarePaymentMapperTest {
 
 	@Test
 	void listsTheBetalsattInUseAndTheActivePayeesWithoutThePersonnummer() throws Exception {
-		final var options = toPaymentOptions(underlag(), json(REGISTERED));
+		final var options = toPaymentOptions(underlag(), json(REGISTERED), "2026-09");
 
 		assertThat(options.paymentMethods()).containsExactly(new LifecarePaymentMethod(14, "Bankgiro via Plusgiro", false, false));
 		assertThat(options.payees()).extracting(LifecarePayee::id).containsExactly(2147483646, 2);
@@ -53,7 +54,7 @@ class LifecarePaymentMapperTest {
 
 	@Test
 	void proposesTheNextUtbetalningFromLifecareAlone() {
-		final var proposal = toPaymentProposal(underlag(), json(REGISTERED));
+		final var proposal = toPaymentProposal(underlag(), json(REGISTERED), "2026-09");
 
 		// The makulerad utbetalning to Konto B is newer but no longer stands, so Konto A is proposed.
 		assertThat(proposal).isEqualTo(new LifecarePaymentProposal("2026-09-21", "2026-09", new BigDecimal("3.0"), 2));
@@ -65,7 +66,7 @@ class LifecarePaymentMapperTest {
 			{ "payment": { "payDate": null }, "payees": [], "paymentMethods": [], "balances": [ { "balanceAmount": 0 } ] }
 			""");
 
-		assertThat(toPaymentProposal(bare, json("[]"))).isEqualTo(new LifecarePaymentProposal(null, null, null, null));
+		assertThat(toPaymentProposal(bare, json("[]"), null)).isEqualTo(new LifecarePaymentProposal(null, null, null, null));
 	}
 
 	@Test
@@ -74,7 +75,7 @@ class LifecarePaymentMapperTest {
 			[ { "paymentId": 4, "amount": 1.0, "payDate": "2026-09-21", "concernedMonth": "202609", "accountNumber": "99999999", "cancellationDate": "" } ]
 			""");
 
-		assertThat(toPaymentProposal(underlag(), registered).payeeId()).isNull();
+		assertThat(toPaymentProposal(underlag(), registered, "2026-09").payeeId()).isNull();
 	}
 
 	@Test
@@ -106,10 +107,36 @@ class LifecarePaymentMapperTest {
 
 	@Test
 	void readsTheStatusForTheApplicationMonth() {
-		assertThat(toPaymentStatus(json(REGISTERED), "2026-09"))
+		assertThat(toPaymentStatus(json(REGISTERED), "2026-09", List.of()))
 			.isEqualTo(new LifecarePaymentStatus("2026-09", true, "2026-09-21", new BigDecimal("1.0"), "Utbetald", false));
-		assertThat(toPaymentStatus(json(REGISTERED), "2026-07"))
+		assertThat(toPaymentStatus(json(REGISTERED), "2026-07", List.of()))
 			.isEqualTo(new LifecarePaymentStatus("2026-07", false, null, null, null, false));
+	}
+
+	/**
+	 * EB-26090047: the utbetalning was linked to the October errand but filed under September in Lifecare, and the
+	 * status matched on month alone, so it read as not registered.
+	 */
+	@Test
+	void readsALinkedUtbetalningAsRegisteredWhateverMonthItConcerns() {
+		assertThat(toPaymentStatus(json(REGISTERED), "2026-10", List.of("3")))
+			.isEqualTo(new LifecarePaymentStatus("2026-10", true, "2026-08-21", new BigDecimal("3.0"), null, false));
+	}
+
+	@Test
+	void fallsBackToTheMonthWhenTheLinkedUtbetalningIsMakulerad() {
+		assertThat(toPaymentStatus(json(REGISTERED), "2026-09", List.of("5")))
+			.isEqualTo(new LifecarePaymentStatus("2026-09", true, "2026-09-21", new BigDecimal("1.0"), "Utbetald", false));
+	}
+
+	@Test
+	void proposesTheErrandsMonthWhenLifecareOffersIt() {
+		final var underlag = underlag();
+		((ArrayNode) underlag.get("paymentConcernMonths")).addObject().put("concernMonth", "202610").put("displayMonth", "Oktober 2026");
+
+		assertThat(toPaymentProposal(underlag, json(REGISTERED), "2026-10").concernedMonth()).isEqualTo("2026-10");
+		assertThat(toPaymentProposal(underlag, json(REGISTERED), "2026-11").concernedMonth()).isEqualTo("2026-09");
+		assertThat(toPaymentProposal(underlag, json(REGISTERED), null).concernedMonth()).isEqualTo("2026-09");
 	}
 
 	@Test
@@ -117,6 +144,6 @@ class LifecarePaymentMapperTest {
 		final var underlag = underlag();
 		((ObjectNode) underlag.get("payment").get("postings").get(0)).putNull("purposeText");
 
-		assertThat(toPaymentOptions(underlag, json("[]")).postings()).containsExactly(new LifecarePaymentPosting(1, "1"));
+		assertThat(toPaymentOptions(underlag, json("[]"), null).postings()).containsExactly(new LifecarePaymentPosting(1, "1"));
 	}
 }

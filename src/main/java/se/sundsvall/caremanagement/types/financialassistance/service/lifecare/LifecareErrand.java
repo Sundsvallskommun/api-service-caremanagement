@@ -43,4 +43,16 @@ public record LifecareErrand(String municipalityId, String namespace, String err
 	public Optional<Integer> decision() {
 		return Optional.ofNullable(decisionId);
 	}
+
+	/**
+	 * The month applied for.
+	 *
+	 * @return the month as yyyy-MM, or empty when the errand has no (or a zero) year or month
+	 */
+	public Optional<String> applicationMonth() {
+		if (periodYear == null || periodMonth == null || periodYear == 0 || periodMonth == 0) {
+			return Optional.empty();
+		}
+		return Optional.of("%d-%02d".formatted(periodYear, periodMonth));
+	}
 }

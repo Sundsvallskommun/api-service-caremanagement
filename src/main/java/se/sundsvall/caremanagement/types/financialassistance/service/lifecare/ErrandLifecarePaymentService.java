@@ -61,11 +61,12 @@ public class ErrandLifecarePaymentService {
 		final var underlag = paymentApi.readPaymentForCreate(serviceId);
 		final var registered = paymentApi.readLatestPayments(serviceId);
 		accessRecorder.read(errand, TARGET_PAYEES, "Läste utbetalningsunderlag i Lifecare");
-		return toPaymentOptions(underlag, registered);
+		return toPaymentOptions(underlag, registered, errand.applicationMonth().orElse(null));
 	}
 
 	/**
-	 * Whether the utbetalning for the errand's application month has been registered. Unavailable, rather than failing,
+	 * Whether the errand's utbetalning has been registered: one linked to the errand, or else one for its application
+	 * month. Unavailable, rather than failing,
 	 * when the errand has no application month, or the insats or Lifecare cannot be read: Lifecare being unreachable is
 	 * a normal state for a status read.
 	 *
@@ -76,14 +77,15 @@ public class ErrandLifecarePaymentService {
 	 */
 	public LifecarePaymentStatus paymentStatus(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		if (errand.periodYear() == null || errand.periodMonth() == null || errand.periodYear() == 0 || errand.periodMonth() == 0) {
+		final var month = errand.applicationMonth();
+		if (month.isEmpty()) {
 			return new LifecarePaymentStatus(null, false, null, null, null, true);
 		}
-		final var applicationMonth = "%d-%02d".formatted(errand.periodYear(), errand.periodMonth());
+		final var applicationMonth = month.get();
 		try {
 			final var registered = paymentApi.readLatestPayments(errand.requireServiceId());
 			accessRecorder.read(errand, TARGET_PAYMENTS, "Läste utbetalningar i Lifecare");
-			return toPaymentStatus(registered, applicationMonth);
+			return toPaymentStatus(registered, applicationMonth, errand.paymentIds());
 		} catch (final RuntimeException _) {
 			return new LifecarePaymentStatus(applicationMonth, false, null, null, null, true);
 		}
