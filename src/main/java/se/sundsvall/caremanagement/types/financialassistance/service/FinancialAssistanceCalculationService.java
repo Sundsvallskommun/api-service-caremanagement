@@ -574,7 +574,7 @@ public class FinancialAssistanceCalculationService {
 	 */
 	static List<String> previousNormNames(final String previousNorm) {
 		return ofNullable(previousNorm)
-			.map(norm -> norm.strip().replaceFirst("\\s*\\d{4}$", "").strip())
+			.map(norm -> norm.strip().replaceFirst("\\s*+\\d{4}$", "").strip())
 			.filter(StringUtils::hasText)
 			.map(List::of)
 			.orElseGet(List::of);

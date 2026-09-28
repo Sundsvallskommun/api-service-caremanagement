@@ -21,12 +21,11 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.lifecare.integration.ByteArrayMultipartFile;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
+import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -56,7 +55,6 @@ import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 @ConditionalOnProperty(name = "integration.lifecare-familycare.provider", havingValue = "integrator")
 public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 
-	private static final Logger LOG = LoggerFactory.getLogger(LifecareIntegratorIntegration.class);
 	private static final String NOT_PORTED = "Operation '%s' is not available through the lifecare-integrator route yet";
 	private static final String MISSING_FIELDS = "The assembled %s is missing required field(s): %s";
 
@@ -174,12 +172,11 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 	 * name. The content is wrapped as an in-memory PDF part, exactly as the direct client does.
 	 */
 	@Override
-	public void postActualisationAttachment(final String municipalityId, final Integer actualisationId, final String documentType, final String documentSenderType,
-		final String title, final String senderName, final String fileName, final byte[] content) {
-
-		final var file = new ByteArrayMultipartFile("file", fileName, APPLICATION_PDF_VALUE, content);
+	public void postActualisationAttachment(final String municipalityId, final Integer actualisationId, final AttachmentUpload attachment) {
+		final var file = new ByteArrayMultipartFile("file", attachment.fileName(), APPLICATION_PDF_VALUE, attachment.content());
 		call("uploading an actualisation attachment", () -> {
-			client.addActualisationAttachment(municipalityId, actualisationId, documentType, documentSenderType, title, senderName, file);
+			client.addActualisationAttachment(municipalityId, actualisationId, attachment.documentType(), attachment.documentSenderType(), attachment.title(),
+				attachment.senderName(), file);
 			return null;
 		});
 	}
@@ -241,7 +238,8 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 		try {
 			return operation.get();
 		} catch (final Exception e) {
-			LOG.warn("lifecare-integrator failed while {}: {}", action, describe(e));
+			// Not logged here: the thrown Problem already carries the (payload-free) upstream descriptor and is logged by
+			// the framework — mirrors the direct client's handling, which does the same.
 			throw Problem.valueOf(BAD_GATEWAY, "Lifecare integrator failed while %s (%s)".formatted(action, describe(e)));
 		}
 	}

@@ -45,7 +45,7 @@ final class CalculationPlacement {
 	static final String ROWS = "rows";
 	static final String ROW_ID = "rowId";
 
-	private static final String AMOUNT_SUFFIX = "\\s+\\d+(?:[.,]\\d+)?$";
+	private static final String AMOUNT_SUFFIX = "\\s++\\d++(?:[.,]\\d++)?$";
 
 	private CalculationPlacement() {}
 

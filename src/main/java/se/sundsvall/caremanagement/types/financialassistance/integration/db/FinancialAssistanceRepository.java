@@ -20,8 +20,8 @@ public interface FinancialAssistanceRepository extends JpaRepository<FinancialAs
 
 	/**
 	 * Same lookup as {@link #findByErrandId(String)}, but with a pessimistic write lock on the errand's row. Used by
-	 * finalize() to make its "not already finalized" check-then-act atomic: two concurrent finalize calls for the same
-	 * errand must not both pass the check before either commits.
+	 * finalizeErrand() to make its "not already finalized" check-then-act atomic: two concurrent finalizeErrand calls for
+	 * the same errand must not both pass the check before either commits.
 	 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select fa from FinancialAssistanceEntity fa where fa.errandId = :errandId")

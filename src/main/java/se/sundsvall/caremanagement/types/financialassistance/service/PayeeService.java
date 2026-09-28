@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -186,7 +187,7 @@ public class PayeeService {
 			return List.of();
 		}
 
-		final var today = LocalDate.now();
+		final var today = LocalDate.now(ZoneId.systemDefault());
 		final List<PaymentView> payments;
 		try {
 			payments = lifecareCaseHistoryService.listPayments(municipalityId, applicant.get(), today.minusMonths(PAYEE_LOOKBACK_MONTHS), today);

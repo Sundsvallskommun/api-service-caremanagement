@@ -34,7 +34,11 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
  */
 final class LifecarePaymentMapper {
 
-	private static final Comparator<JsonNode> NEWEST_PAY_DATE_FIRST = Comparator.comparing((final JsonNode payment) -> textOrEmpty(payment, "payDate")).reversed();
+	private static final String FIELD_PAY_DATE = "payDate";
+	private static final String FIELD_PAYMENT = "payment";
+	private static final String FIELD_ACCOUNT_NUMBER = "accountNumber";
+
+	private static final Comparator<JsonNode> NEWEST_PAY_DATE_FIRST = Comparator.comparing((final JsonNode payment) -> textOrEmpty(payment, FIELD_PAY_DATE)).reversed();
 
 	private LifecarePaymentMapper() {}
 
@@ -50,7 +54,7 @@ final class LifecarePaymentMapper {
 		return new LifecarePaymentOptions(
 			methods.stream().filter(method -> flag(method, "inUse")).map(LifecarePaymentMapper::toPaymentMethod).toList(),
 			array(underlag, "payees").stream().filter(payee -> flag(payee, "isActive")).map(payee -> toPayee(payee, methods)).toList(),
-			array(field(underlag, "payment"), "postings").stream().map(LifecarePaymentMapper::toPosting).toList(),
+			array(field(underlag, FIELD_PAYMENT), "postings").stream().map(LifecarePaymentMapper::toPosting).toList(),
 			array(underlag, "balances").stream().map(LifecarePaymentMapper::toBalance).toList(),
 			array(underlag, "paymentConcernMonths").stream()
 				.map(month -> new LifecarePaymentConcernMonth(toMonth(text(month, "concernMonth")), text(month, "displayMonth")))
@@ -71,7 +75,7 @@ final class LifecarePaymentMapper {
 		final var paymentMethod = Optional.ofNullable(text(payee, "paymentMethodText"))
 			.or(() -> methods.stream()
 				.filter(method -> Objects.equals(integer(method, "paymentCode"), paymentMethodCode))
-				.map(method -> text(method, "payment"))
+				.map(method -> text(method, FIELD_PAYMENT))
 				.filter(Objects::nonNull)
 				.findFirst())
 			.orElse("");
@@ -83,7 +87,7 @@ final class LifecarePaymentMapper {
 			paymentMethodCode,
 			paymentMethod,
 			textOrEmpty(payee, "clearing"),
-			textOrEmpty(payee, "accountNumber"),
+			textOrEmpty(payee, FIELD_ACCOUNT_NUMBER),
 			textOrEmpty(payee, "streetAddress"),
 			textOrEmpty(payee, "careOfAddress"),
 			textOrEmpty(payee, "postalCode"),
@@ -102,7 +106,7 @@ final class LifecarePaymentMapper {
 			.sorted(NEWEST_PAY_DATE_FIRST)
 			.map(payment -> new LifecareRegisteredPayment(
 				integer(payment, "paymentId"),
-				text(payment, "payDate"),
+				text(payment, FIELD_PAY_DATE),
 				toMonth(text(payment, "concernedMonth")),
 				decimal(payment, "amount"),
 				textOrEmpty(payment, "paymentMethodText"),
@@ -122,7 +126,7 @@ final class LifecarePaymentMapper {
 	static LifecarePaymentStatus toPaymentStatus(final JsonNode registered, final String applicationMonth) {
 		final var month = applicationMonth.replaceFirst("-", "");
 		return latestStanding(elements(registered).stream().filter(payment -> month.equals(text(payment, "concernedMonth"))).toList())
-			.map(payment -> new LifecarePaymentStatus(applicationMonth, true, text(payment, "payDate"), decimal(payment, "amount"), text(payment, "statusText"), false))
+			.map(payment -> new LifecarePaymentStatus(applicationMonth, true, text(payment, FIELD_PAY_DATE), decimal(payment, "amount"), text(payment, "statusText"), false))
 			.orElseGet(() -> new LifecarePaymentStatus(applicationMonth, false, null, null, null, false));
 	}
 
@@ -136,17 +140,17 @@ final class LifecarePaymentMapper {
 			.filter(Objects::nonNull)
 			.reduce(BigDecimal.ZERO, BigDecimal::add);
 		final var latestAccount = latestStanding(elements(registered))
-			.map(payment -> digitsOnly(text(payment, "accountNumber")))
+			.map(payment -> digitsOnly(text(payment, FIELD_ACCOUNT_NUMBER)))
 			.orElse("");
 		Integer payeeId = null;
 		if (!latestAccount.isEmpty()) {
 			payeeId = array(underlag, "payees").stream()
-				.filter(payee -> flag(payee, "isActive") && digitsOnly(text(payee, "accountNumber")).equals(latestAccount))
+				.filter(payee -> flag(payee, "isActive") && digitsOnly(text(payee, FIELD_ACCOUNT_NUMBER)).equals(latestAccount))
 				.map(payee -> integer(payee, "payeeId"))
 				.findFirst()
 				.orElse(null);
 		}
-		final var payDate = field(field(underlag, "payment"), "payDate");
+		final var payDate = field(field(underlag, FIELD_PAYMENT), FIELD_PAY_DATE);
 		String paymentDate = null;
 		if (payDate != null && payDate.isString()) {
 			paymentDate = payDate.asString();
@@ -171,7 +175,7 @@ final class LifecarePaymentMapper {
 	}
 
 	private static LifecarePaymentMethod toPaymentMethod(final JsonNode method) {
-		return new LifecarePaymentMethod(integer(method, "paymentCode"), text(method, "payment"), flag(method, "localNumberEnabled"), flag(method, "localNumberMandatory"));
+		return new LifecarePaymentMethod(integer(method, "paymentCode"), text(method, FIELD_PAYMENT), flag(method, "localNumberEnabled"), flag(method, "localNumberMandatory"));
 	}
 
 	private static LifecarePaymentPosting toPosting(final JsonNode posting) {

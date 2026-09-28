@@ -59,10 +59,16 @@ class SectionReconciler {
 		this.expenseRepository = expenseRepository;
 	}
 
+	private static final SectionOps<FaNormPersonEntity> PERSON_OPS = new SectionOps<>(SectionReconciler::personKey, FaNormPersonEntity::getOrigin,
+		SectionReconciler::copyPersonProcess, SectionReconciler::personLabel);
+	private static final SectionOps<FaNormIncomeEntity> INCOME_OPS = new SectionOps<>(SectionReconciler::incomeKey, FaNormIncomeEntity::getOrigin,
+		SectionReconciler::copyIncomeProcess, SectionReconciler::incomeLabel);
+	private static final SectionOps<FaNormExpenseEntity> EXPENSE_OPS = new SectionOps<>(SectionReconciler::expenseKey, FaNormExpenseEntity::getOrigin,
+		SectionReconciler::copyExpenseProcess, SectionReconciler::expenseLabel);
+
 	Diff reconcilePersons(final String errandId, final List<FaNormPersonEntity> fresh) {
 		final var saver = positioningSaver(personRepository.nextPositionForErrand(errandId), FaNormPersonEntity::getPosition, FaNormPersonEntity::setPosition, personRepository::save);
-		return merge(ORIGIN_SYSTEM, personRepository.findByErrandId(errandId), nullSafe(fresh),
-			SectionReconciler::personKey, FaNormPersonEntity::getOrigin, SectionReconciler::copyPersonProcess, SectionReconciler::personLabel, saver);
+		return merge(ORIGIN_SYSTEM, personRepository.findByErrandId(errandId), nullSafe(fresh), PERSON_OPS, saver);
 	}
 
 	/**
@@ -75,16 +81,13 @@ class SectionReconciler {
 		final var saver = positioningSaver(incomeRepository.nextPositionForErrand(errandId), FaNormIncomeEntity::getPosition, FaNormIncomeEntity::setPosition, incomeRepository::save);
 		final var existing = incomeRepository.findByErrandId(errandId);
 		final var byApplication = nullSafe(fresh).stream().collect(Collectors.partitioningBy(row -> ORIGIN_APPLICATION.equals(row.getOrigin())));
-		merge(ORIGIN_APPLICATION, existing, byApplication.get(true),
-			SectionReconciler::incomeKey, FaNormIncomeEntity::getOrigin, SectionReconciler::copyIncomeProcess, SectionReconciler::incomeLabel, saver);
-		return merge(ORIGIN_SYSTEM, existing, byApplication.get(false),
-			SectionReconciler::incomeKey, FaNormIncomeEntity::getOrigin, SectionReconciler::copyIncomeProcess, SectionReconciler::incomeLabel, saver);
+		merge(ORIGIN_APPLICATION, existing, byApplication.get(true), INCOME_OPS, saver);
+		return merge(ORIGIN_SYSTEM, existing, byApplication.get(false), INCOME_OPS, saver);
 	}
 
 	Diff reconcileExpenses(final String errandId, final List<FaNormExpenseEntity> fresh) {
 		final var saver = positioningSaver(expenseRepository.nextPositionForErrand(errandId), FaNormExpenseEntity::getPosition, FaNormExpenseEntity::setPosition, expenseRepository::save);
-		return merge(ORIGIN_SYSTEM, expenseRepository.findByErrandId(errandId), nullSafe(fresh),
-			SectionReconciler::expenseKey, FaNormExpenseEntity::getOrigin, SectionReconciler::copyExpenseProcess, SectionReconciler::expenseLabel, saver);
+		return merge(ORIGIN_SYSTEM, expenseRepository.findByErrandId(errandId), nullSafe(fresh), EXPENSE_OPS, saver);
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -93,41 +96,44 @@ class SectionReconciler {
 	// the position they already have.
 	// ------------------------------------------------------------------------------------------------------------------
 
+	/**
+	 * The per-section strategy the shared {@link #merge} runs against: how to derive a row's identity key and origin,
+	 * how to refresh only the process columns of a matched row, and how to label a row for a warning.
+	 */
+	private record SectionOps<E>(Function<E, String> keyOf, Function<E, String> originOf, BiConsumer<E, E> copyProcessInto, Function<E, String> labelOf) {}
+
 	private static <E> Diff merge(
 		final String processOrigin,
 		final List<E> existing,
 		final List<E> fresh,
-		final Function<E, String> keyOf,
-		final Function<E, String> originOf,
-		final BiConsumer<E, E> copyProcessInto,
-		final Function<E, String> labelOf,
+		final SectionOps<E> ops,
 		final Consumer<E> persist) {
 
 		final var systemByKey = new LinkedHashMap<String, E>();
 		for (final var row : existing) {
-			if (processOrigin.equals(originOf.apply(row))) {
-				systemByKey.putIfAbsent(keyOf.apply(row), row);
+			if (processOrigin.equals(ops.originOf().apply(row))) {
+				systemByKey.putIfAbsent(ops.keyOf().apply(row), row);
 			}
 		}
 
 		final var freshKeys = new LinkedHashSet<String>();
 		final var added = new ArrayList<String>();
 		for (final var freshRow : fresh) {
-			final var key = keyOf.apply(freshRow);
+			final var key = ops.keyOf().apply(freshRow);
 			freshKeys.add(key);
 			final var match = systemByKey.get(key);
 			if (match != null) {
-				copyProcessInto.accept(match, freshRow); // refresh process columns only — caseworker value + deleted untouched
+				ops.copyProcessInto().accept(match, freshRow); // refresh process columns only — caseworker value + deleted untouched
 				persist.accept(match);
 			} else {
 				persist.accept(freshRow); // a genuinely new process row
-				added.add(labelOf.apply(freshRow));
+				added.add(ops.labelOf().apply(freshRow));
 			}
 		}
 
 		final var dropped = systemByKey.entrySet().stream()
 			.filter(entry -> !freshKeys.contains(entry.getKey()))
-			.map(entry -> labelOf.apply(entry.getValue()))
+			.map(entry -> ops.labelOf().apply(entry.getValue()))
 			.toList();
 
 		return new Diff(added, dropped);

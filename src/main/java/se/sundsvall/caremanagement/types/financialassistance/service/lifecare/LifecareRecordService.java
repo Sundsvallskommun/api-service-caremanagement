@@ -252,9 +252,9 @@ public class LifecareRecordService {
 
 		final var created = client.post(PATH_CREATE_NOTE, Map.of(),
 			toJournalNoteBody(requireObject(proposal.path("documentJournalNote"), PATH_NOTE_PROPOSAL), noteType, request));
-		final var record = toRecord(created, JOURNAL_NOTE);
-		recorder.written(errand, LifecareAccessEntry.CREATE, JOURNAL_NOTE, "Skrev en journalanteckning i Lifecare", record.getId());
-		return record;
+		final var journalNote = toRecord(created, JOURNAL_NOTE);
+		recorder.written(errand, LifecareAccessEntry.CREATE, JOURNAL_NOTE, "Skrev en journalanteckning i Lifecare", journalNote.getId());
+		return journalNote;
 	}
 
 	/**
@@ -278,9 +278,9 @@ public class LifecareRecordService {
 
 		final var created = client.post(PATH_CREATE_DOCUMENT, Map.of(),
 			toDocumentBody(requireObject(proposal.path("document"), PATH_DOCUMENT_PROPOSAL), documentType, request));
-		final var record = toRecord(created, DOCUMENT);
-		recorder.written(errand, LifecareAccessEntry.CREATE, DOCUMENT, "Skrev ett dokument i Lifecare", record.getId());
-		return record;
+		final var document = toRecord(created, DOCUMENT);
+		recorder.written(errand, LifecareAccessEntry.CREATE, DOCUMENT, "Skrev ett dokument i Lifecare", document.getId());
+		return document;
 	}
 
 	/**
@@ -299,8 +299,8 @@ public class LifecareRecordService {
 
 	private LifecareRecordBody readBody(final Kind kind, final String id) {
 		try {
-			final var record = client.get(kind.readPath(), params(id, "true", "false"));
-			final var content = text(record.path("content"));
+			final var body = client.get(kind.readPath(), params(id, "true", "false"));
+			final var content = text(body.path("content"));
 			if (content == null) {
 				return LifecareRecordBody.create().withId(id).withContent("");
 			}
@@ -328,11 +328,11 @@ public class LifecareRecordService {
 		final UpdateLifecareRecordRequest edit, final Kind kind) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		assertTheClients(errand, id);
-		final var record = readEditable(kind, id);
-		if (!isEditable(record)) {
+		final var editable = readEditable(kind, id);
+		if (!isEditable(editable)) {
 			throw Problem.valueOf(CONFLICT, FINALISED);
 		}
-		final var updated = applyRecordEdit(record, edit);
+		final var updated = applyRecordEdit(editable, edit);
 		client.post(kind.updatePath(), Map.of(), updated);
 		recorder.written(errand, LifecareAccessEntry.UPDATE, kind.category(), kind.updateDescription(), String.valueOf(id));
 		return toRecordContent(updated, kind.category());

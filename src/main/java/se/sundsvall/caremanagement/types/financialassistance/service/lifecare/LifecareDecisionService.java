@@ -27,6 +27,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionMapper.toTypes;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionMapper.toView;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJson.integer;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * The errand's beslut, kept in Lifecare. The caseworker's Spara writes it there, Decision/Create the first time and
@@ -202,7 +203,7 @@ public class LifecareDecisionService {
 		try {
 			errandService.linkDecision(errand, decisionId);
 		} catch (final RuntimeException e) {
-			LOG.error("Beslut {} was created in Lifecare but errand {} could not be linked to it ({})", decisionId, errand.errandId(), e.getClass().getSimpleName());
+			LOG.error("Beslut {} was created in Lifecare but errand {} could not be linked to it ({})", decisionId, sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 			throw Problem.valueOf(BAD_GATEWAY, ERROR_LINK_FAILED.formatted(decisionId));
 		}
 	}

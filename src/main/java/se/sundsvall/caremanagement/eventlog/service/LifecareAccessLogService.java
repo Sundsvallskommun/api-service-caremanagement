@@ -23,7 +23,7 @@ class LifecareAccessLogService implements LifecareAccessLog {
 	}
 
 	@Override
-	public void record(final String municipalityId, final String namespace, final String errandId, final List<LifecareAccessEntry> entries) {
+	public void append(final String municipalityId, final String namespace, final String errandId, final List<LifecareAccessEntry> entries) {
 		if (entries.isEmpty()) {
 			return;
 		}

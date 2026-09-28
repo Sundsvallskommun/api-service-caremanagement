@@ -229,6 +229,11 @@ public class CalculationSyncService {
 	@Transactional
 	public void reconcileWarnings(final String municipalityId, final String errandId, final String applicantPartyId, final Integer calculationId,
 		final LocalDate fromDate, final LocalDate toDate) {
+		doReconcileWarnings(municipalityId, errandId, applicantPartyId, calculationId, fromDate, toDate);
+	}
+
+	private void doReconcileWarnings(final String municipalityId, final String errandId, final String applicantPartyId, final Integer calculationId,
+		final LocalDate fromDate, final LocalDate toDate) {
 		final Optional<CalculationView> calculation;
 		try {
 			calculation = findCalculation(municipalityId, applicantPartyId, calculationId, fromDate, toDate);
@@ -294,7 +299,7 @@ public class CalculationSyncService {
 			row.withSystemWrittenAmount(nonZero(change.amount())).withSystemWrittenAt(now).withSsbtekBaselineAmount(row.getSsbtekAmount());
 		});
 		syncRepository.saveAll(rows.values());
-		reconcileWarnings(municipalityId, errandId, context.applicantPartyId(), context.calculationId(), context.fromDate(), context.toDate());
+		doReconcileWarnings(municipalityId, errandId, context.applicantPartyId(), context.calculationId(), context.fromDate(), context.toDate());
 	}
 
 	private record SyncContext(Integer calculationId, String applicantPartyId, LocalDate fromDate, LocalDate toDate) {}

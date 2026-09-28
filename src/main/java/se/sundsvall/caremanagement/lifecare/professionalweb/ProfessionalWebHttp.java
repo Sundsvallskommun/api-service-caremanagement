@@ -83,7 +83,7 @@ public class ProfessionalWebHttp {
 	public ProfessionalWebResponse send(final String method, final URI uri, final Map<String, String> headers, final byte[] body) {
 		final var builder = HttpRequest.newBuilder(uri).timeout(readTimeout);
 		headers.forEach(builder::header);
-		if (body == null) {
+		if (body == null || body.length == 0) {
 			builder.method(method, HttpRequest.BodyPublishers.noBody());
 		} else {
 			builder.method(method, HttpRequest.BodyPublishers.ofByteArray(body));
@@ -129,7 +129,7 @@ public class ProfessionalWebHttp {
 				headers.put("Cookie", cookieHeader);
 			}
 			var method = "GET";
-			if (body != null) {
+			if (formFields != null) {
 				method = "POST";
 				headers.put("Content-Type", "application/x-www-form-urlencoded");
 			}
@@ -173,7 +173,7 @@ public class ProfessionalWebHttp {
 
 	static byte[] encodeForm(final Map<String, String> fields) {
 		if (fields == null) {
-			return null;
+			return new byte[0];
 		}
 		return fields.entrySet().stream()
 			.map(entry -> URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8) + "=" + URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))

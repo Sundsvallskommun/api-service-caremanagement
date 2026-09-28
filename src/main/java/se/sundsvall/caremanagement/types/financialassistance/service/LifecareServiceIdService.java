@@ -9,6 +9,7 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 
 import static org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * The errand's Lifecare insats id — the applicant's open financial-assistance service in Lifecare, the key
@@ -70,7 +71,7 @@ public class LifecareServiceIdService {
 			return resolved.orElse(null);
 		} catch (final RuntimeException e) {
 			// The exception type only: messages from the Lifecare lookup may carry the personal number.
-			LOG.warn("Could not look up the Lifecare insats for errand {} ({}); the next read tries again", errandId, e.getClass().getSimpleName());
+			LOG.warn("Could not look up the Lifecare insats for errand {} ({}); the next read tries again", sanitizeForLogging(errandId), e.getClass().getSimpleName());
 			return null;
 		}
 	}

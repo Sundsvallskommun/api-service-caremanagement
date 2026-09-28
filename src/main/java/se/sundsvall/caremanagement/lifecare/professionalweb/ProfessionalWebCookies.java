@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.lifecare.professionalweb;
 
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -126,7 +127,7 @@ public class ProfessionalWebCookies {
 		if ("expires".equals(name)) {
 			try {
 				// ASP.NET writes the date with dashes (01-Jan-1970), which RFC 1123 spells with spaces.
-				return !ZonedDateTime.parse(value.replace('-', ' '), DateTimeFormatter.RFC_1123_DATE_TIME).isAfter(ZonedDateTime.now());
+				return !ZonedDateTime.parse(value.replace('-', ' '), DateTimeFormatter.RFC_1123_DATE_TIME).isAfter(ZonedDateTime.now(ZoneId.systemDefault()));
 			} catch (final DateTimeParseException _) {
 				return false;
 			}

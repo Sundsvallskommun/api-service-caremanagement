@@ -16,6 +16,7 @@ import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
+import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.caremanagement.shared.SourceFile;
 
 import static java.util.Collections.emptyList;
@@ -92,7 +93,7 @@ class MessageArchiveServiceTest {
 
 		// messages page + 1 separator + 1 attachment = 3 combine sources
 		verify(attachmentServiceMock).combineToPdf(argThatHasSize(3));
-		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, EXPECTED_FILE_NAME, MERGED, "1", "1", EXPECTED_TITLE, "Sundsvalls kommun");
+		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, new AttachmentUpload("1", "1", EXPECTED_TITLE, "Sundsvalls kommun", EXPECTED_FILE_NAME, MERGED));
 		verify(attachmentServiceMock).createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, EXPECTED_FILE_NAME, MERGED);
 	}
 
@@ -161,13 +162,13 @@ class MessageArchiveServiceTest {
 		when(attachmentServiceMock.combineToPdf(any())).thenReturn(MERGED);
 		final var failingFileName = LABEL + "_EB-26060002_2026-05-12--2026-05-13.pdf";
 		doThrow(new RuntimeException("Lifecare down")).when(actualisationServiceMock)
-			.uploadAttachment(eq(MUNICIPALITY_ID), any(), eq(failingFileName), any(), any(), any(), any(), any());
+			.uploadAttachment(eq(MUNICIPALITY_ID), any(), argThat(attachment -> failingFileName.equals(attachment.fileName())));
 
 		service.archiveClosedErrands();
 
 		// The second (healthy) errand is still archived despite the first throwing.
 		verify(attachmentServiceMock).createMessageHistoryAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, EXPECTED_FILE_NAME, MERGED);
-		verify(actualisationServiceMock, times(2)).uploadAttachment(eq(MUNICIPALITY_ID), any(), any(), any(), any(), any(), any(), any());
+		verify(actualisationServiceMock, times(2)).uploadAttachment(eq(MUNICIPALITY_ID), any(), any());
 	}
 
 	@Test

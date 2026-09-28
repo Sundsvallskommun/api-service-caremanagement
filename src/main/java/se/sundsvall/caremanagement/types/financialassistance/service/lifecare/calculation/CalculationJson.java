@@ -142,7 +142,7 @@ final class CalculationJson {
 	/** A number the way JavaScript writes it: without decimals when it is integral. */
 	static JsonNode numberNode(final double value) {
 		if (value == Math.rint(value) && Math.abs(value) < Integer.MAX_VALUE) {
-			return NODES.numberNode((int) value);
+			return NODES.numberNode(Math.toIntExact((long) value));
 		}
 		return NODES.numberNode(value);
 	}

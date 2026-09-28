@@ -30,19 +30,19 @@ class LifecareAccessRecorderTest {
 	void read() {
 		recorder.read(ERRAND, "reminders", "Läste bevakningar");
 
-		verify(accessLog).record("2281", "NS", "errand", List.of(new LifecareAccessEntry("READ", "reminders", "Läste bevakningar", null)));
+		verify(accessLog).append("2281", "NS", "errand", List.of(new LifecareAccessEntry("READ", "reminders", "Läste bevakningar", null)));
 	}
 
 	@Test
 	void readThatCannotBeLoggedFails() {
-		doThrow(new IllegalStateException()).when(accessLog).record(any(), any(), any(), any());
+		doThrow(new IllegalStateException()).when(accessLog).append(any(), any(), any(), any());
 
 		assertThatThrownBy(() -> recorder.read(ERRAND, "reminders", "x", "1")).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
 	void writeThatCannotBeLoggedStands() {
-		doThrow(new IllegalStateException()).when(accessLog).record(any(), any(), any(), any());
+		doThrow(new IllegalStateException()).when(accessLog).append(any(), any(), any(), any());
 
 		assertThatNoException().isThrownBy(() -> recorder.written(ERRAND, "CREATE", "reminder", "Skapade bevakning", "9"));
 	}

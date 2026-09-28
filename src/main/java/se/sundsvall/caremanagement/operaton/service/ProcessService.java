@@ -5,6 +5,7 @@ import generated.se.sundsvall.operaton.ProcessDefinitionResponse;
 import generated.se.sundsvall.operaton.ProcessDefinitionsResponse;
 import generated.se.sundsvall.operaton.StartProcessInstanceRequest;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -95,7 +96,7 @@ public class ProcessService {
 	public void queueMessageRetry(final String municipalityId, final String namespace, final String messageName, final String businessKey,
 		final Map<String, Object> variables, final String firstError) {
 
-		final var now = OffsetDateTime.now();
+		final var now = OffsetDateTime.now(ZoneId.systemDefault());
 		processMessageRetryRepository.save(ProcessMessageRetryEntity.create()
 			.withMunicipalityId(municipalityId)
 			.withNamespace(namespace)

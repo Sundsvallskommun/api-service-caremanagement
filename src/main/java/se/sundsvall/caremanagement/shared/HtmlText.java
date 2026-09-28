@@ -35,7 +35,7 @@ public final class HtmlText {
 				.replaceAll("<[^>]*>", ""))
 			.map(HtmlUtils::htmlUnescape)
 			.map(value -> value.replace('\u00A0', ' '))
-			.map(value -> value.strip().replaceAll("[ \\t]+\\n", "\n").replaceAll("\\n{3,}", "\n\n"))
+			.map(value -> value.strip().replaceAll("[ \\t]++\\n", "\n").replaceAll("\\n{3,}", "\n\n"))
 			.orElse(null);
 	}
 }

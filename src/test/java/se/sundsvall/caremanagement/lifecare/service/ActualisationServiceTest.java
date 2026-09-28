@@ -214,9 +214,10 @@ class ActualisationServiceTest {
 			1, 2, 3
 		};
 
-		service.uploadAttachment(MUNICIPALITY_ID, 5012, "EB-26060001_meddelandehistorik.pdf", content, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun");
+		service.uploadAttachment(MUNICIPALITY_ID, 5012,
+			new AttachmentUpload("MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun", "EB-26060001_meddelandehistorik.pdf", content));
 
-		verify(lifecareFamilyCareIntegrationMock).postActualisationAttachment(MUNICIPALITY_ID, 5012, "MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik",
-			"Sundsvalls kommun", "EB-26060001_meddelandehistorik.pdf", content);
+		verify(lifecareFamilyCareIntegrationMock).postActualisationAttachment(MUNICIPALITY_ID, 5012,
+			new AttachmentUpload("MEDDELANDEHISTORIK", "MYNDIGHET", "Meddelandehistorik", "Sundsvalls kommun", "EB-26060001_meddelandehistorik.pdf", content));
 	}
 }

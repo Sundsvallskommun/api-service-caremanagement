@@ -21,5 +21,5 @@ public interface LifecareAccessLog {
 	 * @param errandId       the errand the access was made for
 	 * @param entries        the accesses
 	 */
-	void record(String municipalityId, String namespace, String errandId, List<LifecareAccessEntry> entries);
+	void append(String municipalityId, String namespace, String errandId, List<LifecareAccessEntry> entries);
 }

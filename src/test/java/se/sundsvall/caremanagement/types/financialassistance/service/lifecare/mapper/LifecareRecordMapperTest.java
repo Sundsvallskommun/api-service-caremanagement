@@ -95,12 +95,12 @@ class LifecareRecordMapperTest {
 			.withLocked(false)
 			.withWriteProtected(true)
 			.withDocumentKind("JournalNote"));
-		assertThat(LifecareRecordMapper.toRecord(models.path(1), DOCUMENT)).satisfies(record -> {
-			assertThat(record.getDocumentKind()).isEqualTo("Pdf");
-			assertThat(record.getDateTime()).isEqualTo("2026-09-21");
-			assertThat(record.getModifiedBy()).isEqualTo("2026-09-21");
-			assertThat(record.getResponsibleCaseworker()).isNull();
-			assertThat(record.getLocked()).isTrue();
+		assertThat(LifecareRecordMapper.toRecord(models.path(1), DOCUMENT)).satisfies(row -> {
+			assertThat(row.getDocumentKind()).isEqualTo("Pdf");
+			assertThat(row.getDateTime()).isEqualTo("2026-09-21");
+			assertThat(row.getModifiedBy()).isEqualTo("2026-09-21");
+			assertThat(row.getResponsibleCaseworker()).isNull();
+			assertThat(row.getLocked()).isTrue();
 		});
 	}
 
@@ -135,8 +135,8 @@ class LifecareRecordMapperTest {
 
 	@ParameterizedTest
 	@MethodSource("editabilityArguments")
-	void isEditable(final String record, final boolean expected) {
-		assertThat(LifecareRecordMapper.isEditable(json(record))).isEqualTo(expected);
+	void isEditable(final String row, final boolean expected) {
+		assertThat(LifecareRecordMapper.isEditable(json(row))).isEqualTo(expected);
 	}
 
 	private static Stream<Arguments> editabilityArguments() {
@@ -151,11 +151,11 @@ class LifecareRecordMapperTest {
 
 	@Test
 	void toRecordContentReadsBodyDateAndTime() {
-		final var record = json("""
+		final var row = json("""
 			{ "documentId": 135, "title": "Journalanteckning", "content": "<p>hej</p>", "occurenceDate": "2026-09-23", "time": "09:02", "protected": false }
 			""");
 
-		final var content = LifecareRecordMapper.toRecordContent(record, JOURNAL_NOTE);
+		final var content = LifecareRecordMapper.toRecordContent(row, JOURNAL_NOTE);
 
 		assertThat(content.getId()).isEqualTo("135");
 		assertThat(content.getCategory()).isEqualTo(JOURNAL_NOTE);
@@ -181,30 +181,30 @@ class LifecareRecordMapperTest {
 
 	@Test
 	void applyRecordEditChangesOnlyTheEditedFields() {
-		final var record = (ObjectNode) json("""
+		final var row = (ObjectNode) json("""
 			{ "documentId": 135, "content": "<p>old</p>", "occurenceDate": "2026-09-01", "time": "08:00",
 			  "documentNoteType": { "id": 1, "name": "Journalanteckning" }, "ownerId": 7, "ownerType": 53, "protected": false }
 			""");
 
-		final var updated = LifecareRecordMapper.applyRecordEdit(record,
+		final var updated = LifecareRecordMapper.applyRecordEdit(row,
 			UpdateLifecareRecordRequest.create().withContent("<p>new</p>").withOccurenceDate("2026-09-23").withTime("09:02"));
 
 		assertThat(updated.path("content").stringValue()).isEqualTo("<p>new</p>");
 		assertThat(updated.path("occurenceDate").stringValue()).isEqualTo("2026-09-23");
 		assertThat(updated.path("time").stringValue()).isEqualTo("09:02");
 		assertThat(updated.path("occurenceTime").stringValue()).isEqualTo("09:02");
-		assertThat(updated.path("documentNoteType")).isEqualTo(record.path("documentNoteType"));
+		assertThat(updated.path("documentNoteType")).isEqualTo(row.path("documentNoteType"));
 		assertThat(updated.path("ownerId").intValue()).isEqualTo(7);
 		assertThat(updated.path("protected").booleanValue()).isFalse();
 		// The record read from Lifecare is not touched.
-		assertThat(record.path("content").stringValue()).isEqualTo("<p>old</p>");
+		assertThat(row.path("content").stringValue()).isEqualTo("<p>old</p>");
 	}
 
 	@Test
 	void applyRecordEditKeepsDateAndTimeWhenLeftOutAndWriteProtectsOnRequest() {
-		final var record = (ObjectNode) json("{\"documentId\": 1, \"occurenceDate\": \"2026-09-01\", \"time\": \"08:00\", \"protected\": false}");
+		final var row = (ObjectNode) json("{\"documentId\": 1, \"occurenceDate\": \"2026-09-01\", \"time\": \"08:00\", \"protected\": false}");
 
-		final var updated = LifecareRecordMapper.applyRecordEdit(record, UpdateLifecareRecordRequest.create().withContent("<p>x</p>").withWriteProtected(true));
+		final var updated = LifecareRecordMapper.applyRecordEdit(row, UpdateLifecareRecordRequest.create().withContent("<p>x</p>").withWriteProtected(true));
 
 		assertThat(updated.path("occurenceDate").stringValue()).isEqualTo("2026-09-01");
 		assertThat(updated.path("time").stringValue()).isEqualTo("08:00");

@@ -48,6 +48,14 @@ public final class LifecareRecordMapper {
 	/** Rows with no written body: a blankett is built from form fields, a PDF is a file. */
 	private static final List<String> NO_TEXT_BODY_TYPES = List.of("Form", "Pdf");
 
+	private static final String FIELD_DOCUMENT_MODELS = "documentModels";
+	private static final String FIELD_TITLE = "title";
+	private static final String FIELD_PROTECTED = "protected";
+	private static final String FIELD_OCCURENCE_TIME = "occurenceTime";
+	private static final String FIELD_CONTENT = "content";
+	private static final String FIELD_OCCURENCE_DATE = "occurenceDate";
+	private static final String FIELD_WRITE_PROTECT_AUTO = "writeProtectAuto";
+
 	private LifecareRecordMapper() {}
 
 	/**
@@ -68,12 +76,12 @@ public final class LifecareRecordMapper {
 	 * @return      the two groups
 	 */
 	public static LifecareRecords toRecords(final JsonNode list) {
-		final var records = list.path("documentModels").valueStream()
+		final var records = list.path(FIELD_DOCUMENT_MODELS).valueStream()
 			.flatMap(model -> categoryOf(model).map(category -> toRecord(model, category)).stream())
 			.toList();
 		return LifecareRecords.create()
-			.withJournalNotes(records.stream().filter(record -> JOURNAL_NOTE.equals(record.getCategory())).toList())
-			.withDocuments(records.stream().filter(record -> DOCUMENT.equals(record.getCategory())).toList());
+			.withJournalNotes(records.stream().filter(row -> JOURNAL_NOTE.equals(row.getCategory())).toList())
+			.withDocuments(records.stream().filter(row -> DOCUMENT.equals(row.getCategory())).toList());
 	}
 
 	/**
@@ -84,7 +92,7 @@ public final class LifecareRecordMapper {
 	 * @return          true when the list holds the record
 	 */
 	public static boolean containsRecord(final JsonNode list, final int recordId) {
-		return list.path("documentModels").valueStream()
+		return list.path(FIELD_DOCUMENT_MODELS).valueStream()
 			.anyMatch(model -> Integer.valueOf(recordId).equals(integer(model.path("id"))));
 	}
 
@@ -97,7 +105,7 @@ public final class LifecareRecordMapper {
 	 * @return          the row, empty when the list holds no such row in that group
 	 */
 	public static Optional<JsonNode> findRecord(final JsonNode list, final int recordId, final String category) {
-		return list.path("documentModels").valueStream()
+		return list.path(FIELD_DOCUMENT_MODELS).valueStream()
 			.filter(model -> Integer.valueOf(recordId).equals(integer(model.path("id"))))
 			.filter(model -> categoryOf(model).filter(category::equals).isPresent())
 			.findFirst();
@@ -111,7 +119,7 @@ public final class LifecareRecordMapper {
 	 * @return          the ids, in Lifecare's order
 	 */
 	public static List<String> textRecordIds(final JsonNode list, final String category) {
-		return list.path("documentModels").valueStream()
+		return list.path(FIELD_DOCUMENT_MODELS).valueStream()
 			.filter(model -> categoryOf(model).filter(category::equals).isPresent())
 			.filter(model -> !NO_TEXT_BODY_TYPES.contains(textOrEmpty(model.path("documentType_Name"))))
 			.map(model -> idText(model.path("id")))
@@ -140,14 +148,14 @@ public final class LifecareRecordMapper {
 		return LifecareRecord.create()
 			.withId(idText(model.path("id")))
 			.withCategory(category)
-			.withTitle(text(model.path("title")))
+			.withTitle(text(model.path(FIELD_TITLE)))
 			.withDateTime(dateTime)
 			.withType(text(model.path("type")))
 			.withOwnerTypeText(text(model.path("ownerTypeText")))
 			.withResponsibleCaseworker(text(model.path("responsibleCaseworker")))
 			.withModifiedBy(modifiedBy)
 			.withLocked(model.path("locked").asBoolean(false))
-			.withWriteProtected(model.path("protected").asBoolean(false))
+			.withWriteProtected(model.path(FIELD_PROTECTED).asBoolean(false))
 			.withDocumentKind(text(model.path("documentType_Name")));
 	}
 
@@ -155,34 +163,34 @@ public final class LifecareRecordMapper {
 	 * Whether a record may still be edited. A finalised (upprättad) record is protected, a locked one carries a lock flag,
 	 * signature or date; any of them closes it.
 	 *
-	 * @param  record the record as GetJournalNoteWithContent or GetDocumentWithContent returns it
-	 * @return        true when editable
+	 * @param  row the record as GetJournalNoteWithContent or GetDocumentWithContent returns it
+	 * @return     true when editable
 	 */
-	public static boolean isEditable(final JsonNode record) {
-		return !isTrue(record.path("protected")) && !isTrue(record.path("locked")) && !truthy(record.path("lockedSignature"))
-			&& !truthy(record.path("lockedDate"));
+	public static boolean isEditable(final JsonNode row) {
+		return !isTrue(row.path(FIELD_PROTECTED)) && !isTrue(row.path("locked")) && !truthy(row.path("lockedSignature"))
+			&& !truthy(row.path("lockedDate"));
 	}
 
 	/**
 	 * The record with its body, as shown when it is opened.
 	 *
-	 * @param  record   the record as Lifecare returns it
+	 * @param  row      the record as Lifecare returns it
 	 * @param  category JOURNAL_NOTE or DOCUMENT
 	 * @return          the content view
 	 */
-	public static LifecareRecordContent toRecordContent(final JsonNode record, final String category) {
-		var time = record.path("time");
+	public static LifecareRecordContent toRecordContent(final JsonNode row, final String category) {
+		var time = row.path("time");
 		if (time.isMissingNode() || time.isNull()) {
-			time = record.path("occurenceTime");
+			time = row.path(FIELD_OCCURENCE_TIME);
 		}
 		return LifecareRecordContent.create()
-			.withId(idText(record.path("documentId")))
+			.withId(idText(row.path("documentId")))
 			.withCategory(category)
-			.withTitle(textOrEmpty(record.path("title")))
-			.withContent(textOrEmpty(record.path("content")))
-			.withOccurenceDate(textOrEmpty(record.path("occurenceDate")))
+			.withTitle(textOrEmpty(row.path(FIELD_TITLE)))
+			.withContent(textOrEmpty(row.path(FIELD_CONTENT)))
+			.withOccurenceDate(textOrEmpty(row.path(FIELD_OCCURENCE_DATE)))
 			.withTime(textOrEmpty(time))
-			.withEditable(isEditable(record));
+			.withEditable(isEditable(row));
 	}
 
 	/**
@@ -190,22 +198,22 @@ public final class LifecareRecordMapper {
 	 * returned it. The time is written to both time and occurenceTime, which Lifecare carries side by side. Skrivskydd is
 	 * only ever switched on.
 	 *
-	 * @param  record the record as its editor opened it
-	 * @param  edit   the edit
-	 * @return        the body to post
+	 * @param  row  the record as its editor opened it
+	 * @param  edit the edit
+	 * @return      the body to post
 	 */
-	public static ObjectNode applyRecordEdit(final ObjectNode record, final UpdateLifecareRecordRequest edit) {
-		final var updated = record.deepCopy();
-		updated.put("content", edit.getContent());
+	public static ObjectNode applyRecordEdit(final ObjectNode row, final UpdateLifecareRecordRequest edit) {
+		final var updated = row.deepCopy();
+		updated.put(FIELD_CONTENT, edit.getContent());
 		if (hasText(edit.getOccurenceDate())) {
-			updated.put("occurenceDate", edit.getOccurenceDate());
+			updated.put(FIELD_OCCURENCE_DATE, edit.getOccurenceDate());
 		}
 		if (hasText(edit.getTime())) {
 			updated.put("time", edit.getTime());
-			updated.put("occurenceTime", edit.getTime());
+			updated.put(FIELD_OCCURENCE_TIME, edit.getTime());
 		}
 		if (Boolean.TRUE.equals(edit.getWriteProtected())) {
-			updated.put("protected", true);
+			updated.put(FIELD_PROTECTED, true);
 		}
 		return updated;
 	}
@@ -221,7 +229,7 @@ public final class LifecareRecordMapper {
 			.map(noteType -> LifecareNoteType.create()
 				.withCode(integer(noteType.path("id")))
 				.withName(text(noteType.path("name")))
-				.withProtectedByDefault(isTrue(noteType.path("writeProtectAuto"))))
+				.withProtectedByDefault(isTrue(noteType.path(FIELD_WRITE_PROTECT_AUTO))))
 			.toList();
 	}
 
@@ -249,15 +257,15 @@ public final class LifecareRecordMapper {
 	 */
 	public static ObjectNode toJournalNoteBody(final ObjectNode blank, final JsonNode noteType, final CreateLifecareJournalNoteRequest request) {
 		final var body = blank.deepCopy();
-		body.put("content", request.getContent());
-		body.put("title", titleOrDefault(request.getTitle(), text(noteType.path("name"))));
+		body.put(FIELD_CONTENT, request.getContent());
+		body.put(FIELD_TITLE, titleOrDefault(request.getTitle(), text(noteType.path("name"))));
 		body.put("noteTypeCode", integer(noteType.path("id")));
-		body.put("protected", Optional.ofNullable(request.getWriteProtected()).orElse(isTrue(noteType.path("writeProtectAuto"))));
+		body.put(FIELD_PROTECTED, Optional.ofNullable(request.getWriteProtected()).orElse(isTrue(noteType.path(FIELD_WRITE_PROTECT_AUTO))));
 		if (hasText(request.getOccurenceDate())) {
-			body.put("occurenceDate", request.getOccurenceDate());
+			body.put(FIELD_OCCURENCE_DATE, request.getOccurenceDate());
 		}
 		if (hasText(request.getOccurenceTime())) {
-			body.put("occurenceTime", request.getOccurenceTime());
+			body.put(FIELD_OCCURENCE_TIME, request.getOccurenceTime());
 		}
 		return body;
 	}
@@ -288,7 +296,7 @@ public final class LifecareRecordMapper {
 				.withCode(integer(documentType.path("documentCode")))
 				.withName(text(documentType.path("name")))
 				.withCanChangeOccurenceDate(isTrue(documentType.path("canChangeOccurenceDate")))
-				.withProtectedByDefault(isTrue(documentType.path("writeProtectAuto"))))
+				.withProtectedByDefault(isTrue(documentType.path(FIELD_WRITE_PROTECT_AUTO))))
 			.toList();
 	}
 
@@ -303,12 +311,12 @@ public final class LifecareRecordMapper {
 	 */
 	public static ObjectNode toDocumentBody(final ObjectNode blank, final JsonNode documentType, final CreateLifecareDocumentRequest request) {
 		final var body = blank.deepCopy();
-		body.put("content", request.getContent());
-		body.put("title", titleOrDefault(request.getTitle(), text(documentType.path("name"))));
+		body.put(FIELD_CONTENT, request.getContent());
+		body.put(FIELD_TITLE, titleOrDefault(request.getTitle(), text(documentType.path("name"))));
 		body.put("documentTypeCode", integer(documentType.path("documentCode")));
-		body.put("protected", Optional.ofNullable(request.getWriteProtected()).orElse(isTrue(documentType.path("writeProtectAuto"))));
+		body.put(FIELD_PROTECTED, Optional.ofNullable(request.getWriteProtected()).orElse(isTrue(documentType.path(FIELD_WRITE_PROTECT_AUTO))));
 		if (hasText(request.getOccurenceDate()) && isTrue(documentType.path("canChangeOccurenceDate"))) {
-			body.put("occurenceDate", request.getOccurenceDate());
+			body.put(FIELD_OCCURENCE_DATE, request.getOccurenceDate());
 		}
 		return body;
 	}

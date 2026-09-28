@@ -22,6 +22,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.refuse;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.text;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.textOrEmpty;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * Registers the caseworker's utbetalning straight in Lifecare with Payment/Create, the register of record.
@@ -116,7 +117,7 @@ public class LifecarePaymentRegistrationService {
 			errandService.linkPayment(errand, lifecareId);
 			return true;
 		} catch (final RuntimeException e) {
-			LOG.error("Lifecare payment {} was registered but errand {} could not be linked to it ({})", lifecareId, errand.errandId(), e.getClass().getSimpleName());
+			LOG.error("Lifecare payment {} was registered but errand {} could not be linked to it ({})", lifecareId, sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 			return false;
 		}
 	}

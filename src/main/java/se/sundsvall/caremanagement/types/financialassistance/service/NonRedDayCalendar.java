@@ -94,7 +94,7 @@ final class NonRedDayCalendar {
 			eves = Set.of();
 		}
 		return (int) month.atDay(1).datesUntil(month.atEndOfMonth().plusDays(1))
-			.filter(date -> date.getDayOfWeek() != DayOfWeek.SATURDAY && date.getDayOfWeek() != DayOfWeek.SUNDAY)
+			.filter(date -> !date.getDayOfWeek().equals(DayOfWeek.SATURDAY) && !date.getDayOfWeek().equals(DayOfWeek.SUNDAY))
 			.filter(date -> !holidays.contains(date))
 			.filter(date -> !eves.contains(date))
 			.count();
@@ -120,8 +120,8 @@ final class NonRedDayCalendar {
 
 	private static boolean isWorkingDay(final LocalDate date) {
 		final var year = date.getYear();
-		return date.getDayOfWeek() != DayOfWeek.SATURDAY
-			&& date.getDayOfWeek() != DayOfWeek.SUNDAY
+		return !date.getDayOfWeek().equals(DayOfWeek.SATURDAY)
+			&& !date.getDayOfWeek().equals(DayOfWeek.SUNDAY)
 			&& !publicHolidays(year).contains(date)
 			&& !date.equals(midsummerEve(year))
 			&& !date.equals(LocalDate.of(year, 12, 24))

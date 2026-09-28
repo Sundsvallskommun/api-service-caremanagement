@@ -67,10 +67,10 @@ public class LifecareFinalizeService {
 	 * @param  decidedBy      the caseworker (X-Sent-By)
 	 * @return                the receipt
 	 */
-	public FinalizeResponse finalize(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request,
+	public FinalizeResponse finalizeErrand(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request,
 		final String decidedBy) {
 		if (request.getDecision() != null) {
-			return finalizeService.finalize(municipalityId, namespace, errandId, request, decidedBy);
+			return finalizeService.finalizeErrand(municipalityId, namespace, errandId, request, decidedBy);
 		}
 		if (!hasText(decidedBy)) {
 			throw Problem.valueOf(BAD_REQUEST, ERROR_NO_DECIDER);
@@ -80,7 +80,7 @@ public class LifecareFinalizeService {
 			.withCommunication(request.getCommunication())
 			.withHouseholdSizeChanged(request.getHouseholdSizeChanged());
 		requireValid(completed);
-		return finalizeService.finalize(municipalityId, namespace, errandId, completed, decidedBy);
+		return finalizeService.finalizeErrand(municipalityId, namespace, errandId, completed, decidedBy);
 	}
 
 	private FinalizeDecision decisionFromLifecare(final String municipalityId, final String namespace, final String errandId) {

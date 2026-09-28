@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.operaton.service.scheduler.processmessageret
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -49,7 +50,7 @@ class ProcessMessageRetryWorker {
 	}
 
 	Result retryDue() {
-		final var now = OffsetDateTime.now();
+		final var now = OffsetDateTime.now(ZoneId.systemDefault());
 		var delivered = 0;
 		var gaveUp = 0;
 		final var due = repository.findByStatusAndNextAttemptBeforeOrderByNextAttempt(STATUS_PENDING, now);

@@ -83,7 +83,7 @@ public record ProfessionalWebProperties(
 		if (!isConfigured()) {
 			return "";
 		}
-		return url.replaceAll("/+$", "");
+		return url.replaceAll("/++$", "");
 	}
 
 	/**

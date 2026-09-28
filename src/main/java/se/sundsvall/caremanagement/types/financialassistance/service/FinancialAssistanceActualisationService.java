@@ -18,6 +18,7 @@ import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationResult;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
+import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
 import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Actualisation;
@@ -49,8 +50,10 @@ public class FinancialAssistanceActualisationService {
 
 	/** How far back the actualisation listing reaches when the caller gives no explicit {@code from} date. */
 	private static final int ACTUALISATION_LOOKBACK_MONTHS = 24;
-	/** Lifecare archive defaults — used when the archive request omits the matching field; all overridable per request. */
 	/**
+	 * Lifecare archive defaults — used when the archive request omits the matching field; all overridable per request.
+	 *
+	 * <p>
 	 * Lifecare's {@code InsertDocumentType} / {@code InsertDocumentSenderType} are <strong>catalogue ids</strong>, not
 	 * code words: the actualisation proposal's {@code attachmentTypes} carries {@code {id: 1, name: "Inkommen
 	 * handling"}} with {@code senderTypes} {@code {id: 1, name: "Den enskilde"}}. The previous values, "ANSOKAN" and
@@ -241,8 +244,8 @@ public class FinancialAssistanceActualisationService {
 		final var fileName = fileNameTemplate.formatted(errandNumber);
 		final var title = titleTemplate.formatted(errandNumber);
 
-		actualisationService.uploadAttachment(municipalityId, actualisationId, fileName, document.content(),
-			DEFAULT_ARCHIVE_DOCUMENT_TYPE, DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE, title, DEFAULT_ARCHIVE_SENDER_NAME);
+		actualisationService.uploadAttachment(municipalityId, actualisationId,
+			new AttachmentUpload(DEFAULT_ARCHIVE_DOCUMENT_TYPE, DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE, title, DEFAULT_ARCHIVE_SENDER_NAME, fileName, document.content()));
 
 		return fileName;
 	}
@@ -309,7 +312,8 @@ public class FinancialAssistanceActualisationService {
 		final var documentSenderType = ofNullable(meta.getDocumentSenderType()).filter(StringUtils::hasText).orElse(DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE);
 		final var senderName = ofNullable(meta.getSenderName()).filter(StringUtils::hasText).orElse(DEFAULT_ARCHIVE_SENDER_NAME);
 
-		actualisationService.uploadAttachment(municipalityId, actualisationId, fileName, readBytes(file), documentType, documentSenderType, title, senderName);
+		actualisationService.uploadAttachment(municipalityId, actualisationId,
+			new AttachmentUpload(documentType, documentSenderType, title, senderName, fileName, readBytes(file)));
 
 		ofNullable(meta.getErrandId()).filter(StringUtils::hasText)
 			.ifPresent(errandId -> addActualisationDecision(municipalityId, namespace, errandId, actualisationId,

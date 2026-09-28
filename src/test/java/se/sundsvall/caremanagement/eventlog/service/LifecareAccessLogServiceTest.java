@@ -42,7 +42,7 @@ class LifecareAccessLogServiceTest {
 		final var identifier = Identifier.parse("joe01doe; type=adAccount");
 		Identifier.set(identifier);
 
-		service.record("2281", "NS", "errand", List.of(new LifecareAccessEntry("READ", "reminders", "Läste bevakningar", "7")));
+		service.append("2281", "NS", "errand", List.of(new LifecareAccessEntry("READ", "reminders", "Läste bevakningar", "7")));
 
 		verify(errandEventService).recordLifecareAccesses(eq("2281"), eq("NS"), eq("errand"), eq(identifier), accessesCaptor.capture());
 		assertThat(accessesCaptor.getValue()).singleElement().satisfies(access -> {
@@ -55,14 +55,14 @@ class LifecareAccessLogServiceTest {
 
 	@Test
 	void nothingToRecord() {
-		service.record("2281", "NS", "errand", List.of());
+		service.append("2281", "NS", "errand", List.of());
 
 		verifyNoInteractions(errandEventService);
 	}
 
 	@Test
 	void missingCaller() {
-		assertThatThrownBy(() -> service.record("2281", "NS", "errand", List.of(new LifecareAccessEntry("READ", "x", null, null))))
+		assertThatThrownBy(() -> service.append("2281", "NS", "errand", List.of(new LifecareAccessEntry("READ", "x", null, null))))
 			.hasMessageContaining("X-Sent-By");
 		verify(errandEventService, org.mockito.Mockito.never()).recordLifecareAccesses(any(), any(), any(), any(), any());
 	}

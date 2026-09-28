@@ -51,6 +51,8 @@ final class LifecareDecisionBodies {
 	static final String ERROR_TYPE_CHANGE = "Beslutstypen kan inte ändras på ett beslut som redan finns i Lifecare. Ändra beslutet direkt i Lifecare.";
 	static final String ERROR_NO_BESLUT = "Lifecare answered without a beslut object to fill in";
 
+	private static final String FIELD_DECISION_PERSONS = "decisionPersons";
+
 	private LifecareDecisionBodies() {}
 
 	/**
@@ -105,7 +107,7 @@ final class LifecareDecisionBodies {
 			throw refuse(ERROR_UNREGISTERED_TYPE.formatted(text(decisionType.path("name")).orElse("")));
 		}
 
-		if (elements(base.path("decisionPersons")).stream().anyMatch(person -> isTrue(person.path("coApplicant")))) {
+		if (elements(base.path(FIELD_DECISION_PERSONS)).stream().anyMatch(person -> isTrue(person.path("coApplicant")))) {
 			throw refuse(ERROR_CO_APPLICANT);
 		}
 
@@ -137,8 +139,8 @@ final class LifecareDecisionBodies {
 			setOrRemove(body, "decisionMakerName", decisionMaker.path("name"));
 		}
 		setOrRemove(body, "decisionMakerTitle", decisionMaker.path("title"));
-		final var persons = body.putArray("decisionPersons");
-		elements(base.path("decisionPersons")).forEach(person -> persons.add(include(person)));
+		final var persons = body.putArray(FIELD_DECISION_PERSONS);
+		elements(base.path(FIELD_DECISION_PERSONS)).forEach(person -> persons.add(include(person)));
 		putAmount(body, Optional.ofNullable(input.amount()).orElse(BigDecimal.ZERO));
 		body.put("coApplicant", NO_CO_APPLICANT);
 		body.put("message", input.message());

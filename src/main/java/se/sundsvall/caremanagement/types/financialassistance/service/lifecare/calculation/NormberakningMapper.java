@@ -56,6 +56,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.textOrEmpty;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.textOrNull;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.truthy;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.AMOUNT_CO_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.INCLUDED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.INCOME_CODE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.NORM_ROW_ID;
@@ -81,6 +82,13 @@ final class NormberakningMapper {
 	private static final String CASEWORKER_ORIGIN = "CASEWORKER";
 	private static final String ROLE_CHILD = "CHILD";
 	private static final String ROLE_VISITATION_CHILD = "VISITATION_CHILD";
+
+	private static final String FIELD_START_DATE = "startDate";
+	private static final String FIELD_END_DATE = "endDate";
+	private static final String FIELD_NORM_TEXT = "normText";
+	private static final String FIELD_COMMON_HOUSEHOLD_COST = "commonHouseholdCost";
+	private static final String FIELD_IS_FINALIZED = "isFinalized";
+	private static final String FIELD_APPROVED_AMOUNT = "approvedAmount";
 	private static final int ADULT_AGE = 18;
 	private static final Pattern ISO_DATE = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
 	private static final Pattern NAME_WITH_AMOUNT = Pattern.compile("\\d+[.,]\\d{2}$");
@@ -192,18 +200,18 @@ final class NormberakningMapper {
 		final var calculation = forEdit.path("calculation");
 		final var incomeTypes = forEdit.path("incomeTypes");
 		final var jobStimulus = isTrue(calculation, "hasApplicantJobStimuli");
-		final var periodStart = textOrEmpty(calculation, "startDate");
+		final var periodStart = textOrEmpty(calculation, FIELD_START_DATE);
 		final var persons = objects(calculation, PERSONS);
 		final var incomes = objects(calculation, INCOMES).stream().filter(CalculationRowChanges::keepsIncome).toList();
 		final var normTypeDisplayNames = new ArrayList<String>();
-		Optional.ofNullable(text(calculation, "normText")).filter(name -> !name.isEmpty()).ifPresent(normTypeDisplayNames::add);
+		Optional.ofNullable(text(calculation, FIELD_NORM_TEXT)).filter(name -> !name.isEmpty()).ifPresent(normTypeDisplayNames::add);
 
 		return NormberakningDraft.create()
 			.withApplicationMonth(applicationMonth)
 			.withNormId(integerOrNull(calculation, "normId"))
 			.withNormTypeDisplayNames(normTypeDisplayNames)
-			.withCalculationFromDate(textOrNull(calculation, "startDate"))
-			.withCalculationToDate(textOrNull(calculation, "endDate"))
+			.withCalculationFromDate(textOrNull(calculation, FIELD_START_DATE))
+			.withCalculationToDate(textOrNull(calculation, FIELD_END_DATE))
 			.withCalculationDate(textOrNull(calculation, "date"))
 			.withHasCustomHouseholdSize(truthy(calculation, "hasCustomHouseholdSize"))
 			.withHouseholdSize(integerOrNull(calculation, "householdSize"))
@@ -216,14 +224,14 @@ final class NormberakningMapper {
 				.map(row -> NormberakningNormRow.create().withId(integerOrNull(row, "rowId")).withName(normRowLabel(row)))
 				.toList())
 			.withAmountForHouseholdSize(decimal(calculation, "amountForHouseholdSize").orElse(null))
-			.withCommonHouseholdCost(decimal(calculation, "commonHouseholdCost").orElse(null))
+			.withCommonHouseholdCost(decimal(calculation, FIELD_COMMON_HOUSEHOLD_COST).orElse(null))
 			.withFamilyMembers(members(calculation))
 			.withIncomeSum(decimal(calculation, "sumInk").orElse(null))
 			.withExpenseSum(decimal(calculation, "sumUtg").orElse(null))
 			.withSpecialExpenseSum(decimal(calculation, "sumSpec").orElse(null))
 			.withUpdated(textOrNull(calculation, "updateTimestamp"))
 			.withSource(SOURCE_LIFECARE)
-			.withFinalized(truthy(calculation, "isFinalized"));
+			.withFinalized(truthy(calculation, FIELD_IS_FINALIZED));
 	}
 
 	private static NormberakningPersonRow toLifecarePersonRow(final ObjectNode person, final int index, final String periodStart) {
@@ -300,8 +308,8 @@ final class NormberakningMapper {
 			.withApplicantCaseworkerAmount(applicant)
 			.withApplicantEffectiveAmount(applicant)
 			.withApplicantAmountDate(textOrNull(row, "applicantSearchDate"))
-			.withCoapplicantCaseworkerAmount(decimal(row, "amountCoApplicant").orElse(null))
-			.withCoapplicantEffectiveAmount(decimal(row, "amountCoApplicant").orElse(null))
+			.withCoapplicantCaseworkerAmount(decimal(row, AMOUNT_CO_APPLICANT).orElse(null))
+			.withCoapplicantEffectiveAmount(decimal(row, AMOUNT_CO_APPLICANT).orElse(null))
 			.withCoapplicantAmountDate(textOrNull(row, "coApplicantSearchDate"))
 			.withNote(textOrNull(row, "applicantNote"));
 		if (jobStimulusApplies) {
@@ -324,8 +332,8 @@ final class NormberakningMapper {
 				.withCostType(idOf(row.path("expenseCode")))
 				.withCostTypeDisplayName(text(row, "expenseType"))
 				.withAppliedAmount(decimal(row, "appliedAmount").orElse(null))
-				.withCaseworkerAmount(decimal(row, "approvedAmount").orElse(null))
-				.withEffectiveAmount(decimal(row, "approvedAmount").orElse(null))
+				.withCaseworkerAmount(decimal(row, FIELD_APPROVED_AMOUNT).orElse(null))
+				.withEffectiveAmount(decimal(row, FIELD_APPROVED_AMOUNT).orElse(null))
 				.withNote(textOrNull(row, "note"));
 		}).toList();
 	}
@@ -348,7 +356,7 @@ final class NormberakningMapper {
 				// Lifecare signs what reduces the result negative; the view carries it as an amount.
 				.withNorm(decimal(summary, "norm").map(BigDecimal::negate).orElse(null))
 				.withFamilyCost(decimal(summary, "familyCost").orElse(null))
-				.withCommonHouseholdCost(decimal(summary, "commonHouseholdCost").orElse(null))
+				.withCommonHouseholdCost(decimal(summary, FIELD_COMMON_HOUSEHOLD_COST).orElse(null))
 				.withExpenses(decimal(summary, "expences").map(BigDecimal::negate).orElse(null))
 				.withSum(decimal(summary, "sum").orElse(null))
 				.withSpecialExpenses(decimal(summary, "specialPurpose").orElse(null))
@@ -356,11 +364,11 @@ final class NormberakningMapper {
 		}
 		return LifecareCalculationView.create()
 			.withId(integerOrNull(calculation, "calculationId"))
-			.withNormName(text(calculation, "normText"))
+			.withNormName(text(calculation, FIELD_NORM_TEXT))
 			.withDate(text(calculation, "date"))
-			.withStartDate(text(calculation, "startDate"))
-			.withEndDate(text(calculation, "endDate"))
-			.withFinalized(truthy(calculation, "isFinalized"))
+			.withStartDate(text(calculation, FIELD_START_DATE))
+			.withEndDate(text(calculation, FIELD_END_DATE))
+			.withFinalized(truthy(calculation, FIELD_IS_FINALIZED))
 			.withUpdated(text(calculation, "updateTimestamp"))
 			.withSummary(summaryView);
 	}
@@ -376,18 +384,18 @@ final class NormberakningMapper {
 		final var summary = calculation.path("calculationSummary");
 		return NormberakningPreviousCalculation.create()
 			.withId(integerOrNull(calculation, "calculationId"))
-			.withNorm(text(calculation, "normText"))
-			.withFromDate(emptyAsNull(text(calculation, "startDate")))
-			.withToDate(emptyAsNull(text(calculation, "endDate")))
+			.withNorm(text(calculation, FIELD_NORM_TEXT))
+			.withFromDate(emptyAsNull(text(calculation, FIELD_START_DATE)))
+			.withToDate(emptyAsNull(text(calculation, FIELD_END_DATE)))
 			.withIncomeSum(decimal(calculation, "sumInk").orElse(null))
 			.withExpenseSum(decimal(calculation, "sumUtg").orElse(null))
 			.withSpecialExpenseSum(decimal(calculation, "sumSpec").orElse(null))
 			.withNormSum(decimal(calculation, "sumNorm").orElse(null))
-			.withCommonHouseholdCost(decimal(calculation, "commonHouseholdCost").orElse(null))
+			.withCommonHouseholdCost(decimal(calculation, FIELD_COMMON_HOUSEHOLD_COST).orElse(null))
 			.withFamilyCost(decimal(summary, "familyCost").orElse(null))
 			.withBalance(decimal(summary, "balance").orElse(null))
 			.withTotalSum(decimal(calculation, "totSum").orElse(null))
-			.withIsFinal(truthy(calculation, "isFinalized"))
+			.withIsFinal(truthy(calculation, FIELD_IS_FINALIZED))
 			.withPersons(objects(calculation, PERSONS).stream()
 				.filter(person -> truthy(person, INCLUDED))
 				.map(person -> NormberakningPreviousPerson.create()
@@ -401,7 +409,7 @@ final class NormberakningMapper {
 					.withType(text(income, "incomeType"))
 					.withAmountApplicant(decimal(income, "amountApplicant").orElse(null))
 					.withApplicantSearchDate(emptyAsNull(text(income, "applicantSearchDate")))
-					.withAmountCoApplicant(decimal(income, "amountCoApplicant").orElse(null))
+					.withAmountCoApplicant(decimal(income, AMOUNT_CO_APPLICANT).orElse(null))
 					.withCoApplicantSearchDate(emptyAsNull(text(income, "coApplicantSearchDate"))))
 				.toList())
 			.withExpenses(objects(calculation, EXPENSES).stream().map(NormberakningMapper::toPreviousExpense).toList())
@@ -412,7 +420,7 @@ final class NormberakningMapper {
 		return NormberakningPreviousExpense.create()
 			.withType(text(expense, "expenseType"))
 			.withAppliedAmount(decimal(expense, "appliedAmount").orElse(null))
-			.withApprovedAmount(decimal(expense, "approvedAmount").orElse(null));
+			.withApprovedAmount(decimal(expense, FIELD_APPROVED_AMOUNT).orElse(null));
 	}
 
 	// ---- catalogues ------------------------------------------------------------------------------------------------

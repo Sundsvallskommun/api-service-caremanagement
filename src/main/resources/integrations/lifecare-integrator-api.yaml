@@ -2545,12 +2545,14 @@ components:
           examples:
           - 5000.0
         elderlyCareDetails:
-          type: "null"
-          $ref: "#/components/schemas/ElderlyCareDecisionDetails"
+          oneOf:
+          - type: "null"
+          - $ref: "#/components/schemas/ElderlyCareDecisionDetails"
           description: Details only present for ELDERLY_CARE decisions
         familyCareDetails:
-          type: "null"
-          $ref: "#/components/schemas/FamilyCareDecisionDetails"
+          oneOf:
+          - type: "null"
+          - $ref: "#/components/schemas/FamilyCareDecisionDetails"
           description: Details only present for FAMILY_CARE decisions
     DecisionsResponse:
       type: object

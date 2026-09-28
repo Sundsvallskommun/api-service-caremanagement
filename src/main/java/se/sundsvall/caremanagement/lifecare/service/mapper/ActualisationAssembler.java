@@ -230,6 +230,11 @@ public final class ActualisationAssembler {
 	 * none. An empty accepted-types list is a statement, not a gap: the type takes no such link, and sending one
 	 * anyway is what FamilyCare answers 400 to.
 	 */
+	// typeOf is typed as a general Function returning a nullable Integer rather than a primitive ToIntFunction on
+	// purpose: a candidate's type id can legitimately be absent, and accepted.contains(null) is a valid "not accepted"
+	// answer here — a primitive int cannot carry that null, and ToIntFunction would NPE on unboxing it. That nullable
+	// return is what trips java:S4276, hence the suppression.
+	@SuppressWarnings("java:S4276")
 	private static <T, U> Optional<Integer> linkedId(final List<T> candidates, final Function<T, Integer> typeOf, final Function<T, Integer> idOf,
 		final List<U> acceptedTypes, final Function<U, Integer> acceptedTypeId) {
 

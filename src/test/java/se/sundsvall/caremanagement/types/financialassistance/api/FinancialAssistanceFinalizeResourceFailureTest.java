@@ -149,7 +149,7 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 	@Test
 	void serviceConflictIsPassedThrough() {
 		final var request = validRequest();
-		when(finalizeServiceMock.finalize(any(), any(), any(), any(), any()))
+		when(finalizeServiceMock.finalizeErrand(any(), any(), any(), any(), any()))
 			.thenThrow(Problem.valueOf(CONFLICT, "errand must be in status AWAITING_DECISION to be finalized, but is in status 'UNDER_REVIEW'"));
 
 		final var response = webTestClient.post()
@@ -166,6 +166,6 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getStatus()).isEqualTo(CONFLICT);
 		assertThat(response.getDetail()).contains("AWAITING_DECISION");
-		verify(finalizeServiceMock).finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe");
+		verify(finalizeServiceMock).finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe");
 	}
 }

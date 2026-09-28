@@ -34,6 +34,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareCalculationEditService.asObject;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toLifecareCalculationView;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toPreviousCalculation;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * The errand's normberäkning, kept in Lifecare. careM's draft (filled from the application and SSBTEK) is the working
@@ -51,6 +52,7 @@ public class ErrandLifecareCalculationService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ErrandLifecareCalculationService.class);
 	private static final ZoneId SWEDISH_TIME = ZoneId.of("Europe/Stockholm");
+	private static final String FIELD_CALCULATION_ID = "calculationId";
 
 	private final LifecareErrandService errandService;
 	private final LifecareCalculationClient client;
@@ -132,7 +134,7 @@ public class ErrandLifecareCalculationService {
 		final var household = householdSizeOf(calculation, draft.draft().getHasCustomHouseholdSize(), draft.draft().getHouseholdSize());
 
 		final var created = createInLifecare(serviceId, CalculationBodyBuilder.create(calculation, household));
-		final var calculationId = Optional.ofNullable(integerOrNull(created, "calculationId"))
+		final var calculationId = Optional.ofNullable(integerOrNull(created, FIELD_CALCULATION_ID))
 			.orElseThrow(() -> Problem.valueOf(BAD_GATEWAY, "Normberäkningen sparades i Lifecare men Lifecare svarade utan dess id. Kontrollera i Lifecare innan du sparar igen."));
 		recorder.written(errand, LifecareAccessEntry.CREATE, TARGET, "Sparade normberäkningen i Lifecare", String.valueOf(calculationId));
 		link(errand, calculationId);
@@ -162,12 +164,12 @@ public class ErrandLifecareCalculationService {
 		recorder.read(errand, TARGET, "Läste insatsens normberäkningar i Lifecare");
 
 		final var own = errand.calculation()
-			.flatMap(ownId -> CalculationJson.elements(listed).stream().filter(item -> CalculationJson.hasNumber(item, "calculationId", ownId)).findFirst())
+			.flatMap(ownId -> CalculationJson.elements(listed).stream().filter(item -> CalculationJson.hasNumber(item, FIELD_CALCULATION_ID, ownId)).findFirst())
 			.map(item -> text(item, "startDate"));
 		final var periodStart = own.or(() -> draftReader.periodStart(errand)).orElse(null);
 
 		return PreviousCalculationPicker.pick(listed, periodStart, errand.calculationId()).map(previous -> {
-			final var previousId = integerOrNull(previous, "calculationId");
+			final var previousId = integerOrNull(previous, FIELD_CALCULATION_ID);
 			final var calculation = client.read(previousId);
 			recorder.read(errand, TARGET, "Läste föregående normberäkning i Lifecare", String.valueOf(previousId));
 			return toPreviousCalculation(calculation);
@@ -192,7 +194,7 @@ public class ErrandLifecareCalculationService {
 		try {
 			errandService.linkCalculation(errand, calculationId);
 		} catch (final RuntimeException e) {
-			LOG.error("Calculation {} was created in Lifecare but errand {} could not be linked to it ({})", calculationId, errand.errandId(), e.getClass().getSimpleName());
+			LOG.error("Calculation {} was created in Lifecare but errand {} could not be linked to it ({})", calculationId, sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 			throw Problem.valueOf(BAD_GATEWAY, "Normberäkningen sparades i Lifecare (beräkning %d) men kunde inte kopplas till ärendet. Spara inte igen – då skapas en beräkning till."
 				.formatted(calculationId));
 		}

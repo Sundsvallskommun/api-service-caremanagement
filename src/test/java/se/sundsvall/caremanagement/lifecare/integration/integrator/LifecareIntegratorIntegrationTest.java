@@ -45,6 +45,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.multipart.MultipartFile;
+import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static generated.se.sundsvall.lifecareintegrator.Decision.SourceEnum.FAMILY_CARE;
@@ -384,7 +385,7 @@ class LifecareIntegratorIntegrationTest {
 	void postActualisationAttachmentUploadsThePdfWithoutResolvingAPerson() {
 		final var content = "%PDF-1.7".getBytes(UTF_8);
 
-		integration.postActualisationAttachment(MUNICIPALITY_ID, 88, "Hyresavi", "Den enskilde", "Hyra juni", "Berit Berg", "hyra.pdf", content);
+		integration.postActualisationAttachment(MUNICIPALITY_ID, 88, new AttachmentUpload("Hyresavi", "Den enskilde", "Hyra juni", "Berit Berg", "hyra.pdf", content));
 
 		final var file = ArgumentCaptor.forClass(MultipartFile.class);
 		verify(clientMock).addActualisationAttachment(eq(MUNICIPALITY_ID), eq(88), eq("Hyresavi"), eq("Den enskilde"),
@@ -400,7 +401,7 @@ class LifecareIntegratorIntegrationTest {
 		doThrow(new IllegalStateException("connection reset")).when(clientMock)
 			.addActualisationAttachment(any(), any(), any(), any(), any(), any(), any());
 
-		assertThatThrownBy(() -> integration.postActualisationAttachment(MUNICIPALITY_ID, 88, "Hyresavi", "Den enskilde", null, null, "hyra.pdf", new byte[0]))
+		assertThatThrownBy(() -> integration.postActualisationAttachment(MUNICIPALITY_ID, 88, new AttachmentUpload("Hyresavi", "Den enskilde", null, null, "hyra.pdf", new byte[0])))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.hasMessageContaining("uploading an actualisation attachment")

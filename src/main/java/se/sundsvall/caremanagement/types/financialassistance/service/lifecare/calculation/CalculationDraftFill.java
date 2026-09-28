@@ -184,24 +184,23 @@ final class CalculationDraftFill {
 		for (final var income : Optional.ofNullable(incomes).orElse(List.of())) {
 			final var applicant = amount(income.getApplicantEffectiveAmount());
 			final var coApplicant = amount(income.getCoapplicantEffectiveAmount());
-			if (income.isDeleted() || applicant == 0 && coApplicant == 0) {
-				continue;
+			if (!income.isDeleted() && (applicant != 0 || coApplicant != 0)) {
+				// By name first: careM's own type codes do not always equal Lifecare's incomeCode (Lön efter skatt).
+				final var type = incomeType(types, income);
+				if (type.isEmpty()) {
+					unknown.add(Optional.ofNullable(income.getTypeName()).orElse(String.valueOf(income.getTypeId())));
+				} else {
+					final var code = type.get().path("id");
+					final var row = rows.stream().filter(candidate -> same(candidate.path("incomeCode"), code)).findFirst().orElseGet(() -> {
+						final var created = newIncomeRow(calculationId, type.get(), 0, 0);
+						rows.add(created);
+						return created;
+					});
+					row.set(AMOUNT_APPLICANT, numberNode(number(row, AMOUNT_APPLICANT) + applicant));
+					row.set(AMOUNT_CO_APPLICANT, numberNode(number(row, AMOUNT_CO_APPLICANT) + coApplicant));
+					provenance.computeIfAbsent(row, _ -> new ArrayList<>()).add(income);
+				}
 			}
-			// By name first: careM's own type codes do not always equal Lifecare's incomeCode (Lön efter skatt).
-			final var type = incomeType(types, income);
-			if (type.isEmpty()) {
-				unknown.add(Optional.ofNullable(income.getTypeName()).orElse(String.valueOf(income.getTypeId())));
-				continue;
-			}
-			final var code = type.get().path("id");
-			final var row = rows.stream().filter(candidate -> same(candidate.path("incomeCode"), code)).findFirst().orElseGet(() -> {
-				final var created = newIncomeRow(calculationId, type.get(), 0, 0);
-				rows.add(created);
-				return created;
-			});
-			row.set(AMOUNT_APPLICANT, numberNode(number(row, AMOUNT_APPLICANT) + applicant));
-			row.set(AMOUNT_CO_APPLICANT, numberNode(number(row, AMOUNT_CO_APPLICANT) + coApplicant));
-			provenance.computeIfAbsent(row, _ -> new ArrayList<>()).add(income);
 		}
 		provenance.forEach(CalculationDraftFill::applyProvenance);
 		return rows;
@@ -276,29 +275,28 @@ final class CalculationDraftFill {
 		});
 		for (final var expense : draftRows) {
 			final var approved = amount(expense.getEffectiveAmount());
-			if (expense.isDeleted() || approved == 0) {
-				continue;
-			}
-			// The draft keeps the cost type as its own code, with Lifecare's label beside it.
-			final var label = Optional.ofNullable(expense.getCostTypeDisplayName()).or(() -> Optional.ofNullable(expense.getCostType())).orElse("");
-			final var type = elements(types).stream().filter(candidate -> sameName(text(candidate, TEXT), label)).findFirst();
-			if (type.isEmpty()) {
-				unknown.add(label);
-				continue;
-			}
-			final var applied = Optional.ofNullable(expense.getAppliedAmount()).map(BigDecimal::doubleValue).orElse(approved);
-			final var note = Optional.ofNullable(expense.getSpecification()).or(() -> Optional.ofNullable(expense.getNote())).orElse(null);
-			final var code = type.get().path("id");
-			rows.stream().filter(row -> same(row.path("expenseCode"), code)).findFirst().ifPresentOrElse(existing -> {
-				existing.set(APPLIED_AMOUNT, numberNode(number(existing, APPLIED_AMOUNT) + applied));
-				existing.set(APPROVED_AMOUNT, numberNode(number(existing, APPROVED_AMOUNT) + approved));
-				final var notes = Stream.of(text(existing, NOTE), note).filter(StringUtils::hasLength).toList();
-				if (notes.isEmpty()) {
-					existing.putNull(NOTE);
+			if (!expense.isDeleted() && approved != 0) {
+				// The draft keeps the cost type as its own code, with Lifecare's label beside it.
+				final var label = Optional.ofNullable(expense.getCostTypeDisplayName()).or(() -> Optional.ofNullable(expense.getCostType())).orElse("");
+				final var type = elements(types).stream().filter(candidate -> sameName(text(candidate, TEXT), label)).findFirst();
+				if (type.isEmpty()) {
+					unknown.add(label);
 				} else {
-					existing.put(NOTE, toLifecareNote(String.join("; ", notes)));
+					final var applied = Optional.ofNullable(expense.getAppliedAmount()).map(BigDecimal::doubleValue).orElse(approved);
+					final var note = Optional.ofNullable(expense.getSpecification()).or(() -> Optional.ofNullable(expense.getNote())).orElse(null);
+					final var code = type.get().path("id");
+					rows.stream().filter(row -> same(row.path("expenseCode"), code)).findFirst().ifPresentOrElse(existing -> {
+						existing.set(APPLIED_AMOUNT, numberNode(number(existing, APPLIED_AMOUNT) + applied));
+						existing.set(APPROVED_AMOUNT, numberNode(number(existing, APPROVED_AMOUNT) + approved));
+						final var notes = Stream.of(text(existing, NOTE), note).filter(StringUtils::hasLength).toList();
+						if (notes.isEmpty()) {
+							existing.putNull(NOTE);
+						} else {
+							existing.put(NOTE, toLifecareNote(String.join("; ", notes)));
+						}
+					}, () -> rows.add(newExpenseRow(type.get(), applied, approved, note)));
 				}
-			}, () -> rows.add(newExpenseRow(type.get(), applied, approved, note)));
+			}
 		}
 		return rows;
 	}

@@ -18,6 +18,7 @@ import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
+import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.caremanagement.shared.SourceFile;
 
 import static java.time.OffsetDateTime.now;
@@ -116,8 +117,8 @@ public class MessageArchiveService {
 			// throws, so a "Failed to archive" log can no longer coincide with a document actually created in Lifecare.
 			attachmentService.createMessageHistoryAttachment(errand.getMunicipalityId(), errand.getNamespace(), errand.getId(), fileName, pdf);
 
-			actualisationService.uploadAttachment(municipalityId, actualisationId.get(), fileName, pdf,
-				properties.lifecareDocumentType(), properties.lifecareDocumentSenderType(), title, properties.lifecareSenderName());
+			actualisationService.uploadAttachment(municipalityId, actualisationId.get(),
+				new AttachmentUpload(properties.lifecareDocumentType(), properties.lifecareDocumentSenderType(), title, properties.lifecareSenderName(), fileName, pdf));
 
 			LOG.info("Archived message history for errand {} ({} message(s)) to Lifecare actualisation {}", errand.getErrandNumber(), thread.size(), actualisationId.get());
 		} catch (final Exception e) {

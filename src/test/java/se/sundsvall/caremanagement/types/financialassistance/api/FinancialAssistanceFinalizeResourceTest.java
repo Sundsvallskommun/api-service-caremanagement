@@ -64,7 +64,7 @@ class FinancialAssistanceFinalizeResourceTest {
 			.withDecisionId("decision-1")
 			.withProcessMessageCorrelated(true)
 			.withCommunication(request.getCommunication());
-		when(finalizeServiceMock.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe")).thenReturn(expected);
+		when(finalizeServiceMock.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe")).thenReturn(expected);
 
 		final var response = webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -78,14 +78,14 @@ class FinancialAssistanceFinalizeResourceTest {
 			.getResponseBody();
 
 		assertThat(response).isEqualTo(expected);
-		verify(finalizeServiceMock).finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe");
+		verify(finalizeServiceMock).finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe");
 	}
 
 	@Test
 	void finalizeWithoutIdentityPassesNullDecider() {
 		// The service rejects a missing decider with 400 — the resource only forwards what it got.
 		final var request = validRequest();
-		when(finalizeServiceMock.finalize(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(request), isNull())).thenReturn(FinalizeResponse.create());
+		when(finalizeServiceMock.finalizeErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(request), isNull())).thenReturn(FinalizeResponse.create());
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -94,7 +94,7 @@ class FinancialAssistanceFinalizeResourceTest {
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(finalizeServiceMock).finalize(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(request), isNull());
+		verify(finalizeServiceMock).finalizeErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), eq(request), isNull());
 	}
 
 	@Test
@@ -108,7 +108,7 @@ class FinancialAssistanceFinalizeResourceTest {
 		final var expected = FinalizeRequest.create()
 			.withDecision(FinalizeDecision.create().withOutcome("AVSLAG"))
 			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false));
-		when(finalizeServiceMock.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, expected, "jane02doe")).thenReturn(FinalizeResponse.create());
+		when(finalizeServiceMock.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, expected, "jane02doe")).thenReturn(FinalizeResponse.create());
 
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -118,7 +118,7 @@ class FinancialAssistanceFinalizeResourceTest {
 			.exchange()
 			.expectStatus().isOk();
 
-		verify(finalizeServiceMock).finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, expected, "jane02doe");
+		verify(finalizeServiceMock).finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, expected, "jane02doe");
 	}
 
 	@Test
@@ -129,7 +129,7 @@ class FinancialAssistanceFinalizeResourceTest {
 			.withDecisionId("decision-1")
 			.withProcessMessageCorrelated(true)
 			.withLifecareDecision(new LifecareDecisionRegistration("decision-1", "REGISTERED", "98", null));
-		when(finalizeServiceMock.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe")).thenReturn(expected);
+		when(finalizeServiceMock.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe")).thenReturn(expected);
 
 		final var response = webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
@@ -143,6 +143,6 @@ class FinancialAssistanceFinalizeResourceTest {
 			.getResponseBody();
 
 		assertThat(response).isEqualTo(expected);
-		verify(finalizeServiceMock).finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe");
+		verify(finalizeServiceMock).finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe");
 	}
 }

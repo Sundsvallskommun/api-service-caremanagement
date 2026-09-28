@@ -116,12 +116,12 @@ public class FinancialAssistanceFinalizeService {
 	 * @param  decidedBy the authenticated caseworker (X-Sent-By) — becomes the decision's {@code createdBy}
 	 * @return           the receipt: decision id, whether the process was resumed, the channels
 	 */
-	public FinalizeResponse finalize(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request, final String decidedBy) {
+	public FinalizeResponse finalizeErrand(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request, final String decidedBy) {
 		final var errand = errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		requireDecider(decidedBy);
 		requireDecision(request);
 		requireStatus(errand.getStatus());
-		// Locks the errand's row for the rest of this transaction, so a concurrent finalize() blocks here rather than
+		// Locks the errand's row for the rest of this transaction, so a concurrent finalizeErrand() blocks here rather than
 		// racing requireNotFinalized() below.
 		final var entity = financialAssistanceRepository.findByErrandIdForUpdate(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERROR_NO_TYPED_ERRAND.formatted(errandId)));
