@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class FinalizeMapperTest {
 
-	private static final LocalDate TODAY = LocalDate.of(2026, 6, 18);
+	private static final LocalDate TODAY = LocalDate.of(2026, Month.JUNE, 18);
 
 	private static FinalizeRequest grantingRequest() {
 		return FinalizeRequest.create()
@@ -24,8 +25,8 @@ class FinalizeMapperTest {
 				.withOutcome("BIFALL")
 				.withReason("Inkomster enligt SSBTEK")
 				.withCoApplicantReason("Beviljad")
-				.withPeriodFrom(LocalDate.of(2026, 6, 1))
-				.withPeriodTo(LocalDate.of(2026, 6, 30))
+				.withPeriodFrom(LocalDate.of(2026, Month.JUNE, 1))
+				.withPeriodTo(LocalDate.of(2026, Month.JUNE, 30))
 				.withAmount(new BigDecimal("7900.00"))
 				.withDecisionMessage("Du beviljas ekonomiskt bistånd"))
 			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(true).withLetter(false))
@@ -43,8 +44,8 @@ class FinalizeMapperTest {
 		assertThat(decision.getAmount()).isEqualByComparingTo("7900.00");
 		assertThat(decision.getDecisionMessage()).isEqualTo("Du beviljas ekonomiskt bistånd");
 		assertThat(decision.getDecisionDate()).isEqualTo(TODAY);
-		assertThat(decision.getPeriodFrom()).isEqualTo(LocalDate.of(2026, 6, 1));
-		assertThat(decision.getPeriodTo()).isEqualTo(LocalDate.of(2026, 6, 30));
+		assertThat(decision.getPeriodFrom()).isEqualTo(LocalDate.of(2026, Month.JUNE, 1));
+		assertThat(decision.getPeriodTo()).isEqualTo(LocalDate.of(2026, Month.JUNE, 30));
 		assertThat(decision.getCreatedBy()).isEqualTo("jane02doe");
 		assertThat(decision.getLifecareStatus()).isEqualTo("PENDING");
 		assertThat(decision.getCoApplicantReason()).isEqualTo("Beviljad");

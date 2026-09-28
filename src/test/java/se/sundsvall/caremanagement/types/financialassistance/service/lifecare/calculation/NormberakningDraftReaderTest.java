@@ -15,6 +15,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAs
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareErrand;
 import se.sundsvall.dept44.problem.Problem;
 
+import static java.time.Month.OCTOBER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.Mockito.when;
@@ -62,7 +63,7 @@ class NormberakningDraftReaderTest {
 	@Test
 	void readsTheDraftsPeriodStartBestEffort() {
 		when(calculationService.getDraft("2281", "FINANCIAL_ASSISTANCE", "e1"))
-			.thenReturn(CalculationDraft.create().withCalculationFromDate(LocalDate.of(2026, 10, 1)))
+			.thenReturn(CalculationDraft.create().withCalculationFromDate(LocalDate.of(2026, OCTOBER, 1)))
 			.thenReturn(CalculationDraft.create())
 			.thenThrow(Problem.valueOf(NOT_FOUND, "No draft"));
 

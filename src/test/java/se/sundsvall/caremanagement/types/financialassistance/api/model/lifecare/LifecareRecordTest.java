@@ -47,8 +47,8 @@ class LifecareRecordTest {
 		assertThat(result.getOwnerTypeText()).isEqualTo("EK Ekonomiskt bistånd");
 		assertThat(result.getResponsibleCaseworker()).isEqualTo("RPA_031DEV");
 		assertThat(result.getModifiedBy()).isEqualTo("RPA_031DEV 2026-09-23");
-		assertThat(result.getLocked()).isEqualTo(true);
-		assertThat(result.getWriteProtected()).isEqualTo(true);
+		assertThat(result.getLocked()).isTrue();
+		assertThat(result.getWriteProtected()).isTrue();
 		assertThat(result.getDocumentKind()).isEqualTo("JournalNote");
 	}
 

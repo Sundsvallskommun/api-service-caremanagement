@@ -12,6 +12,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 
+import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_EXPENSE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_SPECIAL_EXPENSE;
@@ -60,14 +61,14 @@ class CalculationDraftMapperTest {
 	@Test
 	void toEffectivePersonFallsBackToTheProcessDays() {
 		final var entity = FaNormPersonEntity.create().withPartyId("party-1").withProcessDays(30)
-			.withDeviationFromDate(LocalDate.of(2026, 6, 10)).withDeviationToDate(LocalDate.of(2026, 6, 20));
+			.withDeviationFromDate(LocalDate.of(2026, JUNE, 10)).withDeviationToDate(LocalDate.of(2026, JUNE, 20));
 
 		final var person = CalculationDraftMapper.toEffectivePerson(entity);
 
 		assertThat(person.partyId()).isEqualTo("party-1");
 		assertThat(person.numberOfDays()).isEqualTo(30);
-		assertThat(person.deviationFromDate()).isEqualTo(LocalDate.of(2026, 6, 10));
-		assertThat(person.deviationToDate()).isEqualTo(LocalDate.of(2026, 6, 20));
+		assertThat(person.deviationFromDate()).isEqualTo(LocalDate.of(2026, JUNE, 10));
+		assertThat(person.deviationToDate()).isEqualTo(LocalDate.of(2026, JUNE, 20));
 	}
 
 	@Test

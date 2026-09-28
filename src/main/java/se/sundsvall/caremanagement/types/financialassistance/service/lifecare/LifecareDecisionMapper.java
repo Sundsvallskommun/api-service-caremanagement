@@ -29,8 +29,8 @@ final class LifecareDecisionMapper {
 	 * listed but refused, since what else they set in motion in Lifecare is not captured.
 	 *
 	 * <p>
-	 * Known limitation: Lifecare's beslutstyper are not fully configured for ekonomiskt bistånd yet. Revisit this
-	 * mapping, and which categories careM lets through, once they are.
+	 * Known limitation: Lifecare's beslutstyper are not fully configured for ekonomiskt bistånd yet, so this mapping
+	 * and the set of categories careM lets through are deliberately conservative until that configuration lands.
 	 * </p>
 	 */
 	static final Map<Integer, String> OUTCOME_BY_CATEGORY = Map.of(0, OUTCOME_BIFALL, 10, OUTCOME_AVSLAG);

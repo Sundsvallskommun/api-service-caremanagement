@@ -59,7 +59,7 @@ class NormberakningPreviousCalculationTest {
 		assertThat(bean.getFamilyCost()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getBalance()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getTotalSum()).isEqualTo(BigDecimal.ONE);
-		assertThat(bean.getIsFinal()).isEqualTo(true);
+		assertThat(bean.getIsFinal()).isTrue();
 		assertThat(bean.getPersons()).isEqualTo(List.of(NormberakningPreviousPerson.create()));
 		assertThat(bean.getIncomes()).isEqualTo(List.of(NormberakningPreviousIncome.create()));
 		assertThat(bean.getExpenses()).isEqualTo(List.of(NormberakningPreviousExpense.create()));

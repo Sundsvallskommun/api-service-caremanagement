@@ -97,9 +97,86 @@ class LifecareIntegratorIntegrationTest {
 	 * The household roster is the reason this route exists at all, so the person mapping earns its own assertion: the
 	 * party id has to land in {@code personId}, which is the field the lifecare services filter on. Dropping it empties
 	 * the roster without an error.
+	 *
+	 * <p>
+	 * Split from a single 34-assertion test (SonarCloud java:S5961) into one method per mapped aspect, so each
+	 * stays well under the 25-assertion ceiling while every original assertion still runs.
 	 */
 	@Test
-	void getCalculationsMapsTheIntegratorsModelBackToFamilyCare() {
+	void getCalculationsMapsThePagingMetadata() {
+		final var result = actOnFullCalculationsResponse();
+
+		assertThat(result.getPageNumber()).isEqualTo(1);
+		assertThat(result.getPageSize()).isEqualTo(20);
+		assertThat(result.getTotalNumberOfPages()).isEqualTo(3);
+		assertThat(result.getTotalNumberOfRecords()).isEqualTo(42);
+	}
+
+	@Test
+	void getCalculationsMapsTheCalculationFields() {
+		final var result = actOnFullCalculationsResponse();
+
+		assertThat(result.getResult()).singleElement().satisfies(calculation -> {
+			assertThat(calculation.getId()).isEqualTo(5012);
+			assertThat(calculation.getNorm()).isEqualTo("Riksnorm 2026");
+			assertThat(calculation.getFromDate()).isEqualTo("2026-06-01");
+			assertThat(calculation.getToDate()).isEqualTo("2026-06-30");
+			assertThat(calculation.getNormSum()).isEqualTo(12345.0);
+			assertThat(calculation.getIncomeSum()).isEqualTo(8000.0);
+			assertThat(calculation.getTotalSum()).isEqualTo(-2155.0);
+			assertThat(calculation.getExpenseSum()).isNull();
+			assertThat(calculation.getInvestigationId()).isEqualTo(77);
+			assertThat(calculation.getServiceId()).isEqualTo(88);
+			assertThat(calculation.getConnectedApplication()).isEqualTo(99);
+			assertThat(calculation.getFinal()).isTrue();
+		});
+	}
+
+	@Test
+	void getCalculationsMapsThePersonDetails() {
+		final var result = actOnFullCalculationsResponse();
+
+		assertThat(result.getResult()).singleElement().satisfies(calculation -> assertThat(calculation.getCalculationPersonDTOs()).singleElement().satisfies(person -> {
+			assertThat(person.getPersonId()).isEqualTo(PARTY_ID);
+			assertThat(person.getName()).isEqualTo("Berit Berg");
+			assertThat(person.getAmount()).isEqualTo(3160.0);
+			assertThat(person.getDeviationFromDate()).isEqualTo("2026-06-10");
+			assertThat(person.getDeviationToDate()).isNull();
+		}));
+	}
+
+	@Test
+	void getCalculationsMapsTheIncomeDetails() {
+		final var result = actOnFullCalculationsResponse();
+
+		assertThat(result.getResult()).singleElement().satisfies(calculation -> assertThat(calculation.getCalculationIncomesDTOs()).singleElement().satisfies(income -> {
+			assertThat(income.getType()).isEqualTo("Lön efter skatt");
+			assertThat(income.getAmountApplicant()).isEqualTo(8000.0);
+			assertThat(income.getAmountCoApplicant()).isNull();
+		}));
+	}
+
+	@Test
+	void getCalculationsMapsTheExpenseDetails() {
+		final var result = actOnFullCalculationsResponse();
+
+		assertThat(result.getResult()).singleElement().satisfies(calculation -> assertThat(calculation.getCalculationExpensesDTOs()).singleElement().satisfies(expense -> {
+			assertThat(expense.getType()).isEqualTo("Hyra");
+			assertThat(expense.getAppliedAmount()).isEqualTo(6500.0);
+		}));
+	}
+
+	@Test
+	void getCalculationsMapsTheSpecialExpenseDetails() {
+		final var result = actOnFullCalculationsResponse();
+
+		assertThat(result.getResult()).singleElement().satisfies(calculation -> assertThat(calculation.getCalculationSpecialExpensesDTOs()).singleElement().satisfies(expense -> {
+			assertThat(expense.getType()).isEqualTo("Tandvård");
+			assertThat(expense.getApprovedAmount()).isEqualTo(450.0);
+		}));
+	}
+
+	private generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedCalculationDTO actOnFullCalculationsResponse() {
 		when(clientMock.getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END)).thenReturn(new PagedCalculationResponse()
 			.meta(new PagingMetaData().page(1).limit(20).totalPages(3).totalRecords(42L))
 			.calculations(List.of(new Calculation()
@@ -123,46 +200,7 @@ class LifecareIntegratorIntegrationTest {
 				.expenses(List.of(new CalculationExpense().type("Hyra").appliedAmount(BigDecimal.valueOf(6500.0))))
 				.specialExpenses(List.of(new CalculationExpense().type("Tandvård").approvedAmount(BigDecimal.valueOf(450.0)))))));
 
-		final var result = integration.getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END);
-
-		assertThat(result.getPageNumber()).isEqualTo(1);
-		assertThat(result.getPageSize()).isEqualTo(20);
-		assertThat(result.getTotalNumberOfPages()).isEqualTo(3);
-		assertThat(result.getTotalNumberOfRecords()).isEqualTo(42);
-		assertThat(result.getResult()).singleElement().satisfies(calculation -> {
-			assertThat(calculation.getId()).isEqualTo(5012);
-			assertThat(calculation.getNorm()).isEqualTo("Riksnorm 2026");
-			assertThat(calculation.getFromDate()).isEqualTo("2026-06-01");
-			assertThat(calculation.getToDate()).isEqualTo("2026-06-30");
-			assertThat(calculation.getNormSum()).isEqualTo(12345.0);
-			assertThat(calculation.getIncomeSum()).isEqualTo(8000.0);
-			assertThat(calculation.getTotalSum()).isEqualTo(-2155.0);
-			assertThat(calculation.getExpenseSum()).isNull();
-			assertThat(calculation.getInvestigationId()).isEqualTo(77);
-			assertThat(calculation.getServiceId()).isEqualTo(88);
-			assertThat(calculation.getConnectedApplication()).isEqualTo(99);
-			assertThat(calculation.getFinal()).isTrue();
-			assertThat(calculation.getCalculationPersonDTOs()).singleElement().satisfies(person -> {
-				assertThat(person.getPersonId()).isEqualTo(PARTY_ID);
-				assertThat(person.getName()).isEqualTo("Berit Berg");
-				assertThat(person.getAmount()).isEqualTo(3160.0);
-				assertThat(person.getDeviationFromDate()).isEqualTo("2026-06-10");
-				assertThat(person.getDeviationToDate()).isNull();
-			});
-			assertThat(calculation.getCalculationIncomesDTOs()).singleElement().satisfies(income -> {
-				assertThat(income.getType()).isEqualTo("Lön efter skatt");
-				assertThat(income.getAmountApplicant()).isEqualTo(8000.0);
-				assertThat(income.getAmountCoApplicant()).isNull();
-			});
-			assertThat(calculation.getCalculationExpensesDTOs()).singleElement().satisfies(expense -> {
-				assertThat(expense.getType()).isEqualTo("Hyra");
-				assertThat(expense.getAppliedAmount()).isEqualTo(6500.0);
-			});
-			assertThat(calculation.getCalculationSpecialExpensesDTOs()).singleElement().satisfies(expense -> {
-				assertThat(expense.getType()).isEqualTo("Tandvård");
-				assertThat(expense.getApprovedAmount()).isEqualTo(450.0);
-			});
-		});
+		return integration.getCalculations(MUNICIPALITY_ID, PARTY_ID, START, END);
 	}
 
 	@Test

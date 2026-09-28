@@ -75,7 +75,9 @@ class IncomeTypeMapperTest {
 
 	@Test
 	void tableIsUnmodifiable() {
-		assertThatThrownBy(() -> IncomeTypeMapper.incomeTypeByName().put("x", "Y"))
+		final var table = IncomeTypeMapper.incomeTypeByName();
+
+		assertThatThrownBy(() -> table.put("x", "Y"))
 			.isInstanceOf(UnsupportedOperationException.class);
 	}
 }

@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,7 @@ class DayCheckBasisTest {
 	@Test
 	void testBuilderMethods() {
 		// Arrange
-		final var periods = List.of(new EconomicDecisionPeriod(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 12, 31)));
+		final var periods = List.of(new EconomicDecisionPeriod(LocalDate.of(2026, Month.AUGUST, 1), LocalDate.of(2026, Month.DECEMBER, 31)));
 		final var consumedDays = 212;
 		final var allDaysConsumed = false;
 

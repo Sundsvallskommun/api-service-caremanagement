@@ -41,7 +41,7 @@ class LifecareRecordContentTest {
 		assertThat(result.getContent()).isEqualTo("<p>Hej</p>");
 		assertThat(result.getOccurenceDate()).isEqualTo("2026-09-23");
 		assertThat(result.getTime()).isEqualTo("09:02");
-		assertThat(result.getEditable()).isEqualTo(true);
+		assertThat(result.getEditable()).isTrue();
 	}
 
 	@Test

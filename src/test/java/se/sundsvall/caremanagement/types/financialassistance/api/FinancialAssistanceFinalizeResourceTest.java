@@ -19,6 +19,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareFinalizeService;
 import se.sundsvall.dept44.support.Identifier;
 
+import static java.time.Month.JUNE;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -49,8 +50,8 @@ class FinancialAssistanceFinalizeResourceTest {
 			.withDecision(FinalizeDecision.create()
 				.withOutcome("BIFALL")
 				.withReason("Inkomster enligt SSBTEK")
-				.withPeriodFrom(LocalDate.of(2026, 6, 1))
-				.withPeriodTo(LocalDate.of(2026, 6, 30))
+				.withPeriodFrom(LocalDate.of(2026, JUNE, 1))
+				.withPeriodTo(LocalDate.of(2026, JUNE, 30))
 				.withAmount(new BigDecimal("7900.00"))
 				.withDecisionMessage("Du beviljas ekonomiskt bistånd för juni 2026"))
 			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false))

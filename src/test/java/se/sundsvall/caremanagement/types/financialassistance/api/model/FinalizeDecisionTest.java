@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.model;
 import com.google.code.beanmatchers.BeanMatchers;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Random;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
@@ -39,16 +40,16 @@ class FinalizeDecisionTest {
 			.withOutcome("BIFALL")
 			.withReason("Inkomster enligt SSBTEK")
 			.withCoApplicantReason("Beviljad")
-			.withPeriodFrom(LocalDate.of(2026, 6, 1))
-			.withPeriodTo(LocalDate.of(2026, 6, 30))
+			.withPeriodFrom(LocalDate.of(2026, Month.JUNE, 1))
+			.withPeriodTo(LocalDate.of(2026, Month.JUNE, 30))
 			.withAmount(new BigDecimal("7900.00"))
 			.withDecisionMessage("Du beviljas ekonomiskt bistånd");
 
 		assertThat(decision.getOutcome()).isEqualTo("BIFALL");
 		assertThat(decision.getReason()).isEqualTo("Inkomster enligt SSBTEK");
 		assertThat(decision.getCoApplicantReason()).isEqualTo("Beviljad");
-		assertThat(decision.getPeriodFrom()).isEqualTo(LocalDate.of(2026, 6, 1));
-		assertThat(decision.getPeriodTo()).isEqualTo(LocalDate.of(2026, 6, 30));
+		assertThat(decision.getPeriodFrom()).isEqualTo(LocalDate.of(2026, Month.JUNE, 1));
+		assertThat(decision.getPeriodTo()).isEqualTo(LocalDate.of(2026, Month.JUNE, 30));
 		assertThat(decision.getAmount()).isEqualByComparingTo("7900.00");
 		assertThat(decision.getDecisionMessage()).isEqualTo("Du beviljas ekonomiskt bistånd");
 		assertThat(decision).hasNoNullFieldsOrProperties();

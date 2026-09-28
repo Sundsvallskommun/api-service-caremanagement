@@ -45,7 +45,8 @@ final class CalculationPlacement {
 	static final String ROWS = "rows";
 	static final String ROW_ID = "rowId";
 
-	private static final String AMOUNT_SUFFIX = "\\s++\\d++(?:[.,]\\d++)?$";
+	// Bounded so the trailing-amount match cannot exhibit non-linear backtracking on a long, non-matching name.
+	private static final String AMOUNT_SUFFIX = "\\s++\\d{1,15}+(?:[.,]\\d{1,2}+)?$";
 
 	private CalculationPlacement() {}
 

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Map;
 import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
@@ -53,8 +54,8 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 		return FinalizeRequest.create()
 			.withDecision(FinalizeDecision.create()
 				.withOutcome("BIFALL")
-				.withPeriodFrom(LocalDate.of(2026, 6, 1))
-				.withPeriodTo(LocalDate.of(2026, 6, 30))
+				.withPeriodFrom(LocalDate.of(2026, Month.JUNE, 1))
+				.withPeriodTo(LocalDate.of(2026, Month.JUNE, 30))
 				.withAmount(new BigDecimal("7900.00")))
 			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false))
 			.withHouseholdSizeChanged(false);
@@ -128,7 +129,7 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 	@Test
 	void periodEndingBeforeStart() {
 		final var request = validRequest();
-		request.getDecision().withPeriodFrom(LocalDate.of(2026, 6, 30)).withPeriodTo(LocalDate.of(2026, 6, 1));
+		request.getDecision().withPeriodFrom(LocalDate.of(2026, Month.JUNE, 30)).withPeriodTo(LocalDate.of(2026, Month.JUNE, 1));
 
 		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
 			tuple("decision.periodTo", "must not be before periodFrom"));

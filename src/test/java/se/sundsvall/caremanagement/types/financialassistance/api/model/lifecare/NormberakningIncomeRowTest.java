@@ -55,13 +55,13 @@ class NormberakningIncomeRowTest {
 		assertThat(bean.getApplicantCaseworkerAmount()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getApplicantEffectiveAmount()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getApplicantAmountDate()).isEqualTo("value");
-		assertThat(bean.getApplicantJobStimulus()).isEqualTo(true);
+		assertThat(bean.getApplicantJobStimulus()).isTrue();
 		assertThat(bean.getApplicantCountedAmount()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getCoapplicantProcessAmount()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getCoapplicantCaseworkerAmount()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getCoapplicantEffectiveAmount()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getCoapplicantAmountDate()).isEqualTo("value");
-		assertThat(bean.getDeleted()).isEqualTo(true);
+		assertThat(bean.getDeleted()).isTrue();
 		assertThat(bean.getNote()).isEqualTo("value");
 	}
 

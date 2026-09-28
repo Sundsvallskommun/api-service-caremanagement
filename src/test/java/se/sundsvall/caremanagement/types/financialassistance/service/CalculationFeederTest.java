@@ -26,6 +26,8 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
+import static java.time.Month.AUGUST;
+import static java.time.Month.SEPTEMBER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
@@ -76,12 +78,12 @@ class CalculationFeederTest {
 	@Test
 	void applicationIncomesReadsTheDeclaredIncomesWithTheirLabels() {
 		final var errand = FinancialAssistanceEntity.create().withIncomes(Arrays.asList(
-			FaIncome.create().withIncomeType("SWISH_DEPOSITS").withAmount(new BigDecimal("599")).withIncomeDate(LocalDate.of(2026, 9, 24)),
+			FaIncome.create().withIncomeType("SWISH_DEPOSITS").withAmount(new BigDecimal("599")).withIncomeDate(LocalDate.of(2026, SEPTEMBER, 24)),
 			null,
 			FaIncome.create().withIncomeType("SALARY").withRecipient("CO_APPLICANT").withAmount(new BigDecimal("6788"))));
 
 		assertThat(feeder.applicationIncomes(errand)).containsExactly(
-			new ApplicationIncome("SWISH_DEPOSITS", null, new BigDecimal("599"), LocalDate.of(2026, 9, 24), "Swish/kontoinsättningar"),
+			new ApplicationIncome("SWISH_DEPOSITS", null, new BigDecimal("599"), LocalDate.of(2026, SEPTEMBER, 24), "Swish/kontoinsättningar"),
 			new ApplicationIncome("SALARY", "CO_APPLICANT", new BigDecimal("6788"), null, "Lön"));
 		assertThat(feeder.applicationIncomes(FinancialAssistanceEntity.create())).isEmpty();
 	}
@@ -415,7 +417,7 @@ class CalculationFeederTest {
 			.withChildren(List.of(FaChild.create().withFirstName("Bo").withLastName("Nilsson")));
 		final var family = new PreviousFamily(List.of(
 			new PreviousFamily.Member("p-1", "NILSSON KARIN", null, null),
-			new PreviousFamily.Member("c-9", "NILSSON OLLE", LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 15))), true, null);
+			new PreviousFamily.Member("c-9", "NILSSON OLLE", LocalDate.of(2026, AUGUST, 1), LocalDate.of(2026, AUGUST, 15))), true, null);
 
 		final var warnings = feeder.familyWarnings(errand, family);
 

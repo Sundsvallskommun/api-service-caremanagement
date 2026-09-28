@@ -19,6 +19,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAs
 import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.node.ObjectNode;
 
+import static java.time.Month.SEPTEMBER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -102,8 +103,8 @@ class LifecareFinalizeServiceTest {
 		assertThat(request.getDecision()).isEqualTo(FinalizeDecision.create()
 			.withOutcome("BIFALL")
 			.withReason("Arbetar deltid ofrivilligt, otillräcklig inkomst")
-			.withPeriodFrom(LocalDate.of(2026, 9, 1))
-			.withPeriodTo(LocalDate.of(2026, 9, 30))
+			.withPeriodFrom(LocalDate.of(2026, SEPTEMBER, 1))
+			.withPeriodTo(LocalDate.of(2026, SEPTEMBER, 30))
 			.withAmount(new BigDecimal("3000"))
 			.withDecisionMessage("<p>Beslut</p>"));
 		assertThat(request.getCommunication()).isEqualTo(COMMUNICATION);
@@ -125,7 +126,7 @@ class LifecareFinalizeServiceTest {
 		final var decision = requestCaptor.getValue().getDecision();
 		assertThat(decision.getOutcome()).isEqualTo("AVSLAG");
 		assertThat(decision.getAmount()).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(decision.getPeriodFrom()).isEqualTo(LocalDate.of(2026, 9, 1));
+		assertThat(decision.getPeriodFrom()).isEqualTo(LocalDate.of(2026, SEPTEMBER, 1));
 		assertThat(decision.getPeriodTo()).isNull();
 	}
 

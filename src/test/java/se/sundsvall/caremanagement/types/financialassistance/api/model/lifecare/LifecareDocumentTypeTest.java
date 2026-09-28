@@ -34,8 +34,8 @@ class LifecareDocumentTypeTest {
 		assertThat(result).hasNoNullFieldsOrProperties();
 		assertThat(result.getCode()).isEqualTo(1);
 		assertThat(result.getName()).isEqualTo("EK Brev");
-		assertThat(result.getCanChangeOccurenceDate()).isEqualTo(true);
-		assertThat(result.getProtectedByDefault()).isEqualTo(true);
+		assertThat(result.getCanChangeOccurenceDate()).isTrue();
+		assertThat(result.getProtectedByDefault()).isTrue();
 	}
 
 	@Test

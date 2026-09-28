@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -91,8 +92,8 @@ class FinancialAssistanceFinalizeServiceTest {
 			.withDecision(FinalizeDecision.create()
 				.withOutcome("BIFALL")
 				.withReason("Inkomster enligt SSBTEK")
-				.withPeriodFrom(LocalDate.of(2026, 6, 1))
-				.withPeriodTo(LocalDate.of(2026, 6, 30))
+				.withPeriodFrom(LocalDate.of(2026, Month.JUNE, 1))
+				.withPeriodTo(LocalDate.of(2026, Month.JUNE, 30))
 				.withAmount(new BigDecimal("7900.00"))
 				.withDecisionMessage("Du beviljas ekonomiskt bistånd"))
 			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(true))
@@ -192,8 +193,8 @@ class FinancialAssistanceFinalizeServiceTest {
 			.returns("BIFALL", Decision::getValue)
 			.returns("Inkomster enligt SSBTEK", Decision::getDescription)
 			.returns("Du beviljas ekonomiskt bistånd", Decision::getDecisionMessage)
-			.returns(LocalDate.of(2026, 6, 1), Decision::getPeriodFrom)
-			.returns(LocalDate.of(2026, 6, 30), Decision::getPeriodTo)
+			.returns(LocalDate.of(2026, Month.JUNE, 1), Decision::getPeriodFrom)
+			.returns(LocalDate.of(2026, Month.JUNE, 30), Decision::getPeriodTo)
 			.returns(LocalDate.now(ZoneId.systemDefault()), Decision::getDecisionDate)
 			.returns(DECIDED_BY, Decision::getCreatedBy);
 		assertThat(decisionCaptor.getValue().getAmount()).isEqualByComparingTo("7900.00");

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.c
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
@@ -69,8 +70,8 @@ final class CalculationFixtures {
 	static CalculationDraft draft() {
 		return CalculationDraft.create()
 			.withNormId(1)
-			.withCalculationFromDate(LocalDate.of(2026, 9, 1))
-			.withCalculationToDate(LocalDate.of(2026, 9, 30))
+			.withCalculationFromDate(LocalDate.of(2026, Month.SEPTEMBER, 1))
+			.withCalculationToDate(LocalDate.of(2026, Month.SEPTEMBER, 30))
 			.withHasCustomHouseholdSize(false)
 			.withPersons(new ArrayList<>(List.of(
 				NormPersonRow.create().withRole("APPLICANT").withName("Test Testsson").withIncluded(true).withPartyId("p1"),

@@ -5,6 +5,7 @@ import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -43,7 +44,7 @@ class LifecareDecisionBodiesTest {
 	}
 
 	private static LifecareDecisionInput bifall() {
-		return new LifecareDecisionInput(153, null, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), new BigDecimal("5"), 16,
+		return new LifecareDecisionInput(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("5"), 16,
 			"<p>test av beslutsmeddelande</p>", false, "RPA_031DEV");
 	}
 
@@ -140,8 +141,8 @@ class LifecareDecisionBodiesTest {
 
 	@Test
 	void createRefusesABifallWithoutThePeriodItsTypeRequiresButTakesAnAvslagWithoutOne() {
-		final var noFrom = new LifecareDecisionInput(153, null, null, LocalDate.of(2026, 9, 30), new BigDecimal("5"), 16, null, false, "RPA_031DEV");
-		final var noTo = new LifecareDecisionInput(153, null, LocalDate.of(2026, 9, 1), null, new BigDecimal("5"), 16, null, false, "RPA_031DEV");
+		final var noFrom = new LifecareDecisionInput(153, null, null, LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("5"), 16, null, false, "RPA_031DEV");
+		final var noTo = new LifecareDecisionInput(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), null, new BigDecimal("5"), 16, null, false, "RPA_031DEV");
 		final var avslagWithoutPeriod = new LifecareDecisionInput(152, null, null, null, BigDecimal.ZERO, null, null, false, "RPA_031DEV");
 
 		assertRefused(() -> buildCreate(fixture("create-proposal.json"), noFrom), "saknar period");
@@ -156,7 +157,7 @@ class LifecareDecisionBodiesTest {
 
 	@Test
 	void createCarriesTheDateAFractionalAmountAndWriteProtection() {
-		final var input = new LifecareDecisionInput(153, LocalDate.of(2026, 9, 24), LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30),
+		final var input = new LifecareDecisionInput(153, LocalDate.of(2026, Month.SEPTEMBER, 24), LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
 			new BigDecimal("7900.50"), 16, "<p>x</p>", true, "RPA_031DEV");
 
 		final var body = buildCreate(fixture("create-proposal.json"), input);
@@ -216,7 +217,7 @@ class LifecareDecisionBodiesTest {
 
 	@Test
 	void updateRefusesToChangeTheBeslutstypOfARegisteredBeslut() {
-		final var input = new LifecareDecisionInput(153, null, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), BigDecimal.ZERO, null, MESSAGE, false,
+		final var input = new LifecareDecisionInput(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), BigDecimal.ZERO, null, MESSAGE, false,
 			"RPA_031DEV");
 
 		assertRefused(() -> buildUpdate(fixture("update-saved.json"), fixture("update-proposal.json"), input), "Beslutstypen kan inte ändras");

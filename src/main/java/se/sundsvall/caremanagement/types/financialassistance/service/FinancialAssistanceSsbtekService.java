@@ -111,7 +111,7 @@ public class FinancialAssistanceSsbtekService {
 		if (from != null) {
 			return from;
 		}
-		final var lastMonth = ofNullable(to).map(YearMonth::from).orElseGet(YearMonth::now);
+		final var lastMonth = ofNullable(to).map(YearMonth::from).orElseGet(() -> YearMonth.now(ZoneId.systemDefault()));
 		return lastMonth.minusMonths(RULE_PERIOD_LOOKBACK_MONTHS).atDay(1);
 	}
 

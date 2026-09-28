@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.integration.db.mod
 
 import com.google.code.beanmatchers.BeanMatchers;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Random;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,8 +38,8 @@ class FaPlanningTest {
 		final var workExtent = "FULL_TIME";
 		final var workDescription = "Job search";
 		final var sickLeaveLevel = "HALF_TIME";
-		final var sickLeaveFrom = LocalDate.of(2026, 9, 1);
-		final var sickLeaveTo = LocalDate.of(2026, 9, 30);
+		final var sickLeaveFrom = LocalDate.of(2026, Month.SEPTEMBER, 1);
+		final var sickLeaveTo = LocalDate.of(2026, Month.SEPTEMBER, 30);
 		final var sfiStudyPath = "B";
 		final var sfiCourse = "C";
 		final var otherDescription = "Other planning";

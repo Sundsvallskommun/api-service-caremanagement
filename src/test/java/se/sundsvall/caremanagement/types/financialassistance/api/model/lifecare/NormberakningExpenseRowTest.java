@@ -55,7 +55,7 @@ class NormberakningExpenseRowTest {
 		assertThat(bean.getProcessAmount()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getCaseworkerAmount()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getEffectiveAmount()).isEqualTo(BigDecimal.ONE);
-		assertThat(bean.getDeleted()).isEqualTo(true);
+		assertThat(bean.getDeleted()).isTrue();
 		assertThat(bean.getNote()).isEqualTo("value");
 	}
 

@@ -254,6 +254,9 @@ public class ApplicationRuleFeeder {
 	 * Whether the application carries any of the citizen's own uploaded files. Best-effort: a failed attachment read
 	 * reports "unknown" ({@code null}), which skips the question rather than claiming there are no attachments.
 	 */
+	// java:S2447 — a deliberate tri-state Boolean (yes/no/unknown): yesNoWarning() treats null as "skip the question",
+	// the same convention as the other nullable Boolean answers on FinancialAssistanceEntity.
+	@SuppressWarnings("java:S2447")
 	private Boolean hasApplicationAttachments(final String errandId) {
 		try {
 			return attachmentService.applicationAttachmentsExist(errandId);

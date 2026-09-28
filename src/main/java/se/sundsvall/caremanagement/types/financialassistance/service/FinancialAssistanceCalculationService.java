@@ -574,10 +574,20 @@ public class FinancialAssistanceCalculationService {
 	 */
 	static List<String> previousNormNames(final String previousNorm) {
 		return ofNullable(previousNorm)
-			.map(norm -> norm.strip().replaceFirst("\\s*+\\d{4}$", "").strip())
+			.map(String::strip)
+			.map(FinancialAssistanceCalculationService::stripTrailingYear)
 			.filter(StringUtils::hasText)
 			.map(List::of)
 			.orElseGet(List::of);
+	}
+
+	/** Drops a trailing four-digit year (and the whitespace before it) from a norm name, without a backtracking regex. */
+	private static String stripTrailingYear(final String norm) {
+		final var trimmed = norm.stripTrailing();
+		if ((trimmed.length() < 4) || !trimmed.substring(trimmed.length() - 4).chars().allMatch(Character::isDigit)) {
+			return trimmed;
+		}
+		return trimmed.substring(0, trimmed.length() - 4).stripTrailing();
 	}
 
 	/** A previous norm the month's catalogue does not offer: the norm was chosen from the application instead. */

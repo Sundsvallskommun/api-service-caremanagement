@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,11 +53,11 @@ class CalculationSyncServiceTest {
 	private static final String ERRAND_ID = "cb20c51f-fcf3-42c0-b613-de563634a8ec";
 	private static final String APPLICANT_PARTY_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 	private static final Integer CALCULATION_ID = 4242;
-	private static final LocalDate FROM = LocalDate.of(2026, 9, 1);
-	private static final LocalDate TO = LocalDate.of(2026, 9, 30);
+	private static final LocalDate FROM = LocalDate.of(2026, Month.SEPTEMBER, 1);
+	private static final LocalDate TO = LocalDate.of(2026, Month.SEPTEMBER, 30);
 	// FamilyCare lists calculations by calculation date, so the linked one is looked for two months either side.
-	private static final LocalDate WINDOW_FROM = LocalDate.of(2026, 7, 1);
-	private static final LocalDate WINDOW_TO = LocalDate.of(2026, 11, 30);
+	private static final LocalDate WINDOW_FROM = LocalDate.of(2026, Month.JULY, 1);
+	private static final LocalDate WINDOW_TO = LocalDate.of(2026, Month.NOVEMBER, 30);
 	private static final OffsetDateTime WRITTEN = OffsetDateTime.parse("2026-09-01T03:00:00+02:00");
 
 	@Mock

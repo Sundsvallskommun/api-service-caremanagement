@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.c
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
@@ -255,10 +256,10 @@ class CalculationRowChangesTest {
 
 	@Test
 	void refusesThePeriodAndANormLifecareDoesNotHave() {
-		assertThatThrownBy(() -> changeHeader(calculation(), forEdit(), NormHeaderInput.create().withCalculationFromDate(LocalDate.of(2026, 9, 2))))
+		assertThatThrownBy(() -> changeHeader(calculation(), forEdit(), NormHeaderInput.create().withCalculationFromDate(LocalDate.of(2026, Month.SEPTEMBER, 2))))
 			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT)
 			.hasMessageContaining("Perioden ändras i Lifecare");
-		assertThatThrownBy(() -> changeHeader(calculation(), forEdit(), NormHeaderInput.create().withCalculationToDate(LocalDate.of(2026, 9, 2))))
+		assertThatThrownBy(() -> changeHeader(calculation(), forEdit(), NormHeaderInput.create().withCalculationToDate(LocalDate.of(2026, Month.SEPTEMBER, 2))))
 			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT);
 		assertThatThrownBy(() -> changeHeader(calculation(), forEdit(), NormHeaderInput.create().withNormType(List.of("NATIONAL_NORM"))))
 			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT);

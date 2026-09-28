@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.YearMonth;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,22 +36,22 @@ class NonRedDayCalendarTest {
 	@Test
 	void publicHolidaysOf2026() {
 		assertThat(NonRedDayCalendar.publicHolidays(2026)).containsExactlyInAnyOrder(
-			LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 6), LocalDate.of(2026, 4, 3), LocalDate.of(2026, 4, 5),
-			LocalDate.of(2026, 4, 6), LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 14), LocalDate.of(2026, 5, 24),
-			LocalDate.of(2026, 6, 6), LocalDate.of(2026, 6, 20), LocalDate.of(2026, 10, 31), LocalDate.of(2026, 12, 25),
-			LocalDate.of(2026, 12, 26));
+			LocalDate.of(2026, Month.JANUARY, 1), LocalDate.of(2026, Month.JANUARY, 6), LocalDate.of(2026, Month.APRIL, 3), LocalDate.of(2026, Month.APRIL, 5),
+			LocalDate.of(2026, Month.APRIL, 6), LocalDate.of(2026, Month.MAY, 1), LocalDate.of(2026, Month.MAY, 14), LocalDate.of(2026, Month.MAY, 24),
+			LocalDate.of(2026, Month.JUNE, 6), LocalDate.of(2026, Month.JUNE, 20), LocalDate.of(2026, Month.OCTOBER, 31), LocalDate.of(2026, Month.DECEMBER, 25),
+			LocalDate.of(2026, Month.DECEMBER, 26));
 	}
 
 	@Test
 	void coincidingHolidaysDoNotBreakTheSet() {
 		// Easter 23 March 2008 puts Kristi himmelsfärd on 1 May - Set.of would throw on the duplicate.
-		assertThat(NonRedDayCalendar.publicHolidays(2008)).hasSize(12).contains(LocalDate.of(2008, 5, 1));
+		assertThat(NonRedDayCalendar.publicHolidays(2008)).hasSize(12).contains(LocalDate.of(2008, Month.MAY, 1));
 	}
 
 	@Test
 	void midsummerEveIsTheFridayBeforeMidsommardagen() {
-		assertThat(NonRedDayCalendar.midsummerEve(2026)).isEqualTo(LocalDate.of(2026, 6, 19));
-		assertThat(NonRedDayCalendar.midsummerEve(2025)).isEqualTo(LocalDate.of(2025, 6, 20));
+		assertThat(NonRedDayCalendar.midsummerEve(2026)).isEqualTo(LocalDate.of(2026, Month.JUNE, 19));
+		assertThat(NonRedDayCalendar.midsummerEve(2025)).isEqualTo(LocalDate.of(2025, Month.JUNE, 20));
 	}
 
 	@ParameterizedTest(name = "{0}: {1} with midsommarafton ordinary, {2} with it red")
@@ -74,7 +75,7 @@ class NonRedDayCalendarTest {
 
 	@Test
 	void aDecidedReadingCollapsesToOneNumber() {
-		final var june = YearMonth.of(2026, 6);
+		final var june = YearMonth.of(2026, Month.JUNE);
 
 		assertThat(NonRedDayCalendar.nonRedDays(june, EVE_IS_RED)).isEqualTo(new NonRedDayCalendar.NonRedDays(21, 21));
 		assertThat(NonRedDayCalendar.nonRedDays(june, EVE_IS_NOT_RED)).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
@@ -84,10 +85,10 @@ class NonRedDayCalendarTest {
 	void theSwitchRecordsThatMidsommaraftonIsAnErsattningsdag() {
 		// Verksamhetens besked 2026-09-23: midsommarafton is not red. A real payment for a whole June was for 22 days.
 		assertThat(NonRedDayCalendar.EVE_READING).isEqualTo(EVE_IS_NOT_RED);
-		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, 6))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
-		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2025, 6))).isEqualTo(new NonRedDayCalendar.NonRedDays(20, 20));
+		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, Month.JUNE))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
+		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2025, Month.JUNE))).isEqualTo(new NonRedDayCalendar.NonRedDays(20, 20));
 		// Julafton and nyårsafton are ersättningsdagar too (svar 2026-09-24): December has one exact count.
-		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, 12))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
+		assertThat(NonRedDayCalendar.nonRedDays(YearMonth.of(2026, Month.DECEMBER))).isEqualTo(new NonRedDayCalendar.NonRedDays(22, 22));
 	}
 
 	@ParameterizedTest(name = "{0} + {1} working days = {2}")

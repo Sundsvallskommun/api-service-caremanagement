@@ -14,8 +14,9 @@ class ProfessionalWebPropertiesTest {
 
 		final var text = properties.toString();
 
-		assertThat(text).doesNotContain("joe01doe", "s3cret");
-		assertThat(text).contains("username=***", "password=***", "url=https://lifecare.example.se");
+		assertThat(text)
+			.doesNotContain("joe01doe", "s3cret")
+			.contains("username=***", "password=***", "url=https://lifecare.example.se");
 	}
 
 	@Test

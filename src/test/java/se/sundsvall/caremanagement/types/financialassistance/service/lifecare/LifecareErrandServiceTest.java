@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -127,7 +128,7 @@ class LifecareErrandServiceTest {
 		service.linkCalculation(ERRAND, 3);
 		service.linkDecision(ERRAND, 4);
 
-		verify(financialAssistanceErrandService, org.mockito.Mockito.times(2)).updateData(any(), any(), any(), dataCaptor.capture());
+		verify(financialAssistanceErrandService, times(2)).updateData(any(), any(), any(), dataCaptor.capture());
 		assertThat(dataCaptor.getAllValues().get(0).getLifecareCalculationId()).isEqualTo(3);
 		assertThat(dataCaptor.getAllValues().get(1).getLifecareDecisionId()).isEqualTo(4);
 	}

@@ -231,7 +231,7 @@ class LifecareRecordMapperTest {
 		expected.put("title", "Journalanteckning");
 		expected.put("noteTypeCode", 1);
 		expected.put("protected", false);
-		assertThat(body.toString()).isEqualTo(expected.toString());
+		assertThat(body).hasToString(expected.toString());
 	}
 
 	@Test
@@ -281,7 +281,7 @@ class LifecareRecordMapperTest {
 		expected.put("title", "EK Brev");
 		expected.put("documentTypeCode", 1);
 		expected.put("protected", false);
-		assertThat(body.toString()).isEqualTo(expected.toString());
+		assertThat(body).hasToString(expected.toString());
 	}
 
 	@Test

@@ -27,9 +27,8 @@ class IntegratorWriteMapperTest {
 	private static final String APPLICANT_PARTY_ID = "6a5c3d18-1f2b-4e77-9c0a-2b3d4e5f6a7b";
 	private static final String MEMBER_PARTY_ID = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
 
-	@Test
-	void theCalculationBodyIsMapped() {
-		final var body = new PostCalculationBodyRequest()
+	private static PostCalculationBodyRequest theCalculationBody() {
+		return new PostCalculationBodyRequest()
 			.personId("200001012384")
 			.serviceId(42)
 			.investigationId(11)
@@ -52,8 +51,11 @@ class IntegratorWriteMapperTest {
 				.note("Lön juni")))
 			.calculationExpenses(List.of(new PersonBasedCalculationExpensePostDTO().id(2).amount(9000.0).approvedAmount(6500.0).note("Hyra")))
 			.calculationSpecialExpenses(List.of(new PersonBasedCalculationSpecialExpensePostDTO().id(3).amount(450.0).approvedAmount(450.0)));
+	}
 
-		final var request = IntegratorWriteMapper.toCalculation(body, APPLICANT_PARTY_ID);
+	@Test
+	void theCalculationBodyMapsHeaderFields() {
+		final var request = IntegratorWriteMapper.toCalculation(theCalculationBody(), APPLICANT_PARTY_ID);
 
 		assertThat(request.getPartyId()).isEqualTo(APPLICANT_PARTY_ID);
 		assertThat(request.getServiceId()).isEqualTo(42);
@@ -65,6 +67,11 @@ class IntegratorWriteMapperTest {
 		assertThat(request.getCalculationToDate()).isEqualTo(LocalDate.of(2026, JUNE, 30));
 		assertThat(request.getHasCustomHouseholdSize()).isTrue();
 		assertThat(request.getHouseholdSize()).isEqualTo(3);
+	}
+
+	@Test
+	void theCalculationBodyMapsThePerson() {
+		final var request = IntegratorWriteMapper.toCalculation(theCalculationBody(), APPLICANT_PARTY_ID);
 
 		assertThat(request.getPersons()).singleElement().satisfies(person -> {
 			assertThat(person.getPartyId()).isEqualTo(MEMBER_PARTY_ID);
@@ -72,6 +79,12 @@ class IntegratorWriteMapperTest {
 			assertThat(person.getDeviationFromDate()).isEqualTo(LocalDate.of(2026, JUNE, 10));
 			assertThat(person.getDeviationToDate()).isNull();
 		});
+	}
+
+	@Test
+	void theCalculationBodyMapsTheIncome() {
+		final var request = IntegratorWriteMapper.toCalculation(theCalculationBody(), APPLICANT_PARTY_ID);
+
 		assertThat(request.getIncomes()).singleElement().satisfies(income -> {
 			assertThat(income.getTypeId()).isEqualTo(1);
 			assertThat(income.getApplicantAmount()).isEqualByComparingTo("8000.0");
@@ -80,6 +93,12 @@ class IntegratorWriteMapperTest {
 			assertThat(income.getCoApplicantAmountDate()).isNull();
 			assertThat(income.getNote()).isEqualTo("Lön juni");
 		});
+	}
+
+	@Test
+	void theCalculationBodyMapsTheExpensesAndSpecialExpenses() {
+		final var request = IntegratorWriteMapper.toCalculation(theCalculationBody(), APPLICANT_PARTY_ID);
+
 		assertThat(request.getExpenses())
 			.extracting(CalculationExpenseRequest::getTypeId, CalculationExpenseRequest::getNote)
 			.containsExactly(tuple(2, "Hyra"));

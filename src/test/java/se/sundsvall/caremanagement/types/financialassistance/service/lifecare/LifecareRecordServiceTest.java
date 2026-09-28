@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Map;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
@@ -393,7 +394,7 @@ class LifecareRecordServiceTest {
 	}
 
 	private void givenFcDocuments(final DocumentView... documents) {
-		final var day = LocalDate.of(2026, 9, 23);
+		final var day = LocalDate.of(2026, Month.SEPTEMBER, 23);
 		when(errandService.applicantPartyId(ERRAND)).thenReturn("party-1");
 		when(caseHistoryService.listDocuments(MUNICIPALITY_ID, "party-1", day, day)).thenReturn(List.of(documents));
 	}

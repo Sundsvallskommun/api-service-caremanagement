@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api.validation.imp
 import jakarta.validation.ConstraintValidatorContext;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -32,7 +33,7 @@ class ValidFinalizeRequestConstraintValidatorTest {
 	void grantingOutcomeWithAmountIsValid() {
 		final var request = FinalizeRequest.create()
 			.withDecision(FinalizeDecision.create().withOutcome("BIFALL").withAmount(new BigDecimal("7900"))
-				.withPeriodFrom(LocalDate.of(2026, 6, 1)).withPeriodTo(LocalDate.of(2026, 6, 30)));
+				.withPeriodFrom(LocalDate.of(2026, Month.JUNE, 1)).withPeriodTo(LocalDate.of(2026, Month.JUNE, 30)));
 
 		assertThat(validator.isValid(request, contextMock)).isTrue();
 		verifyNoInteractions(contextMock);
@@ -70,7 +71,7 @@ class ValidFinalizeRequestConstraintValidatorTest {
 	void periodEndingBeforeStartIsRejected() {
 		final var request = FinalizeRequest.create()
 			.withDecision(FinalizeDecision.create().withOutcome("BIFALL").withAmount(new BigDecimal("7900"))
-				.withPeriodFrom(LocalDate.of(2026, 6, 30)).withPeriodTo(LocalDate.of(2026, 6, 1)));
+				.withPeriodFrom(LocalDate.of(2026, Month.JUNE, 30)).withPeriodTo(LocalDate.of(2026, Month.JUNE, 1)));
 
 		assertThat(validator.isValid(request, contextMock)).isFalse();
 

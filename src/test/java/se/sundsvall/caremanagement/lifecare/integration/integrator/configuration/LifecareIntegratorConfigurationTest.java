@@ -19,6 +19,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static se.sundsvall.caremanagement.lifecare.integration.integrator.configuration.LifecareIntegratorConfiguration.CLIENT_ID;
@@ -94,7 +95,7 @@ class LifecareIntegratorConfigurationTest {
 
 			// The OAuth2 customizer among them needs a fully built ClientRegistration to run, which this test has no
 			// reason to construct — only the log-level one is under test, so the others are allowed to fail.
-			final var builderMock = Mockito.mock(feign.Feign.Builder.class);
+			final var builderMock = mock(feign.Feign.Builder.class);
 			customizerCaptor.getAllValues().forEach(customizer -> {
 				try {
 					customizer.customize(builderMock);

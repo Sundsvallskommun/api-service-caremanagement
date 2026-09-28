@@ -13,6 +13,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
@@ -356,7 +357,7 @@ class LifecareCaseServiceTest {
 		assertThat(family.commonHouseholdCost()).isEqualByComparingTo("1234");
 		assertThat(family.members()).containsExactly(
 			new PreviousFamily.Member(APPLICANT_PARTY_ID, "NILSSON KARIN", null, null),
-			new PreviousFamily.Member(CHILD_PARTY_ID, "NILSSON OLLE", LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 15)));
+			new PreviousFamily.Member(CHILD_PARTY_ID, "NILSSON OLLE", LocalDate.of(2026, Month.MAY, 1), LocalDate.of(2026, Month.MAY, 15)));
 		assertThat(family.members().get(1).hasDeviation()).isTrue();
 		assertThat(family.members().getFirst().hasDeviation()).isFalse();
 	}

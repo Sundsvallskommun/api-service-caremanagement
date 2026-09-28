@@ -168,8 +168,7 @@ class WarningServiceTest {
 			.map(WarningServiceTest::readConstant)
 			.toList();
 
-		assertThat(types).hasSize(43);
-		assertThat(types).allSatisfy(type -> {
+		assertThat(types).hasSize(43).allSatisfy(type -> {
 			assertThat(displayNames).as("display name for %s", type).containsKey(type);
 			assertThat(displayNames.get(type)).as("display name for %s", type).isNotBlank();
 			assertThat(allowableValues).as("Warning.type allowableValues must contain %s", type).contains(type);
