@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.c
 
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.HouseholdSize;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -45,8 +46,8 @@ final class CalculationPlacement {
 	static final String ROWS = "rows";
 	static final String ROW_ID = "rowId";
 
-	// Bounded so the trailing-amount match cannot exhibit non-linear backtracking on a long, non-matching name.
-	private static final String AMOUNT_SUFFIX = "\\s++\\d{1,15}+(?:[.,]\\d{1,2}+)?$";
+	// Matched against the name's last word only, with matches(): anchored at both ends, so it runs in linear time.
+	private static final Pattern AMOUNT_WORD = Pattern.compile("\\d++(?:[.,]\\d++)?");
 
 	private CalculationPlacement() {}
 
@@ -57,7 +58,15 @@ final class CalculationPlacement {
 	 * @return      the name, e.g. Ensamstående
 	 */
 	static String normRowName(final String name) {
-		return name.replaceAll(AMOUNT_SUFFIX, "").trim();
+		final var trimmed = name.strip();
+		var lastWordStart = trimmed.length();
+		while (lastWordStart > 0 && !Character.isWhitespace(trimmed.charAt(lastWordStart - 1))) {
+			lastWordStart--;
+		}
+		if (lastWordStart > 0 && AMOUNT_WORD.matcher(trimmed.substring(lastWordStart)).matches()) {
+			return trimmed.substring(0, lastWordStart).strip();
+		}
+		return trimmed;
 	}
 
 	/** The norm row with the id on the beräkning's norm. */

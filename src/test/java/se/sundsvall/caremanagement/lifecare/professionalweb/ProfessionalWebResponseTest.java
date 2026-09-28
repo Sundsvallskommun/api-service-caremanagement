@@ -89,11 +89,12 @@ class ProfessionalWebResponseTest {
 			9
 		}, uri);
 
-		assertThat(first).isEqualTo(second).hasSameHashCodeAs(second);
-		assertThat(first).isNotEqualTo(different);
-		assertThat(first).isEqualTo(first);
-		assertThat(first).isNotEqualTo("not a response");
-		assertThat(first).isNotEqualTo(null);
+		assertThat(first)
+			.isEqualTo(second).hasSameHashCodeAs(second)
+			.isNotEqualTo(different)
+			.isEqualTo(first)
+			.isNotEqualTo("not a response")
+			.isNotEqualTo(null);
 	}
 
 	@Test

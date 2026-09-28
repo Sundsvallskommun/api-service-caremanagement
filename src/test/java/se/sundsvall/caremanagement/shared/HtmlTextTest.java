@@ -46,4 +46,14 @@ class HtmlTextTest {
 	void excessiveBlankLinesAreCollapsed() {
 		assertThat(HtmlText.toPlainText("<p>a</p><p></p><p></p><p>b</p>")).isEqualTo("a\n\nb");
 	}
+
+	@Test
+	void trailingSpacesAndTabsAreRemovedFromEveryLine() {
+		assertThat(HtmlText.toPlainText("rad ett \t<br>rad tv\u00e5\t\t<br>  rad tre")).isEqualTo("rad ett\nrad två\n  rad tre");
+	}
+
+	@Test
+	void aLongRunOfBlanksIsHandled() {
+		assertThat(HtmlText.toPlainText("a" + " ".repeat(100_000) + "b")).isEqualTo("a" + " ".repeat(100_000) + "b");
+	}
 }

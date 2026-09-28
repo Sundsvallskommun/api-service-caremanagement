@@ -21,12 +21,13 @@ class AttachmentUploadTest {
 			1, 2, 3
 		});
 
-		assertThat(first).isEqualTo(second).hasSameHashCodeAs(second);
-		assertThat(first).isNotEqualTo(differentContent);
-		assertThat(first).isNotEqualTo(differentTitle);
-		assertThat(first).isEqualTo(first);
-		assertThat(first).isNotEqualTo("not an attachment");
-		assertThat(first).isNotEqualTo(null);
+		assertThat(first)
+			.isEqualTo(second).hasSameHashCodeAs(second)
+			.isNotEqualTo(differentContent)
+			.isNotEqualTo(differentTitle)
+			.isEqualTo(first)
+			.isNotEqualTo("not an attachment")
+			.isNotEqualTo(null);
 	}
 
 	@Test

@@ -1,8 +1,10 @@
 package se.sundsvall.caremanagement.shared;
 
+import java.util.Arrays;
 import org.springframework.web.util.HtmlUtils;
 
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.joining;
 
 /**
  * Converts the HTML fragments Lifecare stores in free-text fields ({@code 
@@ -35,7 +37,24 @@ public final class HtmlText {
 				.replaceAll("<[^>]*>", ""))
 			.map(HtmlUtils::htmlUnescape)
 			.map(value -> value.replace('\u00A0', ' '))
-			.map(value -> value.strip().replaceAll("[ \\t]++\\n", "\n").replaceAll("\\n{3,}", "\n\n"))
+			.map(value -> withoutTrailingBlanks(value.strip()).replaceAll("\\n{3,}", "\n\n"))
 			.orElse(null);
+	}
+
+	/**
+	 * Each line without the spaces and tabs it ends with; done by hand, as a regex for it backtracks on long blank runs.
+	 */
+	private static String withoutTrailingBlanks(final String text) {
+		return Arrays.stream(text.split("\n", -1))
+			.map(HtmlText::stripTrailingBlanks)
+			.collect(joining("\n"));
+	}
+
+	private static String stripTrailingBlanks(final String line) {
+		var end = line.length();
+		while (end > 0 && (line.charAt(end - 1) == ' ' || line.charAt(end - 1) == '\t')) {
+			end--;
+		}
+		return line.substring(0, end);
 	}
 }

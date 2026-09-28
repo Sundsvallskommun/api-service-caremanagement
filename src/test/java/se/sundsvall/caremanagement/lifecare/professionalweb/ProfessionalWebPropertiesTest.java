@@ -25,4 +25,20 @@ class ProfessionalWebPropertiesTest {
 
 		assertThat(properties.toString()).contains("username=null", "password=null");
 	}
+
+	@Test
+	void baseUrlDropsEveryTrailingSlash() {
+		assertThat(withUrl("https://lifecare.example.se").baseUrl()).isEqualTo("https://lifecare.example.se");
+		assertThat(withUrl("https://lifecare.example.se/").baseUrl()).isEqualTo("https://lifecare.example.se");
+		assertThat(withUrl("https://lifecare.example.se/fc///").baseUrl()).isEqualTo("https://lifecare.example.se/fc");
+	}
+
+	@Test
+	void baseUrlIsEmptyWhenUnconfigured() {
+		assertThat(withUrl(null).baseUrl()).isEmpty();
+	}
+
+	private static ProfessionalWebProperties withUrl(final String url) {
+		return new ProfessionalWebProperties(url, null, "Actor_Professional", "saml", null, null, null, Duration.ofMinutes(20), 5, 30, "template-1", "template-2", null);
+	}
 }
