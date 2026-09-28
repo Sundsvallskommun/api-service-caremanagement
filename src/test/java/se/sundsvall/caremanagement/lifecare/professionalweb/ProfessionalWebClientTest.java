@@ -158,7 +158,7 @@ class ProfessionalWebClientTest {
 
 	@Test
 	void unconfigured() {
-		final var properties = new ProfessionalWebProperties(null, null, "a", "saml", null, null, null, Duration.ofMinutes(1), 1, 1, "d", "c", null);
+		final var properties = new ProfessionalWebProperties(null, null, "a", "saml", null, null, null, Duration.ofMinutes(1), 1, 1, "d", "c", "t", null);
 		final var http = new ProfessionalWebHttp(HttpClient.newHttpClient(), properties);
 		final var unconfigured = new ProfessionalWebClient(new DirectProfessionalWebTransport(properties, new ProfessionalWebSession(properties, new ProfessionalWebSignIn(properties, http), http, Clock.systemUTC()), http));
 
@@ -219,7 +219,7 @@ class ProfessionalWebClientTest {
 
 	private ProfessionalWebProperties properties(final String username, final String password, final Duration ttl) {
 		return new ProfessionalWebProperties(wireMock.baseUrl() + "/", "Domain", "Actor_Professional", "saml", "Sundsvall_Intra",
-			username, password, ttl, 1, 5, "decision-template", "calculation-template", null);
+			username, password, ttl, 1, 5, "decision-template", "calculation-template", "document-template", null);
 	}
 
 	private void stubSignIn() {

@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.DocumentView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.CreateLifecareDocumentRequest;
@@ -50,6 +51,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareRecordService.PATH_DOCUMENT_PROPOSAL;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareRecordService.PATH_LIST;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareRecordService.PATH_NOTE_PROPOSAL;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareRecordService.PATH_PRINT_DOCUMENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareRecordService.PATH_READ_DOCUMENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareRecordService.PATH_READ_NOTE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareRecordService.PATH_UPDATE_DOCUMENT;
@@ -95,6 +97,8 @@ class LifecareRecordServiceTest {
 	private LifecareAccessRecorder recorder;
 	@Mock
 	private LifecareCaseHistoryService caseHistoryService;
+	@Mock
+	private ProfessionalWebProperties properties;
 
 	@InjectMocks
 	private LifecareRecordService service;
@@ -350,6 +354,53 @@ class LifecareRecordServiceTest {
 
 		assertThat(service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 4)).isEqualTo(pdf);
 		verify(recorder).read(ERRAND, "DOCUMENT", "Hämtade ett dokument som PDF ur Lifecare", "4");
+	}
+
+	@Test
+	void readDocumentPdfPrintsAWrittenDocumentWithTheTemplate() {
+		final var pdf = "%PDF-1.7".getBytes();
+		givenClientList();
+		when(properties.documentPrintTemplateId()).thenReturn("template-1");
+		when(client.getPdf(PATH_PRINT_DOCUMENT, Map.of("templateId", "template-1", "documentId", "3", "hideRevisions", "true"))).thenReturn(pdf);
+
+		assertThat(service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 3)).isEqualTo(pdf);
+		verify(recorder).read(ERRAND, "DOCUMENT", "Hämtade ett dokument som PDF ur Lifecare", "3");
+		verifyNoInteractions(caseHistoryService);
+	}
+
+	@Test
+	void readDocumentPdfPrintsABlankettWithTheTemplate() {
+		final var pdf = "%PDF-1.7".getBytes();
+		givenClientList();
+		when(properties.documentPrintTemplateId()).thenReturn("template-1");
+		when(client.getPdf(PATH_PRINT_DOCUMENT, Map.of("templateId", "template-1", "documentId", "5", "hideRevisions", "true"))).thenReturn(pdf);
+
+		assertThat(service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 5)).isEqualTo(pdf);
+		verify(recorder).read(ERRAND, "DOCUMENT", "Hämtade ett dokument som PDF ur Lifecare", "5");
+		verifyNoInteractions(caseHistoryService);
+	}
+
+	@Test
+	void readDocumentPdfIsNotLoggedWhenLifecareRefusesThePrint() {
+		givenClientList();
+		when(properties.documentPrintTemplateId()).thenReturn("template-1");
+		when(client.getPdf(eq(PATH_PRINT_DOCUMENT), anyMap())).thenThrow(Problem.valueOf(BAD_GATEWAY, "refused"));
+
+		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 3), BAD_GATEWAY, "refused");
+		verifyNoInteractions(recorder);
+	}
+
+	@Test
+	void readDocumentPdfReadsARowWithoutKindFromFc() {
+		givenErrand();
+		when(errandService.applicantPersonalNumber(ERRAND)).thenReturn(PERSONAL_NUMBER);
+		when(client.get(PATH_LIST, BY_CLIENT)).thenReturn(json("""
+			{ "documentModels": [ { "id": 8, "title": "Fil", "date": "2026-09-23", "typeCode": 1 } ] }
+			"""));
+
+		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 8), NOT_FOUND, LifecareRecordService.NO_PDF);
+		verify(client, never()).getPdf(anyString(), anyMap());
+		verify(caseHistoryService).listDocuments(eq(MUNICIPALITY_ID), any(), eq(LocalDate.of(2026, 9, 23)), eq(LocalDate.of(2026, 9, 23)));
 	}
 
 	@Test

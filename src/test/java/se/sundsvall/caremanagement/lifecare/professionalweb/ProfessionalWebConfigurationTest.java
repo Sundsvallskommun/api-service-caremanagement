@@ -12,7 +12,7 @@ class ProfessionalWebConfigurationTest {
 	@Test
 	void professionalWebHttpClientNeverFollowsRedirectsAndPinsHttp11() {
 		final var properties = new ProfessionalWebProperties("https://lifecare.example.se", "SundsvallVoO_PLUS", "Actor_Professional", "saml",
-			"Sundsvall_Intra", "joe01doe", "s3cret", Duration.ofMinutes(20), 5, 30, "template-1", "template-2", null);
+			"Sundsvall_Intra", "joe01doe", "s3cret", Duration.ofMinutes(20), 5, 30, "template-1", "template-2", "template-3", null);
 
 		final var client = new ProfessionalWebConfiguration().professionalWebHttpClient(properties, new Truststore(null));
 

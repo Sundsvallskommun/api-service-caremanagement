@@ -229,7 +229,8 @@ class FinancialAssistanceLifecareRecordResource {
 
 	@GetMapping(path = "/documents/documents/{id}/pdf", produces = APPLICATION_PDF_VALUE)
 	@Operation(summary = "Read a document as a PDF file",
-		description = "One of the applicant's documents as the PDF file Lifecare holds for it, for sending it on as a bilaga. The file is read from Lifecare's FC API, matched on the document's title and date. 404 when the record is not in the applicant's Lifecare record or Lifecare holds no PDF for it (only PDF-backed documents have one); 409 when several Lifecare documents share its title and date. The read is logged.",
+		description = "One of the applicant's documents as a PDF file, for sending it on as a bilaga. A written document or a blankett is printed by Lifecare with the configured print template, the way Lifecare's own Skriv ut does, and nothing is saved in Lifecare. Any other document is the file Lifecare's FC API holds for it, matched on the document's title and date. 404 when the record is not in the applicant's Lifecare record or Lifecare holds no PDF for it; 409 when several Lifecare documents share its title and date; 502 when Lifecare refuses the print, for example because the print template is not available for the document's owner. The read is logged.",
+
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", content = @Content(mediaType = APPLICATION_PDF_VALUE, schema = @Schema(type = "string", format = "binary"))),
 			@ApiResponse(responseCode = "409", description = "Conflict - the document cannot be told apart from another in Lifecare", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))

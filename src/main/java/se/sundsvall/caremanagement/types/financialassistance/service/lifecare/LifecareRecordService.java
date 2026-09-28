@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.DocumentView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.CreateLifecareDocumentRequest;
@@ -30,6 +31,7 @@ import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareNodeValues.integer;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareNodeValues.text;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareNodeValues.textOrEmpty;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.DOCUMENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.JOURNAL_NOTE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.activeNoteTypes;
@@ -70,6 +72,10 @@ public class LifecareRecordService {
 	static final String PATH_DOCUMENT_PROPOSAL = "api2/Document/GetDocumentProposalForService";
 	static final String PATH_CREATE_NOTE = "api2/Document/CreateJournalNote/";
 	static final String PATH_CREATE_DOCUMENT = "api2/Document/CreateDocument/";
+	static final String PATH_PRINT_DOCUMENT = "RenderPdf/PrintDocument";
+
+	/** The document kinds Lifecare prints through a print template rather than holding a file for. */
+	static final List<String> PRINTED_KINDS = List.of("Regular", "Form");
 
 	static final String TARGET_ALL = "JOURNAL_AND_DOCUMENTS";
 
@@ -97,13 +103,15 @@ public class LifecareRecordService {
 	private final LifecareErrandService errandService;
 	private final LifecareAccessRecorder recorder;
 	private final LifecareCaseHistoryService caseHistoryService;
+	private final ProfessionalWebProperties properties;
 
 	LifecareRecordService(final ProfessionalWebClient client, final LifecareErrandService errandService, final LifecareAccessRecorder recorder,
-		final LifecareCaseHistoryService caseHistoryService) {
+		final LifecareCaseHistoryService caseHistoryService, final ProfessionalWebProperties properties) {
 		this.client = client;
 		this.errandService = errandService;
 		this.recorder = recorder;
 		this.caseHistoryService = caseHistoryService;
+		this.properties = properties;
 	}
 
 	/**
@@ -157,9 +165,11 @@ public class LifecareRecordService {
 	 * One of the applicant's documents as a PDF file, for sending it on as a bilaga.
 	 *
 	 * <p>
-	 * The document must be in the applicant's ProfessionalWeb list under Dokument. Its file is read from Lifecare's FC API,
-	 * whose documents carry their own ids, so the FC document is picked by the row's title and date: none yields 404,
-	 * several 409 rather than a guess. FC holds a file only for PDF-backed documents; for the others Lifecare answers 404.
+	 * The document must be in the applicant's ProfessionalWeb list under Dokument. A written document or a blankett is
+	 * printed by Lifecare with the configured print template, the way Lifecare's own Skriv ut does; nothing is saved in
+	 * Lifecare. Lifecare ties print templates to the document's owner and refuses a template the owner lacks, which answers
+	 * 502. Any other document is read from Lifecare's FC API, whose documents carry their own ids, so the FC document is
+	 * picked by the row's title and date: none yields 404, several 409 rather than a guess.
 	 * </p>
 	 *
 	 * @param  municipalityId the municipality
@@ -172,25 +182,12 @@ public class LifecareRecordService {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		final var row = findRecord(readList(errand), id, DOCUMENT)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NOT_THE_CLIENTS));
-		final var title = text(row.path("title"));
-		final var date = text(row.path("date"));
-		if (title == null || date == null) {
-			throw Problem.valueOf(NOT_FOUND, NO_PDF);
+		final byte[] pdf;
+		if (PRINTED_KINDS.contains(textOrEmpty(row.path("documentType_Name")))) {
+			pdf = printDocument(id);
+		} else {
+			pdf = storedDocumentPdf(municipalityId, errand, row);
 		}
-		final var day = LocalDate.parse(date.substring(0, Math.min(date.length(), 10)));
-		final var matches = caseHistoryService.listDocuments(municipalityId, errandService.applicantPartyId(errand), day, day).stream()
-			.filter(document -> title.equals(document.title()))
-			.filter(document -> document.date() != null && document.date().startsWith(day.toString()))
-			.map(DocumentView::id)
-			.distinct()
-			.toList();
-		if (matches.isEmpty()) {
-			throw Problem.valueOf(NOT_FOUND, NO_PDF);
-		}
-		if (matches.size() > 1) {
-			throw Problem.valueOf(CONFLICT, AMBIGUOUS_PDF);
-		}
-		final var pdf = caseHistoryService.documentContent(municipalityId, matches.getFirst());
 		recorder.read(errand, DOCUMENT, "Hämtade ett dokument som PDF ur Lifecare", String.valueOf(id));
 		return pdf;
 	}
@@ -349,6 +346,36 @@ public class LifecareRecordService {
 		if (!containsRecord(readList(errand), id)) {
 			throw Problem.valueOf(NOT_FOUND, NOT_THE_CLIENTS);
 		}
+	}
+
+	private byte[] printDocument(final int id) {
+		final var params = new LinkedHashMap<String, String>();
+		params.put("templateId", properties.documentPrintTemplateId());
+		params.put("documentId", String.valueOf(id));
+		params.put("hideRevisions", "true");
+		return client.getPdf(PATH_PRINT_DOCUMENT, params);
+	}
+
+	private byte[] storedDocumentPdf(final String municipalityId, final LifecareErrand errand, final JsonNode row) {
+		final var title = text(row.path("title"));
+		final var date = text(row.path("date"));
+		if (title == null || date == null) {
+			throw Problem.valueOf(NOT_FOUND, NO_PDF);
+		}
+		final var day = LocalDate.parse(date.substring(0, Math.min(date.length(), 10)));
+		final var matches = caseHistoryService.listDocuments(municipalityId, errandService.applicantPartyId(errand), day, day).stream()
+			.filter(document -> title.equals(document.title()))
+			.filter(document -> document.date() != null && document.date().startsWith(day.toString()))
+			.map(DocumentView::id)
+			.distinct()
+			.toList();
+		if (matches.isEmpty()) {
+			throw Problem.valueOf(NOT_FOUND, NO_PDF);
+		}
+		if (matches.size() > 1) {
+			throw Problem.valueOf(CONFLICT, AMBIGUOUS_PDF);
+		}
+		return caseHistoryService.documentContent(municipalityId, matches.getFirst());
 	}
 
 	private JsonNode readList(final LifecareErrand errand) {

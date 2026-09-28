@@ -38,6 +38,9 @@ import org.springframework.util.StringUtils;
  * @param readTimeout                read timeout in seconds
  * @param decisionPrintTemplateId    the print template of a decision PDF
  * @param calculationPrintTemplateId the print template of a calculation PDF
+ * @param documentPrintTemplateId    the print template a written document or blankett is printed with. Lifecare ties
+ *                                   print templates to the document's owner (utredning, insats, aktualisering), and
+ *                                   refuses a template the owner lacks
  * @param testDecisionMaker          a decision maker to use instead of the signed-in caseworker, test only
  */
 @ConfigurationProperties("integration.lifecare-professionalweb")
@@ -54,6 +57,7 @@ public record ProfessionalWebProperties(
 	@DefaultValue("30") int readTimeout,
 	@DefaultValue("885bfb68-c97b-47c0-921d-ef00caaa2423") String decisionPrintTemplateId,
 	@DefaultValue("7936e9ec-e32a-40cf-9dea-d95b16e021f0") String calculationPrintTemplateId,
+	@DefaultValue("439158d3-204d-4ab5-be26-4ae3a255c8b0") String documentPrintTemplateId,
 	String testDecisionMaker) {
 
 	/**
@@ -98,6 +102,7 @@ public record ProfessionalWebProperties(
 			+ ", password=" + redacted(password) + ", sessionTtl=" + sessionTtl
 			+ ", connectTimeout=" + connectTimeout + ", readTimeout=" + readTimeout
 			+ ", decisionPrintTemplateId=" + decisionPrintTemplateId + ", calculationPrintTemplateId=" + calculationPrintTemplateId
+			+ ", documentPrintTemplateId=" + documentPrintTemplateId
 			+ ", testDecisionMaker=" + testDecisionMaker + "}";
 	}
 

@@ -10,7 +10,7 @@ class ProfessionalWebPropertiesTest {
 	@Test
 	void toStringRedactsUsernameAndPassword() {
 		final var properties = new ProfessionalWebProperties("https://lifecare.example.se", "SundsvallVoO_PLUS", "Actor_Professional", "saml",
-			"Sundsvall_Intra", "joe01doe", "s3cret", Duration.ofMinutes(20), 5, 30, "template-1", "template-2", null);
+			"Sundsvall_Intra", "joe01doe", "s3cret", Duration.ofMinutes(20), 5, 30, "template-1", "template-2", "template-3", null);
 
 		final var text = properties.toString();
 
@@ -20,7 +20,7 @@ class ProfessionalWebPropertiesTest {
 
 	@Test
 	void toStringHandlesUnsetCredentials() {
-		final var properties = new ProfessionalWebProperties(null, null, "Actor_Professional", "saml", null, null, null, Duration.ofMinutes(20), 5, 30, "template-1", "template-2", null);
+		final var properties = new ProfessionalWebProperties(null, null, "Actor_Professional", "saml", null, null, null, Duration.ofMinutes(20), 5, 30, "template-1", "template-2", "template-3", null);
 
 		assertThat(properties.toString()).contains("username=null", "password=null");
 	}
