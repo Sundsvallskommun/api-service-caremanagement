@@ -39,6 +39,6 @@ class ProfessionalWebHealthIndicatorTest {
 	}
 
 	private static ProfessionalWebProperties properties(final String url) {
-		return new ProfessionalWebProperties(url, "d", "a", "saml", null, "u", "p", Duration.ofMinutes(20), 1, 1, "x", "y", null);
+		return new ProfessionalWebProperties(url, "d", "a", "saml", null, "u", "p", Duration.ofMinutes(20), 1, 1, "x", "y", "z", null);
 	}
 }
