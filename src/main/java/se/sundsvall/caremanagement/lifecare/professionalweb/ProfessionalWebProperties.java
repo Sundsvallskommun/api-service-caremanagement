@@ -57,7 +57,7 @@ public record ProfessionalWebProperties(
 	@DefaultValue("30") int readTimeout,
 	@DefaultValue("885bfb68-c97b-47c0-921d-ef00caaa2423") String decisionPrintTemplateId,
 	@DefaultValue("7936e9ec-e32a-40cf-9dea-d95b16e021f0") String calculationPrintTemplateId,
-	@DefaultValue("439158d3-204d-4ab5-be26-4ae3a255c8b0") String documentPrintTemplateId,
+	@DefaultValue("b9f20b49-c8ba-4c44-ad33-b2bf8f0b688a") String documentPrintTemplateId,
 	String testDecisionMaker) {
 
 	/**
