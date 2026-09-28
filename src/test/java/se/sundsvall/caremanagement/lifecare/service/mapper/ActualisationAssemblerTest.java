@@ -85,7 +85,7 @@ class ActualisationAssemblerTest {
 		assertThat(body.getOrganisationId()).isEqualTo(31);
 		assertThat(body.getOrganisationUnitId()).isEqualTo("unit-A");
 		assertThat(body.getServiceId()).isEqualTo(41);
-		assertThat(body.getInvestigationId()).isEqualTo(51);
+		assertThat(body.getInvestigationId()).isNull();
 		// Type does not require a specify-type or working-status → neither set.
 		assertThat(body.getSpecifies()).isNull();
 		assertThat(body.getWorkingStatus()).isNull();
@@ -143,6 +143,26 @@ class ActualisationAssemblerTest {
 		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE, null, NAMES).body();
 
 		assertThat(body.getServiceId()).isEqualTo(2);
+		assertThat(body.getInvestigationId()).isNull();
+	}
+
+	/**
+	 * FamilyCare rejects a body carrying both links with "Cannot contain both investigation and service" — which stopped
+	 * EB-26090047 at the actualisation step. With no accepted insats, the accepted investigation is linked instead.
+	 */
+	@Test
+	void linksTheAcceptedInvestigationOnlyWhenNoAcceptedServiceExists() {
+		final var proposal = new PersonBasedAktualiseringProposalDTO()
+			.addActualisationTypesItem(new PersonBasedAktualiseringsInfoDTO()
+				.id(1)
+				.addServiceTypesItem(new PersonBasedAktualiseringsServiceTypeDTO().id(27))
+				.addInvestigationTypesItem(new PersonBasedAktualiseringsInvestigationTypeDTO().id(40)))
+			.addServicesItem(new PersonBasedAktualiseringsServiceDTO().id(5).type(3))
+			.addInvestigationsItem(new PersonBasedAktualiseringsInvestigationDTO().id(99).type(40));
+
+		final var body = ActualisationAssembler.assemble(PERSON_ID, proposal, DATE, null, NAMES).body();
+
+		assertThat(body.getServiceId()).isNull();
 		assertThat(body.getInvestigationId()).isEqualTo(99);
 	}
 
