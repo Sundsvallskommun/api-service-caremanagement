@@ -46,7 +46,9 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.nor
  * {@code Services}/{@code Investigations} are everything the person has open anywhere in socialtjänsten — a
  * vuxenutredning, a BoU-avgift — and the chosen type names which of their types it accepts. Taking the first offered
  * one attached a "Vux Utredning 14 kap 2 § SoL" to an EB-återansökan, which FamilyCare answers 400 to; an accepted
- * type list that is empty means the type takes no such link, so none is sent. The specify-type and working-status
+ * type list that is empty means the type takes no such link, so none is sent. And at most one link is sent: FamilyCare
+ * refuses a body with both, so an accepted service wins over an accepted investigation. The specify-type and
+ * working-status
  * are still first-offered when the type asks for them, minus the unnamed {@code {id: 0}} placeholder that leads the
  * working-status catalogue. The {@code CaseworkerId} is set from the caseworker resolved off the applicant's most
  * recent Lifecare Service (see {@code CaseworkerResolver}) when one is supplied, and left unset otherwise — the
@@ -112,11 +114,14 @@ public final class ActualisationAssembler {
 				// socialtjänsten - a vuxenutredning and a BoU-avgift sit in the same list as the EB ones. Only the
 				// ones whose type the chosen actualisation type accepts may be linked, and a type that accepts none
 				// (as EK Återansökan does for investigations) gets no link at all.
+				// FamilyCare takes one link, never both ("Cannot contain both investigation and service"): the EB insats
+				// wins, and an accepted investigation is linked only when the person has no such insats.
 				if (linkExistingCases) {
 					linkedId(proposal.getServices(), PersonBasedAktualiseringsServiceDTO::getType, PersonBasedAktualiseringsServiceDTO::getId,
-						type.getServiceTypes(), PersonBasedAktualiseringsServiceTypeDTO::getId).ifPresent(body::serviceId);
-					linkedId(proposal.getInvestigations(), PersonBasedAktualiseringsInvestigationDTO::getType, PersonBasedAktualiseringsInvestigationDTO::getId,
-						type.getInvestigationTypes(), PersonBasedAktualiseringsInvestigationTypeDTO::getId).ifPresent(body::investigationId);
+						type.getServiceTypes(), PersonBasedAktualiseringsServiceTypeDTO::getId)
+						.ifPresentOrElse(body::serviceId,
+							() -> linkedId(proposal.getInvestigations(), PersonBasedAktualiseringsInvestigationDTO::getType, PersonBasedAktualiseringsInvestigationDTO::getId,
+								type.getInvestigationTypes(), PersonBasedAktualiseringsInvestigationTypeDTO::getId).ifPresent(body::investigationId));
 				}
 			});
 			organization(proposal, names, misses).ifPresent(org -> {
