@@ -260,6 +260,35 @@ class DecisionProposalServiceTest {
 	}
 
 	@Test
+	void aBifallReasonIsNotProposedOnAnAvslag() {
+		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("1000"))));
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
+			.thenReturn(List.of(decision("EK Försörjningsstöd 4 kap 1 § SoL, bifall", "Boendekostnad", "Medsökande", "Sjukskriven")));
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of(), List.of())).thenReturn(List.of());
+
+		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(proposal.getOutcome()).isEqualTo("AVSLAG");
+		assertThat(proposal.getReason()).isNull();
+		assertThat(proposal.getCoApplicantReason()).isNull();
+		assertThat(proposal.getReasonOptions()).containsExactlyElementsOf(DEFAULT_REASON_OPTIONS);
+		assertThat(proposal.getPreviousDecision().getReason()).isEqualTo("Boendekostnad"); // still shown as history
+	}
+
+	@Test
+	void anAvslagReasonCarriesOverToAnAvslag() {
+		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("1000"))));
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
+			.thenReturn(List.of(decision("EK Försörjningsstöd 4 kap 1 § SoL, avslag", "Boendekostnad")));
+		when(warningServiceMock.reconcileByTypes(ERRAND_ID, DECISION_PROPOSAL_TYPES, Set.of(), List.of())).thenReturn(List.of());
+
+		final var proposal = service.get(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(proposal.getOutcome()).isEqualTo("AVSLAG");
+		assertThat(proposal.getReason()).isEqualTo("Boendekostnad");
+	}
+
+	@Test
 	void avslagWhenTheEstimateIsNotPositive() {
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft(), Optional.of(APPLICANT), Optional.of(new BigDecimal("1000"))));
 		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30"))).thenReturn(List.of());
