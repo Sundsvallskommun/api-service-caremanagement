@@ -4,8 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 
 /**
- * One income on which the latest SSBTEK answer and the normberäkning saved in Lifecare disagree, and whether Draken's
- * BFF may bring the calculation in line without asking.
+ * One income on which the latest SSBTEK answer and the normberäkning saved in Lifecare disagree, and whether the
+ * calculation may be brought in line without asking.
  */
 @Schema(description = "One income on which the latest SSBTEK answer and the normberäkning saved in Lifecare disagree")
 public record SsbtekChange(

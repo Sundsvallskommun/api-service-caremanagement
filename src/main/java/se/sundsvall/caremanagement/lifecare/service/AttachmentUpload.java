@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.lifecare.service;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A document to attach to an actualisation: the two Lifecare {@code InsertDocument*} type codes, the title and
@@ -39,6 +40,6 @@ public record AttachmentUpload(String documentType, String documentSenderType, S
 	@Override
 	public String toString() {
 		return "AttachmentUpload[documentType=%s, documentSenderType=%s, title=%s, senderName=%s, fileName=%s, content=%d bytes]"
-			.formatted(documentType, documentSenderType, title, senderName, fileName, content == null ? 0 : content.length);
+			.formatted(documentType, documentSenderType, title, senderName, fileName, Optional.ofNullable(content).map(bytes -> bytes.length).orElse(0));
 	}
 }

@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.core.service.ErrandService;
-import se.sundsvall.caremanagement.decisions.api.model.DecisionLifecareResult;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
@@ -44,36 +43,35 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * <ol>
  * <li>records the finalize choices on the errand (communication channels, household-size flag);</li>
  * <li>records the decision as a {@code PAYMENT} {@code Decision} row — the audit trail — and receipts it against the
- * errand's beslut in Lifecare ({@code lifecareDecisionId}): the row is marked {@code SYNCED} with Lifecare's id, as a
- * {@code WRITTEN} report to {@code .../decisions/{decisionId}/lifecare-result} would. The beslut is already in Lifecare
- * (Draken saves it there before finalizing), so this is only the link between the two, made in the same transaction.
- * A client that still posts that report afterwards changes nothing: re-posting WRITTEN is idempotent;</li>
+ * errand's beslut in Lifecare ({@code lifecareDecisionId}): the row is marked {@code SYNCED} with Lifecare's id. The
+ * beslut is already in Lifecare (careM saved it there through the errand's /lifecare/decision route before
+ * finalizing), so this is only the link between the two, made in the same transaction;</li>
  * <li>correlates {@code PaymentDecisionReceived} to the waiting process, which then sets the status and, for a bifall,
  * checks the linked Lifecare payments until they are paid out;</li>
  * <li>purges careM's normberäkning draft when the errand is linked to a normberäkning saved in Lifecare
  * ({@code lifecareCalculationId}): the draft was only a proposal, frozen since that id was set, and the decided
  * calculation is Lifecare's. Keeping it would store the household's incomes and expenses twice. Without the id (an
  * avslag decided without a saved calculation) the draft is the only trace of the proposal and stays for the errand's
- * own
- * disposal.</li>
+ * own disposal.</li>
  * </ol>
  *
  * <p>
- * The preconditions are the real ones, not caseworker check-offs: Draken saves the beslut in Lifecare and links it as
- * {@code lifecareDecisionId} (every outcome); for a granting outcome (BIFALL/DELAVSLAG) it also saves the normberäkning
- * and links it as {@code lifecareCalculationId}, both through {@code PATCH .../data} before this call, and registers
- * the
- * payments directly in Lifecare. finalize refuses an errand that lacks a required reference, and an avslag linked to
- * payments. These are references: careM does not claim that the calculation is final, the beslut locked or a
- * payment paid out because an id is there — those statuses are Lifecare's, read from Lifecare (payment-status for the
- * process; Draken reads the rest itself). careM creates no payments, and no payee state affects this call.
+ * The preconditions are the real ones, not caseworker check-offs: the beslut is saved in Lifecare and linked as
+ * {@code lifecareDecisionId} (every outcome); for a granting outcome (BIFALL/DELAVSLAG) the normberäkning is saved and
+ * linked as {@code lifecareCalculationId} too, and the payments registered in Lifecare — all through the errand's
+ * /lifecare routes, which link what they create, before this call. finalize refuses an errand that lacks a required
+ * reference, and an avslag linked to payments. These are references: careM does not claim that the calculation is
+ * final, the beslut locked or a payment paid out because an id is there — those statuses are Lifecare's, read from
+ * Lifecare (payment-status for the process; the rest through the errand's /lifecare routes). This call creates no
+ * payments.
  *
  * <p>
  * Step 3 is best-effort and reported in the response rather than failing the call: the decision is recorded either
  * way, and an uncorrelated message is queued, in this transaction, for the scheduled process-message retry. The
- * Lifecare writes — decision, utbetalningar, bevakningar, journal, documents — are all the Draken BFF's, done directly
- * against Lifecare. Sending the decision to the applicant (step 6 of the verksamhet's flow) is the BFF's job too; this
- * service only records and echoes the chosen channels.
+ * Lifecare writes — decision, utbetalningar, bevakningar, journal, documents — are careM's, made through
+ * ProfessionalWeb by the errand's /lifecare routes on the caseworker's action in Draken, never by this call. Sending
+ * the decision to the applicant (step 6 of the verksamhet's flow) is Draken's job; this service only records and echoes
+ * the chosen channels.
  */
 @Service
 @Transactional
@@ -84,7 +82,6 @@ public class FinancialAssistanceFinalizeService {
 	private static final String ERROR_NO_TYPED_ERRAND = "No financial-assistance errand for id %s";
 	private static final String ERROR_NO_DECIDER = "a decision can only be recorded by an identified user - the X-Sent-By header is required";
 	private static final String ERROR_NO_DECISION = "the finalize request carries no decision";
-	private static final String LIFECARE_RESULT_WRITTEN = "WRITTEN";
 	private static final String REGISTRATION_REGISTERED = "REGISTERED";
 	private static final String ERROR_WRONG_STATUS = "errand must be in status %s to be finalized, but is in status '%s'";
 	private static final String ERROR_ALREADY_FINALIZED = "errand '%s' already carries a %s decision - it has been finalized";
@@ -137,8 +134,7 @@ public class FinancialAssistanceFinalizeService {
 		final var decisionId = decisionService.create(municipalityId, namespace, errandId,
 			toPaymentDecision(request, decidedBy, LocalDate.now(ZoneId.systemDefault())));
 		final var lifecareId = String.valueOf(entity.getLifecareDecisionId());
-		decisionService.recordLifecareResult(municipalityId, namespace, errandId, decisionId,
-			DecisionLifecareResult.create().withOutcome(LIFECARE_RESULT_WRITTEN).withLifecareId(lifecareId));
+		decisionService.markSyncedInLifecare(municipalityId, namespace, errandId, decisionId, lifecareId);
 
 		// 3. Resume the process.
 		final var correlated = correlatePaymentDecision(municipalityId, namespace, errandId, outcome);
@@ -197,14 +193,15 @@ public class FinancialAssistanceFinalizeService {
 	}
 
 	/**
-	 * The Lifecare artefacts the decision rests on must be linked to the errand. Every outcome is a beslut Draken saves in
+	 * The Lifecare artefacts the decision rests on must be linked to the errand. Every outcome is a beslut saved in
 	 * Lifecare first, so {@code lifecareDecisionId} is always required. A granting outcome (BIFALL/DELAVSLAG) is paid
 	 * against the normberäkning in Lifecare, so it also needs {@code lifecareCalculationId}. Its payments are not a
-	 * precondition here: Draken registers them in Lifecare from its payment form without handing careM their ids, and the
-	 * process does not move the errand to PAID until payment-status has found them paid in Lifecare, on the errand's own
-	 * insats — a bifall whose payment is missing waits and is escalated to the caseworker, it never closes. An avslag
-	 * pays nothing: it needs no calculation, and a linked payment means money was registered in Lifecare for a decision
-	 * that grants none, so it is refused rather than recorded.
+	 * precondition here: careM links the ones it registers, but one registered in Lifecare some other way carries no
+	 * link. Either way the process does not move the errand to PAID until payment-status has found them paid in
+	 * Lifecare, by their linked ids or on the errand's own insats — a bifall whose payment is missing waits and is
+	 * escalated to the caseworker, it never closes. An avslag pays nothing: it needs no calculation, and a linked
+	 * payment means money was registered in Lifecare for a decision that grants none, so it is refused rather than
+	 * recorded.
 	 */
 	private static void requireLifecareReferences(final FinancialAssistanceEntity entity, final String errandId, final String outcome) {
 		if (entity.getLifecareDecisionId() == null) {

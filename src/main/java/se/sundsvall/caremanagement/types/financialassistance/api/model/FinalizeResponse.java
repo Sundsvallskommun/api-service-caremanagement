@@ -26,8 +26,8 @@ public class FinalizeResponse {
 	private CommunicationChannels communication;
 
 	@Schema(description = """
-		How the recorded decision was tied to the errand's beslut in Lifecare (lifecareDecisionId). careM receipts it itself, \
-		so a client no longer has to post .../decisions/{decisionId}/lifecare-result after finalizing.""")
+		How the recorded decision was tied to the errand's beslut in Lifecare (lifecareDecisionId), receipted by careM in the \
+		same call.""")
 	private LifecareDecisionRegistration lifecareDecision;
 
 	public static FinalizeResponse create() {

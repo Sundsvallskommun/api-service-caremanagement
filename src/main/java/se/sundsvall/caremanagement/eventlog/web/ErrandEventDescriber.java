@@ -34,9 +34,6 @@ final class ErrandEventDescriber {
 		Map.entry("documents", new String[] {
 			"dokument", "dokument"
 		}),
-		Map.entry("journal-entries", new String[] {
-			"journalanteckning", "journalanteckningar"
-		}),
 		Map.entry("messages", new String[] {
 			"meddelande", "meddelanden"
 		}),
@@ -66,9 +63,6 @@ final class ErrandEventDescriber {
 		}),
 		Map.entry("warnings", new String[] {
 			"varning", "varningar"
-		}),
-		Map.entry("monitorings", new String[] {
-			"bevakning", "bevakningar"
 		}),
 		Map.entry("status-history", new String[] {
 			"statushistorik", "statushistorik"

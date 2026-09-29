@@ -13,8 +13,8 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * The errand's Lifecare insats id — the applicant's open financial-assistance service in Lifecare, the key
- * Lifecare's own case reads (journal, documents, reminders, jobbstimulans) take. Draken's BFF reads those live and
- * gets the key off the errand.
+ * Lifecare's own case reads (journal, documents, reminders, jobbstimulans) take. careM's errand-scoped /lifecare
+ * routes read those live and take the key off the errand.
  *
  * <p>
  * Intake stores it from the insats the actualisation was linked to. An errand that had no open insats then — a

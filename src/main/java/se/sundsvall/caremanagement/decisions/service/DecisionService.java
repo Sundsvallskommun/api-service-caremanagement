@@ -10,7 +10,6 @@ import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
-import se.sundsvall.caremanagement.decisions.api.model.DecisionLifecareResult;
 import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
 import se.sundsvall.caremanagement.decisions.service.event.DecisionCreated;
@@ -22,8 +21,6 @@ import static java.time.OffsetDateTime.now;
 import static java.time.ZoneId.systemDefault;
 import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.Optional.ofNullable;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.decisions.service.mapper.DecisionMapper.toDecision;
@@ -40,10 +37,6 @@ public class DecisionService {
 	/** Set by finalize when it hands the decision over to be written into Lifecare. */
 	public static final String LIFECARE_STATUS_PENDING = "PENDING";
 	static final String LIFECARE_STATUS_SYNCED = "SYNCED";
-	static final String LIFECARE_STATUS_FAILED = "FAILED";
-	static final String OUTCOME_FAILED = "FAILED";
-	static final String ERROR_DETAIL_REQUIRED = "detail is required when outcome is FAILED — it is Lifecare's own message, shown to the caseworker";
-	static final String ERROR_ALREADY_SYNCED = "Decision is already SYNCED in Lifecare and cannot be reported as FAILED";
 
 	private final ErrandQueryService errandQueryService;
 	private final DecisionRepository decisionRepository;
@@ -78,30 +71,16 @@ public class DecisionService {
 	}
 
 	/**
-	 * Record the report on writing the decision into Lifecare. {@code ALREADY_EXISTS} counts as success. Re-posting the
-	 * same outcome is idempotent; reporting {@code FAILED} on a decision already {@code SYNCED} is a {@code 409}, because
-	 * that would silently tell the caseworker a decision Lifecare has is missing.
+	 * Receipt the decision against the beslut already saved in Lifecare: marks it {@code SYNCED} with Lifecare's id. Called
+	 * by finalize, which only runs once the errand's beslut is in Lifecare.
 	 */
-	public Decision recordLifecareResult(final String municipalityId, final String namespace, final String errandId, final String decisionId,
-		final DecisionLifecareResult result) {
+	public Decision markSyncedInLifecare(final String municipalityId, final String namespace, final String errandId, final String decisionId,
+		final String lifecareId) {
 
 		final var entity = findDecision(municipalityId, namespace, errandId, decisionId);
-
-		if (OUTCOME_FAILED.equals(result.getOutcome())) {
-			if (!hasText(result.getDetail())) {
-				throw Problem.valueOf(BAD_REQUEST, ERROR_DETAIL_REQUIRED);
-			}
-			if (LIFECARE_STATUS_SYNCED.equals(entity.getLifecareStatus())) {
-				throw Problem.valueOf(CONFLICT, ERROR_ALREADY_SYNCED);
-			}
-			return toDecision(decisionRepository.save(entity
-				.withLifecareStatus(LIFECARE_STATUS_FAILED)
-				.withLifecareDetail(result.getDetail())));
-		}
-
 		return toDecision(decisionRepository.save(entity
 			.withLifecareStatus(LIFECARE_STATUS_SYNCED)
-			.withLifecareId(ofNullable(result.getLifecareId()).filter(StringUtils::hasText).orElse(entity.getLifecareId()))
+			.withLifecareId(ofNullable(lifecareId).filter(StringUtils::hasText).orElse(entity.getLifecareId()))
 			.withLifecareDetail(null)));
 	}
 

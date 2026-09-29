@@ -28,10 +28,11 @@ tags:
 - name: Financial Assistance · Finalize
   description: "Besluta och utbetala: record the caseworker's decision and resume\
     \ the process. The Lifecare writes (beslut, payments, bevakningar, journal, documents,\
-    \ and the normberäkning beyond the daily prepare's proposal) are made by Draken's\
-    \ BFF directly in Lifecare before the decision; the errand only carries the references\
-    \ (lifecareCalculationId, lifecareDecisionId, lifecarePaymentIds). The decision\
-    \ is sent to the applicant by the frontend."
+    \ and the normberäkning beyond the daily prepare's proposal) are made by careM\
+    \ through the errand's /lifecare routes, on the caseworker's action in Draken,\
+    \ before the decision; the errand only carries the references (lifecareCalculationId,\
+    \ lifecareDecisionId, lifecarePaymentIds). The decision is sent to the applicant\
+    \ by the frontend."
 - name: Financial Assistance · Lifecare
   description: "The applicant's case in Lifecare. The history reads (calculations,\
     \ decisions, documents keyed by partyId, period defaulting to the last 24 months)\
@@ -42,10 +43,6 @@ tags:
     \ access on the errand and links what it creates back onto it."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
-- name: Financial Assistance · Monitorings
-  description: "Financial assistance monitorings — date-bound watch/reminder objects\
-    \ on an errand, with full CRUD. Unlike the income warnings they carry no acknowledge\
-    \ lifecycle."
 - name: Financial Assistance · Household identifiers
   description: "The errand number and the household's personal numbers, served on\
     \ demand to the process's beredning step (prepare-income-basis) so they never\
@@ -75,6 +72,8 @@ tags:
   description: "Pre-application and case-intake calls: eligibility routing (common\
     \ entry point), renewal pre-fill from Lifecare, the income/cost type metadata\
     \ catalogue, and Lifecare actualisation (case intake)."
+- name: Journal
+  description: The catalogue of Lifecare journal types (Typ/Journaltyp)
 - name: Financial Assistance · Warnings
   description: "Acknowledgeable financial assistance income warnings on an errand\
     \ — create, list and set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare\
@@ -89,25 +88,17 @@ tags:
 - name: Referrals
   description: "Referrals/consultations on an errand: receiving authority, due date,\
     \ free-text response and status (SENT → RESPONDED)."
-- name: Financial Assistance · Payees
-  description: "The betalningsmottagare selectable for an errand's payment form: the\
-    \ payees seen on the applicant's Lifecare payments in the last 12 months, plus\
-    \ the ones added by hand here when the history does not contain the right one.\
-    \ FamilyCare exposes no payee register, so a past payment is the only evidence\
-    \ a payee exists. Reading is side-effect free."
+- name: Financial Assistance · Calculation
+  description: "The calculation: prepare the calculation draft each daily loop (the\
+    \ first run also creates the normberäkning proposal in Lifecare and links it on\
+    \ the errand), and read or edit the draft header."
 - name: Event Log
   description: "Who/what/when activity log for an errand — every read and write, with\
     \ the acting user"
-- name: Journal
-  description: Journalanteckningar (case-journal entries) attached to an errand
 - name: Errand decisions
   description: "Decision audit trail on an errand. Stores both system-generated decisions\
     \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
     \ (e.g. caseworker APPROVE/REJECT), distinguished by `decisionType`."
-- name: Financial Assistance · Calculation
-  description: "The calculation: prepare the calculation draft each daily loop (no\
-    \ Lifecare write — Draken saves the normberäkning in Lifecare), and read or edit\
-    \ the draft header."
 - name: Financial Assistance · Payment
   description: Read from Lifecare whether the payments a bifall is linked to have
     been paid out. caremanagement makes no payment and stores no payment status.
@@ -116,10 +107,10 @@ tags:
     \ one of the three application-type slugs (financial-assistance-new / -renewal\
     \ / -supplementary); read and replace the typed data via the shared financial-assistance\
     \ path."
-- name: Documents
-  description: Formal case documents attached to an errand
 - name: Errands
   description: Errand operations
+- name: Documents
+  description: The catalogue of Lifecare document types (Typ/Dokumenttyp)
 - name: Financial Assistance · Draft rows
   description: "Caseworker edits to the draft calculation rows — add, edit, soft-delete\
     \ and restore income, expense and person rows. Each touches only the caseworker\
@@ -221,171 +212,6 @@ paths:
                 oneOf:
                 - $ref: "#/components/schemas/Problem"
                 - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/monitorings/{monitoringId}:
-    get:
-      tags:
-      - Financial Assistance · Monitorings
-      summary: Read a monitoring on an errand
-      operationId: getMonitoring
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: monitoringId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Monitoring"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    put:
-      tags:
-      - Financial Assistance · Monitorings
-      summary: Replace a monitoring on an errand
-      operationId: updateMonitoring
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: monitoringId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MonitoringRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Monitoring"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    delete:
-      tags:
-      - Financial Assistance · Monitorings
-      summary: Delete a monitoring on an errand
-      operationId: deleteMonitoring
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: monitoringId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: Successful operation
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
         "500":
           description: Internal server error
           content:
@@ -2534,405 +2360,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/journal-entries:
-    get:
-      tags:
-      - Journal
-      summary: List journal entries for an errand (most recent first)
-      operationId: list_2
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/JournalEntry"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    post:
-      tags:
-      - Journal
-      summary: Add a journal entry to an errand
-      operationId: createJournalEntry
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateJournalEntry"
-        required: true
-      responses:
-        "201":
-          description: Successful operation
-          headers:
-            Location:
-              style: simple
-              schema:
-                type: string
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/journal-entries/{journalEntryId}/lock:
-    post:
-      tags:
-      - Journal
-      summary: Lock a journal entry (write-protection) — it becomes an immutable finalised
-        record
-      operationId: lock
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: journalEntryId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LockJournalEntry"
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/JournalEntry"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "409":
-          description: Conflict
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/events/lifecare:
-    post:
-      tags:
-      - Event Log
-      summary: Report reads and writes made in Lifecare directly on the errand's behalf
-      description: "For a caller that reads or writes Lifecare itself — Draken's BFF\
-        \ reading journal, documents, reminders and jobbstimulans live, and writing\
-        \ journal notes, documents and reminders straight into Lifecare. Each reported\
-        \ access becomes one row in the errand's access log with source LIFECARE,\
-        \ attributed to the X-Sent-By identity, so the log still answers who saw or\
-        \ wrote what. Report after the Lifecare call, not before; report nothing for\
-        \ a call Lifecare refused."
-      operationId: reportLifecareAccesses
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/LifecareAccess"
-        required: true
-      responses:
-        "204":
-          description: Recorded
-        "404":
-          description: Errand not found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/documents:
-    get:
-      tags:
-      - Documents
-      summary: List documents for an errand (most recent first)
-      operationId: list_3
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Document"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    post:
-      tags:
-      - Documents
-      summary: Add a document to an errand
-      operationId: createDocument
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateDocument"
-        required: true
-      responses:
-        "201":
-          description: Successful operation
-          headers:
-            Location:
-              style: simple
-              schema:
-                type: string
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/documents/{documentId}/lock:
-    post:
-      tags:
-      - Documents
-      summary: Lock a document (write-protection) — it becomes an immutable finalised
-        record
-      operationId: lock_1
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: documentId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LockDocument"
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Document"
-        "409":
-          description: Conflict
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/{errandId}/decisions:
     get:
       tags:
@@ -3025,80 +2452,6 @@ paths:
               style: simple
               schema:
                 type: string
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/decisions/{decisionId}/lifecare-result:
-    post:
-      tags:
-      - Errand decisions
-      summary: Report the outcome of writing the decision into Lifecare
-      description: "For Draken's BFF, which writes the decision into Lifecare itself.\
-        \ WRITTEN and ALREADY_EXISTS mark the decision SYNCED and store Lifecare's\
-        \ id; FAILED marks it FAILED with Lifecare's own message, which the caseworker\
-        \ sees. Re-posting the same outcome is harmless; FAILED on a SYNCED decision\
-        \ is a 409."
-      operationId: recordLifecareResult
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-        example: 2281
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-        example: MY_NAMESPACE
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: decisionId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/DecisionLifecareResult"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Decision"
-        "409":
-          description: Conflict
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
         "400":
           description: Bad request
           content:
@@ -3519,317 +2872,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payees:
-    get:
-      tags:
-      - Financial Assistance · Payees
-      summary: List the selectable betalningsmottagare for an errand
-      description: "The payees derived from the applicant's Lifecare payments in the\
-        \ last 12 months (most recently paid first, source=LIFECARE, no id), followed\
-        \ by the ones added by hand on this errand (source=MANUAL) that are not already\
-        \ among them. A manually added payee collapses into its Lifecare twin once\
-        \ a payment has gone to it, so the list never offers the same account twice.\
-        \ The Lifecare read is best-effort: an outage degrades the list to the manual\
-        \ rows rather than failing."
-      operationId: listPayees
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/PayeeOption"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    post:
-      tags:
-      - Financial Assistance · Payees
-      summary: Add a betalningsmottagare by hand
-      description: "Stores the payee on the errand so it is selectable immediately.\
-        \ It is created in Lifecare by Draken's BFF, which reports back through POST\
-        \ .../{payeeId}/lifecare-result; until then the payee is lifecareStatus=PENDING.\
-        \ An identical payee already on the errand is returned as-is instead of being\
-        \ duplicated."
-      operationId: createPayee
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PayeeRequest"
-        required: true
-      responses:
-        "201":
-          description: Successful operation
-          headers:
-            Location:
-              style: simple
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PayeeOption"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payees/{payeeId}/lifecare-result:
-    post:
-      tags:
-      - Financial Assistance · Payees
-      summary: Report the outcome of creating the payee in Lifecare
-      description: "ADDED and ALREADY_EXISTS both set lifecareStatus=SYNCED — a payee\
-        \ already in Lifecare is not created twice, and the caseworker's intent is\
-        \ satisfied either way. FAILED requires detail, which must be Lifecare's own\
-        \ message since it is shown to the caseworker as-is. Re-reporting the same\
-        \ outcome is idempotent; reporting FAILED on an already SYNCED payee is a\
-        \ 409."
-      operationId: reportLifecareResult
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: payeeId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PayeeLifecareResult"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PayeeOption"
-        "409":
-          description: Conflict
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/monitorings:
-    get:
-      tags:
-      - Financial Assistance · Monitorings
-      summary: List the monitorings on an errand
-      operationId: listMonitorings
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Monitoring"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    post:
-      tags:
-      - Financial Assistance · Monitorings
-      summary: Create a monitoring on an errand
-      description: Creates a date-bound monitoring on the errand. Returns the created
-        monitoring and its Location.
-      operationId: createMonitoring
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MonitoringRequest"
-        required: true
-      responses:
-        "201":
-          description: Successful operation
-          headers:
-            Location:
-              style: simple
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Monitoring"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/reminders:
     get:
       tags:
@@ -4123,7 +3165,7 @@ paths:
         \ belongs to. An active payee with the same betalsätt, account and clearing\
         \ is returned instead of being created a second time. 400 when the betalsä\
         tt is not in use on the insats."
-      operationId: createPayee_1
+      operationId: createPayee
       parameters:
       - name: municipalityId
         in: path
@@ -4581,7 +3623,7 @@ paths:
         \ Lifecare's own proposal. The rubrik defaults to the document type's name,\
         \ skrivskydd to the type's default; the date is only taken when the type allows\
         \ it. 400 when the document type is not a writable one in Lifecare."
-      operationId: createDocument_1
+      operationId: createDocument
       parameters:
       - name: municipalityId
         in: path
@@ -4817,19 +3859,19 @@ paths:
         \ when no beslut is saved or its beslutstyp cannot be finalized, 422 when\
         \ the beslut breaks the decision's rules. The recorded decision is receipted\
         \ against the Lifecare beslut in the same call (marked SYNCED with lifecareId,\
-        \ reported as lifecareDecision), so posting .../lifecare-result afterwards\
-        \ is no longer needed (and harmless). Creates no payments: Draken registers\
-        \ them directly in Lifecare. Every outcome requires the beslut to be saved\
-        \ in Lifecare and linked as lifecareDecisionId; a BIFALL/DELAVSLAG also requires\
-        \ the normberäkning saved in Lifecare and linked as lifecareCalculationId,\
-        \ otherwise 409. An AVSLAG linked to Lifecare payments (lifecarePaymentIds)\
-        \ is refused with 409. A decision on a normberäkning linked as lifecareCalculationId\
-        \ purges careM's calculation draft: the decided calculation is Lifecare's,\
-        \ and the draft read answers 404 from then on. Does not send anything to the\
-        \ applicant: the response echoes the communication channels for the frontend\
-        \ to act on. Requires the errand in AWAITING_DECISION and an identified caller\
-        \ (X-Sent-By); a second finalize is rejected with 409. A process that could\
-        \ not be reached is reported in the response, not as an error."
+        \ reported as lifecareDecision). Creates no payments: they are registered\
+        \ in Lifecare beforehand through the errand's /lifecare/payments route. Every\
+        \ outcome requires the beslut to be saved in Lifecare and linked as lifecareDecisionId;\
+        \ a BIFALL/DELAVSLAG also requires the normberäkning saved in Lifecare and\
+        \ linked as lifecareCalculationId, otherwise 409. An AVSLAG linked to Lifecare\
+        \ payments (lifecarePaymentIds) is refused with 409. A decision on a normberä\
+        kning linked as lifecareCalculationId purges careM's calculation draft: the\
+        \ decided calculation is Lifecare's, and the draft read answers 404 from then\
+        \ on. Does not send anything to the applicant: the response echoes the communication\
+        \ channels for the frontend to act on. Requires the errand in AWAITING_DECISION\
+        \ and an identified caller (X-Sent-By); a second finalize is rejected with\
+        \ 409. A process that could not be reached is reported in the response, not\
+        \ as an error."
       operationId: finalize
       parameters:
       - name: municipalityId
@@ -4907,11 +3949,12 @@ paths:
       tags:
       - Financial Assistance · Calculation
       summary: Acknowledge SSBTEK changes written into the normberäkning in Lifecare
-      description: "Draken's BFF reports the incomes it wrote into the linked normberä\
-        kning (amount null = taken out). careM records them as what the system last\
-        \ wrote, so the next SSBTEK change to the same income is again recognised\
-        \ as untouched by a caseworker, and brings the SSBTEK_CALCULATION_DIFF warnings\
-        \ up to date (best-effort). 409 when calculationId is not the errand's lifecareCalculationId."
+      description: "Draken reports the incomes it had written into the linked normberä\
+        kning through careM's /lifecare calculation route (amount null = taken out).\
+        \ careM records them as what the system last wrote, so the next SSBTEK change\
+        \ to the same income is again recognised as untouched by a caseworker, and\
+        \ brings the SSBTEK_CALCULATION_DIFF warnings up to date (best-effort). 409\
+        \ when calculationId is not the errand's lifecareCalculationId."
       operationId: applied
       parameters:
       - name: municipalityId
@@ -6464,362 +5507,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/journal-entries/{journalEntryId}:
-    get:
-      tags:
-      - Journal
-      summary: Read a journal entry
-      operationId: read_1
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: journalEntryId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/JournalEntry"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    delete:
-      tags:
-      - Journal
-      summary: Delete a journal entry (only while WORKING; a LOCKED entry returns
-        409)
-      operationId: delete_1
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: journalEntryId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: Successful operation
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "409":
-          description: Conflict
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    patch:
-      tags:
-      - Journal
-      summary: Update a journal entry (only while WORKING; a LOCKED entry returns
-        409)
-      operationId: update_1
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: journalEntryId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateJournalEntry"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/JournalEntry"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "409":
-          description: Conflict
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/{errandId}/documents/{documentId}:
-    get:
-      tags:
-      - Documents
-      summary: Read a document
-      operationId: read_2
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: documentId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Document"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    delete:
-      tags:
-      - Documents
-      summary: Delete a document (only while WORKING; a LOCKED document returns 409)
-      operationId: delete_2
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: documentId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: Successful operation
-        "409":
-          description: Conflict
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    patch:
-      tags:
-      - Documents
-      summary: Update a document (only while WORKING; a LOCKED document returns 409)
-      operationId: update_2
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: documentId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateDocument"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Document"
-        "409":
-          description: Conflict
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/warnings/{warningId}:
     patch:
       tags:
@@ -7785,7 +6472,7 @@ paths:
       tags:
       - Status History
       summary: List status transitions for errand
-      operationId: list_4
+      operationId: list_2
       parameters:
       - name: municipalityId
         in: path
@@ -8087,7 +6774,7 @@ paths:
       tags:
       - Conversation
       summary: Read a message
-      operationId: read_3
+      operationId: read_1
       parameters:
       - name: municipalityId
         in: path
@@ -8252,7 +6939,7 @@ paths:
         \ (the X-Sent-By value, e.g. an AD account) and source (HTTP access log or\
         \ EVENT change log). Set includeReads=false for a clean 'what changed' timeline\
         \ without the read noise."
-      operationId: list_5
+      operationId: list_3
       parameters:
       - name: municipalityId
         in: path
@@ -8912,168 +7599,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/payees/{payeeId}:
-    get:
-      tags:
-      - Financial Assistance · Payees
-      summary: Read a manually added betalningsmottagare
-      description: "The payee's name, payment method, clearing and account number\
-        \ — read by Draken's BFF when it creates the payee in Lifecare."
-      operationId: getPayee
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: payeeId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PayeeOption"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    delete:
-      tags:
-      - Financial Assistance · Payees
-      summary: Remove a manually added betalningsmottagare
-      description: Removes the payee from the errand. Only manually added payees exist
-        as rows — a LIFECARE-derived option has no id and cannot be removed here.
-        Does not remove anything already written into Lifecare.
-      operationId: deletePayee
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: payeeId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: Successful operation
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/monitorings/count:
-    get:
-      tags:
-      - Financial Assistance · Monitorings
-      summary: Count the monitorings on an errand
-      description: How many monitorings are on the errand. Not recorded in the event
-        log.
-      operationId: countMonitorings
-      parameters:
-      - name: municipalityId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: namespace
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "[\\w\\-]+"
-      - name: errandId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MonitoringCount"
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                oneOf:
-                - $ref: "#/components/schemas/Problem"
-                - $ref: "#/components/schemas/ConstraintViolationProblem"
-        "404":
-          description: Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Internal server error
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/section-status:
     get:
       tags:
@@ -9706,7 +8231,15 @@ paths:
       tags:
       - Financial Assistance · Lifecare
       summary: Read a document as a PDF file
-      description: "One of the applicant's documents as a PDF file, for sending it on as a bilaga. A written document or a blankett is printed by Lifecare with the configured print template, the way Lifecare's own Skriv ut does, and nothing is saved in Lifecare. Any other document is the file Lifecare's FC API holds for it, matched on the document's title and date. 404 when the record is not in the applicant's Lifecare record or Lifecare holds no PDF for it; 409 when several Lifecare documents share its title and date; 502 when Lifecare refuses the print, for example because the print template is not available for the document's owner. The read is logged."
+      description: "One of the applicant's documents as a PDF file, for sending it\
+        \ on as a bilaga. A written document or a blankett is printed by Lifecare\
+        \ with the configured print template, the way Lifecare's own Skriv ut does,\
+        \ and nothing is saved in Lifecare. Any other document is the file Lifecare's\
+        \ FC API holds for it, matched on the document's title and date. 404 when\
+        \ the record is not in the applicant's Lifecare record or Lifecare holds no\
+        \ PDF for it; 409 when several Lifecare documents share its title and date;\
+        \ 502 when Lifecare refuses the print, for example because the print template\
+        \ is not available for the document's owner. The read is logged."
       operationId: readDocumentPdf
       parameters:
       - name: municipalityId
@@ -10280,7 +8813,7 @@ paths:
       summary: Read where the normberäkning in Lifecare no longer matches SSBTEK
       description: "Compares the latest SSBTEK amounts the daily prepare recorded\
         \ with the errand's linked normberäkning, read live from Lifecare. Each change\
-        \ says whether Draken may write it without asking (AUTO: the calculation still\
+        \ says whether it may be written without asking (AUTO: the calculation still\
         \ holds what the system last wrote there) or must show it to the caseworker\
         \ (CONFIRM, with a reason). Nothing is written, in Lifecare or in careM. 404\
         \ when no normberäkning is linked (lifecareCalculationId), after finalize,\
@@ -11243,10 +9776,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        detail:
-          type: string
         causeAsProblem:
           $ref: "#/components/schemas/ThrowableProblem"
+        detail:
+          type: string
         instance:
           type: string
           format: uri
@@ -11274,129 +9807,6 @@ components:
           type: string
         message:
           type: string
-    MonitoringRequest:
-      type: object
-      description: Request to create or replace a financial assistance monitoring
-        on an errand.
-      properties:
-        source:
-          type: string
-          description: "Provenance, defaults to CASEWORKER when omitted. LIFECARE\
-            \ (with lifecareId) posts a monitoring read out of Lifecare onto the errand."
-          enum:
-          - CASEWORKER
-          - LIFECARE
-          examples:
-          - CASEWORKER
-        lifecareId:
-          type: string
-          description: The monitoring's id in Lifecare. Set when posting a LIFECARE-sourced
-            monitoring (the idempotency key) or when stamping back the id of a caseworker
-            monitoring written there.
-          examples:
-          - "987654"
-          maxLength: 64
-          minLength: 0
-        title:
-          type: string
-          description: Short headline for the monitoring
-          examples:
-          - Follow up income details from CSN
-          maxLength: 255
-          minLength: 0
-        description:
-          type: string
-          description: Free-text details of what to watch for
-          examples:
-          - Awaiting supplementary documentation before a decision can be made.
-        startDate:
-          type: string
-          format: date
-          description: When the watch becomes relevant (monitoringsdatum)
-          examples:
-          - 2026-07-01
-        endDate:
-          type: string
-          format: date
-          description: When the watch ends — open-ended when omitted. Must not be
-            before the start date.
-          examples:
-          - 2026-07-31
-        createdBy:
-          type: string
-          description: The caseworker who created the monitoring
-          examples:
-          - joe01doe
-          maxLength: 64
-          minLength: 0
-      required:
-      - startDate
-      - title
-    Monitoring:
-      type: object
-      description: A financial assistance monitoring (date-bound watch/reminder) on
-        an errand.
-      properties:
-        id:
-          type: string
-          description: The monitoring id
-          examples:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-          readOnly: true
-        source:
-          type: string
-          description: "Provenance: CASEWORKER for one authored in Draken (Draken's\
-            \ BFF writes it onto the person in Lifecare), LIFECARE for one read out\
-            \ of Lifecare and posted onto the errand."
-          enum:
-          - CASEWORKER
-          - LIFECARE
-          examples:
-          - CASEWORKER
-        lifecareId:
-          type: string
-          description: The monitoring's id in Lifecare once it exists there — null
-            until a caseworker-authored monitoring has been written there; always
-            set for a LIFECARE-sourced one.
-          examples:
-          - "987654"
-        title:
-          type: string
-          description: Short headline for the monitoring
-          examples:
-          - Follow up income details from CSN
-        description:
-          type: string
-          description: Free-text details of what to watch for
-          examples:
-          - Awaiting supplementary documentation before a decision can be made.
-        startDate:
-          type: string
-          format: date
-          description: When the watch becomes relevant (monitoringsdatum)
-          examples:
-          - 2026-07-01
-        endDate:
-          type: string
-          format: date
-          description: When the watch ends — open-ended when omitted
-          examples:
-          - 2026-07-31
-        createdBy:
-          type: string
-          description: The caseworker who created the monitoring
-          examples:
-          - joe01doe
-        created:
-          type: string
-          format: date-time
-          description: When the monitoring was created
-          readOnly: true
-        updated:
-          type: string
-          format: date-time
-          description: When the monitoring was last updated
-          readOnly: true
     LifecareReminderRequest:
       type: object
       description: "A bevakning as the caseworker fills it in, new or changed. It\
@@ -12219,9 +10629,10 @@ components:
           type: integer
           format: int32
           description: "Reference to the Lifecare decision (beslut) the errand concerns,\
-            \ set by Draken once the beslut is saved in Lifecare. A reference only:\
-            \ whether the beslut is locked (skrivskyddat) is Lifecare's status and\
-            \ is never stored here. finalize requires it for every outcome."
+            \ set by careM when it saves the beslut in Lifecare through the errand's\
+            \ /lifecare/decision route. A reference only: whether the beslut is locked\
+            \ (skrivskyddat) is Lifecare's status and is never stored here. finalize\
+            \ requires it for every outcome."
           examples:
           - 4711
         lifecareCalculationId:
@@ -12229,24 +10640,25 @@ components:
           format: int32
           description: "Reference to the Lifecare normberäkning (calculation) the\
             \ errand concerns. Set by the daily prepare when it creates the proposal\
-            \ in Lifecare, or by Draken when it saves a calculation for an errand\
-            \ that has none; once set it is not replaced by the prepare step. Draken\
-            \ updates this calculation rather than creating another. A reference only:\
-            \ whether the calculation is final (slutlig) is Lifecare's status and\
-            \ is never stored here. finalize requires it for a granting outcome (BIFALL/DELAVSLAG)."
+            \ in Lifecare, or by careM's /lifecare calculation route when the caseworker\
+            \ saves a calculation for an errand that has none; once set it is not\
+            \ replaced. Later saves update this calculation rather than creating another.\
+            \ A reference only: whether the calculation is final (slutlig) is Lifecare's\
+            \ status and is never stored here. finalize requires it for a granting\
+            \ outcome (BIFALL/DELAVSLAG)."
           examples:
           - 4242
         lifecarePaymentIds:
           type: array
           description: "References to the Lifecare payments (utbetalningar) a bifall\
-            \ pays with. Set either by Draken once it has registered a payment in\
-            \ Lifecare, or by careM itself once payment-status has found the errand's\
-            \ payments paid in Lifecare on the errand's own insats. When given in\
-            \ a PATCH the list replaces the stored one; an empty list clears it. References\
-            \ only: whether a payment is registered or paid out is read from Lifecare,\
-            \ never stored here. When set, payment-status verifies exactly these ids\
-            \ against Lifecare, and no other errand can take them; finalize refuses\
-            \ an AVSLAG that carries any."
+            \ pays with. Set by careM when it registers a payment in Lifecare through\
+            \ the errand's /lifecare/payments route, or once payment-status has found\
+            \ the errand's payments paid in Lifecare on the errand's own insats. When\
+            \ given in a PATCH the list replaces the stored one; an empty list clears\
+            \ it. References only: whether a payment is registered or paid out is\
+            \ read from Lifecare, never stored here. When set, payment-status verifies\
+            \ exactly these ids against Lifecare, and no other errand can take them;\
+            \ finalize refuses an AVSLAG that carries any."
           items:
             type: string
             examples:
@@ -13023,316 +11435,6 @@ components:
           minItems: 1
       required:
       - messageIds
-    CreateJournalEntry:
-      type: object
-      properties:
-        type:
-          type: string
-          description: Journal entry type (Lifecare 'Typ'/Journaltyp)
-          examples:
-          - Journalfört meddelande
-          maxLength: 255
-          minLength: 0
-        heading:
-          type: string
-          description: Heading (Lifecare 'Rubrik')
-          examples:
-          - "Journalfört meddelande: 2025-05-30 Info"
-          maxLength: 255
-          minLength: 0
-        text:
-          type: string
-          description: Free-text body of the journal entry; optional
-          examples:
-          - Hej! Vill bara informera att jag fått jobb på Mejeriet.
-          maxLength: 1048576
-          minLength: 0
-        entryDateTime:
-          type: string
-          format: date-time
-          description: Documented date and time (Lifecare 'Datum'/'Tid')
-          examples:
-          - 2025-05-30T14:30:00+02:00
-        createdBy:
-          type: string
-          description: User id of the author (Lifecare 'Upprättad av'); optional
-          examples:
-          - carola01winberg
-          maxLength: 64
-          minLength: 0
-      required:
-      - entryDateTime
-      - heading
-      - type
-    LockJournalEntry:
-      type: object
-      properties:
-        lockedBy:
-          type: string
-          description: User id of whoever locks the entry; optional
-          examples:
-          - carola01winberg
-          maxLength: 64
-          minLength: 0
-    JournalEntry:
-      type: object
-      description: A journalanteckning (case-journal entry) attached to an errand
-      properties:
-        id:
-          type: string
-          description: Unique identifier
-        errandId:
-          type: string
-          description: Errand id this journal entry belongs to
-        source:
-          type: string
-          description: "Provenance — CASEWORKER for a journal entry authored in Draken,\
-            \ LIFECARE for one read out of Lifecare onto the errand"
-          examples:
-          - CASEWORKER
-        lifecareId:
-          type: string
-          description: The journal entry's id in Lifecare's document list — set on
-            LIFECARE-sourced rows
-          examples:
-          - "27"
-        type:
-          type: string
-          description: Journal entry type (Lifecare 'Typ'/Journaltyp). A municipality-configured
-            value; see the metadata catalogue for a provisional set.
-          examples:
-          - Journalfört meddelande
-        heading:
-          type: string
-          description: Heading (Lifecare 'Rubrik')
-          examples:
-          - "Journalfört meddelande: 2025-05-30 Info"
-        text:
-          type: string
-          description: Free-text body of the journal entry
-          examples:
-          - Hej! Vill bara informera att jag fått jobb på Mejeriet.
-        entryDateTime:
-          type: string
-          format: date-time
-          description: "Documented date and time (Lifecare 'Datum'/'Tid'), distinct\
-            \ from the system created timestamp"
-          examples:
-          - 2025-05-30T14:30:00+02:00
-        status:
-          type: string
-          description: "Write-protection status — WORKING is an editable working note,\
-            \ LOCKED is a finalised record"
-          enum:
-          - WORKING
-          - LOCKED
-          examples:
-          - WORKING
-        createdBy:
-          type: string
-          description: User id of the author (Lifecare 'Upprättad av'/'Ägare')
-          examples:
-          - carola01winberg
-        created:
-          type: string
-          format: date-time
-          description: Created timestamp
-        modifiedBy:
-          type: string
-          description: User id of the last editor (Lifecare 'Ändrat av'); null until
-            the entry has been edited
-          examples:
-          - ebb14eri
-        modified:
-          type: string
-          format: date-time
-          description: Last modified timestamp; null until the entry has been edited
-        lockedBy:
-          type: string
-          description: User id of whoever locked the entry; null while WORKING
-          examples:
-          - carola01winberg
-        locked:
-          type: string
-          format: date-time
-          description: Timestamp when the entry was locked (became an upprättad handling);
-            null while WORKING
-    LifecareAccess:
-      type: object
-      description: "One read or write made in Lifecare directly on an errand's behalf,\
-        \ reported to the errand's access log."
-      properties:
-        action:
-          type: string
-          description: What was done in Lifecare
-          enum:
-          - READ
-          - CREATE
-          - UPDATE
-          - DELETE
-          examples:
-          - READ
-          minLength: 1
-        target:
-          type: string
-          description: "What in Lifecare was accessed — a stable name, not a Lifecare\
-            \ path"
-          examples:
-          - lifecare/journal-notes
-          maxLength: 255
-          minLength: 0
-        description:
-          type: string
-          description: "A human-readable summary, shown in the access log"
-          examples:
-          - Läste journalen i Lifecare
-          maxLength: 512
-          minLength: 0
-        lifecareId:
-          type: string
-          description: "The Lifecare record the access was about (e.g. the journal\
-            \ note written), when there is one"
-          examples:
-          - "4711"
-          maxLength: 64
-          minLength: 0
-      required:
-      - action
-      - target
-    CreateDocument:
-      type: object
-      properties:
-        type:
-          type: string
-          description: Document type (Lifecare 'Typ'/Dokumenttyp)
-          examples:
-          - Brev
-          maxLength: 255
-          minLength: 0
-        heading:
-          type: string
-          description: Heading (Lifecare 'Rubrik')
-          examples:
-          - Beslut om ekonomiskt bistånd 2025-05
-          maxLength: 255
-          minLength: 0
-        text:
-          type: string
-          description: Free-text body of the document; optional
-          examples:
-          - Beslut har fattats enligt nedan ...
-          maxLength: 1048576
-          minLength: 0
-        documentDateTime:
-          type: string
-          format: date-time
-          description: Documented date and time (Lifecare 'Datum'/'Tid')
-          examples:
-          - 2025-05-30T14:30:00+02:00
-        createdBy:
-          type: string
-          description: User id of the author (Lifecare 'Upprättad av'); optional
-          examples:
-          - carola01winberg
-          maxLength: 64
-          minLength: 0
-      required:
-      - documentDateTime
-      - heading
-      - type
-    LockDocument:
-      type: object
-      properties:
-        lockedBy:
-          type: string
-          description: User id of whoever locks the document; optional
-          examples:
-          - carola01winberg
-          maxLength: 64
-          minLength: 0
-    Document:
-      type: object
-      description: A document (formal case document) attached to an errand
-      properties:
-        id:
-          type: string
-          description: Unique identifier
-        errandId:
-          type: string
-          description: Errand id this document belongs to
-        source:
-          type: string
-          description: "Provenance — CASEWORKER for a document authored in Draken,\
-            \ LIFECARE for one read out of Lifecare onto the errand"
-          examples:
-          - CASEWORKER
-        lifecareId:
-          type: string
-          description: The document's id in Lifecare's document list — set on LIFECARE-sourced
-            rows
-          examples:
-          - "27"
-        type:
-          type: string
-          description: Document type (Lifecare 'Typ'/Dokumenttyp). A municipality-configured
-            value; see the metadata catalogue for a provisional set.
-          examples:
-          - Brev
-        heading:
-          type: string
-          description: Heading (Lifecare 'Rubrik')
-          examples:
-          - Beslut om ekonomiskt bistånd 2025-05
-        text:
-          type: string
-          description: Free-text body of the document
-          examples:
-          - Beslut har fattats enligt nedan ...
-        documentDateTime:
-          type: string
-          format: date-time
-          description: "Documented date and time (Lifecare 'Datum'/'Tid'), distinct\
-            \ from the system created timestamp"
-          examples:
-          - 2025-05-30T14:30:00+02:00
-        status:
-          type: string
-          description: "Write-protection status — WORKING is an editable draft, LOCKED\
-            \ is a finalised record"
-          enum:
-          - WORKING
-          - LOCKED
-          examples:
-          - WORKING
-        createdBy:
-          type: string
-          description: User id of the author (Lifecare 'Upprättad av'/'Ägare')
-          examples:
-          - carola01winberg
-        created:
-          type: string
-          format: date-time
-          description: Created timestamp
-        modifiedBy:
-          type: string
-          description: User id of the last editor (Lifecare 'Ändrat av'); null until
-            the document has been edited
-          examples:
-          - ebb14eri
-        modified:
-          type: string
-          format: date-time
-          description: Last modified timestamp; null until the document has been edited
-        lockedBy:
-          type: string
-          description: User id of whoever locked the document; null while WORKING
-          examples:
-          - carola01winberg
-        locked:
-          type: string
-          format: date-time
-          description: Timestamp when the document was locked (became an upprättad
-            handling); null while WORKING
     Decision:
       type: object
       description: "Decision recorded against an errand. Both system-generated decisions\
@@ -13456,38 +11558,6 @@ components:
           format: date-time
           description: Timestamp the decision was recorded (server-assigned)
           readOnly: true
-    DecisionLifecareResult:
-      type: object
-      description: The report on writing a decision into Lifecare.
-      properties:
-        outcome:
-          type: string
-          description: What happened when the decision was written to Lifecare
-          enum:
-          - WRITTEN
-          - ALREADY_EXISTS
-          - FAILED
-          examples:
-          - WRITTEN
-          minLength: 1
-        lifecareId:
-          type: string
-          description: "The decision id Lifecare gave, when it gave one. Stored as\
-            \ the decision's lifecareId"
-          examples:
-          - "88123"
-          maxLength: 64
-          minLength: 0
-        detail:
-          type: string
-          description: Lifecare's own message. Required when outcome is FAILED — it
-            is shown to the caseworker as-is
-          examples:
-          - Beslutet kunde inte registreras
-          maxLength: 1024
-          minLength: 0
-      required:
-      - outcome
     AddCoCaseworker:
       type: object
       description: Request to add a co-caseworker (medhandläggare) to an errand
@@ -13661,156 +11731,6 @@ components:
           format: date-time
           description: When the warning was last updated
           readOnly: true
-    PayeeRequest:
-      type: object
-      description: A betalningsmottagare to add by hand on an errand.
-      properties:
-        name:
-          type: string
-          description: "Name of the payee, as it should read in Lifecare"
-          examples:
-          - Sundsvalls Hyresbostäder AB
-          maxLength: 255
-          minLength: 0
-        paymentMethod:
-          type: string
-          description: The Lifecare payment method
-          examples:
-          - Bankgiro via Plusgiro
-          maxLength: 64
-          minLength: 0
-        clearing:
-          type: string
-          description: "Clearing number, when the payment method needs one"
-          examples:
-          - "6000"
-          maxLength: 16
-          minLength: 0
-        accountNumber:
-          type: string
-          description: "Account, bankgiro or plusgiro number, when the payment method\
-            \ needs one"
-          examples:
-          - 5555-6666
-          maxLength: 64
-          minLength: 0
-      required:
-      - name
-      - paymentMethod
-    PayeeOption:
-      type: object
-      description: A selectable betalningsmottagare — either derived from the applicant's
-        Lifecare payment history or added by hand on the errand.
-      properties:
-        id:
-          type: string
-          description: "The payee's id on the errand. Null for a LIFECARE-derived\
-            \ option, which is not a stored row"
-          examples:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-          readOnly: true
-        name:
-          type: string
-          description: Name of the payee as registered in Lifecare
-          examples:
-          - Anna Andersson
-        paymentMethod:
-          type: string
-          description: "The Lifecare payment method, e.g. bank account, bankgiro,\
-            \ plusgiro or utbetalningskort"
-          examples:
-          - Personkonto
-        clearing:
-          type: string
-          description: "Clearing number, when the payment method needs one"
-          examples:
-          - "6000"
-        accountNumber:
-          type: string
-          description: "Account, bankgiro or plusgiro number, when the payment method\
-            \ needs one"
-          examples:
-          - "123456789"
-        source:
-          type: string
-          description: "Where the option comes from: LIFECARE (seen on a payment in\
-            \ the last 12 months) or MANUAL (added by hand on this errand)"
-          enum:
-          - LIFECARE
-          - MANUAL
-          examples:
-          - LIFECARE
-          readOnly: true
-        lifecareStatus:
-          type: string
-          description: "For a MANUAL option, how far its creation in Lifecare has\
-            \ got: PENDING until it is reported back, then SYNCED or FAILED. Null\
-            \ for a LIFECARE option, which is in Lifecare by definition"
-          enum:
-          - PENDING
-          - SYNCED
-          - FAILED
-          examples:
-          - PENDING
-          readOnly: true
-        lifecarePayeeId:
-          type: string
-          description: "The payee id Lifecare gave, when the lifecare-result report\
-            \ carried one"
-          examples:
-          - "44213"
-          readOnly: true
-        lifecareDetail:
-          type: string
-          description: Lifecare's own message when lifecareStatus is FAILED — shown
-            to the caseworker as-is
-          examples:
-          - Kontonummer har fel format
-          readOnly: true
-        lastPaidOn:
-          type: string
-          description: "For a LIFECARE option, the date of the most recent payment\
-            \ to this payee — passed through as the raw Lifecare string, like every\
-            \ other date read out of Lifecare"
-          examples:
-          - 2026-08-27
-          readOnly: true
-        created:
-          type: string
-          format: date-time
-          description: When the MANUAL option was added
-          readOnly: true
-    PayeeLifecareResult:
-      type: object
-      description: The report on adding a payee to Lifecare.
-      properties:
-        outcome:
-          type: string
-          description: What ended up happening in Lifecare
-          enum:
-          - ADDED
-          - ALREADY_EXISTS
-          - FAILED
-          examples:
-          - ADDED
-          minLength: 1
-        lifecarePayeeId:
-          type: string
-          description: "The payee id Lifecare gave, when it gave one"
-          examples:
-          - "44213"
-          maxLength: 64
-          minLength: 0
-        detail:
-          type: string
-          description: Lifecare's own message. Required when outcome is FAILED — it
-            is shown to the caseworker as-is
-          examples:
-          - Kontonummer har fel format
-          maxLength: 1024
-          minLength: 0
-      required:
-      - outcome
     LifecarePaymentRequest:
       type: object
       description: An utbetalning to register on the errand's insats in Lifecare
@@ -14153,9 +12073,9 @@ components:
           - 12
         note:
           type: string
+          description: Free-text note; Lifecare takes at most 80 characters
           maxLength: 80
           minLength: 0
-          description: Free-text note; Lifecare takes at most 80 characters
     LifecareJobStimulusPeriodRequest:
       type: object
       description: A new jobbstimulans period for the sökande
@@ -14531,10 +12451,10 @@ components:
     FinalizeRequest:
       type: object
       description: "Finalize a financial assistance errand: record the decision and\
-        \ resume the process. Carries no payments - Draken registers them directly\
-        \ in Lifecare, and the process reads them from there. A payments field from\
-        \ an older client is ignored. Leave out decision to have careM read the beslut\
-        \ saved in Lifecare."
+        \ resume the process. Carries no payments - they are registered in Lifecare\
+        \ beforehand through the errand's /lifecare/payments route, and the process\
+        \ reads them from there. A payments field from an older client is ignored.\
+        \ Leave out decision to have careM read the beslut saved in Lifecare."
       properties:
         decision:
           $ref: "#/components/schemas/FinalizeDecision"
@@ -14581,9 +12501,7 @@ components:
         lifecareDecision:
           $ref: "#/components/schemas/LifecareDecisionRegistration"
           description: "How the recorded decision was tied to the errand's beslut\
-            \ in Lifecare (lifecareDecisionId). careM receipts it itself, so a client\
-            \ no longer has to post .../decisions/{decisionId}/lifecare-result after\
-            \ finalizing."
+            \ in Lifecare (lifecareDecisionId), receipted by careM in the same call."
           readOnly: true
       readOnly: true
     LifecareDecisionRegistration:
@@ -14616,8 +12534,7 @@ components:
       readOnly: true
     AppliedSsbtekChange:
       type: object
-      description: One income Draken's BFF wrote into the Lifecare calculation from
-        SSBTEK
+      description: One income written into the Lifecare calculation from SSBTEK
       properties:
         role:
           type: string
@@ -14644,7 +12561,7 @@ components:
       - role
     AppliedSsbtekChanges:
       type: object
-      description: What Draken's BFF wrote into the Lifecare calculation from SSBTEK
+      description: What was written into the Lifecare calculation from SSBTEK
       properties:
         calculationId:
           type: integer
@@ -14889,7 +12806,8 @@ components:
           readOnly: true
         origin:
           type: string
-          description: "Who created the row: the process from SSBTEK (SYSTEM), the process from the application's declared incomes (APPLICATION) or a caseworker"
+          description: "Who created the row: the process from SSBTEK (SYSTEM), the\
+            \ process from the application's declared incomes (APPLICATION) or a caseworker"
           enum:
           - SYSTEM
           - APPLICATION
@@ -15440,9 +13358,9 @@ components:
             type: string
         changeWarnings:
           type: array
-          description: "Ignored. The period-over-period change warnings the operaton\
-            \ rules still send; caremanagement compares against the previous normberäkning\
-            \ itself"
+          description: Ignored. The period-over-period change warnings the operaton
+            rules still send; caremanagement compares against the previous normberäkning
+            itself
           items:
             type: string
         ssbtekError:
@@ -15716,88 +13634,6 @@ components:
           type: string
           format: date-time
           description: Last modified timestamp; null until the note has been edited
-    UpdateJournalEntry:
-      type: object
-      properties:
-        type:
-          type: string
-          description: Journal entry type (Lifecare 'Typ'/Journaltyp)
-          examples:
-          - Journalfört meddelande
-          maxLength: 255
-          minLength: 0
-        heading:
-          type: string
-          description: Heading (Lifecare 'Rubrik')
-          examples:
-          - "Journalfört meddelande: 2025-05-30 Info"
-          maxLength: 255
-          minLength: 0
-        text:
-          type: string
-          description: Free-text body of the journal entry; optional
-          examples:
-          - Hej! Vill bara informera att jag fått jobb på Mejeriet.
-          maxLength: 1048576
-          minLength: 0
-        entryDateTime:
-          type: string
-          format: date-time
-          description: Documented date and time (Lifecare 'Datum'/'Tid')
-          examples:
-          - 2025-05-30T14:30:00+02:00
-        modifiedBy:
-          type: string
-          description: User id of the editor (Lifecare 'Ändrat av'); optional
-          examples:
-          - ebb14eri
-          maxLength: 64
-          minLength: 0
-      required:
-      - entryDateTime
-      - heading
-      - type
-    UpdateDocument:
-      type: object
-      properties:
-        type:
-          type: string
-          description: Document type (Lifecare 'Typ'/Dokumenttyp)
-          examples:
-          - Brev
-          maxLength: 255
-          minLength: 0
-        heading:
-          type: string
-          description: Heading (Lifecare 'Rubrik')
-          examples:
-          - Beslut om ekonomiskt bistånd 2025-05
-          maxLength: 255
-          minLength: 0
-        text:
-          type: string
-          description: Free-text body of the document; optional
-          examples:
-          - Beslut har fattats enligt nedan ...
-          maxLength: 1048576
-          minLength: 0
-        documentDateTime:
-          type: string
-          format: date-time
-          description: Documented date and time (Lifecare 'Datum'/'Tid')
-          examples:
-          - 2025-05-30T14:30:00+02:00
-        modifiedBy:
-          type: string
-          description: User id of the editor (Lifecare 'Ändrat av'); optional
-          examples:
-          - ebb14eri
-          maxLength: 64
-          minLength: 0
-      required:
-      - documentDateTime
-      - heading
-      - type
     NormHeaderInput:
       type: object
       description: "Caseworker edit of the calculation header — norm, calculation\
@@ -16540,16 +14376,6 @@ components:
           description: "The answer per responding agency (af, csn, fk, skv, so, tns,\
             \ miv), forwarded verbatim from SSBTEK. Shapes differ per agency and are\
             \ not modelled; an agency that did not answer may be absent or empty."
-    MonitoringCount:
-      type: object
-      description: The number of monitorings on the errand
-      properties:
-        count:
-          type: integer
-          format: int64
-          description: Number of monitorings on the errand
-          examples:
-          - 2
     LifecareSectionStatus:
       type: object
       description: "Which of the errand's sections Lifecare has as done - the checks\
@@ -17096,7 +14922,9 @@ components:
           - 0
         origin:
           type: string
-          description: "Who created the row: the process from SSBTEK (SYSTEM), the process from the application's declared incomes (APPLICATION) or a caseworker (always CASEWORKER in Lifecare)"
+          description: "Who created the row: the process from SSBTEK (SYSTEM), the\
+            \ process from the application's declared incomes (APPLICATION) or a caseworker\
+            \ (always CASEWORKER in Lifecare)"
           enum:
           - SYSTEM
           - APPLICATION

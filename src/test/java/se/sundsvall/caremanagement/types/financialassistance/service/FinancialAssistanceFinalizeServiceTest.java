@@ -20,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
-import se.sundsvall.caremanagement.decisions.api.model.DecisionLifecareResult;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
@@ -176,8 +175,7 @@ class FinancialAssistanceFinalizeServiceTest {
 		final var inOrder = inOrder(repositoryMock, decisionServiceMock, processServiceMock);
 		inOrder.verify(repositoryMock).save(entityCaptor.capture());
 		inOrder.verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
-		inOrder.verify(decisionServiceMock).recordLifecareResult(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID,
-			DecisionLifecareResult.create().withOutcome("WRITTEN").withLifecareId("815"));
+		inOrder.verify(decisionServiceMock).markSyncedInLifecare(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID, "815");
 		inOrder.verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), variablesCaptor.capture());
 
 		assertThat(entityCaptor.getValue())

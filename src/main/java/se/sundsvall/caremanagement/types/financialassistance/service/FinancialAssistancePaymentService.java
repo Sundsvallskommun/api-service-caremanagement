@@ -30,11 +30,12 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.NonR
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinalizeMapper.DECISION_TYPE_PAYMENT;
 
 /**
- * Reads whether the Lifecare payments of a bifall have been effectuated. caremanagement makes no payment and stores no
- * payment data — Draken's BFF registers the payments directly in Lifecare; the process polls this to detect when
- * Lifecare has paid them, and escalates to the caseworker once the answer is {@code overdue}. Lifecare is the
- * authority: careM keeps at most the Lifecare ids of the errand's payments as references ({@code lifecarePaymentIds}),
- * and a payment counts as effectuated only when Lifecare itself reports a PayDate for it.
+ * Reads whether the Lifecare payments of a bifall have been effectuated. This service makes no payment and stores no
+ * payment data — careM registers the payments in Lifecare through the errand's /lifecare/payments route
+ * ({@code LifecarePaymentRegistrationService}); the process polls this to detect when Lifecare has paid them, and
+ * escalates to the caseworker once the answer is {@code overdue}. Lifecare is the authority: careM keeps at most the
+ * Lifecare ids of the errand's payments as references ({@code lifecarePaymentIds}), and a payment counts as
+ * effectuated only when Lifecare itself reports a PayDate for it.
  */
 @Service
 @Transactional
@@ -83,10 +84,10 @@ public class FinancialAssistancePaymentService {
 	 * <ol>
 	 * <li>the errand carries {@code lifecarePaymentIds}: exactly those ids must be reported paid by Lifecare
 	 * ({@link #checkLinkedPayments});</li>
-	 * <li>otherwise — Draken registers the payments in Lifecare without telling careM their ids — the payments are found
-	 * in Lifecare on the errand's own insats for the application month, leaving out every id another errand references
-	 * ({@link #checkPaymentsOnTheInsats}). Once they are all paid they are linked to the errand, so from then on they are
-	 * this decision's and can never close another errand.</li>
+	 * <li>otherwise — a payment registered in Lifecare other than through careM, or one whose link did not get through —
+	 * the payments are found in Lifecare on the errand's own insats for the application month, leaving out every id
+	 * another errand references ({@link #checkPaymentsOnTheInsats}). Once they are all paid they are linked to the
+	 * errand, so from then on they are this decision's and can never close another errand.</li>
 	 * </ol>
 	 *
 	 * <p>
@@ -122,7 +123,7 @@ public class FinancialAssistancePaymentService {
 	}
 
 	/**
-	 * The payments Draken registered in Lifecare without linking their ids: the applicant's Lifecare payments on the
+	 * The payments registered in Lifecare without a link to the errand: the applicant's Lifecare payments on the
 	 * errand's insats that concern the application month, less every id another errand references (its
 	 * {@code lifecarePaymentIds}). Effectuated when there is at
 	 * least one and Lifecare reports a PayDate for each; they are then linked to the errand, which turns every later
@@ -185,7 +186,7 @@ public class FinancialAssistancePaymentService {
 	}
 
 	/**
-	 * The payments Draken registered in Lifecare and linked to the errand, verified by their Lifecare ids. The deadline
+	 * The payments registered in Lifecare and linked to the errand, verified by their Lifecare ids. The deadline
 	 * counts from the day of the errand's {@code PAYMENT} decision.
 	 */
 	private PaymentStatusResponse checkLinkedPayments(final String municipalityId, final String namespace, final PaymentStatusRequest request,

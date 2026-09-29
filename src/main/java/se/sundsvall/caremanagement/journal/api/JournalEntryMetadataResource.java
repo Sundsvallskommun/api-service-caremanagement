@@ -28,7 +28,7 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @RestController
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}/errands/journal-entries")
-@Tag(name = "Journal", description = "Journalanteckningar (case-journal entries) attached to an errand")
+@Tag(name = "Journal", description = "The catalogue of Lifecare journal types (Typ/Journaltyp)")
 @ApiResponses(value = {
 	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
 		Problem.class, ConstraintViolationProblem.class

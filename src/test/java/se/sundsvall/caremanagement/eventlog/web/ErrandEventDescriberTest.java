@@ -29,7 +29,6 @@ class ErrandEventDescriberTest {
 		assertThat(ErrandEventDescriber.describe("POST", List.of("notes"), false)).isEqualTo("Lade till anteckning");
 		assertThat(ErrandEventDescriber.describe("POST", List.of("attachments"), false)).isEqualTo("Lade till bilaga");
 		assertThat(ErrandEventDescriber.describe("DELETE", List.of("attachments"), true)).isEqualTo("Tog bort bilaga");
-		assertThat(ErrandEventDescriber.describe("GET", List.of("journal-entries"), false)).isEqualTo("Visade journalanteckningar");
 	}
 
 	@Test

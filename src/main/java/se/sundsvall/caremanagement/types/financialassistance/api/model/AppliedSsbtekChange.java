@@ -5,8 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 import se.sundsvall.dept44.common.validators.annotation.OneOf;
 
-/** One income Draken's BFF wrote into the Lifecare calculation from SSBTEK. */
-@Schema(description = "One income Draken's BFF wrote into the Lifecare calculation from SSBTEK")
+/** One income written into the Lifecare calculation from SSBTEK, at the caseworker's request in Draken. */
+@Schema(description = "One income written into the Lifecare calculation from SSBTEK")
 public record AppliedSsbtekChange(
 
 	@Schema(description = "Whose income", examples = "APPLICANT", allowableValues = {

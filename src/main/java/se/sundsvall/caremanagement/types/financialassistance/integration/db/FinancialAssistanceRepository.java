@@ -52,8 +52,9 @@ public interface FinancialAssistanceRepository extends JpaRepository<FinancialAs
 	List<String> findLifecarePaymentIdsLinkedElsewhere(@Param("lifecarePaymentIds") Collection<String> lifecarePaymentIds, @Param("errandId") String errandId);
 
 	/**
-	 * Link a Lifecare calculation to the errand, but only when none is linked yet. The prepare step and Draken's BFF
-	 * can both create the calculation; whichever links first wins, and the other learns it lost from the {@code 0}.
+	 * Link a Lifecare calculation to the errand, but only when none is linked yet. The prepare step and the caseworker's
+	 * first save through the errand's /lifecare calculation route can both create the calculation; whichever links first
+	 * wins, and the other learns it lost from the {@code 0}.
 	 *
 	 * @return the number of rows updated — {@code 1} when this call linked the id, {@code 0} when one was already linked
 	 */

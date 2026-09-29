@@ -12,9 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.eventlog.api.model.ActorEventLog;
 import se.sundsvall.caremanagement.eventlog.api.model.ErrandEventEntry;
-import se.sundsvall.caremanagement.eventlog.api.model.LifecareAccess;
 import se.sundsvall.caremanagement.eventlog.integration.db.ErrandEventRepository;
 import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEntity;
+import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.requestid.RequestId;
 import se.sundsvall.dept44.support.Identifier;
@@ -34,7 +34,7 @@ public class ErrandEventService {
 	 */
 	static final int ACTOR_EVENT_LIMIT = 1000;
 
-	/** Source of a row reported by a caller that read or wrote Lifecare directly (Draken's BFF). */
+	/** Source of a row recording one of careM's own reads or writes in Lifecare. */
 	static final String SOURCE_LIFECARE = "LIFECARE";
 
 	private final ErrandEventRepository errandEventRepository;
@@ -54,17 +54,15 @@ public class ErrandEventService {
 	}
 
 	/**
-	 * Records reads and writes a caller made in Lifecare directly on the errand's behalf — Draken's BFF, which reads
-	 * journal, documents, reminders and jobbstimulans live from Lifecare and writes journal notes, documents and
-	 * reminders straight into it. None of that passes this service's own request logging, so the caller reports it and
-	 * it lands in the same who/what/when log, under source {@code LIFECARE}, attributed to the caller's
-	 * {@code X-Sent-By} identity.
+	 * Records the reads and writes careM made in Lifecare on the errand's behalf. They go to Lifecare's ProfessionalWeb,
+	 * not through this service's own request logging, so they land in the same who/what/when log under source
+	 * {@code LIFECARE}, attributed to the caseworker who asked for them.
 	 *
-	 * @param caller   the reporting caller's identity, from the {@code X-Sent-By} header
+	 * @param caller   the caseworker's identity, from the {@code X-Sent-By} header
 	 * @param accesses what was accessed in Lifecare, one row each
 	 */
 	public void recordLifecareAccesses(final String municipalityId, final String namespace, final String errandId, final Identifier caller,
-		final List<LifecareAccess> accesses) {
+		final List<LifecareAccessEntry> accesses) {
 		errandAccessGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 
 		final var created = now(ZoneId.systemDefault());
@@ -148,22 +146,22 @@ public class ErrandEventService {
 	}
 
 	/**
-	 * One reported Lifecare access as a log row. The description falls back to "{@code ACTION target}", the same shape
+	 * One Lifecare access as a log row. The description falls back to "{@code ACTION target}", the same shape
 	 * the request log uses when it has nothing better, so the list never shows an empty line.
 	 */
 	private static ErrandEventEntity toLifecareEntity(final String municipalityId, final String namespace, final String errandId, final Identifier caller,
-		final String requestId, final OffsetDateTime created, final LifecareAccess access) {
+		final String requestId, final OffsetDateTime created, final LifecareAccessEntry access) {
 		return ErrandEventEntity.create()
 			.withErrandId(errandId)
 			.withMunicipalityId(municipalityId)
 			.withNamespace(namespace)
 			.withSource(SOURCE_LIFECARE)
-			.withAction(access.getAction())
-			.withTarget(access.getTarget())
-			.withDescription(Optional.ofNullable(access.getDescription())
+			.withAction(access.action())
+			.withTarget(access.target())
+			.withDescription(Optional.ofNullable(access.description())
 				.filter(StringUtils::hasText)
-				.orElseGet(() -> access.getAction() + " " + access.getTarget()))
-			.withLifecareId(access.getLifecareId())
+				.orElseGet(() -> access.action() + " " + access.target()))
+			.withLifecareId(access.lifecareId())
 			.withActor(caller.getValue())
 			.withActorType(caller.getTypeString())
 			.withRequestId(requestId)

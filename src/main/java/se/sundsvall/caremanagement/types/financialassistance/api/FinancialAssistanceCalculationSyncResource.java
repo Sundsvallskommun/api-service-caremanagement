@@ -55,7 +55,7 @@ class FinancialAssistanceCalculationSyncResource {
 
 	@GetMapping(produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "Read where the normberäkning in Lifecare no longer matches SSBTEK",
-		description = "Compares the latest SSBTEK amounts the daily prepare recorded with the errand's linked normberäkning, read live from Lifecare. Each change says whether Draken may write it without asking (AUTO: the calculation still holds what the system last wrote there) or must show it to the caseworker (CONFIRM, with a reason). Nothing is written, in Lifecare or in careM. 404 when no normberäkning is linked (lifecareCalculationId), after finalize, or when the calculation is not found in the calculation period; 502 when Lifecare cannot be read.",
+		description = "Compares the latest SSBTEK amounts the daily prepare recorded with the errand's linked normberäkning, read live from Lifecare. Each change says whether it may be written without asking (AUTO: the calculation still holds what the system last wrote there) or must show it to the caseworker (CONFIRM, with a reason). Nothing is written, in Lifecare or in careM. 404 when no normberäkning is linked (lifecareCalculationId), after finalize, or when the calculation is not found in the calculation period; 502 when Lifecare cannot be read.",
 		responses = @ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true))
 	ResponseEntity<SsbtekChanges> getChanges(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -67,7 +67,7 @@ class FinancialAssistanceCalculationSyncResource {
 
 	@PostMapping(path = "/applied", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
 	@Operation(summary = "Acknowledge SSBTEK changes written into the normberäkning in Lifecare",
-		description = "Draken's BFF reports the incomes it wrote into the linked normberäkning (amount null = taken out). careM records them as what the system last wrote, so the next SSBTEK change to the same income is again recognised as untouched by a caseworker, and brings the SSBTEK_CALCULATION_DIFF warnings up to date (best-effort). 409 when calculationId is not the errand's lifecareCalculationId.",
+		description = "Draken reports the incomes it had written into the linked normberäkning through careM's /lifecare calculation route (amount null = taken out). careM records them as what the system last wrote, so the next SSBTEK change to the same income is again recognised as untouched by a caseworker, and brings the SSBTEK_CALCULATION_DIFF warnings up to date (best-effort). 409 when calculationId is not the errand's lifecareCalculationId.",
 		responses = {
 			@ApiResponse(responseCode = "204", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "409", description = "Conflict - not the linked calculation", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))

@@ -8,13 +8,15 @@ import se.sundsvall.caremanagement.types.financialassistance.api.validation.Vali
 
 /**
  * The Besluta och utbetala request — the decision the caseworker confirmed in Draken and how it is sent. It carries
- * no payments: Draken registers them directly in Lifecare, and the process reads them from there. The cross-field rules
- * (amount required with a granting outcome, period order) are enforced by {@link ValidFinalizeRequest}.
+ * no payments: they are registered in Lifecare beforehand through the errand's /lifecare/payments route, and the
+ * process reads them from there. The cross-field rules (amount required with a granting outcome, period order) are
+ * enforced by {@link ValidFinalizeRequest}.
  */
 @Schema(description = """
-	Finalize a financial assistance errand: record the decision and resume the process. Carries no payments - Draken \
-	registers them directly in Lifecare, and the process reads them from there. A payments field from an older client is \
-	ignored. Leave out decision to have careM read the beslut saved in Lifecare.""")
+	Finalize a financial assistance errand: record the decision and resume the process. Carries no payments - they are \
+	registered in Lifecare beforehand through the errand's /lifecare/payments route, and the process reads them from \
+	there. A payments field from an older client is ignored. Leave out decision to have careM read the beslut saved in \
+	Lifecare.""")
 @ValidFinalizeRequest
 public class FinalizeRequest {
 

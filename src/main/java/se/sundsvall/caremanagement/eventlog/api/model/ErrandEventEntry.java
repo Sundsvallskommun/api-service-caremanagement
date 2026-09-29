@@ -13,8 +13,8 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
  * @param municipalityId the municipality id
  * @param namespace      the namespace
  * @param source         where the row came from: {@code HTTP} (an inbound request), {@code EVENT} (a published domain
- *                       event) or {@code LIFECARE} (a read or write Draken's BFF made in Lifecare directly and
- *                       reported)
+ *                       event) or {@code LIFECARE} (a read or write careM made in Lifecare on the errand's
+ *                       behalf)
  * @param action         READ / CREATE / UPDATE / DELETE (derived from the HTTP method)
  * @param target         what was acted on, e.g. {@code errand}, {@code decisions},
  *                       {@code financial-assistance/calculation/draft/incomes}

@@ -14,13 +14,13 @@ final class FinancialAssistanceApiTags {
 	static final String INTAKE = "Financial Assistance · Intake";
 	static final String INTAKE_DESC = "Pre-application and case-intake calls: eligibility routing (common entry point), renewal pre-fill from Lifecare, the income/cost type metadata catalogue, and Lifecare actualisation (case intake).";
 	static final String CALCULATION = "Financial Assistance · Calculation";
-	static final String CALCULATION_DESC = "The calculation: prepare the calculation draft each daily loop (no Lifecare write — Draken saves the normberäkning in Lifecare), and read or edit the draft header.";
+	static final String CALCULATION_DESC = "The calculation: prepare the calculation draft each daily loop (the first run also creates the normberäkning proposal in Lifecare and links it on the errand), and read or edit the draft header.";
 	static final String DRAFT_ROWS = "Financial Assistance · Draft rows";
 	static final String DRAFT_ROWS_DESC = "Caseworker edits to the draft calculation rows — add, edit, soft-delete and restore income, expense and person rows. Each touches only the caseworker value / note / soft-delete; the process columns are owned by the daily prepare.";
 	static final String WARNINGS = "Financial Assistance · Warnings";
 	static final String WARNINGS_DESC = "Acknowledgeable financial assistance income warnings on an errand — create, list and set status (OPEN / ACKNOWLEDGED / CLOSED). The daily prepare step reconciles them.";
 	static final String FINALIZE = "Financial Assistance · Finalize";
-	static final String FINALIZE_DESC = "Besluta och utbetala: record the caseworker's decision and resume the process. The Lifecare writes (beslut, payments, bevakningar, journal, documents, and the normberäkning beyond the daily prepare's proposal) are made by Draken's BFF directly in Lifecare before the decision; the errand only carries the references (lifecareCalculationId, lifecareDecisionId, lifecarePaymentIds). The decision is sent to the applicant by the frontend.";
+	static final String FINALIZE_DESC = "Besluta och utbetala: record the caseworker's decision and resume the process. The Lifecare writes (beslut, payments, bevakningar, journal, documents, and the normberäkning beyond the daily prepare's proposal) are made by careM through the errand's /lifecare routes, on the caseworker's action in Draken, before the decision; the errand only carries the references (lifecareCalculationId, lifecareDecisionId, lifecarePaymentIds). The decision is sent to the applicant by the frontend.";
 	static final String PAYMENT = "Financial Assistance · Payment";
 	static final String PAYMENT_DESC = "Read from Lifecare whether the payments a bifall is linked to have been paid out. caremanagement makes no payment and stores no payment status.";
 	static final String PROPOSALS = "Financial Assistance · Proposals";

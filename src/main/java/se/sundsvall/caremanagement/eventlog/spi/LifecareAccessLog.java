@@ -6,9 +6,8 @@ import java.util.List;
  * The errand access log, for reads and writes careM makes in Lifecare ProfessionalWeb on an errand's behalf.
  *
  * <p>
- * The in-process twin of {@code POST .../errands/{errandId}/events/lifecare}: each entry becomes one row with source
- * LIFECARE, attributed to the caller identity of the current request (X-Sent-By), so the log answers who saw or wrote
- * what even though Lifecare itself shows the integration account.
+ * Each entry becomes one row with source LIFECARE, attributed to the caller identity of the current request
+ * (X-Sent-By), so the log answers who saw or wrote what even though Lifecare itself shows the integration account.
  * </p>
  */
 public interface LifecareAccessLog {

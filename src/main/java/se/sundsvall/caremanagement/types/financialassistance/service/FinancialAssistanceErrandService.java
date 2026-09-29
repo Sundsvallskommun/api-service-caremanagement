@@ -160,10 +160,11 @@ public class FinancialAssistanceErrandService {
 	}
 
 	/**
-	 * A normberäkning is linked once. The daily prepare and Draken's BFF can both create one in Lifecare, and the loser's
-	 * calculation must not silently replace the winner's link — the errand would then point at a calculation nobody
-	 * else knows was swapped in. Linking goes through the same conditional update the prepare step uses, so a link that
-	 * lands between this read and this write is caught too. The same id again is a no-op, so retries stay safe.
+	 * A normberäkning is linked once. The daily prepare and the caseworker's first save through the errand's /lifecare
+	 * calculation route can both create one in Lifecare, and the loser's calculation must not silently replace the
+	 * winner's link — the errand would then point at a calculation nobody else knows was swapped in. Linking goes
+	 * through the same conditional update the prepare step uses, so a link that lands between this read and this write
+	 * is caught too. The same id again is a no-op, so retries stay safe.
 	 */
 	private void requireLinkableCalculation(final String errandId, final FinancialAssistanceEntity entity, final Integer calculationId) {
 		if ((calculationId == null) || calculationId.equals(entity.getLifecareCalculationId())) {

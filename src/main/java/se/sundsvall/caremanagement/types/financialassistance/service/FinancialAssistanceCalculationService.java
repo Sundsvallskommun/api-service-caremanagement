@@ -50,12 +50,11 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * The financial-assistance calculation pipeline — preparing the draft calculation from the process-classified incomes
- * and, once the SSBTEK basis is complete, posting it to Lifecare as the normberäkning proposal
- * ({@link #prepareCalculation}), and the draft itself (get/patch header). The proposal is linked on the errand as
- * {@code lifecareCalculationId}; from then on the caseworker continues it in Lifecare through Draken's BFF, which
- * updates that calculation rather than creating another. The errand envelope, its strongly-typed application data and
- * the case-history reads
- * stay on the per-resource FinancialAssistanceErrandService / FinancialAssistanceLifecareService /
+ * and posting it to Lifecare as the normberäkning proposal ({@link #prepareCalculation}), and the draft itself
+ * (get/patch header). The proposal is linked on the errand as {@code lifecareCalculationId}; from then on the
+ * caseworker continues it in Lifecare from Draken through the errand's /lifecare calculation route, which updates that
+ * calculation rather than creating another. The errand envelope, its strongly-typed application data and the
+ * case-history reads stay on the per-resource FinancialAssistanceErrandService / FinancialAssistanceLifecareService /
  * FinancialAssistanceActualisationService / FinancialAssistancePaymentService.
  */
 @Service
@@ -131,7 +130,7 @@ public class FinancialAssistanceCalculationService {
 	 *
 	 * <p>
 	 * <strong>Once the errand carries a {@code lifecareCalculationId}, the Lifecare normberäkning is the truth</strong>,
-	 * whether this step or the caseworker (through Draken) created it. careM's draft is no longer refreshed — a
+	 * whether this step or the caseworker (from Draken) created it. careM's draft is no longer refreshed — a
 	 * refresh would overwrite nothing the caseworker sees any more, and the warnings it raises would describe a draft
 	 * nobody uses. Those draft warnings ({@link WarningService#DRAFT_REFRESH_TYPES}: the new/dropped rows, the expense
 	 * feed, the NORM-04 family, the late transfer and the duplicate incomes) are then left exactly as they last were,
@@ -144,8 +143,9 @@ public class FinancialAssistanceCalculationService {
 	 * <p>
 	 * <strong>SSBTEK keeps reaching the saved normberäkning</strong> ({@link #syncWithLifecare}): each run after the link
 	 * records this run's SSBTEK amounts and compares them with the calculation in Lifecare, raising a
-	 * {@code SSBTEK_CALCULATION_DIFF} warning per disagreement. Draken's BFF writes the changes into the calculation —
-	 * FamilyCare cannot change one — see {@link CalculationSyncService}.
+	 * {@code SSBTEK_CALCULATION_DIFF} warning per disagreement. The changes are written into the calculation through
+	 * ProfessionalWeb on the caseworker's action in Draken — FamilyCare cannot change one — see
+	 * {@link CalculationSyncService}.
 	 */
 	public CalculationResponse prepareCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
 		if (TRUE.equals(request.getSsbtekError())) {
@@ -472,8 +472,9 @@ public class FinancialAssistanceCalculationService {
 	 * creates it instead, so a Lifecare outage never wedges the process.
 	 *
 	 * <p>
-	 * The link is conditional ({@link FinancialAssistanceRepository#linkLifecareCalculationIfAbsent}): Draken's BFF
-	 * creates a calculation when the errand has none, so the two can race. Whichever links first wins; the loser's
+	 * The link is conditional ({@link FinancialAssistanceRepository#linkLifecareCalculationIfAbsent}): the caseworker's
+	 * first save through the errand's /lifecare calculation route creates a calculation when the errand has none, so the
+	 * two can race. Whichever links first wins; the loser's
 	 * calculation stays in Lifecare unlinked (FamilyCare has no delete), and the warning below is the trace of it.
 	 */
 	private void proposeInLifecare(final String municipalityId, final PrepareInput input) {
@@ -522,8 +523,8 @@ public class FinancialAssistanceCalculationService {
 	private void syncWithLifecare(final String municipalityId, final PrepareInput input) {
 		final var header = draftService.header(input.errandId());
 		if (header.isEmpty()) {
-			// The sync rows hang off the draft; without one (a BFF-created calculation on an errand never prepared) there
-			// is no period to read the calculation in and nothing to record against.
+			// The sync rows hang off the draft; without one (a caseworker-created calculation on a never-prepared errand)
+			// there is no period to read the calculation in and nothing to record against.
 			return;
 		}
 		try {
