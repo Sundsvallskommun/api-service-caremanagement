@@ -237,6 +237,11 @@ financial-assistance:
     # created errand is frozen as NEEDS_MANUAL_REVIEW (no aktualisering, no arkivering) for a caseworker to reopen in
     # Lifecare and release. Policy value — confirm the day count with legal/jurist.
     recently-closed-window-days: 30
+    # Off until the guard measures the right thing. It counts careM errands in status CLOSED, but a careM errand is one
+    # month's application and the normal flow ends PAID → CLOSED, so next month's ordinary renewal would be frozen and
+    # routed as "recently closed". The guard is meant for an EB insats that ended in Lifecare; switch it on only once it
+    # reads that (kvarlistan v07).
+    recently-closed-enabled: ${FINANCIAL_ASSISTANCE_RECENTLY_CLOSED_ENABLED:false}
     # TEST OVERRIDE, off by default: when true the eligibility check short-circuits and returns all three application
     # types (new/renewal/supplementary application) regardless of any existing case, so the frontend can exercise all
     # three flows. Only ever set FINANCIAL_ASSISTANCE_RETURN_ALL_TYPES=true in a throwaway test environment — it
