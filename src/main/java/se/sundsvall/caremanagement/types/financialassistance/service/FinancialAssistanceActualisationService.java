@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -69,6 +71,9 @@ public class FinancialAssistanceActualisationService {
 	private static final String DEFAULT_ARCHIVE_DOCUMENT_SENDER_TYPE = "1";
 	private static final String DEFAULT_ARCHIVE_SENDER_NAME = "Draken";
 	private static final String ACTUALISATION_NOT_FOUND_MESSAGE = "No Lifecare actualisation '%s' found for the given applicant";
+	/** What the errand's Decision row says about the actualisation itself; the archive outcome is appended. */
+	private static final String ACTUALISATION_CREATED_MESSAGE = "Actualisation created in Lifecare (id %d). %s";
+	private static final String ACTUALISATION_ADOPTED_MESSAGE = "Actualisation found in Lifecare (id %d) - an earlier attempt had created it, so no second one was made. %s";
 	/** Archive outcomes, written onto the errand's Decision row so the caseworker sees what happened. */
 	private static final String ARCHIVED_MESSAGE = "Application archived to Lifecare as %s.";
 	/** careM's own name for the merge of the citizen's uploads — the marker that tells the two documents apart. */
@@ -100,19 +105,104 @@ public class FinancialAssistanceActualisationService {
 
 	/**
 	 * Create the Lifecare actualisation (case intake) for the application month and return the created actualisation id.
-	 * The intake date follows {@link #intakeDate(ActualisationRequest)}. When the request carries an {@code errandId},
+	 * The intake date follows {@link #intakeDate}. When the request carries an {@code errandId},
 	 * the creation is recorded on that errand as a {@code Decision(ACTUALISATION)} so the caseworker sees it in the
 	 * case's audit trail.
+	 *
+	 * <p>
+	 * <strong>Repeatable for one errand.</strong> FamilyCare has no delete, so a retry must never create a second
+	 * actualisation for the same application, and the external task does retry — on any failure, including a response
+	 * that never arrived. With an {@code errandId}:
+	 * <ol>
+	 * <li>an actualisation already recorded on the errand is returned as it is — nothing is created;</li>
+	 * <li>otherwise the intent is committed to the errand <em>before</em> Lifecare is called (see
+	 * {@link FinancialAssistanceRepository#markActualisationRequestedIfAbsent}), so an attempt that dies between
+	 * Lifecare's answer and our record leaves a trace;</li>
+	 * <li>when that marker was already set, an earlier attempt may have created the actualisation without recording it, so
+	 * it is looked for in Lifecare first and adopted if found — see
+	 * {@link ActualisationService#createOrAdoptActualisation}.</li>
+	 * </ol>
+	 * A call without an {@code errandId}, or for an errand with no stored application, has nothing to hold the marker and
+	 * creates every time.
 	 */
 	public ActualisationResponse createActualisation(final String municipalityId, final String namespace, final ActualisationRequest request) {
-		final var applicant = request.getApplicant();
-		final var intakeDate = intakeDate(request);
-		final var result = actualisationService.createActualisation(municipalityId, applicant, intakeDate, isNewApplication(request));
+		return ofNullable(request.getErrandId()).filter(StringUtils::hasText)
+			.map(errandId -> createForErrand(municipalityId, namespace, errandId, request))
+			.orElseGet(() -> createStandalone(municipalityId, request));
+	}
 
-		ofNullable(request.getErrandId()).filter(StringUtils::hasText)
-			.ifPresent(errandId -> recordActualisation(municipalityId, namespace, errandId, result));
+	/**
+	 * Nothing to key a retry on and nothing to record it on: a manual call creates the actualisation, with the återansökan
+	 * type.
+	 */
+	private ActualisationResponse createStandalone(final String municipalityId, final ActualisationRequest request) {
+		final var result = actualisationService.createActualisation(municipalityId, request.getApplicant(), applicationMonthStart(request), false);
 
 		return ActualisationResponse.create().withActualisationId(result.actualisationId());
+	}
+
+	private ActualisationResponse createForErrand(final String municipalityId, final String namespace, final String errandId, final ActualisationRequest request) {
+		final var recorded = recordedActualisationId(municipalityId, namespace, errandId);
+		if (recorded.isPresent()) {
+			LOG.info("Errand {} already has Lifecare actualisation {} recorded - not creating another", sanitizeForLogging(errandId), recorded.get());
+			return ActualisationResponse.create().withActualisationId(recorded.get());
+		}
+
+		// Null for an errand with no stored application: it has neither a submission date to read nor a row to hold the marker.
+		final var application = financialAssistanceRepository.findByErrandId(errandId).orElse(null);
+		final var applicant = request.getApplicant();
+		final var intakeDate = intakeDate(request, application);
+		final var newApplication = isNewApplication(application);
+
+		final ActualisationResult result;
+		if (ofNullable(application).map(entity -> requestedBefore(entity, errandId)).orElse(false)) {
+			result = actualisationService.createOrAdoptActualisation(municipalityId, applicant, intakeDate, newApplication,
+				actualisationId -> decisionService.existsOnAnotherErrand(ACTUALISATION_TYPE, String.valueOf(actualisationId), errandId));
+		} else {
+			result = actualisationService.createActualisation(municipalityId, applicant, intakeDate, newApplication);
+		}
+
+		recordActualisation(municipalityId, namespace, errandId, result);
+
+		return ActualisationResponse.create().withActualisationId(result.actualisationId());
+	}
+
+	/**
+	 * The Lifecare actualisation id recorded on the errand — the most recent {@code Decision(ACTUALISATION)} whose value
+	 * is an id. Also finds one a caseworker set from the archive route.
+	 */
+	private Optional<Integer> recordedActualisationId(final String municipalityId, final String namespace, final String errandId) {
+		return decisionService.readAll(municipalityId, namespace, errandId).stream()
+			.filter(decision -> ACTUALISATION_TYPE.equals(decision.getDecisionType()))
+			.map(Decision::getValue)
+			.filter(StringUtils::hasText)
+			.map(FinancialAssistanceActualisationService::parseId)
+			.flatMap(Optional::stream)
+			.findFirst();
+	}
+
+	private static Optional<Integer> parseId(final String value) {
+		try {
+			return Optional.of(Integer.valueOf(value.trim()));
+		} catch (final NumberFormatException e) {
+			return Optional.empty();
+		}
+	}
+
+	/**
+	 * Whether an earlier attempt already went to Lifecare for the errand — and, when none did, commit that this one is
+	 * about to. The write is the repository's own transaction, so it is committed here and now, not with the intake: a
+	 * failure after Lifecare has created the actualisation rolls the intake back and must not take the marker with it.
+	 *
+	 * <p>
+	 * A marker that was set between the read and the write counts as an earlier attempt: the conditional update reports
+	 * it, so two attempts cannot both take the first-attempt path.
+	 */
+	private boolean requestedBefore(final FinancialAssistanceEntity application, final String errandId) {
+		if (application.getActualisationRequestedAt() != null) {
+			return true;
+		}
+		return financialAssistanceRepository.markActualisationRequestedIfAbsent(errandId, OffsetDateTime.now(ZoneId.systemDefault())) == 0;
 	}
 
 	/**
@@ -136,25 +226,23 @@ public class FinancialAssistanceActualisationService {
 	 * shifts that window by at most a month, which does not change which caseworker is found in practice, but it is a
 	 * behaviour change rather than a pure relabelling.
 	 */
-	private LocalDate intakeDate(final ActualisationRequest request) {
-		final var applicationMonthStart = YearMonth.parse(request.getApplicationMonth()).atDay(1);
-
-		return ofNullable(request.getErrandId())
-			.filter(StringUtils::hasText)
-			.flatMap(financialAssistanceRepository::findByErrandId)
+	private static LocalDate intakeDate(final ActualisationRequest request, final FinancialAssistanceEntity application) {
+		return ofNullable(application)
 			.map(FinancialAssistanceEntity::getCreated)
 			.map(OffsetDateTime::toLocalDate)
-			.orElse(applicationMonthStart);
+			.orElseGet(() -> applicationMonthStart(request));
+	}
+
+	private static LocalDate applicationMonthStart(final ActualisationRequest request) {
+		return YearMonth.parse(request.getApplicationMonth()).atDay(1);
 	}
 
 	/**
 	 * Whether the errand is a nyansökan, which Lifecare actualises with its own type. A standalone call without an
 	 * {@code errandId} keeps the återansökan type it has always had.
 	 */
-	private boolean isNewApplication(final ActualisationRequest request) {
-		return ofNullable(request.getErrandId())
-			.filter(StringUtils::hasText)
-			.flatMap(financialAssistanceRepository::findByErrandId)
+	private static boolean isNewApplication(final FinancialAssistanceEntity application) {
+		return ofNullable(application)
 			.map(FinancialAssistanceEntity::getApplicationType)
 			.filter(APPLICATION_TYPE_NEW::equals)
 			.isPresent();
@@ -173,7 +261,7 @@ public class FinancialAssistanceActualisationService {
 		final var archiveOutcome = archiveApplication(municipalityId, namespace, errandId, result.actualisationId());
 
 		addActualisationDecision(municipalityId, namespace, errandId, result.actualisationId(),
-			"Actualisation created in Lifecare (id %d). %s".formatted(result.actualisationId(), archiveOutcome));
+			actualisationRecordedMessage(result).formatted(result.actualisationId(), archiveOutcome));
 
 		// The insats the actualisation was linked to is the key Lifecare's own case reads take; keeping it on the errand
 		// saves every later errand open a Lifecare lookup. None for a nyansökan — that one is filled in on read.
@@ -183,6 +271,17 @@ public class FinancialAssistanceActualisationService {
 		ofNullable(result.assignedUserId()).filter(StringUtils::hasText)
 			.ifPresent(assignedUserId -> errandService.updateErrand(municipalityId, namespace, errandId,
 				PatchErrand.create().withAssignedUserId(assignedUserId)));
+	}
+
+	/**
+	 * What the errand's audit trail says about where the actualisation came from — created now, or found from an earlier
+	 * attempt.
+	 */
+	private static String actualisationRecordedMessage(final ActualisationResult result) {
+		if (result.adopted()) {
+			return ACTUALISATION_ADOPTED_MESSAGE;
+		}
+		return ACTUALISATION_CREATED_MESSAGE;
 	}
 
 	/**

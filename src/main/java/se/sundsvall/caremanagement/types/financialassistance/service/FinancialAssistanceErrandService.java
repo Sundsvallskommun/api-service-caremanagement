@@ -153,8 +153,9 @@ public class FinancialAssistanceErrandService {
 	/**
 	 * Applies the non-null fields of {@code data} onto the errand's stored application data (PATCH semantics — null
 	 * fields leave the existing values untouched). The server-owned fields ({@code applicationType},
-	 * {@code lastDailyRunAt}, timestamps and the Lifecare references) are never written from client data; the Lifecare
-	 * references are linked by the services that create them, see {@link #linkCalculation} and {@link #linkDecision}.
+	 * {@code lastDailyRunAt}, {@code actualisationRequestedAt}, timestamps and the Lifecare references) are never written
+	 * from client data; the Lifecare references are linked by the services that create them, see {@link #linkCalculation}
+	 * and {@link #linkDecision}.
 	 */
 	public void updateData(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceData data) {
 		// Scope check — throws 404 when the errand is missing in this namespace/municipality.

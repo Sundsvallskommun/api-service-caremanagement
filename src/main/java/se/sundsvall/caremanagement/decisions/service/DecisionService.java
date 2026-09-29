@@ -71,6 +71,15 @@ public class DecisionService {
 	}
 
 	/**
+	 * Whether a decision of the given type and value is recorded on an errand other than the given one — across
+	 * municipalities and namespaces, because what it is asked about (a Lifecare id, say) belongs to no tenant.
+	 */
+	@Transactional(readOnly = true)
+	public boolean existsOnAnotherErrand(final String decisionType, final String value, final String errandId) {
+		return decisionRepository.existsByDecisionTypeAndValueAndErrandIdNot(decisionType, value, errandId);
+	}
+
+	/**
 	 * Receipt the decision against the beslut already saved in Lifecare: marks it {@code SYNCED} with Lifecare's id. Called
 	 * by finalize, which only runs once the errand's beslut is in Lifecare.
 	 */

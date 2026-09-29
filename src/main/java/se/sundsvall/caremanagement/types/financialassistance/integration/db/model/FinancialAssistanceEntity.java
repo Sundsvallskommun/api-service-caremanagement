@@ -122,6 +122,16 @@ public class FinancialAssistanceEntity implements Auditable {
 	private OffsetDateTime lastDailyRunAt;
 
 	/**
+	 * When the Lifecare actualisation step first went to Lifecare for this errand — written, in a transaction of its own,
+	 * before the actualisation is created. A set value with no {@code Decision(ACTUALISATION)} on the errand means an
+	 * attempt may have created the actualisation without getting to record it, so a retry looks for it in Lifecare
+	 * instead of creating another. Set once and never cleared.
+	 */
+	@Column(name = "actualisation_requested_at")
+	@TimeZoneStorage(TimeZoneStorageType.NORMALIZE)
+	private OffsetDateTime actualisationRequestedAt;
+
+	/**
 	 * The applicant's open financial-assistance service (insats) id in Lifecare — the key Lifecare's own case reads take.
 	 * Set at intake from the insats the actualisation was linked to, and filled in later when the errand had none then
 	 * (a nyansökan, whose insats the caseworker opens afterwards). A key, not case data: nothing about the insats itself
@@ -426,6 +436,14 @@ public class FinancialAssistanceEntity implements Auditable {
 		this.lastDailyRunAt = lastDailyRunAt;
 	}
 
+	public OffsetDateTime getActualisationRequestedAt() {
+		return actualisationRequestedAt;
+	}
+
+	public void setActualisationRequestedAt(final OffsetDateTime actualisationRequestedAt) {
+		this.actualisationRequestedAt = actualisationRequestedAt;
+	}
+
 	public Integer getLifecareServiceId() {
 		return lifecareServiceId;
 	}
@@ -710,6 +728,11 @@ public class FinancialAssistanceEntity implements Auditable {
 		return this;
 	}
 
+	public FinancialAssistanceEntity withActualisationRequestedAt(final OffsetDateTime actualisationRequestedAt) {
+		this.actualisationRequestedAt = actualisationRequestedAt;
+		return this;
+	}
+
 	public FinancialAssistanceEntity withLifecareServiceId(final Integer lifecareServiceId) {
 		this.lifecareServiceId = lifecareServiceId;
 		return this;
@@ -825,7 +848,8 @@ public class FinancialAssistanceEntity implements Auditable {
 			&& Objects.equals(hasPendingBenefits, that.hasPendingBenefits) && Objects.equals(hasAssets, that.hasAssets)
 			&& Objects.equals(staysInMunicipality, that.staysInMunicipality)
 			&& Objects.equals(attestation, that.attestation) && Objects.equals(attestedAt, that.attestedAt)
-			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt) && Objects.equals(lifecareServiceId, that.lifecareServiceId)
+			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt) && Objects.equals(actualisationRequestedAt, that.actualisationRequestedAt)
+			&& Objects.equals(lifecareServiceId, that.lifecareServiceId)
 			&& Objects.equals(lifecareDecisionId, that.lifecareDecisionId) && Objects.equals(lifecareCalculationId, that.lifecareCalculationId)
 			&& Objects.equals(lifecarePaymentIds, that.lifecarePaymentIds)
 			&& Objects.equals(householdSizeChanged, that.householdSizeChanged) && Objects.equals(notifyMinaSidor, that.notifyMinaSidor)
@@ -842,7 +866,7 @@ public class FinancialAssistanceEntity implements Auditable {
 		return Objects.hash(errandId, applicationType, maritalStatus, periodMonth, periodYear, periodChoice, normType,
 			hasChildrenUnder21, childrenResidenceChanged, housingForm, housingPersonCount, housingRoomsPlusKitchen, housingChanged,
 			hasIncomes, hasPendingBenefits, hasAssets, staysInMunicipality, attestation,
-			attestedAt, lastDailyRunAt, lifecareServiceId, lifecareDecisionId, lifecareCalculationId, lifecarePaymentIds, householdSizeChanged, notifyMinaSidor, notifyDigitalMailbox, notifyLetter,
+			attestedAt, lastDailyRunAt, actualisationRequestedAt, lifecareServiceId, lifecareDecisionId, lifecareCalculationId, lifecarePaymentIds, householdSizeChanged, notifyMinaSidor, notifyDigitalMailbox, notifyLetter,
 			children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
 			created, modified);
 	}
@@ -852,7 +876,7 @@ public class FinancialAssistanceEntity implements Auditable {
 		return "FinancialAssistanceEntity{errandId='" + errandId + "', applicationType='" + applicationType
 			+ "', maritalStatus='" + maritalStatus + "', periodMonth=" + periodMonth + ", periodYear=" + periodYear
 			+ ", normType=" + normType + ", housingForm='" + housingForm + "', attestation=" + attestation
-			+ ", lastDailyRunAt=" + lastDailyRunAt + ", lifecareServiceId=" + lifecareServiceId + ", lifecareDecisionId=" + lifecareDecisionId
+			+ ", lastDailyRunAt=" + lastDailyRunAt + ", actualisationRequestedAt=" + actualisationRequestedAt + ", lifecareServiceId=" + lifecareServiceId + ", lifecareDecisionId=" + lifecareDecisionId
 			+ ", lifecareCalculationId=" + lifecareCalculationId + ", lifecarePaymentIds=" + lifecarePaymentIds + ", created=" + created + ", modified=" + modified + '}';
 	}
 }

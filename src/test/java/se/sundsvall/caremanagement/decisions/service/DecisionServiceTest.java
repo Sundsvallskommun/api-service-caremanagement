@@ -54,6 +54,17 @@ class DecisionServiceTest {
 	private DecisionService service;
 
 	@Test
+	void existsOnAnotherErrandAsksTheRepository() {
+		when(decisionRepositoryMock.existsByDecisionTypeAndValueAndErrandIdNot("ACTUALISATION", "5012", ERRAND_ID)).thenReturn(true);
+		when(decisionRepositoryMock.existsByDecisionTypeAndValueAndErrandIdNot("ACTUALISATION", "5013", ERRAND_ID)).thenReturn(false);
+
+		assertThat(service.existsOnAnotherErrand("ACTUALISATION", "5012", ERRAND_ID)).isTrue();
+		assertThat(service.existsOnAnotherErrand("ACTUALISATION", "5013", ERRAND_ID)).isFalse();
+		// Not tenant-scoped: what it is asked about belongs to no municipality or namespace.
+		verifyNoInteractions(errandQueryServiceMock, errandGuardMock);
+	}
+
+	@Test
 	void createPublishesNotificationsAndReturnsId() {
 		final var errand = Errand.create().withId(ERRAND_ID).withReporterUserId("reporter").withAssignedUserId("assignee");
 		final var saved = DecisionEntity.create().withId(DECISION_ID);
