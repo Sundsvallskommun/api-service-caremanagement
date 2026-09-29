@@ -4,6 +4,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationCalculati
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -26,9 +27,9 @@ class ApplicationIncomeToFamilyCareMapperTest {
 	@Test
 	void declaredIncomesResolveToTheProposalsTypesAndSumPerTypeAndRecipient() {
 		final var incomes = List.of(
-			new ApplicationIncome("SWISH_DEPOSITS", null, BigDecimal.valueOf(599), LocalDate.of(2026, 9, 24), "Swish/kontoinsättningar"),
-			new ApplicationIncome("OTHER_INCOME", "APPLICANT", BigDecimal.valueOf(100), LocalDate.of(2026, 9, 1), "Annan inkomst"),
-			new ApplicationIncome("RENT_SHARE_FROM_CHILD", "APPLICANT", BigDecimal.valueOf(200), LocalDate.of(2026, 9, 10), "Hyresdel från barn"),
+			new ApplicationIncome("SWISH_DEPOSITS", null, BigDecimal.valueOf(599), LocalDate.of(2026, Month.SEPTEMBER, 24), "Swish/kontoinsättningar"),
+			new ApplicationIncome("OTHER_INCOME", "APPLICANT", BigDecimal.valueOf(100), LocalDate.of(2026, Month.SEPTEMBER, 1), "Annan inkomst"),
+			new ApplicationIncome("RENT_SHARE_FROM_CHILD", "APPLICANT", BigDecimal.valueOf(200), LocalDate.of(2026, Month.SEPTEMBER, 10), "Hyresdel från barn"),
 			new ApplicationIncome("SALARY", "CO_APPLICANT", BigDecimal.valueOf(6788), null, "Lön"));
 
 		final var result = ApplicationIncomeToFamilyCareMapper.toIncomeLines(incomes, proposal());

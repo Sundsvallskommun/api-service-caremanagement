@@ -29,6 +29,8 @@ import se.sundsvall.caremanagement.lifecare.service.model.SsbtekIncome;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.ObjectMapper;
 
+import static java.time.Month.APRIL;
+import static java.time.Month.FEBRUARY;
 import static java.time.Month.JUNE;
 import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -114,7 +116,7 @@ class CalculationServiceTest {
 			new SsbtekIncome("Bostadsbidrag", null, "Månad", new BigDecimal("400"), LocalDate.of(2026, MAY, 15), ApplicantRole.CO_APPLICANT),
 			"TA_MED", "Bostadsbidrag", false, "Ta med");
 		final var alreadyTaken = new ClassifiedIncome(
-			new SsbtekIncome("Bostadsbidrag", null, "Månad", new BigDecimal("999"), LocalDate.of(2026, 4, 15), ApplicantRole.APPLICANT),
+			new SsbtekIncome("Bostadsbidrag", null, "Månad", new BigDecimal("999"), LocalDate.of(2026, APRIL, 15), ApplicantRole.APPLICANT),
 			"TA_MED", "Bostadsbidrag", false, "Ta med", true);
 		when(objectMapperMock.readValue("[json]", ClassifiedIncome[].class)).thenReturn(new ClassifiedIncome[] {
 			bostadsbidrag(), coApplicant, alreadyTaken
@@ -360,7 +362,7 @@ class CalculationServiceTest {
 		when(lifecareFamilyCareIntegrationMock.getCalculationProposal(MUNICIPALITY_ID, APPLICANT)).thenReturn(proposal());
 		when(lifecareFamilyCareIntegrationMock.createCalculation(eq(MUNICIPALITY_ID), any(PostCalculationBodyRequest.class))).thenReturn(6000);
 
-		final var february = YearMonth.of(2026, 2); // 2026-02-01–2026-02-28 is 27
+		final var february = YearMonth.of(2026, FEBRUARY); // 2026-02-01–2026-02-28 is 27
 		final var persons = List.of(
 			new EffectivePerson("full", 30, null, null),
 			new EffectivePerson("partial", 12, null, null),

@@ -52,7 +52,7 @@ class FinancialAssistanceLifecareServiceTest {
 	void listCalculationsResolvesPartyDefaultsPeriodAndMaps() {
 		final var view = new CalculationView(7001, "Riksnorm 2026", "2026-06-01", "2026-06-30", BigDecimal.valueOf(12000.0), BigDecimal.valueOf(9500.0), BigDecimal.valueOf(500.0), BigDecimal.valueOf(10500.0),
 			BigDecimal.valueOf(1200.0), BigDecimal.valueOf(800.0), BigDecimal.valueOf(-2000.0), BigDecimal.valueOf(8500.0), Boolean.TRUE,
-			List.of(new CalculationPersonView("200001011234", "Barn Andersson", BigDecimal.valueOf(4500.0), null, null)),
+			List.of(new CalculationPersonView("Barn Andersson", BigDecimal.valueOf(4500.0), null, null)),
 			List.of(new CalculationIncomeView("Lön", BigDecimal.valueOf(12000.0), "2026-05-15", BigDecimal.valueOf(0.0), null)),
 			List.of(new CalculationExpenseView("Hyra", BigDecimal.valueOf(7500.0), BigDecimal.valueOf(7000.0))),
 			List.of(new CalculationExpenseView("Tandvård", BigDecimal.valueOf(500.0), BigDecimal.valueOf(500.0))));
@@ -64,7 +64,7 @@ class FinancialAssistanceLifecareServiceTest {
 			assertThat(calculation.getId()).isEqualTo(7001);
 			assertThat(calculation.getNormSum()).isEqualTo(BigDecimal.valueOf(10500.0));
 			assertThat(calculation.getIsFinal()).isTrue();
-			assertThat(calculation.getPersons()).singleElement().satisfies(person -> assertThat(person.getPersonId()).isEqualTo("200001011234"));
+			assertThat(calculation.getPersons()).singleElement().satisfies(person -> assertThat(person.getName()).isEqualTo("Barn Andersson"));
 			assertThat(calculation.getIncomes()).singleElement().satisfies(income -> assertThat(income.getType()).isEqualTo("Lön"));
 			assertThat(calculation.getExpenses()).singleElement().satisfies(expense -> assertThat(expense.getApprovedAmount()).isEqualTo(BigDecimal.valueOf(7000.0)));
 			assertThat(calculation.getSpecialExpenses()).singleElement().satisfies(expense -> assertThat(expense.getType()).isEqualTo("Tandvård"));
@@ -81,7 +81,7 @@ class FinancialAssistanceLifecareServiceTest {
 	void listDecisionsResolvesPartyDefaultsPeriodAndMaps() {
 		final var view = new DecisionView(9900, "2026-06-02", "Bifall", "2026-06-01", "2026-06-30", "Beviljas enligt norm",
 			"Anna Andersson", "IFO", 2, BigDecimal.valueOf(8500.0), "198001019999", "Sammanboende",
-			List.of(new DecisionPersonView("198001019999", "Sven Svensson", Boolean.TRUE)));
+			List.of(new DecisionPersonView("Sven Svensson", Boolean.TRUE)));
 		when(lifecareCaseHistoryServiceMock.listDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(view));
 
 		final var result = service.listDecisions(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, JANUARY, 1), LocalDate.of(2026, JUNE, 30));

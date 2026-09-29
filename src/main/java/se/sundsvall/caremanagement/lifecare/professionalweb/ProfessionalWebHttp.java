@@ -83,7 +83,7 @@ public class ProfessionalWebHttp {
 	public ProfessionalWebResponse send(final String method, final URI uri, final Map<String, String> headers, final byte[] body) {
 		final var builder = HttpRequest.newBuilder(uri).timeout(readTimeout);
 		headers.forEach(builder::header);
-		if (body == null) {
+		if (body == null || body.length == 0) {
 			builder.method(method, HttpRequest.BodyPublishers.noBody());
 		} else {
 			builder.method(method, HttpRequest.BodyPublishers.ofByteArray(body));
@@ -129,7 +129,7 @@ public class ProfessionalWebHttp {
 				headers.put("Cookie", cookieHeader);
 			}
 			var method = "GET";
-			if (body != null) {
+			if (formFields != null) {
 				method = "POST";
 				headers.put("Content-Type", "application/x-www-form-urlencoded");
 			}
@@ -153,7 +153,8 @@ public class ProfessionalWebHttp {
 	 *
 	 * <p>
 	 * Lifecare says it three ways depending on the endpoint: the 360 signal, a redirect back to the identity portal, and
-	 * the login page delivered as HTML where JSON was expected. A 401 joins them because an expired ASP.NET session
+	 * the login page delivered as HTML (with a non-error status) where JSON was expected. A 401 joins them because an
+	 * expired ASP.NET session
 	 * surfaces that way too. A 403 deliberately does not: that is Lifecare saying the account may not see this, and a
 	 * new session would only hide a real permission problem behind a second failure.
 	 * </p>
@@ -168,12 +169,14 @@ public class ProfessionalWebHttp {
 		if (response.location().filter(location -> location.contains(IDENTITY_PORTAL_PATH)).isPresent()) {
 			return true;
 		}
-		return response.contentType().contains("text/html");
+		// The login page comes back as an ordinary page. An HTML error page (IIS 500, a proxy's 502/503/504) is not a
+		// lost session: Lifecare may already have acted on a write, so resending it could make it twice.
+		return (response.status() < 400) && response.contentType().contains("text/html");
 	}
 
 	static byte[] encodeForm(final Map<String, String> fields) {
 		if (fields == null) {
-			return null;
+			return new byte[0];
 		}
 		return fields.entrySet().stream()
 			.map(entry -> URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8) + "=" + URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))

@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.PlatformTransactionManager;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentCreated;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -55,6 +57,8 @@ class LifecarePaymentRegistrationServiceTest {
 	private LifecareAccessRecorder accessRecorder;
 	@Mock
 	private LifecarePaymentApi paymentApi;
+	@Mock
+	private PlatformTransactionManager transactionManager;
 
 	@InjectMocks
 	private LifecarePaymentRegistrationService service;
@@ -90,6 +94,14 @@ class LifecarePaymentRegistrationServiceTest {
 		assertThat(bodyCaptor.getValue().get("billingNumber").asString()).isEqualTo("123");
 		verify(errandService).linkPayment(ERRAND, "4");
 		verify(accessRecorder).read(ERRAND, "PAYEES", "Läste utbetalningsunderlag i Lifecare");
+		// The errand is locked before the duplicate check and held over the create, and released before the link.
+		final var order = inOrder(transactionManager, errandService, paymentApi);
+		order.verify(transactionManager).getTransaction(any());
+		order.verify(errandService).lock(ERRAND);
+		order.verify(paymentApi).readLatestPayments(1);
+		order.verify(paymentApi).createPayment(eq(1), any());
+		order.verify(transactionManager).commit(any());
+		order.verify(errandService).linkPayment(ERRAND, "4");
 		verify(accessRecorder).written(ERRAND, "CREATE", "PAYMENT", "Registrerade en utbetalning i Lifecare", "4");
 	}
 
@@ -99,6 +111,8 @@ class LifecarePaymentRegistrationServiceTest {
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), CONFLICT, "id 4");
 		verify(paymentApi, never()).createPayment(anyInt(), any());
+		verify(errandService).lock(ERRAND);
+		verify(transactionManager).rollback(any());
 	}
 
 	@Test

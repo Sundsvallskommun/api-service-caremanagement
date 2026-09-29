@@ -41,7 +41,7 @@ class LifecareCalculationViewTest {
 		assertThat(bean.getDate()).isEqualTo("value");
 		assertThat(bean.getStartDate()).isEqualTo("value");
 		assertThat(bean.getEndDate()).isEqualTo("value");
-		assertThat(bean.getFinalized()).isEqualTo(true);
+		assertThat(bean.getFinalized()).isTrue();
 		assertThat(bean.getUpdated()).isEqualTo("value");
 		assertThat(bean.getSummary()).isEqualTo(LifecareCalculationSummary.create());
 	}

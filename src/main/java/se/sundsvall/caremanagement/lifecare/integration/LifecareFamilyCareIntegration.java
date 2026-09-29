@@ -22,6 +22,7 @@ import java.util.function.Supplier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
+import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -226,12 +227,11 @@ public class LifecareFamilyCareIntegration implements LifecareFamilyCare {
 	 * typed as {@code application/pdf}. No payload is logged.
 	 */
 	@Override
-	public void postActualisationAttachment(final String municipalityId, final Integer actualisationId, final String documentType, final String documentSenderType,
-		final String title, final String senderName, final String fileName, final byte[] content) {
-
-		final var file = new ByteArrayMultipartFile("Content", fileName, PDF_MIME_TYPE, content);
+	public void postActualisationAttachment(final String municipalityId, final Integer actualisationId, final AttachmentUpload attachment) {
+		final var file = new ByteArrayMultipartFile("Content", attachment.fileName(), PDF_MIME_TYPE, attachment.content());
 		call("uploading actualisation attachment", () -> {
-			lifecareFamilyCareClient.postActualisationAttachment(actualisationId, documentType, documentSenderType, title, senderName, file);
+			lifecareFamilyCareClient.postActualisationAttachment(actualisationId, attachment.documentType(), attachment.documentSenderType(), attachment.title(),
+				attachment.senderName(), file);
 			return null;
 		});
 	}

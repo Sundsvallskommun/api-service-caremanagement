@@ -18,6 +18,7 @@ import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.User;
 import java.time.LocalDate;
 import java.util.List;
+import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 
 /**
  * The Lifecare FamilyCare surface careM depends on, separated from who answers it.
@@ -117,6 +118,5 @@ public interface LifecareFamilyCare {
 	 */
 	Integer createCalculation(String municipalityId, PostCalculationBodyRequest body);
 
-	void postActualisationAttachment(String municipalityId, Integer actualisationId, String documentType, String documentSenderType,
-		String title, String senderName, String fileName, byte[] content);
+	void postActualisationAttachment(String municipalityId, Integer actualisationId, AttachmentUpload attachment);
 }

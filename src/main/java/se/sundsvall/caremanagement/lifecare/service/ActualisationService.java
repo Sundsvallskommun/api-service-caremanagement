@@ -138,16 +138,10 @@ public class ActualisationService {
 	 * Upload a generated PDF and bind it to an existing Lifecare actualisation (the document write-back used by the
 	 * conversation-archiving job). The file is sent as {@code application/pdf}.
 	 *
-	 * @param actualisationId    the Lifecare actualisation the document is bound to
-	 * @param fileName           the file name shown in Lifecare
-	 * @param content            the PDF bytes
-	 * @param documentType       the Lifecare {@code InsertDocumentType} code
-	 * @param documentSenderType the Lifecare {@code InsertDocumentSenderType} code
-	 * @param title              the document title
-	 * @param senderName         the sender name
+	 * @param actualisationId the Lifecare actualisation the document is bound to
+	 * @param attachment      the document's type codes, title, sender and PDF content
 	 */
-	public void uploadAttachment(final String municipalityId, final Integer actualisationId, final String fileName, final byte[] content,
-		final String documentType, final String documentSenderType, final String title, final String senderName) {
-		lifecareFamilyCareIntegration.postActualisationAttachment(municipalityId, actualisationId, documentType, documentSenderType, title, senderName, fileName, content);
+	public void uploadAttachment(final String municipalityId, final Integer actualisationId, final AttachmentUpload attachment) {
+		lifecareFamilyCareIntegration.postActualisationAttachment(municipalityId, actualisationId, attachment);
 	}
 }

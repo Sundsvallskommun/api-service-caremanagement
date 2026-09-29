@@ -26,11 +26,9 @@ class LifecareDecisionPersonTest {
 	@Test
 	void testBuilderMethods() {
 		final var person = LifecareDecisionPerson.create()
-			.withPersonId("200001011234")
 			.withName("Anna Andersson")
 			.withCoApplicant(false);
 
-		assertThat(person.getPersonId()).isEqualTo("200001011234");
 		assertThat(person.getName()).isEqualTo("Anna Andersson");
 		assertThat(person.getCoApplicant()).isFalse();
 	}

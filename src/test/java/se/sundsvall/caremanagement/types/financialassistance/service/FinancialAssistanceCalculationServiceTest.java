@@ -53,12 +53,14 @@ import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.time.Month.JUNE;
+import static java.time.Month.MAY;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -291,7 +293,7 @@ class FinancialAssistanceCalculationServiceTest {
 		final var month = YearMonth.of(2026, JUNE);
 		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM"));
 		final var untransferable = List.of(new ClassifiedIncome(
-			new SsbtekIncome("Studiemedel", null, null, BigDecimal.valueOf(2500), LocalDate.of(2026, 5, 25), ApplicantRole.APPLICANT),
+			new SsbtekIncome("Studiemedel", null, null, BigDecimal.valueOf(2500), LocalDate.of(2026, MAY, 25), ApplicantRole.APPLICANT),
 			"TA_MED", "Studiemedel", false, "Ta med"));
 		final var warning = new WarningService.WarningInput(WarningService.TYPE_INCOME_NOT_TRANSFERABLE, "studiemedel|APPLICANT", "text");
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of("199001011234"));
@@ -317,7 +319,7 @@ class FinancialAssistanceCalculationServiceTest {
 		// SSBTEK rows, and one no Lifecare type takes is warned about rather than left out without a trace.
 		final var month = YearMonth.of(2026, JUNE);
 		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM"));
-		final var declared = List.of(new ApplicationIncome("SWISH_DEPOSITS", null, BigDecimal.valueOf(599), LocalDate.of(2026, 5, 24), "Swish/kontoinsättningar"));
+		final var declared = List.of(new ApplicationIncome("SWISH_DEPOSITS", null, BigDecimal.valueOf(599), LocalDate.of(2026, MAY, 24), "Swish/kontoinsättningar"));
 		final var ssbtekLines = List.of(new FamilyCareIncomeLine(2, "Bostadsbidrag", "APPLICANT", BigDecimal.valueOf(4500), null, "SSBTEK: Bostadsbidrag"));
 		final var applicationLines = List.of(new FamilyCareIncomeLine(30, "Swish/Insättningar/Överföringar", "APPLICANT", BigDecimal.valueOf(599), null, "Ansökan: Swish/kontoinsättningar"));
 		final var notTaken = new ApplicationIncome("RENT_SHARE_FROM_CHILD", null, BigDecimal.TEN, null, "Hyresdel från barn");
@@ -421,11 +423,18 @@ class FinancialAssistanceCalculationServiceTest {
 		assertThat(errand.getLifecareCalculationId()).isEqualTo(779);
 	}
 
-	@Test
-	void prepareWithACalculationSavedInLifecareKeepsTheDraftAndItsWarnings() {
-		// Draken has saved the normberäkning in Lifecare and set its id on the errand: that calculation is the truth, so
-		// the draft is not refreshed and its warnings are not reconciled. The SSBTEK work carries on as before.
-		final var month = YearMonth.of(2026, JUNE);
+	/**
+	 * An errand whose normberäkning Draken has saved in Lifecare, with an application question warning and a previous
+	 * household.
+	 */
+	private record SavedCalculationFixture(FinancialAssistanceEntity errand, WarningService.WarningInput questionWarning, PreviousHousehold previous) {
+	}
+
+	/**
+	 * Draken has saved the normberäkning in Lifecare and set its id on the errand: that calculation is the truth, so the
+	 * draft is not refreshed and its warnings are not reconciled. The SSBTEK work carries on as before.
+	 */
+	private SavedCalculationFixture savedCalculationRun(final YearMonth month) {
 		final var errand = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withNormType(List.of("NATIONAL_NORM")).withLifecareCalculationId(4242);
 		final var questionWarning = new WarningService.WarningInput(WarningService.TYPE_PENDING_BENEFIT, "pending-benefit", "text");
 		final var previous = new PreviousHousehold(Set.of(APPLICANT_PARTY_ID), true, 1, null, null, "Riksnorm 2025");
@@ -436,18 +445,29 @@ class FinancialAssistanceCalculationServiceTest {
 		when(calculationServiceMock.completeness(MUNICIPALITY_ID, APPLICANT_PARTY_ID, month, "[json]")).thenReturn(new Completeness(false, List.of("Dagersättning")));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus("UNDER_REVIEW"));
 		incomeChange(month, "[json]");
+		return new SavedCalculationFixture(errand, questionWarning, previous);
+	}
 
-		final var request = CalculationRequest.create()
+	private static CalculationRequest savedCalculationRequest() {
+		return CalculationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID).withClassifiedIncomes("[json]")
 			.withUnhandledIncomes(List.of("Bostadstillägg (NOT_ON_WHITELIST)")).withChangeWarnings(List.of("Bostadsbidrag: -23%"));
+	}
 
-		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
+	@Test
+	void prepareWithACalculationSavedInLifecareLeavesTheDraftUntouched() {
+		final var month = YearMonth.of(2026, JUNE);
+		savedCalculationRun(month);
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, savedCalculationRequest());
 
 		// The draft is left alone: no refresh, no feed, no family copy, no late transfer, no duplicate read. Only its header
 		// is read, for the SSBTEK sync — and without one (as here) there is nothing to sync against.
 		verify(draftServiceMock).header(ERRAND_ID);
 		verifyNoMoreInteractions(draftServiceMock);
-		verifyNoInteractions(lateTransferFeederMock, untransferableIncomeFeederMock, lifecareServiceIdServiceMock, calculationSyncServiceMock);
+		verifyNoInteractions(lateTransferFeederMock, untransferableIncomeFeederMock, calculationSyncServiceMock);
+		// The insats is looked up once, up front, and not again: no proposal is committed.
+		verify(lifecareServiceIdServiceMock).currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		// A linked calculation is never proposed again.
 		verify(calculationServiceMock, never()).commitEffective(any(), any(), any(), any(), any(), any(), any());
 		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
@@ -459,17 +479,33 @@ class FinancialAssistanceCalculationServiceTest {
 		verify(lifecareCaseServiceMock, never()).previousFamily(any(), any(), any());
 		// The housing-cost change is frozen with the draft: it concerns the calculation's boendekostnad.
 		verify(calculationFeederMock, never()).housingDeltaWarnings(any(), any(), any());
+	}
+
+	@Test
+	void prepareWithACalculationSavedInLifecareReconcilesOnlyRuleWarnings() {
+		final var month = YearMonth.of(2026, JUNE);
+		final var fixture = savedCalculationRun(month);
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, savedCalculationRequest());
 
 		// Only the SSBTEK income warnings and the draft-independent rule warnings are reconciled.
 		verify(warningServiceMock, never()).reconcileCalculationWarnings(any(), any(), any(), any(), any(), any(), any());
 		final ArgumentCaptor<List<WarningService.WarningInput>> rules = ArgumentCaptor.captor();
 		verify(warningServiceMock).reconcileRuleWarnings(eq(ERRAND_ID), eq(List.of("Bostadstillägg (NOT_ON_WHITELIST)")), eq(List.of(INCOME_CHANGE_TEXT)),
 			eq(List.of("Dagersättning")), rules.capture(), eq(Set.of()));
-		assertThat(rules.getValue()).containsExactly(questionWarning);
-		verify(applicationRuleFeederMock).previousCalculationWarnings(MUNICIPALITY_ID, errand, previous);
-		verify(periodRuleFeederMock).periodWarnings(eq(MUNICIPALITY_ID), eq(YearMonth.of(2026, 5)), any(), any());
+		assertThat(rules.getValue()).containsExactly(fixture.questionWarning());
+		verify(applicationRuleFeederMock).previousCalculationWarnings(MUNICIPALITY_ID, fixture.errand(), fixture.previous());
+		verify(periodRuleFeederMock).periodWarnings(eq(MUNICIPALITY_ID), eq(YearMonth.of(2026, MAY)), any(), any());
+	}
 
-		// Completeness, the one-time recommendation, the status, the read-failure close and the run stamp are unchanged.
+	@Test
+	void prepareWithACalculationSavedInLifecareStillRecordsTheDecisionAndStatus() {
+		final var month = YearMonth.of(2026, JUNE);
+		savedCalculationRun(month);
+
+		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, savedCalculationRequest());
+
+		// Completeness, the one-time recommendation and the status are unchanged by the frozen draft.
 		assertThat(response.isInformationComplete()).isFalse();
 		assertThat(response.getMissingIncomeTypes()).containsExactly("Dagersättning");
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
@@ -478,11 +514,20 @@ class FinancialAssistanceCalculationServiceTest {
 		final var patchCaptor = ArgumentCaptor.forClass(PatchErrand.class);
 		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), patchCaptor.capture());
 		assertThat(patchCaptor.getValue().getStatus()).isEqualTo("SUPPLEMENT_REQUESTED");
+	}
+
+	@Test
+	void prepareWithACalculationSavedInLifecareStillStampsTheRun() {
+		final var month = YearMonth.of(2026, JUNE);
+		final var fixture = savedCalculationRun(month);
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, savedCalculationRequest());
+
+		// The read-failure close, the medsökande payment warning and the run stamp all follow the household, not the draft.
 		verify(warningServiceMock).reconcileSsbtekReadFailure(ERRAND_ID, false);
-		// A frozen draft does not freeze the medsökande payment warning: it concerns the household, not the draft.
 		verify(paymentWarningServiceMock).reconcile(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
-		assertThat(errand.getLastDailyRunAt()).isCloseTo(OffsetDateTime.now(), within(10, SECONDS));
-		verify(repositoryMock).save(errand);
+		assertThat(fixture.errand().getLastDailyRunAt()).isCloseTo(OffsetDateTime.now(), within(10, SECONDS));
+		verify(repositoryMock).save(fixture.errand());
 	}
 
 	private static final String INCOME_CHANGE_TEXT = "Bostadsbidrag: 1000 kr i föregående normberäkning → 1250 kr nu";
@@ -589,7 +634,7 @@ class FinancialAssistanceCalculationServiceTest {
 		// This run's SSBTEK amounts are recorded — not merged into the frozen draft — and compared with the saved
 		// calculation over the draft's period, which falls back to the application month when the header has none.
 		verify(calculationSyncServiceMock).recordSsbtek(ERRAND_ID, rows);
-		verify(calculationSyncServiceMock).reconcileWarnings(MUNICIPALITY_ID, ERRAND_ID, APPLICANT_PARTY_ID, 4242, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30));
+		verify(calculationSyncServiceMock).reconcileWarnings(MUNICIPALITY_ID, ERRAND_ID, APPLICANT_PARTY_ID, 4242, LocalDate.of(2026, JUNE, 1), LocalDate.of(2026, JUNE, 30));
 		verify(draftServiceMock, never()).refresh(any(), any(), any(), any(), any(), any(), any());
 	}
 
@@ -626,7 +671,7 @@ class FinancialAssistanceCalculationServiceTest {
 		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		// The day check gets the control month (the month before the application month) and the gate facts as sent.
-		verify(periodRuleFeederMock).periodWarnings(eq(MUNICIPALITY_ID), eq(YearMonth.of(2026, 5)), any(), eq(dayCheckBasis));
+		verify(periodRuleFeederMock).periodWarnings(eq(MUNICIPALITY_ID), eq(YearMonth.of(2026, MAY)), any(), eq(dayCheckBasis));
 
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
@@ -664,7 +709,7 @@ class FinancialAssistanceCalculationServiceTest {
 	private FinancialAssistanceEntity completeRunWithDraft(final YearMonth month) {
 		final var errand = completeRun(month);
 		when(draftServiceMock.header(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(7)
-			.withCalculationFromDate(LocalDate.of(2026, 6, 1)).withCalculationToDate(LocalDate.of(2026, 6, 30)).withCalculationDate(LocalDate.of(2026, 6, 1))));
+			.withCalculationFromDate(LocalDate.of(2026, JUNE, 1)).withCalculationToDate(LocalDate.of(2026, JUNE, 30)).withCalculationDate(LocalDate.of(2026, JUNE, 1))));
 		when(draftServiceMock.liveIncomes(ERRAND_ID)).thenReturn(List.of(FaNormIncomeEntity.create().withTypeId(20).withApplicantProcessAmount(new BigDecimal("5000"))));
 		when(draftServiceMock.liveExpenses(ERRAND_ID)).thenReturn(List.of(FaNormExpenseEntity.create().withCostType("HOUSING_COST").withProcessAmount(new BigDecimal("6500"))));
 		when(draftServiceMock.livePersons(ERRAND_ID)).thenReturn(List.of(FaNormPersonEntity.create().withPartyId(APPLICANT_PARTY_ID).withProcessDays(30)));
@@ -687,6 +732,12 @@ class FinancialAssistanceCalculationServiceTest {
 
 		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest());
 
+		// The insats is resolved before the run's first read, so its own commit cannot leave this run's snapshot behind
+		// the row the proposal is linked on.
+		final var order = inOrder(lifecareServiceIdServiceMock, errandServiceMock);
+		order.verify(lifecareServiceIdServiceMock).currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		order.verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
 		// The draft's effective rows go to Lifecare with the header's norm and period and the errand's EB insats.
 		final ArgumentCaptor<CalculationHeader> header = ArgumentCaptor.captor();
 		final ArgumentCaptor<List<EffectiveIncome>> incomes = ArgumentCaptor.captor();
@@ -694,8 +745,8 @@ class FinancialAssistanceCalculationServiceTest {
 		final ArgumentCaptor<List<EffectivePerson>> persons = ArgumentCaptor.captor();
 		verify(calculationServiceMock).commitEffective(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), eq(month), header.capture(), incomes.capture(), expenses.capture(), persons.capture());
 		assertThat(header.getValue().normId()).isEqualTo(7);
-		assertThat(header.getValue().calculationFromDate()).isEqualTo(LocalDate.of(2026, 6, 1));
-		assertThat(header.getValue().calculationToDate()).isEqualTo(LocalDate.of(2026, 6, 30));
+		assertThat(header.getValue().calculationFromDate()).isEqualTo(LocalDate.of(2026, JUNE, 1));
+		assertThat(header.getValue().calculationToDate()).isEqualTo(LocalDate.of(2026, JUNE, 30));
 		assertThat(header.getValue().serviceId()).isEqualTo(55);
 		assertThat(incomes.getValue()).singleElement().satisfies(income -> assertThat(income.applicantAmount()).isEqualByComparingTo("5000"));
 		assertThat(expenses.getValue()).singleElement().satisfies(expense -> assertThat(expense.approvedAmount()).isEqualByComparingTo("6500"));

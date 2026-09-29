@@ -4,6 +4,8 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebErrors;
@@ -22,6 +24,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.refuse;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.text;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.textOrEmpty;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * Registers the caseworker's utbetalning straight in Lifecare with Payment/Create, the register of record.
@@ -47,11 +50,14 @@ public class LifecarePaymentRegistrationService {
 	private final LifecareErrandService errandService;
 	private final LifecareAccessRecorder accessRecorder;
 	private final LifecarePaymentApi paymentApi;
+	private final TransactionTemplate transactionTemplate;
 
-	LifecarePaymentRegistrationService(final LifecareErrandService errandService, final LifecareAccessRecorder accessRecorder, final LifecarePaymentApi paymentApi) {
+	LifecarePaymentRegistrationService(final LifecareErrandService errandService, final LifecareAccessRecorder accessRecorder, final LifecarePaymentApi paymentApi,
+		final PlatformTransactionManager transactionManager) {
 		this.errandService = errandService;
 		this.accessRecorder = accessRecorder;
 		this.paymentApi = paymentApi;
+		this.transactionTemplate = new TransactionTemplate(transactionManager);
 	}
 
 	/**
@@ -77,13 +83,18 @@ public class LifecarePaymentRegistrationService {
 			throw refuse("Personen har inget hushåll i Lifecare på utbetalningsdagen.");
 		}
 
-		final var duplicate = findRegisteredPayment(paymentApi.readLatestPayments(serviceId), body);
-		if (duplicate.isPresent()) {
-			throw Problem.valueOf(CONFLICT, "En likadan utbetalning finns redan i Lifecare (id %s): samma belopp, månad, konto och datum."
-				.formatted(integer(duplicate.get(), "paymentId")));
-		}
-
-		final var lifecareId = create(serviceId, body);
+		// The duplicate check and the create hold the errand's row lock together: a double click or a proxy retry waits
+		// here until the first one has registered, and its duplicate check then finds that payment. Linking stays
+		// outside, so a link that fails cannot roll back the answer for a payment already made.
+		final var lifecareId = transactionTemplate.execute(_ -> {
+			errandService.lock(errand);
+			final var duplicate = findRegisteredPayment(paymentApi.readLatestPayments(serviceId), body);
+			if (duplicate.isPresent()) {
+				throw Problem.valueOf(CONFLICT, "En likadan utbetalning finns redan i Lifecare (id %s): samma belopp, månad, konto och datum."
+					.formatted(integer(duplicate.get(), "paymentId")));
+			}
+			return create(serviceId, body);
+		});
 		final var linked = link(errand, lifecareId);
 		accessRecorder.written(errand, LifecareAccessEntry.CREATE, TARGET_PAYMENT, "Registrerade en utbetalning i Lifecare", lifecareId);
 		return new LifecarePaymentCreated(lifecareId, linked);
@@ -116,7 +127,7 @@ public class LifecarePaymentRegistrationService {
 			errandService.linkPayment(errand, lifecareId);
 			return true;
 		} catch (final RuntimeException e) {
-			LOG.error("Lifecare payment {} was registered but errand {} could not be linked to it ({})", lifecareId, errand.errandId(), e.getClass().getSimpleName());
+			LOG.error("Lifecare payment {} was registered but errand {} could not be linked to it ({})", lifecareId, sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 			return false;
 		}
 	}

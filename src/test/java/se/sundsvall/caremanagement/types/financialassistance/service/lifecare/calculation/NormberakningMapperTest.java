@@ -20,6 +20,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.NormberakningTypeOption;
 import tools.jackson.databind.node.ObjectNode;
 
+import static java.time.Month.SEPTEMBER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
@@ -52,9 +53,13 @@ class NormberakningMapperTest {
 		return forEdit;
 	}
 
+	private static ObjectNode householdCalculation() {
+		return forEdit(calculation(",\"householdSize\":2,\"amountForHouseholdSize\":1280,\"commonHouseholdCost\":1280"));
+	}
+
 	@Test
-	void showsLifecaresBeräkningInTheTabsDraftShape() {
-		final var view = NormberakningMapper.toLifecareDraftView(forEdit(calculation(",\"householdSize\":2,\"amountForHouseholdSize\":1280,\"commonHouseholdCost\":1280")), "2026-09");
+	void showsLifecaresBeräkningsHeaderInTheTabsDraftShape() {
+		final var view = NormberakningMapper.toLifecareDraftView(householdCalculation(), "2026-09");
 
 		assertThat(view.getSource()).isEqualTo("LIFECARE");
 		assertThat(view.getFinalized()).isFalse();
@@ -74,6 +79,12 @@ class NormberakningMapperTest {
 		assertThat(view.getFamilyMembers()).isEqualTo(1);
 		assertThat(view.getUpdated()).isEqualTo("2026-09-24");
 		assertThat(view.getApplicantJobStimulus()).isFalse();
+	}
+
+	@Test
+	void showsLifecaresBeräkningsPersonsInTheTabsDraftShape() {
+		final var view = NormberakningMapper.toLifecareDraftView(householdCalculation(), "2026-09");
+
 		assertThat(view.getPersons()).singleElement().satisfies(person -> {
 			assertThat(person.getId()).isEqualTo("1");
 			assertThat(person.getPersonalNumber()).isEqualTo("880209-T050");
@@ -85,6 +96,12 @@ class NormberakningMapperTest {
 			assertThat(person.getOrigin()).isEqualTo("CASEWORKER");
 			assertThat(person.getDeviationFromDate()).isNull();
 		});
+	}
+
+	@Test
+	void showsLifecaresBeräkningsIncomesAndExpensesInTheTabsDraftShape() {
+		final var view = NormberakningMapper.toLifecareDraftView(householdCalculation(), "2026-09");
+
 		assertThat(view.getIncomes()).singleElement().satisfies(income -> {
 			assertThat(income.getId()).isEqualTo("19");
 			assertThat(income.getTypeName()).isEqualTo("Aktivitetsstöd");
@@ -240,13 +257,13 @@ class NormberakningMapperTest {
 			.withNormId(1)
 			.withNormType(List.of("NATIONAL_NORM"))
 			.withNormTypeDisplayNames(List.of("Riksnorm"))
-			.withCalculationFromDate(LocalDate.of(2026, 9, 1))
-			.withCalculationToDate(LocalDate.of(2026, 9, 30))
-			.withCalculationDate(LocalDate.of(2026, 9, 24))
+			.withCalculationFromDate(LocalDate.of(2026, SEPTEMBER, 1))
+			.withCalculationToDate(LocalDate.of(2026, SEPTEMBER, 30))
+			.withCalculationDate(LocalDate.of(2026, SEPTEMBER, 24))
 			.withHasCustomHouseholdSize(true)
 			.withHouseholdSize(3)
 			.withPersons(List.of(NormPersonRow.create().withId("r1").withPartyId("p1").withRole("APPLICANT").withIncluded(true)
-				.withDeviationFromDate(LocalDate.of(2026, 9, 5)), NormPersonRow.create().withId("r2")))
+				.withDeviationFromDate(LocalDate.of(2026, SEPTEMBER, 5)), NormPersonRow.create().withId("r2")))
 			.withIncomes(List.of(NormIncomeRow.create().withId("i1").withApplicantAmountDate(created).withApplicantEffectiveAmount(BigDecimal.TEN)))
 			.withExpenses(List.of(NormExpenseRow.create().withId("x1").withBucket("EXPENSE").withCostType("RENT").withProcessAmount(BigDecimal.ONE)))
 			.withSpecialExpenses(null)
@@ -308,8 +325,8 @@ class NormberakningMapperTest {
 		assertThat(expense.getCostType()).isEqualTo("RENT");
 		assertThat(expense.getAppliedAmount()).isEqualTo(BigDecimal.TWO);
 		assertThat(expense.getSpecification()).isEqualTo("spec");
-		assertThat(person.getDeviationFromDate()).isEqualTo(LocalDate.of(2026, 9, 1));
-		assertThat(person.getDeviationToDate()).isEqualTo(LocalDate.of(2026, 9, 10));
+		assertThat(person.getDeviationFromDate()).isEqualTo(LocalDate.of(2026, SEPTEMBER, 1));
+		assertThat(person.getDeviationToDate()).isEqualTo(LocalDate.of(2026, SEPTEMBER, 10));
 		assertThat(person.getIncluded()).isTrue();
 		assertThat(person.getNormInterval()).isEqualTo("Barn 7-10");
 		assertThat(NormberakningMapper.toIncomeInput(NormberakningRowInput.create()).getApplicantAmountDate()).isNull();
@@ -317,8 +334,16 @@ class NormberakningMapperTest {
 	}
 
 	@Test
+	void readsAPlainAttributionDateAsTheStartOfThatDayInSweden() {
+		// The API documents "ISO date or date-time" and the Lifecare path takes both; the draft path now does too.
+		final var income = NormberakningMapper.toIncomeInput(NormberakningRowInput.create().withApplicantAmountDate("2026-09-02"));
+
+		assertThat(income.getApplicantAmountDate()).isEqualTo(OffsetDateTime.parse("2026-09-02T00:00:00+02:00"));
+	}
+
+	@Test
 	void refusesDatesCaremsDraftCannotRead() {
-		assertThatThrownBy(() -> NormberakningMapper.toIncomeInput(NormberakningRowInput.create().withApplicantAmountDate("2026-09-02")))
+		assertThatThrownBy(() -> NormberakningMapper.toIncomeInput(NormberakningRowInput.create().withApplicantAmountDate("2 september")))
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 		assertThatThrownBy(() -> NormberakningMapper.toPersonInput(NormberakningRowInput.create().withDeviationFromDate("2026-09-02T00:00:00Z")))
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);

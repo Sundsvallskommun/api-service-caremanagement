@@ -9,13 +9,11 @@ import se.sundsvall.caremanagement.document.api.model.DocumentType;
  *
  * <p>
  * Lifecare document types ("Typ"/Dokumenttyp) are configured per municipality (IFO-handbok §3.4.14), so this is
- * <em>not</em> an authoritative Sundsvall set and {@code Document.type} is intentionally not validated against it. It
- * exists so the frontend (Draken) has a dropdown source and a Lifecare label to select; in practice
- * the
- * served catalogue is the seeded {@code DOCUMENT_TYPE} lookups for the namespace, falling back to this set when none
- * are
- * seeded. The Lifecare screens showed Sundsvall-specific labels ("BE Dokument", "BE Brev"); the generic types below are
- * common IFO document types, provisional until the real Sundsvall configuration is seeded.
+ * <em>not</em> an authoritative Sundsvall set. It exists so the Draken template admin has a dropdown source and a
+ * Lifecare label to select; in practice the served catalogue is the seeded {@code DOCUMENT_TYPE} lookups for the
+ * namespace, falling back to this set when none are seeded. The Lifecare screens showed Sundsvall-specific labels
+ * ("BE Dokument", "BE Brev"); the generic types below are common IFO document types, provisional until the real
+ * Sundsvall configuration is seeded.
  * </p>
  */
 public final class DocumentTypes {

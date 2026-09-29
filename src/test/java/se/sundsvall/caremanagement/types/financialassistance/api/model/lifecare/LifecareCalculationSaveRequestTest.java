@@ -29,7 +29,7 @@ class LifecareCalculationSaveRequestTest {
 			.withFinalize(true);
 
 		assertThat(bean).hasNoNullFieldsOrProperties();
-		assertThat(bean.getFinalize()).isEqualTo(true);
+		assertThat(bean.getFinalize()).isTrue();
 	}
 
 	@Test

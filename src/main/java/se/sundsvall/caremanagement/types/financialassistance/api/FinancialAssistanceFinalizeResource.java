@@ -61,8 +61,8 @@ class FinancialAssistanceFinalizeResource {
 			Lifecare (lifecareDecisionId) and record that: its outcome from the beslutstyp's category, orsak, period, amount \
 			and beslutsmeddelande; 400 when no beslut is saved or its beslutstyp cannot be finalized, 422 when the beslut breaks \
 			the decision's rules. The recorded decision is receipted against the Lifecare beslut in the same call (marked \
-			SYNCED with lifecareId, reported as lifecareDecision), so posting .../lifecare-result afterwards is no longer \
-			needed (and harmless). Creates no payments: Draken registers them directly in Lifecare. Every outcome requires \
+			SYNCED with lifecareId, reported as lifecareDecision). Creates no payments: they are registered in Lifecare \
+			beforehand through the errand's /lifecare/payments route. Every outcome requires \
 			the beslut to be saved in Lifecare and linked as lifecareDecisionId; a BIFALL/DELAVSLAG also requires the \
 			normberäkning saved in Lifecare and linked as lifecareCalculationId, otherwise 409. An AVSLAG linked to Lifecare \
 			payments (lifecarePaymentIds) is refused with 409. A decision on a normberäkning linked as lifecareCalculationId \
@@ -82,7 +82,7 @@ class FinancialAssistanceFinalizeResource {
 				description = "Bad Gateway - Lifecare could not be read",
 				content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
-	ResponseEntity<FinalizeResponse> finalize(
+	ResponseEntity<FinalizeResponse> finalizeErrand(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId,
@@ -90,6 +90,6 @@ class FinancialAssistanceFinalizeResource {
 
 		// The decider is the authenticated caseworker (X-Sent-By), not a client-supplied field, so it can't be spoofed.
 		final var decidedBy = Optional.ofNullable(Identifier.get()).map(Identifier::getValue).orElse(null);
-		return ok(finalizeService.finalize(municipalityId, namespace, errandId, request, decidedBy));
+		return ok(finalizeService.finalizeErrand(municipalityId, namespace, errandId, request, decidedBy));
 	}
 }

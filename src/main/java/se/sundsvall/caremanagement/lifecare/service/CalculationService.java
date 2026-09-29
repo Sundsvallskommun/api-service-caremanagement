@@ -174,7 +174,7 @@ public class CalculationService {
 		try {
 			return lifecareCaseService.previousCalculationIncomeTypes(municipalityId, applicantPartyId, applicationMonth);
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the previous month's calculation — transferring the comparison period unfiltered", e);
+			LOG.warn("Could not read the previous month's calculation — transferring the comparison period unfiltered ({})", e.getClass().getSimpleName());
 			return List.of();
 		}
 	}
@@ -333,7 +333,7 @@ public class CalculationService {
 			final var previousTypes = lifecareCaseService.previousCalculationIncomeTypes(municipalityId, applicantPartyId, applicationMonth);
 			return ClassifiedIncomeToFamilyCareMapper.missingPreviousIncomeTypes(previousTypes, classified, proposal);
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not determine calculation completeness against the previous month — treating as complete", e);
+			LOG.warn("Could not determine calculation completeness against the previous month — treating as complete ({})", e.getClass().getSimpleName());
 			return List.of();
 		}
 	}

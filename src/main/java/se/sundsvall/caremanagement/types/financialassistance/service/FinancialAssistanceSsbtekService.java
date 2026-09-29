@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -110,7 +111,7 @@ public class FinancialAssistanceSsbtekService {
 		if (from != null) {
 			return from;
 		}
-		final var lastMonth = ofNullable(to).map(YearMonth::from).orElseGet(YearMonth::now);
+		final var lastMonth = ofNullable(to).map(YearMonth::from).orElseGet(() -> YearMonth.now(ZoneId.systemDefault()));
 		return lastMonth.minusMonths(RULE_PERIOD_LOOKBACK_MONTHS).atDay(1);
 	}
 
@@ -119,7 +120,7 @@ public class FinancialAssistanceSsbtekService {
 		if (to != null) {
 			return to;
 		}
-		final var firstMonth = ofNullable(from).map(YearMonth::from).orElseGet(() -> YearMonth.now().minusMonths(RULE_PERIOD_LOOKBACK_MONTHS));
+		final var firstMonth = ofNullable(from).map(YearMonth::from).orElseGet(() -> YearMonth.now(ZoneId.systemDefault()).minusMonths(RULE_PERIOD_LOOKBACK_MONTHS));
 		return firstMonth.plusMonths(RULE_PERIOD_LOOKBACK_MONTHS).atEndOfMonth();
 	}
 

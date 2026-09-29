@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,7 +61,7 @@ class LifecareDecisionServiceTest {
 		  ]
 		}""";
 
-	private static final LifecareDecisionSaveRequest BIFALL = new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30),
+	private static final LifecareDecisionSaveRequest BIFALL = new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
 		new BigDecimal("3000"), 19, "<p>Beslut</p>", null);
 
 	@Mock
@@ -174,7 +175,7 @@ class LifecareDecisionServiceTest {
 		when(lifecareMock.update(eq(98), bodyCaptor.capture())).thenReturn(changed);
 
 		final var view = service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), new BigDecimal("3000"), 19, "<p>Ändrat</p>", false));
+			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, "<p>Ändrat</p>", false));
 
 		verify(lifecareMock, never()).create(anyInt(), any());
 		assertThat(bodyCaptor.getValue().path("decisionId").asInt()).isEqualTo(98);
@@ -196,7 +197,7 @@ class LifecareDecisionServiceTest {
 		when(lifecareMock.update(eq(98), bodyCaptor.capture())).thenReturn(locked);
 
 		final var view = service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), new BigDecimal("3000"), 19, "<p>Beslut</p>", true));
+			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, "<p>Beslut</p>", true));
 
 		assertThat(bodyCaptor.getValue().path("lockedMessage").booleanValue()).isTrue();
 		verify(accessRecorderMock).written(errand, "UPDATE", "DECISION", "Ändrade och skrivskyddade beslutet i Lifecare", "98");
@@ -212,7 +213,7 @@ class LifecareDecisionServiceTest {
 		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
 
 		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), new BigDecimal("3000"), 19, null, true));
+			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, null, true));
 
 		verify(accessRecorderMock).written(errand, "CREATE", "DECISION", "Registrerade och skrivskyddade beslutet i Lifecare", "98");
 	}

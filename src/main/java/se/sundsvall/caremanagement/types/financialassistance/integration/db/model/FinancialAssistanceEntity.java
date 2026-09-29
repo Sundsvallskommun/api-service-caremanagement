@@ -28,8 +28,9 @@ import static org.hibernate.Length.LONG32;
  * <p>
  * {@code @DynamicUpdate}: an update writes only the columns that changed. The row has several writers that hold it
  * for seconds at a time — the daily prepare loads it, reads Lifecare and SSBTEK, then stamps {@code lastDailyRunAt}
- * — while Draken's BFF sets {@code lifecareCalculationId} / {@code lifecareDecisionId} through its PATCH. Writing
- * every column would put the stale {@code null} the prepare loaded back over the id the BFF saved in between.
+ * — while the caseworker's saves through the errand's /lifecare routes (or a PATCH of the data) link
+ * {@code lifecareCalculationId} / {@code lifecareDecisionId}. Writing every column would put the stale {@code null}
+ * the prepare loaded back over the id linked in between.
  */
 @Entity
 @DynamicUpdate
@@ -134,16 +135,17 @@ public class FinancialAssistanceEntity implements Auditable {
 	private Integer lifecareDecisionId;
 
 	/**
-	 * The Lifecare normberäkning (calculation) id the errand concerns, set by the caseworker once Draken has saved the
-	 * calculation in Lifecare. A key only. While set, the Lifecare calculation is the truth and prepare no longer
-	 * refreshes careM's calculation draft.
+	 * The Lifecare normberäkning (calculation) id the errand concerns, set when the daily prepare or careM's /lifecare
+	 * calculation route creates the calculation in Lifecare. A key only. While set, the Lifecare calculation is the
+	 * truth and prepare no longer refreshes careM's calculation draft.
 	 */
 	@Column(name = "lifecare_calculation_id")
 	private Integer lifecareCalculationId;
 
 	/**
-	 * The Lifecare payment (utbetalning) ids a bifall pays with, set by the caseworker once Draken has registered each
-	 * payment in Lifecare. Keys only: whether a payment is registered or paid out is read from Lifecare, never stored.
+	 * The Lifecare payment (utbetalning) ids a bifall pays with, set when careM registers each payment in Lifecare
+	 * through the errand's /lifecare/payments route, or when payment-status finds them paid on the errand's insats.
+	 * Keys only: whether a payment is registered or paid out is read from Lifecare, never stored.
 	 */
 	@ElementCollection
 	@CollectionTable(name = "errand_fa_lifecare_payment", joinColumns = @JoinColumn(name = "errand_id"))

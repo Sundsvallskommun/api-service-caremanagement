@@ -27,7 +27,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -164,7 +163,6 @@ class ErrandEventInterceptorTest {
 			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands"),
 			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/metadata"),
 			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/events"),
-			arguments("POST", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/events/lifecare"),
 			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/unread-count"),
 			arguments("POST", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/messages/read"),
 			arguments("GET", "/2281/FINANCIAL_ASSISTANCE/errands/" + ERRAND_ID + "/notes/count"),
@@ -221,16 +219,17 @@ class ErrandEventInterceptorTest {
 
 		interceptor().afterCompletion(requestMock, responseMock, new Object(), null);
 
-		final var captor = ArgumentCaptor.forClass(ErrandEventEntity.class);
-		verify(serviceMock, times(2)).recordEvent(captor.capture());
+		@SuppressWarnings("unchecked")
+		final ArgumentCaptor<List<ErrandEventEntity>> captor = ArgumentCaptor.forClass(List.class);
+		verify(serviceMock).recordEvents(captor.capture());
 
-		assertThat(captor.getAllValues())
+		assertThat(captor.getValue())
 			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getTarget, ErrandEventEntity::getAction, ErrandEventEntity::getActor)
 			.containsExactly(
 				tuple(HIT_ONE, "errands/search", "READ", "joe001doe"),
 				tuple(HIT_TWO, "errands/search", "READ", "joe001doe"));
 		// The row has to say it was a list sighting, not an opened case — the two are different disclosures.
-		assertThat(captor.getAllValues()).allSatisfy(entity -> assertThat(entity.getDescription()).isEqualTo("Såg ärendet i en sökträfflista (2 träffar)"));
+		assertThat(captor.getValue()).allSatisfy(entity -> assertThat(entity.getDescription()).isEqualTo("Såg ärendet i en sökträfflista (2 träffar)"));
 	}
 
 	@Test

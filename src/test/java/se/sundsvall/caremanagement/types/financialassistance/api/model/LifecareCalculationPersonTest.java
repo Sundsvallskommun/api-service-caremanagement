@@ -27,13 +27,11 @@ class LifecareCalculationPersonTest {
 	@Test
 	void testBuilderMethods() {
 		final var person = LifecareCalculationPerson.create()
-			.withPersonId("200001011234")
 			.withName("Anna Andersson")
 			.withAmount(BigDecimal.valueOf(4500.0))
 			.withDeviationFromDate("2026-06-01")
 			.withDeviationToDate("2026-06-30");
 
-		assertThat(person.getPersonId()).isEqualTo("200001011234");
 		assertThat(person.getName()).isEqualTo("Anna Andersson");
 		assertThat(person.getAmount()).isEqualTo(BigDecimal.valueOf(4500.0));
 		assertThat(person.getDeviationFromDate()).isEqualTo("2026-06-01");

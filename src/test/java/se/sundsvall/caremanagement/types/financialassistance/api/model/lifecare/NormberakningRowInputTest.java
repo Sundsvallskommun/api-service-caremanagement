@@ -67,7 +67,7 @@ class NormberakningRowInputTest {
 		assertThat(bean.getRole()).isEqualTo("value");
 		assertThat(bean.getName()).isEqualTo("value");
 		assertThat(bean.getCaseworkerDays()).isEqualTo(1);
-		assertThat(bean.getIncluded()).isEqualTo(true);
+		assertThat(bean.getIncluded()).isTrue();
 		assertThat(bean.getDeviationFromDate()).isEqualTo("value");
 		assertThat(bean.getDeviationToDate()).isEqualTo("value");
 		assertThat(bean.getNormInterval()).isEqualTo("value");

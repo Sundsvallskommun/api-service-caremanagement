@@ -28,9 +28,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
  * <p>
  * A finalize request without a decision is completed from the beslut the errand is linked to in Lifecare
  * ({@code lifecareDecisionId}): its outcome (from the beslutstyp's category), orsak, period, amount (0 for an avslag)
- * and beslutsmeddelande, as the Draken BFF built the request before. A request that carries a decision is finalized as
- * it is, so a client that still reads the beslut itself keeps working. Either way the Lifecare read happens here,
- * outside the finalize transaction, so no database transaction waits on Lifecare.
+ * and beslutsmeddelande. A request that carries a decision is finalized as it is. Either way the Lifecare read happens
+ * here, outside the finalize transaction, so no database transaction waits on Lifecare.
  * </p>
  */
 @Service
@@ -67,10 +66,10 @@ public class LifecareFinalizeService {
 	 * @param  decidedBy      the caseworker (X-Sent-By)
 	 * @return                the receipt
 	 */
-	public FinalizeResponse finalize(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request,
+	public FinalizeResponse finalizeErrand(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request,
 		final String decidedBy) {
 		if (request.getDecision() != null) {
-			return finalizeService.finalize(municipalityId, namespace, errandId, request, decidedBy);
+			return finalizeService.finalizeErrand(municipalityId, namespace, errandId, request, decidedBy);
 		}
 		if (!hasText(decidedBy)) {
 			throw Problem.valueOf(BAD_REQUEST, ERROR_NO_DECIDER);
@@ -80,7 +79,7 @@ public class LifecareFinalizeService {
 			.withCommunication(request.getCommunication())
 			.withHouseholdSizeChanged(request.getHouseholdSizeChanged());
 		requireValid(completed);
-		return finalizeService.finalize(municipalityId, namespace, errandId, completed, decidedBy);
+		return finalizeService.finalizeErrand(municipalityId, namespace, errandId, completed, decidedBy);
 	}
 
 	private FinalizeDecision decisionFromLifecare(final String municipalityId, final String namespace, final String errandId) {

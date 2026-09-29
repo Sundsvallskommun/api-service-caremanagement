@@ -28,6 +28,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
+import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -403,7 +404,7 @@ class LifecareFamilyCareIntegrationTest {
 			9, 8, 7
 		};
 
-		integration.postActualisationAttachment(MUNICIPALITY_ID, 4711, "DOC", "SENDER", "Title", "Sender", "EB-1_meddelandehistorik.pdf", content);
+		integration.postActualisationAttachment(MUNICIPALITY_ID, 4711, new AttachmentUpload("DOC", "SENDER", "Title", "Sender", "EB-1_meddelandehistorik.pdf", content));
 
 		final ArgumentCaptor<MultipartFile> fileCaptor = ArgumentCaptor.forClass(MultipartFile.class);
 		verify(clientMock).postActualisationAttachment(eq(4711), eq("DOC"), eq("SENDER"), eq("Title"), eq("Sender"), fileCaptor.capture());
@@ -419,9 +420,9 @@ class LifecareFamilyCareIntegrationTest {
 		doThrow(new RuntimeException("connection reset")).when(clientMock)
 			.postActualisationAttachment(eq(4711), any(), any(), any(), any(), any());
 
-		assertThatThrownBy(() -> integration.postActualisationAttachment(MUNICIPALITY_ID, 4711, "DOC", "SENDER", "Title", "Sender", "f.pdf", new byte[] {
+		assertThatThrownBy(() -> integration.postActualisationAttachment(MUNICIPALITY_ID, 4711, new AttachmentUpload("DOC", "SENDER", "Title", "Sender", "f.pdf", new byte[] {
 			1
-		}))
+		})))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())

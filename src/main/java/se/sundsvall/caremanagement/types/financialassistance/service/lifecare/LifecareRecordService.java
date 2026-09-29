@@ -36,7 +36,6 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.JOURNAL_NOTE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.activeNoteTypes;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.applyRecordEdit;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.containsRecord;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.findRecord;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.isEditable;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareRecordMapper.textRecordIds;
@@ -249,9 +248,9 @@ public class LifecareRecordService {
 
 		final var created = client.post(PATH_CREATE_NOTE, Map.of(),
 			toJournalNoteBody(requireObject(proposal.path("documentJournalNote"), PATH_NOTE_PROPOSAL), noteType, request));
-		final var record = toRecord(created, JOURNAL_NOTE);
-		recorder.written(errand, LifecareAccessEntry.CREATE, JOURNAL_NOTE, "Skrev en journalanteckning i Lifecare", record.getId());
-		return record;
+		final var journalNote = toRecord(created, JOURNAL_NOTE);
+		recorder.written(errand, LifecareAccessEntry.CREATE, JOURNAL_NOTE, "Skrev en journalanteckning i Lifecare", journalNote.getId());
+		return journalNote;
 	}
 
 	/**
@@ -275,9 +274,9 @@ public class LifecareRecordService {
 
 		final var created = client.post(PATH_CREATE_DOCUMENT, Map.of(),
 			toDocumentBody(requireObject(proposal.path("document"), PATH_DOCUMENT_PROPOSAL), documentType, request));
-		final var record = toRecord(created, DOCUMENT);
-		recorder.written(errand, LifecareAccessEntry.CREATE, DOCUMENT, "Skrev ett dokument i Lifecare", record.getId());
-		return record;
+		final var document = toRecord(created, DOCUMENT);
+		recorder.written(errand, LifecareAccessEntry.CREATE, DOCUMENT, "Skrev ett dokument i Lifecare", document.getId());
+		return document;
 	}
 
 	/**
@@ -296,8 +295,8 @@ public class LifecareRecordService {
 
 	private LifecareRecordBody readBody(final Kind kind, final String id) {
 		try {
-			final var record = client.get(kind.readPath(), params(id, "true", "false"));
-			final var content = text(record.path("content"));
+			final var body = client.get(kind.readPath(), params(id, "true", "false"));
+			final var content = text(body.path("content"));
 			if (content == null) {
 				return LifecareRecordBody.create().withId(id).withContent("");
 			}
@@ -310,7 +309,7 @@ public class LifecareRecordService {
 
 	private LifecareRecordContent read(final String municipalityId, final String namespace, final String errandId, final int id, final Kind kind) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		assertTheClients(errand, id);
+		assertTheClients(errand, id, kind);
 		final var content = toRecordContent(readEditable(kind, id), kind.category());
 		recorder.read(errand, kind.category(), kind.readDescription(), String.valueOf(id));
 		return content;
@@ -324,12 +323,12 @@ public class LifecareRecordService {
 	private LifecareRecordContent update(final String municipalityId, final String namespace, final String errandId, final int id,
 		final UpdateLifecareRecordRequest edit, final Kind kind) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		assertTheClients(errand, id);
-		final var record = readEditable(kind, id);
-		if (!isEditable(record)) {
+		assertTheClients(errand, id, kind);
+		final var editable = readEditable(kind, id);
+		if (!isEditable(editable)) {
 			throw Problem.valueOf(CONFLICT, FINALISED);
 		}
-		final var updated = applyRecordEdit(record, edit);
+		final var updated = applyRecordEdit(editable, edit);
 		client.post(kind.updatePath(), Map.of(), updated);
 		recorder.written(errand, LifecareAccessEntry.UPDATE, kind.category(), kind.updateDescription(), String.valueOf(id));
 		return toRecordContent(updated, kind.category());
@@ -342,8 +341,12 @@ public class LifecareRecordService {
 		return requireObject(client.get(kind.readPath(), params(String.valueOf(id), "false", "true")), kind.readPath());
 	}
 
-	private void assertTheClients(final LifecareErrand errand, final int id) {
-		if (!containsRecord(readList(errand), id)) {
+	/**
+	 * The record must be the applicant's and of the kind the route reads — a document id must not pass as a journal note
+	 * the kind-specific Lifecare endpoint would then fetch whatever it is.
+	 */
+	private void assertTheClients(final LifecareErrand errand, final int id, final Kind kind) {
+		if (findRecord(readList(errand), id, kind.category()).isEmpty()) {
 			throw Problem.valueOf(NOT_FOUND, NOT_THE_CLIENTS);
 		}
 	}

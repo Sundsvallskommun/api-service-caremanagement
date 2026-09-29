@@ -70,6 +70,9 @@ public class NormberakningRowInput {
 	@Schema(description = "Person: the role (careM draft only)", allowableValues = {
 		"APPLICANT", "CO_APPLICANT", "CHILD", "VISITATION_CHILD"
 	})
+	@OneOf(value = {
+		"APPLICANT", "CO_APPLICANT", "CHILD", "VISITATION_CHILD"
+	}, nullable = true)
 	private String role;
 
 	@Schema(description = "Person: the name (careM draft only)")

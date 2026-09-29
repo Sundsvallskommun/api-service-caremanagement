@@ -87,7 +87,11 @@ public record ProfessionalWebProperties(
 		if (!isConfigured()) {
 			return "";
 		}
-		return url.replaceAll("/+$", "");
+		var end = url.length();
+		while (end > 0 && url.charAt(end - 1) == '/') {
+			end--;
+		}
+		return url.substring(0, end);
 	}
 
 	/**

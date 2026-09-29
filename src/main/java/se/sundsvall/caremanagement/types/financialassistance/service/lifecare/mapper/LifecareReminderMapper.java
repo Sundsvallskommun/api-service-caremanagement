@@ -28,6 +28,11 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
  */
 public final class LifecareReminderMapper {
 
+	private static final String FIELD_REMINDER_DATE = "reminderDate";
+	private static final String FIELD_STATUS = "status";
+	private static final String FIELD_PRIORITY = "priority";
+	private static final String FIELD_CASEWORKER_ID = "caseworkerId";
+
 	private LifecareReminderMapper() {}
 
 	/**
@@ -61,18 +66,18 @@ public final class LifecareReminderMapper {
 	static LifecareReminder toReminder(final JsonNode reminder) {
 		return LifecareReminder.create()
 			.withId(integer(reminder.path("reminderId")))
-			.withDate(text(reminder.path("reminderDate")))
+			.withDate(text(reminder.path(FIELD_REMINDER_DATE)))
 			.withStatus(textOrEmpty(reminder.path("statusText")))
-			.withStatusCode(integer(reminder.path("status")))
+			.withStatusCode(integer(reminder.path(FIELD_STATUS)))
 			.withPriority(textOrEmpty(reminder.path("priorityText")))
-			.withPriorityCode(integer(reminder.path("priority")))
+			.withPriorityCode(integer(reminder.path(FIELD_PRIORITY)))
 			.withType(textOrEmpty(reminder.path("typeText")))
 			.withObjectType(textOrEmpty(reminder.path("objectTypeName")))
 			.withText(textOrEmpty(reminder.path("text")))
 			.withCaseworker(Optional.ofNullable(text(reminder.path("caseworkerName")))
-				.or(() -> Optional.ofNullable(text(reminder.path("caseworkerId"))))
+				.or(() -> Optional.ofNullable(text(reminder.path(FIELD_CASEWORKER_ID))))
 				.orElse(""))
-			.withCaseworkerId(textOrEmpty(reminder.path("caseworkerId")));
+			.withCaseworkerId(textOrEmpty(reminder.path(FIELD_CASEWORKER_ID)));
 	}
 
 	/**
@@ -88,8 +93,8 @@ public final class LifecareReminderMapper {
 		return LifecareReminderOptions.create()
 			.withPriorities(toChoices(options.path("reminderPriorityTypes")))
 			.withStatuses(toChoices(options.path("reminderStatusTypes")))
-			.withDefaultPriority(integer(blank.path("priority")))
-			.withDefaultStatus(integer(blank.path("status")));
+			.withDefaultPriority(integer(blank.path(FIELD_PRIORITY)))
+			.withDefaultStatus(integer(blank.path(FIELD_STATUS)));
 	}
 
 	private static List<LifecareReminderChoice> toChoices(final JsonNode codes) {
@@ -135,11 +140,11 @@ public final class LifecareReminderMapper {
 		body.put("objectId", target.objectId());
 		body.put("personId", personId);
 		body.put("personName", personName);
-		body.put("caseworkerId", target.caseworkerId());
+		body.put(FIELD_CASEWORKER_ID, target.caseworkerId());
 		body.put("caseworkerName", target.caseworkerName());
-		body.put("reminderDate", request.getReminderDate());
-		body.put("status", request.getStatus());
-		body.put("priority", request.getPriority());
+		body.put(FIELD_REMINDER_DATE, request.getReminderDate());
+		body.put(FIELD_STATUS, request.getStatus());
+		body.put(FIELD_PRIORITY, request.getPriority());
 		body.put("type", target.type());
 		body.put("typeText", target.typeText());
 		body.put("text", request.getText());
@@ -168,10 +173,10 @@ public final class LifecareReminderMapper {
 		body.put("isDateDirty", dateChanged);
 		body.setAll(current.deepCopy());
 		body.put("isDateDirty", dateChanged);
-		body.put("reminderDate", request.getReminderDate());
-		body.put("status", request.getStatus());
+		body.put(FIELD_REMINDER_DATE, request.getReminderDate());
+		body.put(FIELD_STATUS, request.getStatus());
 		body.put("statusText", statusText);
-		body.put("priority", request.getPriority());
+		body.put(FIELD_PRIORITY, request.getPriority());
 		body.put("priorityText", priorityText);
 		body.put("text", request.getText());
 		return body;

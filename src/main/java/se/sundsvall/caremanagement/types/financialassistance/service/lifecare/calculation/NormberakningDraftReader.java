@@ -15,6 +15,8 @@ import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAs
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareErrand;
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.DraftPerson;
 
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
+
 /**
  * careM's draft normberäkning with the personnummer of its persons, which the caseworker identifies a member by and a
  * Lifecare household member is matched on. The personnummer are resolved best-effort: a person the citizen service
@@ -61,7 +63,7 @@ class NormberakningDraftReader {
 			return Optional.ofNullable(calculationService.getDraft(errand.municipalityId(), errand.namespace(), errand.errandId()).getCalculationFromDate())
 				.map(Object::toString);
 		} catch (final RuntimeException e) {
-			LOG.info("No draft period for errand {} ({})", errand.errandId(), e.getClass().getSimpleName());
+			LOG.info("No draft period for errand {} ({})", sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 			return Optional.empty();
 		}
 	}

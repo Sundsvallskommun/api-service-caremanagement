@@ -33,7 +33,7 @@ class LifecareNoteTypeTest {
 		assertThat(result).hasNoNullFieldsOrProperties();
 		assertThat(result.getCode()).isEqualTo(1);
 		assertThat(result.getName()).isEqualTo("Journalanteckning");
-		assertThat(result.getProtectedByDefault()).isEqualTo(true);
+		assertThat(result.getProtectedByDefault()).isTrue();
 	}
 
 	@Test

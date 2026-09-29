@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,13 +36,13 @@ import static org.mockito.Mockito.when;
 class PeriodRuleFeederTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
-	private static final YearMonth CONTROL_MONTH = YearMonth.of(2026, 9);
+	private static final YearMonth CONTROL_MONTH = YearMonth.of(2026, Month.SEPTEMBER);
 	private static final String W1 = "Det finns ekonomiskt beslut hos Arbetsförmedlingen och 450 dagar är inte förbrukade men det saknas utbetalning i SSBTEK denna månad";
 	private static final String W2 = "Det finns ekonomiskt beslut hos Arbetsförmedlingen och 450 dagar är inte förbrukade men antal utbetalda dagar stämmer inte överens med icke-röda dagar föregående månad";
 
 	/** AF decision covering the control month, FK days left: the gate is open. */
 	private static final DayCheckBasis OPEN_GATE = DayCheckBasis.create()
-		.withEconomicDecisionPeriods(List.of(new EconomicDecisionPeriod(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 12, 31))))
+		.withEconomicDecisionPeriods(List.of(new EconomicDecisionPeriod(LocalDate.of(2026, Month.AUGUST, 1), LocalDate.of(2026, Month.DECEMBER, 31))))
 		.withConsumedDays(212)
 		.withAllDaysConsumed(false);
 
@@ -73,7 +74,7 @@ class PeriodRuleFeederTest {
 	void anotherIncomeIsNotAPayment() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(PeriodVerdict.none());
 		final var housingAllowance = control(income("Bostadsbidrag", "Bostadsbidrag", "Bostadsbidrag",
-			LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(12)));
+			LocalDate.of(2026, Month.AUGUST, 1), LocalDate.of(2026, Month.AUGUST, 31), BigDecimal.valueOf(12)));
 
 		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(housingAllowance), OPEN_GATE)).isEmpty();
 		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, false, null, null, null, null));
@@ -82,7 +83,7 @@ class PeriodRuleFeederTest {
 	@Test
 	void aComparisonPeriodPaymentIsNotAControlMonthPayment() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(PeriodVerdict.none());
-		final var lastMonths = comparison(dayBenefit(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31), BigDecimal.valueOf(23)));
+		final var lastMonths = comparison(dayBenefit(LocalDate.of(2026, Month.JULY, 1), LocalDate.of(2026, Month.JULY, 31), BigDecimal.valueOf(23)));
 
 		feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(lastMonths), OPEN_GATE);
 
@@ -95,7 +96,7 @@ class PeriodRuleFeederTest {
 		// checked nor mistaken for the aktivitetsstöd the table asks about.
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(PeriodVerdict.none());
 		final var parental = control(income("Dagersättning", "Föräldrapenning", "Föräldrapenning",
-			LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(3)));
+			LocalDate.of(2026, Month.AUGUST, 1), LocalDate.of(2026, Month.AUGUST, 31), BigDecimal.valueOf(3)));
 
 		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(parental), OPEN_GATE)).isEmpty();
 		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, false, null, null, null, null));
@@ -106,7 +107,7 @@ class PeriodRuleFeederTest {
 		// FK splitting a payment across several utbetalningsdetalj rows leaves sub-benefit and amount type null, so it
 		// cannot be routed. It may well be the aktivitetsstöd - claiming it is missing would be a fabricated finding.
 		final var split = control(income("Dagersättning", null, null,
-			LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(21)));
+			LocalDate.of(2026, Month.AUGUST, 1), LocalDate.of(2026, Month.AUGUST, 31), BigDecimal.valueOf(21)));
 
 		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(split), OPEN_GATE)).isEmpty();
 		verifyNoInteractions(periodRulesServiceMock);
@@ -128,7 +129,7 @@ class PeriodRuleFeederTest {
 	void aWholeMonthPaymentIsComparedWithTheNonRedDaysOfTheMonthItCovers() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(new PeriodVerdict(true, W2));
 		// Paid in September (the control month), covering August: August 2026 has 21 non-red days and no eve.
-		final var payment = control(dayBenefit(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(21.5)));
+		final var payment = control(dayBenefit(LocalDate.of(2026, Month.AUGUST, 1), LocalDate.of(2026, Month.AUGUST, 31), BigDecimal.valueOf(21.5)));
 
 		final var warnings = feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(payment), OPEN_GATE);
 
@@ -143,10 +144,10 @@ class PeriodRuleFeederTest {
 	@Test
 	void midsommaraftonIsAnErsattningsdag() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(PeriodVerdict.none());
-		final var payment = control(dayBenefit(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30), BigDecimal.valueOf(22)));
+		final var payment = control(dayBenefit(LocalDate.of(2026, Month.JUNE, 1), LocalDate.of(2026, Month.JUNE, 30), BigDecimal.valueOf(22)));
 
-		feeder.periodWarnings(MUNICIPALITY_ID, YearMonth.of(2026, 7), List.of(payment),
-			DayCheckBasis.create().withEconomicDecisionPeriods(List.of(period(LocalDate.of(2026, 6, 1), null))).withAllDaysConsumed(false));
+		feeder.periodWarnings(MUNICIPALITY_ID, YearMonth.of(2026, Month.JULY), List.of(payment),
+			DayCheckBasis.create().withEconomicDecisionPeriods(List.of(period(LocalDate.of(2026, Month.JUNE, 1), null))).withAllDaysConsumed(false));
 
 		// June 2026: 22 non-red days with midsommarafton (Friday 19th) an ordinary day - decided 2026-09-23, no tolerance left.
 		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(22), 22, 22));
@@ -155,10 +156,10 @@ class PeriodRuleFeederTest {
 	@Test
 	void julaftonAndNyarsaftonAreErsattningsdagar() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(PeriodVerdict.none());
-		final var payment = control(dayBenefit(LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31), BigDecimal.valueOf(22)));
+		final var payment = control(dayBenefit(LocalDate.of(2026, Month.DECEMBER, 1), LocalDate.of(2026, Month.DECEMBER, 31), BigDecimal.valueOf(22)));
 
-		feeder.periodWarnings(MUNICIPALITY_ID, YearMonth.of(2027, 1), List.of(payment),
-			DayCheckBasis.create().withEconomicDecisionPeriods(List.of(period(LocalDate.of(2026, 8, 1), null))).withAllDaysConsumed(false));
+		feeder.periodWarnings(MUNICIPALITY_ID, YearMonth.of(2027, Month.JANUARY), List.of(payment),
+			DayCheckBasis.create().withEconomicDecisionPeriods(List.of(period(LocalDate.of(2026, Month.AUGUST, 1), null))).withAllDaysConsumed(false));
 
 		// Decided in verksamhetens svar 2026-09-24 section 1: December has one exact count, with both eves as ordinary days.
 		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(22), 22, 22));
@@ -167,7 +168,7 @@ class PeriodRuleFeederTest {
 	@Test
 	void aPeriodSpanningTwoMonthsIsUnreadable() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(new PeriodVerdict(true, "Gick ej att läsa ut antal dagar"));
-		final var payment = control(dayBenefit(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(40)));
+		final var payment = control(dayBenefit(LocalDate.of(2026, Month.JULY, 1), LocalDate.of(2026, Month.AUGUST, 31), BigDecimal.valueOf(40)));
 
 		final var warnings = feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(payment), OPEN_GATE);
 
@@ -179,7 +180,7 @@ class PeriodRuleFeederTest {
 	void aMissingPeriodIsUnreadableAndKeyedOnThePaymentDate() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(new PeriodVerdict(true, "Gick ej att läsa ut antal dagar"));
 		final var payment = control(new SsbtekIncome("Dagersättning", "Arbetsmarknadspolitiskt program", "Aktivitetsstöd",
-			BigDecimal.valueOf(5000), LocalDate.of(2026, 9, 25), null, null, BigDecimal.valueOf(22), ApplicantRole.APPLICANT));
+			BigDecimal.valueOf(5000), LocalDate.of(2026, Month.SEPTEMBER, 25), null, null, BigDecimal.valueOf(22), ApplicantRole.APPLICANT));
 
 		final var warnings = feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(payment), OPEN_GATE);
 
@@ -202,9 +203,9 @@ class PeriodRuleFeederTest {
 		when(periodRulesServiceMock.dayCheck(any(), any()))
 			.thenReturn(new PeriodVerdict(true, W2))
 			.thenReturn(PeriodVerdict.none());
-		final var first = control(dayBenefit(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(20)));
+		final var first = control(dayBenefit(LocalDate.of(2026, Month.AUGUST, 1), LocalDate.of(2026, Month.AUGUST, 31), BigDecimal.valueOf(20)));
 		final var second = control(income("Dagersättning", "Dagersättning", "Utvecklingsersättning",
-			LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30), BigDecimal.valueOf(24)));
+			LocalDate.of(2026, Month.JUNE, 1), LocalDate.of(2026, Month.JUNE, 30), BigDecimal.valueOf(24)));
 
 		final var warnings = feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(first, second), OPEN_GATE);
 
@@ -216,7 +217,7 @@ class PeriodRuleFeederTest {
 	void selectionIsCaseAndWhitespaceInsensitive() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(new PeriodVerdict(true, W2));
 		final var payment = control(income("  DAGERSÄTTNING ", "Arbetsmarknadspolitiskt Pgm", "AKTIVITETSSTÖD",
-			LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(22)));
+			LocalDate.of(2026, Month.AUGUST, 1), LocalDate.of(2026, Month.AUGUST, 31), BigDecimal.valueOf(22)));
 
 		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(payment), OPEN_GATE)).hasSize(1);
 		verify(periodRulesServiceMock).dayCheck(MUNICIPALITY_ID, new DayCheck(true, false, true, true, BigDecimal.valueOf(22), 21, 21));
@@ -225,7 +226,7 @@ class PeriodRuleFeederTest {
 	@Test
 	void aVerdictWithoutAWarningRaisesNothing() {
 		when(periodRulesServiceMock.dayCheck(any(), any())).thenReturn(PeriodVerdict.none());
-		final var payment = control(dayBenefit(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), BigDecimal.valueOf(21)));
+		final var payment = control(dayBenefit(LocalDate.of(2026, Month.AUGUST, 1), LocalDate.of(2026, Month.AUGUST, 31), BigDecimal.valueOf(21)));
 
 		assertThat(feeder.periodWarnings(MUNICIPALITY_ID, CONTROL_MONTH, List.of(payment), OPEN_GATE)).isEmpty();
 	}
@@ -248,16 +249,16 @@ class PeriodRuleFeederTest {
 	private static Stream<Arguments> gates() {
 		final var withNullEntry = new ArrayList<EconomicDecisionPeriod>();
 		withNullEntry.add(null);
-		withNullEntry.add(period(LocalDate.of(2026, 9, 15), LocalDate.of(2026, 9, 20)));
+		withNullEntry.add(period(LocalDate.of(2026, Month.SEPTEMBER, 15), LocalDate.of(2026, Month.SEPTEMBER, 20)));
 
 		return Stream.of(
 			Arguments.of("no basis at all: both halves unread", null, null, null),
 			Arguments.of("empty basis: both halves unread", DayCheckBasis.create(), null, null),
 			Arguments.of("AF answered with no decision", DayCheckBasis.create().withEconomicDecisionPeriods(List.of()), false, null),
-			Arguments.of("AF decision ended before the control month", afOnly(period(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 31))), false, null),
-			Arguments.of("AF decision starts after the control month", afOnly(period(LocalDate.of(2026, 10, 1), null)), false, null),
-			Arguments.of("AF decision open-ended from before", afOnly(period(LocalDate.of(2026, 1, 1), null)), true, null),
-			Arguments.of("AF decision without a start date", afOnly(period(null, LocalDate.of(2026, 9, 1))), true, null),
+			Arguments.of("AF decision ended before the control month", afOnly(period(LocalDate.of(2026, Month.JANUARY, 1), LocalDate.of(2026, Month.AUGUST, 31))), false, null),
+			Arguments.of("AF decision starts after the control month", afOnly(period(LocalDate.of(2026, Month.OCTOBER, 1), null)), false, null),
+			Arguments.of("AF decision open-ended from before", afOnly(period(LocalDate.of(2026, Month.JANUARY, 1), null)), true, null),
+			Arguments.of("AF decision without a start date", afOnly(period(null, LocalDate.of(2026, Month.SEPTEMBER, 1))), true, null),
 			Arguments.of("AF decision inside the month, null entries ignored", DayCheckBasis.create().withEconomicDecisionPeriods(withNullEntry), true, null),
 			Arguments.of("FK flag: all consumed", DayCheckBasis.create().withAllDaysConsumed(true), null, true),
 			Arguments.of("FK flag: days left", DayCheckBasis.create().withAllDaysConsumed(false).withConsumedDays(100), null, false),
@@ -284,7 +285,7 @@ class PeriodRuleFeederTest {
 	private static SsbtekIncome income(final String benefit, final String subBenefit, final String amountType,
 		final LocalDate from, final LocalDate to, final BigDecimal days) {
 
-		return new SsbtekIncome(benefit, subBenefit, amountType, BigDecimal.valueOf(5000), LocalDate.of(2026, 9, 25), from, to, days, ApplicantRole.APPLICANT);
+		return new SsbtekIncome(benefit, subBenefit, amountType, BigDecimal.valueOf(5000), LocalDate.of(2026, Month.SEPTEMBER, 25), from, to, days, ApplicantRole.APPLICANT);
 	}
 
 	private static ClassifiedIncome control(final SsbtekIncome income) {

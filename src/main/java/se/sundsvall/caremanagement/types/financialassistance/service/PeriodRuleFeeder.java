@@ -49,15 +49,15 @@ import static java.util.Optional.ofNullable;
 @Service
 public class PeriodRuleFeeder {
 
+	private static final String BENEFIT_DAY_ALLOWANCE = "dagersättning";
+
 	/** Aktivitetsstöd / utvecklings- / etableringsersättning — the regelverk's sub-benefit list. */
 	private static final Set<String> DAY_BENEFIT_SUB_BENEFITS = Set.of(
-		"arbetsmarknadspolitiskt program", "arbetsmarknadspolitiskt pgm", "dagersättning");
+		"arbetsmarknadspolitiskt program", "arbetsmarknadspolitiskt pgm", BENEFIT_DAY_ALLOWANCE);
 
 	/** …and its amount-type list. */
 	private static final Set<String> DAY_BENEFIT_AMOUNT_TYPES = Set.of(
 		"aktivitetsstöd", "etableringsersättning", "bostadsersättning", "etableringstillägg", "utvecklingsersättning");
-
-	private static final String BENEFIT_DAY_ALLOWANCE = "dagersättning";
 
 	/** The jobb- och utvecklingsgaranti's day limit. */
 	static final int MAX_GUARANTEE_DAYS = 450;

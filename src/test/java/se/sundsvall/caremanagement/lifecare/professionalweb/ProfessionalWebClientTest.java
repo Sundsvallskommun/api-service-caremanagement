@@ -109,6 +109,35 @@ class ProfessionalWebClientTest {
 	}
 
 	@Test
+	void bootstrapsTheModuleAgainOnTheFreshSession() {
+		// The session dies mid-TTL: bootstrapping the old one does not help, and the new one asks for its own artifact.
+		wireMock.stubFor(get(urlPathEqualTo(API)).inScenario("renew").whenScenarioStateIs(STARTED)
+			.willReturn(aResponse().withStatus(360)).willSetStateTo("old-bootstrapped"));
+		wireMock.stubFor(get(urlPathEqualTo(API)).inScenario("renew").whenScenarioStateIs("old-bootstrapped")
+			.willReturn(aResponse().withStatus(360)).willSetStateTo("signed-in-again"));
+		wireMock.stubFor(get(urlPathEqualTo(API)).inScenario("renew").whenScenarioStateIs("signed-in-again")
+			.willReturn(aResponse().withStatus(360)).willSetStateTo("new-bootstrapped"));
+		wireMock.stubFor(get(urlPathEqualTo(API)).inScenario("renew").whenScenarioStateIs("new-bootstrapped")
+			.willReturn(okJson("{\"ok\":true}")));
+		wireMock.stubFor(get(urlPathEqualTo("/WESE.FC.ProfessionalWeb/Heartbeat")).willReturn(ok()));
+
+		assertThat(client.get("api2/Thing/Get", Map.of()).get("ok").asBoolean()).isTrue();
+		wireMock.verify(2, getRequestedFor(urlPathEqualTo("/WESE.FC.ProfessionalWeb/Heartbeat")));
+		wireMock.verify(2, postRequestedFor(urlPathEqualTo("/idp/login/post")));
+	}
+
+	@Test
+	void doesNotResendAWriteAnsweredWithAnHtmlErrorPage() {
+		// An IIS or proxy error page is HTML too, but it is not the login page: Lifecare may already have saved the write.
+		wireMock.stubFor(post(urlPathEqualTo(API))
+			.willReturn(aResponse().withStatus(504).withHeader("Content-Type", "text/html").withBody("<html>Gateway Timeout</html>")));
+
+		assertThatThrownBy(() -> client.post("api2/Thing/Get", Map.of(), Map.of("a", 1))).isInstanceOf(ThrowableProblem.class);
+		wireMock.verify(1, postRequestedFor(urlPathEqualTo(API)));
+		wireMock.verify(0, getRequestedFor(urlPathEqualTo("/WESE.FC.ProfessionalWeb/Heartbeat")));
+	}
+
+	@Test
 	void givesUpWhenAFreshSessionIsRefused() {
 		wireMock.stubFor(get(urlPathEqualTo(API)).willReturn(aResponse().withStatus(401)));
 		wireMock.stubFor(get(urlPathEqualTo("/WESE.FC.ProfessionalWeb/Heartbeat")).willReturn(ok()));

@@ -42,7 +42,7 @@ public final class FinalizeMapper {
 				.withPeriodFrom(decision.getPeriodFrom())
 				.withPeriodTo(decision.getPeriodTo())
 				.withCreatedBy(decidedBy)
-				// Written into Lifecare by Draken's BFF; its lifecare-result report moves it to SYNCED or FAILED.
+				// The finalize service receipts it against the errand's beslut in Lifecare, marking it SYNCED.
 				.withLifecareStatus(LIFECARE_STATUS_PENDING))
 			.orElse(null);
 	}

@@ -34,6 +34,7 @@ class NotificationErrandFilter implements ErrandNotificationFilter {
 
 	private static final String ACKNOWLEDGED = "acknowledged";
 	private static final String HANDLED = "handled";
+	private static final String FIELD_ERRAND_ID = "errandId";
 
 	@Override
 	public Specification<ErrandEntity> hasUnacknowledgedNotifications(final String municipalityId, final String namespace, final String ownerId) {
@@ -53,7 +54,7 @@ class NotificationErrandFilter implements ErrandNotificationFilter {
 			final var notification = subquery.from(NotificationEntity.class);
 
 			final var predicates = new ArrayList<Predicate>();
-			predicates.add(cb.equal(notification.get("errandId"), root.get("id")));
+			predicates.add(cb.equal(notification.get(FIELD_ERRAND_ID), root.get("id")));
 			predicates.add(cb.equal(notification.get("municipalityId"), municipalityId));
 			predicates.add(cb.equal(notification.get("namespace"), namespace));
 			predicates.add(cb.isFalse(notification.get(flag)));
@@ -81,7 +82,7 @@ class NotificationErrandFilter implements ErrandNotificationFilter {
 		final var coCaseworker = subquery.from(CoCaseworkerEntity.class);
 
 		final var predicates = new ArrayList<Predicate>();
-		predicates.add(cb.equal(coCaseworker.get("errandId"), notification.get("errandId")));
+		predicates.add(cb.equal(coCaseworker.get(FIELD_ERRAND_ID), notification.get(FIELD_ERRAND_ID)));
 		predicates.add(cb.equal(coCaseworker.get("municipalityId"), municipalityId));
 		predicates.add(cb.equal(coCaseworker.get("namespace"), namespace));
 		predicates.add(cb.equal(coCaseworker.get("userId"), ownerId));

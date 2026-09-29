@@ -41,16 +41,18 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
- * Keeps the normberäkning saved in Lifecare in step with SSBTEK after it has been created. FamilyCare, careM's route to
- * Lifecare, can create a calculation but not change one; only Draken's BFF can, through ProfessionalWeb. So careM works
- * out what differs and the BFF writes it:
+ * Keeps the normberäkning saved in Lifecare in step with SSBTEK after it has been created. The daily prepare reaches
+ * Lifecare through FamilyCare (the lifecare-integrator), which can create a calculation but not change one; a change
+ * goes through ProfessionalWeb ({@code LifecareCalculationEditService}), on the caseworker's action in Draken. So careM
+ * works out what differs, and the change is written through the errand's /lifecare calculation route:
  *
  * <ul>
  * <li>the daily prepare {@link #recordSsbtek records} the latest SSBTEK amount per income, compares it with the
  * calculation read from Lifecare and raises one {@link WarningService#TYPE_SSBTEK_CALCULATION_DIFF} warning per
  * disagreement that SSBTEK caused — see {@link #warnings};</li>
- * <li>Draken's BFF {@link #changes reads} the disagreements, writes the {@code AUTO} ones into the calculation (and the
- * {@code CONFIRM} ones the caseworker accepts), and {@link #applied acknowledges} what it wrote.</li>
+ * <li>Draken {@link #changes reads} the disagreements, has the {@code AUTO} ones (and the {@code CONFIRM} ones the
+ * caseworker accepts) written into the calculation through careM's /lifecare calculation route, and
+ * {@link #applied acknowledges} what was written.</li>
  * </ul>
  *
  * An income may be written without asking only when the calculation still holds exactly what the system last wrote
@@ -74,7 +76,7 @@ public class CalculationSyncService {
 
 	/** The calculation is saved as final in Lifecare, which allows no change. */
 	static final String REASON_FINAL = "FINAL";
-	/** careM has no record of what the system wrote to this calculation — created by Draken before this existed. */
+	/** careM has no record of what the system wrote to this calculation — created from Draken before this existed. */
 	static final String REASON_NO_BASELINE = "NO_BASELINE";
 	/** The calculation holds something other than what the system last wrote: a caseworker has changed it. */
 	static final String REASON_EDITED = "EDITED";
@@ -229,6 +231,11 @@ public class CalculationSyncService {
 	@Transactional
 	public void reconcileWarnings(final String municipalityId, final String errandId, final String applicantPartyId, final Integer calculationId,
 		final LocalDate fromDate, final LocalDate toDate) {
+		doReconcileWarnings(municipalityId, errandId, applicantPartyId, calculationId, fromDate, toDate);
+	}
+
+	private void doReconcileWarnings(final String municipalityId, final String errandId, final String applicantPartyId, final Integer calculationId,
+		final LocalDate fromDate, final LocalDate toDate) {
 		final Optional<CalculationView> calculation;
 		try {
 			calculation = findCalculation(municipalityId, applicantPartyId, calculationId, fromDate, toDate);
@@ -274,8 +281,8 @@ public class CalculationSyncService {
 	}
 
 	/**
-	 * Record what Draken's BFF wrote into the calculation, as what the system last wrote there, then bring the warnings
-	 * up to date (best-effort). 409 when the calculation written to is not the one linked to the errand.
+	 * Record what was written into the calculation at Draken's request, as what the system last wrote there, then bring
+	 * the warnings up to date (best-effort). 409 when the calculation written to is not the one linked to the errand.
 	 */
 	@Transactional
 	public void applied(final String municipalityId, final String namespace, final String errandId, final AppliedSsbtekChanges request) {
@@ -290,11 +297,11 @@ public class CalculationSyncService {
 			final var typeKey = normalize(change.incomeType());
 			final var row = rows.computeIfAbsent(key(typeKey, change.role()), ignored -> FaCalculationSyncEntity.create()
 				.withErrandId(errandId).withIncomeTypeKey(typeKey).withIncomeTypeName(change.incomeType()).withRole(change.role()));
-			// The calculation now holds what the BFF wrote, in view of what SSBTEK says now: that is the new baseline.
+			// The calculation now holds what was written, in view of what SSBTEK says now: that is the new baseline.
 			row.withSystemWrittenAmount(nonZero(change.amount())).withSystemWrittenAt(now).withSsbtekBaselineAmount(row.getSsbtekAmount());
 		});
 		syncRepository.saveAll(rows.values());
-		reconcileWarnings(municipalityId, errandId, context.applicantPartyId(), context.calculationId(), context.fromDate(), context.toDate());
+		doReconcileWarnings(municipalityId, errandId, context.applicantPartyId(), context.calculationId(), context.fromDate(), context.toDate());
 	}
 
 	private record SyncContext(Integer calculationId, String applicantPartyId, LocalDate fromDate, LocalDate toDate) {}
@@ -443,7 +450,7 @@ public class CalculationSyncService {
 	 * The warnings: one per disagreement with the calculation that SSBTEK caused, i.e. on an income whose SSBTEK amount
 	 * has moved since the calculation was last aligned with it. While SSBTEK still says what it said then, a calculation
 	 * that differs is the caseworker's own edit — theirs to make, and no news to them. (The {@link #changes} read still
-	 * lists every disagreement, for the BFF to propose.)
+	 * lists every disagreement, for Draken to propose.)
 	 */
 	static List<WarningService.WarningInput> warnings(final List<FaCalculationSyncEntity> rows, final CalculationView calculation) {
 		final var moved = rows.stream().filter(CalculationSyncService::ssbtekMoved).toList();

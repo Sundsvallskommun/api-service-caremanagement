@@ -3,6 +3,8 @@ package se.sundsvall.caremanagement.eventlog.web;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.core.MethodParameter;
+import org.springframework.core.ResolvableType;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -43,9 +45,17 @@ class SearchHitsCollector implements ResponseBodyAdvice<Object> {
 	/** Request attribute carrying the ids of the errands a search returned. */
 	static final String SEARCH_HITS_ATTRIBUTE = SearchHitsCollector.class.getName() + ".searchHits";
 
+	/**
+	 * Matches a search whether the handler returns the body itself or wraps it in a {@code ResponseEntity}: for a
+	 * wrapped body Spring passes the handler's own return type, so the body type is the {@code HttpEntity}'s generic.
+	 */
 	@Override
 	public boolean supports(final MethodParameter returnType, final Class<? extends org.springframework.http.converter.HttpMessageConverter<?>> converterType) {
-		return FindErrandsResponse.class.isAssignableFrom(returnType.getParameterType());
+		final var type = ResolvableType.forMethodParameter(returnType);
+		if (HttpEntity.class.isAssignableFrom(type.toClass())) {
+			return FindErrandsResponse.class.isAssignableFrom(type.as(HttpEntity.class).getGeneric(0).toClass());
+		}
+		return FindErrandsResponse.class.isAssignableFrom(type.toClass());
 	}
 
 	@Override

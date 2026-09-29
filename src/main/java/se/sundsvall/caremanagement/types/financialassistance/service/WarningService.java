@@ -313,7 +313,7 @@ public class WarningService {
 	@Transactional
 	public void reconcileCalculationWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final DraftChanges draftChanges, final List<WarningInput> sectionWarnings) {
-		reconcileCalculationWarnings(errandId, unhandled, changes, missing, draftChanges, sectionWarnings, Set.of());
+		doReconcileCalculationWarnings(errandId, unhandled, changes, missing, draftChanges, sectionWarnings, Set.of());
 	}
 
 	/**
@@ -323,6 +323,16 @@ public class WarningService {
 	 */
 	@Transactional
 	public void reconcileCalculationWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
+		final List<String> missing, final DraftChanges draftChanges, final List<WarningInput> sectionWarnings, final Set<String> unverifiedTypes) {
+		doReconcileCalculationWarnings(errandId, unhandled, changes, missing, draftChanges, sectionWarnings, unverifiedTypes);
+	}
+
+	/**
+	 * The shared body of both {@code reconcileCalculationWarnings} overloads above. Package-private and intentionally not
+	 * {@code @Transactional}: called only from those two public entry points, which each carry their own transaction — a
+	 * self-invoked {@code @Transactional} sibling method would run outside the proxy (java:S6809).
+	 */
+	private void doReconcileCalculationWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final DraftChanges draftChanges, final List<WarningInput> sectionWarnings, final Set<String> unverifiedTypes) {
 
 		final var unverified = ofNullable(unverifiedTypes).orElseGet(Set::of);
@@ -357,7 +367,7 @@ public class WarningService {
 	@Transactional
 	public void reconcileRuleWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final List<WarningInput> ruleWarnings) {
-		reconcileRuleWarnings(errandId, unhandled, changes, missing, ruleWarnings, Set.of());
+		doReconcileRuleWarnings(errandId, unhandled, changes, missing, ruleWarnings, Set.of());
 	}
 
 	/**
@@ -367,6 +377,16 @@ public class WarningService {
 	 */
 	@Transactional
 	public void reconcileRuleWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
+		final List<String> missing, final List<WarningInput> ruleWarnings, final Set<String> unverifiedTypes) {
+		doReconcileRuleWarnings(errandId, unhandled, changes, missing, ruleWarnings, unverifiedTypes);
+	}
+
+	/**
+	 * The shared body of both {@code reconcileRuleWarnings} overloads above. Package-private and intentionally not
+	 * {@code @Transactional}: called only from those two public entry points, which each carry their own transaction — a
+	 * self-invoked {@code @Transactional} sibling method would run outside the proxy (java:S6809).
+	 */
+	private void doReconcileRuleWarnings(final String errandId, final List<String> unhandled, final List<String> changes,
 		final List<String> missing, final List<WarningInput> ruleWarnings, final Set<String> unverifiedTypes) {
 
 		final var unverified = ofNullable(unverifiedTypes).orElseGet(Set::of);
@@ -424,7 +444,7 @@ public class WarningService {
 	 */
 	@Transactional
 	public List<Warning> reconcileByTypes(final String errandId, final Set<String> ownedTypes, final List<WarningInput> current) {
-		return reconcileByTypes(errandId, ownedTypes, Set.of(), current);
+		return doReconcileByTypes(errandId, ownedTypes, Set.of(), current);
 	}
 
 	/**
@@ -434,6 +454,15 @@ public class WarningService {
 	 */
 	@Transactional
 	public List<Warning> reconcileByTypes(final String errandId, final Set<String> ownedTypes, final Set<String> unverifiedTypes, final List<WarningInput> current) {
+		return doReconcileByTypes(errandId, ownedTypes, unverifiedTypes, current);
+	}
+
+	/**
+	 * The shared body of both {@code reconcileByTypes} overloads above. Package-private and intentionally not
+	 * {@code @Transactional}: called only from those two public entry points, which each carry their own transaction — a
+	 * self-invoked {@code @Transactional} sibling method would run outside the proxy (java:S6809).
+	 */
+	private List<Warning> doReconcileByTypes(final String errandId, final Set<String> ownedTypes, final Set<String> unverifiedTypes, final List<WarningInput> current) {
 		final var unverified = ofNullable(unverifiedTypes).orElseGet(Set::of);
 		current.stream()
 			.filter(input -> !ownedTypes.contains(input.type()) || unverified.contains(input.type()))

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.operaton.service.scheduler.processmessageret
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -49,10 +50,10 @@ class ProcessMessageRetryWorker {
 	}
 
 	Result retryDue() {
-		final var now = OffsetDateTime.now();
+		final var now = OffsetDateTime.now(ZoneId.systemDefault());
 		var delivered = 0;
 		var gaveUp = 0;
-		final var due = repository.findByStatusAndNextAttemptBeforeOrderByNextAttempt(STATUS_PENDING, now);
+		final var due = repository.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(STATUS_PENDING, now);
 		for (final var retry : due) {
 			if (retryOne(retry, now)) {
 				delivered++;
@@ -65,6 +66,10 @@ class ProcessMessageRetryWorker {
 
 	/** One row, failures kept to the row so the rest of the batch still runs. */
 	private boolean retryOne(final ProcessMessageRetryEntity retry, final OffsetDateTime now) {
+		// Claimed before the engine call: the next attempt moves forward first, so a run that overlaps this one (a lock
+		// that expired under a hanging engine, or a second instance) does not pick the row up and send it again.
+		retry.setNextAttempt(now.plus(backoff(retry.getAttempts() + 1)));
+		repository.save(retry);
 		try {
 			processService.correlateMessage(retry.getMunicipalityId(), retry.getNamespace(), retry.getMessageName(), retry.getErrandId(), variablesOf(retry));
 			repository.delete(retry);
@@ -72,7 +77,12 @@ class ProcessMessageRetryWorker {
 				retry.getAttempts() + 1);
 			return true;
 		} catch (final RuntimeException e) {
-			recordFailure(retry, now, e);
+			try {
+				recordFailure(retry, now, e);
+			} catch (final RuntimeException saveFailure) {
+				// The claim above already moved the next attempt forward, so the row is simply tried again later.
+				LOG.warn("Could not record the failed delivery for errand {} ({})", sanitizeForLogging(retry.getErrandId()), saveFailure.getClass().getSimpleName());
+			}
 			return false;
 		}
 	}

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Map;
 import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
@@ -53,8 +54,8 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 		return FinalizeRequest.create()
 			.withDecision(FinalizeDecision.create()
 				.withOutcome("BIFALL")
-				.withPeriodFrom(LocalDate.of(2026, 6, 1))
-				.withPeriodTo(LocalDate.of(2026, 6, 30))
+				.withPeriodFrom(LocalDate.of(2026, Month.JUNE, 1))
+				.withPeriodTo(LocalDate.of(2026, Month.JUNE, 30))
 				.withAmount(new BigDecimal("7900.00")))
 			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false))
 			.withHouseholdSizeChanged(false);
@@ -85,14 +86,14 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 	@Test
 	void invalidMunicipalityId() {
 		assertConstraintViolation(post("x", ERRAND_ID, validRequest()),
-			tuple("finalize.municipalityId", "not a valid municipality ID"));
+			tuple("finalizeErrand.municipalityId", "not a valid municipality ID"));
 		verifyNoInteractions(finalizeServiceMock);
 	}
 
 	@Test
 	void invalidErrandId() {
 		assertConstraintViolation(post(MUNICIPALITY_ID, "not-a-uuid", validRequest()),
-			tuple("finalize.errandId", "not a valid UUID"));
+			tuple("finalizeErrand.errandId", "not a valid UUID"));
 		verifyNoInteractions(finalizeServiceMock);
 	}
 
@@ -128,7 +129,7 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 	@Test
 	void periodEndingBeforeStart() {
 		final var request = validRequest();
-		request.getDecision().withPeriodFrom(LocalDate.of(2026, 6, 30)).withPeriodTo(LocalDate.of(2026, 6, 1));
+		request.getDecision().withPeriodFrom(LocalDate.of(2026, Month.JUNE, 30)).withPeriodTo(LocalDate.of(2026, Month.JUNE, 1));
 
 		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
 			tuple("decision.periodTo", "must not be before periodFrom"));
@@ -149,7 +150,7 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 	@Test
 	void serviceConflictIsPassedThrough() {
 		final var request = validRequest();
-		when(finalizeServiceMock.finalize(any(), any(), any(), any(), any()))
+		when(finalizeServiceMock.finalizeErrand(any(), any(), any(), any(), any()))
 			.thenThrow(Problem.valueOf(CONFLICT, "errand must be in status AWAITING_DECISION to be finalized, but is in status 'UNDER_REVIEW'"));
 
 		final var response = webTestClient.post()
@@ -166,6 +167,6 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getStatus()).isEqualTo(CONFLICT);
 		assertThat(response.getDetail()).contains("AWAITING_DECISION");
-		verify(finalizeServiceMock).finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe");
+		verify(finalizeServiceMock).finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe");
 	}
 }

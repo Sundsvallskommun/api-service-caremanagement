@@ -25,6 +25,14 @@ final class LifecareJobStimulusMapper {
 	static final String CO_APPLICANT = "CO_APPLICANT";
 	static final String CO_APPLICANT_REFUSAL = "Hushållet har en medsökande. Jobbstimulans kan inte ändras från Drakel för sådana hushåll ännu. Gör det direkt i Lifecare.";
 
+	private static final String FIELD_APPLICANT = "applicant";
+	private static final String FIELD_CO_APPLICANT = "coApplicant";
+	private static final String FIELD_PERIODS = "periods";
+	private static final String FIELD_MIN_DATE = "minDate";
+	private static final String FIELD_TO_DATE = "toDate";
+	private static final String FIELD_PERSON_ID = "personId";
+	private static final String FIELD_PERSON_ID_FORMATTED = "personIdFormatted";
+
 	private LifecareJobStimulusMapper() {}
 
 	/**
@@ -35,7 +43,7 @@ final class LifecareJobStimulusMapper {
 	 * @return     the periods
 	 */
 	static List<LifecareJobStimulusPeriod> toJobStimulusPeriods(final JsonNode raw) {
-		return Stream.concat(periods(field(raw, "applicant"), APPLICANT), periods(field(raw, "coApplicant"), CO_APPLICANT)).toList();
+		return Stream.concat(periods(field(raw, FIELD_APPLICANT), APPLICANT), periods(field(raw, FIELD_CO_APPLICANT), CO_APPLICANT)).toList();
 	}
 
 	/**
@@ -56,61 +64,61 @@ final class LifecareJobStimulusMapper {
 	 * @return          the body to post
 	 */
 	static ObjectNode buildJobStimulusAdd(final JsonNode current, final String fromDate, final String toDate) {
-		final var applicant = field(current, "applicant");
+		final var applicant = field(current, FIELD_APPLICANT);
 		if (applicant == null || !applicant.isObject()) {
 			throw refuse("Sökande finns inte på insatsen i Lifecare.");
 		}
-		if (flag(current, "hasCoApplicant") || field(current, "coApplicant") != null) {
+		if (flag(current, "hasCoApplicant") || field(current, FIELD_CO_APPLICANT) != null) {
 			throw refuse(CO_APPLICANT_REFUSAL);
 		}
 
-		final var existing = array(applicant, "periods");
+		final var existing = array(applicant, FIELD_PERIODS);
 		final var periods = NODES.arrayNode();
 		for (var index = 0; index < existing.size(); index++) {
 			final var period = copyOf(existing.get(index));
 			period.put("isValid", true);
 			if (index == 0) {
-				period.put("minDate", 0);
+				period.put(FIELD_MIN_DATE, 0);
 			} else {
-				final var previousEnd = field(existing.get(index - 1), "toDate");
+				final var previousEnd = field(existing.get(index - 1), FIELD_TO_DATE);
 				if (previousEnd == null) {
-					period.put("minDate", 0);
+					period.put(FIELD_MIN_DATE, 0);
 				} else {
-					period.set("minDate", previousEnd.deepCopy());
+					period.set(FIELD_MIN_DATE, previousEnd.deepCopy());
 				}
 			}
 			periods.add(period);
 		}
 		final var added = NODES.objectNode();
-		copyField(applicant, added, "personId");
-		copyField(applicant, added, "personIdFormatted");
+		copyField(applicant, added, FIELD_PERSON_ID);
+		copyField(applicant, added, FIELD_PERSON_ID_FORMATTED);
 		added.put("fromDate", fromDate);
-		added.put("toDate", toDate);
+		added.put(FIELD_TO_DATE, toDate);
 		added.put("markedForRemoval", false);
 		periods.add(added);
 
 		final var applicantBody = NODES.objectNode();
-		applicantBody.set("periods", periods);
-		copyField(applicant, applicantBody, "personId");
+		applicantBody.set(FIELD_PERIODS, periods);
+		copyField(applicant, applicantBody, FIELD_PERSON_ID);
 		copyField(applicant, applicantBody, "name");
-		copyField(applicant, applicantBody, "personIdFormatted");
+		copyField(applicant, applicantBody, FIELD_PERSON_ID_FORMATTED);
 
 		final var noCoApplicant = NODES.objectNode();
-		noCoApplicant.put("personId", "");
-		noCoApplicant.put("personIdFormatted", "");
+		noCoApplicant.put(FIELD_PERSON_ID, "");
+		noCoApplicant.put(FIELD_PERSON_ID_FORMATTED, "");
 		noCoApplicant.put("name", "");
-		noCoApplicant.set("periods", NODES.arrayNode());
+		noCoApplicant.set(FIELD_PERIODS, NODES.arrayNode());
 
 		final var body = NODES.objectNode();
-		body.set("applicant", applicantBody);
-		body.set("coApplicant", noCoApplicant);
+		body.set(FIELD_APPLICANT, applicantBody);
+		body.set(FIELD_CO_APPLICANT, noCoApplicant);
 		return body;
 	}
 
 	private static Stream<LifecareJobStimulusPeriod> periods(final JsonNode person, final String role) {
-		return array(person, "periods").stream()
+		return array(person, FIELD_PERIODS).stream()
 			.filter(period -> !flag(period, "markedForRemoval"))
-			.map(period -> new LifecareJobStimulusPeriod(integer(period, "jobStimulusId"), role, emptyToNull(text(period, "fromDate")), emptyToNull(text(period, "toDate"))));
+			.map(period -> new LifecareJobStimulusPeriod(integer(period, "jobStimulusId"), role, emptyToNull(text(period, "fromDate")), emptyToNull(text(period, FIELD_TO_DATE))));
 	}
 
 	/** Lifecare sends an empty string for a period without an end. */

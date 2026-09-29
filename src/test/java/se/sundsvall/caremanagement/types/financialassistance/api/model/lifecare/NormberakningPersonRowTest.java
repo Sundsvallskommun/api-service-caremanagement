@@ -59,13 +59,13 @@ class NormberakningPersonRowTest {
 		assertThat(bean.getProcessDays()).isEqualTo(1);
 		assertThat(bean.getCaseworkerDays()).isEqualTo(1);
 		assertThat(bean.getEffectiveDays()).isEqualTo(1);
-		assertThat(bean.getIncluded()).isEqualTo(true);
+		assertThat(bean.getIncluded()).isTrue();
 		assertThat(bean.getDeviationFromDate()).isEqualTo("value");
 		assertThat(bean.getDeviationToDate()).isEqualTo("value");
 		assertThat(bean.getNormInterval()).isEqualTo("value");
 		assertThat(bean.getNormRowId()).isEqualTo(1);
 		assertThat(bean.getAmount()).isEqualTo(BigDecimal.ONE);
-		assertThat(bean.getDeleted()).isEqualTo(true);
+		assertThat(bean.getDeleted()).isTrue();
 		assertThat(bean.getNote()).isEqualTo("value");
 	}
 

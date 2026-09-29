@@ -64,7 +64,9 @@ class LifecareCaseHistoryServiceTest {
 			assertThat(calculation.norm()).isEqualTo("Riksnorm 2026");
 			assertThat(calculation.normSum()).isEqualTo(BigDecimal.valueOf(10500.0));
 			assertThat(calculation.isFinal()).isTrue();
-			assertThat(calculation.persons()).singleElement().satisfies(person -> assertThat(person.personId()).isEqualTo("200001011234"));
+			// The personnummer FamilyCare returned is not passed on: the history names the person only.
+			assertThat(calculation.persons()).singleElement().satisfies(person -> assertThat(person).hasToString(
+				"CalculationPersonView[name=Barn, amount=4500.0, deviationFromDate=2026-06-01, deviationToDate=2026-06-30]"));
 			assertThat(calculation.incomes()).singleElement().satisfies(income -> assertThat(income.type()).isEqualTo("Lön"));
 			assertThat(calculation.expenses()).singleElement().satisfies(expense -> assertThat(expense.approvedAmount()).isEqualTo(BigDecimal.valueOf(7000.0)));
 			assertThat(calculation.specialExpenses()).singleElement().satisfies(expense -> assertThat(expense.type()).isEqualTo("Tandvård"));

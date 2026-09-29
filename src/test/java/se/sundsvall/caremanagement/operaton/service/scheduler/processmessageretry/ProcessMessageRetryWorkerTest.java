@@ -21,7 +21,9 @@ import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,25 +56,43 @@ class ProcessMessageRetryWorkerTest {
 	@Test
 	void aDeliveredMessageIsRemoved() {
 		final var retry = pending("e1", 1, OffsetDateTime.now().minusMinutes(2));
-		when(repositoryMock.findByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
 
 		final var result = worker.retryDue();
 
-		verify(processServiceMock).correlateMessage("2281", "FINANCIAL_ASSISTANCE", "PaymentDecisionReceived", "e1", Map.of("paymentDecision", "APPROVED"));
-		verify(repositoryMock).delete(retry);
+		// Claimed (next attempt moved forward and saved) before the engine is called, then removed once delivered.
+		final var order = inOrder(repositoryMock, processServiceMock);
+		order.verify(repositoryMock).save(retry);
+		order.verify(processServiceMock).correlateMessage("2281", "FINANCIAL_ASSISTANCE", "PaymentDecisionReceived", "e1", Map.of("paymentDecision", "APPROVED"));
+		order.verify(repositoryMock).delete(retry);
 		assertThat(result).isEqualTo(new ProcessMessageRetryWorker.Result(1, 1, 0));
+	}
+
+	@Test
+	void aFailureToRecordTheFailureDoesNotStopTheBatch() {
+		final var failing = pending("e1", 2, OffsetDateTime.now().minusHours(1));
+		final var delivering = pending("e2", 1, OffsetDateTime.now().minusMinutes(2));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(failing, delivering));
+		doThrow(new IllegalStateException("engine down")).when(processServiceMock).correlateMessage(any(), any(), any(), eq("e1"), any());
+		// The claim saves, the failure record does not.
+		when(repositoryMock.save(failing)).thenReturn(failing).thenThrow(new IllegalStateException("db down"));
+
+		final var result = worker.retryDue();
+
+		verify(repositoryMock).delete(delivering);
+		assertThat(result).isEqualTo(new ProcessMessageRetryWorker.Result(2, 1, 0));
 	}
 
 	@Test
 	void aFailureBacksOffAndDoesNotStopTheBatch() {
 		final var failing = pending("e1", 2, OffsetDateTime.now().minusHours(1));
 		final var delivering = pending("e2", 1, OffsetDateTime.now().minusMinutes(2));
-		when(repositoryMock.findByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(failing, delivering));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(failing, delivering));
 		doThrow(new IllegalStateException("Not Found: nothing waiting")).when(processServiceMock).correlateMessage(any(), any(), any(), eq("e1"), any());
 
 		final var result = worker.retryDue();
 
-		verify(repositoryMock).save(failing);
+		verify(repositoryMock, times(2)).save(failing); // the claim, then the failure
 		assertThat(failing.getStatus()).isEqualTo("PENDING");
 		assertThat(failing.getAttempts()).isEqualTo(3);
 		assertThat(failing.getLastError()).isEqualTo("Not Found: nothing waiting");
@@ -86,12 +106,12 @@ class ProcessMessageRetryWorkerTest {
 	@Test
 	void aRowOlderThanThreeDaysGivesUp() {
 		final var retry = pending("e1", 80, OffsetDateTime.now().minusDays(3).minusMinutes(1));
-		when(repositoryMock.findByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
 		doThrow(new IllegalStateException("engine down")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), any());
 
 		final var result = worker.retryDue();
 
-		verify(repositoryMock).save(retry);
+		verify(repositoryMock, times(2)).save(retry); // the claim, then giving up
 		assertThat(retry.getStatus()).isEqualTo("GAVE_UP");
 		assertThat(retry.getAttempts()).isEqualTo(81);
 		assertThat(result).isEqualTo(new ProcessMessageRetryWorker.Result(1, 0, 1));
@@ -99,7 +119,7 @@ class ProcessMessageRetryWorkerTest {
 
 	@Test
 	void nothingDueDoesNothing() {
-		when(repositoryMock.findByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of());
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of());
 
 		assertThat(worker.retryDue()).isEqualTo(new ProcessMessageRetryWorker.Result(0, 0, 0));
 	}

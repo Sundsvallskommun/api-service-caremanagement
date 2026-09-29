@@ -10,6 +10,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalD
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationServiceDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationSpecialExpensePostDTO;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.YearMonth;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -200,7 +201,7 @@ class CalculationAssemblerTest {
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(4).name("Matnorm 2026").fromDate("2026-01-01").toDate("2026-12-31"))
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(1).name("Riksnorm 2026").fromDate("2026-01-01").toDate("2026-12-31"))
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(9).name("Specnorm 2025").fromDate("2025-01-01").toDate("2025-12-31"));
-		final var september = YearMonth.of(2026, 9);
+		final var september = YearMonth.of(2026, Month.SEPTEMBER);
 
 		assertThat(CalculationAssembler.matchingNormId(proposal, september, List.of("riksnorm"))).contains(1);
 		// a norm that does not cover the month does not match, and nothing falls back to the first covering one

@@ -75,7 +75,7 @@ class CoCaseworkerResource {
 		@Parameter(name = "errandId") @ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final AddCoCaseworker request) {
 
-		final var id = service.add(municipalityId, namespace, errandId, request);
+		service.add(municipalityId, namespace, errandId, request);
 		return created(fromPath("/{municipalityId}/{namespace}/errands/{errandId}/co-caseworkers/{userId}")
 			.buildAndExpand(municipalityId, namespace, errandId, request.userId()).toUri())
 			.header(CONTENT_TYPE, ALL_VALUE)

@@ -37,7 +37,7 @@ class CreateLifecareDocumentRequestTest {
 		assertThat(result.getDocumentTypeCode()).isEqualTo(1);
 		assertThat(result.getTitle()).isEqualTo("Beslut om bistånd");
 		assertThat(result.getOccurenceDate()).isEqualTo("2026-09-23");
-		assertThat(result.getWriteProtected()).isEqualTo(true);
+		assertThat(result.getWriteProtected()).isTrue();
 	}
 
 	@Test

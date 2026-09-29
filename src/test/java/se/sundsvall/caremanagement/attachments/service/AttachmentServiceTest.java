@@ -230,8 +230,8 @@ class AttachmentServiceTest {
 	 * {@code APPLICATION} rows are the individual uploads. Filtering on {@code APPLICATION} matches nothing and the
 	 * actualisation step then reports "nothing to archive" on an errand that plainly had documents, which is exactly
 	 * what happened the first time this shipped.
-	 */
-	/**
+	 *
+	 * <p>
 	 * Verksamheten asked for both documents: the application PDF (the CASE_DATA snapshot) and careM's merge of the
 	 * citizen's uploads, in that order. The individual APPLICATION rows are not archived — they are already inside the
 	 * merge.

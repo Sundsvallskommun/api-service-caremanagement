@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+import static java.time.Month.DECEMBER;
 import static java.time.Month.JANUARY;
 import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,7 +40,7 @@ class IntegratorProposalMapperTest {
 		final var proposal = new CalculationProposal()
 			.investigations(List.of(new ProposalCase().id(11).type(1).name("Utredning EB").startDate(LocalDate.of(2026, JANUARY, 15))))
 			.services(List.of(new ProposalCase().id(42).type(2).name("Ekonomiskt bistånd").startDate(LocalDate.of(2026, JANUARY, 20))))
-			.norms(List.of(new Norm().id(7).name("Riksnorm 2026").validFrom(LocalDate.of(2026, JANUARY, 1)).validTo(LocalDate.of(2026, 12, 31))))
+			.norms(List.of(new Norm().id(7).name("Riksnorm 2026").validFrom(LocalDate.of(2026, JANUARY, 1)).validTo(LocalDate.of(2026, DECEMBER, 31))))
 			.householdMembers(List.of(new HouseholdMember().partyId(PARTY_ID).name("Berit Berg").childFromOtherHousehold(false)))
 			.incomeTypes(List.of(new Lookup().id(1).name("Lön efter skatt")))
 			.expenseTypes(List.of(new Lookup().id(2).name("Hyra")))
@@ -112,9 +113,8 @@ class IntegratorProposalMapperTest {
 		assertThat(IntegratorProposalMapper.toCalculationProposal(null)).isNull();
 	}
 
-	@Test
-	void theActualisationProposalIsMapped() {
-		final var proposal = new ActualisationProposal()
+	private static ActualisationProposal actualisationProposal() {
+		return new ActualisationProposal()
 			.actualisationTypes(List.of(new ActualisationType()
 				.id(1)
 				.name("Ansökan")
@@ -132,8 +132,11 @@ class IntegratorProposalMapperTest {
 			.services(List.of(new ProposalCase().id(42).type(2).name("Ekonomiskt bistånd")
 				.startDate(LocalDate.of(2026, JANUARY, 20)).organisationId(4).organisationUnitId("IFO-EB").caseworkerId("kaka01")))
 			.attachmentTypes(List.of(new AttachmentType().id(5).name("Hyresavi").senderTypes(List.of(new Lookup().id(50).name("Den enskilde")))));
+	}
 
-		final var result = IntegratorProposalMapper.toActualisationProposal(proposal);
+	@Test
+	void theActualisationProposalIsMapped() {
+		final var result = IntegratorProposalMapper.toActualisationProposal(actualisationProposal());
 
 		assertThat(result.getActualisationTypes()).singleElement().satisfies(type -> {
 			assertThat(type.getId()).isEqualTo(1);
@@ -162,6 +165,11 @@ class IntegratorProposalMapperTest {
 			assertThat(organization.getUnitId()).isEqualTo("IFO-EB");
 			assertThat(organization.getName()).isEqualTo("IFO Ekonomiskt bistånd");
 		});
+	}
+
+	@Test
+	void theActualisationProposalCasesAndAttachmentTypesAreMapped() {
+		final var result = IntegratorProposalMapper.toActualisationProposal(actualisationProposal());
 
 		// The actualisation proposal's cases carry the organisation and caseworker the calculation proposal's do not.
 		assertThat(result.getInvestigations()).singleElement().satisfies(investigation -> {

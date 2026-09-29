@@ -17,11 +17,11 @@ import static org.hamcrest.CoreMatchers.allOf;
 
 class LifecareDecisionTest {
 
-	private static final List<LifecareDecisionPerson> PERSONS = List.of(LifecareDecisionPerson.create().withPersonId("200001011234").withName("Anna Andersson"));
+	private static final List<LifecareDecisionPerson> PERSONS = List.of(LifecareDecisionPerson.create().withName("Anna Andersson"));
 
 	@BeforeAll
 	static void setup() {
-		BeanMatchers.registerValueGenerator(() -> LifecareDecisionPerson.create().withPersonId("200001011234"), LifecareDecisionPerson.class);
+		BeanMatchers.registerValueGenerator(() -> LifecareDecisionPerson.create(), LifecareDecisionPerson.class);
 	}
 
 	@Test

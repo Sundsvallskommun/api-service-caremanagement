@@ -48,16 +48,6 @@ public final class FinancialAssistanceMapper {
 
 	private FinancialAssistanceMapper() {}
 
-	/**
-	 * A reference list without repeats, as a fresh mutable list — the Lifecare payment ids are a set keyed on the errand,
-	 * so the same id sent twice is one reference. Null stays null (a PATCH that leaves the list alone).
-	 */
-	private static List<String> distinctOrNull(final List<String> source) {
-		return ofNullable(source)
-			.map(list -> new ArrayList<>(list.stream().distinct().toList()))
-			.orElse(null);
-	}
-
 	private static <S, T> List<T> mapList(final List<S> source, final Function<S, T> mapper) {
 		return ofNullable(source)
 			.map(list -> list.stream()
@@ -96,9 +86,6 @@ public final class FinancialAssistanceMapper {
 				.withStayDescription(d.getStayDescription())
 				.withAttestation(d.getAttestation())
 				.withAttestedAt(d.getAttestedAt())
-				.withLifecareDecisionId(d.getLifecareDecisionId())
-				.withLifecareCalculationId(d.getLifecareCalculationId())
-				.withLifecarePaymentIds(distinctOrNull(d.getLifecarePaymentIds()))
 				.withChildren(mapList(d.getChildren(), FinancialAssistanceMapper::toFaChild))
 				.withCosts(mapList(d.getCosts(), FinancialAssistanceMapper::toFaCost))
 				.withIncomes(mapList(d.getIncomes(), FinancialAssistanceMapper::toFaIncome))
@@ -143,9 +130,6 @@ public final class FinancialAssistanceMapper {
 		ofNullable(source.getStayDescription()).ifPresent(entity::setStayDescription);
 		ofNullable(source.getAttestation()).ifPresent(entity::setAttestation);
 		ofNullable(source.getAttestedAt()).ifPresent(entity::setAttestedAt);
-		ofNullable(source.getLifecareDecisionId()).ifPresent(entity::setLifecareDecisionId);
-		ofNullable(source.getLifecareCalculationId()).ifPresent(entity::setLifecareCalculationId);
-		ofNullable(distinctOrNull(source.getLifecarePaymentIds())).ifPresent(entity::setLifecarePaymentIds);
 		ofNullable(mapList(source.getChildren(), FinancialAssistanceMapper::toFaChild)).ifPresent(value -> entity.setChildren(new ArrayList<>(value)));
 		ofNullable(mapList(source.getCosts(), FinancialAssistanceMapper::toFaCost)).ifPresent(value -> entity.setCosts(new ArrayList<>(value)));
 		ofNullable(mapList(source.getIncomes(), FinancialAssistanceMapper::toFaIncome)).ifPresent(value -> entity.setIncomes(new ArrayList<>(value)));

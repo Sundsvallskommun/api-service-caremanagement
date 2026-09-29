@@ -159,9 +159,9 @@ class FinancialAssistanceLifecareRecordResource {
 		@ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final CreateLifecareJournalNoteRequest request) {
 
-		final var record = service.createJournalNote(municipalityId, namespace, errandId, request);
-		return created(fromPath(RECORD_LOCATION.formatted("journal-notes")).buildAndExpand(municipalityId, namespace, errandId, record.getId()).toUri())
-			.body(record);
+		final var created = service.createJournalNote(municipalityId, namespace, errandId, request);
+		return created(fromPath(RECORD_LOCATION.formatted("journal-notes")).buildAndExpand(municipalityId, namespace, errandId, created.getId()).toUri())
+			.body(created);
 	}
 
 	@PostMapping(path = "/documents/documents", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
@@ -178,9 +178,9 @@ class FinancialAssistanceLifecareRecordResource {
 		@ValidUuid @PathVariable final String errandId,
 		@Valid @NotNull @RequestBody final CreateLifecareDocumentRequest request) {
 
-		final var record = service.createDocument(municipalityId, namespace, errandId, request);
-		return created(fromPath(RECORD_LOCATION.formatted("documents")).buildAndExpand(municipalityId, namespace, errandId, record.getId()).toUri())
-			.body(record);
+		final var created = service.createDocument(municipalityId, namespace, errandId, request);
+		return created(fromPath(RECORD_LOCATION.formatted("documents")).buildAndExpand(municipalityId, namespace, errandId, created.getId()).toUri())
+			.body(created);
 	}
 
 	@GetMapping(path = "/documents/journal-notes/{id}", produces = APPLICATION_JSON_VALUE)

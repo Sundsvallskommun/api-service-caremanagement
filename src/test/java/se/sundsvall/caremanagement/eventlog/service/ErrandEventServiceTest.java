@@ -10,9 +10,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
-import se.sundsvall.caremanagement.eventlog.api.model.LifecareAccess;
 import se.sundsvall.caremanagement.eventlog.integration.db.ErrandEventRepository;
 import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEntity;
+import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.support.Identifier;
@@ -54,12 +54,23 @@ class ErrandEventServiceTest {
 	}
 
 	@Test
+	void recordEventsStampsOneTimeAndSavesInOneWrite() {
+		final var first = ErrandEventEntity.create().withErrandId("e1").withAction("READ").withTarget("errands/search");
+		final var second = ErrandEventEntity.create().withErrandId("e2").withAction("READ").withTarget("errands/search");
+
+		service.recordEvents(List.of(first, second));
+
+		verify(repositoryMock).saveAll(List.of(first, second));
+		assertThat(first.getCreated()).isNotNull().isEqualTo(second.getCreated());
+	}
+
+	@Test
 	@SuppressWarnings("unchecked")
 	void recordLifecareAccessesWritesOneLifecareRowPerAccessAttributedToTheCaller() {
 		final var caller = Identifier.parse("joe001doe; type=adAccount");
 		final var accesses = List.of(
-			LifecareAccess.create().withAction("READ").withTarget("lifecare/journal-notes").withDescription("Läste journalen i Lifecare"),
-			LifecareAccess.create().withAction("CREATE").withTarget("lifecare/journal-notes").withLifecareId("4711"));
+			new LifecareAccessEntry("READ", "lifecare/journal-notes", "Läste journalen i Lifecare", null),
+			new LifecareAccessEntry("CREATE", "lifecare/journal-notes", null, "4711"));
 
 		service.recordLifecareAccesses("2281", "ns", "e1", caller, accesses);
 
@@ -79,7 +90,7 @@ class ErrandEventServiceTest {
 	@Test
 	void recordLifecareAccessesOnUnknownErrandRecordsNothing() {
 		doThrow(Problem.valueOf(NOT_FOUND, "No errand")).when(errandAccessGuardMock).verifyExistingErrand("2281", "ns", "e1");
-		final var accesses = List.of(LifecareAccess.create().withAction("READ").withTarget("lifecare/reminders"));
+		final var accesses = List.of(new LifecareAccessEntry("READ", "lifecare/reminders", null, null));
 		final var caller = Identifier.parse("joe001doe; type=adAccount");
 
 		assertThatThrownBy(() -> service.recordLifecareAccesses("2281", "ns", "e1", caller, accesses))

@@ -19,6 +19,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAs
 import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.node.ObjectNode;
 
+import static java.time.Month.SEPTEMBER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -83,9 +84,9 @@ class LifecareFinalizeServiceTest {
 	void finalizesARequestCarryingADecisionAsItIs() {
 		final var request = withoutDecision().withDecision(FinalizeDecision.create().withOutcome("AVSLAG"));
 		final var response = FinalizeResponse.create().withDecisionId("decision-1");
-		when(finalizeServiceMock.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY)).thenReturn(response);
+		when(finalizeServiceMock.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY)).thenReturn(response);
 
-		assertThat(service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY)).isSameAs(response);
+		assertThat(service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY)).isSameAs(response);
 		verifyNoInteractions(errandServiceMock, lifecareMock, accessRecorderMock);
 	}
 
@@ -94,16 +95,16 @@ class LifecareFinalizeServiceTest {
 		final var errand = linkedTo(98);
 		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
 		final var response = FinalizeResponse.create().withDecisionId("decision-1");
-		when(finalizeServiceMock.finalize(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), requestCaptor.capture(), eq(DECIDED_BY))).thenReturn(response);
+		when(finalizeServiceMock.finalizeErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), requestCaptor.capture(), eq(DECIDED_BY))).thenReturn(response);
 
-		assertThat(service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY)).isSameAs(response);
+		assertThat(service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY)).isSameAs(response);
 
 		final var request = requestCaptor.getValue();
 		assertThat(request.getDecision()).isEqualTo(FinalizeDecision.create()
 			.withOutcome("BIFALL")
 			.withReason("Arbetar deltid ofrivilligt, otillräcklig inkomst")
-			.withPeriodFrom(LocalDate.of(2026, 9, 1))
-			.withPeriodTo(LocalDate.of(2026, 9, 30))
+			.withPeriodFrom(LocalDate.of(2026, SEPTEMBER, 1))
+			.withPeriodTo(LocalDate.of(2026, SEPTEMBER, 30))
 			.withAmount(new BigDecimal("3000"))
 			.withDecisionMessage("<p>Beslut</p>"));
 		assertThat(request.getCommunication()).isEqualTo(COMMUNICATION);
@@ -117,15 +118,15 @@ class LifecareFinalizeServiceTest {
 		final var avslag = (ObjectNode) tree(SAVED);
 		avslag.put("decisionType", 10).put("amount", 500).put("fromDate", "2026-09-01T00:00:00").put("toDate", "");
 		when(lifecareMock.readDecision(98)).thenReturn(avslag);
-		when(finalizeServiceMock.finalize(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), requestCaptor.capture(), eq(DECIDED_BY)))
+		when(finalizeServiceMock.finalizeErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), requestCaptor.capture(), eq(DECIDED_BY)))
 			.thenReturn(FinalizeResponse.create());
 
-		service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY);
+		service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY);
 
 		final var decision = requestCaptor.getValue().getDecision();
 		assertThat(decision.getOutcome()).isEqualTo("AVSLAG");
 		assertThat(decision.getAmount()).isEqualByComparingTo(BigDecimal.ZERO);
-		assertThat(decision.getPeriodFrom()).isEqualTo(LocalDate.of(2026, 9, 1));
+		assertThat(decision.getPeriodFrom()).isEqualTo(LocalDate.of(2026, SEPTEMBER, 1));
 		assertThat(decision.getPeriodTo()).isNull();
 	}
 
@@ -133,7 +134,7 @@ class LifecareFinalizeServiceTest {
 	void refusesWhenNoBeslutHasBeenSaved() {
 		linkedTo(null);
 
-		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY))
+		assertThatThrownBy(() -> service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
 			.hasMessageContaining("Spara beslutet");
@@ -147,7 +148,7 @@ class LifecareFinalizeServiceTest {
 		recovery.put("decisionType", 9);
 		when(lifecareMock.readDecision(98)).thenReturn(recovery);
 
-		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY))
+		assertThatThrownBy(() -> service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
 			.hasMessageContaining("inte går att verkställa");
@@ -161,7 +162,7 @@ class LifecareFinalizeServiceTest {
 		tooLong.put("message", "x".repeat(8193)).put("toDate", "2026-08-31");
 		when(lifecareMock.readDecision(98)).thenReturn(tooLong);
 
-		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY))
+		assertThatThrownBy(() -> service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT)
 			.hasMessageContaining("decision.decisionMessage")
@@ -176,15 +177,15 @@ class LifecareFinalizeServiceTest {
 		odd.put("fromDate", "01.09.2026");
 		when(lifecareMock.readDecision(98)).thenReturn(odd);
 
-		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY))
+		assertThatThrownBy(() -> service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
-		verify(finalizeServiceMock, never()).finalize(any(), any(), any(), any(), any());
+		verify(finalizeServiceMock, never()).finalizeErrand(any(), any(), any(), any(), any());
 	}
 
 	@Test
 	void readsNothingForAnUnidentifiedCaller() {
-		assertThatThrownBy(() -> service.finalize(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), " "))
+		assertThatThrownBy(() -> service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), " "))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 		verifyNoInteractions(errandServiceMock, lifecareMock, finalizeServiceMock);

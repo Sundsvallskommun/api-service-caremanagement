@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.api;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -80,7 +81,7 @@ class FinancialAssistanceLifecareDecisionResourceTest {
 
 	@Test
 	void saveDecision() {
-		final var request = new LifecareDecisionSaveRequest(153, LocalDate.of(2026, 9, 23), LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30),
+		final var request = new LifecareDecisionSaveRequest(153, LocalDate.of(2026, Month.SEPTEMBER, 23), LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
 			new BigDecimal("3000"), 19, "<p>Beslut</p>", true);
 		when(serviceMock.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request)).thenReturn(VIEW);
 

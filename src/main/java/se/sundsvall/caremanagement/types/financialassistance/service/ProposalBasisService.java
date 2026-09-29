@@ -19,6 +19,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.mapper.Prop
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.util.StringUtils.hasText;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * The shared basis both section proposals are derived from: the errand's calculation draft, the resolved household,
@@ -137,11 +138,13 @@ public class ProposalBasisService {
 				.filter(calculation -> calculation.balance() != null)
 				.findFirst();
 			if (match.isEmpty()) {
-				LOG.warn("Saved Lifecare calculation {} for errand {} was not found between {} and {} — the proposal amount is estimated", calculationId.get(), errandId, from, to);
+				LOG.warn("Saved Lifecare calculation {} for errand {} was not found between {} and {} — the proposal amount is estimated", calculationId.get(),
+					sanitizeForLogging(errandId), from, to);
 			}
 			return match;
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the saved Lifecare calculation {} for errand {} — the proposal amount is estimated", calculationId.get(), errandId, e);
+			LOG.warn("Could not read the saved Lifecare calculation {} for errand {} — the proposal amount is estimated", calculationId.get(),
+				sanitizeForLogging(errandId), e);
 			return Optional.empty();
 		}
 	}
@@ -154,7 +157,7 @@ public class ProposalBasisService {
 		try {
 			return ofNullable(lifecareCaseService.previousHousehold(municipalityId, applicant, applicationMonth).normSum()).map(BigDecimal::abs);
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the previous calculation household — the proposal amount is left unknown", e);
+			LOG.warn("Could not read the previous calculation household — the proposal amount is left unknown ({})", e.getClass().getSimpleName());
 			return Optional.empty();
 		}
 	}

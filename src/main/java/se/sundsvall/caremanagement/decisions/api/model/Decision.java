@@ -67,12 +67,12 @@ public class Decision {
 	private String createdBy;
 
 	@Schema(description = """
-		Where the decision stands in Lifecare: PENDING once handed over to be written there, SYNCED once written, \
-		FAILED when Lifecare refused it (see lifecareDetail). Null for a decision that is never written to Lifecare.""",
+		Where the decision stands in Lifecare: SYNCED once it is receipted against the beslut careM saved there. Null for \
+		a decision that is never written to Lifecare.""",
 		examples = "SYNCED",
 		accessMode = READ_ONLY,
 		allowableValues = {
-			"PENDING", "SYNCED", "FAILED"
+			"PENDING", "SYNCED"
 		})
 	@Null(groups = OnCreate.class)
 	private String lifecareStatus;
@@ -80,12 +80,6 @@ public class Decision {
 	@Schema(description = "The decision's id in Lifecare, once written there", examples = "88123", accessMode = READ_ONLY)
 	@Null(groups = OnCreate.class)
 	private String lifecareId;
-
-	@Schema(description = "Lifecare's own message when writing the decision failed — shown to the caseworker as-is",
-		examples = "Beslutet kunde inte registreras",
-		accessMode = READ_ONLY)
-	@Null(groups = OnCreate.class)
-	private String lifecareDetail;
 
 	@Schema(description = "Timestamp the decision was recorded (server-assigned)", accessMode = READ_ONLY)
 	@Null(groups = OnCreate.class)
@@ -278,19 +272,6 @@ public class Decision {
 		return this;
 	}
 
-	public String getLifecareDetail() {
-		return lifecareDetail;
-	}
-
-	public void setLifecareDetail(final String lifecareDetail) {
-		this.lifecareDetail = lifecareDetail;
-	}
-
-	public Decision withLifecareDetail(final String lifecareDetail) {
-		this.lifecareDetail = lifecareDetail;
-		return this;
-	}
-
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -300,14 +281,13 @@ public class Decision {
 			&& Objects.equals(coApplicantReason, that.coApplicantReason)
 			&& Objects.equals(amount, that.amount) && Objects.equals(decisionMessage, that.decisionMessage) && Objects.equals(decisionDate, that.decisionDate)
 			&& Objects.equals(periodFrom, that.periodFrom) && Objects.equals(periodTo, that.periodTo) && Objects.equals(createdBy, that.createdBy)
-			&& Objects.equals(lifecareStatus, that.lifecareStatus) && Objects.equals(lifecareId, that.lifecareId)
-			&& Objects.equals(lifecareDetail, that.lifecareDetail) && Objects.equals(created, that.created);
+			&& Objects.equals(lifecareStatus, that.lifecareStatus) && Objects.equals(lifecareId, that.lifecareId) && Objects.equals(created, that.created);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, decisionType, value, description, coApplicantReason, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, lifecareStatus, lifecareId,
-			lifecareDetail, created);
+			created);
 	}
 
 	@Override
@@ -326,7 +306,6 @@ public class Decision {
 			", createdBy='" + createdBy + '\'' +
 			", lifecareStatus='" + lifecareStatus + '\'' +
 			", lifecareId='" + lifecareId + '\'' +
-			", lifecareDetail='" + lifecareDetail + '\'' +
 			", created=" + created +
 			'}';
 	}

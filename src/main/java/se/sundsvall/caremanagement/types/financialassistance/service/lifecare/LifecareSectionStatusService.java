@@ -12,6 +12,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJson.elements;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJson.integer;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJson.isTrue;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * Which of the errand's Normberäkning, Beslut and Utbetalning are done, as Lifecare has them: the checks on the tabs,
@@ -70,7 +71,7 @@ public class LifecareSectionStatusService {
 				.anyMatch(calculation -> Objects.equals(integer(calculation.path("calculationId")).orElse(null), errand.calculationId())
 					&& isTrue(calculation.path("isFinalized")));
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read whether the beräkning of errand {} is slutlig in Lifecare ({})", errand.errandId(), e.getClass().getSimpleName());
+			LOG.warn("Could not read whether the beräkning of errand {} is slutlig in Lifecare ({})", sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 			return false;
 		}
 	}
@@ -91,11 +92,12 @@ public class LifecareSectionStatusService {
 			final var registered = client.get(PATH_LATEST_PAYMENTS, params);
 			accessRecorder.read(errand, "PAYMENTS", "Läste utbetalningar i Lifecare");
 			return elements(registered).stream()
-				.filter(payment -> payment.path("concernedMonth").isString() && month.equals(payment.path("concernedMonth").stringValue()))
-				// Lifecare leaves cancellationDate empty until the utbetalning is makulerad.
-				.anyMatch(payment -> payment.path("cancellationDate").isString() && payment.path("cancellationDate").stringValue().isEmpty());
+				.filter(payment -> month.equals(LifecarePaymentNodes.text(payment, "concernedMonth")))
+				// The same rule every other payment read uses: standing until Lifecare gives it a cancellationDate, so an
+				// empty, null or missing one all mean not makulerad.
+				.anyMatch(payment -> !LifecarePaymentNodes.cancelled(payment));
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the utbetalningar of errand {} in Lifecare ({})", errand.errandId(), e.getClass().getSimpleName());
+			LOG.warn("Could not read the utbetalningar of errand {} in Lifecare ({})", sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 			return false;
 		}
 	}

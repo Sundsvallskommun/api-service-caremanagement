@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.eventlog.service;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
-import se.sundsvall.caremanagement.eventlog.api.model.LifecareAccess;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessLog;
 import se.sundsvall.dept44.problem.Problem;
@@ -11,7 +10,7 @@ import se.sundsvall.dept44.support.Identifier;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
- * Records careM's own Lifecare accesses through the same path as the ones a caller reports over HTTP.
+ * Records careM's own Lifecare accesses in the errand's access log.
  */
 @Service
 class LifecareAccessLogService implements LifecareAccessLog {
@@ -23,17 +22,11 @@ class LifecareAccessLogService implements LifecareAccessLog {
 	}
 
 	@Override
-	public void record(final String municipalityId, final String namespace, final String errandId, final List<LifecareAccessEntry> entries) {
+	public void append(final String municipalityId, final String namespace, final String errandId, final List<LifecareAccessEntry> entries) {
 		if (entries.isEmpty()) {
 			return;
 		}
-		errandEventService.recordLifecareAccesses(municipalityId, namespace, errandId, caller(), entries.stream()
-			.map(entry -> LifecareAccess.create()
-				.withAction(entry.action())
-				.withTarget(entry.target())
-				.withDescription(entry.description())
-				.withLifecareId(entry.lifecareId()))
-			.toList());
+		errandEventService.recordLifecareAccesses(municipalityId, namespace, errandId, caller(), entries);
 	}
 
 	private static Identifier caller() {

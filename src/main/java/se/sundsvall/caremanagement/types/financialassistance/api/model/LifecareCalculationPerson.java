@@ -11,9 +11,6 @@ import java.util.Objects;
 @Schema(description = "A household member on a Lifecare calculation.")
 public class LifecareCalculationPerson {
 
-	@Schema(description = "The Lifecare person id", examples = "200001011234")
-	private String personId;
-
 	@Schema(description = "The person name", examples = "Anna Andersson")
 	private String name;
 
@@ -28,19 +25,6 @@ public class LifecareCalculationPerson {
 
 	public static LifecareCalculationPerson create() {
 		return new LifecareCalculationPerson();
-	}
-
-	public String getPersonId() {
-		return personId;
-	}
-
-	public void setPersonId(final String personId) {
-		this.personId = personId;
-	}
-
-	public LifecareCalculationPerson withPersonId(final String personId) {
-		this.personId = personId;
-		return this;
 	}
 
 	public String getName() {
@@ -100,18 +84,18 @@ public class LifecareCalculationPerson {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final LifecareCalculationPerson that = (LifecareCalculationPerson) o;
-		return Objects.equals(personId, that.personId) && Objects.equals(name, that.name) && Objects.equals(amount, that.amount)
+		return Objects.equals(name, that.name) && Objects.equals(amount, that.amount)
 			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(personId, name, amount, deviationFromDate, deviationToDate);
+		return Objects.hash(name, amount, deviationFromDate, deviationToDate);
 	}
 
 	@Override
 	public String toString() {
-		return "LifecareCalculationPerson{personId='" + personId + "', name='" + name + "', amount=" + amount + ", deviationFromDate='" + deviationFromDate
+		return "LifecareCalculationPerson{name='" + name + "', amount=" + amount + ", deviationFromDate='" + deviationFromDate
 			+ "', deviationToDate='" + deviationToDate + "'}";
 	}
 }

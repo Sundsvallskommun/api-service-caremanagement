@@ -60,8 +60,9 @@ class LifecareServiceIdServiceTest {
 		when(actualisationServiceMock.findFinancialAssistanceServiceId(MUNICIPALITY_ID, APPLICANT)).thenReturn(Optional.of(7700));
 
 		assertThat(service.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(7700);
-		verify(repositoryMock).save(entity);
-		assertThat(entity.getLifecareServiceId()).isEqualTo(7700);
+		// A targeted update, never a save of the entity loaded before the seconds-long lookup.
+		verify(repositoryMock).linkLifecareServiceIfAbsent(ERRAND_ID, 7700);
+		verify(repositoryMock, never()).save(any());
 	}
 
 	@Test

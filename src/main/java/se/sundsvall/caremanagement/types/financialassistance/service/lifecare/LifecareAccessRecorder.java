@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessLog;
 
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
+
 /**
  * Writes an errand's Lifecare accesses to its access log.
  *
@@ -40,7 +42,7 @@ public class LifecareAccessRecorder {
 	}
 
 	public void read(final LifecareErrand errand, final String target, final String description, final String lifecareId) {
-		accessLog.record(errand.municipalityId(), errand.namespace(), errand.errandId(),
+		accessLog.append(errand.municipalityId(), errand.namespace(), errand.errandId(),
 			List.of(new LifecareAccessEntry(LifecareAccessEntry.READ, target, description, lifecareId)));
 	}
 
@@ -55,10 +57,10 @@ public class LifecareAccessRecorder {
 	 */
 	public void written(final LifecareErrand errand, final String action, final String target, final String description, final String lifecareId) {
 		try {
-			accessLog.record(errand.municipalityId(), errand.namespace(), errand.errandId(),
+			accessLog.append(errand.municipalityId(), errand.namespace(), errand.errandId(),
 				List.of(new LifecareAccessEntry(action, target, description, lifecareId)));
 		} catch (final RuntimeException e) {
-			LOG.error("Could not log a Lifecare {} of {} on errand {} ({})", action, target, errand.errandId(), e.getClass().getSimpleName());
+			LOG.error("Could not log a Lifecare {} of {} on errand {} ({})", action, target, sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 		}
 	}
 }

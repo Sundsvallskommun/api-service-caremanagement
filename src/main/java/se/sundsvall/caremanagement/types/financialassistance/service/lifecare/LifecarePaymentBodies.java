@@ -39,6 +39,16 @@ final class LifecarePaymentBodies {
 	/** How many message rows a Lifecare utbetalning has (messageRow1 to messageRow7). */
 	private static final int MESSAGE_ROWS = 7;
 
+	private static final String FIELD_AMOUNT = "amount";
+	private static final String FIELD_PAYMENT_METHOD = "paymentMethod";
+	private static final String FIELD_PAY_DATE = "payDate";
+	private static final String FIELD_CONCERNED_MONTH = "concernedMonth";
+	private static final String FIELD_CLEARING = "clearing";
+	private static final String FIELD_ACCOUNT_NUMBER = "accountNumber";
+	private static final String FIELD_PURPOSE = "purpose";
+	private static final String FIELD_IS_ACTIVE = "isActive";
+	private static final String FIELD_PAYEE_ID = "payeeId";
+
 	private LifecarePaymentBodies() {}
 
 	/**
@@ -94,21 +104,29 @@ final class LifecarePaymentBodies {
 			throw refuse("Mottagaren finns inte i Lifecare. Lägg till den där först.");
 		}
 		// A payment that is not an object has no postings, so it has been refused above.
-		return fill(copyOf(payment), request, amount, paymentCode, concernedMonth, purpose, balance, postings);
+		return fill(copyOf(payment), request, new ResolvedPayment(amount, paymentCode, concernedMonth, purpose, balance, postings));
 	}
 
-	private static ObjectNode fill(final ObjectNode body, final LifecarePaymentRequest request, final BigDecimal amount, final Integer paymentCode,
-		final String concernedMonth, final String purpose, final JsonNode balance, final List<JsonNode> postings) {
+	/** The pieces of the Payment/Create body resolved against Lifecare's underlag, ready to be filled in. */
+	private record ResolvedPayment(BigDecimal amount, Integer paymentCode, String concernedMonth, String purpose, JsonNode balance, List<JsonNode> postings) {}
+
+	private static ObjectNode fill(final ObjectNode body, final LifecarePaymentRequest request, final ResolvedPayment resolved) {
+		final var amount = resolved.amount();
+		final var paymentCode = resolved.paymentCode();
+		final var concernedMonth = resolved.concernedMonth();
+		final var purpose = resolved.purpose();
+		final var balance = resolved.balance();
+		final var postings = resolved.postings();
 
 		// Setting a field the underlag has keeps it where the underlag had it; only the added fields go last.
-		body.put("amount", amount);
-		body.put("paymentMethod", paymentCode);
+		body.put(FIELD_AMOUNT, amount);
+		body.put(FIELD_PAYMENT_METHOD, paymentCode);
 		if (request.paymentDate() != null) {
-			body.put("payDate", request.paymentDate());
+			body.put(FIELD_PAY_DATE, request.paymentDate());
 		}
-		body.put("concernedMonth", concernedMonth);
-		body.put("clearing", Objects.toString(request.clearingNumber(), ""));
-		body.put("accountNumber", Objects.toString(request.accountNumber(), ""));
+		body.put(FIELD_CONCERNED_MONTH, concernedMonth);
+		body.put(FIELD_CLEARING, Objects.toString(request.clearingNumber(), ""));
+		body.put(FIELD_ACCOUNT_NUMBER, Objects.toString(request.accountNumber(), ""));
 		body.put("name", Objects.toString(request.payeeName(), ""));
 		body.put("streetAddress", Objects.toString(request.payeeAddress(), ""));
 		body.put("careOfAddress", Objects.toString(request.payeeCareOf(), ""));
@@ -139,10 +157,10 @@ final class LifecarePaymentBodies {
 		final var postingRows = NODES.arrayNode();
 		postings.forEach(posting -> {
 			final var copy = copyOf(posting);
-			if (purpose.equals(text(posting, "purpose"))) {
-				copy.put("amount", amount);
+			if (purpose.equals(text(posting, FIELD_PURPOSE))) {
+				copy.put(FIELD_AMOUNT, amount);
 			} else {
-				copy.put("amount", 0);
+				copy.put(FIELD_AMOUNT, 0);
 			}
 			postingRows.add(copy);
 		});
@@ -164,14 +182,14 @@ final class LifecarePaymentBodies {
 	 * @return            the duplicate, if there is one
 	 */
 	static Optional<JsonNode> findRegisteredPayment(final JsonNode registered, final JsonNode body) {
-		final var amount = decimal(body, "amount");
-		final var account = digitsOnly(text(body, "accountNumber"));
+		final var amount = decimal(body, FIELD_AMOUNT);
+		final var account = digitsOnly(text(body, FIELD_ACCOUNT_NUMBER));
 		return LifecarePaymentNodes.elements(registered).stream()
 			.filter(payment -> !cancelled(payment))
-			.filter(payment -> sameAmount(decimal(payment, "amount"), amount))
-			.filter(payment -> Objects.equals(text(payment, "concernedMonth"), text(body, "concernedMonth")))
-			.filter(payment -> Objects.equals(text(payment, "payDate"), text(body, "payDate")))
-			.filter(payment -> digitsOnly(text(payment, "accountNumber")).equals(account))
+			.filter(payment -> sameAmount(decimal(payment, FIELD_AMOUNT), amount))
+			.filter(payment -> Objects.equals(text(payment, FIELD_CONCERNED_MONTH), text(body, FIELD_CONCERNED_MONTH)))
+			.filter(payment -> Objects.equals(text(payment, FIELD_PAY_DATE), text(body, FIELD_PAY_DATE)))
+			.filter(payment -> digitsOnly(text(payment, FIELD_ACCOUNT_NUMBER)).equals(account))
 			.findFirst();
 	}
 
@@ -190,11 +208,11 @@ final class LifecarePaymentBodies {
 			return Optional.empty();
 		}
 		return payees.stream()
-			.filter(payee -> flag(payee, "isActive"))
-			.filter(payee -> !Objects.equals(integer(payee, "payeeId"), ADDRESS_PAYEE_ID))
-			.filter(payee -> Objects.equals(integer(payee, "paymentMethod"), candidate.paymentMethod()))
-			.filter(payee -> digitsOnly(text(payee, "accountNumber")).equals(accountNumber))
-			.filter(payee -> digitsOnly(text(payee, "clearing")).equals(digitsOnly(candidate.clearing())))
+			.filter(payee -> flag(payee, FIELD_IS_ACTIVE))
+			.filter(payee -> !Objects.equals(integer(payee, FIELD_PAYEE_ID), ADDRESS_PAYEE_ID))
+			.filter(payee -> Objects.equals(integer(payee, FIELD_PAYMENT_METHOD), candidate.paymentMethod()))
+			.filter(payee -> digitsOnly(text(payee, FIELD_ACCOUNT_NUMBER)).equals(accountNumber))
+			.filter(payee -> digitsOnly(text(payee, FIELD_CLEARING)).equals(digitsOnly(candidate.clearing())))
 			.findFirst();
 	}
 
@@ -209,14 +227,14 @@ final class LifecarePaymentBodies {
 	static ObjectNode buildPayeeCreate(final String personId, final LifecarePayeeRequest payee) {
 		final var name = payee.name().trim();
 		final var body = NODES.objectNode();
-		body.put("payeeId", 0);
+		body.put(FIELD_PAYEE_ID, 0);
 		body.put("payeeName", Optional.ofNullable(payee.payeeName()).map(String::trim).filter(StringUtils::hasText).orElse(name));
 		body.put("personId", personId);
-		body.put("paymentMethod", payee.paymentMethod());
+		body.put(FIELD_PAYMENT_METHOD, payee.paymentMethod());
 		body.putNull("paymentMethodText");
-		body.put("accountNumber", Optional.ofNullable(payee.accountNumber()).map(String::trim).orElse(""));
+		body.put(FIELD_ACCOUNT_NUMBER, Optional.ofNullable(payee.accountNumber()).map(String::trim).orElse(""));
 		body.putNull("memorialAccountNumber");
-		body.put("clearing", Optional.ofNullable(payee.clearing()).map(String::trim).orElse(""));
+		body.put(FIELD_CLEARING, Optional.ofNullable(payee.clearing()).map(String::trim).orElse(""));
 		body.put("name", name);
 		body.putNull("streetAddress");
 		body.putNull("careOfAddress");
@@ -226,7 +244,7 @@ final class LifecarePaymentBodies {
 		body.put("addressFromPerson", false);
 		body.put("updateTimestamp", "");
 		body.putNull("updateSignature");
-		body.put("isActive", true);
+		body.put(FIELD_IS_ACTIVE, true);
 		body.putNull("statusText");
 		return body;
 	}
@@ -246,13 +264,13 @@ final class LifecarePaymentBodies {
 		final var accountNumber = digitsOnly(request.accountNumber());
 		if (accountNumber.isEmpty()) {
 			return payees.stream()
-				.anyMatch(payee -> Objects.equals(integer(payee, "payeeId"), ADDRESS_PAYEE_ID) && sameName(text(payee, "payeeName"), request.payeeName()));
+				.anyMatch(payee -> Objects.equals(integer(payee, FIELD_PAYEE_ID), ADDRESS_PAYEE_ID) && sameName(text(payee, "payeeName"), request.payeeName()));
 		}
 		return payees.stream()
-			.filter(payee -> flag(payee, "isActive"))
-			.filter(payee -> Objects.equals(integer(payee, "paymentMethod"), paymentCode))
-			.filter(payee -> digitsOnly(text(payee, "accountNumber")).equals(accountNumber))
-			.anyMatch(payee -> digitsOnly(text(payee, "clearing")).equals(digitsOnly(request.clearingNumber())));
+			.filter(payee -> flag(payee, FIELD_IS_ACTIVE))
+			.filter(payee -> Objects.equals(integer(payee, FIELD_PAYMENT_METHOD), paymentCode))
+			.filter(payee -> digitsOnly(text(payee, FIELD_ACCOUNT_NUMBER)).equals(accountNumber))
+			.anyMatch(payee -> digitsOnly(text(payee, FIELD_CLEARING)).equals(digitsOnly(request.clearingNumber())));
 	}
 
 	/**
@@ -265,13 +283,13 @@ final class LifecarePaymentBodies {
 		}
 		if (!StringUtils.hasLength(accountingCode)) {
 			if (postings.size() == 1) {
-				return textOrEmpty(postings.getFirst(), "purpose");
+				return textOrEmpty(postings.getFirst(), FIELD_PURPOSE);
 			}
 			throw refuse("Välj ändamål (kontering) för utbetalningen.");
 		}
 		final var code = accountingCode.trim();
 		return postings.stream()
-			.map(posting -> textOrEmpty(posting, "purpose"))
+			.map(posting -> textOrEmpty(posting, FIELD_PURPOSE))
 			.filter(code::equals)
 			.findFirst()
 			.orElseThrow(() -> refuse("Ändamålet \"%s\" finns inte bland insatsens konteringsrader i Lifecare.".formatted(accountingCode)));

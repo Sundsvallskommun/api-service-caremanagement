@@ -149,7 +149,7 @@ class DecisionProposalServiceTest {
 			NormExpenseRow.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000")).withEffectiveAmount(new BigDecimal("8000")),
 			NormExpenseRow.create().withCostType("OTHER").withOtherSubType("Busskort").withAppliedAmount(new BigDecimal("500"))));
 		when(proposalBasisServiceMock.basis(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(basis(draft, Optional.of(APPLICANT), Optional.of(new BigDecimal("6200"))));
-		when(lifecareCaseHistoryServiceMock.listDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT), eq(LocalDate.parse("2025-06-01")), eq(LocalDate.parse("2026-06-30"))))
+		when(lifecareCaseHistoryServiceMock.listDecisions(MUNICIPALITY_ID, APPLICANT, LocalDate.parse("2025-06-01"), LocalDate.parse("2026-06-30")))
 			.thenReturn(List.of(decision("Förskott på förmån", "Arbetslös, ingen ersättning/stöd")));
 		final var reconciled = List.of(Warning.create().withType("EXPENSE_PARTIALLY_REJECTED"));
 		final var captor = ArgumentCaptor.forClass(List.class);

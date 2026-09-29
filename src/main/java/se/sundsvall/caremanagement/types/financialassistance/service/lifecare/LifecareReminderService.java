@@ -62,6 +62,8 @@ public class LifecareReminderService {
 	static final String INSATS_OBJECT_TYPE = "IFO.Insats";
 	static final String INSATS_REMINDER_TYPE = "Manuell bevakning insats";
 
+	private static final String FIELD_OPTIONS = "options";
+
 	static final String PAST_DATE = "Bevakningsdatumet kan inte ligga bakåt i tiden.";
 	static final String NO_MANUAL_REMINDER = "Lifecare tillåter ingen manuell bevakning på insatsen.";
 	static final String NO_CASEWORKER = "Insatsen har ingen handläggare i Lifecare som kan bevaka.";
@@ -130,7 +132,7 @@ public class LifecareReminderService {
 		final var proposal = readProposal(serviceId);
 		final var blank = requireObject(proposal.path("reminderForAdd"), PATH_PROPOSAL);
 		final var target = resolveTarget(proposal, blank);
-		resolveCodeTexts(proposal.path("options"), request);
+		resolveCodeTexts(proposal.path(FIELD_OPTIONS), request);
 
 		final var body = toReminderCreateBody(blank, target, errandService.applicantPersonalNumber(errand), applicantName(errand), request);
 		client.post(PATH_CREATE, Map.of(), body);
@@ -160,7 +162,7 @@ public class LifecareReminderService {
 		if (dateChanged && isPast(request.getReminderDate())) {
 			throw Problem.valueOf(BAD_REQUEST, PAST_DATE);
 		}
-		final var texts = resolveCodeTexts(proposal.path("options"), request);
+		final var texts = resolveCodeTexts(proposal.path(FIELD_OPTIONS), request);
 
 		client.post(PATH_UPDATE, Map.of(), toReminderUpdateBody(current, request, dateChanged, texts.get(0), texts.get(1)));
 		recorder.written(errand, LifecareAccessEntry.UPDATE, TARGET_REMINDER, "Ändrade en bevakning i Lifecare", String.valueOf(reminderId));
@@ -221,7 +223,7 @@ public class LifecareReminderService {
 		final var caseworkerId = Optional.ofNullable(text(insats.path("caseworkerId")))
 			.filter(StringUtils::hasText)
 			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, NO_CASEWORKER));
-		final var caseworkerName = proposal.path("options").path("reminderCaseworkers").valueStream()
+		final var caseworkerName = proposal.path(FIELD_OPTIONS).path("reminderCaseworkers").valueStream()
 			.filter(candidate -> caseworkerId.equals(text(candidate.path("id"))))
 			.map(candidate -> text(candidate.path("name")))
 			.filter(Objects::nonNull)

@@ -9,11 +9,12 @@ import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 
 import static org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * The errand's Lifecare insats id — the applicant's open financial-assistance service in Lifecare, the key
- * Lifecare's own case reads (journal, documents, reminders, jobbstimulans) take. Draken's BFF reads those live and
- * gets the key off the errand.
+ * Lifecare's own case reads (journal, documents, reminders, jobbstimulans) take. careM's errand-scoped /lifecare
+ * routes read those live and take the key off the errand.
  *
  * <p>
  * Intake stores it from the insats the actualisation was linked to. An errand that had no open insats then — a
@@ -66,11 +67,13 @@ public class LifecareServiceIdService {
 			final var resolved = householdPartyService.household(municipalityId, namespace, errandId).applicantPartyId()
 				.filter(StringUtils::hasText)
 				.flatMap(personId -> actualisationService.findFinancialAssistanceServiceId(municipalityId, personId));
-			resolved.ifPresent(serviceId -> financialAssistanceRepository.save(entity.withLifecareServiceId(serviceId)));
+			// A targeted update, not a save of the entity loaded above: the lookup takes seconds, and saving that stale copy
+			// would write a null back over a calculation or beslut linked in the meantime.
+			resolved.ifPresent(serviceId -> financialAssistanceRepository.linkLifecareServiceIfAbsent(errandId, serviceId));
 			return resolved.orElse(null);
 		} catch (final RuntimeException e) {
 			// The exception type only: messages from the Lifecare lookup may carry the personal number.
-			LOG.warn("Could not look up the Lifecare insats for errand {} ({}); the next read tries again", errandId, e.getClass().getSimpleName());
+			LOG.warn("Could not look up the Lifecare insats for errand {} ({}); the next read tries again", sanitizeForLogging(errandId), e.getClass().getSimpleName());
 			return null;
 		}
 	}

@@ -83,14 +83,27 @@ class LifecareSectionStatusServiceTest {
 	}
 
 	@Test
-	void doesNotCountAMakuleradUtbetalning() {
+	void doesNotCountAMakuleradUtbetalningOrOneForAnotherMonth() {
 		errand(1, null, null, 2026, 9);
 		when(clientMock.get("api2/Payment/GetLatestPayments", PAYMENT_PARAMS)).thenReturn(tree("""
 			[{"paymentId": 1, "payDate": "2026-09-25", "concernedMonth": "202609", "cancellationDate": "2026-09-26"},
-			 {"paymentId": 2, "payDate": "2026-09-25", "concernedMonth": "202609", "cancellationDate": null},
 			 {"paymentId": 3, "payDate": "2026-09-25", "concernedMonth": null, "cancellationDate": ""}]"""));
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).paymentRegistered()).isFalse();
+	}
+
+	@Test
+	void countsAnUtbetalningWithANullOrMissingCancellationDateAsStanding() {
+		errand(1, null, null, 2026, 9);
+		when(clientMock.get("api2/Payment/GetLatestPayments", PAYMENT_PARAMS)).thenReturn(tree("""
+			[{"paymentId": 2, "payDate": "2026-09-25", "concernedMonth": "202609", "cancellationDate": null}]"""));
+
+		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).paymentRegistered()).isTrue();
+
+		when(clientMock.get("api2/Payment/GetLatestPayments", PAYMENT_PARAMS)).thenReturn(tree("""
+			[{"paymentId": 4, "payDate": "2026-09-25", "concernedMonth": "202609"}]"""));
+
+		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).paymentRegistered()).isTrue();
 	}
 
 	@Test

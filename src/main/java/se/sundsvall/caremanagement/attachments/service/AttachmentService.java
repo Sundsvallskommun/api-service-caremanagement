@@ -31,6 +31,7 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
+import static org.springframework.transaction.annotation.Propagation.REQUIRES_NEW;
 import static se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper.toAttachment;
 import static se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper.toAttachmentEntity;
 import static se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper.toAttachmentList;
@@ -134,9 +135,14 @@ public class AttachmentService {
 	 * {@link #applicationAttachmentsExist} returns a boolean — the model stays inside this module, while
 	 * {@code SourceFile} already crosses it for {@link #combineToPdf}.
 	 *
+	 * <p>
+	 * A transaction of its own: the Lifecare intake calls this after it has created the actualisation, and treats a
+	 * failed read as best-effort. Joining the intake's transaction, a failure here would mark it rollback-only and undo
+	 * the intake's own writes after all.
+	 *
 	 * @return the application documents in archiving order, possibly empty
 	 */
-	@Transactional(readOnly = true)
+	@Transactional(readOnly = true, propagation = REQUIRES_NEW)
 	public List<SourceFile> readApplicationArchiveDocuments(final String errandId) {
 		final var attachments = attachmentRepository.findByErrandId(errandId);
 

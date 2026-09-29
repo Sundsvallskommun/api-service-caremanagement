@@ -26,6 +26,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toIncomeInput;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toNormOptions;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toPersonInput;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
  * The Normberäkning tab's rows, wherever they are kept. Until the beräkning is first saved in Lifecare they are careM's
@@ -245,7 +246,7 @@ public class ErrandNormberakningService {
 			recorder.read(errand, TARGET, "Läste normer i Lifecare");
 			return toNormOptions(proposal.path("norms"));
 		} catch (final RuntimeException e) {
-			LOG.info("No Lifecare norms for errand {} ({})", errand.errandId(), e.getClass().getSimpleName());
+			LOG.info("No Lifecare norms for errand {} ({})", sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 			return List.of();
 		}
 	}

@@ -35,7 +35,7 @@ class LifecareReminderMapperTest {
 			"caseworkerName":"Test Handläggare","reminderDate":"2026-09-30","status":3,"statusText":null,"priority":2,"priorityText":null,\
 			"type":3,"typeText":"Manuell bevakning insats","text":"Kontrollera hyran","startComponent1":0,"startComponent2":0,\
 			"updateTimestamp":"","updateSignature":null,"objectId2":null,"info":null,"customerId":0,"personIdFormatted":""}""";
-		assertThat(body.toString()).isEqualTo(expected);
+		assertThat(body).hasToString(expected);
 		// The proposal itself is left as it was.
 		assertThat(blank.path("objectId").isNull()).isTrue();
 	}
@@ -56,7 +56,7 @@ class LifecareReminderMapperTest {
 		expected.put("isDateDirty", false);
 		expected.setAll(current.deepCopy());
 		expected.put("text", "Hejsdfdsf");
-		assertThat(body.toString()).isEqualTo(expected.toString());
+		assertThat(body).hasToString(expected.toString());
 	}
 
 	@Test

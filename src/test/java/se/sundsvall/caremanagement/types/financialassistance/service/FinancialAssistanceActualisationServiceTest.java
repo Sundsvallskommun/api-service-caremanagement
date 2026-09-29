@@ -22,6 +22,7 @@ import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationResult;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
+import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.caremanagement.lifecare.service.model.ActualisationSummary;
 import se.sundsvall.caremanagement.shared.SourceFile;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.ActualisationRequest;
@@ -38,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -154,8 +156,9 @@ class FinancialAssistanceActualisationServiceTest {
 			.withApplicationMonth("2026-06")
 			.withErrandId(ERRAND_ID));
 
-		verify(financialAssistanceRepositoryMock).save(errand);
-		assertThat(errand.getLifecareServiceId()).isEqualTo(7700);
+		// A targeted update: the actualisation's insats is authoritative, and no stale entity is written back.
+		verify(financialAssistanceRepositoryMock).updateLifecareServiceId(ERRAND_ID, 7700);
+		verify(financialAssistanceRepositoryMock, never()).save(errand);
 	}
 
 	@Test
@@ -190,10 +193,10 @@ class FinancialAssistanceActualisationServiceTest {
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID));
 
 		// Both documents, under names a caseworker can tell apart among the person's other Lifecare documents.
-		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, "EB-26060001_ansokan.pdf", application.content(),
-			"1", "1", "Ansökan ekonomiskt bistånd EB-26060001", "Draken");
-		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, "EB-26060001_bilagor.pdf", merged.content(),
-			"1", "1", "Bilagor till ansökan EB-26060001", "Draken");
+		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012,
+			new AttachmentUpload("1", "1", "Ansökan ekonomiskt bistånd EB-26060001", "Draken", "EB-26060001_ansokan.pdf", application.content()));
+		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012,
+			new AttachmentUpload("1", "1", "Bilagor till ansökan EB-26060001", "Draken", "EB-26060001_bilagor.pdf", merged.content()));
 
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
@@ -212,7 +215,7 @@ class FinancialAssistanceActualisationServiceTest {
 		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID));
 
-		verify(actualisationServiceMock, never()).uploadAttachment(any(), any(), any(), any(), any(), any(), any(), any());
+		verify(actualisationServiceMock, never()).uploadAttachment(any(), any(), any());
 
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
@@ -231,7 +234,7 @@ class FinancialAssistanceActualisationServiceTest {
 			.thenReturn(List.of(new SourceFile("EB-26060001.pdf", "application/pdf", "pdf".getBytes(UTF_8))));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withErrandNumber("EB-26060001"));
 		doThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare refused the upload"))
-			.when(actualisationServiceMock).uploadAttachment(any(), any(), any(), any(), any(), any(), any(), any());
+			.when(actualisationServiceMock).uploadAttachment(any(), any(), any());
 
 		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, ActualisationRequest.create()
 			.withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID));
@@ -243,7 +246,9 @@ class FinancialAssistanceActualisationServiceTest {
 		assertThat(decisionCaptor.getValue().getDescription())
 			.contains("id 5012")
 			.contains("FAILED")
-			.contains("Lifecare refused the upload");
+			// The exception type only: Lifecare's message may carry the file name or the applicant's details.
+			.contains("ThrowableProblem")
+			.doesNotContain("Lifecare refused the upload");
 	}
 
 	@Test
@@ -349,9 +354,9 @@ class FinancialAssistanceActualisationServiceTest {
 
 		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, APPLICANT_PARTY_ID, 5012, file, null);
 
-		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, "tillaggsansokan.pdf", new byte[] {
+		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, new AttachmentUpload("1", "1", "tillaggsansokan.pdf", "Draken", "tillaggsansokan.pdf", new byte[] {
 			1, 2, 3
-		}, "1", "1", "tillaggsansokan.pdf", "Draken");
+		}));
 		// No errandId → nothing recorded on an errand.
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 	}
@@ -370,9 +375,9 @@ class FinancialAssistanceActualisationServiceTest {
 
 		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, APPLICANT_PARTY_ID, 5012, file, request);
 
-		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, "tillaggsansokan.pdf", new byte[] {
+		verify(actualisationServiceMock).uploadAttachment(MUNICIPALITY_ID, 5012, new AttachmentUpload("KOMPLETTERING", "MYNDIGHET", "Tilläggsansökan juni", "Sundsvalls kommun", "tillaggsansokan.pdf", new byte[] {
 			9
-		}, "KOMPLETTERING", "MYNDIGHET", "Tilläggsansökan juni", "Sundsvalls kommun");
+		}));
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
 	}
 
@@ -386,7 +391,9 @@ class FinancialAssistanceActualisationServiceTest {
 
 		service.archiveToActualisation(MUNICIPALITY_ID, NAMESPACE, APPLICANT_PARTY_ID, 5012, file, request);
 
-		verify(actualisationServiceMock).uploadAttachment(eq(MUNICIPALITY_ID), eq(5012), eq("tillaggsansokan.pdf"), any(), eq("1"), eq("1"), eq("tillaggsansokan.pdf"), eq("Draken"));
+		verify(actualisationServiceMock).uploadAttachment(eq(MUNICIPALITY_ID), eq(5012),
+			argThat(attachment -> "tillaggsansokan.pdf".equals(attachment.fileName()) && "1".equals(attachment.documentType()) && "1".equals(attachment.documentSenderType())
+				&& "tillaggsansokan.pdf".equals(attachment.title()) && "Draken".equals(attachment.senderName())));
 
 		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
 		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
@@ -409,7 +416,7 @@ class FinancialAssistanceActualisationServiceTest {
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
 			.hasMessage("Bad Request: Could not read the uploaded file: stream closed");
 
-		verify(actualisationServiceMock, never()).uploadAttachment(eq(MUNICIPALITY_ID), any(), any(), any(), any(), any(), any(), any());
+		verify(actualisationServiceMock, never()).uploadAttachment(eq(MUNICIPALITY_ID), any(), any());
 	}
 
 	@Test
@@ -424,6 +431,6 @@ class FinancialAssistanceActualisationServiceTest {
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
 			.hasMessage("Not Found: No Lifecare actualisation '9999' found for the given applicant");
 
-		verify(actualisationServiceMock, never()).uploadAttachment(eq(MUNICIPALITY_ID), any(), any(), any(), any(), any(), any(), any());
+		verify(actualisationServiceMock, never()).uploadAttachment(eq(MUNICIPALITY_ID), any(), any());
 	}
 }

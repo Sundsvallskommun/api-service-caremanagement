@@ -35,6 +35,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.text;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.truthy;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.AMOUNT_APPLICANT;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.AMOUNT_CO_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.DEVIATION_DAYS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.GROSS_AMOUNT_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.HAS_CUSTOM_HOUSEHOLD_SIZE;
@@ -97,7 +98,7 @@ final class CalculationRowChanges {
 
 	/** A row Lifecare keeps: one it would drop (every amount 0) is not shown. */
 	static boolean keepsIncome(final JsonNode row) {
-		return notZero(row, AMOUNT_APPLICANT) || notZero(row, "amountCoApplicant");
+		return notZero(row, AMOUNT_APPLICANT) || notZero(row, AMOUNT_CO_APPLICANT);
 	}
 
 	/**
@@ -146,7 +147,7 @@ final class CalculationRowChanges {
 		row.put(AMOUNT_APPLICANT, 0);
 		row.put("applicantSearchDate", "");
 		row.putNull("applicantNote");
-		row.put("amountCoApplicant", 0);
+		row.put(AMOUNT_CO_APPLICANT, 0);
 		row.put("coApplicantSearchDate", "");
 		row.put(GROSS_AMOUNT_APPLICANT, 0);
 		row.put("grossAmountCoApplicant", 0);
@@ -182,7 +183,7 @@ final class CalculationRowChanges {
 		row.set(AMOUNT_APPLICANT, amountNode(input.getApplicantCaseworkerAmount()));
 		row.set(GROSS_AMOUNT_APPLICANT, amountNode(input.getApplicantCaseworkerAmount()));
 		row.put("applicantSearchDate", lifecareDay(input.getApplicantAmountDate()));
-		row.set("amountCoApplicant", amountNode(input.getCoapplicantCaseworkerAmount()));
+		row.set(AMOUNT_CO_APPLICANT, amountNode(input.getCoapplicantCaseworkerAmount()));
 		row.put("coApplicantSearchDate", lifecareDay(input.getCoapplicantAmountDate()));
 		row.put("applicantNote", input.getNote());
 	}

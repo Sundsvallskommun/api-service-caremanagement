@@ -13,6 +13,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
@@ -356,7 +357,7 @@ class LifecareCaseServiceTest {
 		assertThat(family.commonHouseholdCost()).isEqualByComparingTo("1234");
 		assertThat(family.members()).containsExactly(
 			new PreviousFamily.Member(APPLICANT_PARTY_ID, "NILSSON KARIN", null, null),
-			new PreviousFamily.Member(CHILD_PARTY_ID, "NILSSON OLLE", LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 15)));
+			new PreviousFamily.Member(CHILD_PARTY_ID, "NILSSON OLLE", LocalDate.of(2026, Month.MAY, 1), LocalDate.of(2026, Month.MAY, 15)));
 		assertThat(family.members().get(1).hasDeviation()).isTrue();
 		assertThat(family.members().getFirst().hasDeviation()).isFalse();
 	}
@@ -399,9 +400,11 @@ class LifecareCaseServiceTest {
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("201801012380"))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("  ")) // blank filtered out
-			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Hyra/Rent").approvedAmount(6000.0))
-			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Housing").appliedAmount(1500.0)) // approved null -> applied
-			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Electricity").approvedAmount(900.0)) // not housing
+			// Lifecare's own catalogue names: "Boendekostnad" is the housing cost, "El 1" is not.
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Boendekostnad").approvedAmount(6000.0))
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Boendekostnad").appliedAmount(1500.0)) // approved null -> applied
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("El 1").approvedAmount(900.0)) // not housing
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type(null).approvedAmount(50.0)) // no type -> not housing
 			.norm("Riksnorm 2026");
 		final var current = new PersonBasedCalculationDTO().toDate("2026-06-30"); // not strictly before June -> excluded
 		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))

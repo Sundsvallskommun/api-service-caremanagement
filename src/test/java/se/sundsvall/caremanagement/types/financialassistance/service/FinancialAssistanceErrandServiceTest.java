@@ -343,61 +343,115 @@ class FinancialAssistanceErrandServiceTest {
 	}
 
 	@Test
-	void updateDataLinksACalculationThroughTheConditionalUpdate() {
-		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
+	void updateDataIgnoresClientSentLifecareReferences() {
+		// The Lifecare references are server-owned: a client sending another person's beslut or calculation id changes
+		// nothing, and no link is attempted.
+		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withLifecareDecisionId(1).withLifecareCalculationId(2);
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
 		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+
+		service.updateData(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceData.create()
+			.withLifecareDecisionId(4711).withLifecareCalculationId(4242).withLifecarePaymentIds(List.of("90210")));
+
+		verify(repositoryMock).save(entity);
+		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
+		verify(repositoryMock, never()).linkLifecareDecisionIfAbsent(any(), any());
+		assertThat(entity.getLifecareDecisionId()).isEqualTo(1);
+		assertThat(entity.getLifecareCalculationId()).isEqualTo(2);
+		assertThat(entity.getLifecarePaymentIds()).isNullOrEmpty();
+	}
+
+	@Test
+	void linkCalculationThroughTheConditionalUpdate() {
+		givenLinks(null, null);
 		when(repositoryMock.linkLifecareCalculationIfAbsent(ERRAND_ID, 4242)).thenReturn(1);
 
-		service.updateData(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceData.create().withLifecareCalculationId(4242));
+		service.linkCalculation(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 4242);
 
+		verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(repositoryMock).linkLifecareCalculationIfAbsent(ERRAND_ID, 4242);
-		verify(repositoryMock).save(entity);
-		assertThat(entity.getLifecareCalculationId()).isEqualTo(4242);
+		verify(repositoryMock, never()).save(any());
 	}
 
 	@Test
-	void updateDataAcceptsTheLinkedCalculationAgain() {
-		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withLifecareCalculationId(4242);
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+	void linkCalculationAcceptsTheLinkedCalculationAgain() {
+		givenLinks(4242, null);
 
-		service.updateData(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceData.create().withLifecareCalculationId(4242));
+		service.linkCalculation(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 4242);
 
-		// A retry of the same link is a no-op, so the BFF's retries stay safe.
+		// A retry of the same link is a no-op, so retries stay safe.
 		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
-		verify(repositoryMock).save(entity);
 	}
 
 	@Test
-	void updateDataRefusesAnotherCalculationWhenOneIsLinked() {
-		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withLifecareCalculationId(4242);
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+	void linkCalculationRefusesAnotherCalculationWhenOneIsLinked() {
+		givenLinks(4242, null);
 
-		final var data = FinancialAssistanceData.create().withLifecareCalculationId(5555);
-		assertThatThrownBy(() -> service.updateData(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, data))
+		assertThatThrownBy(() -> service.linkCalculation(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 5555))
 			.isInstanceOf(Problem.class)
 			.hasFieldOrPropertyWithValue("status", CONFLICT);
-
-		verify(repositoryMock, never()).save(any());
-		assertThat(entity.getLifecareCalculationId()).isEqualTo(4242);
+		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
 	}
 
 	@Test
-	void updateDataRefusesACalculationWhenAnotherIsLinkedMeanwhile() {
+	void linkCalculationRefusesACalculationWhenAnotherIsLinkedMeanwhile() {
 		// The errand read as unlinked, but the daily prepare linked its proposal before this write: the conditional
-		// update catches it, so the BFF's calculation does not silently replace the prepare step's link.
-		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
-		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+		// update catches it, so this calculation does not silently replace the prepare step's link.
+		givenLinks(null, null);
 		when(repositoryMock.linkLifecareCalculationIfAbsent(ERRAND_ID, 5555)).thenReturn(0);
 
-		final var data = FinancialAssistanceData.create().withLifecareCalculationId(5555);
-		assertThatThrownBy(() -> service.updateData(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, data))
+		assertThatThrownBy(() -> service.linkCalculation(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 5555))
 			.isInstanceOf(Problem.class)
 			.hasFieldOrPropertyWithValue("status", CONFLICT);
+	}
 
-		verify(repositoryMock, never()).save(any());
+	@Test
+	void linkDecisionThroughTheConditionalUpdate() {
+		givenLinks(null, null);
+		when(repositoryMock.linkLifecareDecisionIfAbsent(ERRAND_ID, 4711)).thenReturn(1);
+
+		service.linkDecision(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 4711);
+
+		verify(repositoryMock).linkLifecareDecisionIfAbsent(ERRAND_ID, 4711);
+	}
+
+	@Test
+	void linkDecisionAcceptsTheLinkedDecisionAgain() {
+		givenLinks(null, 4711);
+
+		service.linkDecision(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 4711);
+
+		verify(repositoryMock, never()).linkLifecareDecisionIfAbsent(any(), any());
+	}
+
+	@Test
+	void linkDecisionLosingARaceNamesBothBeslut() {
+		// Two first saves both created a beslut; the other one linked first. The loser is told which beslut to void.
+		final var unlinked = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID);
+		final var linkedMeanwhile = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withLifecareDecisionId(4711);
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(unlinked), Optional.of(linkedMeanwhile));
+		when(repositoryMock.linkLifecareDecisionIfAbsent(ERRAND_ID, 4712)).thenReturn(0);
+
+		assertThatThrownBy(() -> service.linkDecision(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 4712))
+			.isInstanceOf(Problem.class)
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessageContaining("Beslut 4712 was created").hasMessageContaining("already has beslut 4711");
+	}
+
+	@Test
+	void linkRefusesAnErrandWithoutFinancialAssistanceData() {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.linkDecision(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 4711))
+			.isInstanceOf(Problem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+	}
+
+	private void givenLinks(final Integer calculationId, final Integer decisionId) {
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID));
+		when(repositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(FinancialAssistanceEntity.create().withErrandId(ERRAND_ID)
+			.withLifecareCalculationId(calculationId).withLifecareDecisionId(decisionId)));
 	}
 }

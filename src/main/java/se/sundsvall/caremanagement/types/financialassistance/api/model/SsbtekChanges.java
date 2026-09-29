@@ -6,8 +6,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
- * Where the normberäkning saved in Lifecare no longer matches SSBTEK — what Draken's BFF writes into the calculation
- * (the AUTO changes) or shows the caseworker (the CONFIRM ones).
+ * Where the normberäkning saved in Lifecare no longer matches SSBTEK — what Draken has written into the calculation
+ * through careM's /lifecare calculation route (the AUTO changes) or shows the caseworker (the CONFIRM ones).
  */
 @Schema(description = "Where the normberäkning saved in Lifecare no longer matches the latest SSBTEK answer")
 public record SsbtekChanges(

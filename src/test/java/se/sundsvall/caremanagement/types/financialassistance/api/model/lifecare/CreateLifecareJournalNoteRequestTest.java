@@ -39,7 +39,7 @@ class CreateLifecareJournalNoteRequestTest {
 		assertThat(result.getTitle()).isEqualTo("Telefonsamtal");
 		assertThat(result.getOccurenceTime()).isEqualTo("11:50");
 		assertThat(result.getOccurenceDate()).isEqualTo("2026-09-23");
-		assertThat(result.getWriteProtected()).isEqualTo(true);
+		assertThat(result.getWriteProtected()).isTrue();
 	}
 
 	@Test

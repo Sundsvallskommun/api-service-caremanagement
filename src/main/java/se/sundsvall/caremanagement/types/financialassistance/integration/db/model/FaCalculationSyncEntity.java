@@ -20,9 +20,10 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
 /**
  * What careM knows about one income of a normberäkning saved in Lifecare — one Lifecare income type on one side
  * (applicant or co-applicant). It keeps the latest amount SSBTEK gave for it (written by the daily prepare) apart from
- * the amount the system last wrote to Lifecare (the proposal the prepare step created, or a change Draken's BFF applied
- * and acknowledged). A Lifecare value that still equals the system-written amount was not touched by a caseworker, so
- * a new SSBTEK amount may be written over it without asking; any other value was, and must be confirmed.
+ * the amount the system last wrote to Lifecare (the proposal the prepare step created, or an SSBTEK change written
+ * through careM's /lifecare calculation route and acknowledged). A Lifecare value that still equals the system-written
+ * amount was not touched by a caseworker, so a new SSBTEK amount may be written over it without asking; any other value
+ * was, and must be confirmed.
  */
 @Entity
 @Table(name = "errand_fa_calculation_sync",

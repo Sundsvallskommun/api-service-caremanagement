@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +61,7 @@ class LifecareReminderServiceTest {
 	private static final Map<String, String> BY_SERVICE = Map.of("id", "2");
 
 	/** Today is pinned so the dates below stay in the future however long the tests live. */
-	private static final Clock TODAY = Clock.fixed(LocalDateTime.of(2026, 9, 23, 0, 30).atZone(ZoneId.of("Europe/Stockholm")).toInstant(),
+	private static final Clock TODAY = Clock.fixed(LocalDateTime.of(2026, Month.SEPTEMBER, 23, 0, 30).atZone(ZoneId.of("Europe/Stockholm")).toInstant(),
 		ZoneId.of("Europe/Stockholm"));
 
 	private static final String LIST = """

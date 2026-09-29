@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.service.ErrandService;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceErrandService;
@@ -108,19 +107,18 @@ public class LifecareErrandService {
 	 * @param calculationId the Lifecare calculation
 	 */
 	public void linkCalculation(final LifecareErrand errand, final int calculationId) {
-		financialAssistanceErrandService.updateData(errand.municipalityId(), errand.namespace(), errand.errandId(),
-			FinancialAssistanceData.create().withLifecareCalculationId(calculationId));
+		financialAssistanceErrandService.linkCalculation(errand.municipalityId(), errand.namespace(), errand.errandId(), calculationId);
 	}
 
 	/**
-	 * Links a Lifecare decision to the errand.
+	 * Links a Lifecare decision to the errand. Write-once: a different id than the one already linked is a 409 naming
+	 * both beslut.
 	 *
 	 * @param errand     the errand
 	 * @param decisionId the Lifecare decision
 	 */
 	public void linkDecision(final LifecareErrand errand, final int decisionId) {
-		financialAssistanceErrandService.updateData(errand.municipalityId(), errand.namespace(), errand.errandId(),
-			FinancialAssistanceData.create().withLifecareDecisionId(decisionId));
+		financialAssistanceErrandService.linkDecision(errand.municipalityId(), errand.namespace(), errand.errandId(), decisionId);
 	}
 
 	/**
@@ -137,6 +135,17 @@ public class LifecareErrandService {
 	 */
 	public void linkPayment(final LifecareErrand errand, final String paymentId) {
 		financialAssistanceRepository.linkPaymentIfAbsent(errand.errandId(), paymentId);
+	}
+
+	/**
+	 * Takes a write lock on the errand's row for the rest of the caller's transaction, so two requests for the same
+	 * errand cannot both pass a check before either acts on it. A database lock rather than an in-process one, so it
+	 * holds across careM instances.
+	 *
+	 * @param errand the errand
+	 */
+	public void lock(final LifecareErrand errand) {
+		financialAssistanceRepository.findByErrandIdForUpdate(errand.errandId());
 	}
 
 	/**

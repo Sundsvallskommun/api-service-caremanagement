@@ -47,9 +47,11 @@ class FinancialAssistanceMapperTest {
 		final var data = fullData();
 		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
 
-		// the finalize-owned fields (household flag, notify channels) are never set from client data
+		// the finalize-owned fields (household flag, notify channels) and the Lifecare references are never set from
+		// client data
 		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("lastDailyRunAt", "created", "modified",
-			"householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter", "lifecareServiceId");
+			"householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter", "lifecareServiceId",
+			"lifecareDecisionId", "lifecareCalculationId", "lifecarePaymentIds");
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
 		assertThat(entity.getApplicationType()).isEqualTo("NEW");
 		assertThat(entity.getMaritalStatus()).isEqualTo("SINGLE");
@@ -82,9 +84,10 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getStayDescription()).isEqualTo("Lives at the registered address");
 		assertThat(entity.getAttestation()).isTrue();
 		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);
-		assertThat(entity.getLifecareDecisionId()).isEqualTo(4711);
-		assertThat(entity.getLifecareCalculationId()).isEqualTo(4242);
-		assertThat(entity.getLifecarePaymentIds()).containsExactly("90210", "90211"); // a repeated id is one reference
+		// server-owned: a client-sent Lifecare reference is ignored
+		assertThat(entity.getLifecareDecisionId()).isNull();
+		assertThat(entity.getLifecareCalculationId()).isNull();
+		assertThat(entity.getLifecarePaymentIds()).isNull();
 		assertThat(entity.getChildren()).hasSize(1);
 		assertThat(entity.getChildren().getFirst().getPartyId()).isEqualTo("20180101-1234");
 		assertThat(entity.getChildren().getFirst().getFirstName()).isEqualTo("Kid");

@@ -77,22 +77,16 @@ INSERT INTO message_read_receipt (id, message_id, reader_side, read_by, read_at)
 INSERT INTO errand_note (id, errand_id, body, author, created, modified_by, modified) VALUES
     ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbn01', '44444444-4444-4444-4444-444444444444', 'Internal note on the errand', 'assignee1', '2025-01-02 09:20:00.000000', NULL, NULL);
 
-INSERT INTO errand_document (id, errand_id, document_type, heading, document_text, document_date_time, status, created_by, created, modified_by, modified, locked_by, locked) VALUES
-    ('ffffffff-ffff-ffff-ffff-ffffffffff01', '44444444-4444-4444-4444-444444444444', 'TYPE-1', 'Case document', 'Document body text', '2025-01-02 09:25:00.000000', 'WORKING', 'assignee1', '2025-01-02 09:25:00.000000', NULL, NULL, NULL, NULL);
-
 -- Financial-assistance extension row on the same errand — proves fk_financial_assistance_errand_id also cascades on
 -- errand deletion (without ON DELETE CASCADE the errand delete would FK-violate and roll back).
 INSERT INTO errand_financial_assistance (errand_id) VALUES
     ('44444444-4444-4444-4444-444444444444');
 
--- FA satellite tables on the same errand — prove fk_fa_calculation_draft/monitoring/warning_errand_id
+-- FA satellite tables on the same errand — prove fk_fa_calculation_draft/warning_errand_id
 -- each cascade on errand deletion (these tables have no FK to errand_financial_assistance, so without their own
 -- ON DELETE CASCADE FK to errand they would orphan a deleted errand's data).
 INSERT INTO errand_financial_assistance_calculation_draft (errand_id, application_month, created) VALUES
     ('44444444-4444-4444-4444-444444444444', '2025-01', '2025-01-02 09:30:00.000000');
-
-INSERT INTO errand_financial_assistance_monitoring (id, errand_id, title, start_date, source, created) VALUES
-    ('dddddddd-dddd-dddd-dddd-ddddddddda01', '44444444-4444-4444-4444-444444444444', 'Monitoring', '2025-01-02', 'CASEWORKER', '2025-01-02 09:30:00.000000');
 
 INSERT INTO errand_financial_assistance_warning (id, errand_id, type, source_key, message, status, auto_resolved, created) VALUES
     ('dddddddd-dddd-dddd-dddd-dddddddddc01', '44444444-4444-4444-4444-444444444444', 'MISSING_SSBTEK', 'Dagersättning', 'Saknas i SSBTEK', 'OPEN', b'0', '2025-01-02 09:30:00.000000');
