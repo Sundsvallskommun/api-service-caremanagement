@@ -36,7 +36,11 @@ class LifecareRecordMapperTest {
 		    "updateSignature": "X", "updateDate": "2026-09-20", "protected": false, "locked": false, "documentType_Name": "Regular", "typeCode": 13 },
 		  { "id": 4, "title": "Blankett", "date": "2026-09-20", "documentType_Name": "Form", "typeCode": 15 },
 		  { "id": 5, "title": "Blankett", "date": "2026-09-20", "documentType_Name": "Form", "typeCode": 1 },
-		  { "id": 6, "title": "Okänd", "date": "2026-09-20", "documentType_Name": "JournalNote" }
+		  { "id": 6, "title": "Okänd", "date": "2026-09-20", "documentType_Name": "JournalNote" },
+		  { "id": 7, "title": "Anteckning", "date": "2026-09-19", "documentType_Name": "JournalNote", "typeCode": 1 },
+		  { "id": 8, "title": "Dokument", "date": "2026-09-19", "documentType_Name": "Regular", "typeCode": 14 },
+		  { "id": 9, "title": "Annan anteckning", "date": "2026-09-19", "documentType_Name": "JournalNote", "typeCode": 13 },
+		  { "id": 10, "title": "Annat dokument", "date": "2026-09-19", "documentType_Name": "Regular", "typeCode": 3 }
 		] }
 		""";
 
@@ -64,11 +68,13 @@ class LifecareRecordMapperTest {
 	}
 
 	@Test
-	void toRecordsSplitsByTypeCode() {
+	void toRecordsSplitsByKindThenTypeCode() {
 		final var records = LifecareRecordMapper.toRecords(json(LIST));
 
-		assertThat(records.getJournalNotes()).extracting(LifecareRecord::getId).containsExactly("1");
-		assertThat(records.getDocuments()).extracting(LifecareRecord::getId).containsExactly("2", "3", "5");
+		// 7 is a Journalanteckning with note type 1, which is Inkommen handling on a document; 4 and 8 are the
+		// blanketter and dokument of type 15 and 14; 9 and 10 carry a code only the other group shows.
+		assertThat(records.getJournalNotes()).extracting(LifecareRecord::getId).containsExactly("1", "7");
+		assertThat(records.getDocuments()).extracting(LifecareRecord::getId).containsExactly("2", "3", "4", "5", "8");
 	}
 
 	@Test
@@ -108,8 +114,8 @@ class LifecareRecordMapperTest {
 	void textRecordIdsLeavesOutBlanketterAndPdfs() {
 		final var list = json(LIST);
 
-		assertThat(LifecareRecordMapper.textRecordIds(list, JOURNAL_NOTE)).containsExactly("1");
-		assertThat(LifecareRecordMapper.textRecordIds(list, DOCUMENT)).containsExactly("3");
+		assertThat(LifecareRecordMapper.textRecordIds(list, JOURNAL_NOTE)).containsExactly("1", "7");
+		assertThat(LifecareRecordMapper.textRecordIds(list, DOCUMENT)).containsExactly("3", "8");
 	}
 
 	@Test
@@ -118,7 +124,10 @@ class LifecareRecordMapperTest {
 
 		assertThat(LifecareRecordMapper.findRecord(list, 2, DOCUMENT)).hasValueSatisfying(row -> assertThat(row.path("id").asInt()).isEqualTo(2));
 		assertThat(LifecareRecordMapper.findRecord(list, 1, DOCUMENT)).isEmpty();
-		assertThat(LifecareRecordMapper.findRecord(list, 4, DOCUMENT)).isEmpty();
+		assertThat(LifecareRecordMapper.findRecord(list, 4, DOCUMENT)).isPresent();
+		assertThat(LifecareRecordMapper.findRecord(list, 7, DOCUMENT)).isEmpty();
+		assertThat(LifecareRecordMapper.findRecord(list, 7, JOURNAL_NOTE)).isPresent();
+		assertThat(LifecareRecordMapper.findRecord(list, 10, DOCUMENT)).isEmpty();
 		assertThat(LifecareRecordMapper.findRecord(list, 99, DOCUMENT)).isEmpty();
 		assertThat(LifecareRecordMapper.findRecord(MissingNode.getInstance(), 2, DOCUMENT)).isEmpty();
 	}

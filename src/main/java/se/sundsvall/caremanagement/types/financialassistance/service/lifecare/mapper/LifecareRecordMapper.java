@@ -2,8 +2,8 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.m
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.CreateLifecareDocumentRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.CreateLifecareJournalNoteRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDocumentType;
@@ -39,11 +39,21 @@ public final class LifecareRecordMapper {
 	/** A document. */
 	public static final String DOCUMENT = "DOCUMENT";
 
+	/** Lifecare's kind of a journalanteckning row; every other kind (Regular, Form, Pdf) is a document. */
+	private static final String KIND_JOURNAL_NOTE = "JournalNote";
+
 	/**
-	 * Which group a Lifecare row is shown under, by its typeCode: 3 under Journal, 1 and 13 under Dokument. A row of any
-	 * other code is shown under neither. Verksamheten's split as of 2026-09-24; Lifecare's codes are undocumented.
+	 * The journalanteckning type codes shown under Journal: 1 Journalanteckning, 3 Beslut. A note's typeCode is its note
+	 * type, from its own code list, so it is read together with the row's kind.
 	 */
-	private static final Map<Integer, String> CATEGORY_BY_TYPE_CODE = Map.of(3, JOURNAL_NOTE, 1, DOCUMENT, 13, DOCUMENT);
+	private static final Set<Integer> JOURNAL_NOTE_TYPE_CODES = Set.of(1, 3);
+
+	/**
+	 * The document type codes shown under Dokument: 1 Inkommen handling, 13 brev, 14 and 15 dokument och blanketter.
+	 * Verksamheten's list as of 2026-09-24; Lifecare's codes are undocumented, and a row of any other code is shown
+	 * under neither group.
+	 */
+	private static final Set<Integer> DOCUMENT_TYPE_CODES = Set.of(1, 13, 14, 15);
 
 	/** Rows with no written body: a blankett is built from form fields, a PDF is a file. */
 	private static final List<String> NO_TEXT_BODY_TYPES = List.of("Form", "Pdf");
@@ -59,18 +69,27 @@ public final class LifecareRecordMapper {
 	private LifecareRecordMapper() {}
 
 	/**
-	 * The group a Lifecare row is shown under.
+	 * The group a Lifecare row is shown under: a journalanteckning under Journal and any other kind under Dokument, each
+	 * only for the type codes that group shows. Journal notes and documents have separate type code lists (1 is
+	 * Journalanteckning for a note and Inkommen handling for a document), so the kind decides the group.
 	 *
 	 * @param  model a row of GetDocumentsListForClient
 	 * @return       JOURNAL_NOTE or DOCUMENT, empty when the row is shown under neither
 	 */
 	public static Optional<String> categoryOf(final JsonNode model) {
-		return Optional.ofNullable(integer(model.path("typeCode"))).map(CATEGORY_BY_TYPE_CODE::get);
+		final var typeCode = integer(model.path("typeCode"));
+		if (typeCode == null) {
+			return Optional.empty();
+		}
+		if (KIND_JOURNAL_NOTE.equals(textOrEmpty(model.path("documentType_Name")))) {
+			return Optional.of(JOURNAL_NOTE).filter(category -> JOURNAL_NOTE_TYPE_CODES.contains(typeCode));
+		}
+		return Optional.of(DOCUMENT).filter(category -> DOCUMENT_TYPE_CODES.contains(typeCode));
 	}
 
 	/**
-	 * Splits Lifecare's flat list into journalanteckningar and documents, keeping Lifecare's order. A row of any other
-	 * type code is left out.
+	 * Splits Lifecare's flat list into journalanteckningar and documents, keeping Lifecare's order. A row neither group
+	 * shows is left out.
 	 *
 	 * @param  list the GetDocumentsListForClient answer
 	 * @return      the two groups
