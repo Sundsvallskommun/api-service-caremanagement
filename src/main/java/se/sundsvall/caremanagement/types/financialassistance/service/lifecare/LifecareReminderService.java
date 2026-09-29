@@ -102,7 +102,8 @@ public class LifecareReminderService {
 	}
 
 	/**
-	 * The priorities and statuses a bevakning can have, and what Lifecare proposes for a new one.
+	 * The priorities and statuses a bevakning can have, and what Lifecare proposes for a new one. The read is logged on
+	 * the errand and is not served when it cannot be.
 	 *
 	 * @param  municipalityId the municipality
 	 * @param  namespace      the namespace
@@ -111,7 +112,10 @@ public class LifecareReminderService {
 	 */
 	public LifecareReminderOptions options(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		return toReminderOptions(readProposal(errand.requireServiceId()));
+		final var options = toReminderOptions(readProposal(errand.requireServiceId()));
+		// The proposal is a blank bevakning on the applicant's insats, so reading it is a read of the errand.
+		recorder.read(errand, TARGET_REMINDER, "Läste underlag för en ny bevakning i Lifecare");
+		return options;
 	}
 
 	/**

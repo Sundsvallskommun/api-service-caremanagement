@@ -202,7 +202,8 @@ public class LifecareRecordService {
 	}
 
 	/**
-	 * The note types a new journalanteckning on the errand's insats can have.
+	 * The note types a new journalanteckning on the errand's insats can have. The read is logged on the errand and is not
+	 * served when it cannot be.
 	 *
 	 * @param  municipalityId the municipality
 	 * @param  namespace      the namespace
@@ -211,11 +212,15 @@ public class LifecareRecordService {
 	 */
 	public List<LifecareNoteType> journalNoteTypes(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		return toNoteTypes(client.get(PATH_NOTE_PROPOSAL, Map.of("id", String.valueOf(errand.requireServiceId()))));
+		final var noteTypes = toNoteTypes(client.get(PATH_NOTE_PROPOSAL, Map.of("id", String.valueOf(errand.requireServiceId()))));
+		// Lifecare answers with a blank note on the applicant's insats, so this is a read of the errand, not a catalogue.
+		recorder.read(errand, JOURNAL_NOTE, "Läste underlag för en ny journalanteckning i Lifecare");
+		return noteTypes;
 	}
 
 	/**
-	 * The document types a new document on the errand's insats can have.
+	 * The document types a new document on the errand's insats can have. The read is logged on the errand and is not
+	 * served when it cannot be.
 	 *
 	 * @param  municipalityId the municipality
 	 * @param  namespace      the namespace
@@ -224,7 +229,10 @@ public class LifecareRecordService {
 	 */
 	public List<LifecareDocumentType> documentTypes(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		return toDocumentTypes(client.get(PATH_DOCUMENT_PROPOSAL, Map.of("id", String.valueOf(errand.requireServiceId()))));
+		final var documentTypes = toDocumentTypes(client.get(PATH_DOCUMENT_PROPOSAL, Map.of("id", String.valueOf(errand.requireServiceId()))));
+		// As for the note types: the answer is a blank document on the applicant's insats.
+		recorder.read(errand, DOCUMENT, "Läste underlag för ett nytt dokument i Lifecare");
+		return documentTypes;
 	}
 
 	/**

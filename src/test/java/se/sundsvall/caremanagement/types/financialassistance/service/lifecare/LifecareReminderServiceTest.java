@@ -145,6 +145,16 @@ class LifecareReminderServiceTest {
 
 		assertThat(options.getDefaultPriority()).isEqualTo(2);
 		assertThat(options.getPriorities()).hasSize(2);
+		verify(recorder).read(ERRAND, "REMINDER", "Läste underlag för en ny bevakning i Lifecare");
+	}
+
+	@Test
+	void optionsAreNotServedWhenTheReadCannotBeLogged() {
+		givenErrand();
+		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal());
+		doThrow(new IllegalStateException("log down")).when(recorder).read(any(), anyString(), anyString());
+
+		assertThatThrownBy(() -> service.options(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test

@@ -133,6 +133,26 @@ class ErrandLifecareCalculationServiceTest {
 	}
 
 	@Test
+	void createsNothingWhenTheReadOfTheUnderlagCouldNotBeLogged() {
+		errandIs(UNLINKED);
+		doThrow(new IllegalStateException("log down")).when(recorder).read(UNLINKED, "CALCULATION", "Läste beräkningsunderlag i Lifecare");
+
+		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false)).isInstanceOf(IllegalStateException.class);
+		verify(client, never()).create(anyInt(), any());
+		verify(errandService, never()).linkCalculation(any(), anyInt());
+	}
+
+	@Test
+	void changesNothingWhenTheReadOfTheUnderlagCouldNotBeLogged() {
+		errandIs(LINKED);
+		when(client.readForEdit(31)).thenReturn(forEdit(saved()));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(LINKED, "CALCULATION", "Läste beräkningsunderlag i Lifecare");
+
+		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false)).isInstanceOf(IllegalStateException.class);
+		verify(client, never()).update(anyInt(), any());
+	}
+
+	@Test
 	void changesTheSameBeräkningEveryTimeAfterNeverMakingASecondOne() {
 		errandIs(LINKED);
 		when(client.readForEdit(31)).thenReturn(forEdit(saved()));
@@ -282,6 +302,15 @@ class ErrandLifecareCalculationServiceTest {
 	}
 
 	@Test
+	void servesNoPdfWhoseReadCouldNotBeLogged() {
+		errandIs(LINKED);
+		when(client.print(31)).thenReturn("%PDF-1.7".getBytes());
+		doThrow(new IllegalStateException("log down")).when(recorder).read(LINKED, "CALCULATION", "Läste normberäkningen som PDF i Lifecare", "31");
+
+		assertThatThrownBy(() -> service.pdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
 	void hasNoPdfBeforeTheBeräkningIsSaved() {
 		errandIs(UNLINKED);
 
@@ -296,6 +325,15 @@ class ErrandLifecareCalculationServiceTest {
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).get().satisfies(view -> assertThat(view.getId()).isEqualTo(31));
 		verify(recorder).read(LINKED, "CALCULATION", "Läste normberäkningen i Lifecare", "31");
+	}
+
+	@Test
+	void servesNoBerakningWhoseReadCouldNotBeLogged() {
+		errandIs(LINKED);
+		when(client.readForEdit(31)).thenReturn(forEdit(saved()));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(LINKED, "CALCULATION", "Läste normberäkningen i Lifecare", "31");
+
+		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
@@ -327,6 +365,26 @@ class ErrandLifecareCalculationServiceTest {
 		verify(recorder).read(LINKED, "CALCULATION", "Läste insatsens normberäkningar i Lifecare");
 		verify(recorder).read(LINKED, "CALCULATION", "Läste föregående normberäkning i Lifecare", "1");
 		verifyNoInteractions(draftReader);
+	}
+
+	@Test
+	void readsNoPreviousBerakningWhenTheReadOfTheListCouldNotBeLogged() {
+		errandIs(LINKED);
+		when(client.listForService(1)).thenReturn(tree(LISTED));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(LINKED, "CALCULATION", "Läste insatsens normberäkningar i Lifecare");
+
+		assertThatThrownBy(() -> service.readPrevious(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
+		verify(client, never()).read(anyInt());
+	}
+
+	@Test
+	void servesNoPreviousBerakningWhoseReadCouldNotBeLogged() {
+		errandIs(LINKED);
+		when(client.listForService(1)).thenReturn(tree(LISTED));
+		when(client.read(1)).thenReturn(json("{\"calculationId\":1,\"normText\":\"Riksnorm 2026\",\"startDate\":\"2026-01-01\"}"));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(LINKED, "CALCULATION", "Läste föregående normberäkning i Lifecare", "1");
+
+		assertThatThrownBy(() -> service.readPrevious(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test

@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -142,6 +143,15 @@ class ErrandNormberakningServiceTest {
 		errandIs(new LifecareErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, null, null, null, null, null, null));
 		assertThat(service.types(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).getNorms()).isEmpty();
 		verifyNoInteractions(recorder);
+	}
+
+	@Test
+	void offersNoNormsWhoseReadCouldNotBeLogged() {
+		errandIs(UNLINKED);
+		when(client.readProposal(1)).thenReturn(json("{\"norms\":[{\"normId\":1,\"name\":\"Riksnorm 2026\"}]}"));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(UNLINKED, "CALCULATION", "Läste normer i Lifecare");
+
+		assertThat(service.types(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).getNorms()).isEmpty();
 	}
 
 	@Test
