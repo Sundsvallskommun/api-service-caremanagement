@@ -144,11 +144,18 @@ public class LifecareCaseService {
 
 	/**
 	 * Whether the person is flagged with protected identity in Lifecare FamilyCare — protected address (skyddad
-	 * population register/retained registration) or protected registration (confidentiality marking). Propagates the
-	 * integration's {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
+	 * population register/retained registration) or protected registration (confidentiality marking).
+	 *
+	 * <p>
+	 * A person Lifecare holds no record of — every first-time applicant — cannot be flagged there, so that is
+	 * {@code false}; the population register (citizen) stays the authority for whether such a person is protected. Every
+	 * <em>other</em> failure (5xx, transport, an open circuit breaker, a partyId that cannot be resolved) propagates as the
+	 * integration's {@code BAD_GATEWAY} problem, and the caller decides whether to treat the lookup as best-effort
+	 * (eligibility) or fail closed (the errand-created gate).
 	 *
 	 * @param  partyId the person's partyId
-	 * @return         {@code true} when either protection flag is set, {@code false} otherwise or when unknown
+	 * @return         {@code true} when either protection flag is set; {@code false} when neither is, or when Lifecare
+	 *                 holds no such person
 	 */
 	public boolean hasProtectedIdentity(final String municipalityId, final String partyId) {
 		return ofNullable(lifecareFamilyCareIntegration.getPerson(municipalityId, partyId))

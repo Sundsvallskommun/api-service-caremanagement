@@ -376,7 +376,8 @@ public class EligibilityService {
 	/**
 	 * Protected identity for one person — protected in population register (citizen) <em>or</em> in Lifecare FamilyCare.
 	 * Each source is best-effort: a transport/upstream failure is treated as "not protected" so an outage degrades to
-	 * normal routing rather than blocking the applicant.
+	 * normal routing rather than blocking the applicant. That is safe only because the errand created afterwards is
+	 * checked again, failing closed, by {@link ProtectedIdentityGate} before any automatic preparation starts.
 	 */
 	private boolean hasProtectedIdentity(final String municipalityId, final String partyId) {
 		return citizenProtected(municipalityId, partyId) || lifecareProtected(municipalityId, partyId);

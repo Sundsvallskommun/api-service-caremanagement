@@ -23,12 +23,21 @@ import se.sundsvall.caremanagement.types.financialassistance.service.event.Finan
  * {@code CaseworkerResolver} can't place.
  *
  * <p>
- * Then the recently-closed guard runs: if the applicant (or co-applicant) had a financial assistance errand closed
- * within the
- * recently-closed window, this re-application is <em>frozen</em> as {@code NEEDS_MANUAL_REVIEW} — no actualisation (the
- * process is not started), and being non-CLOSED it is never picked up by the archive job — so a caseworker reopens the
- * previous intervention in Lifecare and releases it (see {@link FinancialAssistanceReleaseListener}). Otherwise the
- * normal
+ * Then two guards decide whether the errand may go into automatic preparation at all. If either fires the errand is
+ * <em>frozen</em> as {@code NEEDS_MANUAL_REVIEW} — no actualisation (the process is not started), and being non-CLOSED
+ * it is never picked up by the archive job:
+ *
+ * <ol>
+ * <li>the <b>protected-identity</b> guard, checked first and failing closed: if the applicant, the co-applicant or a
+ * child is flagged with protected identity in the population register or in Lifecare — or the flag could not be read,
+ * because unknown is not cleared — a caseworker takes the errand by hand. The status is the only trace on the errand;
+ * the reason is not recorded there, so the protected status is not readable from any errand field;</li>
+ * <li>the <b>recently-closed</b> guard: if the applicant (or co-applicant) had a financial assistance errand closed
+ * within the recently-closed window, this re-application waits for a caseworker to reopen the previous intervention in
+ * Lifecare.</li>
+ * </ol>
+ *
+ * Either way a caseworker releases the errand (see {@link FinancialAssistanceReleaseListener}). Otherwise the normal
  * path applies: a renewal starts the full decision-support process, a supplementary application starts the lighter
  * supplementary-application process (whose actualisation step attaches the previous renewal application's Lifecare
  * caseworker), and a new

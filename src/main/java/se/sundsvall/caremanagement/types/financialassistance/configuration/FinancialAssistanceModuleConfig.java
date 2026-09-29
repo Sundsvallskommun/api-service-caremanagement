@@ -61,7 +61,9 @@ public class FinancialAssistanceModuleConfig {
 	// Status codes
 	public static final String STATUS_RECEIVED = "RECEIVED";
 	/**
-	 * A freshly created re-application that hit the recently-closed guard — frozen for a caseworker to reopen + release.
+	 * A freshly created errand held back from automatic preparation — a party with protected identity (or whose flag could
+	 * not be read), or a re-application that hit the recently-closed guard — frozen for a caseworker to take by hand and
+	 * release. The two reasons deliberately share this one status, so it never tells which one applied.
 	 */
 	public static final String STATUS_NEEDS_MANUAL_REVIEW = "NEEDS_MANUAL_REVIEW";
 	public static final String STATUS_UNDER_REVIEW = "UNDER_REVIEW";

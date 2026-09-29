@@ -25,16 +25,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
+import se.sundsvall.dept44.problem.Problem;
+import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.time.Month.JUNE;
 import static java.time.Month.MARCH;
 import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 
 @ExtendWith(MockitoExtension.class)
 class LifecareCaseServiceTest {
@@ -614,11 +618,22 @@ class LifecareCaseServiceTest {
 		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isFalse();
 	}
 
+	/** A first-time applicant: Lifecare holds no record of them, so it cannot flag them (the integrations answer null). */
 	@Test
 	void notProtectedWhenNoPersonRecord() {
 		when(integrationMock.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(null);
 
 		assertThat(service().hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isFalse();
+	}
+
+	/** Anything but a missing person is a failure the caller must see — the errand gate fails closed on it. */
+	@Test
+	void protectedIdentityLookupFailurePropagates() {
+		when(integrationMock.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Error fetching person in Lifecare FamilyCare: RuntimeException"));
+
+		assertThatThrownBy(() -> service().hasProtectedIdentity(MUNICIPALITY_ID, APPLICANT_PARTY_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
 	}
 
 	@Test

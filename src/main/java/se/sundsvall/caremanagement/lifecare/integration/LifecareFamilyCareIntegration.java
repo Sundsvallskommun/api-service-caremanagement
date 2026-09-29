@@ -83,10 +83,26 @@ public class LifecareFamilyCareIntegration implements LifecareFamilyCare {
 		return e.getClass().getSimpleName();
 	}
 
+	/**
+	 * FamilyCare's master data for the person, or {@code null} when FamilyCare holds no such person — it answers 404 for
+	 * one it does not know, which is an answer and not a failure (the integrator treats it the same way on its side). A
+	 * citizen the personal identity number cannot be resolved for is still a failure: that is resolved before the call.
+	 */
 	@Override
 	public PersonBasedPersonDTO getPerson(final String municipalityId, final String partyId) {
 		final var personalNumber = personalNumber(municipalityId, partyId);
-		return call("fetching person", () -> lifecareFamilyCareClient.getPerson(personalNumber));
+		return call("fetching person", () -> personOrNull(personalNumber));
+	}
+
+	private PersonBasedPersonDTO personOrNull(final String personalNumber) {
+		try {
+			return lifecareFamilyCareClient.getPerson(personalNumber);
+		} catch (final ThrowableProblem e) {
+			if (UpstreamNotFound.matches(e)) {
+				return null;
+			}
+			throw e;
+		}
 	}
 
 	@Override
