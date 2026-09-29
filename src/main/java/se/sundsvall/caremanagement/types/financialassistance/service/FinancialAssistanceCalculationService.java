@@ -53,9 +53,9 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * and posting it to Lifecare as the normberäkning proposal ({@link #prepareCalculation}), and the draft itself
  * (get/patch header). The proposal is linked on the errand as {@code lifecareCalculationId}; from then on the
  * caseworker continues it in Lifecare from Draken through the errand's /lifecare calculation route, which updates that
- * calculation rather than creating another. The errand envelope, its strongly-typed application data and the
- * case-history reads stay on the per-resource FinancialAssistanceErrandService / FinancialAssistanceLifecareService /
- * FinancialAssistanceActualisationService / FinancialAssistancePaymentService.
+ * calculation rather than creating another. The errand envelope and its strongly-typed application data stay on the
+ * per-resource FinancialAssistanceErrandService / FinancialAssistanceActualisationService /
+ * FinancialAssistancePaymentService.
  */
 @Service
 @Transactional

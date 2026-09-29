@@ -30,7 +30,7 @@ public class LifecareDecisionFilter {
 		this.serviceIds = Set.copyOf(serviceIds);
 	}
 
-	/** Whether the decision was made under an ekonomiskt bistånd service — the filter for the case-history listing. */
+	/** Whether the decision was made under one of the configured ekonomiskt bistånd services. */
 	public boolean isFinancialAssistance(final DecisionView decision) {
 		return decision.serviceId() != null && serviceIds.contains(decision.serviceId());
 	}
