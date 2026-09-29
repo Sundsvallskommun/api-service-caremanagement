@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.core.integration.db;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.LockModeType;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -32,6 +33,23 @@ public interface ErrandRepository extends JpaRepository<ErrandEntity, String>, J
 	 * {@code (municipality_id, namespace, status, touched)} index.
 	 */
 	List<ErrandEntity> findByMunicipalityIdAndNamespaceAndStatusAndTouchedLessThanEqual(String municipalityId, String namespace, String status, OffsetDateTime cutoff);
+
+	/**
+	 * Errands of the given types that are in {@code status} and have no process instance linked, created within
+	 * {@code createdFrom}..{@code createdTo} (both inclusive), oldest first. Backs the recovery of a process start that
+	 * failed: an errand still in its first status with nothing linked, some time after it was created. Narrowed by the
+	 * {@code (municipality_id, namespace, status)} index.
+	 */
+	@Query("""
+		select e from ErrandEntity e
+		where e.municipalityId = :municipalityId and e.namespace = :namespace and e.status = :status
+			and e.typeSlug in :typeSlugs and e.processInstanceId is null
+			and e.created between :createdFrom and :createdTo
+		order by e.created
+		""")
+	List<ErrandEntity> findWithoutProcessInstance(@Param("municipalityId") String municipalityId, @Param("namespace") String namespace,
+		@Param("typeSlugs") Collection<String> typeSlugs, @Param("status") String status,
+		@Param("createdFrom") OffsetDateTime createdFrom, @Param("createdTo") OffsetDateTime createdTo);
 
 	/**
 	 * Sets the denormalized {@code applicant_name} read-model field. A targeted bulk update on purpose: it bypasses the

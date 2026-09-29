@@ -80,4 +80,30 @@ class ErrandQueryServiceTest {
 			new ErrandStatusView("OPEN", "jane01doe"),
 			new ErrandStatusView("CLOSED", null));
 	}
+
+	@Test
+	void findWithoutProcessInstanceMapsEntitiesToApiModels() {
+		final var from = OffsetDateTime.parse("2026-09-20T00:00:00Z");
+		final var to = OffsetDateTime.parse("2026-09-29T00:00:00Z");
+		final var slugs = List.of("financial-assistance-new", "financial-assistance-renewal");
+		when(errandRepositoryMock.findWithoutProcessInstance(MUNICIPALITY_ID, NAMESPACE, slugs, "RECEIVED", from, to))
+			.thenReturn(List.of(ErrandEntity.create().withId(ERRAND_ID).withTypeSlug("financial-assistance-new").withStatus("RECEIVED")));
+
+		final var result = service.findWithoutProcessInstance(MUNICIPALITY_ID, NAMESPACE, slugs, "RECEIVED", from, to);
+
+		assertThat(result).singleElement().satisfies(errand -> {
+			assertThat(errand.getId()).isEqualTo(ERRAND_ID);
+			assertThat(errand.getTypeSlug()).isEqualTo("financial-assistance-new");
+			assertThat(errand.getStatus()).isEqualTo("RECEIVED");
+		});
+	}
+
+	@Test
+	void findWithoutProcessInstanceEmptyWhenNoneMatch() {
+		final var from = OffsetDateTime.parse("2026-09-20T00:00:00Z");
+		final var to = OffsetDateTime.parse("2026-09-29T00:00:00Z");
+		when(errandRepositoryMock.findWithoutProcessInstance(MUNICIPALITY_ID, NAMESPACE, List.of("t"), "RECEIVED", from, to)).thenReturn(List.of());
+
+		assertThat(service.findWithoutProcessInstance(MUNICIPALITY_ID, NAMESPACE, List.of("t"), "RECEIVED", from, to)).isEmpty();
+	}
 }

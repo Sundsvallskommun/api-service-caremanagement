@@ -4,10 +4,12 @@ import generated.se.sundsvall.operaton.CorrelationMessageRequest;
 import generated.se.sundsvall.operaton.ProcessDefinitionResponse;
 import generated.se.sundsvall.operaton.ProcessDefinitionsResponse;
 import generated.se.sundsvall.operaton.ProcessInstanceResponse;
+import generated.se.sundsvall.operaton.ProcessInstancesResponse;
 import generated.se.sundsvall.operaton.StartProcessInstanceRequest;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -28,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -195,5 +198,56 @@ class ProcessServiceTest {
 		assertThat(ProcessService.truncate("x".repeat(2000))).hasSize(1024);
 		assertThat(ProcessService.truncate("short")).isEqualTo("short");
 		assertThat(ProcessService.truncate(null)).isNull();
+	}
+
+	@Test
+	void activeBusinessKeysAreThoseOfTheDefinitionsRunningInstances() {
+		when(operatonClientMock.getProcessDefinitionsByName(MUNICIPALITY_ID, "Handläggning"))
+			.thenReturn(new ProcessDefinitionsResponse().processDefinitions(List.of(new ProcessDefinitionResponse().key("the-key"))));
+		when(operatonClientMock.getProcessInstances(MUNICIPALITY_ID)).thenReturn(new ProcessInstancesResponse().processInstances(List.of(
+			new ProcessInstanceResponse().id("pi-1").processDefinitionId("the-key:3:abc").businessKey("errand-1"),
+			// an older version of the same definition still counts
+			new ProcessInstanceResponse().id("pi-2").processDefinitionId("the-key:1:def").businessKey("errand-2"),
+			// another process on the same errand does not
+			new ProcessInstanceResponse().id("pi-3").processDefinitionId("another-key:1:ghi").businessKey("errand-3"),
+			// a key that merely starts with ours is another definition
+			new ProcessInstanceResponse().id("pi-4").processDefinitionId("the-key-2:1:jkl").businessKey("errand-4"),
+			new ProcessInstanceResponse().id("pi-5").processDefinitionId("the-key:3:mno"),
+			new ProcessInstanceResponse().id("pi-6").businessKey("errand-6"))));
+
+		final var result = service.activeBusinessKeys(MUNICIPALITY_ID, "Handläggning");
+
+		assertThat(result).containsExactlyInAnyOrder("errand-1", "errand-2");
+		verify(operatonClientMock).getProcessInstances(MUNICIPALITY_ID);
+	}
+
+	@Test
+	void activeBusinessKeysEmptyWhenNothingIsRunning() {
+		when(operatonClientMock.getProcessDefinitionsByName(MUNICIPALITY_ID, "Handläggning"))
+			.thenReturn(new ProcessDefinitionsResponse().processDefinitions(List.of(new ProcessDefinitionResponse().key("the-key"))));
+		when(operatonClientMock.getProcessInstances(MUNICIPALITY_ID)).thenReturn(new ProcessInstancesResponse());
+
+		assertThat(service.activeBusinessKeys(MUNICIPALITY_ID, "Handläggning")).isEqualTo(Set.of());
+	}
+
+	@Test
+	void activeBusinessKeysEmptyWhenTheEngineAnswersNothing() {
+		when(operatonClientMock.getProcessDefinitionsByName(MUNICIPALITY_ID, "Handläggning"))
+			.thenReturn(new ProcessDefinitionsResponse().processDefinitions(List.of(new ProcessDefinitionResponse().key("the-key"))));
+		when(operatonClientMock.getProcessInstances(MUNICIPALITY_ID)).thenReturn(null);
+
+		assertThat(service.activeBusinessKeys(MUNICIPALITY_ID, "Handläggning")).isEmpty();
+	}
+
+	@Test
+	void activeBusinessKeysUnknownDefinitionThrowsBadRequestWithoutListingInstances() {
+		when(operatonClientMock.getProcessDefinitionsByName(MUNICIPALITY_ID, "Unknown"))
+			.thenReturn(new ProcessDefinitionsResponse().processDefinitions(List.of()));
+
+		assertThatThrownBy(() -> service.activeBusinessKeys(MUNICIPALITY_ID, "Unknown"))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: No Operaton process definition found with name 'Unknown'");
+		verify(operatonClientMock, never()).getProcessInstances(any());
 	}
 }
