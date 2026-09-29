@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SavedCalculationWarningsTest {
 
 	private static final CalculationView CALCULATION = new CalculationView(31, null, null, null, null, null, null, null, null, null, null, null, false,
-		List.of(new CalculationPersonView(null, "Anna Andersson", BigDecimal.ONE, null, null)),
+		List.of(new CalculationPersonView("Anna Andersson", BigDecimal.ONE, null, null)),
 		List.of(
 			new CalculationIncomeView("Barnbidrag", new BigDecimal("1250"), null, null, null),
 			new CalculationIncomeView("Dagersättning från FK", null, null, new BigDecimal("9800"), null),

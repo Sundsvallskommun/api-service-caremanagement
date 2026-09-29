@@ -400,9 +400,11 @@ class LifecareCaseServiceTest {
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("201801012380"))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("  ")) // blank filtered out
-			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Hyra/Rent").approvedAmount(6000.0))
-			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Housing").appliedAmount(1500.0)) // approved null -> applied
-			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Electricity").approvedAmount(900.0)) // not housing
+			// Lifecare's own catalogue names: "Boendekostnad" is the housing cost, "El 1" is not.
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Boendekostnad").approvedAmount(6000.0))
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Boendekostnad").appliedAmount(1500.0)) // approved null -> applied
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("El 1").approvedAmount(900.0)) // not housing
+			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type(null).approvedAmount(50.0)) // no type -> not housing
 			.norm("Riksnorm 2026");
 		final var current = new PersonBasedCalculationDTO().toDate("2026-06-30"); // not strictly before June -> excluded
 		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))

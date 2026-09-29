@@ -157,7 +157,7 @@ public class ProposalBasisService {
 		try {
 			return ofNullable(lifecareCaseService.previousHousehold(municipalityId, applicant, applicationMonth).normSum()).map(BigDecimal::abs);
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the previous calculation household — the proposal amount is left unknown", e);
+			LOG.warn("Could not read the previous calculation household — the proposal amount is left unknown ({})", e.getClass().getSimpleName());
 			return Optional.empty();
 		}
 	}

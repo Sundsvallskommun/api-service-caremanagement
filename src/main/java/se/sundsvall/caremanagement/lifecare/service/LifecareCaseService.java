@@ -432,13 +432,12 @@ public class LifecareCaseService {
 		return amounts;
 	}
 
-	/** The previous housing cost — Rent/housing expense rows, matched on the FamilyCare type name (best-effort). */
+	/**
+	 * Whether an expense row is the housing cost (Lifecare's "Boendekostnad"), classified by the same catalogue mapping
+	 * the other previous-expense amounts use rather than by a guess at the name.
+	 */
 	private static boolean isHousing(final String type) {
-		if (type == null) {
-			return false;
-		}
-		final var lower = type.toLowerCase();
-		return lower.contains("rent") || lower.contains("housing");
+		return ExpenseTypeMapper.costTypeForFamilyCareName(type).filter("RENT"::equals).isPresent();
 	}
 
 	/** The decided (approved) amount of an expense, falling back to the applied amount. */

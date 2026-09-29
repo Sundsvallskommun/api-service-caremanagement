@@ -80,8 +80,7 @@ public class DecisionService {
 		final var entity = findDecision(municipalityId, namespace, errandId, decisionId);
 		return toDecision(decisionRepository.save(entity
 			.withLifecareStatus(LIFECARE_STATUS_SYNCED)
-			.withLifecareId(ofNullable(lifecareId).filter(StringUtils::hasText).orElse(entity.getLifecareId()))
-			.withLifecareDetail(null)));
+			.withLifecareId(ofNullable(lifecareId).filter(StringUtils::hasText).orElse(entity.getLifecareId()))));
 	}
 
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String decisionId) {

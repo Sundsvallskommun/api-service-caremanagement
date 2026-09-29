@@ -85,18 +85,6 @@ public final class LifecareRecordMapper {
 	}
 
 	/**
-	 * Whether a record id is in Lifecare's list for the client.
-	 *
-	 * @param  list     the GetDocumentsListForClient answer
-	 * @param  recordId the record id
-	 * @return          true when the list holds the record
-	 */
-	public static boolean containsRecord(final JsonNode list, final int recordId) {
-		return list.path(FIELD_DOCUMENT_MODELS).valueStream()
-			.anyMatch(model -> Integer.valueOf(recordId).equals(integer(model.path("id"))));
-	}
-
-	/**
 	 * One row of Lifecare's list for the client, when it is in the given group.
 	 *
 	 * @param  list     the GetDocumentsListForClient answer

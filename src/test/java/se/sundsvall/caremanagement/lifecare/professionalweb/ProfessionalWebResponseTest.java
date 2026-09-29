@@ -70,6 +70,15 @@ class ProfessionalWebResponseTest {
 	}
 
 	@Test
+	void describeLeavesOutTheRedirectsQueryString() {
+		// The login redirect carries the original request in ReturnUrl, and that can hold a personnummer.
+		final var response = new ProfessionalWebResponse(302, headers(Map.of(
+			"Location", List.of("/IdentityPortalWeb/login?ReturnUrl=%2fapi2%2fRecords%3fid%3d199001011234"))), null, URI.create("https://example.com"));
+
+		assertThat(response.describe()).isEqualTo("status 302, redirects to /IdentityPortalWeb/login").doesNotContain("199001011234");
+	}
+
+	@Test
 	void describeOmitsTypeAndRedirectWhenAbsent() {
 		final var response = new ProfessionalWebResponse(200, headers(Map.of()), null, URI.create("https://example.com"));
 
@@ -104,5 +113,20 @@ class ProfessionalWebResponseTest {
 		}, URI.create("https://example.com"));
 
 		assertThat(response.toString()).contains("body=4 bytes").doesNotContain("1, 2, 3, 4");
+	}
+
+	@Test
+	void toStringNamesTheHeadersAndLeavesOutCookieValuesAndTheQuery() {
+		final var response = new ProfessionalWebResponse(200, headers(Map.of("Set-Cookie", List.of("LEGACY-TOKEN=secret-session"))), null,
+			URI.create("https://example.com/api2/Records?id=199001011234"));
+
+		assertThat(response.toString())
+			.contains("Set-Cookie", "uri=https://example.com/api2/Records")
+			.doesNotContain("secret-session", "199001011234");
+	}
+
+	@Test
+	void toStringWithoutAUri() {
+		assertThat(new ProfessionalWebResponse(200, headers(Map.of()), null, null).toString()).contains("uri=null");
 	}
 }

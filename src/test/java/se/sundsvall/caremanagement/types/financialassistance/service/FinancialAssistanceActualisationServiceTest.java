@@ -156,8 +156,9 @@ class FinancialAssistanceActualisationServiceTest {
 			.withApplicationMonth("2026-06")
 			.withErrandId(ERRAND_ID));
 
-		verify(financialAssistanceRepositoryMock).save(errand);
-		assertThat(errand.getLifecareServiceId()).isEqualTo(7700);
+		// A targeted update: the actualisation's insats is authoritative, and no stale entity is written back.
+		verify(financialAssistanceRepositoryMock).updateLifecareServiceId(ERRAND_ID, 7700);
+		verify(financialAssistanceRepositoryMock, never()).save(errand);
 	}
 
 	@Test
@@ -245,7 +246,9 @@ class FinancialAssistanceActualisationServiceTest {
 		assertThat(decisionCaptor.getValue().getDescription())
 			.contains("id 5012")
 			.contains("FAILED")
-			.contains("Lifecare refused the upload");
+			// The exception type only: Lifecare's message may carry the file name or the applicant's details.
+			.contains("ThrowableProblem")
+			.doesNotContain("Lifecare refused the upload");
 	}
 
 	@Test

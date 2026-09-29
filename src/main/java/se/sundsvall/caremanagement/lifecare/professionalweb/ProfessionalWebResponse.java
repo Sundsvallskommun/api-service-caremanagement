@@ -44,8 +44,9 @@ public record ProfessionalWebResponse(int status, HttpHeaders headers, byte[] bo
 	}
 
 	/**
-	 * A one-line description for a log line: status, type and where it was pointing. Carries no body, so it is safe to
-	 * log anywhere.
+	 * A one-line description for a log line: status, type and where it was pointing. Carries no body and no query
+	 * string — a redirect to the login page carries the original request in its ReturnUrl, personnummer included — so
+	 * it is safe to log anywhere.
 	 *
 	 * @return the description
 	 */
@@ -55,8 +56,17 @@ public record ProfessionalWebResponse(int status, HttpHeaders headers, byte[] bo
 		if (!type.isBlank()) {
 			description.append(", type ").append(type);
 		}
-		location().ifPresent(location -> description.append(", redirects to ").append(location));
+		location().ifPresent(location -> description.append(", redirects to ").append(withoutQuery(location)));
 		return description.toString();
+	}
+
+	/** The part of a URL before its query string. */
+	static String withoutQuery(final String url) {
+		final var cut = url.indexOf('?');
+		if (cut < 0) {
+			return url;
+		}
+		return url.substring(0, cut);
 	}
 
 	/**
@@ -83,11 +93,12 @@ public record ProfessionalWebResponse(int status, HttpHeaders headers, byte[] bo
 	}
 
 	/**
-	 * Summarizes {@code body} by its length rather than its content: the raw bytes may carry sensitive Lifecare data
-	 * and must never end up in a log line via a careless {@code toString()}.
+	 * Safe for a log line through a careless {@code toString()}: the body by its length, the headers by their names (a
+	 * Set-Cookie value is the session credential) and the URI without its query (which can carry a personnummer).
 	 */
 	@Override
 	public String toString() {
-		return "ProfessionalWebResponse[status=%d, headers=%s, body=%d bytes, uri=%s]".formatted(status, headers, body.length, uri);
+		return "ProfessionalWebResponse[status=%d, headers=%s, body=%d bytes, uri=%s]".formatted(status, headers.map().keySet(), body.length,
+			Optional.ofNullable(uri).map(URI::toString).map(ProfessionalWebResponse::withoutQuery).orElse(null));
 	}
 }

@@ -42,7 +42,6 @@ class DecisionMapperTest {
 			.withCreatedBy(CREATED_BY)
 			.withLifecareStatus("SYNCED")
 			.withLifecareId("88123")
-			.withLifecareDetail("detail")
 			.withCreated(CREATED);
 
 		final var decision = DecisionMapper.toDecision(entity);
@@ -61,7 +60,6 @@ class DecisionMapperTest {
 		assertThat(decision.getCoApplicantReason()).isEqualTo("Beviljad");
 		assertThat(decision.getLifecareStatus()).isEqualTo("SYNCED");
 		assertThat(decision.getLifecareId()).isEqualTo("88123");
-		assertThat(decision.getLifecareDetail()).isEqualTo("detail");
 		assertThat(decision.getCreated()).isEqualTo(CREATED);
 	}
 
@@ -89,7 +87,7 @@ class DecisionMapperTest {
 
 		final var entity = DecisionMapper.toDecisionEntity(decision, ERRAND_ID);
 
-		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "lifecareId", "lifecareDetail");
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "lifecareId");
 		// only the status is carried over: a new decision has no Lifecare id or message yet
 		assertThat(entity.getLifecareStatus()).isEqualTo("PENDING");
 		// errandId comes from the argument, not the source DTO

@@ -18,6 +18,7 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.JsonNode;
 
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionBodies.ERROR_CO_APPLICANT;
@@ -46,6 +47,7 @@ public class LifecareDecisionService {
 	static final String TARGET_DECISION = "DECISION";
 	static final String ERROR_NOT_SAVED = "Beslutet är inte sparat i Lifecare ännu.";
 	static final String ERROR_CREATE_UNCERTAIN = "Lifecare svarade inte när beslutet sparades. Kontrollera i Lifecare om beslutet finns innan du sparar igen.";
+	static final String ERROR_ALREADY_LINKED = "Ärendet har redan ett annat beslut kopplat. Beslut %s som just skapades i Lifecare är överflödigt – makulera det i Lifecare och läs om ärendet.";
 	static final String ERROR_LINK_FAILED = "Beslutet sparades i Lifecare (beslut %s) men kunde inte kopplas till ärendet. Spara inte igen – då skapas ett beslut till.";
 
 	private static final Logger LOG = LoggerFactory.getLogger(LifecareDecisionService.class);
@@ -203,6 +205,10 @@ public class LifecareDecisionService {
 		try {
 			errandService.linkDecision(errand, decisionId);
 		} catch (final RuntimeException e) {
+			if ((e instanceof final ThrowableProblem problem) && (problem.getStatus() == CONFLICT)) {
+				// Another save linked its beslut first: this one is surplus in Lifecare, and saving again is safe.
+				throw Problem.valueOf(CONFLICT, ERROR_ALREADY_LINKED.formatted(decisionId));
+			}
 			LOG.error("Beslut {} was created in Lifecare but errand {} could not be linked to it ({})", decisionId, sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 			throw Problem.valueOf(BAD_GATEWAY, ERROR_LINK_FAILED.formatted(decisionId));
 		}

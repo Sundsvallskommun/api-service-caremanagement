@@ -93,7 +93,6 @@ public final class LifecareHistoryMapper {
 
 	private static LifecareCalculationPerson toCalculationPerson(final CalculationPersonView view) {
 		return LifecareCalculationPerson.create()
-			.withPersonId(view.personId())
 			.withName(view.name())
 			.withAmount(view.amount())
 			.withDeviationFromDate(view.deviationFromDate())
@@ -102,7 +101,6 @@ public final class LifecareHistoryMapper {
 
 	private static LifecareDecisionPerson toDecisionPerson(final DecisionPersonView view) {
 		return LifecareDecisionPerson.create()
-			.withPersonId(view.personId())
 			.withName(view.name())
 			.withCoApplicant(view.coApplicant());
 	}

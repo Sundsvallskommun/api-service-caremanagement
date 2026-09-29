@@ -67,7 +67,9 @@ public class LifecareServiceIdService {
 			final var resolved = householdPartyService.household(municipalityId, namespace, errandId).applicantPartyId()
 				.filter(StringUtils::hasText)
 				.flatMap(personId -> actualisationService.findFinancialAssistanceServiceId(municipalityId, personId));
-			resolved.ifPresent(serviceId -> financialAssistanceRepository.save(entity.withLifecareServiceId(serviceId)));
+			// A targeted update, not a save of the entity loaded above: the lookup takes seconds, and saving that stale copy
+			// would write a null back over a calculation or beslut linked in the meantime.
+			resolved.ifPresent(serviceId -> financialAssistanceRepository.linkLifecareServiceIfAbsent(errandId, serviceId));
 			return resolved.orElse(null);
 		} catch (final RuntimeException e) {
 			// The exception type only: messages from the Lifecare lookup may carry the personal number.

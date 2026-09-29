@@ -334,8 +334,16 @@ class NormberakningMapperTest {
 	}
 
 	@Test
+	void readsAPlainAttributionDateAsTheStartOfThatDayInSweden() {
+		// The API documents "ISO date or date-time" and the Lifecare path takes both; the draft path now does too.
+		final var income = NormberakningMapper.toIncomeInput(NormberakningRowInput.create().withApplicantAmountDate("2026-09-02"));
+
+		assertThat(income.getApplicantAmountDate()).isEqualTo(OffsetDateTime.parse("2026-09-02T00:00:00+02:00"));
+	}
+
+	@Test
 	void refusesDatesCaremsDraftCannotRead() {
-		assertThatThrownBy(() -> NormberakningMapper.toIncomeInput(NormberakningRowInput.create().withApplicantAmountDate("2026-09-02")))
+		assertThatThrownBy(() -> NormberakningMapper.toIncomeInput(NormberakningRowInput.create().withApplicantAmountDate("2 september")))
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 		assertThatThrownBy(() -> NormberakningMapper.toPersonInput(NormberakningRowInput.create().withDeviationFromDate("2026-09-02T00:00:00Z")))
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);

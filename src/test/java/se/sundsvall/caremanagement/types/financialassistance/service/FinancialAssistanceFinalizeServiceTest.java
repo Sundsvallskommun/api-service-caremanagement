@@ -149,10 +149,11 @@ class FinancialAssistanceFinalizeServiceTest {
 
 		service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
 
-		// The row must be locked (findByErrandIdForUpdate, not the plain findByErrandId) before the "already finalized"
-		// check runs, so two concurrent finalize calls for the same errand cannot both pass it.
-		final var inOrder = inOrder(repositoryMock, decisionServiceMock);
+		// The lock is the first read (before even the errand), so the "already finalized" check reads after it is held
+		// and two concurrent finalize calls for the same errand cannot both pass it.
+		final var inOrder = inOrder(repositoryMock, errandServiceMock, decisionServiceMock);
 		inOrder.verify(repositoryMock).findByErrandIdForUpdate(ERRAND_ID);
+		inOrder.verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		inOrder.verify(decisionServiceMock).readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		verify(repositoryMock, never()).findByErrandId(ERRAND_ID);
 	}
@@ -273,7 +274,8 @@ class FinancialAssistanceFinalizeServiceTest {
 	}
 
 	@Test
-	void missingErrandYields404BeforeAnythingElse() {
+	void missingErrandYields404BeforeAnyWrite() {
+		when(repositoryMock.findByErrandIdForUpdate(ERRAND_ID)).thenReturn(Optional.of(grantable()));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(Problem.valueOf(NOT_FOUND, "No errand"));
 		final var request = grantingRequest();
 
@@ -281,11 +283,14 @@ class FinancialAssistanceFinalizeServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 
-		verifyNoInteractions(decisionServiceMock, repositoryMock, processServiceMock);
+		// Only the lock was taken: nothing is written, no decision recorded, no process resumed.
+		verify(repositoryMock, never()).save(any());
+		verifyNoInteractions(decisionServiceMock, processServiceMock);
 	}
 
 	@Test
 	void aRequestWithoutDecisionYields400() {
+		when(repositoryMock.findByErrandIdForUpdate(ERRAND_ID)).thenReturn(Optional.of(grantable()));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
 		final var request = FinalizeRequest.create().withCommunication(CommunicationChannels.create());
 
@@ -294,11 +299,14 @@ class FinancialAssistanceFinalizeServiceTest {
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
 			.hasMessageContaining("no decision");
 
-		verifyNoInteractions(decisionServiceMock, repositoryMock, processServiceMock);
+		// Only the lock was taken: nothing is written, no decision recorded, no process resumed.
+		verify(repositoryMock, never()).save(any());
+		verifyNoInteractions(decisionServiceMock, processServiceMock);
 	}
 
 	@Test
 	void missingDeciderYields400() {
+		when(repositoryMock.findByErrandIdForUpdate(ERRAND_ID)).thenReturn(Optional.of(grantable()));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
 		final var request = grantingRequest();
 
@@ -307,11 +315,14 @@ class FinancialAssistanceFinalizeServiceTest {
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
 			.hasMessageContaining("X-Sent-By");
 
-		verifyNoInteractions(decisionServiceMock, repositoryMock, processServiceMock);
+		// Only the lock was taken: nothing is written, no decision recorded, no process resumed.
+		verify(repositoryMock, never()).save(any());
+		verifyNoInteractions(decisionServiceMock, processServiceMock);
 	}
 
 	@Test
 	void wrongStatusYields409() {
+		when(repositoryMock.findByErrandIdForUpdate(ERRAND_ID)).thenReturn(Optional.of(grantable()));
 		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("SUPPLEMENT_REQUESTED"));
 		final var request = grantingRequest();
 
@@ -320,7 +331,9 @@ class FinancialAssistanceFinalizeServiceTest {
 			.hasFieldOrPropertyWithValue("status", CONFLICT)
 			.hasMessage("Conflict: errand must be in status AWAITING_DECISION to be finalized, but is in status 'SUPPLEMENT_REQUESTED'");
 
-		verifyNoInteractions(decisionServiceMock, repositoryMock, processServiceMock);
+		// Only the lock was taken: nothing is written, no decision recorded, no process resumed.
+		verify(repositoryMock, never()).save(any());
+		verifyNoInteractions(decisionServiceMock, processServiceMock);
 	}
 
 	@Test
@@ -427,11 +440,12 @@ class FinancialAssistanceFinalizeServiceTest {
 
 		service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
 
-		// The decision is recorded and the process resumed before careM's copy of the normberäkning is disposed of.
+		// The decision is recorded and careM's copy of the normberäkning disposed of before the process is resumed, so
+		// nothing that can fail runs after the process has moved on.
 		final var inOrder = inOrder(decisionServiceMock, processServiceMock, calculationDraftRepositoryMock);
 		inOrder.verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Decision.class));
-		inOrder.verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), anyMap());
 		inOrder.verify(calculationDraftRepositoryMock).deleteById(ERRAND_ID);
+		inOrder.verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), anyMap());
 	}
 
 	@Test
@@ -479,9 +493,7 @@ class FinancialAssistanceFinalizeServiceTest {
 
 	@Test
 	void missingTypedErrandYields404() {
-		// The row lookup (and its lock) now happens before requireNotFinalized, so the 404 fires without ever reading
-		// the errand's decisions — decisionServiceMock is deliberately left unstubbed.
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("AWAITING_DECISION"));
+		// The row lookup (and its lock) is the first read, so the 404 fires before the errand or its decisions are read.
 		when(repositoryMock.findByErrandIdForUpdate(ERRAND_ID)).thenReturn(Optional.empty());
 		final var request = grantingRequest();
 

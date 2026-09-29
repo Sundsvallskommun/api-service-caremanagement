@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api;
 
+import java.util.List;
 import java.util.Map;
 import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
@@ -86,6 +87,24 @@ class FinancialAssistanceLifecarePaymentResourceFailureTest {
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
 			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(), tuple("registerPayment.errandId", "not a valid UUID")));
+
+		verifyNoInteractions(paymentServiceMock, registrationServiceMock);
+	}
+
+	@Test
+	void registerPaymentInvalidBody() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/payments").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", randomUUID().toString())))
+			.contentType(APPLICATION_JSON)
+			.bodyValue(Map.of("amount", 1, "paymentDate", "21/9/2026", "applicationMonth", "2026-13",
+				"messageLines", List.of("1", "2", "3", "4", "5", "6", "7", "8")))
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("applicationMonth", "must be a month as yyyy-MM"),
+				tuple("messageLines", "size must be between 0 and 7"),
+				tuple("paymentDate", "must be a date as yyyy-MM-dd")));
 
 		verifyNoInteractions(paymentServiceMock, registrationServiceMock);
 	}

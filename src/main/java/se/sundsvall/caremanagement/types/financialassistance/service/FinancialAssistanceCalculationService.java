@@ -151,6 +151,10 @@ public class FinancialAssistanceCalculationService {
 		if (TRUE.equals(request.getSsbtekError())) {
 			return prepareAfterReadFailure(municipalityId, namespace, request);
 		}
+		// Before this transaction's first read: resolving the insats commits it on the errand in a transaction of its own,
+		// and doing that after the first read would leave this transaction's snapshot older than the row it later links
+		// the normberäkning on — MariaDB 11 refuses that write (1020). Resolved here, commitDraft finds it stored.
+		lifecareServiceIdService.currentOrResolve(municipalityId, namespace, request.getErrandId());
 		final var input = gather(municipalityId, namespace, request);
 		final var previous = previousHousehold(municipalityId, input.applicant(), input.applicationMonth());
 		final var refresh = refreshDraftUnlessSavedInLifecare(municipalityId, input, previous);
@@ -551,7 +555,7 @@ public class FinancialAssistanceCalculationService {
 		try {
 			return lifecareCaseService.previousHousehold(municipalityId, applicant, applicationMonth);
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the previous calculation household — skipping the household drift check", e);
+			LOG.warn("Could not read the previous calculation household — skipping the household drift check ({})", e.getClass().getSimpleName());
 			return PreviousHousehold.empty();
 		}
 	}
@@ -564,7 +568,7 @@ public class FinancialAssistanceCalculationService {
 		try {
 			return new PreviousFamilyRead(lifecareCaseService.previousFamily(municipalityId, applicant, applicationMonth), false);
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the previous calculation family — the household is taken from the application", e);
+			LOG.warn("Could not read the previous calculation family — the household is taken from the application ({})", e.getClass().getSimpleName());
 			return new PreviousFamilyRead(PreviousFamily.empty(), true);
 		}
 	}
@@ -605,7 +609,7 @@ public class FinancialAssistanceCalculationService {
 		try {
 			return lifecareCaseService.previousCalculationIncomeAmounts(municipalityId, applicant, applicationMonth);
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the previous calculation income amounts — the income comparison is skipped", e);
+			LOG.warn("Could not read the previous calculation income amounts — the income comparison is skipped ({})", e.getClass().getSimpleName());
 			return Map.of();
 		}
 	}
@@ -618,7 +622,7 @@ public class FinancialAssistanceCalculationService {
 		try {
 			return lifecareCaseService.previousPersonAmounts(municipalityId, applicant, applicationMonth);
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the previous calculation person amounts — the person rows get no amount", e);
+			LOG.warn("Could not read the previous calculation person amounts — the person rows get no amount ({})", e.getClass().getSimpleName());
 			return Map.of();
 		}
 	}
@@ -628,7 +632,7 @@ public class FinancialAssistanceCalculationService {
 		try {
 			return lifecareCaseService.previousExpenseAmounts(municipalityId, applicant, applicationMonth);
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the previous calculation expense amounts — expense history treated as missing", e);
+			LOG.warn("Could not read the previous calculation expense amounts — expense history treated as missing ({})", e.getClass().getSimpleName());
 			return Map.of();
 		}
 	}

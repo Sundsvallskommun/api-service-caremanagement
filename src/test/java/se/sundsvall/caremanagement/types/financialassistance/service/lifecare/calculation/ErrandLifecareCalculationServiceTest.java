@@ -235,10 +235,24 @@ class ErrandLifecareCalculationServiceTest {
 	}
 
 	@Test
-	void saysTheBeräkningExistsWhenTheErrandCannotBeLinkedToIt() {
+	void saysTheBeräkningIsSurplusWhenAnotherWasLinkedFirst() {
+		// The daily prepare linked its calculation first: saving again is safe, and this one is surplus in Lifecare.
 		errandIs(UNLINKED);
 		when(client.create(eq(1), any())).thenReturn(saved());
 		doThrow(Problem.valueOf(CONFLICT, "Another calculation is linked")).when(errandService).linkCalculation(UNLINKED, 31);
+
+		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false))
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessageContaining("Beräkning 31")
+			.hasMessageContaining("överflödig");
+		verify(recorder).written(UNLINKED, "CREATE", "CALCULATION", "Sparade normberäkningen i Lifecare", "31");
+	}
+
+	@Test
+	void saysTheBeräkningExistsWhenTheErrandCannotBeLinkedToIt() {
+		errandIs(UNLINKED);
+		when(client.create(eq(1), any())).thenReturn(saved());
+		doThrow(new IllegalStateException("db down")).when(errandService).linkCalculation(UNLINKED, 31);
 
 		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false))
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)

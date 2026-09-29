@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.lifecare.professionalweb;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -58,28 +59,37 @@ public class DirectProfessionalWebTransport implements ProfessionalWebTransport 
 	 */
 	@Override
 	public ProfessionalWebResponse exchange(final String method, final String path, final Map<String, String> params, final byte[] body) {
-		var response = send(method, path, params, body);
+		var sent = send(method, path, params, body);
 
-		if (ProfessionalWebHttp.needsSession(response)) {
-			LOG.warn("Lifecare wants a session for {} ({}) - bootstrapping it", MODULE, response.describe());
+		if (ProfessionalWebHttp.needsSession(sent.response())) {
+			LOG.warn("Lifecare wants a session for {} ({}) - bootstrapping it", MODULE, sent.response().describe());
 			session.bootstrapModule(MODULE);
-			response = send(method, path, params, body);
+			sent = send(method, path, params, body);
 		}
-		if (ProfessionalWebHttp.needsSession(response)) {
-			LOG.warn("Lifecare still refuses {} ({}) - signing in again", path, response.describe());
-			session.reset();
-			response = send(method, path, params, body);
+		if (ProfessionalWebHttp.needsSession(sent.response())) {
+			LOG.warn("Lifecare still refuses {} ({}) - signing in again", path, sent.response().describe());
+			// Only the session this request used: a request that raced ahead may already have established a new one.
+			session.reset(sent.session());
+			sent = send(method, path, params, body);
+			if (ProfessionalWebHttp.needsSession(sent.response())) {
+				// A fresh session's first module call asks for the module's artifact, like the first call ever did.
+				session.bootstrapModule(MODULE);
+				sent = send(method, path, params, body);
+			}
 		}
-		if (ProfessionalWebHttp.needsSession(response)) {
-			throw Problem.valueOf(BAD_GATEWAY, "Lifecare would not accept a freshly established session (" + response.describe() + ")");
+		if (ProfessionalWebHttp.needsSession(sent.response())) {
+			throw Problem.valueOf(BAD_GATEWAY, "Lifecare would not accept a freshly established session (" + sent.response().describe() + ")");
 		}
-		if (!response.isSuccess()) {
-			LOG.info("Lifecare answered {} {} with {}", method, path, response.describe());
+		if (!sent.response().isSuccess()) {
+			LOG.info("Lifecare answered {} {} with {}", method, path, sent.response().describe());
 		}
-		return response;
+		return sent.response();
 	}
 
-	private ProfessionalWebResponse send(final String method, final String path, final Map<String, String> params, final byte[] body) {
+	/** One answer, and the session it was sent on. */
+	private record Sent(ProfessionalWebResponse response, Instant session) {}
+
+	private Sent send(final String method, final String path, final Map<String, String> params, final byte[] body) {
 		final var headers = new LinkedHashMap<String, String>();
 		headers.putAll(ProfessionalWebHttp.BROWSER_HEADERS);
 		headers.putAll(ProfessionalWebHttp.AJAX_HEADERS);
@@ -94,10 +104,11 @@ public class DirectProfessionalWebTransport implements ProfessionalWebTransport 
 			}
 		}
 		headers.putAll(session.prepare());
+		final var sessionUsed = session.established();
 
 		final var response = http.send(method, uri(path, params), headers, bytes);
 		session.absorb(response);
-		return response;
+		return new Sent(response, sessionUsed);
 	}
 
 	private URI uri(final String path, final Map<String, String> params) {

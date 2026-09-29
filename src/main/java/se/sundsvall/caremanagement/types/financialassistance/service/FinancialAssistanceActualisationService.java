@@ -178,8 +178,7 @@ public class FinancialAssistanceActualisationService {
 		// The insats the actualisation was linked to is the key Lifecare's own case reads take; keeping it on the errand
 		// saves every later errand open a Lifecare lookup. None for a nyansökan — that one is filled in on read.
 		ofNullable(result.serviceId())
-			.ifPresent(serviceId -> financialAssistanceRepository.findByErrandId(errandId)
-				.ifPresent(entity -> financialAssistanceRepository.save(entity.withLifecareServiceId(serviceId))));
+			.ifPresent(serviceId -> financialAssistanceRepository.updateLifecareServiceId(errandId, serviceId));
 
 		ofNullable(result.assignedUserId()).filter(StringUtils::hasText)
 			.ifPresent(assignedUserId -> errandService.updateErrand(municipalityId, namespace, errandId,
@@ -218,8 +217,11 @@ public class FinancialAssistanceActualisationService {
 			LOG.info("Archived {} application document(s) of errand {} to Lifecare actualisation {}", archived.size(), errandNumber, actualisationId);
 			return ARCHIVED_MESSAGE.formatted(String.join(", ", archived));
 		} catch (final Exception e) {
-			LOG.error("Failed to archive the application of errand {} to Lifecare actualisation {}: {}", sanitizeForLogging(errandId), actualisationId, e.getMessage(), e);
-			return ARCHIVE_FAILED_MESSAGE.formatted(e.getMessage());
+			// The exception type only, in the log and in the decision text the API serves: Lifecare's and the blob store's
+			// messages may carry the file name or the applicant's details.
+			LOG.error("Failed to archive the application of errand {} to Lifecare actualisation {} ({})", sanitizeForLogging(errandId), actualisationId,
+				e.getClass().getSimpleName());
+			return ARCHIVE_FAILED_MESSAGE.formatted(e.getClass().getSimpleName());
 		}
 	}
 

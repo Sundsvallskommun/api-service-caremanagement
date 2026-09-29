@@ -165,7 +165,7 @@ class DecisionServiceTest {
 
 	@Test
 	void markSyncedInLifecareStoresLifecaresId() {
-		final var entity = DecisionEntity.create().withId(DECISION_ID).withErrandId(ERRAND_ID).withLifecareStatus("PENDING").withLifecareDetail("old");
+		final var entity = DecisionEntity.create().withId(DECISION_ID).withErrandId(ERRAND_ID).withLifecareStatus("PENDING");
 		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.of(entity));
 		when(decisionRepositoryMock.save(entity)).thenReturn(entity);
 
@@ -174,7 +174,6 @@ class DecisionServiceTest {
 		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		assertThat(result.getLifecareStatus()).isEqualTo("SYNCED");
 		assertThat(result.getLifecareId()).isEqualTo("88123");
-		assertThat(result.getLifecareDetail()).isNull();
 	}
 
 	@Test

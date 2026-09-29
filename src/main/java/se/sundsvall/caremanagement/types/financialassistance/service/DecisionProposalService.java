@@ -261,7 +261,7 @@ public class DecisionProposalService {
 				.filter(ProposalMapper::isRecoveryClaim)
 				.toList());
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the applicant's återkrav in Lifecare — the decision proposal is computed without them", e);
+			LOG.warn("Could not read the applicant's återkrav in Lifecare — the decision proposal is computed without them ({})", e.getClass().getSimpleName());
 			return LifecareRead.failed(List.of());
 		}
 	}
@@ -280,7 +280,7 @@ public class DecisionProposalService {
 				.filter(decision -> lifecareDecisionFilter.isPreviousDecisionCandidate(decision, errandServiceId))
 				.findFirst());
 		} catch (final RuntimeException e) {
-			LOG.warn("Could not read the previous Lifecare decision — the decision proposal is computed without it", e);
+			LOG.warn("Could not read the previous Lifecare decision — the decision proposal is computed without it ({})", e.getClass().getSimpleName());
 			return LifecareRead.failed(Optional.empty());
 		}
 	}

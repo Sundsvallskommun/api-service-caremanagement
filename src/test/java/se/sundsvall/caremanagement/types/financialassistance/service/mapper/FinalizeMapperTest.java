@@ -37,7 +37,7 @@ class FinalizeMapperTest {
 	void toPaymentDecisionMapsEverything() {
 		final var decision = FinalizeMapper.toPaymentDecision(grantingRequest(), "jane02doe", TODAY);
 
-		assertThat(decision).hasNoNullFieldsOrPropertiesExcept("id", "created", "lifecareId", "lifecareDetail");
+		assertThat(decision).hasNoNullFieldsOrPropertiesExcept("id", "created", "lifecareId");
 		assertThat(decision.getDecisionType()).isEqualTo("PAYMENT");
 		assertThat(decision.getValue()).isEqualTo("BIFALL");
 		assertThat(decision.getDescription()).isEqualTo("Inkomster enligt SSBTEK");

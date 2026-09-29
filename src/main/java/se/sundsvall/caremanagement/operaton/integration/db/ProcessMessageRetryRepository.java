@@ -9,5 +9,9 @@ import se.sundsvall.caremanagement.operaton.integration.db.model.ProcessMessageR
 @CircuitBreaker(name = "processMessageRetryRepository")
 public interface ProcessMessageRetryRepository extends JpaRepository<ProcessMessageRetryEntity, String> {
 
-	List<ProcessMessageRetryEntity> findByStatusAndNextAttemptBeforeOrderByNextAttempt(String status, OffsetDateTime now);
+	/**
+	 * The next due messages, oldest first, at most five: each is a blocking engine call of up to 35 s (connect + read
+	 * timeout), so five keep one run well inside its five-minute ShedLock. The rest wait for the next minute's run.
+	 */
+	List<ProcessMessageRetryEntity> findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(String status, OffsetDateTime now);
 }

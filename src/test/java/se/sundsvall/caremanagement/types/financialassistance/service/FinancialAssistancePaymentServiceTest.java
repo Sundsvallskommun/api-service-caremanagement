@@ -232,10 +232,26 @@ class FinancialAssistancePaymentServiceTest {
 		assertThat(response.getPaymentDate()).isEqualTo("2026-06-26");
 		assertThat(response.getDeadline()).isEqualTo("2026-09-24");
 		assertThat(response.getOverdue()).isFalse();
-		// From now on they are this decision's: linked, so the next read verifies exactly them.
-		verify(financialAssistanceRepositoryMock).save(entity);
-		assertThat(entity.getLifecarePaymentIds()).containsExactly("101", "102");
-		assertThat(entity.getLifecareServiceId()).isEqualTo(7700);
+		// From now on they are this decision's: linked one at a time, atomically, so the next read verifies exactly them
+		// and a payment the caseworker links meanwhile is not dropped.
+		verify(financialAssistanceRepositoryMock).linkPaymentIfAbsent(ERRAND_ID, "101");
+		verify(financialAssistanceRepositoryMock).linkPaymentIfAbsent(ERRAND_ID, "102");
+		verify(financialAssistanceRepositoryMock, never()).save(any());
+	}
+
+	@Test
+	void aPaymentLinkedWhileTheInsatsWasReadMustBePaidToo() {
+		// The caseworker registered payment 555 while this check read Lifecare: the errand is paid only when it is too.
+		unlinkedErrand(LocalDate.of(2026, SEPTEMBER, 21));
+		when(paymentStatusServiceMock.registeredPayments(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(List.of(
+			new LifecarePayment("101", 7700, "2026-06", "2026-06-25")));
+		when(financialAssistanceRepositoryMock.findLinkedPaymentIdsForUpdate(ERRAND_ID)).thenReturn(List.of("101", "555"));
+		when(paymentStatusServiceMock.paidPaymentDates(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any())).thenReturn(Map.of("101", "2026-06-25"));
+
+		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, errandRequest());
+
+		assertThat(response.getEffectuated()).isFalse();
+		verify(financialAssistanceRepositoryMock).linkPaymentIfAbsent(ERRAND_ID, "101");
 	}
 
 	@Test
@@ -309,7 +325,7 @@ class FinancialAssistancePaymentServiceTest {
 		final var response = service.checkPaymentStatus(MUNICIPALITY_ID, NAMESPACE, request);
 
 		assertThat(response.getEffectuated()).isTrue();
-		assertThat(entity.getLifecarePaymentIds()).containsExactly("101");
+		verify(financialAssistanceRepositoryMock).linkPaymentIfAbsent(ERRAND_ID, "101");
 	}
 
 	@Test

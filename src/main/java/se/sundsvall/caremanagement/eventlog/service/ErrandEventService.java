@@ -54,6 +54,15 @@ public class ErrandEventService {
 	}
 
 	/**
+	 * Records several HTTP-sourced events in one write — a search logs one row per hit, and a page can hold many — each
+	 * stamped with the same time.
+	 */
+	public void recordEvents(final List<ErrandEventEntity> entities) {
+		final var created = now(ZoneId.systemDefault());
+		errandEventRepository.saveAll(entities.stream().map(entity -> entity.withCreated(created)).toList());
+	}
+
+	/**
 	 * Records the reads and writes careM made in Lifecare on the errand's behalf. They go to Lifecare's ProfessionalWeb,
 	 * not through this service's own request logging, so they land in the same who/what/when log under source
 	 * {@code LIFECARE}, attributed to the caseworker who asked for them.

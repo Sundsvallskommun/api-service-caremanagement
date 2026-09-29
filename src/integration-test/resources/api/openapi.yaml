@@ -3872,7 +3872,7 @@ paths:
         \ and an identified caller (X-Sent-By); a second finalize is rejected with\
         \ 409. A process that could not be reached is reported in the response, not\
         \ as an error."
-      operationId: finalize
+      operationId: finalizeErrand
       parameters:
       - name: municipalityId
         in: path
@@ -9776,10 +9776,10 @@ components:
             $ref: "#/components/schemas/Violation"
         title:
           type: string
-        causeAsProblem:
-          $ref: "#/components/schemas/ThrowableProblem"
         detail:
           type: string
+        causeAsProblem:
+          $ref: "#/components/schemas/ThrowableProblem"
         instance:
           type: string
           format: uri
@@ -10632,9 +10632,10 @@ components:
             \ set by careM when it saves the beslut in Lifecare through the errand's\
             \ /lifecare/decision route. A reference only: whether the beslut is locked\
             \ (skrivskyddat) is Lifecare's status and is never stored here. finalize\
-            \ requires it for every outcome."
+            \ requires it for every outcome. Server-owned: ignored on create and PATCH."
           examples:
           - 4711
+          readOnly: true
         lifecareCalculationId:
           type: integer
           format: int32
@@ -10645,26 +10646,27 @@ components:
             \ replaced. Later saves update this calculation rather than creating another.\
             \ A reference only: whether the calculation is final (slutlig) is Lifecare's\
             \ status and is never stored here. finalize requires it for a granting\
-            \ outcome (BIFALL/DELAVSLAG)."
+            \ outcome (BIFALL/DELAVSLAG). Server-owned: ignored on create and PATCH."
           examples:
           - 4242
+          readOnly: true
         lifecarePaymentIds:
           type: array
           description: "References to the Lifecare payments (utbetalningar) a bifall\
             \ pays with. Set by careM when it registers a payment in Lifecare through\
             \ the errand's /lifecare/payments route, or once payment-status has found\
-            \ the errand's payments paid in Lifecare on the errand's own insats. When\
-            \ given in a PATCH the list replaces the stored one; an empty list clears\
-            \ it. References only: whether a payment is registered or paid out is\
-            \ read from Lifecare, never stored here. When set, payment-status verifies\
-            \ exactly these ids against Lifecare, and no other errand can take them;\
-            \ finalize refuses an AVSLAG that carries any."
+            \ the errand's payments paid in Lifecare on the errand's own insats. Server-owned:\
+            \ ignored on create and PATCH. References only: whether a payment is registered\
+            \ or paid out is read from Lifecare, never stored here. When set, payment-status\
+            \ verifies exactly these ids against Lifecare, and no other errand can\
+            \ take them; finalize refuses an AVSLAG that carries any."
           items:
             type: string
             examples:
             - "90210"
             maxLength: 64
             minLength: 0
+          readOnly: true
         children:
           type: array
           description: Children included in the application
@@ -11529,14 +11531,12 @@ components:
           minLength: 0
         lifecareStatus:
           type: string
-          description: "Where the decision stands in Lifecare: PENDING once handed\
-            \ over to be written there, SYNCED once written, FAILED when Lifecare\
-            \ refused it (see lifecareDetail). Null for a decision that is never written\
-            \ to Lifecare."
+          description: "Where the decision stands in Lifecare: SYNCED once it is receipted\
+            \ against the beslut careM saved there. Null for a decision that is never\
+            \ written to Lifecare."
           enum:
           - PENDING
           - SYNCED
-          - FAILED
           examples:
           - SYNCED
           readOnly: true
@@ -11545,13 +11545,6 @@ components:
           description: "The decision's id in Lifecare, once written there"
           examples:
           - "88123"
-          readOnly: true
-        lifecareDetail:
-          type: string
-          description: Lifecare's own message when writing the decision failed — shown
-            to the caseworker as-is
-          examples:
-          - Beslutet kunde inte registreras
           readOnly: true
         created:
           type: string
@@ -11737,9 +11730,11 @@ components:
       properties:
         paymentDate:
           type: string
-          description: Utbetalningsdatum; Lifecare's proposed date when left out
+          description: "Utbetalningsdatum, yyyy-MM-dd; Lifecare's proposed date when\
+            \ left out"
           examples:
           - 2026-09-21
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
         amount:
           type: number
           description: The amount; must be above 0
@@ -11750,63 +11745,86 @@ components:
           description: "The month the utbetalning concerns, yyyy-MM"
           examples:
           - 2026-09
+          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
         paymentMethod:
           type: string
           description: "The betalsätt's name, matched against Lifecare's betalsätt\
             \ on the insats"
           examples:
           - Bankgiro via Plusgiro
+          maxLength: 255
+          minLength: 0
         payeeName:
           type: string
           description: The payee's name
           examples:
           - Kontoinnehavare A
+          maxLength: 255
+          minLength: 0
         payeeAddress:
           type: string
           description: The payee's street address
           examples:
           - Storgatan 1
+          maxLength: 255
+          minLength: 0
         payeeCareOf:
           type: string
           description: The payee's c/o address
           examples:
           - ""
+          maxLength: 255
+          minLength: 0
         payeeZipCode:
           type: string
           description: The payee's postal code
           examples:
           - "85230"
+          maxLength: 16
+          minLength: 0
         payeeCity:
           type: string
           description: The payee's postal town
           examples:
           - Sundsvall
+          maxLength: 255
+          minLength: 0
         clearingNumber:
           type: string
           description: Clearing number
           examples:
           - "6000"
+          maxLength: 16
+          minLength: 0
         accountNumber:
           type: string
           description: Account number; left out for the registered-address payee
           examples:
           - "11111111"
+          maxLength: 64
+          minLength: 0
         accountingCode:
           type: string
           description: "Kontering: the ändamål (Lifecare purpose) among the insats's\
             \ konteringsrader"
           examples:
           - "1"
+          maxLength: 64
+          minLength: 0
         localPaymentNumber:
           type: string
           description: Lokalbetalningsnummer
           examples:
           - ""
+          maxLength: 64
+          minLength: 0
         invoiceNumber:
           type: string
           description: Invoice number (Lifecare billingNumber)
           examples:
           - "123"
+          maxLength: 64
+          minLength: 0
         usesOcr:
           type: boolean
           description: Whether the invoice number is an OCR number
@@ -11814,9 +11832,13 @@ components:
           - false
         messageLines:
           type: array
-          description: "Message rows, at most seven are sent"
+          description: "Message rows, at most seven"
           items:
             type: string
+            maxLength: 255
+            minLength: 0
+          maxItems: 7
+          minItems: 0
     LifecarePaymentCreated:
       type: object
       description: An utbetalning registered in Lifecare (not the same as paid out)
@@ -16182,11 +16204,6 @@ components:
       type: object
       description: A person on a Lifecare decision.
       properties:
-        personId:
-          type: string
-          description: The Lifecare person id
-          examples:
-          - "200001011234"
         name:
           type: string
           description: The person name
@@ -16335,11 +16352,6 @@ components:
       type: object
       description: A household member on a Lifecare calculation.
       properties:
-        personId:
-          type: string
-          description: The Lifecare person id
-          examples:
-          - "200001011234"
         name:
           type: string
           description: The person name

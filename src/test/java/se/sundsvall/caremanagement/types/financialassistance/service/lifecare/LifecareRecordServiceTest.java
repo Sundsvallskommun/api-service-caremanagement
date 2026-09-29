@@ -201,6 +201,16 @@ class LifecareRecordServiceTest {
 	}
 
 	@Test
+	void readRefusesADocumentThroughTheJournalNoteRoute() {
+		givenClientList();
+
+		// Record 3 is the applicant's, but it is a document: the journal-note route must not fetch it.
+		assertRefused(() -> service.readJournalNote(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 3), NOT_FOUND, LifecareRecordService.NOT_THE_CLIENTS);
+		verify(client, never()).get(eq(PATH_READ_NOTE), anyMap());
+		verifyNoInteractions(recorder);
+	}
+
+	@Test
 	void readOnAnAnswerThatIsNotAnObject() {
 		givenClientList();
 		when(client.get(PATH_READ_NOTE, recordParams("1", "false", "true"))).thenReturn(json("[]"));

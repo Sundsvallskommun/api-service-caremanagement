@@ -1,6 +1,8 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -22,6 +24,7 @@ import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_RECEIVED;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.applicationTypeForSlug;
 import static se.sundsvall.caremanagement.types.financialassistance.service.mapper.FinancialAssistanceMapper.toEntity;
@@ -47,6 +50,9 @@ public class FinancialAssistanceErrandService {
 
 	/** Decisions recorded by the automated pipelines, written as the drakel system actor. */
 	private static final String RECOMMENDATION_TYPE = "RECOMMENDATION";
+	static final String ERROR_NO_FINANCIAL_ASSISTANCE_DATA = "Errand %s has no financial assistance data to link a Lifecare reference to";
+	static final String ERROR_CALCULATION_ALREADY_LINKED = "Errand %s already has another normberäkning linked; read the errand again instead of creating another calculation";
+	static final String ERROR_DECISION_ALREADY_LINKED = "Beslut %s was created in Lifecare, but errand %s already has beslut %s linked; void beslut %s in Lifecare";
 
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
@@ -147,33 +153,57 @@ public class FinancialAssistanceErrandService {
 	/**
 	 * Applies the non-null fields of {@code data} onto the errand's stored application data (PATCH semantics — null
 	 * fields leave the existing values untouched). The server-owned fields ({@code applicationType},
-	 * {@code lastDailyRunAt}, timestamps) are never written from client data. {@code lifecareCalculationId} is
-	 * write-once, see {@link #requireLinkableCalculation}.
+	 * {@code lastDailyRunAt}, timestamps and the Lifecare references) are never written from client data; the Lifecare
+	 * references are linked by the services that create them, see {@link #linkCalculation} and {@link #linkDecision}.
 	 */
 	public void updateData(final String municipalityId, final String namespace, final String errandId, final FinancialAssistanceData data) {
 		// Scope check — throws 404 when the errand is missing in this namespace/municipality.
 		errandService.readErrand(municipalityId, namespace, errandId);
-		final var existing = financialAssistanceRepository.findByErrandId(errandId);
-		existing.ifPresent(entity -> requireLinkableCalculation(errandId, entity, data.getLifecareCalculationId()));
-		final var entity = existing.orElseGet(() -> FinancialAssistanceEntity.create().withErrandId(errandId));
+		final var entity = financialAssistanceRepository.findByErrandId(errandId)
+			.orElseGet(() -> FinancialAssistanceEntity.create().withErrandId(errandId));
 		financialAssistanceRepository.save(updateEntity(entity, data));
 	}
 
 	/**
-	 * A normberäkning is linked once. The daily prepare and the caseworker's first save through the errand's /lifecare
-	 * calculation route can both create one in Lifecare, and the loser's calculation must not silently replace the
-	 * winner's link — the errand would then point at a calculation nobody else knows was swapped in. Linking goes
-	 * through the same conditional update the prepare step uses, so a link that lands between this read and this write
-	 * is caught too. The same id again is a no-op, so retries stay safe.
+	 * Links the Lifecare normberäkning careM created for the errand. Linked once: the daily prepare and the caseworker's
+	 * first save through the errand's /lifecare calculation route can both create one in Lifecare, and the loser's
+	 * calculation must not silently replace the winner's link. The link is a conditional update, so a link that lands
+	 * between another request's read and write is caught too. The same id again is a no-op, so retries stay safe.
 	 */
-	private void requireLinkableCalculation(final String errandId, final FinancialAssistanceEntity entity, final Integer calculationId) {
-		if ((calculationId == null) || calculationId.equals(entity.getLifecareCalculationId())) {
+	public void linkCalculation(final String municipalityId, final String namespace, final String errandId, final int calculationId) {
+		final var linked = currentLink(municipalityId, namespace, errandId, FinancialAssistanceEntity::getLifecareCalculationId);
+		if (linked.filter(id -> id == calculationId).isPresent()) {
 			return;
 		}
-		if ((entity.getLifecareCalculationId() == null) && (financialAssistanceRepository.linkLifecareCalculationIfAbsent(errandId, calculationId) == 1)) {
-			entity.setLifecareCalculationId(calculationId);
+		if (linked.isEmpty() && (financialAssistanceRepository.linkLifecareCalculationIfAbsent(errandId, calculationId) == 1)) {
 			return;
 		}
-		throw Problem.valueOf(CONFLICT, "Errand %s already has another normberäkning linked; read the errand again instead of creating another calculation".formatted(errandId));
+		throw Problem.valueOf(CONFLICT, ERROR_CALCULATION_ALREADY_LINKED.formatted(errandId));
+	}
+
+	/**
+	 * Links the Lifecare beslut careM created for the errand. Linked once, as {@link #linkCalculation}: two first saves
+	 * racing each other both create a beslut in Lifecare, and the second must not replace the first's link. The loser is
+	 * told which beslut it created, so the caseworker can void it in Lifecare rather than leave it orphaned there.
+	 */
+	public void linkDecision(final String municipalityId, final String namespace, final String errandId, final int decisionId) {
+		final var linked = currentLink(municipalityId, namespace, errandId, FinancialAssistanceEntity::getLifecareDecisionId);
+		if (linked.filter(id -> id == decisionId).isPresent()) {
+			return;
+		}
+		if (linked.isEmpty() && (financialAssistanceRepository.linkLifecareDecisionIfAbsent(errandId, decisionId) == 1)) {
+			return;
+		}
+		final var winner = financialAssistanceRepository.findByErrandId(errandId).map(FinancialAssistanceEntity::getLifecareDecisionId).orElse(null);
+		throw Problem.valueOf(CONFLICT, ERROR_DECISION_ALREADY_LINKED.formatted(decisionId, errandId, winner, decisionId));
+	}
+
+	private Optional<Integer> currentLink(final String municipalityId, final String namespace, final String errandId,
+		final Function<FinancialAssistanceEntity, Integer> link) {
+		// Scope check — throws 404 when the errand is missing in this namespace/municipality.
+		errandService.readErrand(municipalityId, namespace, errandId);
+		final var entity = financialAssistanceRepository.findByErrandId(errandId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERROR_NO_FINANCIAL_ASSISTANCE_DATA.formatted(errandId)));
+		return Optional.ofNullable(link.apply(entity));
 	}
 }

@@ -4,13 +4,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Objects;
 
 /**
- * A single person on a Lifecare decision — identifies the person and whether they are the co-applicant.
+ * A single person on a Lifecare decision — named, and whether they are the co-applicant. No personnummer: the history
+ * is
+ * for display, and the errand already knows its household by party id.
  */
 @Schema(description = "A person on a Lifecare decision.")
 public class LifecareDecisionPerson {
-
-	@Schema(description = "The Lifecare person id", examples = "200001011234")
-	private String personId;
 
 	@Schema(description = "The person name", examples = "Anna Andersson")
 	private String name;
@@ -20,19 +19,6 @@ public class LifecareDecisionPerson {
 
 	public static LifecareDecisionPerson create() {
 		return new LifecareDecisionPerson();
-	}
-
-	public String getPersonId() {
-		return personId;
-	}
-
-	public void setPersonId(final String personId) {
-		this.personId = personId;
-	}
-
-	public LifecareDecisionPerson withPersonId(final String personId) {
-		this.personId = personId;
-		return this;
 	}
 
 	public String getName() {
@@ -66,16 +52,16 @@ public class LifecareDecisionPerson {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final LifecareDecisionPerson that = (LifecareDecisionPerson) o;
-		return Objects.equals(personId, that.personId) && Objects.equals(name, that.name) && Objects.equals(coApplicant, that.coApplicant);
+		return Objects.equals(name, that.name) && Objects.equals(coApplicant, that.coApplicant);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(personId, name, coApplicant);
+		return Objects.hash(name, coApplicant);
 	}
 
 	@Override
 	public String toString() {
-		return "LifecareDecisionPerson{personId='" + personId + "', name='" + name + "', coApplicant=" + coApplicant + "}";
+		return "LifecareDecisionPerson{name='" + name + "', coApplicant=" + coApplicant + "}";
 	}
 }

@@ -9,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -50,6 +51,16 @@ class SearchHitsCollectorTest {
 		assertThat(collector.supports(otherReturnType, null)).isFalse();
 	}
 
+	@Test
+	void supportsASearchResponseWrappedInAResponseEntity() throws NoSuchMethodException {
+		// The shape ErrandResource.findErrands really has: Spring hands the advice the handler's own return type.
+		final var wrappedSearch = new MethodParameter(ReturnTypes.class.getDeclaredMethod("findErrandsWrapped"), -1);
+		final var wrappedOther = new MethodParameter(ReturnTypes.class.getDeclaredMethod("readErrandWrapped"), -1);
+
+		assertThat(collector.supports(wrappedSearch, null)).isTrue();
+		assertThat(collector.supports(wrappedOther, null)).isFalse();
+	}
+
 	/** Stand-ins for a controller method's return type, so {@code supports()} can be exercised without a real resource. */
 	@SuppressWarnings("unused")
 	private static final class ReturnTypes {
@@ -58,6 +69,14 @@ class SearchHitsCollectorTest {
 		}
 
 		static Errand readErrand() {
+			return null;
+		}
+
+		static ResponseEntity<FindErrandsResponse> findErrandsWrapped() {
+			return null;
+		}
+
+		static ResponseEntity<Errand> readErrandWrapped() {
 			return null;
 		}
 	}

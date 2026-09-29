@@ -60,6 +60,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -464,7 +465,9 @@ class FinancialAssistanceCalculationServiceTest {
 		// is read, for the SSBTEK sync — and without one (as here) there is nothing to sync against.
 		verify(draftServiceMock).header(ERRAND_ID);
 		verifyNoMoreInteractions(draftServiceMock);
-		verifyNoInteractions(lateTransferFeederMock, untransferableIncomeFeederMock, lifecareServiceIdServiceMock, calculationSyncServiceMock);
+		verifyNoInteractions(lateTransferFeederMock, untransferableIncomeFeederMock, calculationSyncServiceMock);
+		// The insats is looked up once, up front, and not again: no proposal is committed.
+		verify(lifecareServiceIdServiceMock).currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 		// A linked calculation is never proposed again.
 		verify(calculationServiceMock, never()).commitEffective(any(), any(), any(), any(), any(), any(), any());
 		verify(repositoryMock, never()).linkLifecareCalculationIfAbsent(any(), any());
@@ -728,6 +731,12 @@ class FinancialAssistanceCalculationServiceTest {
 		when(repositoryMock.linkLifecareCalculationIfAbsent(ERRAND_ID, 777)).thenReturn(1);
 
 		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest());
+
+		// The insats is resolved before the run's first read, so its own commit cannot leave this run's snapshot behind
+		// the row the proposal is linked on.
+		final var order = inOrder(lifecareServiceIdServiceMock, errandServiceMock);
+		order.verify(lifecareServiceIdServiceMock).currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		order.verify(errandServiceMock).readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
 		// The draft's effective rows go to Lifecare with the header's norm and period and the errand's EB insats.
 		final ArgumentCaptor<CalculationHeader> header = ArgumentCaptor.captor();

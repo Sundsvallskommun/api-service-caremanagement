@@ -17,14 +17,14 @@ import static org.hamcrest.CoreMatchers.allOf;
 
 class LifecareCalculationTest {
 
-	private static final List<LifecareCalculationPerson> PERSONS = List.of(LifecareCalculationPerson.create().withPersonId("200001011234").withName("Anna Andersson"));
+	private static final List<LifecareCalculationPerson> PERSONS = List.of(LifecareCalculationPerson.create().withName("Anna Andersson"));
 	private static final List<LifecareCalculationIncome> INCOMES = List.of(LifecareCalculationIncome.create().withType("Lön").withAmountApplicant(BigDecimal.valueOf(12000.0)));
 	private static final List<LifecareCalculationExpense> EXPENSES = List.of(LifecareCalculationExpense.create().withType("Hyra").withAppliedAmount(BigDecimal.valueOf(7500.0)));
 	private static final List<LifecareCalculationExpense> SPECIAL_EXPENSES = List.of(LifecareCalculationExpense.create().withType("Tandvård").withAppliedAmount(BigDecimal.valueOf(500.0)));
 
 	@BeforeAll
 	static void setup() {
-		BeanMatchers.registerValueGenerator(() -> LifecareCalculationPerson.create().withPersonId("200001011234"), LifecareCalculationPerson.class);
+		BeanMatchers.registerValueGenerator(() -> LifecareCalculationPerson.create(), LifecareCalculationPerson.class);
 		BeanMatchers.registerValueGenerator(() -> LifecareCalculationIncome.create().withType("Lön"), LifecareCalculationIncome.class);
 		BeanMatchers.registerValueGenerator(() -> LifecareCalculationExpense.create().withType("Hyra"), LifecareCalculationExpense.class);
 	}

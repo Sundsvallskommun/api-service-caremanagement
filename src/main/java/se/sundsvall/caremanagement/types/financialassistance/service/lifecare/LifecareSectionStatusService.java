@@ -92,9 +92,10 @@ public class LifecareSectionStatusService {
 			final var registered = client.get(PATH_LATEST_PAYMENTS, params);
 			accessRecorder.read(errand, "PAYMENTS", "Läste utbetalningar i Lifecare");
 			return elements(registered).stream()
-				.filter(payment -> payment.path("concernedMonth").isString() && month.equals(payment.path("concernedMonth").stringValue()))
-				// Lifecare leaves cancellationDate empty until the utbetalning is makulerad.
-				.anyMatch(payment -> payment.path("cancellationDate").isString() && payment.path("cancellationDate").stringValue().isEmpty());
+				.filter(payment -> month.equals(LifecarePaymentNodes.text(payment, "concernedMonth")))
+				// The same rule every other payment read uses: standing until Lifecare gives it a cancellationDate, so an
+				// empty, null or missing one all mean not makulerad.
+				.anyMatch(payment -> !LifecarePaymentNodes.cancelled(payment));
 		} catch (final RuntimeException e) {
 			LOG.warn("Could not read the utbetalningar of errand {} in Lifecare ({})", sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 			return false;

@@ -54,6 +54,17 @@ class ErrandEventServiceTest {
 	}
 
 	@Test
+	void recordEventsStampsOneTimeAndSavesInOneWrite() {
+		final var first = ErrandEventEntity.create().withErrandId("e1").withAction("READ").withTarget("errands/search");
+		final var second = ErrandEventEntity.create().withErrandId("e2").withAction("READ").withTarget("errands/search");
+
+		service.recordEvents(List.of(first, second));
+
+		verify(repositoryMock).saveAll(List.of(first, second));
+		assertThat(first.getCreated()).isNotNull().isEqualTo(second.getCreated());
+	}
+
+	@Test
 	@SuppressWarnings("unchecked")
 	void recordLifecareAccessesWritesOneLifecareRowPerAccessAttributedToTheCaller() {
 		final var caller = Identifier.parse("joe001doe; type=adAccount");

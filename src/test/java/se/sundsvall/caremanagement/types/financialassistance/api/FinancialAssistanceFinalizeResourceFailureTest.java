@@ -86,14 +86,14 @@ class FinancialAssistanceFinalizeResourceFailureTest {
 	@Test
 	void invalidMunicipalityId() {
 		assertConstraintViolation(post("x", ERRAND_ID, validRequest()),
-			tuple("finalize.municipalityId", "not a valid municipality ID"));
+			tuple("finalizeErrand.municipalityId", "not a valid municipality ID"));
 		verifyNoInteractions(finalizeServiceMock);
 	}
 
 	@Test
 	void invalidErrandId() {
 		assertConstraintViolation(post(MUNICIPALITY_ID, "not-a-uuid", validRequest()),
-			tuple("finalize.errandId", "not a valid UUID"));
+			tuple("finalizeErrand.errandId", "not a valid UUID"));
 		verifyNoInteractions(finalizeServiceMock);
 	}
 

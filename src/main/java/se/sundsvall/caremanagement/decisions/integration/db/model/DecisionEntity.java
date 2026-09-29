@@ -59,18 +59,15 @@ public class DecisionEntity {
 	private String createdBy;
 
 	/**
-	 * Where the decision stands in Lifecare: {@code PENDING} once it has been handed over to be written there
-	 * (finalize), {@code SYNCED} once the writer reported it written, {@code FAILED} with Lifecare's own message in
-	 * {@link #lifecareDetail}. Null for a decision that is never written to Lifecare (a recommendation, say).
+	 * Where the decision stands in Lifecare: {@code PENDING} when finalize creates it, {@code SYNCED} once finalize has
+	 * receipted it against the beslut careM saved in Lifecare, in the same transaction. Null for a decision that is never
+	 * written to Lifecare (a recommendation, say).
 	 */
 	@Column(name = "lifecare_status", length = 16)
 	private String lifecareStatus;
 
 	@Column(name = "lifecare_id", length = 64)
 	private String lifecareId;
-
-	@Column(name = "lifecare_detail", length = 1024)
-	private String lifecareDetail;
 
 	@Column(name = "created")
 	@TimeZoneStorage(NORMALIZE)
@@ -282,19 +279,6 @@ public class DecisionEntity {
 		return this;
 	}
 
-	public String getLifecareDetail() {
-		return lifecareDetail;
-	}
-
-	public void setLifecareDetail(final String lifecareDetail) {
-		this.lifecareDetail = lifecareDetail;
-	}
-
-	public DecisionEntity withLifecareDetail(final String lifecareDetail) {
-		this.lifecareDetail = lifecareDetail;
-		return this;
-	}
-
 	@Override
 	public boolean equals(final Object obj) {
 		if (this == obj)
@@ -308,14 +292,13 @@ public class DecisionEntity {
 			&& Objects.equals(decisionMessage, other.decisionMessage) && Objects.equals(decisionDate, other.decisionDate)
 			&& Objects.equals(periodFrom, other.periodFrom) && Objects.equals(periodTo, other.periodTo)
 			&& Objects.equals(createdBy, other.createdBy) && Objects.equals(lifecareStatus, other.lifecareStatus)
-			&& Objects.equals(lifecareId, other.lifecareId) && Objects.equals(lifecareDetail, other.lifecareDetail)
-			&& Objects.equals(created, other.created);
+			&& Objects.equals(lifecareId, other.lifecareId) && Objects.equals(created, other.created);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandId, decisionType, value, description, coApplicantReason, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, lifecareStatus, lifecareId,
-			lifecareDetail, created);
+			created);
 	}
 
 	@Override

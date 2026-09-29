@@ -27,7 +27,6 @@ public final class DecisionMapper {
 				.withCreatedBy(e.getCreatedBy())
 				.withLifecareStatus(e.getLifecareStatus())
 				.withLifecareId(e.getLifecareId())
-				.withLifecareDetail(e.getLifecareDetail())
 				.withCreated(e.getCreated()))
 			.orElse(null);
 	}

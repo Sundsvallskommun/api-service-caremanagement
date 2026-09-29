@@ -82,12 +82,7 @@ class FinancialAssistanceFinalizeResource {
 				description = "Bad Gateway - Lifecare could not be read",
 				content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
-	// Deliberately not renamed away from Object.finalize()'s name (java:S1175 kept open here, see class javadoc / PR
-	// notes): Hibernate Validator derives a ConstraintViolationProblem's field path from this exact method name
-	// ("finalize.errandId"), which is part of the response body a client can already be reading. Renaming it would
-	// silently change that observable API contract, which is a real behaviour change this PR must not make.
-	@SuppressWarnings("java:S1175")
-	ResponseEntity<FinalizeResponse> finalize(
+	ResponseEntity<FinalizeResponse> finalizeErrand(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId,

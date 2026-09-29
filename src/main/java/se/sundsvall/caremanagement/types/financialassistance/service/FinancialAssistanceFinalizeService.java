@@ -46,13 +46,14 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * errand's beslut in Lifecare ({@code lifecareDecisionId}): the row is marked {@code SYNCED} with Lifecare's id. The
  * beslut is already in Lifecare (careM saved it there through the errand's /lifecare/decision route before
  * finalizing), so this is only the link between the two, made in the same transaction;</li>
- * <li>correlates {@code PaymentDecisionReceived} to the waiting process, which then sets the status and, for a bifall,
- * checks the linked Lifecare payments until they are paid out;</li>
  * <li>purges careM's normberäkning draft when the errand is linked to a normberäkning saved in Lifecare
  * ({@code lifecareCalculationId}): the draft was only a proposal, frozen since that id was set, and the decided
  * calculation is Lifecare's. Keeping it would store the household's incomes and expenses twice. Without the id (an
  * avslag decided without a saved calculation) the draft is the only trace of the proposal and stays for the errand's
  * own disposal.</li>
+ * <li>correlates {@code PaymentDecisionReceived} to the waiting process, which then sets the status and, for a bifall,
+ * checks the linked Lifecare payments until they are paid out. Last, so nothing that can fail runs after the process
+ * has moved on.</li>
  * </ol>
  *
  * <p>
@@ -114,14 +115,15 @@ public class FinancialAssistanceFinalizeService {
 	 * @return           the receipt: decision id, whether the process was resumed, the channels
 	 */
 	public FinalizeResponse finalizeErrand(final String municipalityId, final String namespace, final String errandId, final FinalizeRequest request, final String decidedBy) {
+		// The lock is the transaction's first read. A concurrent finalizeErrand() blocks here, and every read below is taken
+		// after the lock is held, so requireNotFinalized() sees the PAYMENT decision a finalize that went first committed.
+		// Reading anything before it would fix this transaction's snapshot too early to see that decision.
+		final var entity = financialAssistanceRepository.findByErrandIdForUpdate(errandId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERROR_NO_TYPED_ERRAND.formatted(errandId)));
 		final var errand = errandService.readErrand(municipalityId, namespace, errandId); // scope check (404 when missing)
 		requireDecider(decidedBy);
 		requireDecision(request);
 		requireStatus(errand.getStatus());
-		// Locks the errand's row for the rest of this transaction, so a concurrent finalizeErrand() blocks here rather than
-		// racing requireNotFinalized() below.
-		final var entity = financialAssistanceRepository.findByErrandIdForUpdate(errandId)
-			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERROR_NO_TYPED_ERRAND.formatted(errandId)));
 		requireNotFinalized(municipalityId, namespace, errandId);
 		final var outcome = request.getDecision().getOutcome();
 		requireLifecareReferences(entity, errandId, outcome);
@@ -136,11 +138,12 @@ public class FinancialAssistanceFinalizeService {
 		final var lifecareId = String.valueOf(entity.getLifecareDecisionId());
 		decisionService.markSyncedInLifecare(municipalityId, namespace, errandId, decisionId, lifecareId);
 
-		// 3. Resume the process.
-		final var correlated = correlatePaymentDecision(municipalityId, namespace, errandId, outcome);
-
-		// 4. The decided normberäkning is Lifecare's; careM's frozen proposal is disposed of.
+		// 3. The decided normberäkning is Lifecare's; careM's frozen proposal is disposed of. Before the correlation, so
+		// nothing that can fail runs after the process has moved on.
 		purgeCalculationDraft(entity, errandId);
+
+		// 4. Resume the process.
+		final var correlated = correlatePaymentDecision(municipalityId, namespace, errandId, outcome);
 
 		LOG.info("Finalized errand {} with outcome {} (decision {}, process correlated: {})", sanitizeForLogging(errandId),
 			sanitizeForLogging(outcome), sanitizeForLogging(decisionId), correlated);

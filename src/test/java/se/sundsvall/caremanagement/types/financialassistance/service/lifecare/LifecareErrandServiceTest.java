@@ -5,14 +5,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
 import se.sundsvall.caremanagement.core.service.ErrandService;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.caremanagement.types.financialassistance.service.FinancialAssistanceErrandService;
@@ -24,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,9 +47,6 @@ class LifecareErrandServiceTest {
 
 	@InjectMocks
 	private LifecareErrandService service;
-
-	@Captor
-	private ArgumentCaptor<FinancialAssistanceData> dataCaptor;
 
 	@AfterEach
 	void tearDown() {
@@ -128,9 +121,17 @@ class LifecareErrandServiceTest {
 		service.linkCalculation(ERRAND, 3);
 		service.linkDecision(ERRAND, 4);
 
-		verify(financialAssistanceErrandService, times(2)).updateData(any(), any(), any(), dataCaptor.capture());
-		assertThat(dataCaptor.getAllValues().get(0).getLifecareCalculationId()).isEqualTo(3);
-		assertThat(dataCaptor.getAllValues().get(1).getLifecareDecisionId()).isEqualTo(4);
+		// Through the dedicated write-once links, never through the client-facing data update.
+		verify(financialAssistanceErrandService).linkCalculation(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 3);
+		verify(financialAssistanceErrandService).linkDecision(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 4);
+		verify(financialAssistanceErrandService, never()).updateData(any(), any(), any(), any());
+	}
+
+	@Test
+	void lockTakesTheErrandsRowLock() {
+		service.lock(ERRAND);
+
+		verify(financialAssistanceRepository).findByErrandIdForUpdate(ERRAND_ID);
 	}
 
 	@Test

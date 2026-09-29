@@ -36,8 +36,8 @@ import tools.jackson.core.type.TypeReference;
 /**
  * The contract between Draken and careM around the Lifecare normberäkning. The first daily prepare that finds the
  * SSBTEK basis complete posts careM's draft to Lifecare as the proposal and links it on the errand as
- * {@code lifecareCalculationId}; when that create fails — or Draken saves a calculation first — Draken's BFF creates it
- * and PATCHes the id instead. Either way, from then on the daily prepare leaves careM's draft alone, and only then may a
+ * {@code lifecareCalculationId}; when that create fails — or the caseworker saves a calculation first — careM creates it
+ * through the errand's /lifecare calculation route and links it there. Either way, from then on the daily prepare leaves careM's draft alone, and only then may a
  * granting decision be finalized.
  *
  * <p>
@@ -46,7 +46,7 @@ import tools.jackson.core.type.TypeReference;
  * </p>
  *
  * <p>
- * One application type (återansökan) is covered: none of these paths — the data PATCH, the draft refresh or the
+ * One application type (återansökan) is covered: none of these paths — the link, the draft refresh or the
  * finalize guards — reads the application type, so a nyansökan takes exactly the same route.
  * </p>
  */
@@ -93,14 +93,21 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 	private FaNormExpenseRepository normExpenseRepository;
 
 	@Test
-	void test01_patchLifecareCalculationIdAndReadItBack() {
+	void test01_patchIgnoresTheLifecareReferencesAndTheLinkedOneIsServed() {
+		// A client may not point the errand at a Lifecare object: the references are careM's to link.
 		setupCall()
 			.withServicePath(ERRAND_PATH + "/data")
 			.withHttpMethod(PATCH)
 			.withRequest(REQUEST_FILE)
 			.withExpectedResponseStatus(NO_CONTENT)
 			.sendRequest();
+		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_ID)).hasValueSatisfying(entity -> {
+			assertThat(entity.getLifecareCalculationId()).isNull();
+			assertThat(entity.getLifecareDecisionId()).isEqualTo(815); // the seeded beslut, not the client's 4712
+		});
 
+		// Linked the way careM links it when it saves the calculation in Lifecare, it is served on the errand.
+		linkCalculation(4711);
 		setupCall()
 			.withServicePath(ERRAND_PATH)
 			.withHttpMethod(GET)
@@ -108,8 +115,6 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 			.withExpectedResponseStatus(OK)
 			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequest();
-
-		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_ID)).hasValueSatisfying(entity -> assertThat(entity.getLifecareCalculationId()).isEqualTo(4711));
 	}
 
 	@Test
@@ -127,9 +132,10 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 		assertThat(refreshed.getExpenses()).extracting(NormExpenseRow::getCostType).containsExactlyInAnyOrder("RENT", "ELECTRICITY");
 		final var warningsBefore = warningSnapshot();
 
-		// Draken saves the normberäkning in Lifecare and sets its id — and the application changes once more.
+		// The caseworker saves the normberäkning in Lifecare, which links its id — and the application changes once more.
+		linkCalculation(4711);
 		patchData("""
-			{"lifecareCalculationId": 4711, "costs": [{"costType": "RENT", "appliedAmount": 6500}, {"costType": "ELECTRICITY", "appliedAmount": 400}, {"costType": "HOME_INSURANCE", "appliedAmount": 150}]}""");
+			{"costs": [{"costType": "RENT", "appliedAmount": 6500}, {"costType": "ELECTRICITY", "appliedAmount": 400}, {"costType": "HOME_INSURANCE", "appliedAmount": 150}]}""");
 		prepare();
 
 		// Run 3: the Lifecare calculation is the truth, so the draft and its warnings are exactly as run 2 left them.
@@ -154,8 +160,7 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 
 	@Test
 	void test04_finalizeBifallWithLifecareCalculationId() {
-		patchData("""
-			{"lifecareCalculationId": 4711}""");
+		linkCalculation(4711);
 
 		// The OAuth token may already be cached by an earlier test in this context, so the stubs are not verified
 		// one by one; processMessageCorrelated=true in the response is the engine stub answering.
@@ -210,8 +215,7 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 	@Test
 	void test07_paymentStatusFindsTheBifallsPaymentOnTheInsatsAndLinksIt() {
 		// A bifall as Draken makes it today: the payment is registered in Lifecare, careM is told nothing about it.
-		patchData("""
-			{"lifecareCalculationId": 4711}""");
+		linkCalculation(4711);
 		setupCall()
 			.withServicePath(ERRAND_PATH + "/finalize")
 			.withHttpMethod(POST)
@@ -238,8 +242,7 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 	@Test
 	void test09_finalizeIgnoresPaymentsFromAnOlderClient() {
 		// A client built against the retired contract still sends its payment drafts; they are ignored, not created.
-		patchData("""
-			{"lifecareCalculationId": 4711}""");
+		linkCalculation(4711);
 
 		setupCall()
 			.withServicePath(ERRAND_PATH + "/finalize")
@@ -257,8 +260,7 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 	@Test
 	void test10_finalizeBifallWithoutLifecareDecisionIdIsRejected() {
 		// The normberäkning alone is not enough: the beslut must be saved in Lifecare too, and that is checked first.
-		patchData("""
-			{"lifecareCalculationId": 4711}""");
+		linkCalculation(4711);
 		final var entity = financialAssistanceRepository.findByErrandId(ERRAND_ID).orElseThrow();
 		entity.setLifecareDecisionId(null);
 		financialAssistanceRepository.save(entity);
@@ -277,8 +279,7 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 
 	@Test
 	void test11_finalizeAvslagLinkedToLifecarePaymentsIsRejected() {
-		patchData("""
-			{"lifecarePaymentIds": ["90210"]}""");
+		financialAssistanceRepository.linkPaymentIfAbsent(ERRAND_ID, "90210");
 
 		setupCall()
 			.withServicePath(ERRAND_PATH + "/finalize")
@@ -299,8 +300,7 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 		assertThat(calculationDraftRepository.existsById(ERRAND_ID)).isTrue();
 		assertThat(normPersonRepository.findByErrandId(ERRAND_ID)).isNotEmpty();
 		assertThat(normExpenseRepository.findByErrandId(ERRAND_ID)).isNotEmpty();
-		patchData("""
-			{"lifecareCalculationId": 4711}""");
+		linkCalculation(4711);
 
 		setupCall()
 			.withServicePath(ERRAND_PATH + "/finalize")
@@ -355,6 +355,11 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 			.withRequest(PREPARE_REQUEST)
 			.withExpectedResponseStatus(OK)
 			.sendRequest();
+	}
+
+	/** Links a calculation the way careM does once it has saved one in Lifecare. */
+	private void linkCalculation(final int calculationId) {
+		assertThat(financialAssistanceRepository.linkLifecareCalculationIfAbsent(ERRAND_ID, calculationId)).isOne();
 	}
 
 	private void patchData(final String data) {

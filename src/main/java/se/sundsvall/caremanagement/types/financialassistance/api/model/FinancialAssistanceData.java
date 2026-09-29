@@ -122,7 +122,8 @@ public class FinancialAssistanceData {
 	@Schema(description = """
 		Reference to the Lifecare decision (beslut) the errand concerns, set by careM when it saves the beslut in Lifecare \
 		through the errand's /lifecare/decision route. A reference only: whether the beslut is locked (skrivskyddat) is \
-		Lifecare's status and is never stored here. finalize requires it for every outcome.""", examples = "4711")
+		Lifecare's status and is never stored here. finalize requires it for every outcome. Server-owned: ignored on \
+		create and PATCH.""", examples = "4711", accessMode = Schema.AccessMode.READ_ONLY)
 	private Integer lifecareDecisionId;
 
 	@Schema(description = """
@@ -130,16 +131,18 @@ public class FinancialAssistanceData {
 		proposal in Lifecare, or by careM's /lifecare calculation route when the caseworker saves a calculation for an errand \
 		that has none; once set it is not replaced. Later saves update this calculation rather than creating another. A \
 		reference only: whether the calculation is final (slutlig) is Lifecare's status and is never stored here. finalize \
-		requires it for a granting outcome (BIFALL/DELAVSLAG).""", examples = "4242")
+		requires it for a granting outcome (BIFALL/DELAVSLAG). Server-owned: ignored on create and PATCH.""",
+		examples = "4242",
+		accessMode = Schema.AccessMode.READ_ONLY)
 	private Integer lifecareCalculationId;
 
 	@ArraySchema(arraySchema = @Schema(description = """
 		References to the Lifecare payments (utbetalningar) a bifall pays with. Set by careM when it registers a \
 		payment in Lifecare through the errand's /lifecare/payments route, or once payment-status has found the \
-		errand's payments paid in Lifecare on the errand's own insats. When given in a PATCH the list replaces the \
-		stored one; an empty list clears it. References only: whether a payment is registered or paid out is read from \
-		Lifecare, never stored here. When set, payment-status verifies exactly these ids against Lifecare, and no \
-		other errand can take them; finalize refuses an AVSLAG that carries any."""),
+		errand's payments paid in Lifecare on the errand's own insats. Server-owned: ignored on create and PATCH. \
+		References only: whether a payment is registered or paid out is read from Lifecare, never stored here. When \
+		set, payment-status verifies exactly these ids against Lifecare, and no other errand can take them; finalize \
+		refuses an AVSLAG that carries any.""", accessMode = Schema.AccessMode.READ_ONLY),
 		schema = @Schema(implementation = String.class, maxLength = 64, examples = "90210"))
 	private List<@NotBlank @Size(max = 64) String> lifecarePaymentIds;
 

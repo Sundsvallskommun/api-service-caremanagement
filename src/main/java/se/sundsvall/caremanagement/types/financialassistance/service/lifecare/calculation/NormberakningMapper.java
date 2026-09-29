@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.c
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -74,6 +75,9 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
  * The views mirror Drakel's BFF responses field for field.
  */
 final class NormberakningMapper {
+
+	/** Where the caseworker picks a date: a plain date is the start of that day here, not in the container's UTC. */
+	private static final ZoneId SWEDEN = ZoneId.of("Europe/Stockholm");
 
 	static final String SOURCE_CAREM = "CAREM";
 	static final String SOURCE_LIFECARE = "LIFECARE";
@@ -489,11 +493,22 @@ final class NormberakningMapper {
 			.withNote(input.getNote());
 	}
 
+	/**
+	 * The attribution date as the draft stores it. The API takes an ISO date or date-time, as the Lifecare path does; a
+	 * plain date is the start of that day in Sweden, where the caseworker picked it.
+	 */
 	private static OffsetDateTime toDateTime(final String value) {
+		if (value == null) {
+			return null;
+		}
 		try {
-			return Optional.ofNullable(value).map(OffsetDateTime::parse).orElse(null);
+			return OffsetDateTime.parse(value);
 		} catch (final DateTimeParseException _) {
-			throw Problem.valueOf(BAD_REQUEST, "'%s' is not an ISO date-time with offset".formatted(value));
+			try {
+				return LocalDate.parse(value).atStartOfDay(SWEDEN).toOffsetDateTime();
+			} catch (final DateTimeParseException _) {
+				throw Problem.valueOf(BAD_REQUEST, "'%s' is not an ISO date or date-time with offset".formatted(value));
+			}
 		}
 	}
 

@@ -146,10 +146,10 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 		final var identifier = Optional.ofNullable(Identifier.get());
 		final var description = "Såg ärendet i en sökträfflista (%d träffar)".formatted(hits.size());
 
-		hits.stream()
+		service.recordEvents(hits.stream()
 			.filter(String.class::isInstance)
 			.map(String.class::cast)
-			.forEach(errandId -> service.recordEvent(ErrandEventEntity.create()
+			.map(errandId -> ErrandEventEntity.create()
 				.withErrandId(errandId)
 				.withMunicipalityId(parts[1])
 				.withNamespace(parts[2])
@@ -162,7 +162,8 @@ class ErrandEventInterceptor implements HandlerInterceptor {
 				.withActor(identifier.map(Identifier::getValue).orElse(null))
 				.withActorType(identifier.map(Identifier::getTypeString).orElse(null))
 				.withRequestId(RequestId.get())
-				.withStatusCode(response.getStatus())));
+				.withStatusCode(response.getStatus()))
+			.toList());
 	}
 
 	private static int indexOfFirstUuid(final String[] parts) {

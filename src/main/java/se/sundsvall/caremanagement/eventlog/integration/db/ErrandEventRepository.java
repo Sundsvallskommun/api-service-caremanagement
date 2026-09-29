@@ -49,12 +49,15 @@ public interface ErrandEventRepository extends JpaRepository<ErrandEventEntity, 
 	 * <p>
 	 * Reads are included by design — a logguppföljning is mostly about who <em>read</em> what, which is the opposite of
 	 * the errand timeline's default use.
+	 * <p>
+	 * The actor is compared as-is, not through {@code lower()}: the column's utf8mb4_general_ci collation already
+	 * compares case-insensitively, and a function on the column would keep MariaDB off the (actor, created) index.
 	 */
 	@Query("""
 		select e from ErrandEventEntity e
 		where e.municipalityId = :municipalityId
 		  and e.namespace = :namespace
-		  and lower(e.actor) = lower(:actor)
+		  and e.actor = :actor
 		  and (:action is null or lower(e.action) = lower(:action))
 		  and (:source is null or lower(e.source) = lower(:source))
 		  and (:from is null or e.created >= :from)
@@ -72,7 +75,7 @@ public interface ErrandEventRepository extends JpaRepository<ErrandEventEntity, 
 		select count(e) from ErrandEventEntity e
 		where e.municipalityId = :municipalityId
 		  and e.namespace = :namespace
-		  and lower(e.actor) = lower(:actor)
+		  and e.actor = :actor
 		  and (:action is null or lower(e.action) = lower(:action))
 		  and (:source is null or lower(e.source) = lower(:source))
 		  and (:from is null or e.created >= :from)

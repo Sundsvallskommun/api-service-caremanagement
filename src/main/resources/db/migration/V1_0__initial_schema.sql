@@ -60,7 +60,6 @@ CREATE TABLE `decision` (
   `created_by` varchar(64) DEFAULT NULL,
   `lifecare_status` varchar(16) DEFAULT NULL,
   `lifecare_id` varchar(64) DEFAULT NULL,
-  `lifecare_detail` varchar(1024) DEFAULT NULL,
   `created` datetime(6) DEFAULT NULL,
   `amount` decimal(15,2) DEFAULT NULL,
   `decision_message` varchar(8192) DEFAULT NULL,

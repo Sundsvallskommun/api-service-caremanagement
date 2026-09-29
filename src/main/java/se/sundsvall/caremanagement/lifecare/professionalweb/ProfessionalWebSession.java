@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
@@ -115,6 +116,30 @@ public class ProfessionalWebSession {
 			bootstrappedModules.clear();
 			establishedAt = null;
 		}
+	}
+
+	/**
+	 * Throws the session away, but only if it is still the one a failing request used. Several requests that found the
+	 * same session dead then renew it once: the first resets and signs in, and the rest find a newer session and just
+	 * resend on it, instead of each throwing away the one the previous request had just established.
+	 *
+	 * @param seen the session the failing request used, as {@link #established()} returned it
+	 */
+	public void reset(final Instant seen) {
+		synchronized (signInLock) {
+			if (Objects.equals(establishedAt, seen)) {
+				reset();
+			}
+		}
+	}
+
+	/**
+	 * When the current session was established — also what tells one session from the next.
+	 *
+	 * @return the time, or null when no session is held
+	 */
+	public Instant established() {
+		return establishedAt;
 	}
 
 	/**

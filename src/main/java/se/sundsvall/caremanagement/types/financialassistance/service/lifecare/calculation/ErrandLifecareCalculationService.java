@@ -19,6 +19,7 @@ import tools.jackson.databind.node.ObjectNode;
 
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.PERSONS;
@@ -49,6 +50,8 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  */
 @Service
 public class ErrandLifecareCalculationService {
+
+	static final String ERROR_ALREADY_LINKED = "Ärendet har redan en normberäkning kopplad. Beräkning %d som just skapades i Lifecare är överflödig – ta bort den i Lifecare och läs om ärendet.";
 
 	private static final Logger LOG = LoggerFactory.getLogger(ErrandLifecareCalculationService.class);
 	private static final ZoneId SWEDISH_TIME = ZoneId.of("Europe/Stockholm");
@@ -194,6 +197,11 @@ public class ErrandLifecareCalculationService {
 		try {
 			errandService.linkCalculation(errand, calculationId);
 		} catch (final RuntimeException e) {
+			if ((e instanceof final ThrowableProblem problem) && (problem.getStatus() == CONFLICT)) {
+				// The daily prepare (or another save) linked its calculation first: this one is surplus, and reading the
+				// errand again is all the caseworker has to do.
+				throw Problem.valueOf(CONFLICT, ERROR_ALREADY_LINKED.formatted(calculationId));
+			}
 			LOG.error("Calculation {} was created in Lifecare but errand {} could not be linked to it ({})", calculationId, sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
 			throw Problem.valueOf(BAD_GATEWAY, "Normberäkningen sparades i Lifecare (beräkning %d) men kunde inte kopplas till ärendet. Spara inte igen – då skapas en beräkning till."
 				.formatted(calculationId));

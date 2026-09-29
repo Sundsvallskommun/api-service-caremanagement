@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -169,11 +168,15 @@ public class FinancialAssistancePaymentService {
 			return notEffectuated(DETAIL_ON_INSATS_NOT_PAID.formatted(unpaid, own.size())).withDeadline(deadline.toString()).withOverdue(overdue);
 		}
 
-		// The insats id is set on the entity too: the lookup above may have stored it in a transaction of its own, and
-		// this save must not write the stale null back over it.
-		entity.setLifecareServiceId(serviceId);
-		entity.setLifecarePaymentIds(new ArrayList<>(own.stream().map(LifecarePayment::id).distinct().toList()));
-		financialAssistanceRepository.save(entity);
+		// Linked one id at a time, atomically, rather than by saving the whole list: a payment the caseworker registers
+		// while this check reads Lifecare is linked in the meantime, and replacing the list would drop that link.
+		final var ownIds = own.stream().map(LifecarePayment::id).distinct().toList();
+		ownIds.forEach(id -> financialAssistanceRepository.linkPaymentIfAbsent(errandId, id));
+		final var linked = financialAssistanceRepository.findLinkedPaymentIdsForUpdate(errandId);
+		if (!ownIds.containsAll(linked)) {
+			// A payment was linked while this ran: the errand is paid only when that one is too.
+			return checkLinkedPayments(municipalityId, namespace, request, applicationMonth, linked);
+		}
 
 		return PaymentStatusResponse.create()
 			.withEffectuated(true)

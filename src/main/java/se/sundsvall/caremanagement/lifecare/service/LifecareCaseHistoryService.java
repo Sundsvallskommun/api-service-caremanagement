@@ -164,7 +164,7 @@ public class LifecareCaseHistoryService {
 	}
 
 	private static CalculationPersonView toCalculationPerson(final PersonBasedCalculationPersonDTO dto) {
-		return new CalculationPersonView(dto.getPersonId(), dto.getName(), toAmount(dto.getAmount()), dto.getDeviationFromDate(), dto.getDeviationToDate());
+		return new CalculationPersonView(dto.getName(), toAmount(dto.getAmount()), dto.getDeviationFromDate(), dto.getDeviationToDate());
 	}
 
 	private static DecisionView toDecision(final PersonBasedDecisionDTO dto) {
@@ -185,7 +185,7 @@ public class LifecareCaseHistoryService {
 	}
 
 	private static DecisionPersonView toDecisionPerson(final PersonBasedDecisionPersonDTO dto) {
-		return new DecisionPersonView(dto.getPersonId(), dto.getName(), dto.getIsCoApplicant());
+		return new DecisionPersonView(dto.getName(), dto.getIsCoApplicant());
 	}
 
 	private static DocumentView toDocument(final PersonBasedDocumentDTO dto) {

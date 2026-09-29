@@ -122,7 +122,8 @@ public class MessageArchiveService {
 
 			LOG.info("Archived message history for errand {} ({} message(s)) to Lifecare actualisation {}", errand.getErrandNumber(), thread.size(), actualisationId.get());
 		} catch (final Exception e) {
-			LOG.error("Failed to archive message history for errand {}: {}", errand.getErrandNumber(), e.getMessage(), e);
+			// The exception type only: the Lifecare upload and the PDF render may echo message content.
+			LOG.error("Failed to archive message history for errand {} ({})", errand.getErrandNumber(), e.getClass().getSimpleName());
 		}
 	}
 

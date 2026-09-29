@@ -67,6 +67,45 @@ public interface FinancialAssistanceRepository extends JpaRepository<FinancialAs
 	int linkLifecareCalculationIfAbsent(@Param("errandId") String errandId, @Param("lifecareCalculationId") Integer lifecareCalculationId);
 
 	/**
+	 * Link a Lifecare decision (beslut) to the errand, but only when none is linked yet. Two first saves racing each other
+	 * both create a beslut in Lifecare; whichever links first wins, and the other learns it lost from the {@code 0}.
+	 *
+	 * @return the number of rows updated — {@code 1} when this call linked the id, {@code 0} when one was already linked
+	 */
+	@Modifying
+	@Transactional
+	@Query("""
+		update FinancialAssistanceEntity fa set fa.lifecareDecisionId = :lifecareDecisionId
+		where fa.errandId = :errandId and fa.lifecareDecisionId is null
+		""")
+	int linkLifecareDecisionIfAbsent(@Param("errandId") String errandId, @Param("lifecareDecisionId") Integer lifecareDecisionId);
+
+	/**
+	 * Store the applicant's Lifecare insats on the errand when none is stored yet. A targeted update rather than a save of
+	 * a loaded entity, so a lookup that takes seconds cannot write stale values back over links made in the meantime.
+	 *
+	 * @return the number of rows updated
+	 */
+	@Modifying
+	@Transactional
+	@Query("""
+		update FinancialAssistanceEntity fa set fa.lifecareServiceId = :lifecareServiceId
+		where fa.errandId = :errandId and fa.lifecareServiceId is null
+		""")
+	int linkLifecareServiceIfAbsent(@Param("errandId") String errandId, @Param("lifecareServiceId") Integer lifecareServiceId);
+
+	/**
+	 * Store the Lifecare insats an actualisation was registered on — that one is authoritative, so it replaces what is
+	 * stored. A targeted update, for the same reason as {@link #linkLifecareServiceIfAbsent}.
+	 *
+	 * @return the number of rows updated
+	 */
+	@Modifying
+	@Transactional
+	@Query("update FinancialAssistanceEntity fa set fa.lifecareServiceId = :lifecareServiceId where fa.errandId = :errandId")
+	int updateLifecareServiceId(@Param("errandId") String errandId, @Param("lifecareServiceId") Integer lifecareServiceId);
+
+	/**
 	 * Adds one Lifecare payment id to the errand's linked payments, atomically. {@code errand_fa_lifecare_payment} is
 	 * keyed on {@code (errand_id, lifecare_payment_id)}, so {@code INSERT IGNORE} is a no-op — not an error — when the id
 	 * is already linked. Deliberately not a read-modify-write of the whole {@code lifecarePaymentIds} list: two
@@ -76,4 +115,11 @@ public interface FinancialAssistanceRepository extends JpaRepository<FinancialAs
 	@Transactional
 	@Query(value = "insert ignore into errand_fa_lifecare_payment (errand_id, lifecare_payment_id) values (:errandId, :paymentId)", nativeQuery = true)
 	void linkPaymentIfAbsent(@Param("errandId") String errandId, @Param("paymentId") String paymentId);
+
+	/**
+	 * The Lifecare payment ids linked to the errand, read with a lock. A locking read sees the latest committed links,
+	 * so a payment another request linked after this transaction's snapshot is not missed.
+	 */
+	@Query(value = "select lifecare_payment_id from errand_fa_lifecare_payment where errand_id = :errandId for update", nativeQuery = true)
+	List<String> findLinkedPaymentIdsForUpdate(@Param("errandId") String errandId);
 }

@@ -113,16 +113,6 @@ class LifecareRecordMapperTest {
 	}
 
 	@Test
-	void containsRecord() {
-		final var list = json(LIST);
-
-		assertThat(LifecareRecordMapper.containsRecord(list, 3)).isTrue();
-		assertThat(LifecareRecordMapper.containsRecord(list, 6)).isTrue();
-		assertThat(LifecareRecordMapper.containsRecord(list, 99)).isFalse();
-		assertThat(LifecareRecordMapper.containsRecord(MissingNode.getInstance(), 3)).isFalse();
-	}
-
-	@Test
 	void findRecord() {
 		final var list = json(LIST);
 
