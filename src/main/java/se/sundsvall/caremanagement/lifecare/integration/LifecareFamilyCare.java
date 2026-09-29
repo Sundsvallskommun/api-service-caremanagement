@@ -73,6 +73,12 @@ public interface LifecareFamilyCare {
 
 	// ---- Person-based reads ------------------------------------------------------------------------------------------
 
+	/**
+	 * The person's FamilyCare master data.
+	 *
+	 * @return the person, or {@code null} when Lifecare holds no such person (a first-time applicant). Every other failure
+	 *         is a {@code BAD_GATEWAY} problem.
+	 */
 	PersonBasedPersonDTO getPerson(String municipalityId, String partyId);
 
 	List<PersonBasedContactDTO> getContacts(String municipalityId, String partyId);

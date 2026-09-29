@@ -67,6 +67,8 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_IMPLEMENTED;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
+import static se.sundsvall.caremanagement.lifecare.integration.DecodedProblems.decode;
+import static se.sundsvall.caremanagement.lifecare.integration.integrator.configuration.LifecareIntegratorConfiguration.CLIENT_ID;
 
 @ExtendWith(MockitoExtension.class)
 class LifecareIntegratorIntegrationTest {
@@ -299,6 +301,71 @@ class LifecareIntegratorIntegrationTest {
 			.returns(PARTY_ID, PersonBasedPersonDTO::getPersonId)
 			.returns("Berit Berg", PersonBasedPersonDTO::getName)
 			.returns(true, PersonBasedPersonDTO::getAddressProtection);
+	}
+
+	private static ThrowableProblem integratorAnswered(final int status, final String body) {
+		return decode(new BufferingProblemErrorDecoder(CLIENT_ID), status, body);
+	}
+
+	@Test
+	void getPersonIsNullWhenLifecareHoldsNoSuchPerson() {
+		// A first-time applicant: the integrator answers 404 No person found. That is an answer, not a failure.
+		when(clientMock.getPerson(MUNICIPALITY_ID, PARTY_ID)).thenThrow(integratorAnswered(404,
+			"{\"title\":\"Not Found\",\"status\":404,\"detail\":\"No person found for partyId '" + PARTY_ID + "'\"}"));
+
+		assertThat(integration.getPerson(MUNICIPALITY_ID, PARTY_ID)).isNull();
+	}
+
+	@Test
+	void getPersonStillFailsWhenPartyCannotResolveThePartyId() {
+		// The integrator's other 404: the identity itself is unknown. Not the same as Lifecare not holding the person.
+		when(clientMock.getPerson(MUNICIPALITY_ID, PARTY_ID)).thenThrow(integratorAnswered(404,
+			"{\"title\":\"Not Found\",\"status\":404,\"detail\":\"No person number found for partyId '" + PARTY_ID + "'\"}"));
+
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, PARTY_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.hasMessageContaining("fetching the person");
+	}
+
+	@Test
+	void getPersonStillFailsOnAnUnexplainedNotFound() {
+		// A 404 from a wrong route or a proxy carries no explanation of ours — never read as a missing person.
+		when(clientMock.getPerson(MUNICIPALITY_ID, PARTY_ID)).thenThrow(integratorAnswered(404, null));
+
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, PARTY_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+	}
+
+	@Test
+	void getPersonStillFailsWhenTheIntegratorAnswers5xx() {
+		when(clientMock.getPerson(MUNICIPALITY_ID, PARTY_ID)).thenThrow(integratorAnswered(500,
+			"{\"title\":\"Internal Server Error\",\"status\":500,\"detail\":\"No person found for partyId '" + PARTY_ID + "'\"}"));
+
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, PARTY_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+	}
+
+	@Test
+	void getPersonStillFailsWhenTheIntegratorRefusesTheCall() {
+		when(clientMock.getPerson(MUNICIPALITY_ID, PARTY_ID)).thenThrow(integratorAnswered(403, null));
+
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, PARTY_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+	}
+
+	@Test
+	void getPersonStillFailsOnATransportFailure() {
+		when(clientMock.getPerson(MUNICIPALITY_ID, PARTY_ID)).thenThrow(new IllegalStateException("GET /2281/person?partyId=" + PARTY_ID));
+
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, PARTY_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.hasMessageContaining("IllegalStateException")
+			.hasMessageNotContaining(PARTY_ID);
 	}
 
 	@Test

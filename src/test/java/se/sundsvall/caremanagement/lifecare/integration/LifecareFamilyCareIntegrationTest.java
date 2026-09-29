@@ -28,7 +28,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.citizen.service.CitizenService;
+import se.sundsvall.caremanagement.lifecare.integration.configuration.LifecareFamilyCareConfiguration;
 import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
+import se.sundsvall.dept44.configuration.feign.decoder.ProblemErrorDecoder;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -47,6 +49,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static se.sundsvall.caremanagement.lifecare.integration.DecodedProblems.decode;
 
 @ExtendWith(MockitoExtension.class)
 class LifecareFamilyCareIntegrationTest {
@@ -460,5 +463,69 @@ class LifecareFamilyCareIntegrationTest {
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
 			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
 			.satisfies(detail -> assertThat(detail).contains("404").contains("person not found"));
+	}
+
+	// ---- getPerson(): FamilyCare's 404 for a person it does not hold is an answer, everything else is a failure --------
+
+	private static ThrowableProblem familyCareAnswered(final int status, final String body) {
+		return decode(new ProblemErrorDecoder(LifecareFamilyCareConfiguration.CLIENT_ID), status, body);
+	}
+
+	@Test
+	void getPersonIsNullWhenFamilyCareAnswers404() {
+		// The body is FamilyCare's own, not a problem — the real decoder still renders the status.
+		when(clientMock.getPerson(PERSON_ID)).thenThrow(familyCareAnswered(404, "{\"Code\":\"NotFound\",\"Message\":\"Not found: Person\"}"));
+
+		assertThat(integration.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isNull();
+	}
+
+	@Test
+	void getPersonIsNullWhenFamilyCareAnswers404WithoutABody() {
+		when(clientMock.getPerson(PERSON_ID)).thenThrow(familyCareAnswered(404, null));
+
+		assertThat(integration.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).isNull();
+	}
+
+	@Test
+	void getPersonStillFailsWhenFamilyCareAnswers5xx() {
+		when(clientMock.getPerson(PERSON_ID)).thenThrow(familyCareAnswered(500, "{\"Code\":\"Error\",\"Message\":\"boom\"}"));
+
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY)
+			.extracting(throwable -> ((ThrowableProblem) throwable).getDetail())
+			.satisfies(detail -> assertThat(detail).startsWith("Error fetching person in Lifecare FamilyCare"));
+	}
+
+	@Test
+	void getPersonStillFailsWhenFamilyCareRefusesTheCall() {
+		// 401/403 mean a wrong key, not a missing person — reading them as "no such person" would let a broken key pass.
+		when(clientMock.getPerson(PERSON_ID)).thenThrow(familyCareAnswered(403, null));
+
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+	}
+
+	@Test
+	void getPersonStillFailsOnATransportFailure() {
+		when(clientMock.getPerson(PERSON_ID)).thenThrow(new IllegalStateException("connection reset"));
+
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, APPLICANT_PARTY_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+	}
+
+	@Test
+	void getPersonForACitizenTheRegisterDoesNotKnowIsStillNotFound() {
+		// Not FamilyCare's 404: the personal identity number cannot be resolved, so FamilyCare is never asked. The gate must
+		// see this as a failure, not as a person FamilyCare does not hold.
+		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, CHILD_PARTY_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> integration.getPerson(MUNICIPALITY_ID, CHILD_PARTY_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verifyNoInteractions(clientMock);
 	}
 }

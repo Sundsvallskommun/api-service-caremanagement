@@ -17,6 +17,7 @@ import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.User;
 import generated.se.sundsvall.lifecareintegrator.CreatedResource;
+import generated.se.sundsvall.lifecareintegrator.Person;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -25,6 +26,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.lifecare.integration.ByteArrayMultipartFile;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
+import se.sundsvall.caremanagement.lifecare.integration.UpstreamNotFound;
 import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -55,6 +57,12 @@ import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 @ConditionalOnProperty(name = "integration.lifecare-familycare.provider", havingValue = "integrator")
 public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 
+	/**
+	 * The start of the integrator's explanation when Lifecare holds no such person, {@code No person found for partyId ...}
+	 * (its {@code FamilyCareService.PERSON_NOT_FOUND}). Deliberately not the bare 404: the same endpoint also answers 404
+	 * {@code No person number found} when Party cannot resolve the partyId, and that must stay a failure.
+	 */
+	static final String PERSON_NOT_FOUND = "No person found for partyId";
 	private static final String NOT_PORTED = "Operation '%s' is not available through the lifecare-integrator route yet";
 	private static final String MISSING_FIELDS = "The assembled %s is missing required field(s): %s";
 
@@ -111,9 +119,26 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 		return call("fetching document content", () -> client.getDocumentContent(municipalityId, id));
 	}
 
+	/**
+	 * The person's master data, or {@code null} when Lifecare holds no such person. The integrator answers 404 with
+	 * {@code No person found} for a person FamilyCare does not know — every first-time applicant — which is an answer and
+	 * not a failure. Its other 404 (Party cannot resolve the partyId, {@code No person number found}) is not that answer:
+	 * the identity is unknown, so it stays a failure.
+	 */
 	@Override
 	public PersonBasedPersonDTO getPerson(final String municipalityId, final String partyId) {
-		return call("fetching the person", () -> IntegratorCaseMapper.toPerson(client.getPerson(municipalityId, partyId), partyId));
+		return call("fetching the person", () -> IntegratorCaseMapper.toPerson(personOrNull(municipalityId, partyId), partyId));
+	}
+
+	private Person personOrNull(final String municipalityId, final String partyId) {
+		try {
+			return client.getPerson(municipalityId, partyId);
+		} catch (final ThrowableProblem e) {
+			if (UpstreamNotFound.matches(e, PERSON_NOT_FOUND)) {
+				return null;
+			}
+			throw e;
+		}
 	}
 
 	@Override
