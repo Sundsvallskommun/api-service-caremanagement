@@ -38,6 +38,11 @@ scheduler:
     name: message-archive
     shedlock-lock-at-most-for: PT5M
     maximum-execution-time: PT5M
+  process-start-retry:
+    cron: '-'
+    name: process-start-retry
+    shedlock-lock-at-most-for: PT5M
+    maximum-execution-time: PT5M
 caremanagement:
   identifier:
     required: false

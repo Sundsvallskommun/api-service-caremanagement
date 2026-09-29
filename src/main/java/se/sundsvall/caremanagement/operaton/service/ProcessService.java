@@ -3,12 +3,16 @@ package se.sundsvall.caremanagement.operaton.service;
 import generated.se.sundsvall.operaton.CorrelationMessageRequest;
 import generated.se.sundsvall.operaton.ProcessDefinitionResponse;
 import generated.se.sundsvall.operaton.ProcessDefinitionsResponse;
+import generated.se.sundsvall.operaton.ProcessInstanceResponse;
+import generated.se.sundsvall.operaton.ProcessInstancesResponse;
 import generated.se.sundsvall.operaton.StartProcessInstanceRequest;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.operaton.integration.OperatonClient;
 import se.sundsvall.caremanagement.operaton.integration.db.ProcessMessageRetryRepository;
@@ -20,6 +24,7 @@ import se.sundsvall.dept44.problem.Problem;
 import tools.jackson.databind.json.JsonMapper;
 
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
@@ -66,6 +71,33 @@ public class ProcessService {
 					.variables(ofNullable(variables).orElseGet(Map::of)));
 				return response.getId();
 			});
+	}
+
+	/**
+	 * The business keys (errandIds) of the running process instances of the definition named {@code processDefinitionName}
+	 * — what a caller checks before starting a process for an errand a second time.
+	 *
+	 * <p>
+	 * Built on the engine's {@code GET /{municipalityId}/process-instances}, the only read of instances it offers: it
+	 * takes no business-key filter and lists every <em>active</em> instance of the engine, so the filtering by
+	 * definition and business key happens here and one call answers for a whole batch of errands. Suspended and ended
+	 * instances are not in that list, so they do not count as running. The definition is matched on its key — the part of
+	 * an instance's {@code processDefinitionId} before the version — so an instance started from an older version of the
+	 * definition still counts.
+	 *
+	 * <p>
+	 * Throws a {@link Problem} with BAD_REQUEST if no definition matches the name, and whatever the client throws when the
+	 * engine cannot be reached; the caller must then treat the answer as unknown, never as "none running".
+	 */
+	public Set<String> activeBusinessKeys(final String municipalityId, final String processDefinitionName) {
+		final var definitionKey = resolveDefinitionKey(municipalityId, processDefinitionName);
+		return ofNullable(operatonClient.getProcessInstances(municipalityId))
+			.map(ProcessInstancesResponse::getProcessInstances)
+			.orElseGet(List::of).stream()
+			.filter(instance -> definitionKey.equals(definitionKeyOf(instance)))
+			.map(ProcessInstanceResponse::getBusinessKey)
+			.filter(Objects::nonNull)
+			.collect(toUnmodifiableSet());
 	}
 
 	/**
@@ -133,6 +165,15 @@ public class ProcessService {
 	public List<Map<String, Object>> evaluateDecision(final String municipalityId, final String decisionKey, final Map<String, Object> variables) {
 		final var response = operatonClient.evaluateDecision(municipalityId, decisionKey, new EvaluateDecisionRequest(ofNullable(variables).orElseGet(Map::of)));
 		return ofNullable(response).map(EvaluateDecisionResponse::results).orElseGet(List::of);
+	}
+
+	/**
+	 * The definition key of an instance — its {@code processDefinitionId} ({@code key:version:id}) up to the first colon.
+	 */
+	private static String definitionKeyOf(final ProcessInstanceResponse instance) {
+		return ofNullable(instance.getProcessDefinitionId())
+			.map(id -> id.split(":", 2)[0])
+			.orElse(null);
 	}
 
 	private String resolveDefinitionKey(final String municipalityId, final String name) {

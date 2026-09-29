@@ -116,7 +116,7 @@ class FinancialAssistanceProcessStarter {
 	/**
 	 * The BPMN process a financial assistance type starts, when the slug is one of the three financial assistance types.
 	 */
-	private static Optional<String> processDefinitionName(final String typeSlug) {
+	static Optional<String> processDefinitionName(final String typeSlug) {
 		return Optional.ofNullable(typeSlug).map(PROCESS_DEFINITION_BY_SLUG::get);
 	}
 
