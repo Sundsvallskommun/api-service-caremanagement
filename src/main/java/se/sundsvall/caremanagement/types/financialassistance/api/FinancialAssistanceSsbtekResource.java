@@ -57,8 +57,9 @@ class FinancialAssistanceSsbtekResource {
 			api-service-financial-aid and forwarded verbatim — the answer per responding agency (af, csn, fk, skv, so, \
 			tns, miv), so a caseworker can see what the composite service actually said rather than only the classified \
 			result. The person is resolved from the errand, never taken from the caller, and the read is recorded in the \
-			errand's access log like every other errand-scoped request. No personnummer is accepted or returned at this \
-			edge, and nothing is stored. The period is resolved in whole months and echoed on the response: it defaults \
+			errand's access log like every other errand-scoped request. No personnummer is accepted, and nothing is stored. \
+			The agency answers are forwarded as SSBTEK gave them and can carry personnummer, names and addresses; a caller \
+			must pass on only the fields it shows. The period is resolved in whole months and echoed on the response: it defaults \
 			to the three SSBTEK rule periods (jämförelseperiod M−2 through ansökningsperiod M), the same window the process \
 			asks for. Agency payload shapes are heterogeneous and follow the SSBTEK contract, so they are not modelled here.""",
 		responses = {

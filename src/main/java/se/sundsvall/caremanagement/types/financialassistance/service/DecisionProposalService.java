@@ -128,8 +128,10 @@ public class DecisionProposalService {
 		final var saved = basis.savedCalculation();
 		final var partiallyRejected = saved.map(ProposalMapper::partiallyRejectedExpenses).orElseGet(() -> ProposalMapper.partiallyRejectedExpenses(draft));
 		final var outcome = basis.estimatedAmount().map(amount -> ProposalMapper.outcome(amount, partiallyRejected));
-		final var reason = previousDecision.map(DecisionView::reason).filter(text -> hasText(text));
-		final var coApplicantReason = previousDecision.map(DecisionView::reasonCoApplicant).filter(text -> hasText(text));
+		// A reason from a bifall is not proposed on an avslag, or the other way round (kvarlistan v02).
+		final var reasonSource = previousDecision.filter(decision -> ProposalMapper.reasonCarriesOver(outcome, decision));
+		final var reason = reasonSource.map(DecisionView::reason).filter(text -> hasText(text));
+		final var coApplicantReason = reasonSource.map(DecisionView::reasonCoApplicant).filter(text -> hasText(text));
 
 		final var recoveryClaimsRead = basis.household().applicantPartyId()
 			.flatMap(applicant -> basis.applicationMonth().map(month -> recoveryClaims(municipalityId, applicant, month)))

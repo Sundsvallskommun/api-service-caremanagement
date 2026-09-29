@@ -2,7 +2,10 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationExpenseView;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationView;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
@@ -16,6 +19,24 @@ class ProposalMapperTest {
 
 	private static NormExpenseRow expense(final String costType, final String applied, final String effective) {
 		return NormExpenseRow.create().withCostType(costType).withAppliedAmount(new BigDecimal(applied)).withEffectiveAmount(new BigDecimal(effective));
+	}
+
+	@ParameterizedTest
+	@CsvSource(nullValues = "null", value = {
+		"BIFALL, 'EK Försörjningsstöd 4 kap 1 § SoL, bifall', true",
+		"DELAVSLAG, 'EK Försörjningsstöd 4 kap 1 § SoL, bifall', true",
+		"AVSLAG, 'EK Försörjningsstöd 4 kap 1 § SoL, bifall', false",
+		"AVSLAG, 'EK Försörjningsstöd 4 kap 1 § SoL, Avslag', true",
+		"BIFALL, 'EK Försörjningsstöd 4 kap 1 § SoL, avslag', false",
+		"DELAVSLAG, 'EK Försörjningsstöd 4 kap 1 § SoL, avslag', false",
+		"AVSLAG, null, false",
+		"BIFALL, null, true",
+		"null, 'EK Försörjningsstöd 4 kap 1 § SoL, avslag', true"
+	})
+	void reasonCarriesOverOnlyToTheSameSide(final String outcome, final String previousType, final boolean expected) {
+		final var previous = new DecisionView(1, "2026-04-28", previousType, "2026-05-01", "2026-05-31", "Boendekostnad", "Anna", "IFO", 2, BigDecimal.ONE, null, null, List.of());
+
+		assertThat(ProposalMapper.reasonCarriesOver(Optional.ofNullable(outcome), previous)).isEqualTo(expected);
 	}
 
 	@Test

@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationView;
 import se.sundsvall.caremanagement.lifecare.service.model.DecisionView;
@@ -161,6 +162,26 @@ public final class ProposalMapper {
 		return ofNullable(decision.type())
 			.filter(type -> type.toLowerCase(Locale.ROOT).contains("förskott"))
 			.isPresent();
+	}
+
+	/**
+	 * Whether the previous beslut's reason may be proposed for this outcome. Lifecare keeps separate reasons for avslag,
+	 * so a reason from a bifall must not be preselected on an avslag, or the other way round. The previous beslut's side
+	 * is read from its type name, which says bifall or avslag (e.g. ”EK Försörjningsstöd 4 kap 1 § SoL, avslag”); delvis
+	 * bifall counts as bifall. Without an outcome the reason carries over as before.
+	 *
+	 * @param  outcome  this proposal's outcome, empty when it could not be estimated
+	 * @param  previous the previous beslut
+	 * @return          true when the reason may be proposed
+	 */
+	public static boolean reasonCarriesOver(final Optional<String> outcome, final DecisionView previous) {
+		if (outcome.isEmpty()) {
+			return true;
+		}
+		final var previousIsAvslag = ofNullable(previous.type())
+			.map(type -> type.toLowerCase(Locale.ROOT).contains("avslag"))
+			.orElse(false);
+		return previousIsAvslag == OUTCOME_AVSLAG.equals(outcome.get());
 	}
 
 	public static PreviousDecision toPreviousDecision(final DecisionView view) {
