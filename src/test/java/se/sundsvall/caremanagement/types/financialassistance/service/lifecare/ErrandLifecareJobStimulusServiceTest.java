@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -58,6 +59,15 @@ class ErrandLifecareJobStimulusServiceTest {
 	}
 
 	@Test
+	void periodsAreNotServedWhenTheReadCannotBeLogged() {
+		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
+		when(jobStimulusApi.readForService(1)).thenReturn(json(LifecareJobStimulusMapperTest.CURRENT));
+		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
+
+		assertThatThrownBy(() -> service.periods(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
 	void addPeriodWithTheEndLifecaresTwoYearRuleGivesSendingEveryExistingPeriodBack() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
 		when(jobStimulusApi.readForService(1)).thenReturn(json(LifecareJobStimulusMapperTest.CURRENT));
@@ -73,6 +83,17 @@ class ErrandLifecareJobStimulusServiceTest {
 		assertThat(sent.get(3).get("toDate").asString()).isEqualTo("2030-01-14");
 		verify(accessRecorder).read(ERRAND, "JOB_STIMULUS", "Läste jobbstimulans i Lifecare");
 		verify(accessRecorder).written(ERRAND, "CREATE", "JOB_STIMULUS", "Lade till en jobbstimulansperiod i Lifecare (2028-01-15 – 2030-01-14)", null);
+	}
+
+	@Test
+	void addPeriodWritesNothingWhenTheReadCannotBeLogged() {
+		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
+		when(jobStimulusApi.readForService(1)).thenReturn(json(LifecareJobStimulusMapperTest.CURRENT));
+		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
+
+		assertThatThrownBy(() -> service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2028-01-15", "2028-12-31")))
+			.isInstanceOf(IllegalStateException.class);
+		verify(jobStimulusApi, never()).save(any());
 	}
 
 	@Test

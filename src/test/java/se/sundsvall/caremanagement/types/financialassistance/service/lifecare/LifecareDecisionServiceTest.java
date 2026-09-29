@@ -151,6 +151,18 @@ class LifecareDecisionServiceTest {
 	}
 
 	@Test
+	void savesNothingWhenTheReadOfTheUnderlagCouldNotBeLogged() {
+		final var errand = loaded(null);
+		caseworker();
+		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
+		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "DECISION", "Läste beslutsunderlag i Lifecare");
+
+		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL)).isInstanceOf(IllegalStateException.class);
+		verify(lifecareMock, never()).create(anyInt(), any());
+		verify(lifecareMock, never()).update(anyInt(), any());
+	}
+
+	@Test
 	void namesTheConfiguredTestDecisionMakerInsteadOfTheCaseworker() {
 		loaded(null);
 		when(propertiesMock.testDecisionMaker()).thenReturn("test");
@@ -326,6 +338,15 @@ class LifecareDecisionServiceTest {
 	}
 
 	@Test
+	void servesNoBeslutstyperWhoseReadCouldNotBeLogged() {
+		final var errand = loaded(null);
+		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
+		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "DECISION", "Läste beslutstyper i Lifecare");
+
+		assertThatThrownBy(() -> service.types(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
 	void listsTheOrsakerOfABeslutstyp() {
 		when(lifecareMock.readReasons(153)).thenReturn(tree("""
 			[{"header": "Arbetar deltid, ofrivilligt", "name": "Arbetar deltid, ofrivilligt", "reasonCode": null,
@@ -354,5 +375,14 @@ class LifecareDecisionServiceTest {
 
 		assertThat(service.pdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isSameAs(pdf);
 		verify(accessRecorderMock).read(errand, "DECISION", "Hämtade beslutet som PDF från Lifecare", "98");
+	}
+
+	@Test
+	void servesNoPdfWhoseReadCouldNotBeLogged() {
+		final var errand = loaded(98);
+		when(lifecareMock.printDecision(98)).thenReturn("%PDF-1.7".getBytes());
+		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "DECISION", "Hämtade beslutet som PDF från Lifecare", "98");
+
+		assertThatThrownBy(() -> service.pdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
 	}
 }

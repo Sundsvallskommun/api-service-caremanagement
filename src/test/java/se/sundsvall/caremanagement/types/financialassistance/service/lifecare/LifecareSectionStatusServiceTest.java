@@ -116,6 +116,16 @@ class LifecareSectionStatusServiceTest {
 	}
 
 	@Test
+	void leavesTheBerakningOffWhenItsReadCannotBeLogged() {
+		final var errand = errand(1, 31, null, null, null);
+		when(clientMock.get("api2/Calculation/ListCalculations", LIST_PARAMS)).thenReturn(tree(CALCULATIONS));
+		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "CALCULATION", "Läste insatsens normberäkningar i Lifecare");
+
+		// Calculation 31 is slutlig in Lifecare, and the check stays off because the read that showed it was not logged.
+		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecareSectionStatus(false, false, false));
+	}
+
+	@Test
 	void leavesTheUtbetalningOffWhenItsReadCannotBeLogged() {
 		final var errand = errand(1, null, null, 2026, 9);
 		when(clientMock.get("api2/Payment/GetLatestPayments", PAYMENT_PARAMS)).thenReturn(tree(PAYMENTS));

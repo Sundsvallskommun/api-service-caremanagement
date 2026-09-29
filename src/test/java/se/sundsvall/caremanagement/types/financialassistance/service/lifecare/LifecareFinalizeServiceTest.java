@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -110,6 +111,16 @@ class LifecareFinalizeServiceTest {
 		assertThat(request.getCommunication()).isEqualTo(COMMUNICATION);
 		assertThat(request.getHouseholdSizeChanged()).isTrue();
 		verify(accessRecorderMock).read(errand, "DECISION", "Läste beslutet i Lifecare", "98");
+	}
+
+	@Test
+	void finalizesNothingWhenTheReadOfTheBeslutCouldNotBeLogged() {
+		final var errand = linkedTo(98);
+		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
+		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "DECISION", "Läste beslutet i Lifecare", "98");
+
+		assertThatThrownBy(() -> service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY)).isInstanceOf(IllegalStateException.class);
+		verifyNoInteractions(finalizeServiceMock);
 	}
 
 	@Test

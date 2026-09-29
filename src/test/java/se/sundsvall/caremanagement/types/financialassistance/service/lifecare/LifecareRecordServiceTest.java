@@ -158,6 +158,16 @@ class LifecareRecordServiceTest {
 	}
 
 	@Test
+	void journalNoteBodiesAreNotServedWhenTheReadCannotBeLogged() {
+		givenClientList();
+		when(client.get(PATH_READ_NOTE, recordParams("1", "true", "false"))).thenReturn(json("{\"content\": \"<p>1</p>\"}"));
+		when(client.get(PATH_READ_NOTE, recordParams("2", "true", "false"))).thenReturn(json("{\"content\": \"<p>2</p>\"}"));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(any(), anyString(), anyString());
+
+		assertThatThrownBy(() -> service.journalNoteBodies(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
 	void documentBodiesSkipBlanketterAndPdfs() {
 		givenClientList();
 		when(client.get(PATH_READ_DOCUMENT, recordParams("3", "true", "false"))).thenReturn(json("{\"content\": null}"));
@@ -178,6 +188,15 @@ class LifecareRecordServiceTest {
 		assertThat(content.getContent()).isEqualTo("<p>old</p>");
 		assertThat(content.getEditable()).isTrue();
 		verify(recorder).read(ERRAND, "JOURNAL_NOTE", "Läste en journalanteckning i Lifecare", "1");
+	}
+
+	@Test
+	void readJournalNoteIsNotServedWhenTheReadCannotBeLogged() {
+		givenClientList();
+		when(client.get(PATH_READ_NOTE, recordParams("1", "false", "true"))).thenReturn(json(RECORD));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(any(), anyString(), anyString(), anyString());
+
+		assertThatThrownBy(() -> service.readJournalNote(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 1)).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
@@ -273,6 +292,16 @@ class LifecareRecordServiceTest {
 			"""));
 
 		assertThat(service.journalNoteTypes(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).extracting(LifecareNoteType::getCode).containsExactly(1);
+		verify(recorder).read(ERRAND, "JOURNAL_NOTE", "Läste underlag för en ny journalanteckning i Lifecare");
+	}
+
+	@Test
+	void journalNoteTypesAreNotServedWhenTheReadCannotBeLogged() {
+		givenErrand();
+		when(client.get(PATH_NOTE_PROPOSAL, BY_SERVICE)).thenReturn(json("{ \"documentNoteTypes\": [] }"));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(any(), anyString(), anyString());
+
+		assertThatThrownBy(() -> service.journalNoteTypes(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
@@ -283,6 +312,16 @@ class LifecareRecordServiceTest {
 			"""));
 
 		assertThat(service.documentTypes(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).extracting(LifecareDocumentType::getCode).containsExactly(1);
+		verify(recorder).read(ERRAND, "DOCUMENT", "Läste underlag för ett nytt dokument i Lifecare");
+	}
+
+	@Test
+	void documentTypesAreNotServedWhenTheReadCannotBeLogged() {
+		givenErrand();
+		when(client.get(PATH_DOCUMENT_PROPOSAL, BY_SERVICE)).thenReturn(json("{ \"documentTypes\": [] }"));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(any(), anyString(), anyString());
+
+		assertThatThrownBy(() -> service.documentTypes(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
@@ -377,6 +416,16 @@ class LifecareRecordServiceTest {
 		assertThat(service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 3)).isEqualTo(pdf);
 		verify(recorder).read(ERRAND, "DOCUMENT", "Hämtade ett dokument som PDF ur Lifecare", "3");
 		verifyNoInteractions(caseHistoryService);
+	}
+
+	@Test
+	void readDocumentPdfIsNotServedWhenTheReadCannotBeLogged() {
+		givenClientList();
+		when(properties.documentPrintTemplateId()).thenReturn("template-1");
+		when(client.getPdf(PATH_PRINT_DOCUMENT, Map.of("templateId", "template-1", "documentId", "3", "hideRevisions", "true"))).thenReturn("%PDF-1.7".getBytes());
+		doThrow(new IllegalStateException("log down")).when(recorder).read(any(), anyString(), anyString(), anyString());
+
+		assertThatThrownBy(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 3)).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test

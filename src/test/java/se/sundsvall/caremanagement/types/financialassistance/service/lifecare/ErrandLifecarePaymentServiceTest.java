@@ -99,6 +99,16 @@ class ErrandLifecarePaymentServiceTest {
 	}
 
 	@Test
+	void paymentStatusUnavailableWhenItsReadCannotBeLogged() {
+		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
+		when(paymentApi.readLatestPayments(1)).thenReturn(json(REGISTERED));
+		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
+
+		// The unlogged read is not handed over: the caller gets the same answer as when Lifecare cannot be read.
+		assertThat(service.paymentStatus(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecarePaymentStatus("2026-09", false, null, null, null, true));
+	}
+
+	@Test
 	void paymentStatusCountsTheLinkedUtbetalningFiledUnderAnotherMonth() {
 		final var october = new LifecareErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 1, null, null, List.of("4"), 2026, 10);
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(october);
@@ -145,6 +155,15 @@ class ErrandLifecarePaymentServiceTest {
 	}
 
 	@Test
+	void registeredPaymentsAreNotServedWhenTheReadCannotBeLogged() {
+		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
+		when(paymentApi.readLatestPayments(1)).thenReturn(json(REGISTERED));
+		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
+
+		assertThatThrownBy(() -> service.registeredPayments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
 	void registeredPaymentsWithoutInsats() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(errand(null, 2026, 9));
 
@@ -172,6 +191,17 @@ class ErrandLifecarePaymentServiceTest {
 		assertThat(bodyCaptor.getValue().get("accountNumber").asString()).isEqualTo("22222222");
 		verify(accessRecorder).read(ERRAND, "PAYEES", "Läste betalningsmottagare i Lifecare");
 		verify(accessRecorder).written(ERRAND, "CREATE", "PAYEE", "Lade till en betalningsmottagare i Lifecare", "3");
+	}
+
+	@Test
+	void createPayeeWritesNothingWhenTheUnderlagReadCannotBeLogged() {
+		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
+		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag());
+		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
+
+		assertThatThrownBy(() -> service.createPayee(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecarePayeeRequest("Kontoinnehavare B", null, 14, null, "22222222")))
+			.isInstanceOf(IllegalStateException.class);
+		verify(paymentApi, never()).createPayee(any());
 	}
 
 	@Test

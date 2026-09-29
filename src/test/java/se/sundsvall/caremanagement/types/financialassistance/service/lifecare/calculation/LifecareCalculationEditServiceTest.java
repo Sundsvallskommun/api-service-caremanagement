@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -91,6 +92,15 @@ class LifecareCalculationEditServiceTest {
 		verify(recorder).written(ERRAND, "UPDATE", "CALCULATION", "Ändrade normberäkningen i Lifecare", "30");
 		verify(client, never()).amountFor(any(), any(), any(), any());
 		verify(client, never()).sharedCost(any(), any(), any());
+	}
+
+	@Test
+	void changesNothingWhenTheReadOfTheUnderlagCouldNotBeLogged() {
+		readsForEdit(forEdit(savedCalculation()));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(ERRAND, "CALCULATION", "Läste beräkningsunderlag i Lifecare");
+
+		assertThatThrownBy(() -> service.change(ERRAND, CALCULATION_ID, (calculation, _) -> calculation, false)).isInstanceOf(IllegalStateException.class);
+		verify(client, never()).update(anyInt(), any());
 	}
 
 	@Test
@@ -317,6 +327,14 @@ class LifecareCalculationEditServiceTest {
 	}
 
 	@Test
+	void showsNoBerakningWhoseReadCouldNotBeLogged() {
+		readsForEdit(forEdit(savedCalculation()));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(ERRAND, "CALCULATION", "Läste normberäkningen i Lifecare", "30");
+
+		assertThatThrownBy(() -> service.readDraftView(ERRAND, CALCULATION_ID)).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
 	void offersLifecaresOwnTypes() {
 		readsForEdit(forEdit(savedCalculation()));
 
@@ -327,6 +345,14 @@ class LifecareCalculationEditServiceTest {
 		assertThat(types.getCostTypes()).singleElement().satisfies(type -> assertThat(type.getDisplayName()).isEqualTo("Boendekostnad"));
 		assertThat(types.getLivingCostTypes()).isEmpty();
 		verify(recorder).read(ERRAND, "CALCULATION", "Läste normberäkningen i Lifecare", "30");
+	}
+
+	@Test
+	void offersNoTypesWhoseReadCouldNotBeLogged() {
+		readsForEdit(forEdit(savedCalculation()));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(ERRAND, "CALCULATION", "Läste normberäkningen i Lifecare", "30");
+
+		assertThatThrownBy(() -> service.readTypes(ERRAND, CALCULATION_ID)).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
