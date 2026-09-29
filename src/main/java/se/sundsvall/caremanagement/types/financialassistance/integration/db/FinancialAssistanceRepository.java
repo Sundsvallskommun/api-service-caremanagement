@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.integration.db;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.LockModeType;
+import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +13,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+
+import static org.springframework.transaction.annotation.Propagation.REQUIRES_NEW;
 
 @CircuitBreaker(name = "financialAssistanceRepository")
 public interface FinancialAssistanceRepository extends JpaRepository<FinancialAssistanceEntity, String> {
@@ -104,6 +107,28 @@ public interface FinancialAssistanceRepository extends JpaRepository<FinancialAs
 	@Transactional
 	@Query("update FinancialAssistanceEntity fa set fa.lifecareServiceId = :lifecareServiceId where fa.errandId = :errandId")
 	int updateLifecareServiceId(@Param("errandId") String errandId, @Param("lifecareServiceId") Integer lifecareServiceId);
+
+	/**
+	 * Record that the Lifecare actualisation step is about to create the errand's actualisation, unless an earlier attempt
+	 * already did. <strong>A transaction of its own</strong> ({@code REQUIRES_NEW}): the marker has to be committed before
+	 * Lifecare is called and has to stay whatever happens to the caller's transaction afterwards — that is the whole point
+	 * of it. Joining the intake's transaction, a failure after the create would roll the marker back with everything else,
+	 * and the retry would have no way to know Lifecare may already hold the actualisation.
+	 *
+	 * <p>
+	 * Conditional, so the first attempt's time is kept and two attempts racing each other cannot both believe they came
+	 * first.
+	 *
+	 * @return {@code 1} when this call set the marker (no earlier attempt), {@code 0} when it was already set — or when
+	 *         the errand has no application row to hold it
+	 */
+	@Modifying
+	@Transactional(propagation = REQUIRES_NEW)
+	@Query("""
+		update FinancialAssistanceEntity fa set fa.actualisationRequestedAt = :requestedAt
+		where fa.errandId = :errandId and fa.actualisationRequestedAt is null
+		""")
+	int markActualisationRequestedIfAbsent(@Param("errandId") String errandId, @Param("requestedAt") OffsetDateTime requestedAt);
 
 	/**
 	 * Adds one Lifecare payment id to the errand's linked payments, atomically. {@code errand_fa_lifecare_payment} is

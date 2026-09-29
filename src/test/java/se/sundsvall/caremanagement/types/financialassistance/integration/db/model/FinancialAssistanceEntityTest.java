@@ -21,6 +21,7 @@ class FinancialAssistanceEntityTest {
 
 	private static final OffsetDateTime ATTESTED_AT = OffsetDateTime.parse("2026-06-01T09:30:00Z");
 	private static final OffsetDateTime LAST_DAILY_RUN_AT = OffsetDateTime.parse("2026-06-02T09:30:00Z");
+	private static final OffsetDateTime ACTUALISATION_REQUESTED_AT = OffsetDateTime.parse("2026-06-02T09:45:00Z");
 	private static final OffsetDateTime CREATED = OffsetDateTime.parse("2026-06-03T10:00:00Z");
 	private static final OffsetDateTime MODIFIED = OffsetDateTime.parse("2026-06-04T11:00:00Z");
 
@@ -86,6 +87,7 @@ class FinancialAssistanceEntityTest {
 			.withAttestation(true)
 			.withAttestedAt(ATTESTED_AT)
 			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withActualisationRequestedAt(ACTUALISATION_REQUESTED_AT)
 			.withLifecareServiceId(7700)
 			.withLifecareDecisionId(4711)
 			.withLifecareCalculationId(4242)
@@ -134,6 +136,7 @@ class FinancialAssistanceEntityTest {
 			.returns(true, FinancialAssistanceEntity::getAttestation)
 			.returns(ATTESTED_AT, FinancialAssistanceEntity::getAttestedAt)
 			.returns(LAST_DAILY_RUN_AT, FinancialAssistanceEntity::getLastDailyRunAt)
+			.returns(ACTUALISATION_REQUESTED_AT, FinancialAssistanceEntity::getActualisationRequestedAt)
 			.returns(7700, FinancialAssistanceEntity::getLifecareServiceId)
 			.returns(4711, FinancialAssistanceEntity::getLifecareDecisionId)
 			.returns(4242, FinancialAssistanceEntity::getLifecareCalculationId)

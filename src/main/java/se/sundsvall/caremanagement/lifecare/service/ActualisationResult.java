@@ -9,6 +9,13 @@ package se.sundsvall.caremanagement.lifecare.service;
  * @param assignedUserId  the network/AD user id of the resolved caseworker, or {@code null} when none was resolved
  * @param serviceId       the applicant's open financial-assistance service (insats) the actualisation was linked to, or
  *                        {@code null} when the applicant has none (a nyansökan, typically)
+ * @param adopted         {@code true} when no actualisation was created because an earlier attempt of the same step had
+ *                        already created this one — see {@link ActualisationService#createOrAdoptActualisation}
  */
-public record ActualisationResult(Integer actualisationId, String assignedUserId, Integer serviceId) {
+public record ActualisationResult(Integer actualisationId, String assignedUserId, Integer serviceId, boolean adopted) {
+
+	/** An actualisation this call created. */
+	public ActualisationResult(final Integer actualisationId, final String assignedUserId, final Integer serviceId) {
+		this(actualisationId, assignedUserId, serviceId, false);
+	}
 }

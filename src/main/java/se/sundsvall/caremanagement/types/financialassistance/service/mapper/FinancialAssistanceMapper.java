@@ -101,7 +101,8 @@ public final class FinancialAssistanceMapper {
 	/**
 	 * Applies non-null fields from {@code source} onto {@code entity} (PATCH semantics — null fields on the source leave
 	 * the existing value untouched). The server-owned fields are never written from client data: {@code errandId},
-	 * {@code applicationType} (derived from the type slug), {@code lastDailyRunAt}, {@code created} and {@code modified}.
+	 * {@code applicationType} (derived from the type slug), {@code lastDailyRunAt}, {@code actualisationRequestedAt},
+	 * {@code created} and {@code modified}.
 	 */
 	public static FinancialAssistanceEntity updateEntity(final FinancialAssistanceEntity entity, final FinancialAssistanceData source) {
 		if (entity == null || source == null) {

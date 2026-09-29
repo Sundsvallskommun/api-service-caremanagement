@@ -6,9 +6,12 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -42,12 +45,16 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
@@ -81,6 +88,17 @@ class FinancialAssistanceActualisationServiceTest {
 
 	private static FinancialAssistanceEntity submittedErrand() {
 		return FinancialAssistanceEntity.create().withCreated(SUBMITTED_AT);
+	}
+
+	/** An errand whose step has been to Lifecare before: the marker is set. */
+	private static FinancialAssistanceEntity submittedErrandThatWasAttemptedBefore() {
+		return submittedErrand().withActualisationRequestedAt(SUBMITTED_AT.plusMinutes(5));
+	}
+
+	/** By default the marker is not there and this attempt is the first to set it. */
+	@BeforeEach
+	void setUp() {
+		lenient().when(financialAssistanceRepositoryMock.markActualisationRequestedIfAbsent(eq(ERRAND_ID), any(OffsetDateTime.class))).thenReturn(1);
 	}
 
 	@Test
@@ -297,6 +315,208 @@ class FinancialAssistanceActualisationServiceTest {
 		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		verify(actualisationServiceMock).createActualisation(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, JUNE, 1), false);
+	}
+
+	// ---- a retry never creates a second actualisation -------------------------------------------------------------
+
+	private static ActualisationRequest requestForTheErrand() {
+		return ActualisationRequest.create()
+			.withApplicant(APPLICANT_PARTY_ID)
+			.withApplicationMonth("2026-06")
+			.withErrandId(ERRAND_ID);
+	}
+
+	private static Decision recordedActualisation(final String value) {
+		return Decision.create().withDecisionType("ACTUALISATION").withValue(value);
+	}
+
+	@Test
+	void theMarkerIsCommittedBeforeLifecareIsCalledAndBeforeAnythingIsRecorded() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
+		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, JUNE, 17), false)).thenReturn(new ActualisationResult(5012, null, null));
+
+		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand());
+
+		assertThat(response.getActualisationId()).isEqualTo(5012);
+		// The marker goes through the repository's own-transaction update, never through a save of the loaded entity
+		// (which would only be committed with the intake), and it is written before Lifecare is called.
+		final InOrder order = inOrder(financialAssistanceRepositoryMock, actualisationServiceMock, decisionServiceMock);
+		order.verify(financialAssistanceRepositoryMock).markActualisationRequestedIfAbsent(eq(ERRAND_ID), any(OffsetDateTime.class));
+		order.verify(actualisationServiceMock).createActualisation(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, JUNE, 17), false);
+		order.verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Decision.class));
+		verify(financialAssistanceRepositoryMock, never()).save(any());
+		// The first attempt has nothing to look for.
+		verify(actualisationServiceMock, never()).createOrAdoptActualisation(any(), any(), any(), anyBoolean(), any());
+	}
+
+	@Test
+	void aFailureAfterLifecareCreatedTheActualisationLeavesTheMarkerBehind() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
+		when(actualisationServiceMock.createActualisation(any(), any(), any(), anyBoolean())).thenReturn(new ActualisationResult(5012, null, null));
+		doThrow(new IllegalStateException("the database went away")).when(decisionServiceMock).create(any(), any(), any(), any());
+
+		assertThatThrownBy(() -> service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand()))
+			.isInstanceOf(IllegalStateException.class);
+
+		// Committed before the failure, in its own transaction: rolling the intake back does not take it along.
+		final InOrder order = inOrder(financialAssistanceRepositoryMock, actualisationServiceMock);
+		order.verify(financialAssistanceRepositoryMock).markActualisationRequestedIfAbsent(eq(ERRAND_ID), any(OffsetDateTime.class));
+		order.verify(actualisationServiceMock).createActualisation(any(), any(), any(), anyBoolean());
+		verify(financialAssistanceRepositoryMock, never()).save(any());
+	}
+
+	@Test
+	void anActualisationAlreadyRecordedOnTheErrandIsReturnedAndNothingIsCreated() {
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(recordedActualisation("5012")));
+
+		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand());
+
+		assertThat(response.getActualisationId()).isEqualTo(5012);
+		verifyNoInteractions(actualisationServiceMock, attachmentServiceMock, errandServiceMock);
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+		verify(financialAssistanceRepositoryMock, never()).markActualisationRequestedIfAbsent(any(), any());
+		verify(financialAssistanceRepositoryMock, never()).updateLifecareServiceId(any(), any());
+	}
+
+	@Test
+	void theMostRecentRecordedActualisationWins() {
+		// Newest first, as the decisions are read.
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Decision.create().withDecisionType("RECOMMENDATION").withValue("APPROVE"),
+			recordedActualisation("5013"),
+			recordedActualisation("5012")));
+
+		assertThat(service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand()).getActualisationId()).isEqualTo(5013);
+		verifyNoInteractions(actualisationServiceMock);
+	}
+
+	@Test
+	void aRecordedActualisationWithoutAnIdIsNotAnActualisation() {
+		when(decisionServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(recordedActualisation(null), recordedActualisation(" "), recordedActualisation("not-a-number")));
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
+		when(actualisationServiceMock.createActualisation(any(), any(), any(), anyBoolean())).thenReturn(new ActualisationResult(5012, null, null));
+
+		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand());
+
+		assertThat(response.getActualisationId()).isEqualTo(5012);
+		verify(actualisationServiceMock).createActualisation(any(), any(), any(), anyBoolean());
+	}
+
+	@Test
+	void aMarkerWithNoRecordedIdLooksForTheEarlierAttemptAndAdoptsWhatItFinds() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrandThatWasAttemptedBefore()));
+		when(actualisationServiceMock.createOrAdoptActualisation(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), eq(LocalDate.of(2026, JUNE, 17)), eq(false), any()))
+			.thenReturn(new ActualisationResult(5012, "anna01ker", 7700, true));
+		when(attachmentServiceMock.readApplicationArchiveDocuments(ERRAND_ID)).thenReturn(List.of());
+
+		final var response = service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand());
+
+		assertThat(response.getActualisationId()).isEqualTo(5012);
+		// Nothing is created, and the marker stays as the first attempt left it.
+		verify(actualisationServiceMock, never()).createActualisation(any(), any(), any(), anyBoolean());
+		verify(financialAssistanceRepositoryMock, never()).markActualisationRequestedIfAbsent(any(), any());
+
+		// What was found is recorded like what would have been created, and the audit trail says which it was.
+		final var decisionCaptor = ArgumentCaptor.forClass(Decision.class);
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), decisionCaptor.capture());
+		assertThat(decisionCaptor.getValue().getValue()).isEqualTo("5012");
+		assertThat(decisionCaptor.getValue().getDescription())
+			.contains("found in Lifecare (id 5012)")
+			.contains("no second one was made")
+			.doesNotContain("created in Lifecare");
+		verify(financialAssistanceRepositoryMock).updateLifecareServiceId(ERRAND_ID, 7700);
+		verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(PatchErrand.class));
+	}
+
+	@Test
+	void aMarkerSetWhileThisAttemptWasStartingCountsAsAnEarlierAttempt() {
+		// The read saw no marker, but another attempt set it before ours: the conditional update reports 0.
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
+		when(financialAssistanceRepositoryMock.markActualisationRequestedIfAbsent(eq(ERRAND_ID), any(OffsetDateTime.class))).thenReturn(0);
+		when(actualisationServiceMock.createOrAdoptActualisation(any(), any(), any(), anyBoolean(), any())).thenReturn(new ActualisationResult(5012, null, null, true));
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand());
+
+		verify(actualisationServiceMock).createOrAdoptActualisation(any(), any(), any(), anyBoolean(), any());
+		verify(actualisationServiceMock, never()).createActualisation(any(), any(), any(), anyBoolean());
+	}
+
+	@Test
+	void anActualisationRecordedOnAnotherErrandIsReportedAsClaimed() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrandThatWasAttemptedBefore()));
+		when(actualisationServiceMock.createOrAdoptActualisation(any(), any(), any(), anyBoolean(), any())).thenReturn(new ActualisationResult(5012, null, null, true));
+		when(decisionServiceMock.existsOnAnotherErrand("ACTUALISATION", "5011", ERRAND_ID)).thenReturn(true);
+		when(decisionServiceMock.existsOnAnotherErrand("ACTUALISATION", "5012", ERRAND_ID)).thenReturn(false);
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand());
+
+		@SuppressWarnings("unchecked")
+		final ArgumentCaptor<Predicate<Integer>> claimed = ArgumentCaptor.forClass(Predicate.class);
+		verify(actualisationServiceMock).createOrAdoptActualisation(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), eq(false), claimed.capture());
+		assertThat(claimed.getValue().test(5011)).isTrue();
+		assertThat(claimed.getValue().test(5012)).isFalse();
+	}
+
+	@Test
+	void aNyansokanThatWasAttemptedBeforeLooksForTheNyansokanType() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrandThatWasAttemptedBefore().withApplicationType("NEW")));
+		when(actualisationServiceMock.createOrAdoptActualisation(any(), any(), any(), eq(true), any())).thenReturn(new ActualisationResult(5012, null, null, true));
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand());
+
+		verify(actualisationServiceMock).createOrAdoptActualisation(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), eq(LocalDate.of(2026, JUNE, 17)), eq(true), any());
+	}
+
+	@Test
+	void whenTheEarlierAttemptCannotBeToldApartNothingIsCreatedOrRecorded() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrandThatWasAttemptedBefore()));
+		when(actualisationServiceMock.createOrAdoptActualisation(any(), any(), any(), anyBoolean(), any()))
+			.thenThrow(Problem.valueOf(CONFLICT, "Lifecare holds 2 actualisations that an earlier attempt of this step may have created"));
+
+		assertThatThrownBy(() -> service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand()))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", CONFLICT);
+
+		verify(actualisationServiceMock, never()).createActualisation(any(), any(), any(), anyBoolean());
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+		verifyNoInteractions(attachmentServiceMock, errandServiceMock);
+		verify(financialAssistanceRepositoryMock, never()).updateLifecareServiceId(any(), any());
+	}
+
+	@Test
+	void whenTheLookupForTheEarlierAttemptFailsNothingIsCreatedOrRecorded() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrandThatWasAttemptedBefore()));
+		when(actualisationServiceMock.createOrAdoptActualisation(any(), any(), any(), anyBoolean(), any()))
+			.thenThrow(Problem.valueOf(BAD_GATEWAY, "Error fetching actualisations in Lifecare FamilyCare: 503"));
+
+		assertThatThrownBy(() -> service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand()))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
+
+		verify(actualisationServiceMock, never()).createActualisation(any(), any(), any(), anyBoolean());
+		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+	}
+
+	@Test
+	void anErrandWithNoStoredApplicationHasNothingToHoldTheMarkerAndCreatesAsBefore() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
+		when(actualisationServiceMock.createActualisation(any(), any(), any(), anyBoolean())).thenReturn(new ActualisationResult(5012, null, null));
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand());
+
+		verify(financialAssistanceRepositoryMock, never()).markActualisationRequestedIfAbsent(any(), any());
+		verify(actualisationServiceMock).createActualisation(any(), any(), any(), anyBoolean());
+		verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Decision.class));
+	}
+
+	@Test
+	void aCallWithoutAnErrandIsNeitherLookedUpNorMarked() {
+		when(actualisationServiceMock.createActualisation(any(), any(), any(), anyBoolean())).thenReturn(new ActualisationResult(5012, null, null));
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, ActualisationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06"));
+
+		verifyNoInteractions(decisionServiceMock, financialAssistanceRepositoryMock);
+		verify(actualisationServiceMock).createActualisation(any(), any(), any(), anyBoolean());
 	}
 
 	@Test

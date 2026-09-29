@@ -47,9 +47,9 @@ class FinancialAssistanceMapperTest {
 		final var data = fullData();
 		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
 
-		// the finalize-owned fields (household flag, notify channels) and the Lifecare references are never set from
-		// client data
-		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("lastDailyRunAt", "created", "modified",
+		// the finalize-owned fields (household flag, notify channels), the actualisation step's marker and the Lifecare
+		// references are never set from client data
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("lastDailyRunAt", "actualisationRequestedAt", "created", "modified",
 			"householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter", "lifecareServiceId",
 			"lifecareDecisionId", "lifecareCalculationId", "lifecarePaymentIds");
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
