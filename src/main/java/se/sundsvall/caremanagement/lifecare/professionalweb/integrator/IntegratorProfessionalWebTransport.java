@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebFormField;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebResponse;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebTransport;
 import se.sundsvall.dept44.problem.Problem;
@@ -41,7 +42,16 @@ class IntegratorProfessionalWebTransport implements ProfessionalWebTransport {
 			.filter(bytes -> bytes.length > 0)
 			.map(JSON::readTree)
 			.orElse(null);
-		final var answer = Optional.ofNullable(client.exchange(MUNICIPALITY_ID, new ProfessionalWebExchangeRequest(method, path, params, jsonBody)))
+		return send(new ProfessionalWebExchangeRequest(method, path, params, jsonBody, null));
+	}
+
+	@Override
+	public ProfessionalWebResponse submitForm(final String path, final Map<String, String> params, final List<ProfessionalWebFormField> fields) {
+		return send(new ProfessionalWebExchangeRequest("POST", path, params, null, fields));
+	}
+
+	private ProfessionalWebResponse send(final ProfessionalWebExchangeRequest request) {
+		final var answer = Optional.ofNullable(client.exchange(MUNICIPALITY_ID, request))
 			.orElseThrow(() -> Problem.valueOf(BAD_GATEWAY, "lifecare-integrator answered without Lifecare's answer"));
 
 		final var headers = Optional.ofNullable(answer.contentType())

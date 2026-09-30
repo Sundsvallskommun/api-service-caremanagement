@@ -46,6 +46,8 @@ public class ProfessionalWebClient {
 	private static final String POST = "POST";
 	private static final String DELETE = "DELETE";
 	private static final byte[] PDF_SIGNATURE = "%PDF".getBytes(StandardCharsets.US_ASCII);
+	static final String ERROR_NOT_A_PDF = "Lifecare did not answer with a PDF";
+	static final String ERROR_ASKED_AGAIN = "Lifecare ställde en parameterfråga som careM inte kunde besvara";
 
 	private final ProfessionalWebTransport transport;
 	private final JsonMapper json = JsonMapper.builder().build();
@@ -89,18 +91,38 @@ public class ProfessionalWebClient {
 	}
 
 	/**
-	 * Reads a file Lifecare renders, such as a decision as PDF.
+	 * Reads a file Lifecare renders, such as a decision as PDF. When the template asks parameter questions first, as
+	 * "Beslut" does for a beslut with a medsökande, the questions are answered with Lifecare's own defaults, as a
+	 * caseworker pressing Klar would.
 	 *
 	 * @param  path   the path below the module
 	 * @param  params query parameters, in order
 	 * @return        the PDF bytes
 	 */
 	public byte[] getPdf(final String path, final Map<String, String> params) {
-		final var body = exchange(GET, path, params, null).body();
-		if (!startsWith(body, PDF_SIGNATURE)) {
-			throw Problem.valueOf(BAD_GATEWAY, "Lifecare did not answer with a PDF");
+		final var answer = exchange(GET, path, params, null);
+		if (isPdf(answer)) {
+			return answer.body();
 		}
-		return body;
+		// Some templates ask parameter questions first (Beslut: "Visa medsökande"); the form is posted back as it came.
+		final var fields = ParameterQueryForm.fields(answer).orElseThrow(() -> Problem.valueOf(BAD_GATEWAY, ERROR_NOT_A_PDF));
+		LOG.info("Lifecare asked {} parameter field(s) before rendering {} - answering with its defaults", fields.size(), path);
+		final var rendered = transport.submitForm(path, params, fields);
+		if (!rendered.isSuccess()) {
+			LOG.info("Lifecare refused the parameters for {} ({})", path, rendered.describe());
+			throw ProfessionalWebErrors.toProblem(rendered);
+		}
+		if (isPdf(rendered)) {
+			return rendered.body();
+		}
+		if (ParameterQueryForm.isParameterQuery(rendered)) {
+			throw Problem.valueOf(BAD_GATEWAY, ERROR_ASKED_AGAIN);
+		}
+		throw Problem.valueOf(BAD_GATEWAY, ERROR_NOT_A_PDF);
+	}
+
+	private static boolean isPdf(final ProfessionalWebResponse response) {
+		return startsWith(response.body(), PDF_SIGNATURE);
 	}
 
 	private ProfessionalWebResponse exchange(final String method, final String path, final Map<String, String> params, final Object body) {

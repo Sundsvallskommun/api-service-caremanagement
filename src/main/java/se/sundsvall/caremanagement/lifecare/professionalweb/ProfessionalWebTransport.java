@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.lifecare.professionalweb;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,4 +27,15 @@ public interface ProfessionalWebTransport {
 	 * @return        Lifecare's answer
 	 */
 	ProfessionalWebResponse exchange(String method, String path, Map<String, String> params, byte[] body);
+
+	/**
+	 * Posts a form back the way a browser submits it: application/x-www-form-urlencoded, to the same address and query
+	 * it came from, with a browser's navigation headers rather than api2's ajax ones.
+	 *
+	 * @param  path   the path below the ProfessionalWeb module
+	 * @param  params query parameters, in order
+	 * @param  fields the form's fields, in document order
+	 * @return        Lifecare's answer
+	 */
+	ProfessionalWebResponse submitForm(String path, Map<String, String> params, List<ProfessionalWebFormField> fields);
 }
