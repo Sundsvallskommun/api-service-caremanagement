@@ -15,6 +15,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.SsbtekBas
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.caremanagement.types.financialassistance.service.mapper.SsbtekPaymentViewFields;
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
@@ -24,12 +25,18 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /**
  * An errand's household member's SSBTEK basis, read live so a caseworker can see what the composite service actually
- * answered (GUI-01, manual SSBTEK check). caremanagement only forwards: the person is the errand's applicant,
- * co-applicant or one of the household children on the application — resolved from the errand the way the beredning
- * resolves them, never taken from the caller (a child's partyId is only accepted when the errand names that child) —
- * their personnummer comes from the citizen service, the call goes to api-service-financial-aid, and the per-agency
- * answer is returned unmodified. Scoping the read to an errand is what puts it in the errand's access log: the path
- * carries the errand id, so {@code ErrandEventInterceptor} records who read whose SSBTEK data and when.
+ * answered (GUI-01, manual SSBTEK check). The person is the errand's applicant, co-applicant or one of the household
+ * children on the application — resolved from the errand the way the beredning resolves them, never taken from the
+ * caller (a child's partyId is only accepted when the errand names that child) — their personnummer comes from the
+ * citizen service, and the call goes to api-service-financial-aid. Scoping the read to an errand is what puts it in the
+ * errand's access log: the path carries the errand id, so {@code ErrandEventInterceptor} records who read whose SSBTEK
+ * data and when.
+ *
+ * <p>
+ * The answer is reduced before it leaves: only the fields in {@link SsbtekPaymentViewFields} are returned, the payment
+ * fields the caseworker's payment view shows. The agencies' own answers carry the person's personnummer, names and
+ * addresses beside the amounts, and those never leave caremanagement (dataminimering).
+ * </p>
  *
  * <p>
  * Nothing is stored. The basis is income data for a named person, so it is held only for the length of the request —
@@ -85,7 +92,7 @@ public class FinancialAssistanceSsbtekService {
 	 * @param  childPartyId   the household child to read when {@code role} is {@code CHILD}, otherwise {@code null}
 	 * @param  from           inclusive start of the period, or {@code null} to derive it
 	 * @param  to             inclusive end of the period, or {@code null} to derive it
-	 * @return                the per-agency basis plus the resolved period
+	 * @return                the payment fields of the per-agency basis plus the resolved period
 	 */
 	public SsbtekBasis getBasis(final String municipalityId, final String namespace, final String errandId, final String role, final String childPartyId,
 		final LocalDate from, final LocalDate to) {
@@ -124,10 +131,13 @@ public class FinancialAssistanceSsbtekService {
 		return firstMonth.plusMonths(RULE_PERIOD_LOOKBACK_MONTHS).atEndOfMonth();
 	}
 
-	/** Never returns {@code null} — an agency-less answer is rendered as an empty map so the frontend has one shape. */
+	/**
+	 * The agencies' answers reduced to the payment view's fields. Never returns {@code null} — an agency-less answer is
+	 * rendered as an empty map so the frontend has one shape.
+	 */
 	private Map<String, Map<String, Object>> basisFor(final String municipalityId, final String applicant, final LocalDate fromDate, final LocalDate toDate) {
-		return ofNullable(financialAidIntegration.getFinancialAidBasis(municipalityId, applicant, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)))
-			.orElseGet(Map::of);
+		return SsbtekPaymentViewFields.ALLOWLIST.retainIn(
+			financialAidIntegration.getFinancialAidBasis(municipalityId, applicant, fromDate.format(ISO_LOCAL_DATE), toDate.format(ISO_LOCAL_DATE)));
 	}
 
 	/** A child is named by partyId and only a child is: the pairing is checked before anything is read. */

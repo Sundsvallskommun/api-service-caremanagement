@@ -164,8 +164,19 @@ class FinancialAssistanceSsbtekServiceTest {
 	}
 
 	@Test
-	void getBasisResolvesPartyAndForwardsAnswerVerbatim() {
-		final var agencies = Map.<String, Map<String, Object>>of("fk", Map.of("formansinformation", Map.of("utbetalningsuppgift", "…")));
+	void getBasisResolvesPartyAndReturnsOnlyThePaymentFields() {
+		final var agencies = Map.<String, Map<String, Object>>of(
+			"af", Map.of("Svar", Map.of("IdentitetsbeteckningFysiskPerson", PERSONAL_NUMBER, "Fornamn", "Test", "Efternamn", "Testsson")),
+			"fk", Map.of(
+				"formansinformation", Map.of(
+					"generellPersoninformation", List.of(Map.of("personnummer", PERSONAL_NUMBER, "foddes", "1990-01-01")),
+					"utbetalningsuppgift", List.of(Map.of(
+						"formansfamilj", Map.of("id", "BOB", "beskrivning", "Bostadsbidrag"),
+						"datum", "2026-03-25",
+						"nettobelopp", Map.of("summa", 4500, "valuta", "SEK"),
+						"utbetalningsmottagare", Map.of("personnummer", PERSONAL_NUMBER, "namn", "Test Testsson")))),
+				"utlamnare", List.of(Map.of("utlamnare", Map.of("kod", "FK", "namn", "Försäkringskassan")))),
+			"so", Map.of("IdentificationNumber", PERSONAL_NUMBER, "NamnIngivare", "Testkommun"));
 		when(citizenServiceMock.getPersonalNumber(MUNICIPALITY_ID, APPLICANT_PARTY_ID)).thenReturn(Optional.of(PERSONAL_NUMBER));
 		when(financialAidIntegrationMock.getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, "2026-01-01", "2026-03-31")).thenReturn(agencies);
 
@@ -173,7 +184,13 @@ class FinancialAssistanceSsbtekServiceTest {
 
 		assertThat(result.getFrom()).isEqualTo(LocalDate.of(2026, JANUARY, 1));
 		assertThat(result.getTo()).isEqualTo(LocalDate.of(2026, MARCH, 31));
-		assertThat(result.getAgencies()).isSameAs(agencies);
+		assertThat(result.getAgencies()).isEqualTo(Map.of(
+			"fk", Map.of("formansinformation", Map.of("utbetalningsuppgift", List.of(Map.of(
+				"formansfamilj", Map.of("beskrivning", "Bostadsbidrag"),
+				"datum", "2026-03-25",
+				"nettobelopp", Map.of("summa", 4500))))),
+			"so", Map.of()));
+		assertThat(result.getAgencies().toString()).doesNotContain(PERSONAL_NUMBER, "Testsson", "Testkommun");
 		verify(financialAidIntegrationMock).getFinancialAidBasis(MUNICIPALITY_ID, PERSONAL_NUMBER, "2026-01-01", "2026-03-31");
 	}
 
