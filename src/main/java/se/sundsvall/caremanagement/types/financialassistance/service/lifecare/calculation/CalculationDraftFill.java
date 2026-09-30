@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.c
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
@@ -36,6 +37,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.same;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.text;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.truthy;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.DEVIATION_DAYS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.INCLUDED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.PERSON_ID;
 
@@ -132,6 +134,49 @@ final class CalculationDraftFill {
 				+ ". Ändra raden i normberäkningen eller för in den direkt i Lifecare.");
 		}
 		return calculation;
+	}
+
+	/**
+	 * The included members' days in the household for a new beräkning, which Lifecare's own "Ny beräkning" leaves empty
+	 * (recorded 2026-09-30). Days the caseworker set on careM's draft win. Otherwise a member who was included in the
+	 * previous beräkning, matched on personnummer, gets the days it had there, as Lifecare's "Kopiera beräkning" carries
+	 * them over; days that do not fit the new period are left out. Everyone else is in for the whole period, as before.
+	 * Roles are not copied: Lifecare's relationType is a snapshot of the household, and the new beräkning takes today's.
+	 *
+	 * @param  calculation the filled beräkning, changed in place
+	 * @param  persons     the draft's persons with their personnummer
+	 * @param  previous    the previous beräkning (GetCalculation), or a missing node when there is none
+	 * @return             the beräkning
+	 */
+	static ObjectNode withDays(final ObjectNode calculation, final List<DraftPerson> persons, final JsonNode previous) {
+		final var draftPersons = persons.stream().filter(person -> !person.row().isDeleted()).toList();
+		final var previousMembers = objects(previous, PERSONS).stream().filter(member -> truthy(member, INCLUDED)).toList();
+		final var periodDays = ChronoUnit.DAYS.between(LocalDate.parse(text(calculation, "startDate")), LocalDate.parse(text(calculation, "endDate"))) + 1;
+		final var members = objects(calculation, PERSONS);
+		for (var index = 0; index < members.size(); index++) {
+			final var member = members.get(index);
+			if (truthy(member, INCLUDED)) {
+				final var caseworkerDays = draftPersonFor(member, index, draftPersons).map(person -> person.row().getCaseworkerDays());
+				caseworkerDays.or(() -> previousDays(member, previousMembers, periodDays))
+					.ifPresent(days -> member.put(DEVIATION_DAYS, days.intValue()));
+			}
+		}
+		return calculation;
+	}
+
+	/** The days a member had in the previous beräkning, when it was in it for part of its period that fits this one. */
+	private static Optional<Integer> previousDays(final JsonNode member, final List<ObjectNode> previousMembers, final long periodDays) {
+		final var key = identityKey(text(member, PERSON_ID));
+		if (key.isEmpty()) {
+			return Optional.empty();
+		}
+		return previousMembers.stream()
+			.filter(previous -> key.equals(identityKey(text(previous, PERSON_ID))))
+			.findFirst()
+			.map(previous -> previous.path(DEVIATION_DAYS))
+			.filter(JsonNode::isNumber)
+			.map(JsonNode::intValue)
+			.filter(days -> days > 0 && days <= periodDays);
 	}
 
 	/**

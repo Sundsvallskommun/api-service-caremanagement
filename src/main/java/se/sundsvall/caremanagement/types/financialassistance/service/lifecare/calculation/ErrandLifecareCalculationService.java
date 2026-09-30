@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.c
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Optional;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.Li
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.MissingNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
@@ -24,6 +26,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.PERSONS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.applyDraft;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.withDays;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.integerOrNull;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.text;
@@ -34,7 +37,6 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareCalculationEditService.TARGET;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.LifecareCalculationEditService.asObject;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toLifecareCalculationView;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningMapper.toPreviousCalculation;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
@@ -108,7 +110,9 @@ public class ErrandLifecareCalculationService {
 
 	/**
 	 * Saves the beräkning in Lifecare. The first time it is created from careM's draft (Lifecare places the members on
-	 * the norm, marks who has jobbstimulans and counts it) and the errand is linked to it. Once it exists Lifecare owns it
+	 * the norm, marks who has jobbstimulans and counts it) and the errand is linked to it. The members' days in the
+	 * household are the caseworker's from the draft, else those they had in the insats's previous beräkning, which is read
+	 * for it (kvarlista b15). Once it exists Lifecare owns it
 	 * and the draft is no longer used: saving again saves Lifecare's own beräkning, which is what finalize (slutlig, after
 	 * which Lifecare allows no change) needs.
 	 *
@@ -133,7 +137,11 @@ public class ErrandLifecareCalculationService {
 
 		final var base = asObject(proposal.path("calculation"));
 		final var filled = applyDraft(base, objects(base, PERSONS), draft.draft(), draft.persons(), proposal, LocalDate.now(SWEDISH_TIME).toString());
-		final var calculation = withJobStimulusIncomes(editService.placeAndMark(filled, jobStimulus, true), proposal.path("incomeTypes"));
+		// Lifecare's own new beräkning starts without days; the previous one's are carried over as its Kopiera beräkning does.
+		final var periodStart = draft.draft().getCalculationFromDate().toString();
+		final var previous = previousCalculation(errand, _ -> periodStart).orElseGet(MissingNode::getInstance);
+		final var dated = withDays(filled, draft.persons(), previous);
+		final var calculation = withJobStimulusIncomes(editService.withCountedDays(editService.placeAndMark(dated, jobStimulus, true)), proposal.path("incomeTypes"));
 		final var household = householdSizeOf(calculation, draft.draft().getHasCustomHouseholdSize(), draft.draft().getHouseholdSize());
 
 		final var created = createInLifecare(serviceId, CalculationBodyBuilder.create(calculation, household));
@@ -163,19 +171,31 @@ public class ErrandLifecareCalculationService {
 		if (errand.serviceId() == null) {
 			return Optional.empty();
 		}
+		return previousCalculation(errand, listed -> errand.calculation()
+			.flatMap(ownId -> CalculationJson.elements(listed).stream().filter(item -> CalculationJson.hasNumber(item, FIELD_CALCULATION_ID, ownId)).findFirst())
+			.map(item -> text(item, "startDate"))
+			.or(() -> draftReader.periodStart(errand))
+			.orElse(null))
+			.map(NormberakningMapper::toPreviousCalculation);
+	}
+
+	/**
+	 * The beräkning preceding the period on the errand's insats, as Lifecare holds it (GetCalculation). Both reads are
+	 * logged, and neither is served when its log entry cannot be written.
+	 *
+	 * @param  errand        the errand, with an insats
+	 * @param  periodStartOf the start of the errand's own period, given the insats's list of beräkningar
+	 * @return               the previous beräkning, empty when the insats has none before the period
+	 */
+	private Optional<JsonNode> previousCalculation(final LifecareErrand errand, final Function<JsonNode, String> periodStartOf) {
 		final var listed = client.listForService(errand.serviceId());
 		recorder.read(errand, TARGET, "Läste insatsens normberäkningar i Lifecare");
 
-		final var own = errand.calculation()
-			.flatMap(ownId -> CalculationJson.elements(listed).stream().filter(item -> CalculationJson.hasNumber(item, FIELD_CALCULATION_ID, ownId)).findFirst())
-			.map(item -> text(item, "startDate"));
-		final var periodStart = own.or(() -> draftReader.periodStart(errand)).orElse(null);
-
-		return PreviousCalculationPicker.pick(listed, periodStart, errand.calculationId()).map(previous -> {
+		return PreviousCalculationPicker.pick(listed, periodStartOf.apply(listed), errand.calculationId()).map(previous -> {
 			final var previousId = integerOrNull(previous, FIELD_CALCULATION_ID);
-			final var calculation = client.read(previousId);
+			final JsonNode calculation = client.read(previousId);
 			recorder.read(errand, TARGET, "Läste föregående normberäkning i Lifecare", String.valueOf(previousId));
-			return toPreviousCalculation(calculation);
+			return calculation;
 		});
 	}
 

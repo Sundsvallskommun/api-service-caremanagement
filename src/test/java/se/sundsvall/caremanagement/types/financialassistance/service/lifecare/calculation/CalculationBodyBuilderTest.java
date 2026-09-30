@@ -86,7 +86,10 @@ class CalculationBodyBuilderTest {
 
 		final var sent = CalculationBodyBuilder.asSentPerson(person);
 
-		assertThat(sent.path("daySubscription").path("da").intValue()).isEqualTo(10);
+		// As the web app's number field holds them (capture 2026-09-30).
+		assertThat(sent.path("deviationDays").stringValue()).isEqualTo("10");
+		assertThat(sent.path("daySubscription").path("da").stringValue()).isEqualTo("10");
+		assertThat(person.path("deviationDays").intValue()).isEqualTo(10);
 		assertThat(sent.path("normSubscription").path("da").intValue()).isEqualTo(3);
 		assertThat(CalculationBodyBuilder.asSentPerson(json("{\"personId\":\"y\"}")).path("daySubscription").path("da").isNull()).isTrue();
 	}

@@ -139,8 +139,8 @@ class LifecareCalculationEditServiceTest {
 		final var sent = objects(sentUpdate(), "calculationPersons").getFirst();
 		assertThat(sent.path("normRowId").intValue()).isEqualTo(2);
 		assertThat(sent.path("amount").intValue()).isEqualTo(1300);
-		assertThat(sent.path("deviationDays").intValue()).isEqualTo(10);
-		assertThat(sent.path("daySubscription")).isEqualTo(tree("{\"da\":10,\"Jb\":false,\"Kb\":null,\"hb\":null}"));
+		assertThat(sent.path("deviationDays").stringValue()).isEqualTo("10");
+		assertThat(sent.path("daySubscription")).isEqualTo(tree("{\"da\":\"10\",\"Jb\":false,\"Kb\":null,\"hb\":null}"));
 	}
 
 	@Test
@@ -360,5 +360,22 @@ class LifecareCalculationEditServiceTest {
 		assertThat(LifecareCalculationEditService.applicationMonthOf(ERRAND)).isEqualTo("2026-09");
 		assertThat(LifecareCalculationEditService.applicationMonthOf(new LifecareErrand("2281", "n", "e", 1, null, null, null, 2026, null))).isNull();
 		assertThat(LifecareCalculationEditService.applicationMonthOf(new LifecareErrand("2281", "n", "e", 1, null, null, null, null, 9))).isNull();
+	}
+
+	@Test
+	void hasLifecareCountTheAmountOfANewMemberInTheHouseholdForOnlySomeDays() {
+		final var calculation = json("""
+			{"startDate":"2026-09-01","endDate":"2026-09-30",
+			 "norm":{"rows":[{"rowId":2,"name":"Ensamstående 3940.00","monthlyAmount":3940,"dailyAmount":130},{"rowId":3,"name":"Barn 0 år","monthlyAmount":1034}]},
+			 "calculationPersons":[
+			   {"personId":"a","included":true,"normRowId":2,"amount":3940,"deviationDays":null},
+			   {"personId":"b","included":true,"normRowId":3,"amount":1034,"deviationDays":15},
+			   {"personId":"c","included":false,"normRowId":0,"amount":0,"deviationDays":15}]}""");
+		when(client.amountFor(any(), any(), any(), any())).thenReturn(tree("512"));
+
+		service.withCountedDays(calculation);
+
+		verify(client).amountFor(any(), eq(tree("{\"rowId\":3,\"name\":\"Barn 0 år\",\"monthlyAmount\":1034}")), eq(tree("\"2026-09-01\"")), eq(tree("\"2026-09-30\"")));
+		assertThat(objects(calculation, "calculationPersons")).extracting(member -> member.path("amount").intValue()).containsExactly(3940, 512, 0);
 	}
 }

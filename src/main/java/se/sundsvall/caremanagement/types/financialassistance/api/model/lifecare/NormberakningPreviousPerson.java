@@ -22,6 +22,16 @@ public class NormberakningPreviousPerson {
 	@Schema(description = "The end of the deviation")
 	private String deviationToDate;
 
+	@Schema(description = "The member's days in the household; absent for the whole period", examples = "15")
+	private Integer deviationDays;
+
+	@Schema(description = "The member's place in the household as Lifecare recorded it for this beräkning: SINGLE (ensamstående), COUPLE (sammanboende par) or OTHER; absent when Lifecare gave none",
+		examples = "SINGLE",
+		allowableValues = {
+			"SINGLE", "COUPLE", "OTHER"
+		})
+	private String relationType;
+
 	public static NormberakningPreviousPerson create() {
 		return new NormberakningPreviousPerson();
 	}
@@ -78,18 +88,45 @@ public class NormberakningPreviousPerson {
 		return this;
 	}
 
+	public Integer getDeviationDays() {
+		return deviationDays;
+	}
+
+	public void setDeviationDays(final Integer deviationDays) {
+		this.deviationDays = deviationDays;
+	}
+
+	public NormberakningPreviousPerson withDeviationDays(final Integer deviationDays) {
+		this.deviationDays = deviationDays;
+		return this;
+	}
+
+	public String getRelationType() {
+		return relationType;
+	}
+
+	public void setRelationType(final String relationType) {
+		this.relationType = relationType;
+	}
+
+	public NormberakningPreviousPerson withRelationType(final String relationType) {
+		this.relationType = relationType;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass()) {
 			return false;
 		}
 		final NormberakningPreviousPerson that = (NormberakningPreviousPerson) o;
-		return Objects.equals(name, that.name) && Objects.equals(amount, that.amount) && Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate);
+		return Objects.equals(name, that.name) && Objects.equals(amount, that.amount) && Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
+			&& Objects.equals(deviationDays, that.deviationDays) && Objects.equals(relationType, that.relationType);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(name, amount, deviationFromDate, deviationToDate);
+		return Objects.hash(name, amount, deviationFromDate, deviationToDate, deviationDays, relationType);
 	}
 
 	@Override
@@ -99,6 +136,8 @@ public class NormberakningPreviousPerson {
 			", amount=" + amount +
 			", deviationFromDate='" + deviationFromDate + '\'' +
 			", deviationToDate='" + deviationToDate + '\'' +
+			", deviationDays=" + deviationDays +
+			", relationType='" + relationType + '\'' +
 			'}';
 	}
 }

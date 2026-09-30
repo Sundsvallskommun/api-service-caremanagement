@@ -9,6 +9,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.isTrue;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.orNull;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.DEVIATION_DAYS;
 
 /**
  * The bodies of {@code Calculation/Create} and {@code Calculation/Update}, byte for byte the way Lifecare's web app
@@ -22,7 +23,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
  * <li>{@code isValid: true} on every member;</li>
  * <li>{@code normSubscription}, {@code dateSubscriptions} (two of them) and {@code daySubscription}: Knockout
  * subscription objects of the shape {da, Jb, Kb, hb} where da holds the observed value (the norm row id, an empty date,
- * the member's days) and Jb, Kb, hb are always false, null, null. A member not placed on the norm goes without a
+ * the member's days) and Jb, Kb, hb are always false, null, null. The days go as a string, deviationDays included,
+ * as the web app's number field holds them. A member not placed on the norm goes without a
  * normRowId at all, and its normSubscription without da;</li>
  * <li>the household size twice: in Lifecare's own camelCase fields where Lifecare read it (Update only), and again in
  * the PascalCase fields HasCustomHouseholdSize, HouseholdSize and NumberOfFamilyMembers appended at the end of the
@@ -119,7 +121,17 @@ final class CalculationBodyBuilder {
 		dateSubscriptions.add(subscription(NODES.stringNode("")));
 		dateSubscriptions.add(subscription(NODES.stringNode("")));
 		sent.set("dateSubscriptions", dateSubscriptions);
-		sent.set("daySubscription", subscription(orNull(person.path("deviationDays")).deepCopy()));
+		// The web app sends the days as its number field holds them, a string (capture 2026-09-30); Lifecare answers with a
+		// number.
+		final var days = orNull(person.path(DEVIATION_DAYS));
+		final JsonNode sentDays;
+		if (days.isNumber()) {
+			sentDays = NODES.stringNode(String.valueOf(days.intValue()));
+			sent.set(DEVIATION_DAYS, sentDays);
+		} else {
+			sentDays = days;
+		}
+		sent.set("daySubscription", subscription(sentDays.deepCopy()));
 		return sent;
 	}
 
