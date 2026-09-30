@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.lifecare.professionalweb.integrator;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +12,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebFormField;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -66,5 +68,21 @@ class IntegratorProfessionalWebTransportTest {
 	@Test
 	void noAnswer() {
 		assertThatThrownBy(() -> transport.exchange("GET", "api2/x", Map.of(), null)).hasMessageContaining("without Lifecare's answer");
+	}
+
+	@Test
+	void sendsAFormAsItsFieldsForTheIntegratorToPost() {
+		final var pdf = Base64.getEncoder().encodeToString("%PDF-1.7".getBytes(StandardCharsets.UTF_8));
+		when(client.exchange(eq("2281"), any())).thenReturn(new ProfessionalWebExchangeResponse(200, "application/pdf", pdf));
+		final var fields = List.of(new ProfessionalWebFormField("51_0_2_1", "true"), new ProfessionalWebFormField("51_0_2_1", "false"));
+
+		final var response = transport.submitForm("RenderPdf/PrintDecision", Map.of("decisionId", "134"), fields);
+
+		assertThat(response.bodyAsString()).startsWith("%PDF");
+		verify(client).exchange(eq("2281"), requestCaptor.capture());
+		assertThat(requestCaptor.getValue().method()).isEqualTo("POST");
+		assertThat(requestCaptor.getValue().path()).isEqualTo("RenderPdf/PrintDecision");
+		assertThat(requestCaptor.getValue().body()).isNull();
+		assertThat(requestCaptor.getValue().form()).isEqualTo(fields);
 	}
 }

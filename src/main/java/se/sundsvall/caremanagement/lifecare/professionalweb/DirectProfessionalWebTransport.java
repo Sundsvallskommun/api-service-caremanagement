@@ -5,7 +5,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,7 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 public class DirectProfessionalWebTransport implements ProfessionalWebTransport {
 
 	private static final String MODULE = ProfessionalWebClient.MODULE;
+	private static final String POST = "POST";
 	private static final Logger LOG = LoggerFactory.getLogger(DirectProfessionalWebTransport.class);
 
 	private final ProfessionalWebProperties properties;
@@ -59,22 +62,32 @@ public class DirectProfessionalWebTransport implements ProfessionalWebTransport 
 	 */
 	@Override
 	public ProfessionalWebResponse exchange(final String method, final String path, final Map<String, String> params, final byte[] body) {
-		var sent = send(method, path, params, body);
+		return withSession(method, path, () -> send(method, path, params, body));
+	}
+
+	@Override
+	public ProfessionalWebResponse submitForm(final String path, final Map<String, String> params, final List<ProfessionalWebFormField> fields) {
+		return withSession(POST, path, () -> sendForm(path, params, fields));
+	}
+
+	/** Sends, and when the answer says a session is needed, establishes one and sends again. */
+	private ProfessionalWebResponse withSession(final String method, final String path, final Supplier<Sent> sender) {
+		var sent = sender.get();
 
 		if (ProfessionalWebHttp.needsSession(sent.response())) {
 			LOG.warn("Lifecare wants a session for {} ({}) - bootstrapping it", MODULE, sent.response().describe());
 			session.bootstrapModule(MODULE);
-			sent = send(method, path, params, body);
+			sent = sender.get();
 		}
 		if (ProfessionalWebHttp.needsSession(sent.response())) {
 			LOG.warn("Lifecare still refuses {} ({}) - signing in again", path, sent.response().describe());
 			// Only the session this request used: a request that raced ahead may already have established a new one.
 			session.reset(sent.session());
-			sent = send(method, path, params, body);
+			sent = sender.get();
 			if (ProfessionalWebHttp.needsSession(sent.response())) {
 				// A fresh session's first module call asks for the module's artifact, like the first call ever did.
 				session.bootstrapModule(MODULE);
-				sent = send(method, path, params, body);
+				sent = sender.get();
 			}
 		}
 		if (ProfessionalWebHttp.needsSession(sent.response())) {
@@ -107,6 +120,23 @@ public class DirectProfessionalWebTransport implements ProfessionalWebTransport 
 		final var sessionUsed = session.established();
 
 		final var response = http.send(method, uri(path, params), headers, bytes);
+		session.absorb(response);
+		return new Sent(response, sessionUsed);
+	}
+
+	/** A form posted back as the browser posts it; the fields and the token are never logged. */
+	private Sent sendForm(final String path, final Map<String, String> params, final List<ProfessionalWebFormField> fields) {
+		final var uri = uri(path, params);
+		final var headers = new LinkedHashMap<String, String>();
+		headers.putAll(ProfessionalWebHttp.BROWSER_HEADERS);
+		headers.putAll(ProfessionalWebHttp.NAVIGATION_HEADERS);
+		headers.put("Origin", origin());
+		headers.put("Referer", uri.toString());
+		headers.put("Content-Type", "application/x-www-form-urlencoded");
+		headers.putAll(session.prepare());
+		final var sessionUsed = session.established();
+
+		final var response = http.send(POST, uri, headers, ProfessionalWebHttp.encodeFields(fields));
 		session.absorb(response);
 		return new Sent(response, sessionUsed);
 	}

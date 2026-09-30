@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -299,5 +300,59 @@ class ProfessionalWebClientTest {
 		public Instant instant() {
 			return now;
 		}
+	}
+
+	@Test
+	void answersLifecaresParameterQuestionsWithItsDefaultsAndGetsThePdf() {
+		final var print = "/WESE.FC.ProfessionalWeb/RenderPdf/PrintDecision";
+		wireMock.stubFor(get(urlPathEqualTo(print))
+			.willReturn(aResponse().withStatus(200).withHeader("Content-Type", "text/html; charset=utf-8").withBody(ParameterQueryFormTest.BESLUT_PAGE)));
+		wireMock.stubFor(post(urlPathEqualTo(print))
+			.withHeader("Content-Type", equalTo("application/x-www-form-urlencoded"))
+			.withRequestBody(equalTo("51_0_2_1=true&51_0_2_1=false&X-LEGACY-TOKEN=tok"))
+			.willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/pdf").withBody("%PDF-1.7 beslut")));
+
+		assertThat(client.getPdf("RenderPdf/PrintDecision", printParams())).startsWith((byte) '%', (byte) 'P');
+
+		// Posted back to the same address and query, as the browser's form without an action does.
+		wireMock.verify(postRequestedFor(urlPathEqualTo(print))
+			.withQueryParam("decisionId", equalTo("134"))
+			.withHeader("Referer", containing("/WESE.FC.ProfessionalWeb/RenderPdf/PrintDecision?templateId=885bfb68&decisionId=134&hideRevisions=true"))
+			.withHeader("Accept", containing("text/html"))
+			.withoutHeader("X-Requested-With")
+			.withHeader("Cookie", containing("LEGACY-TOKEN=tok")));
+		// The parameter page is an answer, not a lost session: one sign-in, no bootstrap.
+		wireMock.verify(1, postRequestedFor(urlPathEqualTo("/idp/login/post")));
+		wireMock.verify(0, getRequestedFor(urlPathEqualTo("/WESE.FC.ProfessionalWeb/Heartbeat")));
+	}
+
+	@Test
+	void givesUpWhenLifecareAsksTheParameterQuestionsAgain() {
+		final var print = "/WESE.FC.ProfessionalWeb/RenderPdf/PrintDecision";
+		final var page = aResponse().withStatus(200).withHeader("Content-Type", "text/html; charset=utf-8").withBody(ParameterQueryFormTest.BESLUT_PAGE);
+		wireMock.stubFor(get(urlPathEqualTo(print)).willReturn(page));
+		wireMock.stubFor(post(urlPathEqualTo(print)).willReturn(page));
+
+		assertThatThrownBy(() -> client.getPdf("RenderPdf/PrintDecision", printParams())).hasMessageContaining("parameterfråga");
+		wireMock.verify(1, postRequestedFor(urlPathEqualTo(print)));
+	}
+
+	@Test
+	void reportsLifecaresRefusalOfTheParameters() {
+		final var print = "/WESE.FC.ProfessionalWeb/RenderPdf/PrintDecision";
+		wireMock.stubFor(get(urlPathEqualTo(print))
+			.willReturn(aResponse().withStatus(200).withHeader("Content-Type", "text/html; charset=utf-8").withBody(ParameterQueryFormTest.BESLUT_PAGE)));
+		wireMock.stubFor(post(urlPathEqualTo(print)).willReturn(aResponse().withStatus(461).withBody("{\"exceptionMessage\":\"Ogiltig parameter\"}")));
+
+		assertThatThrownBy(() -> client.getPdf("RenderPdf/PrintDecision", printParams()))
+			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getDetail()).isEqualTo("Ogiltig parameter"));
+	}
+
+	private static Map<String, String> printParams() {
+		final var params = new LinkedHashMap<String, String>();
+		params.put("templateId", "885bfb68");
+		params.put("decisionId", "134");
+		params.put("hideRevisions", "true");
+		return params;
 	}
 }

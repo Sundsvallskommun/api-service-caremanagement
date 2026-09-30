@@ -9,6 +9,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -170,8 +171,22 @@ public class ProfessionalWebHttp {
 			return true;
 		}
 		// The login page comes back as an ordinary page. An HTML error page (IIS 500, a proxy's 502/503/504) is not a
-		// lost session: Lifecare may already have acted on a write, so resending it could make it twice.
-		return (response.status() < 400) && response.contentType().contains("text/html");
+		// lost session: Lifecare may already have acted on a write, so resending it could make it twice. Nor is the
+		// print's parameter questions page, which is an answer to be filled in (capture 2026-09-30).
+		return (response.status() < 400) && response.contentType().contains("text/html") && !ParameterQueryForm.isParameterQuery(response);
+	}
+
+	/**
+	 * A form's fields as a browser posts them: in order, a repeated name repeated.
+	 *
+	 * @param  fields the fields
+	 * @return        the application/x-www-form-urlencoded body
+	 */
+	static byte[] encodeFields(final List<ProfessionalWebFormField> fields) {
+		return fields.stream()
+			.map(field -> URLEncoder.encode(field.name(), StandardCharsets.UTF_8) + "=" + URLEncoder.encode(field.value(), StandardCharsets.UTF_8))
+			.collect(Collectors.joining("&"))
+			.getBytes(StandardCharsets.UTF_8);
 	}
 
 	static byte[] encodeForm(final Map<String, String> fields) {
