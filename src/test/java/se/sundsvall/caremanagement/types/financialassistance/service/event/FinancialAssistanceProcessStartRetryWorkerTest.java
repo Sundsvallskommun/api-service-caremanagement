@@ -39,6 +39,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.SLUG_SUPPLEMENTARY;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_RECEIVED;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_UNDER_REVIEW;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_WITHDRAWN;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.PROCESS_DEFINITION_NAME;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.PROCESS_DEFINITION_NAME_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessStarter.PROCESS_DEFINITION_NAME_SUPPLEMENTARY;
@@ -220,6 +221,20 @@ class FinancialAssistanceProcessStartRetryWorkerTest {
 
 		verifyNoInteractions(processorMock);
 		assertThat(result).isEqualTo(new FinancialAssistanceProcessStartRetryWorker.Result(2, 0, 0, 0, 0, 0));
+	}
+
+	@Test
+	void neverStartsAProcessForAnErrandWithdrawnSinceTheBatchWasRead() {
+		// Withdrawn after the selection (which only takes RECEIVED errands): a process started now would never be ended.
+		final var withdrawn = errand("e1", SLUG_RENEWAL, Duration.ofHours(1));
+		whenSelected(withdrawn);
+		when(processServiceMock.activeBusinessKeys(MUNICIPALITY_ID, PROCESS_DEFINITION_NAME)).thenReturn(Set.of());
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, "e1")).thenReturn(Optional.of(errand("e1", SLUG_RENEWAL, Duration.ofHours(1)).withStatus(STATUS_WITHDRAWN)));
+
+		final var result = worker.retryUnstarted();
+
+		verifyNoInteractions(processorMock);
+		assertThat(result).isEqualTo(new FinancialAssistanceProcessStartRetryWorker.Result(1, 0, 0, 0, 0, 0));
 	}
 
 	@Test

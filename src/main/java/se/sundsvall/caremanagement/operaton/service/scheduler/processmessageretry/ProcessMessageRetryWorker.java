@@ -28,6 +28,14 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * arrive but whose answer was lost ends there too: the engine then keeps answering {@code 404}. The row is the evidence
  * either way; correlating by hand through the process-messages endpoint is the remedy.
  * </p>
+ *
+ * <p>
+ * The one exception is a message that ends a process ({@code ErrandWithdrawn}): a {@code 404} for it means there is
+ * no process to end — it ended already, or the errand never had one — which is where the message was meant to leave
+ * the errand. Such a row is settled and removed with an info line (and counted with the delivered ones), instead of
+ * retrying for days and ending as an error for an errand nothing was wrong with; see
+ * {@link ProcessService#isNothingToEnd}.
+ * </p>
  */
 @Component
 class ProcessMessageRetryWorker {
@@ -77,6 +85,9 @@ class ProcessMessageRetryWorker {
 				retry.getAttempts() + 1);
 			return true;
 		} catch (final RuntimeException e) {
+			if (ProcessService.isNothingToEnd(retry.getMessageName(), e)) {
+				return settleWithoutDelivery(retry);
+			}
 			try {
 				recordFailure(retry, now, e);
 			} catch (final RuntimeException saveFailure) {
@@ -85,6 +96,23 @@ class ProcessMessageRetryWorker {
 			}
 			return false;
 		}
+	}
+
+	/**
+	 * The message asked for a process to end and there is none: the row is done. A failure to remove it leaves it to the
+	 * next run, which is then answered the same way.
+	 */
+	private boolean settleWithoutDelivery(final ProcessMessageRetryEntity retry) {
+		try {
+			repository.delete(retry);
+		} catch (final RuntimeException deleteFailure) {
+			LOG.warn("Could not remove the settled {} for errand {} ({})", sanitizeForLogging(retry.getMessageName()), sanitizeForLogging(retry.getErrandId()),
+				deleteFailure.getClass().getSimpleName());
+			return false;
+		}
+		LOG.info("No process is running for errand {}; {} has nothing to end and is dropped after {} attempt(s)", sanitizeForLogging(retry.getErrandId()),
+			sanitizeForLogging(retry.getMessageName()), retry.getAttempts() + 1);
+		return true;
 	}
 
 	private void recordFailure(final ProcessMessageRetryEntity retry, final OffsetDateTime now, final RuntimeException e) {
