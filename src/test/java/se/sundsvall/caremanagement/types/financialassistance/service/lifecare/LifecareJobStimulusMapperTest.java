@@ -73,12 +73,52 @@ class LifecareJobStimulusMapperTest {
 		}
 		""";
 
+	/** GetJobStimulusForService on Jeppson Test, insats 24, a household with a medsökande (capture 2026-09-30). */
+	private static final String WITH_CO_APPLICANT = """
+		{
+		  "applicant": {
+		    "periods": [
+		      { "jobStimulusId": 104, "personId": "19790101T030", "fromDate": "2026-01-01", "toDate": "2027-12-31", "updateTimestamp": "2026-09-23",
+		        "updateSignature": "ebb14eri", "markedForRemoval": false, "personIdFormatted": "790101-T030" },
+		      { "jobStimulusId": 105, "personId": "19790101T030", "fromDate": "2028-01-01", "toDate": "2029-12-31", "updateTimestamp": "2026-09-23",
+		        "updateSignature": "ebb14eri", "markedForRemoval": false, "personIdFormatted": "790101-T030" }
+		    ],
+		    "personId": "19790101T030", "name": "Jeppson, Test", "personIdFormatted": "790101-T030"
+		  },
+		  "coApplicant": { "periods": [], "personId": "20120505T020", "name": "Jeppson, Medsökande", "personIdFormatted": "120505-T020" },
+		  "hasCoApplicant": true
+		}
+		""";
+
+	/**
+	 * Calculation/SaveJobStimulus adding the medsökande's first period (capture 2026-09-30), field for field and in order.
+	 */
+	private static final String CO_APPLICANT_CAPTURE = """
+		{
+		  "applicant": {
+		    "periods": [
+		      { "jobStimulusId": 104, "personId": "19790101T030", "fromDate": "2026-01-01", "toDate": "2027-12-31", "updateTimestamp": "2026-09-23",
+		        "updateSignature": "ebb14eri", "markedForRemoval": false, "personIdFormatted": "790101-T030", "isValid": true, "minDate": 0 },
+		      { "jobStimulusId": 105, "personId": "19790101T030", "fromDate": "2028-01-01", "toDate": "2029-12-31", "updateTimestamp": "2026-09-23",
+		        "updateSignature": "ebb14eri", "markedForRemoval": false, "personIdFormatted": "790101-T030", "isValid": true, "minDate": "2027-12-31" }
+		    ],
+		    "personId": "19790101T030", "name": "Jeppson, Test", "personIdFormatted": "790101-T030"
+		  },
+		  "coApplicant": {
+		    "periods": [
+		      { "personId": "20120505T020", "personIdFormatted": "120505-T020", "fromDate": "2026-09-01", "toDate": "2028-08-31", "markedForRemoval": false }
+		    ],
+		    "personId": "20120505T020", "name": "Jeppson, Medsökande", "personIdFormatted": "120505-T020"
+		  }
+		}
+		""";
+
 	private static ObjectNode current() {
 		return (ObjectNode) json(CURRENT);
 	}
 
 	private static void assertRefused(final JsonNode current, final String reason) {
-		assertThatThrownBy(() -> buildJobStimulusAdd(current, "2028-01-15", "2030-01-14"))
+		assertThatThrownBy(() -> buildJobStimulusAdd(current, "APPLICANT", "2028-01-15", "2030-01-14"))
 			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> {
 				assertThat(problem.getStatus()).isEqualTo(UNPROCESSABLE_CONTENT);
 				assertThat(problem.getDetail()).contains(reason);
@@ -87,7 +127,7 @@ class LifecareJobStimulusMapperTest {
 
 	@Test
 	void turnsTheReadPeriodsAndANewOneIntoExactlyTheCapturedSaveBody() {
-		assertThat(serialised(buildJobStimulusAdd(current(), "2028-01-15", "2030-01-14"))).isEqualTo(serialised(json(CAPTURE)));
+		assertThat(serialised(buildJobStimulusAdd(current(), "APPLICANT", "2028-01-15", "2030-01-14"))).isEqualTo(serialised(json(CAPTURE)));
 	}
 
 	@Test
@@ -95,7 +135,7 @@ class LifecareJobStimulusMapperTest {
 		final var none = current();
 		((ObjectNode) none.get("applicant")).putArray("periods");
 
-		final var body = buildJobStimulusAdd(none, "2026-10-01", "2028-09-30");
+		final var body = buildJobStimulusAdd(none, "APPLICANT", "2026-10-01", "2028-09-30");
 
 		assertThat(serialised(body.get("applicant").get("periods"))).isEqualTo(
 			"[{\"personId\":\"19880209T050\",\"personIdFormatted\":\"880209-T050\",\"fromDate\":\"2026-10-01\",\"toDate\":\"2028-09-30\",\"markedForRemoval\":false}]");
@@ -106,19 +146,41 @@ class LifecareJobStimulusMapperTest {
 		final var openEnded = current();
 		((ObjectNode) openEnded.get("applicant").get("periods").get(0)).putNull("toDate");
 
-		final var body = buildJobStimulusAdd(openEnded, "2028-01-15", "2030-01-14");
+		final var body = buildJobStimulusAdd(openEnded, "APPLICANT", "2028-01-15", "2030-01-14");
 
 		assertThat(body.get("applicant").get("periods").get(1).get("minDate").asInt()).isZero();
 	}
 
 	@Test
-	void refusesAHouseholdWithAMedsokandeWhosePeriodsWouldOtherwiseBeLost() {
-		final var flagged = current().put("hasCoApplicant", true);
-		final var withCoApplicant = current();
-		withCoApplicant.putObject("coApplicant").put("name", "Testsson, Medsökande");
+	void addsAMedsokandesPeriodSendingBothPersonsSetsBackLikeTheCapturedSaveBody() {
+		assertThat(serialised(buildJobStimulusAdd(json(WITH_CO_APPLICANT), "CO_APPLICANT", "2026-09-01", "2028-08-31"))).isEqualTo(serialised(json(CO_APPLICANT_CAPTURE)));
+	}
 
-		assertRefused(flagged, "medsökande");
-		assertRefused(withCoApplicant, "medsökande");
+	@Test
+	void keepsTheMedsokandesPeriodsWhenTheSokandeGetsOne() {
+		final var current = (ObjectNode) json(WITH_CO_APPLICANT);
+		((ObjectNode) current.get("coApplicant")).set("periods", json("""
+			[{ "jobStimulusId": 115, "personId": "20120505T020", "fromDate": "2026-09-01", "toDate": "2028-08-31", "markedForRemoval": false },
+			 { "jobStimulusId": 116, "personId": "20120505T020", "fromDate": "2028-09-01", "toDate": "2030-08-31", "markedForRemoval": false }]"""));
+
+		final var body = buildJobStimulusAdd(current, "APPLICANT", "2030-01-01", "2031-12-31");
+
+		assertThat(body.get("applicant").get("periods").values()).extracting(period -> period.get("fromDate").asString()).containsExactly("2026-01-01", "2028-01-01", "2030-01-01");
+		final var coApplicantPeriods = body.get("coApplicant").get("periods");
+		assertThat(coApplicantPeriods.values()).extracting(period -> period.get("jobStimulusId").asInt()).containsExactly(115, 116);
+		// minDate is counted per person.
+		assertThat(coApplicantPeriods.get(0).get("minDate").asInt()).isZero();
+		assertThat(coApplicantPeriods.get(1).get("minDate").asString()).isEqualTo("2028-08-31");
+		assertThat(body.get("coApplicant").get("name").asString()).isEqualTo("Jeppson, Medsökande");
+	}
+
+	@Test
+	void refusesAPeriodForAMedsokandeTheInsatsDoesNotHave() {
+		assertThatThrownBy(() -> buildJobStimulusAdd(current(), "CO_APPLICANT", "2026-09-01", "2028-08-31"))
+			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> {
+				assertThat(problem.getStatus()).isEqualTo(UNPROCESSABLE_CONTENT);
+				assertThat(problem.getDetail()).contains("ingen medsökande");
+			});
 	}
 
 	@Test
@@ -150,14 +212,16 @@ class LifecareJobStimulusMapperTest {
 	}
 
 	@Test
-	void removeRefusesAHouseholdWithAMedsokande() {
-		final var flagged = current().put("hasCoApplicant", true);
+	void removesAMedsokandesPeriodKeepingTheSokandes() {
+		final var current = (ObjectNode) json(WITH_CO_APPLICANT);
+		((ObjectNode) current.get("coApplicant")).set("periods", json("""
+			[{ "jobStimulusId": 115, "personId": "20120505T020", "fromDate": "2026-09-01", "toDate": "2028-08-31", "markedForRemoval": false }]"""));
 
-		assertThatThrownBy(() -> buildJobStimulusRemove(flagged, 102))
-			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> {
-				assertThat(problem.getStatus()).isEqualTo(UNPROCESSABLE_CONTENT);
-				assertThat(problem.getDetail()).contains("medsökande");
-			});
+		final var body = buildJobStimulusRemove(current, 115);
+
+		assertThat(body.get("coApplicant").get("periods").isEmpty()).isTrue();
+		assertThat(body.get("coApplicant").get("personId").asString()).isEqualTo("20120505T020");
+		assertThat(body.get("applicant").get("periods").values()).extracting(period -> period.get("jobStimulusId").asInt()).containsExactly(104, 105);
 	}
 
 	@Test

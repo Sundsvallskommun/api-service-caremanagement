@@ -60,7 +60,7 @@ class FinancialAssistanceLifecareJobStimulusResourceFailureTest {
 		webTestClient.post()
 			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", randomUUID().toString())))
 			.contentType(APPLICATION_JSON)
-			.bodyValue(new LifecareJobStimulusPeriodRequest("2028-1-15", "15/01/2030"))
+			.bodyValue(new LifecareJobStimulusPeriodRequest("2028-1-15", "15/01/2030", null))
 			.exchange()
 			.expectStatus().isBadRequest()
 			.expectBody(ConstraintViolationProblem.class)
@@ -122,6 +122,25 @@ class FinancialAssistanceLifecareJobStimulusResourceFailureTest {
 				assertThat(body).isNotNull();
 				assertThat(body.getViolations()).extracting(Violation::field, Violation::message)
 					.containsExactly(tuple("removeJobStimulusPeriod.errandId", "not a valid UUID"));
+			});
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void addJobStimulusPeriodForAnUnknownPerson() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", randomUUID().toString())))
+			.contentType(APPLICATION_JSON)
+			.bodyValue(new LifecareJobStimulusPeriodRequest("2026-09-01", null, "CHILD"))
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> {
+				final var body = result.getResponseBody();
+				assertThat(body).isNotNull();
+				assertThat(body.getViolations()).extracting(Violation::field, Violation::message)
+					.containsExactly(tuple("role", "must be one of: [APPLICANT, CO_APPLICANT]"));
 			});
 
 		verifyNoInteractions(serviceMock);
